@@ -71,7 +71,7 @@ function validate(options: unknown): ToastOptions {
 
 function region(): HTMLElement {
   const existing = document.querySelector("idg-toast-region");
-  if (existing) return existing as HTMLElement;
+  if (existing) return existing;
   const created = document.createElement("idg-toast-region");
   document.body.append(created);
   return created;
