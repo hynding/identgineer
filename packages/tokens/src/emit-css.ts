@@ -10,11 +10,19 @@ export function toCssVariableName(path: string): string {
   return `${PREFIX}${path.replaceAll(".", "-")}`;
 }
 
-function formatFontFamily(names: readonly string[]): string {
-  const generic = /^[a-z-]+$/;
+// A quoted font name is the one place free text reaches the stylesheet, so anything that
+// could close the string and start a new declaration is refused rather than escaped.
+const UNSAFE_FONT_NAME = /["\\\n\r\f]/;
+
+function formatFontFamily(token: ResolvedToken, names: readonly string[]): string {
   const plain = /^[A-Za-z0-9_-]+$/;
   return names
-    .map((name) => (generic.test(name) || plain.test(name) ? name : `"${name}"`))
+    .map((name) => {
+      if (UNSAFE_FONT_NAME.test(name)) {
+        throw new Error(`${token.source}: token "${token.path}" has an unsafe font name`);
+      }
+      return plain.test(name) ? name : `"${name}"`;
+    })
     .join(", ");
 }
 
@@ -24,7 +32,7 @@ function formatPercent(position: number): string {
 
 export function formatValue(token: ResolvedToken): string {
   const { value } = token;
-  if (token.type === "fontFamily" && isStringArray(value)) return formatFontFamily(value);
+  if (token.type === "fontFamily" && isStringArray(value)) return formatFontFamily(token, value);
   if (token.type === "cubicBezier" && isNumberArray(value)) {
     return `cubic-bezier(${value.join(", ")})`;
   }
