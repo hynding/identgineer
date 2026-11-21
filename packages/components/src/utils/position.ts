@@ -39,6 +39,8 @@ export interface PositionInput {
   offset: number;
   /** Smallest distance the surface keeps from the viewport's edges. */
   padding: number;
+  /** The anchor's inline direction, which decides the edge a start or end placement aligns to. */
+  direction?: "ltr" | "rtl";
 }
 
 export interface Position {
@@ -75,11 +77,13 @@ function mainCoordinate(side: Side, input: PositionInput): number {
 
 function crossCoordinate(side: Side, alignment: Alignment, input: PositionInput): number {
   const { anchor, floating } = input;
-  const [start, length, size] = isVertical(side)
+  const vertical = isVertical(side);
+  const [start, length, size] = vertical
     ? [anchor.x, anchor.width, floating.width]
     : [anchor.y, anchor.height, floating.height];
-  if (alignment === "start") return start;
-  if (alignment === "end") return start + length - size;
+  const mirrored = vertical && input.direction === "rtl";
+  if (alignment === "start") return mirrored ? start + length - size : start;
+  if (alignment === "end") return mirrored ? start : start + length - size;
   return start + length / 2 - size / 2;
 }
 

@@ -57,6 +57,7 @@ export class SurfacePosition {
       placement,
       offset,
       padding: VIEWPORT_PADDING,
+      direction: getComputedStyle(anchor).direction === "rtl" ? "rtl" : "ltr",
     });
     this.surface.style.setProperty("--_x", `${String(Math.round(position.x))}px`);
     this.surface.style.setProperty("--_y", `${String(Math.round(position.y))}px`);
