@@ -123,10 +123,18 @@ export class IdgDialog {
     this.observer.observe(this.host, { childList: true });
   }
 
+  // A dialog removed while open leaves the top layer without a close event, yet stays open, and
+  // would come back as a dialog that is neither modal nor able to become one. It is closed here
+  // instead, as by its method, and focus is left where the move put it.
   disconnectedCallback(): void {
     this.observer?.disconnect();
-    // A dialog removed while open leaves the top layer without a close event.
-    this.releaseScroll();
+    const native = this.native;
+    if (native?.open !== true) {
+      this.releaseScroll();
+      return;
+    }
+    native.close();
+    this.settleClosed("method", false);
   }
 
   componentWillLoad(): void {
@@ -282,14 +290,21 @@ export class IdgDialog {
     );
   }
 
-  private handleClose = (): void => {
-    const reason = this.pendingReason ?? "escape";
+  private settleClosed(reason: DialogCloseReason, restoreFocus: boolean): void {
     this.pendingReason = undefined;
     this.releaseScroll();
     this.open = false;
-    this.restoreFocus();
+    if (restoreFocus) this.restoreFocus();
+    this.invoker = undefined;
+    this.invokerAncestors = [];
     this.focusInside = false;
     this.idgClose.emit({ returnValue: this.native?.returnValue ?? "", reason });
+  }
+
+  private handleClose = (): void => {
+    // The close a removal settled has already been reported.
+    if (!this.open && this.pendingReason === undefined) return;
+    this.settleClosed(this.pendingReason ?? "escape", true);
   };
 
   // Escape arrives as the browser's close request. It is always taken over, so that a refusal
