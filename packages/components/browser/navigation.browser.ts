@@ -287,6 +287,10 @@ test.describe("idg-accordion", () => {
         { role: "heading", name: "Contact New" },
         { role: "button", name: "Contact New" },
       ]);
+    // Only the open panel is a landmark, so closed ones are not empty regions.
+    await expect
+      .poll(async () => (await tree(page, "accordion", ["region"])).map((node) => node.name))
+      .toEqual(["Shipping"]);
     await expect
       .poll(async () => (await tree(page, "item-shipping", ["region"]))[0])
       .toEqual({ role: "region", name: "Shipping" });
@@ -585,6 +589,31 @@ test.describe("idg-pagination", () => {
       { page: 7 },
       { page: 12 },
     ]);
+  });
+
+  test("keeps focus on the current page when a page number is used, as the list is redrawn", async ({
+    page,
+  }) => {
+    await openNavigation(page);
+    await page.evaluate(() => {
+      const pager = document.getElementById("pagination-buttons");
+      pager?.setAttribute("page-count", "20");
+      pager?.setAttribute("page", "1");
+    });
+    const pager = page.locator("#pagination-buttons");
+    const focused = () =>
+      pager.evaluate((host) => host.shadowRoot?.activeElement?.textContent.trim() ?? "none");
+    const label = (name: string) => pager.locator('[part="page"]').filter({ hasText: name });
+    // Each press moves the window of pages, so the buttons are redrawn around the ellipsis.
+    for (const next of ["5", "4", "3"]) {
+      await label(new RegExp(`^${next}$`)).focus();
+      await page.keyboard.press("Enter");
+      await expect(pager).toHaveAttribute("page", next);
+      await expect.poll(focused).toBe(next);
+    }
+    await label(/^20$/).click();
+    await expect(pager).toHaveAttribute("page", "20");
+    await expect.poll(focused).toBe("20");
   });
 
   test("keeps focus in the control when the one pressed becomes unavailable", async ({ page }) => {
