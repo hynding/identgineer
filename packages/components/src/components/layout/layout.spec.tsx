@@ -377,3 +377,141 @@ describe("idg-layout page chrome", () => {
     expect(sheets.sheets()).toHaveLength(0);
   });
 });
+
+describe("idg-layout navigation that is open from the start, and the Escape key", () => {
+  it("opens the drawer once loaded when navigation-open is in the markup", async () => {
+    shows("drawer");
+    const { root, waitForChanges } = await render(
+      <idg-layout navigation-open>
+        <a slot="navigation" href="/one">
+          One
+        </a>
+        Content
+      </idg-layout>,
+    );
+    await waitForChanges();
+    expect(dialog.showModal).toHaveBeenCalledTimes(1);
+    expect(toggle(root).getAttribute("aria-expanded")).toBe("true");
+    expect(drawer(root).hasAttribute("open")).toBe(true);
+  });
+
+  it("opens the panel once loaded when the layout shows the navigation as a panel", async () => {
+    shows("disclosure");
+    const { root, waitForChanges } = await render(
+      <idg-layout navigation-open>
+        <a slot="navigation" href="/one">
+          One
+        </a>
+        Content
+      </idg-layout>,
+    );
+    await waitForChanges();
+    expect(dialog.show).toHaveBeenCalledTimes(1);
+    expect(drawer(root).hasAttribute("open")).toBe(true);
+  });
+
+  it("starts closed when navigation-open is set but the navigation is drawn inline", async () => {
+    shows("inline");
+    const { root, waitForChanges } = await render(
+      <idg-layout navigation-open>
+        <a slot="navigation" href="/one">
+          One
+        </a>
+        Content
+      </idg-layout>,
+    );
+    await waitForChanges();
+    expect((root as LayoutHost).navigationOpen).toBe(false);
+  });
+
+  describe("with a panel open", () => {
+    beforeEach(() => {
+      shows("disclosure");
+    });
+
+    async function opened() {
+      const rendered = await render(page);
+      toggle(rendered.root).click();
+      await rendered.waitForChanges();
+      return rendered;
+    }
+
+    it("is not closed by an Escape that happens in the content of the page", async () => {
+      const { root, waitForChanges } = await opened();
+      const focus = vi.spyOn(toggle(root), "focus");
+      const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true });
+      root.querySelector("p")?.dispatchEvent(escape);
+      await waitForChanges();
+      expect((root as LayoutHost).navigationOpen).toBe(true);
+      expect(focus).not.toHaveBeenCalled();
+    });
+
+    it("is not closed by an Escape that something already used", async () => {
+      const { root, waitForChanges } = await opened();
+      const escape = new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      escape.preventDefault();
+      root.querySelector('[slot="navigation"]')?.dispatchEvent(escape);
+      await waitForChanges();
+      expect((root as LayoutHost).navigationOpen).toBe(true);
+    });
+
+    it("is not closed by an Escape in the actions, which are not part of the panel", async () => {
+      const { root, waitForChanges } = await opened();
+      const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true });
+      root.querySelector('[slot="actions"]')?.dispatchEvent(escape);
+      await waitForChanges();
+      expect((root as LayoutHost).navigationOpen).toBe(true);
+    });
+
+    it("is closed from the page without moving focus the page has put elsewhere", async () => {
+      const { root, waitForChanges } = await opened();
+      const focus = vi.spyOn(toggle(root), "focus");
+      (root as LayoutHost).navigationOpen = false;
+      await waitForChanges();
+      expect(focus).not.toHaveBeenCalled();
+    });
+
+    it("is not closed by a click that opens the link elsewhere or is not the primary button", async () => {
+      const { root, waitForChanges } = await opened();
+      const link = root.querySelector('[slot="navigation"]');
+      for (const init of [
+        { ctrlKey: true },
+        { metaKey: true },
+        { shiftKey: true },
+        { button: 1 },
+      ]) {
+        link?.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true, ...init }));
+        await waitForChanges();
+        expect((root as LayoutHost).navigationOpen).toBe(true);
+      }
+    });
+  });
+});
+
+describe("idg-layout regions that are missing and a shell that is embedded", () => {
+  it("says on the shell that there is no hero, so a layout can arrange itself without one", async () => {
+    const without = await render(
+      <idg-layout>
+        <a slot="navigation" href="/one">
+          One
+        </a>
+        Content
+      </idg-layout>,
+    );
+    expect(part(without.root, "shell").classList.contains("no-hero")).toBe(true);
+    const withHero = await render(page);
+    expect(part(withHero.root, "shell").classList.contains("no-hero")).toBe(false);
+  });
+
+  it("reflects embedded, so the shell can stop claiming the height of the window", async () => {
+    const { root } = await render(<idg-layout embedded>Content</idg-layout>);
+    expect(root.hasAttribute("embedded")).toBe(true);
+    const plain = await render(<idg-layout>Content</idg-layout>);
+    expect(plain.root.hasAttribute("embedded")).toBe(false);
+  });
+});
