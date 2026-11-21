@@ -1,0 +1,57 @@
+/* Shared by every interactive component. Colour, type, space, radius, border, shadow, motion and
+   target size all come from --idg-* tokens, which inherit through the shadow root. */
+
+:host {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.control {
+  /* Hover lift and press squash are scaled by --idg-motion-enabled so a mode or preference that
+     turns movement off needs no per-component rule. */
+  --_lift: calc(var(--idg-feedback-hover-lift) * var(--idg-motion-enabled));
+  --_press: calc(1 - (1 - var(--idg-feedback-press-scale)) * var(--idg-motion-enabled));
+
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+  min-inline-size: var(--idg-density-target-size);
+  min-block-size: var(--idg-density-target-size);
+  margin: 0;
+  border-width: var(--idg-border-control-width);
+  border-style: var(--idg-border-control-style);
+  border-color: var(--idg-border-control-color);
+  font-family: var(--idg-font-family-body);
+  font-weight: var(--idg-font-weight-semibold);
+  line-height: var(--idg-font-body-line-height);
+  letter-spacing: var(--idg-font-body-letter-spacing);
+  text-decoration: none;
+  text-transform: var(--idg-ornament-control-transform);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition-property: transform, box-shadow, background-color, border-color, color;
+  transition-duration: var(--idg-motion-duration-fast);
+  transition-timing-function: var(--idg-motion-easing-standard);
+}
+
+.control:focus-visible {
+  outline-width: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
+  outline-style: var(--idg-focus-ring-style);
+  outline-color: var(--idg-color-focus-ring);
+  outline-offset: var(--idg-focus-ring-offset);
+}
+
+.control:disabled,
+.control[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+.control[aria-busy="true"] {
+  cursor: progress;
+}

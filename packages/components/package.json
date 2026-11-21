@@ -3,10 +3,35 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.js",
+  "types": "dist/types/index.d.ts",
+  "collection": "dist/collection/collection-manifest.json",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./loader": {
+      "types": "./loader/index.d.ts",
+      "import": "./loader/index.js"
+    },
+    "./custom-elements": {
+      "types": "./dist/components/index.d.ts",
+      "import": "./dist/components/index.js"
+    },
+    "./docs.json": "./dist/docs.json"
   },
   "scripts": {
+    "build": "stencil build --prod",
+    "dev": "stencil build --dev --watch --serve",
     "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@stencil/core": "4.45.5"
+  },
+  "devDependencies": {
+    "@identgineer/tokens": "workspace:*",
+    "@stencil/vitest": "1.16.2"
   }
 }

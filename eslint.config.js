@@ -7,19 +7,32 @@ export default tseslint.config(
   {
     ignores: [
       "**/node_modules/",
+      ".claude/",
       "**/dist/",
       "**/www/",
       "**/.stencil/",
+      "**/loader/",
+      "packages/components/src/components.d.ts",
       "**/coverage/",
       "cms/generated/",
     ],
   },
   js.configs.recommended,
   {
-    files: ["**/*.ts"],
+    files: ["**/*.ts", "**/*.tsx"],
     extends: [tseslint.configs.strictTypeChecked, tseslint.configs.stylisticTypeChecked],
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+    },
+  },
+  {
+    // Stencil declares its JSX namespace without an Element type, so every JSX expression has
+    // the error type and these three rules would reject all of them. The rest stay on.
+    files: ["**/*.tsx"],
+    rules: {
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
     },
   },
   {
