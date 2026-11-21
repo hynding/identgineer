@@ -24,6 +24,7 @@ import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
 import { SkeletonVariant } from "./components/skeleton/skeleton-options";
 import { StatDirection, StatSentiment } from "./components/stat/stat-options";
+import { TabsActivation, TabsOrientation } from "./components/tabs/tabs-options";
 import { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 import { ToastPosition } from "./components/toast-region/toast-region-options";
 export { AlertVariant } from "./components/alert/alert-options";
@@ -45,6 +46,7 @@ export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
 export { SkeletonVariant } from "./components/skeleton/skeleton-options";
 export { StatDirection, StatSentiment } from "./components/stat/stat-options";
+export { TabsActivation, TabsOrientation } from "./components/tabs/tabs-options";
 export { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 export { ToastPosition } from "./components/toast-region/toast-region-options";
 export namespace Components {
@@ -1067,6 +1069,86 @@ export namespace Components {
          */
         "value": string;
     }
+    /**
+     * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
+     * host carries the tab role and state itself, so the relations to the panel, which sits beside it
+     * in the page, can be made between the two hosts.
+     */
+    interface IdgTab {
+        /**
+          * Keeps the tab in the list, where it is announced, but stops it being selected.
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by the tabs: which way the list runs.
+          * @default "horizontal"
+         */
+        "orientation": TabsOrientation;
+        /**
+          * Set by the tabs: whether this tab is selected.
+          * @default false
+         */
+        "selected": boolean;
+        /**
+          * Set by the tabs: whether this tab is the one tab stop of the list.
+          * @default false
+         */
+        "tabbable": boolean;
+        /**
+          * Pairs the tab with the panel of the same value.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
+     * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
+     * reader can still move into it.
+     */
+    interface IdgTabPanel {
+        /**
+          * Set by the tabs: whether this panel's tab is selected.
+          * @default false
+         */
+        "selected": boolean;
+        /**
+          * Pairs the panel with the tab of the same value.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
+     * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
+     * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
+     * its position among its own kind as its value.
+     */
+    interface IdgTabs {
+        /**
+          * `automatic` selects a tab as the arrow keys reach it. `manual` only moves focus, and Enter or Space selects, which suits panels that are slow to show.
+          * @default "automatic"
+         */
+        "activation": TabsActivation;
+        /**
+          * The tab list's accessible name.
+         */
+        "label"?: string;
+        /**
+          * Which way the tab list runs.
+          * @default "horizontal"
+         */
+        "orientation": TabsOrientation;
+        /**
+          * Focuses the selected tab.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * The value of the selected tab. Without a match the first enabled tab is selected.
+          * @default ""
+         */
+        "value": string;
+    }
     interface IdgTextarea {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -1291,6 +1373,10 @@ export interface IdgSelectCustomEvent<T> extends CustomEvent<T> {
 export interface IdgSwitchCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgSwitchElement;
+}
+export interface IdgTabsCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgTabsElement;
 }
 export interface IdgTextareaCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -1713,6 +1799,51 @@ declare global {
         prototype: HTMLIdgSwitchElement;
         new (): HTMLIdgSwitchElement;
     };
+    /**
+     * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
+     * host carries the tab role and state itself, so the relations to the panel, which sits beside it
+     * in the page, can be made between the two hosts.
+     */
+    interface HTMLIdgTabElement extends Components.IdgTab, HTMLStencilElement {
+    }
+    var HTMLIdgTabElement: {
+        prototype: HTMLIdgTabElement;
+        new (): HTMLIdgTabElement;
+    };
+    /**
+     * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
+     * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
+     * reader can still move into it.
+     */
+    interface HTMLIdgTabPanelElement extends Components.IdgTabPanel, HTMLStencilElement {
+    }
+    var HTMLIdgTabPanelElement: {
+        prototype: HTMLIdgTabPanelElement;
+        new (): HTMLIdgTabPanelElement;
+    };
+    interface HTMLIdgTabsElementEventMap {
+        "idgChange": ValueDetail;
+    }
+    /**
+     * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
+     * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
+     * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
+     * its position among its own kind as its value.
+     */
+    interface HTMLIdgTabsElement extends Components.IdgTabs, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgTabsElementEventMap>(type: K, listener: (this: HTMLIdgTabsElement, ev: IdgTabsCustomEvent<HTMLIdgTabsElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgTabsElementEventMap>(type: K, listener: (this: HTMLIdgTabsElement, ev: IdgTabsCustomEvent<HTMLIdgTabsElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgTabsElement: {
+        prototype: HTMLIdgTabsElement;
+        new (): HTMLIdgTabsElement;
+    };
     interface HTMLIdgTextareaElementEventMap {
         "idgInput": ValueDetail;
         "idgChange": ValueDetail;
@@ -1816,6 +1947,9 @@ declare global {
         "idg-skeleton": HTMLIdgSkeletonElement;
         "idg-stat": HTMLIdgStatElement;
         "idg-switch": HTMLIdgSwitchElement;
+        "idg-tab": HTMLIdgTabElement;
+        "idg-tab-panel": HTMLIdgTabPanelElement;
+        "idg-tabs": HTMLIdgTabsElement;
         "idg-textarea": HTMLIdgTextareaElement;
         "idg-toast": HTMLIdgToastElement;
         "idg-toast-region": HTMLIdgToastRegionElement;
@@ -2838,6 +2972,86 @@ declare namespace LocalJSX {
          */
         "value"?: string;
     }
+    /**
+     * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
+     * host carries the tab role and state itself, so the relations to the panel, which sits beside it
+     * in the page, can be made between the two hosts.
+     */
+    interface IdgTab {
+        /**
+          * Keeps the tab in the list, where it is announced, but stops it being selected.
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * Set by the tabs: which way the list runs.
+          * @default "horizontal"
+         */
+        "orientation"?: TabsOrientation;
+        /**
+          * Set by the tabs: whether this tab is selected.
+          * @default false
+         */
+        "selected"?: boolean;
+        /**
+          * Set by the tabs: whether this tab is the one tab stop of the list.
+          * @default false
+         */
+        "tabbable"?: boolean;
+        /**
+          * Pairs the tab with the panel of the same value.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
+     * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
+     * reader can still move into it.
+     */
+    interface IdgTabPanel {
+        /**
+          * Set by the tabs: whether this panel's tab is selected.
+          * @default false
+         */
+        "selected"?: boolean;
+        /**
+          * Pairs the panel with the tab of the same value.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
+     * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
+     * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
+     * its position among its own kind as its value.
+     */
+    interface IdgTabs {
+        /**
+          * `automatic` selects a tab as the arrow keys reach it. `manual` only moves focus, and Enter or Space selects, which suits panels that are slow to show.
+          * @default "automatic"
+         */
+        "activation"?: TabsActivation;
+        /**
+          * The tab list's accessible name.
+         */
+        "label"?: string;
+        /**
+          * Fires when the user selects a tab, and not when `value` is set from script.
+         */
+        "onIdgChange"?: (event: IdgTabsCustomEvent<ValueDetail>) => void;
+        /**
+          * Which way the tab list runs.
+          * @default "horizontal"
+         */
+        "orientation"?: TabsOrientation;
+        /**
+          * The value of the selected tab. Without a match the first enabled tab is selected.
+          * @default ""
+         */
+        "value"?: string;
+    }
     interface IdgTextarea {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -3252,6 +3466,23 @@ declare namespace LocalJSX {
         "accessibleDescription": string;
         "invalid": boolean;
     }
+    interface IdgTabAttributes {
+        "value": string;
+        "disabled": boolean;
+        "selected": boolean;
+        "tabbable": boolean;
+        "orientation": TabsOrientation;
+    }
+    interface IdgTabPanelAttributes {
+        "value": string;
+        "selected": boolean;
+    }
+    interface IdgTabsAttributes {
+        "value": string;
+        "orientation": TabsOrientation;
+        "activation": TabsActivation;
+        "label": string;
+    }
     interface IdgTextareaAttributes {
         "name": string;
         "value": string;
@@ -3324,6 +3555,9 @@ declare namespace LocalJSX {
         "idg-skeleton": Omit<IdgSkeleton, keyof IdgSkeletonAttributes> & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes]?: IdgSkeleton[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `attr:${K}`]?: IdgSkeletonAttributes[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `prop:${K}`]?: IdgSkeleton[K] };
         "idg-stat": Omit<IdgStat, keyof IdgStatAttributes> & { [K in keyof IdgStat & keyof IdgStatAttributes]?: IdgStat[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `attr:${K}`]?: IdgStatAttributes[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `prop:${K}`]?: IdgStat[K] };
         "idg-switch": Omit<IdgSwitch, keyof IdgSwitchAttributes> & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes]?: IdgSwitch[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `attr:${K}`]?: IdgSwitchAttributes[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `prop:${K}`]?: IdgSwitch[K] };
+        "idg-tab": Omit<IdgTab, keyof IdgTabAttributes> & { [K in keyof IdgTab & keyof IdgTabAttributes]?: IdgTab[K] } & { [K in keyof IdgTab & keyof IdgTabAttributes as `attr:${K}`]?: IdgTabAttributes[K] } & { [K in keyof IdgTab & keyof IdgTabAttributes as `prop:${K}`]?: IdgTab[K] };
+        "idg-tab-panel": Omit<IdgTabPanel, keyof IdgTabPanelAttributes> & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes]?: IdgTabPanel[K] } & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes as `attr:${K}`]?: IdgTabPanelAttributes[K] } & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes as `prop:${K}`]?: IdgTabPanel[K] };
+        "idg-tabs": Omit<IdgTabs, keyof IdgTabsAttributes> & { [K in keyof IdgTabs & keyof IdgTabsAttributes]?: IdgTabs[K] } & { [K in keyof IdgTabs & keyof IdgTabsAttributes as `attr:${K}`]?: IdgTabsAttributes[K] } & { [K in keyof IdgTabs & keyof IdgTabsAttributes as `prop:${K}`]?: IdgTabs[K] };
         "idg-textarea": Omit<IdgTextarea, keyof IdgTextareaAttributes> & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes]?: IdgTextarea[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `attr:${K}`]?: IdgTextareaAttributes[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `prop:${K}`]?: IdgTextarea[K] };
         "idg-toast": Omit<IdgToast, keyof IdgToastAttributes> & { [K in keyof IdgToast & keyof IdgToastAttributes]?: IdgToast[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `attr:${K}`]?: IdgToastAttributes[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `prop:${K}`]?: IdgToast[K] };
         "idg-toast-region": Omit<IdgToastRegion, keyof IdgToastRegionAttributes> & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes]?: IdgToastRegion[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `attr:${K}`]?: IdgToastRegionAttributes[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `prop:${K}`]?: IdgToastRegion[K] };
@@ -3478,6 +3712,25 @@ declare module "@stencil/core" {
              */
             "idg-stat": LocalJSX.IntrinsicElements["idg-stat"] & JSXBase.HTMLAttributes<HTMLIdgStatElement>;
             "idg-switch": LocalJSX.IntrinsicElements["idg-switch"] & JSXBase.HTMLAttributes<HTMLIdgSwitchElement>;
+            /**
+             * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
+             * host carries the tab role and state itself, so the relations to the panel, which sits beside it
+             * in the page, can be made between the two hosts.
+             */
+            "idg-tab": LocalJSX.IntrinsicElements["idg-tab"] & JSXBase.HTMLAttributes<HTMLIdgTabElement>;
+            /**
+             * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
+             * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
+             * reader can still move into it.
+             */
+            "idg-tab-panel": LocalJSX.IntrinsicElements["idg-tab-panel"] & JSXBase.HTMLAttributes<HTMLIdgTabPanelElement>;
+            /**
+             * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
+             * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
+             * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
+             * its position among its own kind as its value.
+             */
+            "idg-tabs": LocalJSX.IntrinsicElements["idg-tabs"] & JSXBase.HTMLAttributes<HTMLIdgTabsElement>;
             "idg-textarea": LocalJSX.IntrinsicElements["idg-textarea"] & JSXBase.HTMLAttributes<HTMLIdgTextareaElement>;
             /**
              * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
