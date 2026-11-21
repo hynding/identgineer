@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { h } from "@stencil/vitest";
-import { renderControl as render, renderWithInternals, stubValidity } from "../../testing/form-internals";
+import {
+  renderControl as render,
+  renderWithInternals,
+  stubValidity,
+} from "../../testing/form-internals";
 import "./checkbox";
 
 function native(root: HTMLElement): HTMLInputElement {
@@ -91,13 +95,13 @@ describe("idg-checkbox events and form", () => {
     expect(internals.setFormValue).toHaveBeenLastCalledWith(null);
   });
 
-  it("does not submit a mixed checkbox that is checked", async () => {
+  it("submits by its checked state alone, as a native checkbox does when mixed", async () => {
     const { internals } = await renderWithInternals(
       <idg-checkbox checked indeterminate>
         A
       </idg-checkbox>,
     );
-    expect(internals.setFormValue).toHaveBeenLastCalledWith(null);
+    expect(internals.setFormValue).toHaveBeenLastCalledWith("on");
   });
 
   it("mirrors the native validity, anchored on the input", async () => {

@@ -6,11 +6,11 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
+import { CheckedDetail, ValueDetail } from "./utils/event-details";
 import { InputSize, InputType } from "./components/input/input-options";
-import { ValueDetail } from "./utils/event-details";
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
+export { CheckedDetail, ValueDetail } from "./utils/event-details";
 export { InputSize, InputType } from "./components/input/input-options";
-export { ValueDetail } from "./utils/event-details";
 export namespace Components {
     interface IdgButton {
         /**
@@ -59,6 +59,56 @@ export namespace Components {
           * @default "primary"
          */
         "variant": ButtonVariant;
+    }
+    interface IdgCheckbox {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: replaces the slotted text as the accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * Whether the choice satisfies its constraints.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "checked": boolean;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Shows a mixed state, such as a parent of partly selected children. A user choice clears it.
+          * @default false
+         */
+        "indeterminate": boolean;
+        /**
+          * Marks the choice as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "name"?: string;
+        /**
+          * Whether the choice is valid, showing the browser's message when it is not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Focuses the native checkbox.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * What is submitted while checked.
+          * @default "on"
+         */
+        "value": string;
     }
     interface IdgInput {
         /**
@@ -140,10 +190,191 @@ export namespace Components {
          */
         "value": string;
     }
+    /**
+     * Options are written as children, exactly as for a native select, and copied into the native
+     * select inside the component: the same markup works with or without a framework, and no option
+     * data has to be serialised into an attribute.
+     */
+    interface IdgSelect {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * Whether the choice satisfies its constraints.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "name"?: string;
+        /**
+          * Whether the choice is valid, showing the browser's message when it is not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Focuses the native select.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * @default "md"
+         */
+        "size": InputSize;
+        /**
+          * The value of the chosen option. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value": string;
+    }
+    interface IdgSwitch {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: replaces the slotted text as the accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * Whether the choice satisfies its constraints.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "checked": boolean;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Marks the choice as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "name"?: string;
+        /**
+          * Whether the choice is valid, showing the browser's message when it is not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Focuses the native input.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * What is submitted while checked.
+          * @default "on"
+         */
+        "value": string;
+    }
+    interface IdgTextarea {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        "autocapitalize"?: string;
+        "autocomplete"?: string;
+        /**
+          * Grows with its content, using `field-sizing` where it exists and a hidden twin elsewhere.
+          * @default false
+         */
+        "autogrow": boolean;
+        /**
+          * Whether the value satisfies its constraints.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * Shows the number of characters, against `maxlength` when there is one.
+          * @default false
+         */
+        "counter": boolean;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "maxlength"?: number;
+        "minlength"?: number;
+        "name"?: string;
+        "placeholder"?: string;
+        /**
+          * @default false
+         */
+        "readonly": boolean;
+        /**
+          * Whether the value is valid, showing the browser's message when it is not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Visible lines. With `autogrow` it is the minimum.
+          * @default 3
+         */
+        "rows": number;
+        /**
+          * Focuses the native textarea.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * @default "md"
+         */
+        "size": InputSize;
+        "spellcheck"?: string;
+        /**
+          * The current value. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value": string;
+    }
+}
+export interface IdgCheckboxCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgCheckboxElement;
 }
 export interface IdgInputCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgInputElement;
+}
+export interface IdgSelectCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgSelectElement;
+}
+export interface IdgSwitchCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgSwitchElement;
+}
+export interface IdgTextareaCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgTextareaElement;
 }
 declare global {
     interface HTMLIdgButtonElement extends Components.IdgButton, HTMLStencilElement {
@@ -151,6 +382,23 @@ declare global {
     var HTMLIdgButtonElement: {
         prototype: HTMLIdgButtonElement;
         new (): HTMLIdgButtonElement;
+    };
+    interface HTMLIdgCheckboxElementEventMap {
+        "idgChange": CheckedDetail;
+    }
+    interface HTMLIdgCheckboxElement extends Components.IdgCheckbox, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgCheckboxElementEventMap>(type: K, listener: (this: HTMLIdgCheckboxElement, ev: IdgCheckboxCustomEvent<HTMLIdgCheckboxElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgCheckboxElementEventMap>(type: K, listener: (this: HTMLIdgCheckboxElement, ev: IdgCheckboxCustomEvent<HTMLIdgCheckboxElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgCheckboxElement: {
+        prototype: HTMLIdgCheckboxElement;
+        new (): HTMLIdgCheckboxElement;
     };
     interface HTMLIdgInputElementEventMap {
         "idgInput": ValueDetail;
@@ -170,9 +418,71 @@ declare global {
         prototype: HTMLIdgInputElement;
         new (): HTMLIdgInputElement;
     };
+    interface HTMLIdgSelectElementEventMap {
+        "idgInput": ValueDetail;
+        "idgChange": ValueDetail;
+    }
+    /**
+     * Options are written as children, exactly as for a native select, and copied into the native
+     * select inside the component: the same markup works with or without a framework, and no option
+     * data has to be serialised into an attribute.
+     */
+    interface HTMLIdgSelectElement extends Components.IdgSelect, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgSelectElementEventMap>(type: K, listener: (this: HTMLIdgSelectElement, ev: IdgSelectCustomEvent<HTMLIdgSelectElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgSelectElementEventMap>(type: K, listener: (this: HTMLIdgSelectElement, ev: IdgSelectCustomEvent<HTMLIdgSelectElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgSelectElement: {
+        prototype: HTMLIdgSelectElement;
+        new (): HTMLIdgSelectElement;
+    };
+    interface HTMLIdgSwitchElementEventMap {
+        "idgChange": CheckedDetail;
+    }
+    interface HTMLIdgSwitchElement extends Components.IdgSwitch, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgSwitchElementEventMap>(type: K, listener: (this: HTMLIdgSwitchElement, ev: IdgSwitchCustomEvent<HTMLIdgSwitchElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgSwitchElementEventMap>(type: K, listener: (this: HTMLIdgSwitchElement, ev: IdgSwitchCustomEvent<HTMLIdgSwitchElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgSwitchElement: {
+        prototype: HTMLIdgSwitchElement;
+        new (): HTMLIdgSwitchElement;
+    };
+    interface HTMLIdgTextareaElementEventMap {
+        "idgInput": ValueDetail;
+        "idgChange": ValueDetail;
+    }
+    interface HTMLIdgTextareaElement extends Components.IdgTextarea, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgTextareaElementEventMap>(type: K, listener: (this: HTMLIdgTextareaElement, ev: IdgTextareaCustomEvent<HTMLIdgTextareaElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgTextareaElementEventMap>(type: K, listener: (this: HTMLIdgTextareaElement, ev: IdgTextareaCustomEvent<HTMLIdgTextareaElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgTextareaElement: {
+        prototype: HTMLIdgTextareaElement;
+        new (): HTMLIdgTextareaElement;
+    };
     interface HTMLElementTagNameMap {
         "idg-button": HTMLIdgButtonElement;
+        "idg-checkbox": HTMLIdgCheckboxElement;
         "idg-input": HTMLIdgInputElement;
+        "idg-select": HTMLIdgSelectElement;
+        "idg-switch": HTMLIdgSwitchElement;
+        "idg-textarea": HTMLIdgTextareaElement;
     }
 }
 declare namespace LocalJSX {
@@ -231,6 +541,52 @@ declare namespace LocalJSX {
           * @default "primary"
          */
         "variant"?: ButtonVariant;
+    }
+    interface IdgCheckbox {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: replaces the slotted text as the accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * @default false
+         */
+        "checked"?: boolean;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Shows a mixed state, such as a parent of partly selected children. A user choice clears it.
+          * @default false
+         */
+        "indeterminate"?: boolean;
+        /**
+          * Marks the choice as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "name"?: string;
+        /**
+          * Fires when the user toggles the checkbox.
+         */
+        "onIdgChange"?: (event: IdgCheckboxCustomEvent<CheckedDetail>) => void;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * What is submitted while checked.
+          * @default "on"
+         */
+        "value"?: string;
     }
     interface IdgInput {
         /**
@@ -312,6 +668,167 @@ declare namespace LocalJSX {
          */
         "value"?: string;
     }
+    /**
+     * Options are written as children, exactly as for a native select, and copied into the native
+     * select inside the component: the same markup works with or without a framework, and no option
+     * data has to be serialised into an attribute.
+     */
+    interface IdgSelect {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "name"?: string;
+        /**
+          * Fires when the user commits a choice.
+         */
+        "onIdgChange"?: (event: IdgSelectCustomEvent<ValueDetail>) => void;
+        /**
+          * Fires as the choice changes.
+         */
+        "onIdgInput"?: (event: IdgSelectCustomEvent<ValueDetail>) => void;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * @default "md"
+         */
+        "size"?: InputSize;
+        /**
+          * The value of the chosen option. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    interface IdgSwitch {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: replaces the slotted text as the accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * @default false
+         */
+        "checked"?: boolean;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Marks the choice as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "name"?: string;
+        /**
+          * Fires when the user flips the switch.
+         */
+        "onIdgChange"?: (event: IdgSwitchCustomEvent<CheckedDetail>) => void;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * What is submitted while checked.
+          * @default "on"
+         */
+        "value"?: string;
+    }
+    interface IdgTextarea {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        "autocapitalize"?: string;
+        "autocomplete"?: string;
+        /**
+          * Grows with its content, using `field-sizing` where it exists and a hidden twin elsewhere.
+          * @default false
+         */
+        "autogrow"?: boolean;
+        /**
+          * Shows the number of characters, against `maxlength` when there is one.
+          * @default false
+         */
+        "counter"?: boolean;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "maxlength"?: number;
+        "minlength"?: number;
+        "name"?: string;
+        /**
+          * Fires when the user commits a value, such as on blur.
+         */
+        "onIdgChange"?: (event: IdgTextareaCustomEvent<ValueDetail>) => void;
+        /**
+          * Fires on every edit.
+         */
+        "onIdgInput"?: (event: IdgTextareaCustomEvent<ValueDetail>) => void;
+        "placeholder"?: string;
+        /**
+          * @default false
+         */
+        "readonly"?: boolean;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * Visible lines. With `autogrow` it is the minimum.
+          * @default 3
+         */
+        "rows"?: number;
+        /**
+          * @default "md"
+         */
+        "size"?: InputSize;
+        "spellcheck"?: string;
+        /**
+          * The current value. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value"?: string;
+    }
 
     interface IdgButtonAttributes {
         "variant": ButtonVariant;
@@ -324,6 +841,17 @@ declare namespace LocalJSX {
         "rel": string;
         "fullWidth": boolean;
         "shortcut": string;
+    }
+    interface IdgCheckboxAttributes {
+        "name": string;
+        "value": string;
+        "checked": boolean;
+        "indeterminate": boolean;
+        "required": boolean;
+        "disabled": boolean;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
     }
     interface IdgInputAttributes {
         "type": InputType;
@@ -351,10 +879,54 @@ declare namespace LocalJSX {
         "accessibleDescription": string;
         "invalid": boolean;
     }
+    interface IdgSelectAttributes {
+        "name": string;
+        "value": string;
+        "required": boolean;
+        "disabled": boolean;
+        "size": InputSize;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
+    interface IdgSwitchAttributes {
+        "name": string;
+        "value": string;
+        "checked": boolean;
+        "required": boolean;
+        "disabled": boolean;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
+    interface IdgTextareaAttributes {
+        "name": string;
+        "value": string;
+        "placeholder": string;
+        "rows": number;
+        "required": boolean;
+        "disabled": boolean;
+        "readonly": boolean;
+        "minlength": number;
+        "maxlength": number;
+        "autocomplete": string;
+        "spellcheck": string;
+        "autocapitalize": string;
+        "size": InputSize;
+        "autogrow": boolean;
+        "counter": boolean;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
 
     interface IntrinsicElements {
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
+        "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`]?: IdgCheckboxAttributes[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
         "idg-input": Omit<IdgInput, keyof IdgInputAttributes> & { [K in keyof IdgInput & keyof IdgInputAttributes]?: IdgInput[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `attr:${K}`]?: IdgInputAttributes[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `prop:${K}`]?: IdgInput[K] };
+        "idg-select": Omit<IdgSelect, keyof IdgSelectAttributes> & { [K in keyof IdgSelect & keyof IdgSelectAttributes]?: IdgSelect[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `attr:${K}`]?: IdgSelectAttributes[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `prop:${K}`]?: IdgSelect[K] };
+        "idg-switch": Omit<IdgSwitch, keyof IdgSwitchAttributes> & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes]?: IdgSwitch[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `attr:${K}`]?: IdgSwitchAttributes[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `prop:${K}`]?: IdgSwitch[K] };
+        "idg-textarea": Omit<IdgTextarea, keyof IdgTextareaAttributes> & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes]?: IdgTextarea[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `attr:${K}`]?: IdgTextareaAttributes[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `prop:${K}`]?: IdgTextarea[K] };
     }
 }
 export { LocalJSX as JSX };
@@ -362,7 +934,16 @@ declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
             "idg-button": LocalJSX.IntrinsicElements["idg-button"] & JSXBase.HTMLAttributes<HTMLIdgButtonElement>;
+            "idg-checkbox": LocalJSX.IntrinsicElements["idg-checkbox"] & JSXBase.HTMLAttributes<HTMLIdgCheckboxElement>;
             "idg-input": LocalJSX.IntrinsicElements["idg-input"] & JSXBase.HTMLAttributes<HTMLIdgInputElement>;
+            /**
+             * Options are written as children, exactly as for a native select, and copied into the native
+             * select inside the component: the same markup works with or without a framework, and no option
+             * data has to be serialised into an attribute.
+             */
+            "idg-select": LocalJSX.IntrinsicElements["idg-select"] & JSXBase.HTMLAttributes<HTMLIdgSelectElement>;
+            "idg-switch": LocalJSX.IntrinsicElements["idg-switch"] & JSXBase.HTMLAttributes<HTMLIdgSwitchElement>;
+            "idg-textarea": LocalJSX.IntrinsicElements["idg-textarea"] & JSXBase.HTMLAttributes<HTMLIdgTextareaElement>;
         }
     }
 }

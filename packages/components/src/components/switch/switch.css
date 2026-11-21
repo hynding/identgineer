@@ -1,0 +1,36 @@
+.native {
+  --_thumb: calc(var(--_box) * 0.7);
+  --_gap: calc((var(--_box) - var(--_thumb)) / 2);
+
+  inline-size: calc(var(--_box) * 1.9);
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--idg-color-bg-subtle);
+}
+
+/* The thumb moves by its inline offset, so right-to-left text flips it without a rule. Where
+   movement is off the thumb jumps and only the colour fades. */
+.native::before {
+  inset-block-start: var(--_gap);
+  inset-inline-start: var(--_gap);
+  inline-size: var(--_thumb);
+  block-size: var(--_thumb);
+  border-radius: inherit;
+  background: var(--idg-color-text-muted);
+  transition-duration: calc(var(--idg-motion-duration-base) * var(--idg-motion-enabled));
+  transition-property: inset-inline-start;
+}
+
+.native:checked::before {
+  inset-inline-start: calc(100% - var(--_thumb) - var(--_gap));
+  background: var(--_mark);
+}
+
+@media (forced-colors: active) {
+  .native::before {
+    background: ButtonText;
+  }
+
+  .native:checked::before {
+    background: HighlightText;
+  }
+}

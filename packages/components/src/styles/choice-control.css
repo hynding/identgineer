@@ -1,0 +1,158 @@
+/* Shared by idg-checkbox, idg-radio and idg-switch: a drawn native input beside its label. The
+   whole label row is the target, so it is never smaller than the design's minimum target size
+   even where the drawn box is small. */
+
+:host {
+  display: inline-flex;
+  max-inline-size: 100%;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+  vertical-align: top;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.choice {
+  --_font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  --_box: calc(var(--_font-size) * 1.25);
+  --_edge: var(--idg-color-border-strong);
+  --_ring-width: 1px;
+  --_mark: var(--idg-color-on-accent);
+  --_fill: var(--idg-color-accent);
+
+  position: relative;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+  min-block-size: var(--idg-density-target-size);
+  cursor: pointer;
+  font-size: var(--_font-size);
+  line-height: var(--idg-font-body-line-height);
+  letter-spacing: var(--idg-font-body-letter-spacing);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The same boundary rule as the text controls: always a ring, withdrawn where the design has its
+   own border and style queries exist. */
+@container not style(--idg-border-control-style: none) {
+  .choice {
+    --_ring-width: 0px;
+  }
+}
+
+.native {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  inline-size: var(--_box);
+  block-size: var(--_box);
+  margin: 0;
+  border-width: var(--idg-border-control-width);
+  border-style: var(--idg-border-control-style);
+  border-color: var(--idg-border-control-color);
+  border-radius: var(--idg-shape-radius-sm);
+  background: var(--idg-surface-background);
+  box-shadow: inset 0 0 0 var(--_ring-width) var(--_edge);
+  color: inherit;
+  cursor: inherit;
+  appearance: none;
+  transition-property: background-color, border-color, box-shadow;
+  transition-duration: var(--idg-motion-duration-fast);
+  transition-timing-function: var(--idg-motion-easing-standard);
+}
+
+/* The drawn mark: a check, a dot or a thumb. It is hidden until its state is on. */
+.native::before {
+  content: "";
+  position: absolute;
+  background: var(--_mark);
+  transition-property: transform, opacity, inset-inline-start;
+  transition-duration: var(--idg-motion-duration-fast);
+  transition-timing-function: var(--idg-motion-easing-standard);
+}
+
+.native:focus-visible {
+  outline-width: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
+  outline-style: var(--idg-focus-ring-style);
+  outline-color: var(--idg-color-focus-ring);
+  outline-offset: var(--idg-focus-ring-offset);
+}
+
+.choice:hover {
+  --_edge: var(--idg-color-text-muted);
+}
+
+.native:checked,
+.native:indeterminate {
+  border-color: var(--_fill);
+  background: var(--_fill);
+  --_edge: var(--_fill);
+}
+
+.choice.invalid {
+  --_edge: var(--idg-color-danger);
+  --_ring-width: 2px;
+}
+
+.choice.invalid .native {
+  border-color: var(--idg-color-danger);
+}
+
+.choice.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.choice.disabled:hover {
+  --_edge: var(--idg-color-border-strong);
+}
+
+.text {
+  min-inline-size: 0;
+}
+
+.invalid-mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: 1.25em;
+  block-size: 1.25em;
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--idg-color-danger);
+  color: var(--idg-color-on-danger);
+  font-size: 0.8em;
+  font-weight: var(--idg-font-weight-bold);
+  line-height: 1;
+}
+
+@media (forced-colors: active) {
+  .native {
+    forced-color-adjust: none;
+    border-color: ButtonText;
+    background: Canvas;
+    --_mark: HighlightText;
+  }
+
+  .native:checked,
+  .native:indeterminate {
+    border-color: Highlight;
+    background: Highlight;
+  }
+
+  .native:focus-visible {
+    outline-color: Highlight;
+  }
+
+  .choice.disabled {
+    opacity: 1;
+  }
+
+  .choice.disabled .native {
+    border-color: GrayText;
+  }
+}

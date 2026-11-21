@@ -37,7 +37,11 @@ export function mirrorOptions(sources: readonly Element[], target: HTMLSelectEle
   }
 }
 
+function trimmedText(node: { textContent: string | null }): string {
+  return (node.textContent ?? "").trim();
+}
+
 /** The value an option submits: its value attribute, or else its text, as in a native select. */
 export function optionValue(option: Element): string {
-  return option.getAttribute("value") ?? option.textContent.trim();
+  return option.getAttribute("value") ?? trimmedText(option);
 }
