@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { h } from "@stencil/vitest";
-import { renderControl as render, renderWithInternals, stubValidity } from "../../testing/form-internals";
+import {
+  renderControl as render,
+  renderWithInternals,
+  stubValidity,
+} from "../../testing/form-internals";
 import "./textarea";
 
 function native(root: HTMLElement): HTMLTextAreaElement {

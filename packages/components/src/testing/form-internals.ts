@@ -44,6 +44,17 @@ export async function renderWithInternals(vnode: ReturnType<typeof h>, form: obj
 function installDefaultValidity(prototype: object): void {
   if (Object.prototype.hasOwnProperty.call(prototype, "validity")) return;
   stubValidity(prototype as HTMLElement, {});
+  // Only inputs have a value in the mock DOM; this gives a textarea or select one as a browser does.
+  const values = new WeakMap<object, string>();
+  Object.defineProperty(prototype, "value", {
+    configurable: true,
+    get(this: object) {
+      return values.get(this) ?? "";
+    },
+    set(this: object, next: string) {
+      values.set(this, next);
+    },
+  });
 }
 
 /** Renders a form control in the mock DOM, which has no constraint validation of its own. */

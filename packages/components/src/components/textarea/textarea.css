@@ -1,0 +1,61 @@
+.box {
+  align-items: stretch;
+}
+
+.native {
+  display: block;
+  resize: vertical;
+  /* A textarea is taller than one line, so the padding stays even when the density is tight. */
+  padding-block: max(var(--idg-density-control-padding-block), var(--idg-space-2xs));
+}
+
+.grow {
+  display: grid;
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.grow > * {
+  grid-area: 1 / 1;
+}
+
+/* Where field-sizing is missing, the hidden twin holds the same text and sets the height, and the
+   textarea fills it. Where it exists the twin only contributes the minimum number of rows. */
+.sizer {
+  padding-block: max(var(--idg-density-control-padding-block), var(--idg-space-2xs));
+  visibility: hidden;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  white-space: pre-wrap;
+}
+
+.grow .native {
+  block-size: 100%;
+  overflow: hidden;
+  resize: none;
+}
+
+@supports (field-sizing: content) {
+  .grow .native {
+    field-sizing: content;
+  }
+}
+
+.invalid-mark {
+  align-self: flex-start;
+  margin-block-start: var(--idg-space-2xs);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-block-start: var(--idg-space-3xs);
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  font-variant-numeric: tabular-nums;
+}
+
+.counter.over {
+  color: var(--idg-color-danger);
+  font-weight: var(--idg-font-weight-bold);
+}
