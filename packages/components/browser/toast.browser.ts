@@ -122,6 +122,33 @@ test.describe("idg-toast keyboard", () => {
     );
   });
 
+  test("Escape in a toast reached with Tab returns focus to where it came from", async ({
+    page,
+  }) => {
+    await openOverlays(page);
+    await showToast(page, { title: "Deleted", action: "Undo" });
+    await page.locator("#end").focus();
+    await page.keyboard.press("Tab");
+    await expect(toasts(page).locator('[part="action"]')).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(toasts(page)).toHaveCount(0);
+    await expect.poll(() => focusedId(page)).toBe("end");
+  });
+
+  test("Escape in a toast reached with no focus before returns focus to the last focused element", async ({
+    page,
+  }) => {
+    await openOverlays(page);
+    await showToast(page, { title: "Deleted", action: "Undo" });
+    await page.locator("#end").focus();
+    await page.locator("#end").blur();
+    // Reached with a click, so the focus event has no element it came from.
+    await toasts(page).locator('[part="action"]').focus();
+    await page.keyboard.press("Escape");
+    await expect(toasts(page)).toHaveCount(0);
+    await expect.poll(() => focusedId(page)).toBe("end");
+  });
+
   test("dismissing a focused toast moves focus to the next one", async ({ page }) => {
     await openOverlays(page);
     await showToast(page, { title: "First", action: "Undo" });
