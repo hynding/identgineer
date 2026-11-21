@@ -72,12 +72,34 @@ describe("idg-accordion-item rendering", () => {
     expect(open.root.shadowRoot?.getElementById(panelId)).toBe(part(open.root, "panel"));
   });
 
-  it("makes the panel a region named by its button when it is asked to", async () => {
-    const { root } = await render(<idg-accordion-item heading="Shipping">Body</idg-accordion-item>);
+  it("makes an open panel a region named by its button when it is asked to", async () => {
+    const { root } = await render(
+      <idg-accordion-item heading="Shipping" open>
+        Body
+      </idg-accordion-item>,
+    );
     const panel = part(root, "panel");
     expect(panel.getAttribute("role")).toBe("region");
     const labelId = panel.getAttribute("aria-labelledby") ?? "";
     expect(root.shadowRoot?.getElementById(labelId)).toBe(part(root, "trigger"));
+  });
+
+  it("leaves a closed panel out of the landmarks, even when it can be found by the browser", async () => {
+    const { root, waitForChanges } = await render(
+      <idg-accordion-item heading="Shipping" findInPage>
+        Body
+      </idg-accordion-item>,
+    );
+    const panel = part(root, "panel");
+    expect(panel.getAttribute("hidden")).toBe("until-found");
+    expect(panel.hasAttribute("role")).toBe(false);
+    expect(panel.hasAttribute("aria-labelledby")).toBe(false);
+    (root as ItemElement).open = true;
+    await waitForChanges();
+    expect(panel.getAttribute("role")).toBe("region");
+    (root as ItemElement).open = false;
+    await waitForChanges();
+    expect(panel.hasAttribute("role")).toBe(false);
   });
 
   it("leaves the panel plain when the accordion has too many items for regions", async () => {
