@@ -778,3 +778,210 @@ test.describe("navigation components accessibility", () => {
     await expect(page.locator("idg-tabs.hydrated")).toHaveCount(3);
   });
 });
+
+/** Adds a table built from nodes, not markup, to the page and waits until it has hydrated. */
+async function addNestedTables(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const make = (name: string, attributes: Record<string, string> = {}, text = "") => {
+      const element = document.createElement(name);
+      for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
+      if (text !== "") element.textContent = text;
+      return element;
+    };
+    const table = (id: string, key: string, head: string, rows: Element[]) => {
+      const host = make("idg-table", { id });
+      const body = make("tbody");
+      body.append(...rows);
+      const header = make("tr");
+      header.append(make("th", { scope: "col", "data-sortable": key }, head));
+      const sections = make("thead");
+      sections.append(header);
+      const native = make("table");
+      native.append(sections, body);
+      host.append(native);
+      return host;
+    };
+    const row = (...cells: Element[]) => {
+      const element = make("tr");
+      element.append(...cells);
+      return element;
+    };
+    const cell = (child: Element | string, attributes: Record<string, string> = {}) => {
+      const element = make("td", attributes);
+      if (typeof child === "string") element.textContent = child;
+      else element.append(child);
+      return element;
+    };
+    const inner = table("inner", "inner", "Inner", [row(cell("b")), row(cell("a"))]);
+    const plain = make("table", { id: "plain" });
+    const plainHead = make("thead");
+    const plainRow = make("tr");
+    plainRow.append(make("th", { scope: "col", "data-sortable": "plain" }, "Plain"));
+    plainHead.append(plainRow);
+    plain.append(plainHead);
+    const outer = table("outer", "outer", "Outer", [
+      row(cell(inner, { id: "span-cell" })),
+      row(cell(plain)),
+      row(cell("x")),
+    ]);
+    document.body.append(outer);
+    await Promise.all(
+      [outer, inner].map((host) =>
+        (host as unknown as { componentOnReady: () => Promise<void> }).componentOnReady(),
+      ),
+    );
+  });
+}
+
+test.describe("idg-table nested in a cell of another", () => {
+  test("stays responsive as the outer body gains and loses a spanning cell, each table keeping its own sorting", async ({
+    page,
+  }) => {
+    await openNavigation(page);
+    await addNestedTables(page);
+    const buttons = (selector: string) => page.locator(`${selector} button.idg-table-sort`);
+    const innerRows = () =>
+      page.locator("#inner tbody td").evaluateAll((cells) => cells.map((cell) => cell.textContent));
+    await expect(buttons("#outer > table > thead")).toHaveCount(1);
+    await expect(buttons("#inner")).toHaveCount(1);
+    // A plain table inside a cell is not the component's, and gets nothing from it.
+    await expect(page.locator("#plain button")).toHaveCount(0);
+    for (let toggle = 0; toggle < 3; toggle += 1) {
+      await page.locator("#span-cell").evaluate((cell) => {
+        cell.setAttribute("colspan", "2");
+      });
+      await expect(buttons("#outer > table > thead")).toHaveCount(0);
+      // The page answers, so the two tables are not chasing each other.
+      expect(await page.evaluate(() => 1 + 1)).toBe(2);
+      await expect(buttons("#inner")).toHaveCount(1);
+      await page.locator("#span-cell").evaluate((cell) => {
+        cell.removeAttribute("colspan");
+      });
+      await expect(buttons("#outer > table > thead")).toHaveCount(1);
+      await expect(buttons("#inner")).toHaveCount(1);
+    }
+    await buttons("#inner").click();
+    await expect.poll(innerRows).toEqual(["a", "b"]);
+    await expect(page.locator("#inner th")).toHaveAttribute("aria-sort", "ascending");
+    await expect(page.locator("#outer > table > thead th")).not.toHaveAttribute("aria-sort");
+    await buttons("#outer > table > thead").click();
+    await expect(page.locator("#outer > table > thead th")).toHaveAttribute(
+      "aria-sort",
+      "ascending",
+    );
+    await expect(page.locator("#inner th")).toHaveAttribute("aria-sort", "ascending");
+    await expect(page.locator("#plain th")).not.toHaveAttribute("aria-sort");
+    await expect.poll(innerRows).toEqual(["a", "b"]);
+  });
+});
+
+test.describe("idg-table with manual-sort and a loading row", () => {
+  test("keeps its sort button and focus when the page swaps the body for a spanning row", async ({
+    page,
+  }) => {
+    await openNavigation(page);
+    await page.evaluate(async () => {
+      const host = document.createElement("idg-table");
+      host.id = "manual";
+      host.setAttribute("manual-sort", "");
+      const native = document.createElement("table");
+      const head = document.createElement("thead");
+      const headRow = document.createElement("tr");
+      const header = document.createElement("th");
+      header.setAttribute("scope", "col");
+      header.setAttribute("data-sortable", "name");
+      header.textContent = "Name";
+      headRow.append(header);
+      head.append(headRow);
+      const body = document.createElement("tbody");
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.textContent = "Ada";
+      row.append(cell);
+      body.append(row);
+      native.append(head, body);
+      host.append(native);
+      Object.assign(window, { sorts: 0 });
+      host.addEventListener("idgSort", () => {
+        (window as unknown as { sorts: number }).sorts += 1;
+        const loading = document.createElement("tr");
+        const wide = document.createElement("td");
+        wide.setAttribute("colspan", "2");
+        wide.textContent = "Loading";
+        loading.append(wide);
+        body.replaceChildren(loading);
+      });
+      document.body.append(host);
+      await (host as unknown as { componentOnReady: () => Promise<void> }).componentOnReady();
+    });
+    const button = page.locator("#manual button.idg-table-sort");
+    await button.focus();
+    await page.keyboard.press("Enter");
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { sorts: number }).sorts))
+      .toBe(1);
+    await expect(page.locator("#manual tbody td")).toHaveText("Loading");
+    await expect(button).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { sorts: number }).sorts))
+      .toBe(2);
+  });
+
+  test("moves focus to the header when spanning cells take the button away", async ({ page }) => {
+    await openNavigation(page);
+    await page.evaluate(() => {
+      const host = document.getElementById("table");
+      const body = host?.querySelector("tbody");
+      if (!body) throw new Error("no body");
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.id = "late-span";
+      cell.setAttribute("colspan", "4");
+      row.append(cell);
+      Object.assign(window, { lateRow: row });
+    });
+    await page.locator("#table button.idg-table-sort").first().focus();
+    await page.evaluate(() => {
+      const row = (window as unknown as { lateRow: Element }).lateRow;
+      document.querySelector("#table tbody")?.append(row);
+    });
+    await expect(page.locator("#table button.idg-table-sort")).toHaveCount(0);
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.localName ?? ""))
+      .not.toBe("body");
+    await expect(page.locator("#table thead th").first()).toBeFocused();
+  });
+});
+
+test.describe("idg-pagination and focus the page moved", () => {
+  for (const mode of ["synchronously", "in a microtask", "in a frame"] as const) {
+    test(`leaves focus where the page put it ${mode}`, async ({ page }) => {
+      await openNavigation(page);
+      await page.evaluate((how) => {
+        const target = document.createElement("button");
+        target.id = "moved-to";
+        target.textContent = "Moved here";
+        document.body.append(target);
+        document.getElementById("pagination-buttons")?.addEventListener("idgPageChange", () => {
+          const move = () => {
+            target.focus();
+          };
+          if (how === "synchronously") move();
+          else if (how === "in a microtask") queueMicrotask(move);
+          else requestAnimationFrame(move);
+        });
+      }, mode);
+      const pager = page.locator("#pagination-buttons");
+      await pager.locator('[part="page"]').filter({ hasText: /^7$/ }).focus();
+      await page.keyboard.press("Enter");
+      await expect(pager).toHaveAttribute("page", "7");
+      await expect(page.locator("#moved-to")).toBeFocused();
+      // Give any late recovery time to show itself before it is judged.
+      await page.evaluate(
+        () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+      );
+      await expect(page.locator("#moved-to")).toBeFocused();
+    });
+  }
+});
