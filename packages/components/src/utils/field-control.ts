@@ -8,6 +8,7 @@ export interface FieldControl {
   accessibleDescription?: string | undefined;
   invalid?: boolean;
   required?: boolean;
+  setFocus?: () => Promise<void>;
 }
 
 export interface FieldState {
