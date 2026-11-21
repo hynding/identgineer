@@ -624,3 +624,186 @@ describe("idg-table nested and spanning", () => {
     watcher.restore();
   });
 });
+
+const nestedTable = (outerBody: unknown) => (
+  <idg-table id="outer">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col" data-sortable="outer">
+            Outer
+          </th>
+        </tr>
+      </thead>
+      <tbody>{outerBody}</tbody>
+    </table>
+  </idg-table>
+);
+
+const innerTable = (
+  <idg-table id="inner">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col" data-sortable="inner">
+            Inner
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>b</td>
+        </tr>
+        <tr>
+          <td>a</td>
+        </tr>
+      </tbody>
+    </table>
+  </idg-table>
+);
+
+describe("idg-table with a table nested in a cell", () => {
+  it("leaves the nested table's buttons and sort mark alone when its own body spans cells", async () => {
+    const { root, waitForChanges } = await render(
+      nestedTable(
+        <tr>
+          <td colSpan={2}>{innerTable}</td>
+        </tr>,
+      ),
+    );
+    const inner = within(root, "#inner");
+    expect(inner.querySelectorAll("button.idg-table-sort")).toHaveLength(1);
+    (inner as TableElement).sortKey = "inner";
+    await waitForChanges();
+    expect(within(inner, "th").getAttribute("aria-sort")).toBe("ascending");
+    (root as TableElement).sortKey = "outer";
+    await waitForChanges();
+    expect(within(inner, "th").getAttribute("aria-sort")).toBe("ascending");
+    expect(inner.querySelectorAll("button.idg-table-sort")).toHaveLength(1);
+  });
+
+  it("puts no sort buttons in a plain table nested in a cell", async () => {
+    const { root } = await render(
+      nestedTable(
+        <tr>
+          <td>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col" data-sortable="plain">
+                    Plain
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>x</td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>,
+      ),
+    );
+    expect(root.querySelectorAll("button.idg-table-sort")).toHaveLength(1);
+    expect(within(root, "table table th").hasAttribute("aria-sort")).toBe(false);
+  });
+
+  it("does not look again for changes inside a nested table", async () => {
+    const watcher = stubMutationObserver();
+    const { root, waitForChanges } = await render(
+      nestedTable(
+        <tr>
+          <td>{innerTable}</td>
+        </tr>,
+      ),
+    );
+    const outer = root as TableElement;
+    outer.sortKey = "outer";
+    await waitForChanges();
+    const header = within(root, "table > thead th");
+    header.removeAttribute("aria-sort");
+    watcher.notify([{ type: "childList", target: within(root, "#inner tbody") }]);
+    await waitForChanges();
+    expect(header.hasAttribute("aria-sort")).toBe(false);
+    watcher.notify([{ type: "childList", target: within(root, "table > tbody") }]);
+    await waitForChanges();
+    expect(header.getAttribute("aria-sort")).toBe("ascending");
+    watcher.restore();
+  });
+});
+
+describe("idg-table spanning cells added later", () => {
+  const rows = [
+    <tr>
+      <td>a</td>
+    </tr>,
+    <tr>
+      <td>b</td>
+    </tr>,
+  ];
+  const loading = () => {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.setAttribute("colspan", "2");
+    row.append(cell);
+    return row;
+  };
+
+  it("keeps its sort buttons with manual-sort, which moves no rows", async () => {
+    const watcher = stubMutationObserver();
+    const { root, waitForChanges } = await render(
+      <idg-table manualSort>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col" data-sortable="a">
+                A
+              </th>
+            </tr>
+          </thead>
+          <tbody>{rows}</tbody>
+        </table>
+      </idg-table>,
+    );
+    const body = within(root, "tbody");
+    body.replaceChildren(loading());
+    watcher.notify([{ type: "childList", target: body }]);
+    await waitForChanges();
+    expect(root.querySelectorAll("button.idg-table-sort")).toHaveLength(1);
+    watcher.restore();
+  });
+
+  it("moves focus to the header when the button it was on is taken away", async () => {
+    const watcher = stubMutationObserver();
+    const focus = vi.spyOn(
+      Object.getPrototypeOf(Object.getPrototypeOf(document.createElement("div"))) as HTMLElement,
+      "focus",
+    );
+    const { root, waitForChanges } = await render(
+      <idg-table>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col" data-sortable="a">
+                A
+              </th>
+            </tr>
+          </thead>
+          <tbody>{rows}</tbody>
+        </table>
+      </idg-table>,
+    );
+    const button = sortButton(root, 0);
+    Object.defineProperty(document, "activeElement", { configurable: true, get: () => button });
+    const body = within(root, "tbody");
+    body.replaceChildren(loading());
+    watcher.notify([{ type: "childList", target: body }]);
+    await waitForChanges();
+    expect(root.querySelectorAll("button.idg-table-sort")).toHaveLength(0);
+    expect(header(root, 0).getAttribute("tabindex")).toBe("-1");
+    expect(focus).toHaveBeenCalled();
+    Reflect.deleteProperty(document, "activeElement");
+    watcher.restore();
+  });
+});
