@@ -654,6 +654,78 @@ which the toast removes itself. Parts `toast`, `icon`, `heading`, `description`,
   and `ariaDescription` were not checked in Firefox or Safari. Headless Chromium draws overlay
   scrollbars, so the scroll lock's gutter is unit-tested rather than measured.
 
+## Navigation and data
+
+### `idg-tabs`, `idg-tab` and `idg-tab-panel`
+
+Tabs (WAI-ARIA APG). Write `idg-tab` and `idg-tab-panel` as children of `idg-tabs`; a tab and its
+panel are paired by `value`, or by position when no `value` is given. The tabs host puts the `role`
+and the selection state on the light-DOM `idg-tab` and `idg-tab-panel` elements themselves, so the
+`aria-controls` and `aria-labelledby` relations use element reflection and no ids are needed.
+
+`idg-tabs`: `value` (the selected tab; the first enabled one by default), `orientation`
+(`horizontal`, `vertical`), `activation` (`automatic` selects on focus, `manual` on Enter or Space),
+`label`. Event `idgChange` (`{ value }`); method `setFocus()`; parts `tablist`.
+`idg-tab`: `value`, `disabled`. `idg-tab-panel`: `value`.
+
+- **Keyboard.** Arrows move along the orientation (mirrored in right-to-left), Home and End jump,
+  disabled tabs are skipped. Only the selected tab is in the tab order, and the panel takes
+  `tabindex="0"` only when its content has nothing focusable.
+- Removing or disabling the selected tab selects a neighbour; tabs and panels added later are
+  picked up, and moving the whole component keeps the selection.
+
+### `idg-accordion` and `idg-accordion-item`
+
+Disclosure sections (APG accordion). Each item is a native button inside a heading, controlling its
+panel through ids in one shadow root.
+
+`idg-accordion`: `multiple` (several open at once; otherwise opening one closes the others),
+`headingLevel` (`heading-level`, 1 to 6, default 3), `findInPage` (`find-in-page`, default on).
+`idg-accordion-item`: `heading`, `value`, `open`, `disabled`. Event `idgToggle` (`{ value, open }`),
+fired for every change of `open`; method `setFocus()`; slots default and `heading` (rich heading
+content); parts `item`, `heading`, `trigger`, `title`, `chevron`, `panel`, `content`.
+
+- **Keyboard.** Enter and Space toggle; ArrowUp, ArrowDown, Home and End move between enabled
+  headers.
+- Closed panels use `hidden="until-found"`, so browser find-in-page and fragment links open them
+  (a disabled item is plainly hidden). With six items or fewer the panel is a named `region`.
+
+### `idg-table`
+
+Wraps a native `<table>` in the light DOM, so the table keeps its semantics. A constructable
+stylesheet in the `idg.components` layer, built from the `--idg-*` tokens, is adopted into the
+document or shadow root the table is in; no inline styles are used, so the strict CSP holds.
+
+Props: `label`, `stickyHeader` (`sticky-header`), `striped`, `maxHeight` (`max-height`), `minWidth`
+(`min-width`), `sortKey`, `sortDirection`, `manualSort`, `sortStatus` (the live-region text pattern).
+Event `idgSort` (`{ key, direction }`); parts `scroller`, `status`.
+
+- **Sorting.** Put `data-sortable` (its value is the key reported, else the column) on a `th` in the
+  `thead`; it becomes a button, the header gets `aria-sort`, and the rows are reordered stably,
+  numbers by value, empty cells last. A cell may give `data-sort-value`. With `manual-sort` the table only reports `idgSort` and the page orders the rows.
+- **Wide tables** scroll inside the component's own region, which is focusable and named by `label`
+  or the caption, so the page never scrolls sideways.
+
+### `idg-pagination`
+
+Page navigation. Props: `page` (1-based, mutable), `pageCount`, `siblings` (default 1),
+`boundaries` (default 1), `hrefTemplate` (`href-template`, with `{page}`), `label`, `previousLabel`,
+`nextLabel`, `pageLabel`. Event `idgPageChange` (`{ page }`, cancelable); parts `nav`, `list`, `page`,
+`previous`, `next`.
+
+The list keeps a constant number of slots so it does not jump as the page changes. Without
+`hrefTemplate` the controls are buttons; with it they are links, through `safeUrl`, and a template
+that gives an unsafe url falls back to buttons. Modified clicks (Ctrl, Shift, middle button) are left
+to the browser. The unavailable previous and next controls are disabled, and focus moves to the
+current page when the control that was pressed becomes unavailable.
+
+### `idg-breadcrumb` and `idg-breadcrumb-item`
+
+A `nav` landmark holding a list. `idg-breadcrumb`: `label` (default "Breadcrumb"), `separator`
+(`chevron`, `slash`; mirrored in right-to-left). `idg-breadcrumb-item`: `href`, `current`; the last
+item is the current page (`aria-current="page"`) and is not a link. Separators are hidden from
+assistive technology.
+
 ## Strict CSP and Trusted Types
 
 Every component is verified in Chromium against
