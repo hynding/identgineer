@@ -190,6 +190,17 @@ describe("idg-toast dismissal", () => {
     pointer(surface, "pointerup", 300);
     expect(seen).toEqual(["swipe"]);
   });
+
+  // A slow machine may coalesce the moves of a quick flick, so the release can come with no move
+  // before it, and away from the toast, which has not followed the pointer.
+  it("is dismissed by a swipe whose release lands off the toast with no move reported", async () => {
+    const { root } = await render(<div>{saved}</div>);
+    const toast = toastIn(root);
+    const seen = reasons(toast);
+    pointer(part(toast, "toast"), "pointerdown", 200);
+    pointer(document.documentElement, "pointerup", 400);
+    expect(seen).toEqual(["swipe"]);
+  });
 });
 
 describe("idg-toast timing", () => {
