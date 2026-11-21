@@ -255,16 +255,43 @@ test.describe("navigation components in a right-to-left page", () => {
     expect(first?.x ?? 0).toBeGreaterThan(last?.x ?? 0);
   });
 
-  test("a table starts its header text at the right", async ({ page }) => {
-    await openNavigationRightToLeft(page);
-    const header = "#table thead th:first-child";
-    await expect
-      .poll(async () => {
+  for (const width of [1100, 320]) {
+    test(`a table mirrors where its header text starts, at ${String(width)}px with the fallback fonts`, async ({
+      page,
+    }) => {
+      await page.route(/\.(woff2?|ttf|otf)(\?.*)?$/, (route) => route.abort());
+      await page.setViewportSize({ width, height: 800 });
+      await openNavigation(page);
+      // A column wider than its text, whatever the fonts, so the text has room to sit at either
+      // side. Set through the style object, which the strict policy allows.
+      await page.locator("#table thead th:first-child").evaluate((cell) => {
+        cell.style.minInlineSize = "16rem";
+      });
+      const header = "#table thead th:first-child";
+      /** The gap between the text and the cell's edge on the left and on the right. */
+      const gaps = async () => {
         const cell = await boxOf(page, header);
         const label = await boxOf(page, header, "button.idg-table-sort");
-        return cell.x + cell.width - (label.x + label.width) < label.x - cell.x;
-      })
-      .toBe(true);
-    await expectNoAxeViolations(page);
-  });
+        return { left: label.x - cell.x, right: cell.x + cell.width - (label.x + label.width) };
+      };
+      await expect.poll(async () => (await gaps()).right - (await gaps()).left).toBeGreaterThan(60);
+      const leftToRight = await gaps();
+      await page.locator("html").evaluate((element) => {
+        element.setAttribute("dir", "rtl");
+      });
+      await expect
+        .poll(async () => {
+          const mirrored = await gaps();
+          return (
+            Math.abs(mirrored.right - leftToRight.left) +
+            Math.abs(mirrored.left - leftToRight.right)
+          );
+        })
+        .toBeLessThan(3);
+      await expect
+        .poll(() => page.locator(header).evaluate((cell) => getComputedStyle(cell).direction))
+        .toBe("rtl");
+      await expectNoAxeViolations(page);
+    });
+  }
 });
