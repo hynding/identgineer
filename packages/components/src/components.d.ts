@@ -26,6 +26,8 @@ import { RadioSelectDetail } from "./components/radio/radio";
 import { SkeletonVariant } from "./components/skeleton/skeleton-options";
 import { StatDirection, StatSentiment } from "./components/stat/stat-options";
 import { TabsActivation, TabsOrientation } from "./components/tabs/tabs-options";
+import { SortDirection } from "./utils/sort-rows";
+import { TableSortDetail } from "./components/table/table-options";
 import { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 import { ToastPosition } from "./components/toast-region/toast-region-options";
 export { AccordionToggleDetail } from "./components/accordion/accordion-options";
@@ -49,6 +51,8 @@ export { RadioSelectDetail } from "./components/radio/radio";
 export { SkeletonVariant } from "./components/skeleton/skeleton-options";
 export { StatDirection, StatSentiment } from "./components/stat/stat-options";
 export { TabsActivation, TabsOrientation } from "./components/tabs/tabs-options";
+export { SortDirection } from "./utils/sort-rows";
+export { TableSortDetail } from "./components/table/table-options";
 export { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 export { ToastPosition } from "./components/toast-region/toast-region-options";
 export namespace Components {
@@ -1187,6 +1191,63 @@ export namespace Components {
         "value": string;
     }
     /**
+     * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
+     * header cells, row and column relations) and the component adds what a table needs around it: a
+     * surface drawn in the design language, a scroll region that is reachable by keyboard and named
+     * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
+     * sortable column headers.
+     * The cells are the page's own, so a shadow root cannot style them. The component adopts a
+     * constructable stylesheet into the document or shadow root the table lives in, scoped to
+     * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
+     * constructable stylesheets shows the table unstyled.
+     * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
+     * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
+     */
+    interface IdgTable {
+        /**
+          * The scroll region's accessible name, when the table is wider than the page. The caption is used without it.
+         */
+        "label"?: string;
+        /**
+          * Only marks the sorted column and reports the sort. Use it when you sort the rows yourself, such as on a server.
+          * @default false
+         */
+        "manualSort": boolean;
+        /**
+          * The tallest the region grows before its rows scroll, as a length such as `24rem`.
+         */
+        "maxHeight"?: string;
+        /**
+          * The narrowest the table is drawn before it scrolls sideways, as a length such as `40rem`.
+         */
+        "minWidth"?: string;
+        /**
+          * The direction of the sort.
+          * @default "ascending"
+         */
+        "sortDirection": SortDirection;
+        /**
+          * The key of the column the rows are sorted by. Empty leaves them in their original order.
+          * @default ""
+         */
+        "sortKey": string;
+        /**
+          * Announced after a sort, where `{column}` is the column and `{direction}` is ascending or descending.
+          * @default "Sorted by {column}, {direction}"
+         */
+        "sortStatus": string;
+        /**
+          * Keeps the header in view while the rows scroll. It needs `maxHeight`, as the rows scroll in the region.
+          * @default false
+         */
+        "stickyHeader": boolean;
+        /**
+          * Shades every other row.
+          * @default false
+         */
+        "striped": boolean;
+    }
+    /**
      * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
      * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
      * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
@@ -1445,6 +1506,10 @@ export interface IdgSelectCustomEvent<T> extends CustomEvent<T> {
 export interface IdgSwitchCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgSwitchElement;
+}
+export interface IdgTableCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgTableElement;
 }
 export interface IdgTabsCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -1925,6 +1990,36 @@ declare global {
         prototype: HTMLIdgTabPanelElement;
         new (): HTMLIdgTabPanelElement;
     };
+    interface HTMLIdgTableElementEventMap {
+        "idgSort": TableSortDetail;
+    }
+    /**
+     * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
+     * header cells, row and column relations) and the component adds what a table needs around it: a
+     * surface drawn in the design language, a scroll region that is reachable by keyboard and named
+     * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
+     * sortable column headers.
+     * The cells are the page's own, so a shadow root cannot style them. The component adopts a
+     * constructable stylesheet into the document or shadow root the table lives in, scoped to
+     * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
+     * constructable stylesheets shows the table unstyled.
+     * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
+     * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
+     */
+    interface HTMLIdgTableElement extends Components.IdgTable, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgTableElementEventMap>(type: K, listener: (this: HTMLIdgTableElement, ev: IdgTableCustomEvent<HTMLIdgTableElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgTableElementEventMap>(type: K, listener: (this: HTMLIdgTableElement, ev: IdgTableCustomEvent<HTMLIdgTableElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgTableElement: {
+        prototype: HTMLIdgTableElement;
+        new (): HTMLIdgTableElement;
+    };
     interface HTMLIdgTabsElementEventMap {
         "idgChange": ValueDetail;
     }
@@ -2055,6 +2150,7 @@ declare global {
         "idg-switch": HTMLIdgSwitchElement;
         "idg-tab": HTMLIdgTabElement;
         "idg-tab-panel": HTMLIdgTabPanelElement;
+        "idg-table": HTMLIdgTableElement;
         "idg-tabs": HTMLIdgTabsElement;
         "idg-textarea": HTMLIdgTextareaElement;
         "idg-toast": HTMLIdgToastElement;
@@ -3194,6 +3290,67 @@ declare namespace LocalJSX {
         "value"?: string;
     }
     /**
+     * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
+     * header cells, row and column relations) and the component adds what a table needs around it: a
+     * surface drawn in the design language, a scroll region that is reachable by keyboard and named
+     * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
+     * sortable column headers.
+     * The cells are the page's own, so a shadow root cannot style them. The component adopts a
+     * constructable stylesheet into the document or shadow root the table lives in, scoped to
+     * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
+     * constructable stylesheets shows the table unstyled.
+     * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
+     * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
+     */
+    interface IdgTable {
+        /**
+          * The scroll region's accessible name, when the table is wider than the page. The caption is used without it.
+         */
+        "label"?: string;
+        /**
+          * Only marks the sorted column and reports the sort. Use it when you sort the rows yourself, such as on a server.
+          * @default false
+         */
+        "manualSort"?: boolean;
+        /**
+          * The tallest the region grows before its rows scroll, as a length such as `24rem`.
+         */
+        "maxHeight"?: string;
+        /**
+          * The narrowest the table is drawn before it scrolls sideways, as a length such as `40rem`.
+         */
+        "minWidth"?: string;
+        /**
+          * Fires when the user chooses a column to sort by, and not when `sortKey` is set from script.
+         */
+        "onIdgSort"?: (event: IdgTableCustomEvent<TableSortDetail>) => void;
+        /**
+          * The direction of the sort.
+          * @default "ascending"
+         */
+        "sortDirection"?: SortDirection;
+        /**
+          * The key of the column the rows are sorted by. Empty leaves them in their original order.
+          * @default ""
+         */
+        "sortKey"?: string;
+        /**
+          * Announced after a sort, where `{column}` is the column and `{direction}` is ascending or descending.
+          * @default "Sorted by {column}, {direction}"
+         */
+        "sortStatus"?: string;
+        /**
+          * Keeps the header in view while the rows scroll. It needs `maxHeight`, as the rows scroll in the region.
+          * @default false
+         */
+        "stickyHeader"?: boolean;
+        /**
+          * Shades every other row.
+          * @default false
+         */
+        "striped"?: boolean;
+    }
+    /**
      * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
      * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
      * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
@@ -3663,6 +3820,17 @@ declare namespace LocalJSX {
         "value": string;
         "selected": boolean;
     }
+    interface IdgTableAttributes {
+        "label": string;
+        "stickyHeader": boolean;
+        "striped": boolean;
+        "maxHeight": string;
+        "minWidth": string;
+        "sortKey": string;
+        "sortDirection": SortDirection;
+        "manualSort": boolean;
+        "sortStatus": string;
+    }
     interface IdgTabsAttributes {
         "value": string;
         "orientation": TabsOrientation;
@@ -3745,6 +3913,7 @@ declare namespace LocalJSX {
         "idg-switch": Omit<IdgSwitch, keyof IdgSwitchAttributes> & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes]?: IdgSwitch[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `attr:${K}`]?: IdgSwitchAttributes[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `prop:${K}`]?: IdgSwitch[K] };
         "idg-tab": Omit<IdgTab, keyof IdgTabAttributes> & { [K in keyof IdgTab & keyof IdgTabAttributes]?: IdgTab[K] } & { [K in keyof IdgTab & keyof IdgTabAttributes as `attr:${K}`]?: IdgTabAttributes[K] } & { [K in keyof IdgTab & keyof IdgTabAttributes as `prop:${K}`]?: IdgTab[K] };
         "idg-tab-panel": Omit<IdgTabPanel, keyof IdgTabPanelAttributes> & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes]?: IdgTabPanel[K] } & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes as `attr:${K}`]?: IdgTabPanelAttributes[K] } & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes as `prop:${K}`]?: IdgTabPanel[K] };
+        "idg-table": Omit<IdgTable, keyof IdgTableAttributes> & { [K in keyof IdgTable & keyof IdgTableAttributes]?: IdgTable[K] } & { [K in keyof IdgTable & keyof IdgTableAttributes as `attr:${K}`]?: IdgTableAttributes[K] } & { [K in keyof IdgTable & keyof IdgTableAttributes as `prop:${K}`]?: IdgTable[K] };
         "idg-tabs": Omit<IdgTabs, keyof IdgTabsAttributes> & { [K in keyof IdgTabs & keyof IdgTabsAttributes]?: IdgTabs[K] } & { [K in keyof IdgTabs & keyof IdgTabsAttributes as `attr:${K}`]?: IdgTabsAttributes[K] } & { [K in keyof IdgTabs & keyof IdgTabsAttributes as `prop:${K}`]?: IdgTabs[K] };
         "idg-textarea": Omit<IdgTextarea, keyof IdgTextareaAttributes> & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes]?: IdgTextarea[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `attr:${K}`]?: IdgTextareaAttributes[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `prop:${K}`]?: IdgTextarea[K] };
         "idg-toast": Omit<IdgToast, keyof IdgToastAttributes> & { [K in keyof IdgToast & keyof IdgToastAttributes]?: IdgToast[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `attr:${K}`]?: IdgToastAttributes[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `prop:${K}`]?: IdgToast[K] };
@@ -3923,6 +4092,20 @@ declare module "@stencil/core" {
              * reader can still move into it.
              */
             "idg-tab-panel": LocalJSX.IntrinsicElements["idg-tab-panel"] & JSXBase.HTMLAttributes<HTMLIdgTabPanelElement>;
+            /**
+             * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
+             * header cells, row and column relations) and the component adds what a table needs around it: a
+             * surface drawn in the design language, a scroll region that is reachable by keyboard and named
+             * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
+             * sortable column headers.
+             * The cells are the page's own, so a shadow root cannot style them. The component adopts a
+             * constructable stylesheet into the document or shadow root the table lives in, scoped to
+             * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
+             * constructable stylesheets shows the table unstyled.
+             * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
+             * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
+             */
+            "idg-table": LocalJSX.IntrinsicElements["idg-table"] & JSXBase.HTMLAttributes<HTMLIdgTableElement>;
             /**
              * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
              * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
