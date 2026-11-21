@@ -1,0 +1,282 @@
+{
+  "$description": "Terracotta and warm cream with a classical serif display over a friendly sans body.",
+  "$extensions": {
+    "identgineer": {
+      "label": "Ember"
+    }
+  },
+  "common": {
+    "font": {
+      "family": {
+        "$type": "fontFamily",
+        "display": {
+          "$value": "{stack.serif-old-style}"
+        },
+        "body": {
+          "$value": "{stack.system-sans}"
+        },
+        "mono": {
+          "$value": "{stack.mono}"
+        }
+      },
+      "display": {
+        "weight": {
+          "$type": "fontWeight",
+          "$value": "{font.weight.semibold}"
+        },
+        "letter-spacing": {
+          "$type": "dimension",
+          "$value": "-0.01em"
+        },
+        "line-height": {
+          "$type": "number",
+          "$value": 1.15
+        }
+      },
+      "body": {
+        "letter-spacing": {
+          "$type": "dimension",
+          "$value": "0em"
+        },
+        "line-height": {
+          "$type": "number",
+          "$value": 1.65
+        }
+      }
+    }
+  },
+  "light": {
+    "color": {
+      "$type": "color",
+      "bg": {
+        "$value": "#fbf4ea"
+      },
+      "bg-subtle": {
+        "$value": "#f3e7d6"
+      },
+      "surface": {
+        "$value": "#fffaf2"
+      },
+      "surface-raised": {
+        "$value": "#ffffff"
+      },
+      "text": {
+        "$value": "#2e1a12"
+      },
+      "text-muted": {
+        "$value": "#6a4a3a"
+      },
+      "border": {
+        "$value": "#e3cfb8"
+      },
+      "border-strong": {
+        "$value": "#a07a5e"
+      },
+      "accent": {
+        "$value": "#b8482a"
+      },
+      "accent-hover": {
+        "$value": "#983a20"
+      },
+      "on-accent": {
+        "$value": "#fffaf2"
+      },
+      "accent-subtle": {
+        "$value": "#f6d9c9"
+      },
+      "on-accent-subtle": {
+        "$value": "#6e2410"
+      },
+      "link": {
+        "$value": "#a23a1e"
+      },
+      "focus-ring": {
+        "$value": "#c2410c"
+      },
+      "success": {
+        "$value": "{palette.green.700}"
+      },
+      "on-success": {
+        "$value": "{palette.neutral.0}"
+      },
+      "success-subtle": {
+        "$value": "{palette.green.100}"
+      },
+      "on-success-subtle": {
+        "$value": "{palette.green.900}"
+      },
+      "warning": {
+        "$value": "{palette.amber.400}"
+      },
+      "on-warning": {
+        "$value": "{palette.amber.950}"
+      },
+      "warning-subtle": {
+        "$value": "{palette.amber.100}"
+      },
+      "on-warning-subtle": {
+        "$value": "{palette.amber.900}"
+      },
+      "danger": {
+        "$value": "{palette.red.600}"
+      },
+      "on-danger": {
+        "$value": "{palette.neutral.0}"
+      },
+      "danger-subtle": {
+        "$value": "{palette.red.100}"
+      },
+      "on-danger-subtle": {
+        "$value": "{palette.red.900}"
+      },
+      "info": {
+        "$value": "{palette.blue.600}"
+      },
+      "on-info": {
+        "$value": "{palette.neutral.0}"
+      },
+      "info-subtle": {
+        "$value": "{palette.blue.100}"
+      },
+      "on-info-subtle": {
+        "$value": "{palette.blue.900}"
+      }
+    },
+    "gradient": {
+      "brand": {
+        "$type": "gradient",
+        "$value": [
+          {
+            "color": "#e9833f",
+            "position": 0
+          },
+          {
+            "color": "#b8482a",
+            "position": 0.5
+          },
+          {
+            "color": "#7a2e2a",
+            "position": 1
+          }
+        ]
+      }
+    }
+  },
+  "dark": {
+    "color": {
+      "$type": "color",
+      "bg": {
+        "$value": "#1c1210"
+      },
+      "bg-subtle": {
+        "$value": "#261915"
+      },
+      "surface": {
+        "$value": "#2b1d18"
+      },
+      "surface-raised": {
+        "$value": "#38261f"
+      },
+      "text": {
+        "$value": "#f6e9da"
+      },
+      "text-muted": {
+        "$value": "#cdb29c"
+      },
+      "border": {
+        "$value": "#4a342b"
+      },
+      "border-strong": {
+        "$value": "#8f6b57"
+      },
+      "accent": {
+        "$value": "#e8845a"
+      },
+      "accent-hover": {
+        "$value": "#f09a74"
+      },
+      "on-accent": {
+        "$value": "#1c1210"
+      },
+      "accent-subtle": {
+        "$value": "#4a2a1e"
+      },
+      "on-accent-subtle": {
+        "$value": "#fbd5c0"
+      },
+      "link": {
+        "$value": "#f4a27c"
+      },
+      "focus-ring": {
+        "$value": "#f2b37a"
+      },
+      "success": {
+        "$value": "{palette.green.400}"
+      },
+      "on-success": {
+        "$value": "{palette.green.950}"
+      },
+      "success-subtle": {
+        "$value": "{palette.green.900}"
+      },
+      "on-success-subtle": {
+        "$value": "{palette.green.200}"
+      },
+      "warning": {
+        "$value": "{palette.amber.400}"
+      },
+      "on-warning": {
+        "$value": "{palette.amber.950}"
+      },
+      "warning-subtle": {
+        "$value": "{palette.amber.900}"
+      },
+      "on-warning-subtle": {
+        "$value": "{palette.amber.200}"
+      },
+      "danger": {
+        "$value": "{palette.red.400}"
+      },
+      "on-danger": {
+        "$value": "{palette.red.950}"
+      },
+      "danger-subtle": {
+        "$value": "{palette.red.900}"
+      },
+      "on-danger-subtle": {
+        "$value": "{palette.red.200}"
+      },
+      "info": {
+        "$value": "{palette.blue.400}"
+      },
+      "on-info": {
+        "$value": "{palette.blue.950}"
+      },
+      "info-subtle": {
+        "$value": "{palette.blue.900}"
+      },
+      "on-info-subtle": {
+        "$value": "{palette.blue.200}"
+      }
+    },
+    "gradient": {
+      "brand": {
+        "$type": "gradient",
+        "$value": [
+          {
+            "color": "#f2b37a",
+            "position": 0
+          },
+          {
+            "color": "#e8845a",
+            "position": 0.5
+          },
+          {
+            "color": "#b8482a",
+            "position": 1
+          }
+        ]
+      }
+    }
+  }
+}

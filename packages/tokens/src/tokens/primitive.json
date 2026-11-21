@@ -1,0 +1,292 @@
+{
+  "$description": "Raw palettes, font stacks and scales. Palette and stack groups only feed aliases and are never emitted.",
+  "palette": {
+    "$type": "color",
+    "neutral": {
+      "0": {
+        "$value": "#ffffff"
+      },
+      "50": {
+        "$value": "#f8fafc"
+      },
+      "200": {
+        "$value": "#e2e8f0"
+      },
+      "500": {
+        "$value": "#64748b"
+      },
+      "600": {
+        "$value": "#475569"
+      },
+      "900": {
+        "$value": "#0f172a"
+      }
+    },
+    "green": {
+      "100": {
+        "$value": "#dcfce7"
+      },
+      "200": {
+        "$value": "#bbf7d0"
+      },
+      "400": {
+        "$value": "#4ade80"
+      },
+      "700": {
+        "$value": "#15803d"
+      },
+      "900": {
+        "$value": "#14532d"
+      },
+      "950": {
+        "$value": "#052e16"
+      }
+    },
+    "amber": {
+      "100": {
+        "$value": "#fef3c7"
+      },
+      "200": {
+        "$value": "#fde68a"
+      },
+      "400": {
+        "$value": "#fbbf24"
+      },
+      "900": {
+        "$value": "#78350f"
+      },
+      "950": {
+        "$value": "#451a03"
+      }
+    },
+    "red": {
+      "100": {
+        "$value": "#fee2e2"
+      },
+      "200": {
+        "$value": "#fecaca"
+      },
+      "400": {
+        "$value": "#f87171"
+      },
+      "600": {
+        "$value": "#dc2626"
+      },
+      "900": {
+        "$value": "#7f1d1d"
+      },
+      "950": {
+        "$value": "#450a0a"
+      }
+    },
+    "blue": {
+      "100": {
+        "$value": "#dbeafe"
+      },
+      "200": {
+        "$value": "#bfdbfe"
+      },
+      "400": {
+        "$value": "#60a5fa"
+      },
+      "600": {
+        "$value": "#2563eb"
+      },
+      "700": {
+        "$value": "#1d4ed8"
+      },
+      "900": {
+        "$value": "#1e3a8a"
+      },
+      "950": {
+        "$value": "#172554"
+      }
+    }
+  },
+  "stack": {
+    "$type": "fontFamily",
+    "system-sans": {
+      "$value": [
+        "system-ui",
+        "-apple-system",
+        "Segoe UI",
+        "Roboto",
+        "Helvetica Neue",
+        "Arial",
+        "sans-serif"
+      ]
+    },
+    "geometric": {
+      "$value": [
+        "Avenir Next",
+        "Avenir",
+        "Century Gothic",
+        "Futura",
+        "Segoe UI",
+        "system-ui",
+        "sans-serif"
+      ]
+    },
+    "humanist": {
+      "$value": [
+        "Seravek",
+        "Gill Sans Nova",
+        "Gill Sans",
+        "Trebuchet MS",
+        "Candara",
+        "Segoe UI",
+        "system-ui",
+        "sans-serif"
+      ]
+    },
+    "grotesque": {
+      "$value": ["Helvetica Neue", "Helvetica", "Arial", "Liberation Sans", "sans-serif"]
+    },
+    "heavy-sans": {
+      "$value": ["Arial Black", "Segoe UI Black", "Helvetica Neue", "Arial", "sans-serif"]
+    },
+    "serif-old-style": {
+      "$value": [
+        "Iowan Old Style",
+        "Palatino Linotype",
+        "Palatino",
+        "Book Antiqua",
+        "Georgia",
+        "serif"
+      ]
+    },
+    "serif-didone": {
+      "$value": ["Didot", "Bodoni 72", "Bodoni MT", "Playfair Display", "Times New Roman", "serif"]
+    },
+    "serif-book": {
+      "$value": ["Charter", "Bitstream Charter", "Sitka Text", "Cambria", "Georgia", "serif"]
+    },
+    "mono": {
+      "$value": [
+        "ui-monospace",
+        "SF Mono",
+        "Cascadia Code",
+        "Menlo",
+        "Consolas",
+        "DejaVu Sans Mono",
+        "Liberation Mono",
+        "monospace"
+      ]
+    }
+  },
+  "font": {
+    "weight": {
+      "$type": "fontWeight",
+      "light": {
+        "$value": 300
+      },
+      "regular": {
+        "$value": 400
+      },
+      "medium": {
+        "$value": 500
+      },
+      "semibold": {
+        "$value": 600
+      },
+      "bold": {
+        "$value": 700
+      },
+      "black": {
+        "$value": 900
+      }
+    },
+    "line-height": {
+      "$type": "number",
+      "tight": {
+        "$value": 1.1
+      },
+      "snug": {
+        "$value": 1.3
+      },
+      "normal": {
+        "$value": 1.5
+      },
+      "relaxed": {
+        "$value": 1.7
+      }
+    },
+    "letter-spacing": {
+      "$type": "dimension",
+      "tight": {
+        "$value": "-0.03em"
+      },
+      "snug": {
+        "$value": "-0.015em"
+      },
+      "normal": {
+        "$value": "0em"
+      },
+      "wide": {
+        "$value": "0.04em"
+      },
+      "wider": {
+        "$value": "0.08em"
+      }
+    },
+    "size": {
+      "$type": "dimension",
+      "$description": "Fluid type scale, 320px to 1280px viewports; minor third growing to major third.",
+      "step-neg1": {
+        "$value": "clamp(0.833rem, 0.811rem + 0.111vw, 0.9rem)"
+      },
+      "step-0": {
+        "$value": "clamp(1rem, 0.958rem + 0.208vw, 1.125rem)"
+      },
+      "step-1": {
+        "$value": "clamp(1.2rem, 1.131rem + 0.344vw, 1.406rem)"
+      },
+      "step-2": {
+        "$value": "clamp(1.44rem, 1.334rem + 0.53vw, 1.758rem)"
+      },
+      "step-3": {
+        "$value": "clamp(1.728rem, 1.572rem + 0.782vw, 2.197rem)"
+      },
+      "step-4": {
+        "$value": "clamp(2.074rem, 1.849rem + 1.122vw, 2.747rem)"
+      },
+      "step-5": {
+        "$value": "clamp(2.488rem, 2.173rem + 1.575vw, 3.433rem)"
+      },
+      "step-6": {
+        "$value": "clamp(2.986rem, 2.551rem + 2.176vw, 4.292rem)"
+      }
+    }
+  },
+  "space": {
+    "$type": "dimension",
+    "$description": "Fluid space scale, 320px to 1280px viewports.",
+    "3xs": {
+      "$value": "clamp(0.25rem, 0.24rem + 0.052vw, 0.281rem)"
+    },
+    "2xs": {
+      "$value": "clamp(0.5rem, 0.479rem + 0.104vw, 0.563rem)"
+    },
+    "xs": {
+      "$value": "clamp(0.75rem, 0.719rem + 0.156vw, 0.844rem)"
+    },
+    "s": {
+      "$value": "clamp(1rem, 0.958rem + 0.208vw, 1.125rem)"
+    },
+    "m": {
+      "$value": "clamp(1.5rem, 1.438rem + 0.313vw, 1.688rem)"
+    },
+    "l": {
+      "$value": "clamp(2rem, 1.917rem + 0.417vw, 2.25rem)"
+    },
+    "xl": {
+      "$value": "clamp(3rem, 2.875rem + 0.625vw, 3.375rem)"
+    },
+    "2xl": {
+      "$value": "clamp(4rem, 3.833rem + 0.833vw, 4.5rem)"
+    },
+    "3xl": {
+      "$value": "clamp(6rem, 5.75rem + 1.25vw, 6.75rem)"
+    }
+  }
+}
