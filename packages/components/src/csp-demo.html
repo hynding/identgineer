@@ -33,6 +33,48 @@
         <idg-button type="submit">Submit</idg-button>
         <idg-button type="reset" variant="secondary">Reset</idg-button>
       </form>
+      <h1>Sign in</h1>
+      <form id="signin" class="stack" method="get" action="/csp-demo.html">
+        <idg-field label="Email" hint="The address you registered with" required>
+          <idg-input name="email" type="email" autocomplete="username" required>
+            <span slot="start" aria-hidden="true">@</span>
+          </idg-input>
+        </idg-field>
+        <idg-field label="Password" hint="At least 12 characters" required>
+          <idg-input
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            minlength="12"
+            required
+            reveal
+          ></idg-input>
+        </idg-field>
+        <idg-field label="Workspace" optional-text="optional">
+          <idg-select name="workspace">
+            <option value="">Personal</option>
+            <optgroup label="Teams">
+              <option value="design">Design</option>
+              <option value="research">Research</option>
+            </optgroup>
+          </idg-select>
+        </idg-field>
+        <idg-field label="Second step">
+          <idg-radio-group name="second-step" value="app">
+            <idg-radio value="app">Authenticator app</idg-radio>
+            <idg-radio value="sms">Text message</idg-radio>
+          </idg-radio-group>
+        </idg-field>
+        <idg-field label="Note to the admin" optional-text="optional">
+          <idg-textarea name="note" autogrow counter maxlength="200"></idg-textarea>
+        </idg-field>
+        <idg-checkbox name="remember" checked>Keep me signed in</idg-checkbox>
+        <idg-switch name="alerts">Email me about new sign-ins</idg-switch>
+        <div class="row">
+          <idg-button type="submit">Sign in</idg-button>
+          <idg-button type="reset" variant="secondary">Clear</idg-button>
+        </div>
+      </form>
     </main>
   </body>
 </html>

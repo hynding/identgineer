@@ -1,0 +1,32 @@
+.native {
+  border-radius: 50%;
+}
+
+.native::before {
+  inset: 24%;
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.4);
+}
+
+/* A radio is filled with a dot, not the whole box, so it reads as a radio without colour. */
+.native:checked {
+  background: var(--idg-surface-background);
+}
+
+.native:checked::before {
+  background: var(--_fill);
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (forced-colors: active) {
+  .native:checked {
+    background: Canvas;
+    border-color: Highlight;
+  }
+
+  .native:checked::before {
+    background: Highlight;
+  }
+}

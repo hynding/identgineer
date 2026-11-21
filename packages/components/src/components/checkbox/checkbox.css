@@ -1,0 +1,18 @@
+.native::before {
+  inset: 15%;
+  clip-path: polygon(14% 52%, 0 66%, 40% 100%, 100% 22%, 86% 8%, 40% 72%);
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+.native:checked::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* The mixed state is a bar, and wins over a check. */
+.native[type="checkbox"]:indeterminate::before {
+  clip-path: inset(40% 0);
+  opacity: 1;
+  transform: scale(1);
+}

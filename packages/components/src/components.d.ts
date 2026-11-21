@@ -6,7 +6,13 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
+import { CheckedDetail, ValueDetail } from "./utils/event-details";
+import { InputSize, InputType } from "./components/input/input-options";
+import { RadioSelectDetail } from "./components/radio/radio";
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
+export { CheckedDetail, ValueDetail } from "./utils/event-details";
+export { InputSize, InputType } from "./components/input/input-options";
+export { RadioSelectDetail } from "./components/radio/radio";
 export namespace Components {
     interface IdgButton {
         /**
@@ -56,6 +62,457 @@ export namespace Components {
          */
         "variant": ButtonVariant;
     }
+    interface IdgCheckbox {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: replaces the slotted text as the accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * Whether the choice satisfies its constraints.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "checked": boolean;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Shows a mixed state, such as a parent of partly selected children. A user choice clears it.
+          * @default false
+         */
+        "indeterminate": boolean;
+        /**
+          * Marks the choice as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "name"?: string;
+        /**
+          * Whether the choice is valid, showing the browser's message when it is not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Focuses the native checkbox.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * What is submitted while checked.
+          * @default "on"
+         */
+        "value": string;
+    }
+    /**
+     * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
+     * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
+     * reference cannot cross a shadow boundary, so their text is handed to the control as properties
+     * and the control applies it to its own native element.
+     */
+    interface IdgField {
+        /**
+          * The error message. Setting it marks the control invalid and announces the message.
+         */
+        "error"?: string;
+        /**
+          * Help text. Shown when the UX mode turns hints on, and always read with the control.
+         */
+        "hint"?: string;
+        /**
+          * The visible label, and the control's accessible name.
+         */
+        "label"?: string;
+        /**
+          * Text such as "optional" shown beside the label of a field that is not required.
+         */
+        "optionalText"?: string;
+        /**
+          * Marks the control required and shows a star.
+          * @default false
+         */
+        "required": boolean;
+    }
+    interface IdgInput {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        "autocapitalize"?: string;
+        "autocomplete"?: string;
+        /**
+          * Whether the value satisfies its constraints. Fires no UI.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        "enterkeyhint"?: string;
+        "inputmode"?: string;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "max"?: string;
+        "maxlength"?: number;
+        "min"?: string;
+        "minlength"?: number;
+        /**
+          * The name the value is submitted under.
+         */
+        "name"?: string;
+        "pattern"?: string;
+        "placeholder"?: string;
+        /**
+          * @default false
+         */
+        "readonly": boolean;
+        /**
+          * Whether the value is valid, showing the browser's message when it is not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Adds a button that shows a password as text. Only for `type="password"`.
+          * @default false
+         */
+        "reveal": boolean;
+        /**
+          * The name of the reveal button.
+          * @default "Show password"
+         */
+        "revealLabel": string;
+        /**
+          * Focuses the native input.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * Control size. Never smaller than the design's minimum target size.
+          * @default "md"
+         */
+        "size": InputSize;
+        "spellcheck"?: string;
+        "step"?: string;
+        /**
+          * What kind of text the control takes. Unknown values fall back to `text`.
+          * @default "text"
+         */
+        "type": InputType;
+        /**
+          * The current value. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
+     * as set by the group are how it passes state down, because radios in separate shadow roots are
+     * not a native radio group.
+     */
+    interface IdgRadio {
+        /**
+          * Set by the group from its value.
+          * @default false
+         */
+        "checked": boolean;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by the group: whether the whole group is disabled.
+          * @default false
+         */
+        "groupDisabled": boolean;
+        /**
+          * Set by the group: marks the group's value as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        /**
+          * Set by the group: this radio's place, from 1.
+         */
+        "position"?: number;
+        /**
+          * Focuses the native radio.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * Set by the group: how many radios the group holds.
+         */
+        "setSize"?: number;
+        /**
+          * Set by the group: whether this radio is the group's one tab stop.
+          * @default true
+         */
+        "tabbable": boolean;
+        /**
+          * What the group takes as its value when this radio is chosen.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
+     * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
+     * its radios, is the form control.
+     */
+    interface IdgRadioGroup {
+        /**
+          * Set by idg-field: the hint and error text, as the group's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: the group's accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * Whether a choice has been made when one is required.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by idg-field, or by you: marks the choice as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "name"?: string;
+        /**
+          * How the radios are laid out.
+          * @default "vertical"
+         */
+        "orientation": Orientation;
+        /**
+          * Whether a choice has been made, showing the browser's message when it has not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Focuses the radio that is the group's tab stop.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * The value of the chosen radio. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * Options are written as children, exactly as for a native select, and copied into the native
+     * select inside the component: the same markup works with or without a framework, and no option
+     * data has to be serialised into an attribute.
+     */
+    interface IdgSelect {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * Whether the choice satisfies its constraints.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "name"?: string;
+        /**
+          * Whether the choice is valid, showing the browser's message when it is not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Focuses the native select.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * @default "md"
+         */
+        "size": InputSize;
+        /**
+          * The value of the chosen option. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value": string;
+    }
+    interface IdgSwitch {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: replaces the slotted text as the accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * Whether the choice satisfies its constraints.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "checked": boolean;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Marks the choice as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "name"?: string;
+        /**
+          * Whether the choice is valid, showing the browser's message when it is not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Focuses the native input.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * What is submitted while checked.
+          * @default "on"
+         */
+        "value": string;
+    }
+    interface IdgTextarea {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        "autocapitalize"?: string;
+        "autocomplete"?: string;
+        /**
+          * Grows with its content, using `field-sizing` where it exists and a hidden twin elsewhere.
+          * @default false
+         */
+        "autogrow": boolean;
+        /**
+          * Whether the value satisfies its constraints.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * Shows the number of characters, against `maxlength` when there is one.
+          * @default false
+         */
+        "counter": boolean;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "maxlength"?: number;
+        "minlength"?: number;
+        "name"?: string;
+        "placeholder"?: string;
+        /**
+          * @default false
+         */
+        "readonly": boolean;
+        /**
+          * Whether the value is valid, showing the browser's message when it is not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Visible lines. With `autogrow` it is the minimum.
+          * @default 3
+         */
+        "rows": number;
+        /**
+          * Focuses the native textarea.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * @default "md"
+         */
+        "size": InputSize;
+        "spellcheck"?: string;
+        /**
+          * The current value. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value": string;
+    }
+}
+export interface IdgCheckboxCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgCheckboxElement;
+}
+export interface IdgInputCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgInputElement;
+}
+export interface IdgRadioCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgRadioElement;
+}
+export interface IdgRadioGroupCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgRadioGroupElement;
+}
+export interface IdgSelectCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgSelectElement;
+}
+export interface IdgSwitchCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgSwitchElement;
+}
+export interface IdgTextareaCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgTextareaElement;
 }
 declare global {
     interface HTMLIdgButtonElement extends Components.IdgButton, HTMLStencilElement {
@@ -64,8 +521,165 @@ declare global {
         prototype: HTMLIdgButtonElement;
         new (): HTMLIdgButtonElement;
     };
+    interface HTMLIdgCheckboxElementEventMap {
+        "idgChange": CheckedDetail;
+    }
+    interface HTMLIdgCheckboxElement extends Components.IdgCheckbox, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgCheckboxElementEventMap>(type: K, listener: (this: HTMLIdgCheckboxElement, ev: IdgCheckboxCustomEvent<HTMLIdgCheckboxElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgCheckboxElementEventMap>(type: K, listener: (this: HTMLIdgCheckboxElement, ev: IdgCheckboxCustomEvent<HTMLIdgCheckboxElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgCheckboxElement: {
+        prototype: HTMLIdgCheckboxElement;
+        new (): HTMLIdgCheckboxElement;
+    };
+    /**
+     * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
+     * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
+     * reference cannot cross a shadow boundary, so their text is handed to the control as properties
+     * and the control applies it to its own native element.
+     */
+    interface HTMLIdgFieldElement extends Components.IdgField, HTMLStencilElement {
+    }
+    var HTMLIdgFieldElement: {
+        prototype: HTMLIdgFieldElement;
+        new (): HTMLIdgFieldElement;
+    };
+    interface HTMLIdgInputElementEventMap {
+        "idgInput": ValueDetail;
+        "idgChange": ValueDetail;
+    }
+    interface HTMLIdgInputElement extends Components.IdgInput, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgInputElementEventMap>(type: K, listener: (this: HTMLIdgInputElement, ev: IdgInputCustomEvent<HTMLIdgInputElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgInputElementEventMap>(type: K, listener: (this: HTMLIdgInputElement, ev: IdgInputCustomEvent<HTMLIdgInputElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgInputElement: {
+        prototype: HTMLIdgInputElement;
+        new (): HTMLIdgInputElement;
+    };
+    interface HTMLIdgRadioElementEventMap {
+        "idgSelect": RadioSelectDetail;
+    }
+    /**
+     * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
+     * as set by the group are how it passes state down, because radios in separate shadow roots are
+     * not a native radio group.
+     */
+    interface HTMLIdgRadioElement extends Components.IdgRadio, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgRadioElementEventMap>(type: K, listener: (this: HTMLIdgRadioElement, ev: IdgRadioCustomEvent<HTMLIdgRadioElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgRadioElementEventMap>(type: K, listener: (this: HTMLIdgRadioElement, ev: IdgRadioCustomEvent<HTMLIdgRadioElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgRadioElement: {
+        prototype: HTMLIdgRadioElement;
+        new (): HTMLIdgRadioElement;
+    };
+    interface HTMLIdgRadioGroupElementEventMap {
+        "idgChange": ValueDetail;
+    }
+    /**
+     * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
+     * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
+     * its radios, is the form control.
+     */
+    interface HTMLIdgRadioGroupElement extends Components.IdgRadioGroup, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgRadioGroupElementEventMap>(type: K, listener: (this: HTMLIdgRadioGroupElement, ev: IdgRadioGroupCustomEvent<HTMLIdgRadioGroupElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgRadioGroupElementEventMap>(type: K, listener: (this: HTMLIdgRadioGroupElement, ev: IdgRadioGroupCustomEvent<HTMLIdgRadioGroupElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgRadioGroupElement: {
+        prototype: HTMLIdgRadioGroupElement;
+        new (): HTMLIdgRadioGroupElement;
+    };
+    interface HTMLIdgSelectElementEventMap {
+        "idgInput": ValueDetail;
+        "idgChange": ValueDetail;
+    }
+    /**
+     * Options are written as children, exactly as for a native select, and copied into the native
+     * select inside the component: the same markup works with or without a framework, and no option
+     * data has to be serialised into an attribute.
+     */
+    interface HTMLIdgSelectElement extends Components.IdgSelect, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgSelectElementEventMap>(type: K, listener: (this: HTMLIdgSelectElement, ev: IdgSelectCustomEvent<HTMLIdgSelectElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgSelectElementEventMap>(type: K, listener: (this: HTMLIdgSelectElement, ev: IdgSelectCustomEvent<HTMLIdgSelectElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgSelectElement: {
+        prototype: HTMLIdgSelectElement;
+        new (): HTMLIdgSelectElement;
+    };
+    interface HTMLIdgSwitchElementEventMap {
+        "idgChange": CheckedDetail;
+    }
+    interface HTMLIdgSwitchElement extends Components.IdgSwitch, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgSwitchElementEventMap>(type: K, listener: (this: HTMLIdgSwitchElement, ev: IdgSwitchCustomEvent<HTMLIdgSwitchElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgSwitchElementEventMap>(type: K, listener: (this: HTMLIdgSwitchElement, ev: IdgSwitchCustomEvent<HTMLIdgSwitchElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgSwitchElement: {
+        prototype: HTMLIdgSwitchElement;
+        new (): HTMLIdgSwitchElement;
+    };
+    interface HTMLIdgTextareaElementEventMap {
+        "idgInput": ValueDetail;
+        "idgChange": ValueDetail;
+    }
+    interface HTMLIdgTextareaElement extends Components.IdgTextarea, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgTextareaElementEventMap>(type: K, listener: (this: HTMLIdgTextareaElement, ev: IdgTextareaCustomEvent<HTMLIdgTextareaElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgTextareaElementEventMap>(type: K, listener: (this: HTMLIdgTextareaElement, ev: IdgTextareaCustomEvent<HTMLIdgTextareaElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgTextareaElement: {
+        prototype: HTMLIdgTextareaElement;
+        new (): HTMLIdgTextareaElement;
+    };
     interface HTMLElementTagNameMap {
         "idg-button": HTMLIdgButtonElement;
+        "idg-checkbox": HTMLIdgCheckboxElement;
+        "idg-field": HTMLIdgFieldElement;
+        "idg-input": HTMLIdgInputElement;
+        "idg-radio": HTMLIdgRadioElement;
+        "idg-radio-group": HTMLIdgRadioGroupElement;
+        "idg-select": HTMLIdgSelectElement;
+        "idg-switch": HTMLIdgSwitchElement;
+        "idg-textarea": HTMLIdgTextareaElement;
     }
 }
 declare namespace LocalJSX {
@@ -125,6 +739,417 @@ declare namespace LocalJSX {
          */
         "variant"?: ButtonVariant;
     }
+    interface IdgCheckbox {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: replaces the slotted text as the accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * @default false
+         */
+        "checked"?: boolean;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Shows a mixed state, such as a parent of partly selected children. A user choice clears it.
+          * @default false
+         */
+        "indeterminate"?: boolean;
+        /**
+          * Marks the choice as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "name"?: string;
+        /**
+          * Fires when the user toggles the checkbox.
+         */
+        "onIdgChange"?: (event: IdgCheckboxCustomEvent<CheckedDetail>) => void;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * What is submitted while checked.
+          * @default "on"
+         */
+        "value"?: string;
+    }
+    /**
+     * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
+     * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
+     * reference cannot cross a shadow boundary, so their text is handed to the control as properties
+     * and the control applies it to its own native element.
+     */
+    interface IdgField {
+        /**
+          * The error message. Setting it marks the control invalid and announces the message.
+         */
+        "error"?: string;
+        /**
+          * Help text. Shown when the UX mode turns hints on, and always read with the control.
+         */
+        "hint"?: string;
+        /**
+          * The visible label, and the control's accessible name.
+         */
+        "label"?: string;
+        /**
+          * Text such as "optional" shown beside the label of a field that is not required.
+         */
+        "optionalText"?: string;
+        /**
+          * Marks the control required and shows a star.
+          * @default false
+         */
+        "required"?: boolean;
+    }
+    interface IdgInput {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        "autocapitalize"?: string;
+        "autocomplete"?: string;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        "enterkeyhint"?: string;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        "inputmode"?: string;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "max"?: string;
+        "maxlength"?: number;
+        "min"?: string;
+        "minlength"?: number;
+        /**
+          * The name the value is submitted under.
+         */
+        "name"?: string;
+        /**
+          * Fires when the user commits a value, such as on blur or Enter.
+         */
+        "onIdgChange"?: (event: IdgInputCustomEvent<ValueDetail>) => void;
+        /**
+          * Fires on every edit.
+         */
+        "onIdgInput"?: (event: IdgInputCustomEvent<ValueDetail>) => void;
+        "pattern"?: string;
+        "placeholder"?: string;
+        /**
+          * @default false
+         */
+        "readonly"?: boolean;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * Adds a button that shows a password as text. Only for `type="password"`.
+          * @default false
+         */
+        "reveal"?: boolean;
+        /**
+          * The name of the reveal button.
+          * @default "Show password"
+         */
+        "revealLabel"?: string;
+        /**
+          * Control size. Never smaller than the design's minimum target size.
+          * @default "md"
+         */
+        "size"?: InputSize;
+        "spellcheck"?: string;
+        "step"?: string;
+        /**
+          * What kind of text the control takes. Unknown values fall back to `text`.
+          * @default "text"
+         */
+        "type"?: InputType;
+        /**
+          * The current value. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
+     * as set by the group are how it passes state down, because radios in separate shadow roots are
+     * not a native radio group.
+     */
+    interface IdgRadio {
+        /**
+          * Set by the group from its value.
+          * @default false
+         */
+        "checked"?: boolean;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * Set by the group: whether the whole group is disabled.
+          * @default false
+         */
+        "groupDisabled"?: boolean;
+        /**
+          * Set by the group: marks the group's value as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        /**
+          * Fires when the user chooses this radio. The group listens; you listen to the group.
+         */
+        "onIdgSelect"?: (event: IdgRadioCustomEvent<RadioSelectDetail>) => void;
+        /**
+          * Set by the group: this radio's place, from 1.
+         */
+        "position"?: number;
+        /**
+          * Set by the group: how many radios the group holds.
+         */
+        "setSize"?: number;
+        /**
+          * Set by the group: whether this radio is the group's one tab stop.
+          * @default true
+         */
+        "tabbable"?: boolean;
+        /**
+          * What the group takes as its value when this radio is chosen.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
+     * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
+     * its radios, is the form control.
+     */
+    interface IdgRadioGroup {
+        /**
+          * Set by idg-field: the hint and error text, as the group's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: the group's accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Set by idg-field, or by you: marks the choice as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "name"?: string;
+        /**
+          * Fires when the user chooses a radio.
+         */
+        "onIdgChange"?: (event: IdgRadioGroupCustomEvent<ValueDetail>) => void;
+        /**
+          * How the radios are laid out.
+          * @default "vertical"
+         */
+        "orientation"?: Orientation;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * The value of the chosen radio. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * Options are written as children, exactly as for a native select, and copied into the native
+     * select inside the component: the same markup works with or without a framework, and no option
+     * data has to be serialised into an attribute.
+     */
+    interface IdgSelect {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "name"?: string;
+        /**
+          * Fires when the user commits a choice.
+         */
+        "onIdgChange"?: (event: IdgSelectCustomEvent<ValueDetail>) => void;
+        /**
+          * Fires as the choice changes.
+         */
+        "onIdgInput"?: (event: IdgSelectCustomEvent<ValueDetail>) => void;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * @default "md"
+         */
+        "size"?: InputSize;
+        /**
+          * The value of the chosen option. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    interface IdgSwitch {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: replaces the slotted text as the accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * @default false
+         */
+        "checked"?: boolean;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Marks the choice as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "name"?: string;
+        /**
+          * Fires when the user flips the switch.
+         */
+        "onIdgChange"?: (event: IdgSwitchCustomEvent<CheckedDetail>) => void;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * What is submitted while checked.
+          * @default "on"
+         */
+        "value"?: string;
+    }
+    interface IdgTextarea {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        "autocapitalize"?: string;
+        "autocomplete"?: string;
+        /**
+          * Grows with its content, using `field-sizing` where it exists and a hidden twin elsewhere.
+          * @default false
+         */
+        "autogrow"?: boolean;
+        /**
+          * Shows the number of characters, against `maxlength` when there is one.
+          * @default false
+         */
+        "counter"?: boolean;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "maxlength"?: number;
+        "minlength"?: number;
+        "name"?: string;
+        /**
+          * Fires when the user commits a value, such as on blur.
+         */
+        "onIdgChange"?: (event: IdgTextareaCustomEvent<ValueDetail>) => void;
+        /**
+          * Fires on every edit.
+         */
+        "onIdgInput"?: (event: IdgTextareaCustomEvent<ValueDetail>) => void;
+        "placeholder"?: string;
+        /**
+          * @default false
+         */
+        "readonly"?: boolean;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * Visible lines. With `autogrow` it is the minimum.
+          * @default 3
+         */
+        "rows"?: number;
+        /**
+          * @default "md"
+         */
+        "size"?: InputSize;
+        "spellcheck"?: string;
+        /**
+          * The current value. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value"?: string;
+    }
 
     interface IdgButtonAttributes {
         "variant": ButtonVariant;
@@ -138,9 +1163,121 @@ declare namespace LocalJSX {
         "fullWidth": boolean;
         "shortcut": string;
     }
+    interface IdgCheckboxAttributes {
+        "name": string;
+        "value": string;
+        "checked": boolean;
+        "indeterminate": boolean;
+        "required": boolean;
+        "disabled": boolean;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
+    interface IdgFieldAttributes {
+        "label": string;
+        "hint": string;
+        "error": string;
+        "required": boolean;
+        "optionalText": string;
+    }
+    interface IdgInputAttributes {
+        "type": InputType;
+        "name": string;
+        "value": string;
+        "placeholder": string;
+        "required": boolean;
+        "disabled": boolean;
+        "readonly": boolean;
+        "minlength": number;
+        "maxlength": number;
+        "min": string;
+        "max": string;
+        "step": string;
+        "pattern": string;
+        "autocomplete": string;
+        "inputmode": string;
+        "enterkeyhint": string;
+        "spellcheck": string;
+        "autocapitalize": string;
+        "size": InputSize;
+        "reveal": boolean;
+        "revealLabel": string;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
+    interface IdgRadioAttributes {
+        "value": string;
+        "checked": boolean;
+        "disabled": boolean;
+        "groupDisabled": boolean;
+        "tabbable": boolean;
+        "position": number;
+        "setSize": number;
+        "invalid": boolean;
+    }
+    interface IdgRadioGroupAttributes {
+        "name": string;
+        "value": string;
+        "required": boolean;
+        "disabled": boolean;
+        "orientation": Orientation;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
+    interface IdgSelectAttributes {
+        "name": string;
+        "value": string;
+        "required": boolean;
+        "disabled": boolean;
+        "size": InputSize;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
+    interface IdgSwitchAttributes {
+        "name": string;
+        "value": string;
+        "checked": boolean;
+        "required": boolean;
+        "disabled": boolean;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
+    interface IdgTextareaAttributes {
+        "name": string;
+        "value": string;
+        "placeholder": string;
+        "rows": number;
+        "required": boolean;
+        "disabled": boolean;
+        "readonly": boolean;
+        "minlength": number;
+        "maxlength": number;
+        "autocomplete": string;
+        "spellcheck": string;
+        "autocapitalize": string;
+        "size": InputSize;
+        "autogrow": boolean;
+        "counter": boolean;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
 
     interface IntrinsicElements {
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
+        "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`]?: IdgCheckboxAttributes[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
+        "idg-field": Omit<IdgField, keyof IdgFieldAttributes> & { [K in keyof IdgField & keyof IdgFieldAttributes]?: IdgField[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `attr:${K}`]?: IdgFieldAttributes[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `prop:${K}`]?: IdgField[K] };
+        "idg-input": Omit<IdgInput, keyof IdgInputAttributes> & { [K in keyof IdgInput & keyof IdgInputAttributes]?: IdgInput[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `attr:${K}`]?: IdgInputAttributes[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `prop:${K}`]?: IdgInput[K] };
+        "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
+        "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
+        "idg-select": Omit<IdgSelect, keyof IdgSelectAttributes> & { [K in keyof IdgSelect & keyof IdgSelectAttributes]?: IdgSelect[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `attr:${K}`]?: IdgSelectAttributes[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `prop:${K}`]?: IdgSelect[K] };
+        "idg-switch": Omit<IdgSwitch, keyof IdgSwitchAttributes> & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes]?: IdgSwitch[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `attr:${K}`]?: IdgSwitchAttributes[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `prop:${K}`]?: IdgSwitch[K] };
+        "idg-textarea": Omit<IdgTextarea, keyof IdgTextareaAttributes> & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes]?: IdgTextarea[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `attr:${K}`]?: IdgTextareaAttributes[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `prop:${K}`]?: IdgTextarea[K] };
     }
 }
 export { LocalJSX as JSX };
@@ -148,6 +1285,35 @@ declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
             "idg-button": LocalJSX.IntrinsicElements["idg-button"] & JSXBase.HTMLAttributes<HTMLIdgButtonElement>;
+            "idg-checkbox": LocalJSX.IntrinsicElements["idg-checkbox"] & JSXBase.HTMLAttributes<HTMLIdgCheckboxElement>;
+            /**
+             * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
+             * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
+             * reference cannot cross a shadow boundary, so their text is handed to the control as properties
+             * and the control applies it to its own native element.
+             */
+            "idg-field": LocalJSX.IntrinsicElements["idg-field"] & JSXBase.HTMLAttributes<HTMLIdgFieldElement>;
+            "idg-input": LocalJSX.IntrinsicElements["idg-input"] & JSXBase.HTMLAttributes<HTMLIdgInputElement>;
+            /**
+             * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
+             * as set by the group are how it passes state down, because radios in separate shadow roots are
+             * not a native radio group.
+             */
+            "idg-radio": LocalJSX.IntrinsicElements["idg-radio"] & JSXBase.HTMLAttributes<HTMLIdgRadioElement>;
+            /**
+             * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
+             * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
+             * its radios, is the form control.
+             */
+            "idg-radio-group": LocalJSX.IntrinsicElements["idg-radio-group"] & JSXBase.HTMLAttributes<HTMLIdgRadioGroupElement>;
+            /**
+             * Options are written as children, exactly as for a native select, and copied into the native
+             * select inside the component: the same markup works with or without a framework, and no option
+             * data has to be serialised into an attribute.
+             */
+            "idg-select": LocalJSX.IntrinsicElements["idg-select"] & JSXBase.HTMLAttributes<HTMLIdgSelectElement>;
+            "idg-switch": LocalJSX.IntrinsicElements["idg-switch"] & JSXBase.HTMLAttributes<HTMLIdgSwitchElement>;
+            "idg-textarea": LocalJSX.IntrinsicElements["idg-textarea"] & JSXBase.HTMLAttributes<HTMLIdgTextareaElement>;
         }
     }
 }

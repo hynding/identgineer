@@ -1,0 +1,100 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--idg-space-3xs) * var(--idg-density-gap-scale));
+}
+
+.label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--idg-space-2xs);
+  align-self: flex-start;
+  cursor: pointer;
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-semibold);
+  line-height: var(--idg-font-body-line-height);
+  text-transform: var(--idg-ornament-control-transform);
+}
+
+.marker {
+  color: var(--idg-color-danger);
+  font-weight: var(--idg-font-weight-bold);
+}
+
+.optional {
+  color: var(--idg-color-text-muted);
+  font-size: 0.85em;
+  font-weight: var(--idg-font-weight-regular);
+  text-transform: none;
+}
+
+.hint,
+.error-text {
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+}
+
+/* The UX mode's hint switch is a number, so scaling lengths and opacity by it hides or shows the
+   hint in every browser, with no style query. The hint is only collapsed, never removed: the
+   control's accessible description carries the same text whether or not it is visible. */
+.hint {
+  max-block-size: calc(var(--idg-ux-hints) * 20em);
+  margin-block-start: calc(var(--idg-ux-hints) * var(--idg-space-3xs));
+  color: var(--idg-color-text-muted);
+  opacity: var(--idg-ux-hints);
+  overflow: hidden;
+  transition-property: opacity, max-block-size;
+  transition-duration: var(--idg-motion-duration-base);
+  transition-timing-function: var(--idg-motion-easing-standard);
+}
+
+.error:not(:empty) {
+  display: flex;
+  align-items: flex-start;
+  align-self: flex-start;
+  gap: var(--idg-space-2xs);
+  box-sizing: border-box;
+  max-inline-size: 100%;
+  padding: var(--idg-space-3xs) var(--idg-space-2xs);
+  border-radius: var(--idg-shape-radius-sm);
+  background: var(--idg-color-danger-subtle);
+  color: var(--idg-color-on-danger-subtle);
+}
+
+.error-mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: 1.25em;
+  block-size: 1.25em;
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--idg-color-danger);
+  color: var(--idg-color-on-danger);
+  font-size: 0.85em;
+  font-weight: var(--idg-font-weight-bold);
+  line-height: 1;
+}
+
+@media (forced-colors: active) {
+  .error:not(:empty) {
+    border: 1px solid CanvasText;
+  }
+
+  .marker {
+    color: CanvasText;
+  }
+}

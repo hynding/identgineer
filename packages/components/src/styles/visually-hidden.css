@@ -1,0 +1,14 @@
+/* Text that stays in the accessibility tree but takes no space, such as a description an input
+   points to. It is not display:none, which would drop it from the tree. */
+.visually-hidden {
+  position: absolute;
+  box-sizing: border-box;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

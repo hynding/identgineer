@@ -14,6 +14,8 @@ export default tseslint.config(
       "**/loader/",
       "packages/components/src/components.d.ts",
       "**/coverage/",
+      "**/test-results/",
+      "**/playwright-report/",
       "cms/generated/",
     ],
   },

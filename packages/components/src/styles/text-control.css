@@ -1,0 +1,187 @@
+/* Shared by idg-input, idg-textarea and idg-select: the box that holds a native text control.
+   Every colour, size and edge comes from --idg-* tokens, which inherit through the shadow root. */
+
+:host {
+  position: relative;
+  display: block;
+  min-inline-size: 0;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.box {
+  /* The edge the design draws is the control border. Designs without one (soft, elevated) would
+     leave the control with no visible boundary, so a 1px inset ring in the strong border colour is
+     always drawn as well. Where style queries exist it is withdrawn for designs that have their own
+     border; elsewhere the two coincide as a slightly heavier edge, which is safe. */
+  --_edge: var(--idg-color-border-strong);
+  --_ring-width: 1px;
+  --_height-scale: 1;
+  --_padding-scale: 1;
+
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
+  inline-size: 100%;
+  min-block-size: max(
+    var(--idg-density-target-size),
+    calc(var(--idg-density-control-height) * var(--_height-scale))
+  );
+  padding-inline: calc(var(--idg-density-control-padding-inline) * var(--_padding-scale));
+  border-width: var(--idg-border-control-width);
+  border-style: var(--idg-border-control-style);
+  border-color: var(--idg-border-control-color);
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--idg-surface-background);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: inset 0 0 0 var(--_ring-width) var(--_edge);
+  color: var(--idg-color-text);
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+  letter-spacing: var(--idg-font-body-letter-spacing);
+  transition-property: box-shadow, background-color, border-color;
+  transition-duration: var(--idg-motion-duration-fast);
+  transition-timing-function: var(--idg-motion-easing-standard);
+}
+
+@container not style(--idg-border-control-style: none) {
+  .box {
+    --_ring-width: 0px;
+  }
+}
+
+.size-sm {
+  --_height-scale: 0.8;
+  --_padding-scale: 0.75;
+
+  border-radius: var(--idg-shape-radius-sm);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+}
+
+.size-lg {
+  --_height-scale: 1.25;
+  --_padding-scale: 1.25;
+
+  border-radius: var(--idg-shape-radius-lg);
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+}
+
+.native {
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  margin: 0;
+  padding-block: var(--idg-density-control-padding-block);
+  padding-inline: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  outline: none;
+  appearance: none;
+}
+
+.native::placeholder {
+  color: var(--idg-color-text-muted);
+  opacity: 1;
+}
+
+/* Browsers paint autofilled fields in their own colours; the inset shadow paints them back. */
+.native:-webkit-autofill {
+  box-shadow: 0 0 0 100vmax var(--idg-color-surface) inset;
+  -webkit-text-fill-color: var(--idg-color-text);
+}
+
+.box:hover {
+  --_edge: var(--idg-color-text-muted);
+}
+
+.box:focus-within {
+  --_edge: var(--idg-color-focus-ring);
+
+  border-color: var(--idg-color-focus-ring);
+  outline-width: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
+  outline-style: var(--idg-focus-ring-style);
+  outline-color: var(--idg-color-focus-ring);
+  outline-offset: var(--idg-focus-ring-offset);
+}
+
+/* Invalid is shown by a heavier edge and a mark as well as the danger colour. */
+.box.invalid {
+  --_edge: var(--idg-color-danger);
+  --_ring-width: 2px;
+
+  border-color: var(--idg-color-danger);
+}
+
+.invalid-mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: 1.25em;
+  block-size: 1.25em;
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--idg-color-danger);
+  color: var(--idg-color-on-danger);
+  font-size: 0.8em;
+  font-weight: var(--idg-font-weight-bold);
+  line-height: 1;
+}
+
+/* Readonly is a plain subtle fill and dashed edge; disabled adds fading and a blocked cursor, so
+   the two never look alike. */
+.box.readonly {
+  --_edge: var(--idg-color-border);
+
+  border-style: dashed;
+  background: var(--idg-color-bg-subtle);
+}
+
+.box.disabled {
+  background: var(--idg-color-bg-subtle);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.box.disabled .native {
+  cursor: not-allowed;
+}
+
+.box.disabled:hover {
+  --_edge: var(--idg-color-border-strong);
+}
+
+slot[name="start"]::slotted(*),
+slot[name="end"]::slotted(*) {
+  color: var(--idg-color-text-muted);
+}
+
+@media (forced-colors: active) {
+  .box {
+    forced-color-adjust: none;
+    border-color: ButtonText;
+    background: Field;
+    color: FieldText;
+  }
+
+  .box:focus-within {
+    border-color: Highlight;
+    outline-color: Highlight;
+  }
+
+  .box.disabled {
+    border-color: GrayText;
+    color: GrayText;
+    opacity: 1;
+  }
+}

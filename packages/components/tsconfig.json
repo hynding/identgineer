@@ -9,6 +9,6 @@
     "types": ["node"],
     "exactOptionalPropertyTypes": false
   },
-  "include": ["src", "checks", "*.config.ts"],
+  "include": ["src", "checks", "browser", "*.config.ts"],
   "exclude": ["node_modules", "dist", "www", "loader"]
 }

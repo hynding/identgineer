@@ -10,8 +10,8 @@ main {
   padding: var(--idg-space-l);
 }
 
-section,
-form {
+section:not(.stack),
+form:not(.stack) {
   display: flex;
   flex-wrap: wrap;
   gap: var(--idg-space-s);
@@ -19,6 +19,33 @@ form {
 }
 
 /* Avoids a flash of unstyled content without the inline <style> Stencil would otherwise inject. */
-idg-button:not(.hydrated) {
+idg-button:not(.hydrated),
+idg-field:not(.hydrated),
+idg-input:not(.hydrated),
+idg-textarea:not(.hydrated),
+idg-select:not(.hydrated),
+idg-checkbox:not(.hydrated),
+idg-radio-group:not(.hydrated),
+idg-radio:not(.hydrated),
+idg-switch:not(.hydrated) {
   visibility: hidden;
+}
+
+.stack {
+  display: grid;
+  gap: var(--idg-space-s);
+  justify-items: stretch;
+  max-inline-size: 36rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--idg-space-s);
+}
+
+/* Stretching a checkbox or switch across the form would make its blank space look clickable. */
+.stack > idg-checkbox,
+.stack > idg-switch {
+  justify-self: start;
 }
