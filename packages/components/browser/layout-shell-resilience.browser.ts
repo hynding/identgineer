@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { LAYOUTS } from "./axes";
+import { LAYOUTS, UX_MODES } from "./axes";
 import { expect, test } from "./fixtures";
 import {
   focusInfo,
@@ -102,9 +102,6 @@ function collisions(layout: string, found: Regions, overHero = true): string[] {
       // The header is laid over the hero in immersive, and the brand over it in a split hero.
       if (overHero && layout === "immersive" && heroPair && header.has(heroPair)) continue;
       if (overHero && layout === "split-hero" && heroPair === "brand") continue;
-      // The brand sits on the top of a rail, over the padding the navigation leaves for it.
-      if ((layout === "side-rail" || layout === "dashboard") && a === "brand" && b === "navigation")
-        continue;
       problems.push(`${a} overlaps ${b}`);
     }
   }
@@ -576,6 +573,160 @@ test.describe("an embedded shell takes the height its content needs", () => {
         .locator("#shell")
         .evaluate((host) => host.getBoundingClientRect().height);
       expect(height, "the shell is as tall as its content").toBeLessThan(1000);
+    });
+  }
+});
+
+test.describe("an embedded shell keeps the shape of its aside", () => {
+  for (const layout of ["top-bar", "magazine", "immersive"]) {
+    test(`${layout}: the aside card is as tall as it is when the shell is not embedded`, async ({
+      page,
+    }) => {
+      await openShell(page, { width: 1280, height: 800, layout });
+      const asideHeight = () =>
+        page.locator("#shell").evaluate((host) => {
+          const aside = host.shadowRoot?.querySelector<HTMLElement>('[part="aside"]');
+          if (!aside) throw new Error("no aside");
+          return aside.getBoundingClientRect().height;
+        });
+      const before = await asideHeight();
+      expect(before, "an aside is drawn").toBeGreaterThan(0);
+      await page.locator("#shell").evaluate((host) => { host.setAttribute("embedded", ""); });
+      await frames(page, 3);
+      expect(await asideHeight()).toBeCloseTo(before, 0);
+    });
+  }
+});
+
+test.describe("scrolling a navigation does not scroll the page", () => {
+  for (const direction of ["ltr", "rtl"] as const) {
+    test(`${direction}: Tab, click and script focus leave the page where it is`, async ({
+      page,
+    }) => {
+      await openShell(page, { width: 1280, height: 800, layout: "top-bar", direction });
+      await change(page, "many-items");
+      await page.evaluate(() => {
+        document.addEventListener("click", (event) => { event.preventDefault(); });
+      });
+      await page.evaluate(() => { window.scrollTo(0, 1100); });
+      await frames(page, 2);
+      const scrollY = await page.evaluate(() => window.scrollY);
+      expect(scrollY, "the page is scrolled").toBeGreaterThan(500);
+      const inside = () =>
+        page.evaluate(() => {
+          const host = document.getElementById("shell");
+          const navigation = host?.shadowRoot?.querySelector<HTMLElement>('[part="navigation"]');
+          const active = document.activeElement;
+          if (!navigation || active?.getAttribute("slot") !== "navigation") return Number.NaN;
+          const box = active.getBoundingClientRect();
+          const bar = navigation.getBoundingClientRect();
+          return Math.max(bar.left - box.left, box.right - bar.right, 0);
+        });
+      await page.locator("#nav-first").focus();
+      for (let index = 0; index < 18; index += 1) {
+        await page.keyboard.press("Tab");
+        await frames(page, 1);
+        expect(await page.evaluate(() => window.scrollY), `Tab ${String(index)}`).toBe(scrollY);
+        expect(await inside(), `Tab ${String(index)} cuts the item`).toBeLessThanOrEqual(1);
+      }
+      for (let index = 0; index < 18; index += 1) {
+        await page.keyboard.press("Shift+Tab");
+        await frames(page, 1);
+        expect(await page.evaluate(() => window.scrollY), `Shift+Tab ${String(index)}`).toBe(
+          scrollY,
+        );
+        expect(await inside(), `Shift+Tab ${String(index)} cuts the item`).toBeLessThanOrEqual(1);
+      }
+      await page.locator("#item-15").click();
+      expect(await page.evaluate(() => window.scrollY), "click").toBe(scrollY);
+      expect(await inside(), "click cuts the item").toBeLessThanOrEqual(1);
+      await page.locator("#item-2").focus();
+      expect(await page.evaluate(() => window.scrollY), "script focus").toBe(scrollY);
+      expect(await inside(), "script focus cuts the item").toBeLessThanOrEqual(1);
+    });
+  }
+});
+
+test.describe("a split hero taller than the window", () => {
+  const inView = (page: Page) =>
+    page.locator("#hero-link").evaluate((link) => {
+      const box = link.getBoundingClientRect();
+      return { top: box.top, bottom: box.bottom, height: window.innerHeight };
+    });
+
+  const CASES: [string, { width: number; height: number; fontSize?: string }, boolean][] = [
+    ["1280x500 at 100%", { width: 1280, height: 500 }, false],
+    ["1280x720 at 125% text", { width: 1280, height: 720, fontSize: "125%" }, false],
+    ["1280x800 with more in the hero", { width: 1280, height: 800 }, true],
+  ];
+
+  for (const [name, size, extra] of CASES) {
+    test(`${name}: a focused hero link is wholly in the window`, async ({ page }) => {
+      await openShell(page, { ...size, layout: "split-hero" });
+      if (extra) {
+        await page.evaluate(() => {
+          const lede = document.querySelector("#shell .lede");
+          for (let index = 0; index < 8; index += 1) {
+            const paragraph = document.createElement("p");
+            paragraph.textContent =
+              "More about how the page is housed, in a sentence or two. ".repeat(4);
+            lede?.after(paragraph);
+          }
+        });
+        await frames(page, 3);
+      }
+      await page.locator("#hero-link").focus();
+      await frames(page, 2);
+      const box = await inView(page);
+      expect(box.top, "the link is below the top").toBeGreaterThanOrEqual(0);
+      expect(box.bottom, "the link is above the bottom").toBeLessThanOrEqual(box.height);
+    });
+  }
+
+  test("1280x800: a hero that fits stays in view while the content scrolls", async ({ page }) => {
+    await openShell(page, { width: 1280, height: 800, layout: "split-hero" });
+    await page.evaluate(() => { window.scrollTo(0, 700); });
+    await frames(page, 2);
+    const top = await page
+      .locator("#shell")
+      .evaluate(
+        (host) => host.shadowRoot?.querySelector('[part="hero"]')?.getBoundingClientRect().top,
+      );
+    expect(top).toBe(0);
+  });
+});
+
+test.describe("the menu button does not move, in any UX mode or at larger text", () => {
+  const CASES: [string, number][] = [
+    ["top-bar", 768],
+    ["bento", 768],
+    ["split-hero", 768],
+    ["split-hero", 1024],
+  ];
+  const opened = async (page: Page) => {
+    const toggle = page.locator("#shell").locator('[part="toggle"]');
+    await expect(toggle).toBeVisible();
+    const before = await toggle.boundingBox();
+    await toggle.click();
+    await expect
+      .poll(() => page.locator("#shell").evaluate((host) => host.hasAttribute("navigation-open")))
+      .toBe(true);
+    await frames(page, 3);
+    const after = await toggle.boundingBox();
+    for (const key of ["x", "y", "width", "height"] as const) {
+      expect(after?.[key], key).toBeCloseTo(before?.[key] ?? Number.NaN, 0);
+    }
+  };
+  for (const [layout, width] of CASES) {
+    for (const ux of UX_MODES) {
+      test(`${layout} at ${String(width)}px in the ${ux} UX mode`, async ({ page }) => {
+        await openShell(page, { width, layout, ux });
+        await opened(page);
+      });
+    }
+    test(`${layout} at ${String(width)}px with the root font at 150%`, async ({ page }) => {
+      await openShell(page, { width: width * 1.5, layout, fontSize: "150%" });
+      await opened(page);
     });
   }
 });
