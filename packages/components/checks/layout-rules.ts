@@ -16,7 +16,7 @@ const LENGTH =
   /(?<![\w.#-])[+-]?(?:\d*\.?\d+)(?:e[+-]?\d+)?(?:px|rem|em|ex|ch|ic|cap|lh|rex|rch|ric|rcap|rlh|vw|vh|vi|vb|vmin|vmax|[sld]v(?:w|h|i|b|min|max)|cq(?:w|h|i|b|min|max)|cm|mm|q|in|pt|pc)\b/gi;
 
 const PHYSICAL_PROPERTY =
-  /^(?:(?:margin|padding|border|scroll-margin|scroll-padding)-(?:left|right|top|bottom)(?:-[a-z]+)*|left|right|top|bottom|(?:min-|max-)?(?:width|height)|overflow-[xy])$/;
+  /^(?:(?:margin|padding|border|scroll-margin|scroll-padding)-(?:left|right|top|bottom)(?:-[a-z]+)*|left|right|top|bottom|(?:min-|max-)?(?:width|height)|overflow-[xy]|clip)$/;
 
 // Properties whose keywords can name a side. Their values may not.
 const DIRECTIONAL_KEYWORDS =
@@ -29,8 +29,11 @@ const SIDED_SHORTHANDS =
   /^(?:margin|padding|inset|border-width|border-style|border-color|scroll-margin|scroll-padding)$/;
 // `overflow` takes x then y, so two values are physical.
 const AXIS_SHORTHANDS = /^overflow$/;
-// The inset of a clip takes a value per side, so more than two are ordered top, right, ...
-const CLIP_SHORTHANDS = /^clip-path$/;
+// The inset() of a shape takes a value per side, and its radii one per corner, so more than two
+// sides or more than one radius are ordered physically. rect() and xywh() are ordered by side or
+// by x and y whatever their count.
+const SHAPE_PROPERTIES = /^(?:clip-path|shape-outside)$/;
+const PHYSICAL_SHAPE = /\b(?:rect|xywh)\(/i;
 // A radius is ordered by corner, so even two values name physical corners.
 const CORNER_SHORTHANDS = /^border-radius$/;
 
@@ -69,18 +72,30 @@ function argumentsOf(value: string, name: string): string | undefined {
   return value.slice(open);
 }
 
-/** The values of an inset() before its `round` radius, which is not part of the sides. */
-function insetSides(value: string): string {
-  const inset = argumentsOf(value, "inset") ?? "";
-  return inset.split(/\s+round\s+/i)[0] ?? "";
+/** Whether an inset() names more than two sides, more than one radius, or an elliptical one. */
+function isPhysicalInset(value: string): boolean {
+  const [sides = "", radius] = (argumentsOf(value, "inset") ?? "").split(/\s+round\s+/i);
+  return (
+    countValues(sides) > 2 ||
+    (radius !== undefined && (countValues(radius) > 1 || radius.includes("/")))
+  );
 }
 
-const VIEWPORT_QUERY = /@media[^{]*\b(?:(?:min|max)-)?(?:width|height|aspect-ratio)\b/gi;
+const VIEWPORT_QUERY =
+  /@media[^{]*\b(?:(?:(?:min|max)-)?(?:width|height|aspect-ratio)|orientation)\b/gi;
 const PRELUDE = /@(?:media|container)\b([^{}]*)\{/gi;
 const DECLARATION = /([\w-]+)\s*:\s*([^;{}]+)(?=[;}])/g;
 
-function blankComments(css: string): string {
-  return css.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, " "));
+// Comments and the inside of strings are not css, so `content: "@media (min-width: 0) {"` is not
+// read as a query. Blanking keeps every offset, so line numbers stay true.
+const COMMENT_OR_STRING = /\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'/g;
+
+function blankCommentsAndStrings(css: string): string {
+  return css.replace(COMMENT_OR_STRING, (text) =>
+    text.startsWith("/")
+      ? text.replace(/[^\n]/g, " ")
+      : `${text[0] ?? ""}${" ".repeat(text.length - 2)}${text[0] ?? ""}`,
+  );
 }
 
 function lineAt(css: string, index: number): number {
@@ -92,19 +107,21 @@ function lineAt(css: string, index: number): number {
  * from a token (a zero is allowed), address the axes logically so they mirror in right-to-left,
  * and react to their container, never to the viewport.
  *
- * Refused: lengths with a unit; physical properties; `left` and `right` as the value of a
- * property that takes them (`text-align`, `justify-*`, `place-*`, `float`, `clear` and the like); margin,
- * padding, inset, border-width, border-style, border-color and scroll-margin or scroll-padding
- * with three or four values, an `inset()` clip with more than two, and any border-radius with more
- * than one value, because those are ordered by physical side or corner; a two-value `overflow`,
- * which is ordered x then y. Keywords are matched in any case, a length is refused in the prelude
- * of `@container` and `@media` as in a declaration, and `float` and `clear` may use
- * `inline-start` and `inline-end`. One and two values are allowed, `!important` is not counted as
- * a value, and an exponent in a length is refused whatever it works out to.
+ * Refused: lengths with a unit, in a declaration or in the prelude of `@container` and `@media`;
+ * physical properties, including the legacy `clip`; `left` and `right`, in any case, as the value
+ * of a property that takes them (`text-align`, `justify-*`, `place-*`, `float`, `clear` and the
+ * like; `inline-start` and `inline-end` are fine); margin, padding, inset, border-width,
+ * border-style, border-color and scroll-margin or scroll-padding with three or four values, and
+ * any border-radius with more than one value, because those are ordered by physical side or
+ * corner; the same for shapes: `rect()` and `xywh()`, and an `inset()` with more than two sides
+ * or more than one radius, in `clip-path` and `shape-outside`; a two-value `overflow`, which is
+ * ordered x then y; and a viewport media query, which includes `orientation` (a container query
+ * may use it). One and two values are allowed, `!important` is not counted as a value, an
+ * exponent in a length is refused whatever it works out to, and strings and comments are not read.
  * Not checked: keywords in other properties such as `background-position`.
  */
 export function findLayoutCssViolations(source: string): LayoutCssViolation[] {
-  const css = blankComments(source);
+  const css = blankCommentsAndStrings(source);
   const violations: LayoutCssViolation[] = [];
 
   for (const query of css.matchAll(VIEWPORT_QUERY)) {
@@ -138,7 +155,7 @@ export function findLayoutCssViolations(source: string): LayoutCssViolation[] {
       (SIDED_SHORTHANDS.test(property) && count > 2) ||
       (AXIS_SHORTHANDS.test(property) && count > 1) ||
       (CORNER_SHORTHANDS.test(property) && (count > 1 || value.includes("/"))) ||
-      (CLIP_SHORTHANDS.test(property) && countValues(insetSides(value)) > 2)
+      (SHAPE_PROPERTIES.test(property) && (PHYSICAL_SHAPE.test(value) || isPhysicalInset(value)))
     ) {
       violations.push({ line, text: `${property}: ${value.trim()}`, rule: "physical shorthand" });
     }

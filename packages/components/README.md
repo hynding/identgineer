@@ -421,7 +421,9 @@ on the surface's normal text colour, so use `idg-stat` on `plain`, `raised` or `
 gives it `role="presentation"`. The rule is the design's own border (thick in brutalist, double in
 pixel, a hairline in editorial) over a theme-coloured hairline that stands in where a design draws no
 border (soft, elevated), and it is never thinner than 1px. A vertical divider needs a parent with a
-height. Part: `line`.
+height. A horizontal divider stretches across its flex or grid container, so it is as wide as an
+`idg-stack` whatever its `align`; inside an `idg-cluster`, which is a row, use
+`orientation="vertical"`. Part: `line`.
 
 ## Overlays
 
@@ -765,7 +767,7 @@ layout with a **step** of a token scale; it never takes a length.
 | Gap steps, from the space scale (`--idg-space-<step>`) | `none`, `3xs`, `2xs`, `xs`, `s`, `m`, `l`, `xl`, `2xl`, `3xl`                    | `gap` on every primitive                       |
 | Size steps, from the size scale (`--idg-size-<step>`)  | `xs` (10rem), `s` (14rem), `m` (20rem), `l` (28rem), `xl` (40rem), `2xl` (56rem) | `min`, `side-width`, `threshold`, `min-height` |
 
-`gap="none"` is a gap of zero. A gap is multiplied by `--idg-density-gap-scale`, so a compact UX mode tightens every layout. A
+`gap="none"` is a gap of zero. Every other gap, a step or the layout's `--idg-layout-gap` by default, is multiplied by `--idg-density-gap-scale`, so a compact UX mode tightens every layout. A
 value that is not a step (`"12px"`, `"var(--x)"`, a typo) is ignored and the layout's own value
 applies, so a prop can never put a length or a declaration in a stylesheet. None of the primitives
 sets an inline style. A word that is wider than its container, with nothing to break it, is the
@@ -774,10 +776,10 @@ table, a button or an image keeps the behaviour it has outside them.
 
 ### `idg-stack`
 
-| Prop    | Attribute | Values                              | Default            |
-| ------- | --------- | ----------------------------------- | ------------------ |
-| `gap`   | `gap`     | a gap step                          | `--idg-layout-gap` |
-| `align` | `align`   | `start`, `center`, `end`, `stretch` | `stretch`          |
+| Prop    | Attribute | Values                              | Default                                        |
+| ------- | --------- | ----------------------------------- | ---------------------------------------------- |
+| `gap`   | `gap`     | a gap step                          | `--idg-layout-gap` × `--idg-density-gap-scale` |
+| `align` | `align`   | `start`, `center`, `end`, `stretch` | `stretch`                                      |
 
 Children one under another. **Slot:** default. **Part:** `stack`. It is a plain flex column with a
 gap and draws nothing of its own. For a rule between items, put an `idg-divider` between them: the
@@ -793,21 +795,21 @@ stack's gap sits on either side of it.
 
 ### `idg-cluster`
 
-| Prop      | Attribute | Values                                          | Default            |
-| --------- | --------- | ----------------------------------------------- | ------------------ |
-| `gap`     | `gap`     | a gap step                                      | `--idg-layout-gap` |
-| `justify` | `justify` | `start`, `center`, `end`, `between`             | `start`            |
-| `align`   | `align`   | `start`, `center`, `end`, `baseline`, `stretch` | `center`           |
+| Prop      | Attribute | Values                                          | Default                                        |
+| --------- | --------- | ----------------------------------------------- | ---------------------------------------------- |
+| `gap`     | `gap`     | a gap step                                      | `--idg-layout-gap` × `--idg-density-gap-scale` |
+| `justify` | `justify` | `start`, `center`, `end`, `between`             | `start`                                        |
+| `align`   | `align`   | `start`, `center`, `end`, `baseline`, `stretch` | `center`                                       |
 
 Items in a row that wraps onto more rows, for tags, buttons or a toolbar. **Slot:** default.
 **Part:** `cluster`.
 
 ### `idg-grid`
 
-| Prop  | Attribute | Values      | Default                 |
-| ----- | --------- | ----------- | ----------------------- |
-| `min` | `min`     | a size step | `--idg-layout-grid-min` |
-| `gap` | `gap`     | a gap step  | `--idg-layout-gap`      |
+| Prop  | Attribute | Values      | Default                                        |
+| ----- | --------- | ----------- | ---------------------------------------------- |
+| `min` | `min`     | a size step | `--idg-layout-grid-min`                        |
+| `gap` | `gap`     | a gap step  | `--idg-layout-gap` × `--idg-density-gap-scale` |
 
 As many equal columns as fit, each at least `min` wide, and never more than `--idg-layout-columns`
 (4 under `top-bar`, 8 under `dashboard`, 2 under `split-hero`, and so on), so a wide container does not
@@ -817,11 +819,11 @@ columns past it.
 
 ### `idg-sidebar`
 
-| Prop        | Attribute    | Values         | Default                    |
-| ----------- | ------------ | -------------- | -------------------------- |
-| `side`      | `side`       | `start`, `end` | `start`                    |
-| `sideWidth` | `side-width` | a size step    | `--idg-layout-aside-width` |
-| `gap`       | `gap`        | a gap step     | `--idg-layout-gap`         |
+| Prop        | Attribute    | Values         | Default                                        |
+| ----------- | ------------ | -------------- | ---------------------------------------------- |
+| `side`      | `side`       | `start`, `end` | `start`                                        |
+| `sideWidth` | `side-width` | a size step    | `--idg-layout-aside-width`                     |
+| `gap`       | `gap`        | a gap step     | `--idg-layout-gap` × `--idg-density-gap-scale` |
 
 A side region of a set width beside the content, which takes the rest. When the content would get
 less than half of the container, the regions stack: the classic wrapping row, with no breakpoint.
@@ -836,11 +838,11 @@ back, and hiding or showing a forwarded item is not observed, only `slotchange`.
 
 ### `idg-switcher`
 
-| Prop        | Attribute   | Values      | Default            |
-| ----------- | ----------- | ----------- | ------------------ |
-| `threshold` | `threshold` | a size step | `l`                |
-| `limit`     | `limit`     | 2 to 6      | none               |
-| `gap`       | `gap`       | a gap step  | `--idg-layout-gap` |
+| Prop        | Attribute   | Values      | Default                                        |
+| ----------- | ----------- | ----------- | ---------------------------------------------- |
+| `threshold` | `threshold` | a size step | `l`                                            |
+| `limit`     | `limit`     | 2 to 6      | none                                           |
+| `gap`       | `gap`       | a gap step  | `--idg-layout-gap` × `--idg-density-gap-scale` |
 
 Items of equal width in one row, which become one column when the container is narrower than
 `threshold`. With `limit`, more items than that stack at any width. This is the one primitive that
@@ -854,10 +856,10 @@ again when it is put back. It reads no size. **Slot:** default. **Part:** `switc
 
 ### `idg-cover`
 
-| Prop        | Attribute    | Values                   | Default            |
-| ----------- | ------------ | ------------------------ | ------------------ |
-| `minHeight` | `min-height` | a size step, or `screen` | `l`                |
-| `gap`       | `gap`        | a gap step               | `--idg-layout-gap` |
+| Prop        | Attribute    | Values                   | Default                                        |
+| ----------- | ------------ | ------------------------ | ---------------------------------------------- |
+| `minHeight` | `min-height` | a size step, or `screen` | `l`                                            |
+| `gap`       | `gap`        | a gap step               | `--idg-layout-gap` × `--idg-density-gap-scale` |
 
 A block at least as tall as `min-height` (`screen` is the height of the viewport) that centres its
 content. It grows when the content needs more room. **Slots:** `top` (pinned to the top), default
@@ -897,13 +899,16 @@ layout primitives' stylesheets are held to more. Each of these is refused:
   `justify-items`, `justify-self`, `align-content`, `place-items`, `place-content`, `place-self`,
   `float` or `clear` (`inline-start` and `inline-end` are allowed);
 - three or four values in `margin`, `padding`, `inset`, `border-width`, `border-style`,
-  `border-color`, `scroll-margin` or `scroll-padding`, more than two values in the `inset()` of
-  `clip-path`, and more than one value in `border-radius`, because those are ordered by physical
-  side or corner;
+  `border-color`, `scroll-margin` or `scroll-padding`, and more than one value in `border-radius`,
+  because those are ordered by physical side or corner;
+- the same for shapes, in `clip-path` and `shape-outside`: `rect()` and `xywh()`, and an `inset()`
+  with more than two sides or more than one radius after `round`; and the legacy `clip` property;
 - two values in `overflow`, which are ordered x then y;
-- a viewport media query.
+- a viewport media query, which includes `@media (orientation: ...)`; a container query may use
+  `orientation`.
 
-`!important` is not counted as a value of the declaration it ends.
+`!important` is not counted as a value of the declaration it ends, and strings and comments are not
+read as css.
 
 ## Development
 

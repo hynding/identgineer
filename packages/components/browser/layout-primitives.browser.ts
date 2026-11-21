@@ -692,7 +692,7 @@ test.describe("a rule between stack items", () => {
             page
               .locator("#stack-dividers")
               .locator('[part="stack"]')
-              .evaluate((element) => element.className),
+              .evaluate((element) => element.getAttribute("class") ?? ""),
           )
           .toContain(`align-${align}`);
         const widths = await page.locator("#stack-dividers").evaluate((element) => {

@@ -3,6 +3,13 @@
   color: var(--idg-color-border);
 }
 
+/* A horizontal rule is as wide as its container. Its width is a percentage, which a shrink-to-fit
+   flex item (a stack that aligns to the start, centre or end) would resolve to nothing, so it
+   stretches across the cross axis instead. Outside a flex or grid container this does nothing. */
+:host(:not([orientation="vertical"])) {
+  align-self: stretch;
+}
+
 :host([orientation="vertical"]) {
   display: inline-block;
   align-self: stretch;
