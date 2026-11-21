@@ -390,3 +390,51 @@ describe("the layout primitives' stylesheets", () => {
     expect(findLayoutCssViolations(css)).toEqual([]);
   });
 });
+
+type TokenGroup = Record<string, { $value?: string } | string | undefined>;
+
+/** The sizes of the token scale as written, such as `40rem`, by step name. */
+function sizeScale(): Map<string, string> {
+  const source = readFileSync(
+    fileURLToPath(new URL("../../tokens/src/tokens/primitive.json", import.meta.url)),
+    "utf8",
+  );
+  const { size } = JSON.parse(source) as { size: TokenGroup };
+  const scale = new Map<string, string>();
+  for (const [step, token] of Object.entries(size)) {
+    if (typeof token === "object" && /^\d+(?:\.\d+)?rem$/.test(token.$value ?? "")) {
+      scale.set(step, token.$value ?? "");
+    }
+  }
+  return scale;
+}
+
+describe("the page shell's stylesheet", () => {
+  const css = readFileSync(
+    fileURLToPath(new URL("../src/components/layout/layout.css", import.meta.url)),
+    "utf8",
+  );
+  const scale = sizeScale();
+
+  it("takes every length from tokens, and compares its container only against a size of the scale", () => {
+    expect(findLayoutCssViolations(css, { containerSizes: [...scale.values()] })).toEqual([]);
+  });
+
+  it("changes arrangement at the xl and 3xl steps, which are 40rem and 72rem", () => {
+    expect(scale.get("xl")).toBe("40rem");
+    expect(scale.get("3xl")).toBe("72rem");
+    const thresholds = new Set(
+      [...css.matchAll(/@container[^{]*?\b(\d+(?:\.\d+)?rem)\b/g)].map((match) => match[1]),
+    );
+    expect(thresholds.has("40rem")).toBe(true);
+    expect(thresholds.has("72rem")).toBe(true);
+    for (const threshold of thresholds) {
+      expect([...scale.values()], `${threshold ?? ""} is on the scale`).toContain(threshold);
+    }
+  });
+
+  it("reads the layout and the container, never the viewport", () => {
+    expect(css).toMatch(/@container[^{]*style\(--idg-layout-shell: top-bar\)/);
+    expect(css).not.toMatch(/@media[^{]*\b(?:width|height)\b/);
+  });
+});
