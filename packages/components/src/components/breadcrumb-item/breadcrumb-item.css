@@ -1,0 +1,91 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  min-inline-size: 0;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.crumb {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--idg-density-target-size);
+  padding-inline: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+  border-radius: var(--idg-shape-radius-sm);
+  color: var(--idg-color-text-muted);
+  overflow-wrap: anywhere;
+  text-decoration: none;
+  text-transform: var(--idg-ornament-control-transform);
+  transition-property: background-color, color;
+  transition-duration: var(--idg-motion-duration-fast);
+  transition-timing-function: var(--idg-motion-easing-standard);
+}
+
+/* A step that goes somewhere is a link and says so with an underline, whose weight follows the
+   design's border (heavy in brutalist and pixel, none in soft) but never beyond 3px. */
+.linked {
+  color: var(--idg-color-link);
+  cursor: pointer;
+  text-decoration-line: underline;
+  text-decoration-thickness: max(1px, min(var(--idg-border-width), 3px));
+  text-underline-offset: 0.2em;
+}
+
+.linked:hover {
+  background: var(--idg-color-accent-subtle);
+  color: var(--idg-color-on-accent-subtle);
+}
+
+/* The current page is drawn in the design's own surface, so a rule above and below (editorial), a
+   hard-edged box (brutalist), a frosted pill (glass) or a raised one (soft) each follow from the
+   design tokens. */
+.current {
+  border-width: var(--idg-surface-border-width);
+  border-style: var(--idg-surface-border-style);
+  border-color: var(--idg-surface-border-color);
+  background: var(--idg-surface-background);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: var(--idg-elevation-sm);
+  color: var(--idg-color-text);
+  font-weight: var(--idg-font-weight-semibold);
+}
+
+.current.linked {
+  text-decoration-line: none;
+}
+
+.separator {
+  display: inline-flex;
+  align-items: center;
+  color: var(--idg-color-text-muted);
+}
+
+.separator-slash {
+  padding-inline: calc(var(--idg-space-3xs) * var(--idg-density-gap-scale));
+  font-weight: var(--idg-font-weight-semibold);
+}
+
+/* The chevron points along the reading direction. */
+:host(:dir(rtl)) .separator-chevron {
+  transform: scaleX(-1);
+}
+
+@media (forced-colors: active) {
+  .linked,
+  .linked:hover {
+    background: transparent;
+    color: LinkText;
+  }
+
+  .current {
+    border: 1px solid CanvasText;
+    color: CanvasText;
+  }
+
+  .separator {
+    color: CanvasText;
+  }
+}

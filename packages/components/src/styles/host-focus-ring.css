@@ -1,0 +1,14 @@
+/* The focus ring of the design language, for a component whose host is itself the focusable
+   element. It matches focus-ring.css, which serves a native element inside a shadow root. */
+:host(:focus-visible) {
+  outline-width: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
+  outline-style: var(--idg-focus-ring-style);
+  outline-color: var(--idg-color-focus-ring);
+  outline-offset: var(--idg-focus-ring-offset);
+}
+
+@media (forced-colors: active) {
+  :host(:focus-visible) {
+    outline-color: Highlight;
+  }
+}

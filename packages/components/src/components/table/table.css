@@ -1,0 +1,39 @@
+:host {
+  display: block;
+  position: relative;
+  min-inline-size: 0;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+/* The scroll area is the table's surface, in the design's own border, radius, fill and elevation,
+   so a wide table scrolls inside its frame and never widens the page. */
+.scroller {
+  box-sizing: border-box;
+  max-inline-size: 100%;
+  max-block-size: var(--_max-height, none);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-width: var(--idg-surface-border-width);
+  border-style: var(--idg-surface-border-style);
+  border-color: var(--idg-surface-border-color);
+  border-radius: var(--idg-shape-radius-lg);
+  background: var(--idg-surface-background);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: var(--idg-elevation-sm);
+}
+
+/* The ring sits inside the frame, where its own edge cannot clip it. */
+.scroller:focus-visible {
+  outline-offset: calc(-1 * var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
+}
+
+@media (forced-colors: active) {
+  .scroller {
+    border: 1px solid CanvasText;
+  }
+}

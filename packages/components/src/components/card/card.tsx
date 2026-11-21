@@ -1,13 +1,12 @@
 import { Component, Element, h, Prop, State } from "@stencil/core";
 import { oneOf } from "../../utils/choice";
+import { headingLevel } from "../../utils/heading-level";
 import { linkRel } from "../../utils/link-rel";
 import { safeUrl } from "../../utils/safe-url";
 import {
   CARD_PADDINGS,
   CARD_VARIANTS,
   DEFAULT_HEADING_LEVEL,
-  MAX_HEADING_LEVEL,
-  MIN_HEADING_LEVEL,
   type CardPadding,
   type CardVariant,
 } from "./card-options";
@@ -99,14 +98,9 @@ export class IdgCard {
     }
   }
 
-  private level(): number {
-    const level = Math.trunc(this.headingLevel);
-    return level >= MIN_HEADING_LEVEL && level <= MAX_HEADING_LEVEL ? level : DEFAULT_HEADING_LEVEL;
-  }
-
   private renderHeading(href: string | undefined) {
     if (this.heading === undefined || this.heading === "") return null;
-    const Heading = `h${String(this.level())}`;
+    const Heading = `h${String(headingLevel(this.headingLevel, DEFAULT_HEADING_LEVEL))}`;
     return (
       <Heading class="heading" part="heading">
         {href === undefined ? (

@@ -19,3 +19,34 @@ export function nextRovingIndex(
   }
   return undefined;
 }
+
+export type RovingOrientation = "horizontal" | "vertical";
+
+const AXIS_KEYS: Readonly<Record<RovingOrientation, readonly string[]>> = {
+  horizontal: ["ArrowLeft", "ArrowRight"],
+  vertical: ["ArrowUp", "ArrowDown"],
+};
+
+/**
+ * Where a key moves focus in a list laid out along one axis, as in tabs and an accordion: the
+ * arrows of that axis step (wrapping, skipping disabled items), Home and End go to the first and
+ * last enabled item, and the arrows of the other axis do nothing.
+ */
+export function rovingMove(
+  current: number,
+  key: string,
+  enabled: readonly boolean[],
+  orientation: RovingOrientation,
+  rightToLeft: boolean,
+): number | undefined {
+  if (key === "Home") {
+    const first = enabled.indexOf(true);
+    return first === -1 ? undefined : first;
+  }
+  if (key === "End") {
+    const last = enabled.lastIndexOf(true);
+    return last === -1 ? undefined : last;
+  }
+  if (!AXIS_KEYS[orientation].includes(key)) return undefined;
+  return nextRovingIndex(current, key, enabled, rightToLeft);
+}

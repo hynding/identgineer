@@ -5,9 +5,11 @@
  * It contains typing information for all components that exist in this project.
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
+import { AccordionToggleDetail } from "./components/accordion/accordion-options";
 import { AlertVariant } from "./components/alert/alert-options";
 import { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 import { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
+import { BreadcrumbSeparator } from "./components/breadcrumb/breadcrumb-options";
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 import { CardPadding, CardVariant } from "./components/card/card-options";
 import { CheckedDetail, ValueDetail } from "./utils/event-details";
@@ -18,15 +20,21 @@ import { IconSize } from "./components/icon/icon-options";
 import { InputSize, InputType } from "./components/input/input-options";
 import { Placement } from "./utils/position";
 import { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
+import { PageChangeDetail } from "./components/pagination/pagination-options";
 import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
 import { SkeletonVariant } from "./components/skeleton/skeleton-options";
 import { StatDirection, StatSentiment } from "./components/stat/stat-options";
+import { TabsActivation, TabsOrientation } from "./components/tabs/tabs-options";
+import { SortDirection } from "./utils/sort-rows";
+import { TableSortDetail } from "./components/table/table-options";
 import { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 import { ToastPosition } from "./components/toast-region/toast-region-options";
+export { AccordionToggleDetail } from "./components/accordion/accordion-options";
 export { AlertVariant } from "./components/alert/alert-options";
 export { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 export { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
+export { BreadcrumbSeparator } from "./components/breadcrumb/breadcrumb-options";
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 export { CardPadding, CardVariant } from "./components/card/card-options";
 export { CheckedDetail, ValueDetail } from "./utils/event-details";
@@ -37,13 +45,88 @@ export { IconSize } from "./components/icon/icon-options";
 export { InputSize, InputType } from "./components/input/input-options";
 export { Placement } from "./utils/position";
 export { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
+export { PageChangeDetail } from "./components/pagination/pagination-options";
 export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
 export { SkeletonVariant } from "./components/skeleton/skeleton-options";
 export { StatDirection, StatSentiment } from "./components/stat/stat-options";
+export { TabsActivation, TabsOrientation } from "./components/tabs/tabs-options";
+export { SortDirection } from "./utils/sort-rows";
+export { TableSortDetail } from "./components/table/table-options";
 export { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 export { ToastPosition } from "./components/toast-region/toast-region-options";
 export namespace Components {
+    /**
+     * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
+     * one item is open at a time. Up and Down, Home and End move between the headers.
+     */
+    interface IdgAccordion {
+        /**
+          * Lets the browser's find in page open a closed item that holds the text it finds, by hiding closed panels with `hidden="until-found"`. A browser without it hides them as usual.
+          * @default false
+         */
+        "findInPage": boolean;
+        /**
+          * The level of every item's heading, 1 to 6. Pick the one that follows the page's own heading.
+          * @default 3
+         */
+        "headingLevel": number;
+        /**
+          * Lets several items be open at once. Otherwise opening one closes the others.
+          * @default false
+         */
+        "multiple": boolean;
+    }
+    /**
+     * One item of an idg-accordion: a heading holding the button that shows or hides the panel
+     * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
+     * the panel's name are plain id references.
+     */
+    interface IdgAccordionItem {
+        /**
+          * Keeps the item where it is but stops the button being used.
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by the accordion: whether a closed panel can be found by the browser.
+          * @default false
+         */
+        "findInPage": boolean;
+        /**
+          * Set by the accordion: whether the panel is a region landmark.
+          * @default true
+         */
+        "hasRegion": boolean;
+        /**
+          * The text of the button. Use the heading slot for anything richer.
+         */
+        "heading"?: string;
+        /**
+          * Set by the accordion: the heading's level.
+          * @default 3
+         */
+        "headingLevel": number;
+        /**
+          * Whether the panel is showing.
+          * @default false
+         */
+        "open": boolean;
+        /**
+          * Set by the accordion while it settles the items at load: a change then is not announced.
+          * @default false
+         */
+        "quiet": boolean;
+        /**
+          * Focuses the button.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * Names the item in `idgToggle`.
+          * @default ""
+         */
+        "value": string;
+    }
     /**
      * A message that stays on the page until it is read or dismissed. For a message that appears in
      * response to what the user did, render the alert at that moment: a live region announces what is
@@ -140,6 +223,52 @@ export namespace Components {
           * @default "neutral"
          */
         "variant": BadgeVariant;
+    }
+    /**
+     * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
+     * idg-breadcrumb-item. The last item is the current page unless another item says it is.
+     */
+    interface IdgBreadcrumb {
+        /**
+          * The landmark's accessible name. Give each breadcrumb on a page its own.
+          * @default "Breadcrumb"
+         */
+        "label": string;
+        /**
+          * The mark between items. It is decoration and hidden from assistive technology.
+          * @default BREADCRUMB_SEPARATORS[0]
+         */
+        "separator": BreadcrumbSeparator;
+    }
+    /**
+     * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
+     * one, and separator are drawn in its own shadow root.
+     */
+    interface IdgBreadcrumbItem {
+        /**
+          * Marks this step as the current page, in place of the last one.
+          * @default false
+         */
+        "current": boolean;
+        /**
+          * Where the step goes. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * Set by the breadcrumb: whether this step is the current page.
+          * @default false
+         */
+        "isCurrent": boolean;
+        /**
+          * Set by the breadcrumb: whether this is the last step, which has no separator after it.
+          * @default false
+         */
+        "isLast": boolean;
+        /**
+          * Set by the breadcrumb: the mark after the step.
+          * @default "chevron"
+         */
+        "separator": BreadcrumbSeparator;
     }
     interface IdgButton {
         /**
@@ -639,6 +768,58 @@ export namespace Components {
     interface IdgMenuSeparator {
     }
     /**
+     * Page controls for a long list: previous and next, the current page and a window of its
+     * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
+     * given, so each page is an address that can be opened, shared and followed without script, and
+     * buttons that fire `idgPageChange` otherwise.
+     */
+    interface IdgPagination {
+        /**
+          * Pages always shown at the start and the end.
+          * @default 1
+         */
+        "boundaries": number;
+        /**
+          * Makes the controls links. `{page}` is replaced by the page number, as in `/items?page={page}`. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "hrefTemplate"?: string;
+        /**
+          * The landmark's accessible name. Give each pagination on a page its own.
+          * @default "Pagination"
+         */
+        "label": string;
+        /**
+          * The accessible name of the next control.
+          * @default "Next page"
+         */
+        "nextLabel": string;
+        /**
+          * The current page, from 1.
+          * @default 1
+         */
+        "page": number;
+        /**
+          * How many pages there are.
+          * @default 1
+         */
+        "pageCount": number;
+        /**
+          * The accessible name of a page control, where `{page}` is the number.
+          * @default "Page {page}"
+         */
+        "pageLabel": string;
+        /**
+          * The accessible name of the previous control.
+          * @default "Previous page"
+         */
+        "previousLabel": string;
+        /**
+          * Pages shown on each side of the current one.
+          * @default 1
+         */
+        "siblings": number;
+    }
+    /**
      * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
      * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
      * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
@@ -965,6 +1146,153 @@ export namespace Components {
          */
         "value": string;
     }
+    /**
+     * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
+     * host carries the tab role and state itself, so the relations to the panel, which sits beside it
+     * in the page, can be made between the two hosts.
+     */
+    interface IdgTab {
+        /**
+          * Keeps the tab in the list, where it is announced, but stops it being selected.
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by the tabs: which way the list runs.
+          * @default "horizontal"
+         */
+        "orientation": TabsOrientation;
+        /**
+          * Set by the tabs: whether this tab is selected.
+          * @default false
+         */
+        "selected": boolean;
+        /**
+          * Set by the tabs: whether this tab is the one tab stop of the list.
+          * @default false
+         */
+        "tabbable": boolean;
+        /**
+          * Pairs the tab with the panel of the same value.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
+     * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
+     * reader can still move into it.
+     */
+    interface IdgTabPanel {
+        /**
+          * Set by the tabs: whether this panel's tab is selected.
+          * @default false
+         */
+        "selected": boolean;
+        /**
+          * Pairs the panel with the tab of the same value.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
+     * header cells, row and column relations) and the component adds what a table needs around it: a
+     * surface drawn in the design language, a scroll region that is reachable by keyboard and named
+     * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
+     * sortable column headers.
+     * The cells are the page's own, so a shadow root cannot style them. The component adopts a
+     * constructable stylesheet into the document or shadow root the table lives in, scoped to
+     * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
+     * constructable stylesheets shows the table unstyled.
+     * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
+     * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
+     */
+    interface IdgTable {
+        /**
+          * The scroll region's accessible name, when the table is wider than the page. The caption is used without it.
+         */
+        "label"?: string;
+        /**
+          * Only marks the sorted column and reports the sort. Use it when you sort the rows yourself, such as on a server.
+          * @default false
+         */
+        "manualSort": boolean;
+        /**
+          * The tallest the region grows before its rows scroll, as a length such as `24rem`.
+         */
+        "maxHeight"?: string;
+        /**
+          * The narrowest the table is drawn before it scrolls sideways, as a length such as `40rem`.
+         */
+        "minWidth"?: string;
+        /**
+          * The word for an ascending sort in the announcement. Translate it with `sortStatus`.
+          * @default "ascending"
+         */
+        "sortAscendingLabel": string;
+        /**
+          * The word for a descending sort in the announcement. Translate it with `sortStatus`.
+          * @default "descending"
+         */
+        "sortDescendingLabel": string;
+        /**
+          * The direction of the sort.
+          * @default "ascending"
+         */
+        "sortDirection": SortDirection;
+        /**
+          * The key of the column the rows are sorted by. Empty leaves them in their original order.
+          * @default ""
+         */
+        "sortKey": string;
+        /**
+          * Announced after a sort, where `{column}` is the column and `{direction}` is ascending or descending.
+          * @default "Sorted by {column}, {direction}"
+         */
+        "sortStatus": string;
+        /**
+          * Keeps the header in view while the rows scroll. It needs `maxHeight`, as the rows scroll in the region.
+          * @default false
+         */
+        "stickyHeader": boolean;
+        /**
+          * Shades every other row.
+          * @default false
+         */
+        "striped": boolean;
+    }
+    /**
+     * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
+     * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
+     * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
+     * its position among its own kind as its value.
+     */
+    interface IdgTabs {
+        /**
+          * `automatic` selects a tab as the arrow keys reach it. `manual` only moves focus, and Enter or Space selects, which suits panels that are slow to show.
+          * @default "automatic"
+         */
+        "activation": TabsActivation;
+        /**
+          * The tab list's accessible name.
+         */
+        "label"?: string;
+        /**
+          * Which way the tab list runs.
+          * @default "horizontal"
+         */
+        "orientation": TabsOrientation;
+        /**
+          * Focuses the selected tab.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * The value of the selected tab. Without a match, the enabled tab nearest to where the selection was takes over, which is the first enabled tab until one has been selected. Values should be unique: a tab that repeats an earlier tab's value cannot be selected, and a warning is logged.
+          * @default ""
+         */
+        "value": string;
+    }
     interface IdgTextarea {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -1146,6 +1474,10 @@ export namespace Components {
         "text"?: string;
     }
 }
+export interface IdgAccordionItemCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgAccordionItemElement;
+}
 export interface IdgAlertCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgAlertElement;
@@ -1165,6 +1497,10 @@ export interface IdgInputCustomEvent<T> extends CustomEvent<T> {
 export interface IdgMenuCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgMenuElement;
+}
+export interface IdgPaginationCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgPaginationElement;
 }
 export interface IdgPopoverCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -1186,6 +1522,14 @@ export interface IdgSwitchCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgSwitchElement;
 }
+export interface IdgTableCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgTableElement;
+}
+export interface IdgTabsCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgTabsElement;
+}
 export interface IdgTextareaCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgTextareaElement;
@@ -1195,6 +1539,38 @@ export interface IdgToastCustomEvent<T> extends CustomEvent<T> {
     target: HTMLIdgToastElement;
 }
 declare global {
+    /**
+     * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
+     * one item is open at a time. Up and Down, Home and End move between the headers.
+     */
+    interface HTMLIdgAccordionElement extends Components.IdgAccordion, HTMLStencilElement {
+    }
+    var HTMLIdgAccordionElement: {
+        prototype: HTMLIdgAccordionElement;
+        new (): HTMLIdgAccordionElement;
+    };
+    interface HTMLIdgAccordionItemElementEventMap {
+        "idgToggle": AccordionToggleDetail;
+    }
+    /**
+     * One item of an idg-accordion: a heading holding the button that shows or hides the panel
+     * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
+     * the panel's name are plain id references.
+     */
+    interface HTMLIdgAccordionItemElement extends Components.IdgAccordionItem, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgAccordionItemElementEventMap>(type: K, listener: (this: HTMLIdgAccordionItemElement, ev: IdgAccordionItemCustomEvent<HTMLIdgAccordionItemElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgAccordionItemElementEventMap>(type: K, listener: (this: HTMLIdgAccordionItemElement, ev: IdgAccordionItemCustomEvent<HTMLIdgAccordionItemElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgAccordionItemElement: {
+        prototype: HTMLIdgAccordionItemElement;
+        new (): HTMLIdgAccordionItemElement;
+    };
     interface HTMLIdgAlertElementEventMap {
         "idgDismiss": void;
     }
@@ -1245,6 +1621,26 @@ declare global {
     var HTMLIdgBadgeElement: {
         prototype: HTMLIdgBadgeElement;
         new (): HTMLIdgBadgeElement;
+    };
+    /**
+     * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
+     * idg-breadcrumb-item. The last item is the current page unless another item says it is.
+     */
+    interface HTMLIdgBreadcrumbElement extends Components.IdgBreadcrumb, HTMLStencilElement {
+    }
+    var HTMLIdgBreadcrumbElement: {
+        prototype: HTMLIdgBreadcrumbElement;
+        new (): HTMLIdgBreadcrumbElement;
+    };
+    /**
+     * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
+     * one, and separator are drawn in its own shadow root.
+     */
+    interface HTMLIdgBreadcrumbItemElement extends Components.IdgBreadcrumbItem, HTMLStencilElement {
+    }
+    var HTMLIdgBreadcrumbItemElement: {
+        prototype: HTMLIdgBreadcrumbItemElement;
+        new (): HTMLIdgBreadcrumbItemElement;
     };
     interface HTMLIdgButtonElement extends Components.IdgButton, HTMLStencilElement {
     }
@@ -1424,6 +1820,29 @@ declare global {
         prototype: HTMLIdgMenuSeparatorElement;
         new (): HTMLIdgMenuSeparatorElement;
     };
+    interface HTMLIdgPaginationElementEventMap {
+        "idgPageChange": PageChangeDetail;
+    }
+    /**
+     * Page controls for a long list: previous and next, the current page and a window of its
+     * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
+     * given, so each page is an address that can be opened, shared and followed without script, and
+     * buttons that fire `idgPageChange` otherwise.
+     */
+    interface HTMLIdgPaginationElement extends Components.IdgPagination, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgPaginationElementEventMap>(type: K, listener: (this: HTMLIdgPaginationElement, ev: IdgPaginationCustomEvent<HTMLIdgPaginationElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgPaginationElementEventMap>(type: K, listener: (this: HTMLIdgPaginationElement, ev: IdgPaginationCustomEvent<HTMLIdgPaginationElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgPaginationElement: {
+        prototype: HTMLIdgPaginationElement;
+        new (): HTMLIdgPaginationElement;
+    };
     interface HTMLIdgPopoverElementEventMap {
         "idgOpen": void;
         "idgClose": void;
@@ -1564,6 +1983,81 @@ declare global {
         prototype: HTMLIdgSwitchElement;
         new (): HTMLIdgSwitchElement;
     };
+    /**
+     * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
+     * host carries the tab role and state itself, so the relations to the panel, which sits beside it
+     * in the page, can be made between the two hosts.
+     */
+    interface HTMLIdgTabElement extends Components.IdgTab, HTMLStencilElement {
+    }
+    var HTMLIdgTabElement: {
+        prototype: HTMLIdgTabElement;
+        new (): HTMLIdgTabElement;
+    };
+    /**
+     * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
+     * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
+     * reader can still move into it.
+     */
+    interface HTMLIdgTabPanelElement extends Components.IdgTabPanel, HTMLStencilElement {
+    }
+    var HTMLIdgTabPanelElement: {
+        prototype: HTMLIdgTabPanelElement;
+        new (): HTMLIdgTabPanelElement;
+    };
+    interface HTMLIdgTableElementEventMap {
+        "idgSort": TableSortDetail;
+    }
+    /**
+     * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
+     * header cells, row and column relations) and the component adds what a table needs around it: a
+     * surface drawn in the design language, a scroll region that is reachable by keyboard and named
+     * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
+     * sortable column headers.
+     * The cells are the page's own, so a shadow root cannot style them. The component adopts a
+     * constructable stylesheet into the document or shadow root the table lives in, scoped to
+     * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
+     * constructable stylesheets shows the table unstyled.
+     * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
+     * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
+     */
+    interface HTMLIdgTableElement extends Components.IdgTable, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgTableElementEventMap>(type: K, listener: (this: HTMLIdgTableElement, ev: IdgTableCustomEvent<HTMLIdgTableElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgTableElementEventMap>(type: K, listener: (this: HTMLIdgTableElement, ev: IdgTableCustomEvent<HTMLIdgTableElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgTableElement: {
+        prototype: HTMLIdgTableElement;
+        new (): HTMLIdgTableElement;
+    };
+    interface HTMLIdgTabsElementEventMap {
+        "idgChange": ValueDetail;
+    }
+    /**
+     * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
+     * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
+     * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
+     * its position among its own kind as its value.
+     */
+    interface HTMLIdgTabsElement extends Components.IdgTabs, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgTabsElementEventMap>(type: K, listener: (this: HTMLIdgTabsElement, ev: IdgTabsCustomEvent<HTMLIdgTabsElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgTabsElementEventMap>(type: K, listener: (this: HTMLIdgTabsElement, ev: IdgTabsCustomEvent<HTMLIdgTabsElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgTabsElement: {
+        prototype: HTMLIdgTabsElement;
+        new (): HTMLIdgTabsElement;
+    };
     interface HTMLIdgTextareaElementEventMap {
         "idgInput": ValueDetail;
         "idgChange": ValueDetail;
@@ -1639,10 +2133,14 @@ declare global {
         new (): HTMLIdgTooltipElement;
     };
     interface HTMLElementTagNameMap {
+        "idg-accordion": HTMLIdgAccordionElement;
+        "idg-accordion-item": HTMLIdgAccordionItemElement;
         "idg-alert": HTMLIdgAlertElement;
         "idg-avatar": HTMLIdgAvatarElement;
         "idg-avatar-group": HTMLIdgAvatarGroupElement;
         "idg-badge": HTMLIdgBadgeElement;
+        "idg-breadcrumb": HTMLIdgBreadcrumbElement;
+        "idg-breadcrumb-item": HTMLIdgBreadcrumbItemElement;
         "idg-button": HTMLIdgButtonElement;
         "idg-card": HTMLIdgCardElement;
         "idg-checkbox": HTMLIdgCheckboxElement;
@@ -1656,6 +2154,7 @@ declare global {
         "idg-menu-group": HTMLIdgMenuGroupElement;
         "idg-menu-item": HTMLIdgMenuItemElement;
         "idg-menu-separator": HTMLIdgMenuSeparatorElement;
+        "idg-pagination": HTMLIdgPaginationElement;
         "idg-popover": HTMLIdgPopoverElement;
         "idg-progress": HTMLIdgProgressElement;
         "idg-radio": HTMLIdgRadioElement;
@@ -1664,6 +2163,10 @@ declare global {
         "idg-skeleton": HTMLIdgSkeletonElement;
         "idg-stat": HTMLIdgStatElement;
         "idg-switch": HTMLIdgSwitchElement;
+        "idg-tab": HTMLIdgTabElement;
+        "idg-tab-panel": HTMLIdgTabPanelElement;
+        "idg-table": HTMLIdgTableElement;
+        "idg-tabs": HTMLIdgTabsElement;
         "idg-textarea": HTMLIdgTextareaElement;
         "idg-toast": HTMLIdgToastElement;
         "idg-toast-region": HTMLIdgToastRegionElement;
@@ -1671,6 +2174,77 @@ declare global {
     }
 }
 declare namespace LocalJSX {
+    /**
+     * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
+     * one item is open at a time. Up and Down, Home and End move between the headers.
+     */
+    interface IdgAccordion {
+        /**
+          * Lets the browser's find in page open a closed item that holds the text it finds, by hiding closed panels with `hidden="until-found"`. A browser without it hides them as usual.
+          * @default false
+         */
+        "findInPage"?: boolean;
+        /**
+          * The level of every item's heading, 1 to 6. Pick the one that follows the page's own heading.
+          * @default 3
+         */
+        "headingLevel"?: number;
+        /**
+          * Lets several items be open at once. Otherwise opening one closes the others.
+          * @default false
+         */
+        "multiple"?: boolean;
+    }
+    /**
+     * One item of an idg-accordion: a heading holding the button that shows or hides the panel
+     * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
+     * the panel's name are plain id references.
+     */
+    interface IdgAccordionItem {
+        /**
+          * Keeps the item where it is but stops the button being used.
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * Set by the accordion: whether a closed panel can be found by the browser.
+          * @default false
+         */
+        "findInPage"?: boolean;
+        /**
+          * Set by the accordion: whether the panel is a region landmark.
+          * @default true
+         */
+        "hasRegion"?: boolean;
+        /**
+          * The text of the button. Use the heading slot for anything richer.
+         */
+        "heading"?: string;
+        /**
+          * Set by the accordion: the heading's level.
+          * @default 3
+         */
+        "headingLevel"?: number;
+        /**
+          * Fires when the item opens or closes, whether the user did it or a script.
+         */
+        "onIdgToggle"?: (event: IdgAccordionItemCustomEvent<AccordionToggleDetail>) => void;
+        /**
+          * Whether the panel is showing.
+          * @default false
+         */
+        "open"?: boolean;
+        /**
+          * Set by the accordion while it settles the items at load: a change then is not announced.
+          * @default false
+         */
+        "quiet"?: boolean;
+        /**
+          * Names the item in `idgToggle`.
+          * @default ""
+         */
+        "value"?: string;
+    }
     /**
      * A message that stays on the page until it is read or dismissed. For a message that appears in
      * response to what the user did, render the alert at that moment: a live region announces what is
@@ -1771,6 +2345,52 @@ declare namespace LocalJSX {
           * @default "neutral"
          */
         "variant"?: BadgeVariant;
+    }
+    /**
+     * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
+     * idg-breadcrumb-item. The last item is the current page unless another item says it is.
+     */
+    interface IdgBreadcrumb {
+        /**
+          * The landmark's accessible name. Give each breadcrumb on a page its own.
+          * @default "Breadcrumb"
+         */
+        "label"?: string;
+        /**
+          * The mark between items. It is decoration and hidden from assistive technology.
+          * @default BREADCRUMB_SEPARATORS[0]
+         */
+        "separator"?: BreadcrumbSeparator;
+    }
+    /**
+     * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
+     * one, and separator are drawn in its own shadow root.
+     */
+    interface IdgBreadcrumbItem {
+        /**
+          * Marks this step as the current page, in place of the last one.
+          * @default false
+         */
+        "current"?: boolean;
+        /**
+          * Where the step goes. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * Set by the breadcrumb: whether this step is the current page.
+          * @default false
+         */
+        "isCurrent"?: boolean;
+        /**
+          * Set by the breadcrumb: whether this is the last step, which has no separator after it.
+          * @default false
+         */
+        "isLast"?: boolean;
+        /**
+          * Set by the breadcrumb: the mark after the step.
+          * @default "chevron"
+         */
+        "separator"?: BreadcrumbSeparator;
     }
     interface IdgButton {
         /**
@@ -2270,6 +2890,62 @@ declare namespace LocalJSX {
     interface IdgMenuSeparator {
     }
     /**
+     * Page controls for a long list: previous and next, the current page and a window of its
+     * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
+     * given, so each page is an address that can be opened, shared and followed without script, and
+     * buttons that fire `idgPageChange` otherwise.
+     */
+    interface IdgPagination {
+        /**
+          * Pages always shown at the start and the end.
+          * @default 1
+         */
+        "boundaries"?: number;
+        /**
+          * Makes the controls links. `{page}` is replaced by the page number, as in `/items?page={page}`. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "hrefTemplate"?: string;
+        /**
+          * The landmark's accessible name. Give each pagination on a page its own.
+          * @default "Pagination"
+         */
+        "label"?: string;
+        /**
+          * The accessible name of the next control.
+          * @default "Next page"
+         */
+        "nextLabel"?: string;
+        /**
+          * Fires when the user chooses a page other than the current one. Call `preventDefault()` to keep the page where it is, for instance to load the page yourself first. On a link it also stops the link being followed.
+         */
+        "onIdgPageChange"?: (event: IdgPaginationCustomEvent<PageChangeDetail>) => void;
+        /**
+          * The current page, from 1.
+          * @default 1
+         */
+        "page"?: number;
+        /**
+          * How many pages there are.
+          * @default 1
+         */
+        "pageCount"?: number;
+        /**
+          * The accessible name of a page control, where `{page}` is the number.
+          * @default "Page {page}"
+         */
+        "pageLabel"?: string;
+        /**
+          * The accessible name of the previous control.
+          * @default "Previous page"
+         */
+        "previousLabel"?: string;
+        /**
+          * Pages shown on each side of the current one.
+          * @default 1
+         */
+        "siblings"?: number;
+    }
+    /**
      * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
      * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
      * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
@@ -2584,6 +3260,157 @@ declare namespace LocalJSX {
          */
         "value"?: string;
     }
+    /**
+     * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
+     * host carries the tab role and state itself, so the relations to the panel, which sits beside it
+     * in the page, can be made between the two hosts.
+     */
+    interface IdgTab {
+        /**
+          * Keeps the tab in the list, where it is announced, but stops it being selected.
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * Set by the tabs: which way the list runs.
+          * @default "horizontal"
+         */
+        "orientation"?: TabsOrientation;
+        /**
+          * Set by the tabs: whether this tab is selected.
+          * @default false
+         */
+        "selected"?: boolean;
+        /**
+          * Set by the tabs: whether this tab is the one tab stop of the list.
+          * @default false
+         */
+        "tabbable"?: boolean;
+        /**
+          * Pairs the tab with the panel of the same value.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
+     * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
+     * reader can still move into it.
+     */
+    interface IdgTabPanel {
+        /**
+          * Set by the tabs: whether this panel's tab is selected.
+          * @default false
+         */
+        "selected"?: boolean;
+        /**
+          * Pairs the panel with the tab of the same value.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
+     * header cells, row and column relations) and the component adds what a table needs around it: a
+     * surface drawn in the design language, a scroll region that is reachable by keyboard and named
+     * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
+     * sortable column headers.
+     * The cells are the page's own, so a shadow root cannot style them. The component adopts a
+     * constructable stylesheet into the document or shadow root the table lives in, scoped to
+     * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
+     * constructable stylesheets shows the table unstyled.
+     * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
+     * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
+     */
+    interface IdgTable {
+        /**
+          * The scroll region's accessible name, when the table is wider than the page. The caption is used without it.
+         */
+        "label"?: string;
+        /**
+          * Only marks the sorted column and reports the sort. Use it when you sort the rows yourself, such as on a server.
+          * @default false
+         */
+        "manualSort"?: boolean;
+        /**
+          * The tallest the region grows before its rows scroll, as a length such as `24rem`.
+         */
+        "maxHeight"?: string;
+        /**
+          * The narrowest the table is drawn before it scrolls sideways, as a length such as `40rem`.
+         */
+        "minWidth"?: string;
+        /**
+          * Fires when the user chooses a column to sort by, and not when `sortKey` is set from script.
+         */
+        "onIdgSort"?: (event: IdgTableCustomEvent<TableSortDetail>) => void;
+        /**
+          * The word for an ascending sort in the announcement. Translate it with `sortStatus`.
+          * @default "ascending"
+         */
+        "sortAscendingLabel"?: string;
+        /**
+          * The word for a descending sort in the announcement. Translate it with `sortStatus`.
+          * @default "descending"
+         */
+        "sortDescendingLabel"?: string;
+        /**
+          * The direction of the sort.
+          * @default "ascending"
+         */
+        "sortDirection"?: SortDirection;
+        /**
+          * The key of the column the rows are sorted by. Empty leaves them in their original order.
+          * @default ""
+         */
+        "sortKey"?: string;
+        /**
+          * Announced after a sort, where `{column}` is the column and `{direction}` is ascending or descending.
+          * @default "Sorted by {column}, {direction}"
+         */
+        "sortStatus"?: string;
+        /**
+          * Keeps the header in view while the rows scroll. It needs `maxHeight`, as the rows scroll in the region.
+          * @default false
+         */
+        "stickyHeader"?: boolean;
+        /**
+          * Shades every other row.
+          * @default false
+         */
+        "striped"?: boolean;
+    }
+    /**
+     * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
+     * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
+     * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
+     * its position among its own kind as its value.
+     */
+    interface IdgTabs {
+        /**
+          * `automatic` selects a tab as the arrow keys reach it. `manual` only moves focus, and Enter or Space selects, which suits panels that are slow to show.
+          * @default "automatic"
+         */
+        "activation"?: TabsActivation;
+        /**
+          * The tab list's accessible name.
+         */
+        "label"?: string;
+        /**
+          * Fires when the user selects a tab, and not when `value` is set from script.
+         */
+        "onIdgChange"?: (event: IdgTabsCustomEvent<ValueDetail>) => void;
+        /**
+          * Which way the tab list runs.
+          * @default "horizontal"
+         */
+        "orientation"?: TabsOrientation;
+        /**
+          * The value of the selected tab. Without a match, the enabled tab nearest to where the selection was takes over, which is the first enabled tab until one has been selected. Values should be unique: a tab that repeats an earlier tab's value cannot be selected, and a warning is logged.
+          * @default ""
+         */
+        "value"?: string;
+    }
     interface IdgTextarea {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -2769,6 +3596,21 @@ declare namespace LocalJSX {
         "text"?: string;
     }
 
+    interface IdgAccordionAttributes {
+        "multiple": boolean;
+        "headingLevel": number;
+        "findInPage": boolean;
+    }
+    interface IdgAccordionItemAttributes {
+        "heading": string;
+        "value": string;
+        "open": boolean;
+        "disabled": boolean;
+        "headingLevel": number;
+        "hasRegion": boolean;
+        "findInPage": boolean;
+        "quiet": boolean;
+    }
     interface IdgAlertAttributes {
         "variant": AlertVariant;
         "dismissible": boolean;
@@ -2792,6 +3634,17 @@ declare namespace LocalJSX {
         "variant": BadgeVariant;
         "size": BadgeSize;
         "dot": boolean;
+    }
+    interface IdgBreadcrumbAttributes {
+        "label": string;
+        "separator": BreadcrumbSeparator;
+    }
+    interface IdgBreadcrumbItemAttributes {
+        "href": string;
+        "current": boolean;
+        "isCurrent": boolean;
+        "isLast": boolean;
+        "separator": BreadcrumbSeparator;
     }
     interface IdgButtonAttributes {
         "variant": ButtonVariant;
@@ -2908,6 +3761,17 @@ declare namespace LocalJSX {
         "shortcut": string;
         "icon": IconName;
     }
+    interface IdgPaginationAttributes {
+        "page": number;
+        "pageCount": number;
+        "siblings": number;
+        "boundaries": number;
+        "hrefTemplate": string;
+        "label": string;
+        "previousLabel": string;
+        "nextLabel": string;
+        "pageLabel": string;
+    }
     interface IdgPopoverAttributes {
         "placement": Placement;
         "offset": number;
@@ -2976,6 +3840,36 @@ declare namespace LocalJSX {
         "accessibleDescription": string;
         "invalid": boolean;
     }
+    interface IdgTabAttributes {
+        "value": string;
+        "disabled": boolean;
+        "selected": boolean;
+        "tabbable": boolean;
+        "orientation": TabsOrientation;
+    }
+    interface IdgTabPanelAttributes {
+        "value": string;
+        "selected": boolean;
+    }
+    interface IdgTableAttributes {
+        "label": string;
+        "stickyHeader": boolean;
+        "striped": boolean;
+        "maxHeight": string;
+        "minWidth": string;
+        "sortKey": string;
+        "sortDirection": SortDirection;
+        "manualSort": boolean;
+        "sortStatus": string;
+        "sortAscendingLabel": string;
+        "sortDescendingLabel": string;
+    }
+    interface IdgTabsAttributes {
+        "value": string;
+        "orientation": TabsOrientation;
+        "activation": TabsActivation;
+        "label": string;
+    }
     interface IdgTextareaAttributes {
         "name": string;
         "value": string;
@@ -3020,10 +3914,14 @@ declare namespace LocalJSX {
     }
 
     interface IntrinsicElements {
+        "idg-accordion": Omit<IdgAccordion, keyof IdgAccordionAttributes> & { [K in keyof IdgAccordion & keyof IdgAccordionAttributes]?: IdgAccordion[K] } & { [K in keyof IdgAccordion & keyof IdgAccordionAttributes as `attr:${K}`]?: IdgAccordionAttributes[K] } & { [K in keyof IdgAccordion & keyof IdgAccordionAttributes as `prop:${K}`]?: IdgAccordion[K] };
+        "idg-accordion-item": Omit<IdgAccordionItem, keyof IdgAccordionItemAttributes> & { [K in keyof IdgAccordionItem & keyof IdgAccordionItemAttributes]?: IdgAccordionItem[K] } & { [K in keyof IdgAccordionItem & keyof IdgAccordionItemAttributes as `attr:${K}`]?: IdgAccordionItemAttributes[K] } & { [K in keyof IdgAccordionItem & keyof IdgAccordionItemAttributes as `prop:${K}`]?: IdgAccordionItem[K] };
         "idg-alert": Omit<IdgAlert, keyof IdgAlertAttributes> & { [K in keyof IdgAlert & keyof IdgAlertAttributes]?: IdgAlert[K] } & { [K in keyof IdgAlert & keyof IdgAlertAttributes as `attr:${K}`]?: IdgAlertAttributes[K] } & { [K in keyof IdgAlert & keyof IdgAlertAttributes as `prop:${K}`]?: IdgAlert[K] };
         "idg-avatar": Omit<IdgAvatar, keyof IdgAvatarAttributes> & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes]?: IdgAvatar[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `attr:${K}`]?: IdgAvatarAttributes[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `prop:${K}`]?: IdgAvatar[K] };
         "idg-avatar-group": Omit<IdgAvatarGroup, keyof IdgAvatarGroupAttributes> & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes]?: IdgAvatarGroup[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `attr:${K}`]?: IdgAvatarGroupAttributes[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `prop:${K}`]?: IdgAvatarGroup[K] };
         "idg-badge": Omit<IdgBadge, keyof IdgBadgeAttributes> & { [K in keyof IdgBadge & keyof IdgBadgeAttributes]?: IdgBadge[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `attr:${K}`]?: IdgBadgeAttributes[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `prop:${K}`]?: IdgBadge[K] };
+        "idg-breadcrumb": Omit<IdgBreadcrumb, keyof IdgBreadcrumbAttributes> & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes]?: IdgBreadcrumb[K] } & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes as `attr:${K}`]?: IdgBreadcrumbAttributes[K] } & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes as `prop:${K}`]?: IdgBreadcrumb[K] };
+        "idg-breadcrumb-item": Omit<IdgBreadcrumbItem, keyof IdgBreadcrumbItemAttributes> & { [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes]?: IdgBreadcrumbItem[K] } & { [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes as `attr:${K}`]?: IdgBreadcrumbItemAttributes[K] } & { [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes as `prop:${K}`]?: IdgBreadcrumbItem[K] };
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
         "idg-card": Omit<IdgCard, keyof IdgCardAttributes> & { [K in keyof IdgCard & keyof IdgCardAttributes]?: IdgCard[K] } & { [K in keyof IdgCard & keyof IdgCardAttributes as `attr:${K}`]?: IdgCardAttributes[K] } & { [K in keyof IdgCard & keyof IdgCardAttributes as `prop:${K}`]?: IdgCard[K] };
         "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`]?: IdgCheckboxAttributes[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
@@ -3037,6 +3935,7 @@ declare namespace LocalJSX {
         "idg-menu-group": Omit<IdgMenuGroup, keyof IdgMenuGroupAttributes> & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes]?: IdgMenuGroup[K] } & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes as `attr:${K}`]?: IdgMenuGroupAttributes[K] } & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes as `prop:${K}`]?: IdgMenuGroup[K] };
         "idg-menu-item": Omit<IdgMenuItem, keyof IdgMenuItemAttributes> & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes]?: IdgMenuItem[K] } & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `attr:${K}`]?: IdgMenuItemAttributes[K] } & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `prop:${K}`]?: IdgMenuItem[K] };
         "idg-menu-separator": IdgMenuSeparator;
+        "idg-pagination": Omit<IdgPagination, keyof IdgPaginationAttributes> & { [K in keyof IdgPagination & keyof IdgPaginationAttributes]?: IdgPagination[K] } & { [K in keyof IdgPagination & keyof IdgPaginationAttributes as `attr:${K}`]?: IdgPaginationAttributes[K] } & { [K in keyof IdgPagination & keyof IdgPaginationAttributes as `prop:${K}`]?: IdgPagination[K] };
         "idg-popover": Omit<IdgPopover, keyof IdgPopoverAttributes> & { [K in keyof IdgPopover & keyof IdgPopoverAttributes]?: IdgPopover[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `attr:${K}`]?: IdgPopoverAttributes[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `prop:${K}`]?: IdgPopover[K] };
         "idg-progress": Omit<IdgProgress, keyof IdgProgressAttributes> & { [K in keyof IdgProgress & keyof IdgProgressAttributes]?: IdgProgress[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `attr:${K}`]?: IdgProgressAttributes[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `prop:${K}`]?: IdgProgress[K] };
         "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
@@ -3045,6 +3944,10 @@ declare namespace LocalJSX {
         "idg-skeleton": Omit<IdgSkeleton, keyof IdgSkeletonAttributes> & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes]?: IdgSkeleton[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `attr:${K}`]?: IdgSkeletonAttributes[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `prop:${K}`]?: IdgSkeleton[K] };
         "idg-stat": Omit<IdgStat, keyof IdgStatAttributes> & { [K in keyof IdgStat & keyof IdgStatAttributes]?: IdgStat[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `attr:${K}`]?: IdgStatAttributes[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `prop:${K}`]?: IdgStat[K] };
         "idg-switch": Omit<IdgSwitch, keyof IdgSwitchAttributes> & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes]?: IdgSwitch[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `attr:${K}`]?: IdgSwitchAttributes[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `prop:${K}`]?: IdgSwitch[K] };
+        "idg-tab": Omit<IdgTab, keyof IdgTabAttributes> & { [K in keyof IdgTab & keyof IdgTabAttributes]?: IdgTab[K] } & { [K in keyof IdgTab & keyof IdgTabAttributes as `attr:${K}`]?: IdgTabAttributes[K] } & { [K in keyof IdgTab & keyof IdgTabAttributes as `prop:${K}`]?: IdgTab[K] };
+        "idg-tab-panel": Omit<IdgTabPanel, keyof IdgTabPanelAttributes> & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes]?: IdgTabPanel[K] } & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes as `attr:${K}`]?: IdgTabPanelAttributes[K] } & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes as `prop:${K}`]?: IdgTabPanel[K] };
+        "idg-table": Omit<IdgTable, keyof IdgTableAttributes> & { [K in keyof IdgTable & keyof IdgTableAttributes]?: IdgTable[K] } & { [K in keyof IdgTable & keyof IdgTableAttributes as `attr:${K}`]?: IdgTableAttributes[K] } & { [K in keyof IdgTable & keyof IdgTableAttributes as `prop:${K}`]?: IdgTable[K] };
+        "idg-tabs": Omit<IdgTabs, keyof IdgTabsAttributes> & { [K in keyof IdgTabs & keyof IdgTabsAttributes]?: IdgTabs[K] } & { [K in keyof IdgTabs & keyof IdgTabsAttributes as `attr:${K}`]?: IdgTabsAttributes[K] } & { [K in keyof IdgTabs & keyof IdgTabsAttributes as `prop:${K}`]?: IdgTabs[K] };
         "idg-textarea": Omit<IdgTextarea, keyof IdgTextareaAttributes> & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes]?: IdgTextarea[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `attr:${K}`]?: IdgTextareaAttributes[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `prop:${K}`]?: IdgTextarea[K] };
         "idg-toast": Omit<IdgToast, keyof IdgToastAttributes> & { [K in keyof IdgToast & keyof IdgToastAttributes]?: IdgToast[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `attr:${K}`]?: IdgToastAttributes[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `prop:${K}`]?: IdgToast[K] };
         "idg-toast-region": Omit<IdgToastRegion, keyof IdgToastRegionAttributes> & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes]?: IdgToastRegion[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `attr:${K}`]?: IdgToastRegionAttributes[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `prop:${K}`]?: IdgToastRegion[K] };
@@ -3055,6 +3958,17 @@ export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
+            /**
+             * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
+             * one item is open at a time. Up and Down, Home and End move between the headers.
+             */
+            "idg-accordion": LocalJSX.IntrinsicElements["idg-accordion"] & JSXBase.HTMLAttributes<HTMLIdgAccordionElement>;
+            /**
+             * One item of an idg-accordion: a heading holding the button that shows or hides the panel
+             * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
+             * the panel's name are plain id references.
+             */
+            "idg-accordion-item": LocalJSX.IntrinsicElements["idg-accordion-item"] & JSXBase.HTMLAttributes<HTMLIdgAccordionItemElement>;
             /**
              * A message that stays on the page until it is read or dismissed. For a message that appears in
              * response to what the user did, render the alert at that moment: a live region announces what is
@@ -3075,6 +3989,16 @@ declare module "@stencil/core" {
              * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
              */
             "idg-badge": LocalJSX.IntrinsicElements["idg-badge"] & JSXBase.HTMLAttributes<HTMLIdgBadgeElement>;
+            /**
+             * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
+             * idg-breadcrumb-item. The last item is the current page unless another item says it is.
+             */
+            "idg-breadcrumb": LocalJSX.IntrinsicElements["idg-breadcrumb"] & JSXBase.HTMLAttributes<HTMLIdgBreadcrumbElement>;
+            /**
+             * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
+             * one, and separator are drawn in its own shadow root.
+             */
+            "idg-breadcrumb-item": LocalJSX.IntrinsicElements["idg-breadcrumb-item"] & JSXBase.HTMLAttributes<HTMLIdgBreadcrumbItemElement>;
             "idg-button": LocalJSX.IntrinsicElements["idg-button"] & JSXBase.HTMLAttributes<HTMLIdgButtonElement>;
             /**
              * A surface that groups related content, drawn in the design language's own surface, border and
@@ -3140,6 +4064,13 @@ declare module "@stencil/core" {
              */
             "idg-menu-separator": LocalJSX.IntrinsicElements["idg-menu-separator"] & JSXBase.HTMLAttributes<HTMLIdgMenuSeparatorElement>;
             /**
+             * Page controls for a long list: previous and next, the current page and a window of its
+             * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
+             * given, so each page is an address that can be opened, shared and followed without script, and
+             * buttons that fire `idgPageChange` otherwise.
+             */
+            "idg-pagination": LocalJSX.IntrinsicElements["idg-pagination"] & JSXBase.HTMLAttributes<HTMLIdgPaginationElement>;
+            /**
              * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
              * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
              * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
@@ -3182,6 +4113,39 @@ declare module "@stencil/core" {
              */
             "idg-stat": LocalJSX.IntrinsicElements["idg-stat"] & JSXBase.HTMLAttributes<HTMLIdgStatElement>;
             "idg-switch": LocalJSX.IntrinsicElements["idg-switch"] & JSXBase.HTMLAttributes<HTMLIdgSwitchElement>;
+            /**
+             * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
+             * host carries the tab role and state itself, so the relations to the panel, which sits beside it
+             * in the page, can be made between the two hosts.
+             */
+            "idg-tab": LocalJSX.IntrinsicElements["idg-tab"] & JSXBase.HTMLAttributes<HTMLIdgTabElement>;
+            /**
+             * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
+             * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
+             * reader can still move into it.
+             */
+            "idg-tab-panel": LocalJSX.IntrinsicElements["idg-tab-panel"] & JSXBase.HTMLAttributes<HTMLIdgTabPanelElement>;
+            /**
+             * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
+             * header cells, row and column relations) and the component adds what a table needs around it: a
+             * surface drawn in the design language, a scroll region that is reachable by keyboard and named
+             * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
+             * sortable column headers.
+             * The cells are the page's own, so a shadow root cannot style them. The component adopts a
+             * constructable stylesheet into the document or shadow root the table lives in, scoped to
+             * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
+             * constructable stylesheets shows the table unstyled.
+             * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
+             * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
+             */
+            "idg-table": LocalJSX.IntrinsicElements["idg-table"] & JSXBase.HTMLAttributes<HTMLIdgTableElement>;
+            /**
+             * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
+             * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
+             * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
+             * its position among its own kind as its value.
+             */
+            "idg-tabs": LocalJSX.IntrinsicElements["idg-tabs"] & JSXBase.HTMLAttributes<HTMLIdgTabsElement>;
             "idg-textarea": LocalJSX.IntrinsicElements["idg-textarea"] & JSXBase.HTMLAttributes<HTMLIdgTextareaElement>;
             /**
              * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a

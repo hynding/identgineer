@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextRovingIndex } from "./roving";
+import { nextRovingIndex, rovingMove } from "./roving";
 
 const ENABLED = [true, true, true, true];
 
@@ -34,5 +34,44 @@ describe("nextRovingIndex", () => {
 
   it("returns undefined when nothing else can take focus", () => {
     expect(nextRovingIndex(0, "ArrowDown", [true, false], false)).toBeUndefined();
+  });
+});
+
+describe("rovingMove", () => {
+  it("moves along the horizontal axis with the horizontal arrows only", () => {
+    expect(rovingMove(0, "ArrowRight", ENABLED, "horizontal", false)).toBe(1);
+    expect(rovingMove(0, "ArrowLeft", ENABLED, "horizontal", false)).toBe(3);
+    expect(rovingMove(0, "ArrowDown", ENABLED, "horizontal", false)).toBeUndefined();
+    expect(rovingMove(0, "ArrowUp", ENABLED, "horizontal", false)).toBeUndefined();
+  });
+
+  it("moves along the vertical axis with the vertical arrows only", () => {
+    expect(rovingMove(0, "ArrowDown", ENABLED, "vertical", false)).toBe(1);
+    expect(rovingMove(0, "ArrowUp", ENABLED, "vertical", false)).toBe(3);
+    expect(rovingMove(0, "ArrowRight", ENABLED, "vertical", false)).toBeUndefined();
+    expect(rovingMove(0, "ArrowLeft", ENABLED, "vertical", false)).toBeUndefined();
+  });
+
+  it("swaps the horizontal arrows in right-to-left text but not the vertical ones", () => {
+    expect(rovingMove(1, "ArrowRight", ENABLED, "horizontal", true)).toBe(0);
+    expect(rovingMove(1, "ArrowLeft", ENABLED, "horizontal", true)).toBe(2);
+    expect(rovingMove(1, "ArrowDown", ENABLED, "vertical", true)).toBe(2);
+  });
+
+  it("goes to the first and last enabled item with Home and End, on either axis", () => {
+    const enabled = [false, true, true, false];
+    expect(rovingMove(2, "Home", enabled, "horizontal", false)).toBe(1);
+    expect(rovingMove(1, "End", enabled, "vertical", true)).toBe(2);
+  });
+
+  it("skips disabled items and wraps", () => {
+    expect(rovingMove(3, "ArrowRight", [true, false, true, true], "horizontal", false)).toBe(0);
+    expect(rovingMove(0, "ArrowLeft", [true, false, true, false], "horizontal", false)).toBe(2);
+  });
+
+  it("returns undefined for other keys and when no item is enabled", () => {
+    expect(rovingMove(0, "a", ENABLED, "horizontal", false)).toBeUndefined();
+    expect(rovingMove(0, "Home", [false, false], "horizontal", false)).toBeUndefined();
+    expect(rovingMove(0, "End", [], "horizontal", false)).toBeUndefined();
   });
 });
