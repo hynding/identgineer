@@ -1064,3 +1064,45 @@ test.describe("the held bar row yields to a larger bar", () => {
     });
   }
 });
+
+test.describe("the brand stays on one line wherever it has room", () => {
+  const WIDTHS_FOR_BRAND = [640, 700, 768, 900, 1024, 1152, 1280, 1920] as const;
+  for (const layout of LAYOUTS) {
+    test(`${layout}: the fixture's brand is one line at every width, UX mode and text size, with no sideways scroll or overlap`, async ({
+      page,
+    }) => {
+      test.setTimeout(240_000);
+      await openShell(page, { width: 1280, layout });
+      for (const fontSize of ["100%", "125%"]) {
+        await page.evaluate((size) => {
+          document.documentElement.style.fontSize = size;
+        }, fontSize);
+        for (const ux of UX_MODES) {
+          await page.evaluate((mode) => {
+            document.documentElement.setAttribute("data-ux", mode);
+          }, ux);
+          for (const width of WIDTHS_FOR_BRAND) {
+            await page.setViewportSize({ width, height: 800 });
+            await frames(page, 2);
+            const where = `${layout} at ${String(width)}px, ${ux}, ${fontSize}`;
+            const lines = await page.evaluate(() => {
+              const name = document.querySelector("#brand-link span");
+              if (!name) throw new Error("no brand");
+              const range = document.createRange();
+              range.selectNodeContents(name);
+              const tops = new Set(
+                [...range.getClientRects()]
+                  .filter((box) => box.width > 0)
+                  .map((box) => Math.round(box.top)),
+              );
+              return tops.size;
+            });
+            expect(lines, `${where}: brand lines`).toBe(1);
+            expect(await sideways(page), `${where}: sideways scroll`).toBeLessThanOrEqual(1);
+            expect(collisions(layout, await regions(page)), `${where}: overlaps`).toEqual([]);
+          }
+        }
+      }
+    });
+  }
+});
