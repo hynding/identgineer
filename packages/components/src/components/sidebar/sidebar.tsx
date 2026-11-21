@@ -1,4 +1,5 @@
-import { Component, h, Prop } from "@stencil/core";
+import { Component, Element, h, Prop, State } from "@stencil/core";
+import { itemsInSlot, watchItems } from "../../utils/slot-items";
 import { oneOf } from "../../utils/choice";
 import {
   GAP_STEPS,
@@ -31,6 +32,8 @@ import { SIDEBAR_SIDES, type SidebarSide } from "./sidebar-options";
   shadow: true,
 })
 export class IdgSidebar {
+  @Element() host!: HTMLElement;
+
   /** Which side of the content the side region is on, in the reading direction. */
   @Prop({ reflect: true }) side: SidebarSide = "start";
 
@@ -40,13 +43,46 @@ export class IdgSidebar {
   /** Space between the regions, a step of the space scale. Without it the layout's gap is used. */
   @Prop({ reflect: true }) gap?: GapStep;
 
+  @State() private hasSide = false;
+
+  private stopWatching?: () => void;
+
+  connectedCallback(): void {
+    this.stopWatching = watchItems(this.host, () => {
+      this.readSide();
+    });
+  }
+
+  disconnectedCallback(): void {
+    this.stopWatching?.();
+  }
+
+  componentWillLoad(): void {
+    this.readSide();
+  }
+
+  componentDidLoad(): void {
+    this.readSide();
+  }
+
+  // The side region keeps its width and its gap while nothing in it is drawn, unless it is told.
+  private readSide(): void {
+    const next = itemsInSlot(this.host, "side").length > 0;
+    if (next !== this.hasSide) this.hasSide = next;
+  }
+
   render() {
     const side = oneOf(SIDEBAR_SIDES, this.side, "start");
     const width = stepOf(SIZE_STEPS, this.sideWidth);
     const gap = stepOf(GAP_STEPS, this.gap);
     const aside = (
-      <div class="side" part="side">
-        <slot name="side" />
+      <div class={{ side: true, empty: !this.hasSide }} part="side">
+        <slot
+          name="side"
+          onSlotchange={() => {
+            this.readSide();
+          }}
+        />
       </div>
     );
     const content = (

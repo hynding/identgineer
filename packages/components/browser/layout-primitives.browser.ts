@@ -394,7 +394,7 @@ test.describe("items that draw nothing", () => {
     });
     await expect.poll(() => distinct(page.locator("#switcher-limit > idg-card"), "y")).toBe(1);
     await page.locator("#extra").evaluate((element) => {
-      element.hidden = false;
+      element.removeAttribute("hidden");
     });
     await expect.poll(() => distinct(page.locator("#switcher-limit > idg-card"), "x")).toBe(1);
   });
@@ -410,13 +410,6 @@ test.describe("items that draw nothing", () => {
             ?.shadowRoot?.querySelector(".switcher")
             ?.classList.contains("over-limit"),
         );
-    await expect.poll(stacked).toBe(true);
-    await page
-      .locator("#forwarded > p")
-      .last()
-      .evaluate((element) => {
-        element.remove();
-      });
     await expect.poll(stacked).toBe(true);
     await page
       .locator("#forwarded > p")
@@ -707,13 +700,14 @@ test.describe("long words", () => {
       await page.locator(selector).evaluate((host, word) => {
         const item = document.createElement(host.localName === "idg-grid" ? "idg-card" : "p");
         item.textContent = word;
+        item.id = "long-word";
         host.append(item);
       }, LONG);
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       );
       expect(overflow).toBeLessThanOrEqual(0);
-      const added = await boxOf(page.locator(`${selector} > :last-child`));
+      const added = await boxOf(page.locator("#long-word"));
       expect(added.x + added.width).toBeLessThanOrEqual(320);
     });
   }

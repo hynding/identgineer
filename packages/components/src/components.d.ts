@@ -1264,7 +1264,7 @@ export namespace Components {
          */
         "gap"?: GapStep;
         /**
-          * Most items allowed in a row, 2 to 6. With more items than that, they stack at any width. Items are counted again when they are added or removed.
+          * Most items allowed in a row, 2 to 6. With more items than that, they stack at any width. Hidden items, templates and scripts do not count; the count is taken again when items are added, removed, hidden or shown.
          */
         "limit"?: number;
         /**
@@ -3571,7 +3571,7 @@ declare namespace LocalJSX {
          */
         "gap"?: GapStep;
         /**
-          * Most items allowed in a row, 2 to 6. With more items than that, they stack at any width. Items are counted again when they are added or removed.
+          * Most items allowed in a row, 2 to 6. With more items than that, they stack at any width. Hidden items, templates and scripts do not count; the count is taken again when items are added, removed, hidden or shown.
          */
         "limit"?: number;
         /**

@@ -315,6 +315,7 @@ section.dashboard::after {
   margin-inline: auto;
   padding-inline: var(--idg-layout-page-gutter);
   gap: var(--idg-layout-section-gap);
+  overflow-wrap: anywhere;
 }
 
 .layout-page > * {

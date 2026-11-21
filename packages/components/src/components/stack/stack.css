@@ -1,6 +1,9 @@
 :host {
   display: block;
   min-inline-size: 0;
+  /* Inherited by the items, so a word wider than its container breaks instead of overflowing. Unlike
+     break-word it also lowers the width the item needs, so a flex or grid item can shrink to fit. */
+  overflow-wrap: anywhere;
 }
 
 :host([hidden]) {
@@ -32,25 +35,15 @@
   align-items: stretch;
 }
 
-/* A rule is drawn on every child after the first, with half the gap on either side of it. The gap
-   moves into the children's padding because a flex gap cannot hold a line. The rule is a hairline
-   in the theme's border colour, which every design language shows, even those with no border. */
+/* A rule is drawn above every child but the first that is drawn, which the component marks, with
+   half the gap on either side of it. The gap moves into the children's block padding and the
+   container's own gap because a flex gap cannot hold a line. The rule is a hairline in the theme's
+   border colour, which every design language shows, even those with no border. */
 .dividers {
-  gap: 0;
+  gap: calc(var(--_gap) / 2);
 }
 
-.dividers ::slotted(*) {
-  padding-block: calc(var(--_gap) / 2);
-}
-
-.dividers ::slotted(:first-child) {
-  padding-block-start: 0;
-}
-
-.dividers ::slotted(:last-child) {
-  padding-block-end: 0;
-}
-
-.dividers ::slotted(:not(:first-child)) {
+.dividers ::slotted(:not([data-idg-stack-first])) {
+  padding-block-start: calc(var(--_gap) / 2);
   border-block-start: thin solid var(--idg-color-border);
 }

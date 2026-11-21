@@ -1,6 +1,9 @@
 :host {
   display: block;
   min-inline-size: 0;
+  /* Inherited by the items, so a word wider than its container breaks instead of overflowing. Unlike
+     break-word it also lowers the width the item needs, so a flex or grid item can shrink to fit. */
+  overflow-wrap: anywhere;
 }
 
 :host([hidden]) {
@@ -21,6 +24,7 @@
    container's own width is what the percentage measures. */
 .switcher ::slotted(*) {
   flex: 1 1 calc((var(--_size) - 100%) * 999);
+  min-inline-size: 0;
 }
 
 /* More items than the limit: every item takes a row to itself, at any width. */

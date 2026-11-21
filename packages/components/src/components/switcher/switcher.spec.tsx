@@ -138,7 +138,8 @@ describe("idg-switcher", () => {
 
   it("counts what the slot is given, so items forwarded through another slot count", async () => {
     const { root } = await render(<idg-switcher limit={2}>{items(1)}</idg-switcher>);
-    const slot = root.shadowRoot?.querySelector("slot:not([name])") as HTMLSlotElement;
+    const slot = root.shadowRoot?.querySelector<HTMLSlotElement>("slot:not([name])");
+    if (!slot) throw new Error("no slot");
     slot.assignedElements = () => [1, 2, 3].map(() => document.createElement("p"));
     slot.dispatchEvent(new Event("slotchange"));
     await new Promise((resolve) => setTimeout(resolve, 0));

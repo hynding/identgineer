@@ -1,6 +1,9 @@
 :host {
   display: block;
   min-inline-size: 0;
+  /* Inherited by the items, so a word wider than its container breaks instead of overflowing. Unlike
+     break-word it also lowers the width the item needs, so a flex or grid item can shrink to fit. */
+  overflow-wrap: anywhere;
 }
 
 :host([hidden]) {
@@ -29,4 +32,9 @@
 .content {
   flex: 999 1 0;
   min-inline-size: 50%;
+}
+
+/* Nothing is drawn at the side, so it keeps neither its width nor the gap that would follow it. */
+.empty {
+  display: none;
 }
