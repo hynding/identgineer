@@ -85,6 +85,7 @@ describe("built tokens", () => {
       "--idg-ornament-hard-shadow-x",
       "--idg-density-target-size",
       "--idg-density-gap-scale",
+      "--idg-rule-width",
       "--idg-size-m",
       "--idg-size-screen",
       "--idg-layout-content-max",

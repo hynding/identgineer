@@ -38,6 +38,49 @@ async function boxOf(locator: Locator): Promise<Box> {
   return box;
 }
 
+/** The pixels of a region of the page that are within a few steps of a colour, given as `rgb(r, g, b)`. */
+async function pixelsNear(page: Page, clip: Box, color: string): Promise<number> {
+  const region = {
+    x: Math.floor(clip.x),
+    y: Math.floor(clip.y),
+    width: Math.max(1, Math.ceil(clip.width)),
+    height: Math.max(1, Math.ceil(clip.height)),
+  };
+  const png = (await page.screenshot({ clip: region })).toString("base64");
+  return page.evaluate(
+    async ([encoded, target]) => {
+      const bytes = Uint8Array.from(atob(encoded ?? ""), (character) => character.charCodeAt(0));
+      const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/png" }));
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("no canvas");
+      context.drawImage(bitmap, 0, 0);
+      const wanted = (target ?? "").match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+      const { data } = context.getImageData(0, 0, bitmap.width, bitmap.height);
+      let count = 0;
+      for (let index = 0; index < data.length; index += 4) {
+        const distance =
+          Math.abs((data[index] ?? 0) - (wanted[0] ?? 0)) +
+          Math.abs((data[index + 1] ?? 0) - (wanted[1] ?? 0)) +
+          Math.abs((data[index + 2] ?? 0) - (wanted[2] ?? 0));
+        if (distance <= 24) count += 1;
+      }
+      return count;
+    },
+    [png, color] as const,
+  );
+}
+
+/** Whether the rule above a stack item is drawn: pixels of the border colour in the strip it occupies. */
+async function ruleAbove(page: Page, selector: string): Promise<boolean> {
+  const item = page.locator(selector);
+  await item.scrollIntoViewIfNeeded();
+  const box = await boxOf(item);
+  const color = await item.evaluate((element) => getComputedStyle(element).borderBlockStartColor);
+  const strip = { x: box.x, y: box.y - 2, width: Math.min(box.width, 160), height: 5 };
+  return (await pixelsNear(page, strip, color)) > 0;
+}
+
 /** Sets how wide the container of a primitive is, through the style object the strict policy allows. */
 async function setInlineSize(page: Page, selector: string, size: string): Promise<void> {
   await page.locator(selector).evaluate((element, value) => {
@@ -341,30 +384,6 @@ test.describe("idg-sidebar", () => {
 });
 
 test.describe("items that draw nothing", () => {
-  const ruled = (page: Page, selector: string) =>
-    page
-      .locator(selector)
-      .evaluateAll((elements) =>
-        elements.map((element) => getComputedStyle(element).borderBlockStartWidth !== "0px"),
-      );
-
-  test("stack dividers sit only between items that draw", async ({ page }) => {
-    await open(page);
-    expect(await ruled(page, "#leading-first, #leading-second")).toEqual([false, true]);
-  });
-
-  test("stack dividers follow an item that is hidden and shown", async ({ page }) => {
-    await open(page);
-    await page.locator("#leading-first").evaluate((element) => {
-      element.setAttribute("hidden", "");
-    });
-    await expect.poll(() => ruled(page, "#leading-second")).toEqual([false]);
-    await page.locator("#leading-first").evaluate((element) => {
-      element.removeAttribute("hidden");
-    });
-    await expect.poll(() => ruled(page, "#leading-first, #leading-second")).toEqual([false, true]);
-  });
-
   test("a switcher limit does not count hidden items, templates or items for another slot", async ({
     page,
   }) => {
@@ -515,19 +534,6 @@ test.describe("idg-stack", () => {
       element.setAttribute("gap", "none");
     });
     await expect.poll(space).toBeLessThan(2);
-  });
-
-  test("dividers rule every child but the first", async ({ page }) => {
-    await open(page);
-    const rules = await children(page, "stack-dividers").evaluateAll((elements) =>
-      elements.map((element) => getComputedStyle(element).borderBlockStartWidth),
-    );
-    expect(rules[0]).toBe("0px");
-    expect(rules.slice(1).every((width) => width !== "0px")).toBe(true);
-    const plain = await children(page, "stack").evaluateAll((elements) =>
-      elements.map((element) => getComputedStyle(element).borderBlockStartWidth),
-    );
-    expect(plain.every((width) => width === "0px")).toBe(true);
   });
 
   test("align moves children to the inline start, centre and end", async ({ page }) => {
@@ -683,35 +689,7 @@ test.describe("the layout primitives in a right-to-left page", () => {
   });
 });
 
-test.describe("long words", () => {
-  const LONG = "a".repeat(40);
-  const TARGETS = [
-    ["idg-stack", "#stack"],
-    ["idg-cluster", "#cluster"],
-    ["idg-grid", "#grid"],
-    ["idg-sidebar", "#sidebar"],
-    ["idg-switcher", "#switcher"],
-    ["idg-cover", "#cover-plain"],
-  ] as const;
-
-  for (const [tag, selector] of TARGETS) {
-    test(`${tag} breaks a 40-character word at 320px instead of overflowing`, async ({ page }) => {
-      await open(page, 320);
-      await page.locator(selector).evaluate((host, word) => {
-        const item = document.createElement(host.localName === "idg-grid" ? "idg-card" : "p");
-        item.textContent = word;
-        item.id = "long-word";
-        host.append(item);
-      }, LONG);
-      const overflow = await page.evaluate(
-        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      );
-      expect(overflow).toBeLessThanOrEqual(0);
-      const added = await boxOf(page.locator("#long-word"));
-      expect(added.x + added.width).toBeLessThanOrEqual(320);
-    });
-  }
-
+test.describe("large text", () => {
   for (const layout of LAYOUTS) {
     test(`the page does not scroll sideways at 320px with the text doubled, under ${layout}`, async ({
       page,
@@ -725,6 +703,189 @@ test.describe("long words", () => {
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       );
       expect(overflow).toBeLessThanOrEqual(0);
+    });
+  }
+});
+
+test.describe("idg-stack dividers", () => {
+  for (const direction of ["ltr", "rtl"] as const) {
+    test.describe(direction, () => {
+      test("draw no rule above the first item that is drawn, and one above each after it", async ({
+        page,
+      }) => {
+        await open(page);
+        await setDirection(page, direction);
+        expect(await ruleAbove(page, "#leading-first")).toBe(false);
+        expect(await ruleAbove(page, "#leading-second")).toBe(true);
+      });
+
+      test("follow an item that is hidden by class, by attribute and shown again", async ({
+        page,
+      }) => {
+        await open(page);
+        await setDirection(page, direction);
+        await page.locator("#leading-first").evaluate((element) => {
+          element.setAttribute("hidden", "");
+        });
+        expect(await ruleAbove(page, "#leading-second")).toBe(false);
+        await page.locator("#leading-first").evaluate((element) => {
+          element.removeAttribute("hidden");
+          element.classList.add("gone");
+        });
+        expect(await ruleAbove(page, "#leading-second")).toBe(false);
+        await page.locator("#leading-first").evaluate((element) => {
+          element.classList.remove("gone");
+        });
+        expect(await ruleAbove(page, "#leading-first")).toBe(false);
+        expect(await ruleAbove(page, "#leading-second")).toBe(true);
+      });
+
+      test("follow items that are reordered", async ({ page }) => {
+        await open(page);
+        await setDirection(page, direction);
+        await page.locator("#leading-second").evaluate((element) => {
+          element.parentElement?.insertBefore(element, document.getElementById("leading-first"));
+        });
+        expect(await ruleAbove(page, "#leading-second")).toBe(false);
+        expect(await ruleAbove(page, "#leading-first")).toBe(true);
+      });
+
+      test("follow changes made while the stack was detached", async ({ page }) => {
+        await open(page);
+        await setDirection(page, direction);
+        await page.locator("#stack-leading").evaluate((stack) => {
+          const parent = stack.parentElement;
+          const next = stack.nextSibling;
+          stack.remove();
+          document.getElementById("leading-first")?.setAttribute("hidden", "");
+          parent?.insertBefore(stack, next);
+        });
+        expect(await ruleAbove(page, "#leading-second")).toBe(false);
+      });
+
+      test("keep the focus ring of the first and last item whole on every side", async ({
+        page,
+      }) => {
+        await open(page);
+        await setDirection(page, direction);
+        await page.locator("#focus-before").locator("button").focus();
+        await page.keyboard.press("Tab");
+        for (const [id, sides] of [
+          ["focus-first", ["top", "start", "end"]],
+          ["focus-last", ["bottom", "start", "end"]],
+        ] as const) {
+          if (id === "focus-last") {
+            await page.keyboard.press("Tab");
+            await page.keyboard.press("Tab");
+          }
+          const control = page.locator(`#${id}`).locator("button");
+          await expect(control).toBeFocused();
+          const ring = await control.evaluate((element) => {
+            const style = getComputedStyle(element);
+            return {
+              color: style.outlineColor,
+              reach: parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset),
+            };
+          });
+          const box = await boxOf(control);
+          const regions: Record<string, Box> = {
+            top: { x: box.x, y: box.y - ring.reach, width: box.width, height: ring.reach - 0.5 },
+            bottom: {
+              x: box.x,
+              y: box.y + box.height + 0.5,
+              width: box.width,
+              height: ring.reach - 0.5,
+            },
+            left: { x: box.x - ring.reach, y: box.y, width: ring.reach - 0.5, height: box.height },
+            right: {
+              x: box.x + box.width + 0.5,
+              y: box.y,
+              width: ring.reach - 0.5,
+              height: box.height,
+            },
+          };
+          const physical = (side: string) =>
+            side === "start"
+              ? direction === "ltr"
+                ? "left"
+                : "right"
+              : side === "end"
+                ? direction === "ltr"
+                  ? "right"
+                  : "left"
+                : side;
+          for (const side of sides) {
+            const region = regions[physical(side)];
+            if (!region) throw new Error(side);
+            expect(await pixelsNear(page, region, ring.color), `${id} ${side}`).toBeGreaterThan(0);
+          }
+        }
+      });
+    });
+  }
+
+  test("do not rule items another component forwards through a slot, and leave no stray rule", async ({
+    page,
+  }) => {
+    await open(page);
+    await page.locator("#forwarded-stack").scrollIntoViewIfNeeded();
+    const second = page.locator("#forwarded-stack > p").nth(1);
+    expect(await ruleAbove(page, "#forwarded-stack > p:first-child")).toBe(false);
+    expect(await ruleAbove(page, "#forwarded-stack > p:nth-child(2)")).toBe(false);
+    expect((await boxOf(second)).height).toBeGreaterThan(0);
+  });
+});
+
+test.describe("the primitives leave their content alone", () => {
+  const HOSTS = ["r-stack", "r-cluster", "r-grid", "r-sidebar", "r-switcher", "r-cover"] as const;
+
+  for (const host of HOSTS) {
+    test.describe(host, () => {
+      test("a table wider than its container scrolls inside its own frame, and breaks no word", async ({
+        page,
+      }) => {
+        await open(page);
+        await setInlineSize(page, `#${host}-box`, "16rem");
+        const table = page.locator(`#${host} idg-table`);
+        const frame = table.locator('[part="scroller"]');
+        await expect
+          .poll(() => frame.evaluate((element) => element.scrollWidth > element.clientWidth))
+          .toBe(true);
+        const wraps = await table.evaluate((element) =>
+          Array.from(element.querySelectorAll("th, td")).map(
+            (cell) => getComputedStyle(cell).overflowWrap,
+          ),
+        );
+        expect(new Set(wraps)).toEqual(new Set(["normal"]));
+        const page_ = await page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        );
+        expect(page_).toBeLessThanOrEqual(0);
+      });
+
+      test("a button label and a flex label keep the width their text needs", async ({ page }) => {
+        await open(page);
+        const alone = {
+          button: await boxOf(page.locator("#alone-button")),
+          label: await boxOf(page.locator("#alone-label")),
+        };
+        await setInlineSize(page, `#${host}-box`, "8rem");
+        const inside = {
+          button: await boxOf(page.locator(`#${host} idg-button`)),
+          label: await boxOf(page.locator(`#${host} .pill`)),
+        };
+        expect(inside.button.width).toBeGreaterThanOrEqual(alone.button.width - 1);
+        expect(inside.button.height).toBeLessThanOrEqual(alone.button.height + 1);
+        expect(inside.label.width).toBeGreaterThanOrEqual(alone.label.width - 1);
+        expect(inside.label.height).toBeLessThanOrEqual(alone.label.height + 1);
+      });
+
+      test("an image keeps its aspect ratio", async ({ page }) => {
+        await open(page);
+        await setInlineSize(page, `#${host}-box`, "12rem");
+        const image = await boxOf(page.locator(`#${host} img`));
+        expect(image.width / image.height).toBeCloseTo(3, 1);
+      });
     });
   }
 });

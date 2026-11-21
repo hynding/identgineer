@@ -54,12 +54,65 @@ describe("findLayoutCssViolations", () => {
     ]);
   });
 
-  it.each(["0", "0px", "0.0rem", "-0em", "0e3px"])(
+  it.each(["0", "0px", "0.0rem", "-0em"])(
     "accepts the zero %s, which is a length with no size to hard-code",
     (zero) => {
       expect(findLayoutCssViolations(`.a { --_gap: ${zero}; }`)).toEqual([]);
     },
   );
+
+  it.each(["1e1px", "1E1px", "0e3px", "1e-400px", "2.5e+2rem"])(
+    "refuses the exponent form %s outright, whatever it works out to",
+    (length) => {
+      expect(findLayoutCssViolations(`.a { gap: ${length}; }`).map((v) => v.rule)).toEqual([
+        "hard-coded length",
+      ]);
+    },
+  );
+
+  it.each([
+    "cqw",
+    "cqh",
+    "cqi",
+    "cqb",
+    "cqmin",
+    "cqmax",
+    "rex",
+    "rch",
+    "ric",
+    "rlh",
+    "ic",
+    "lh",
+    "cap",
+    "svw",
+    "svh",
+    "svi",
+    "svb",
+    "svmin",
+    "svmax",
+    "lvw",
+    "lvh",
+    "lvi",
+    "lvb",
+    "lvmin",
+    "lvmax",
+    "dvw",
+    "dvh",
+    "dvi",
+    "dvb",
+    "dvmin",
+    "dvmax",
+    "vi",
+    "vb",
+    "vmin",
+    "vmax",
+    "ch",
+    "ex",
+  ])("refuses the unit %s", (unit) => {
+    expect(findLayoutCssViolations(`.a { min-inline-size: 5${unit}; }`).map((v) => v.rule)).toEqual(
+      ["hard-coded length"],
+    );
+  });
 
   it("does not mistake a custom property name for a length", () => {
     expect(findLayoutCssViolations(".a { gap: var(--space-4px); }")).toEqual([]);
@@ -92,6 +145,42 @@ describe("findLayoutCssViolations", () => {
     ["logical margins", ".a { margin-inline: 0 var(--x); }"],
   ])("accepts %s", (_name, css) => {
     expect(findLayoutCssViolations(css)).toEqual([]);
+  });
+
+  it.each([
+    [".a { place-items: left; }"],
+    [".a { place-items: center right; }"],
+    [".a { place-content: left top; }"],
+    [".a { place-self: right; }"],
+  ])("refuses the physical keyword in %s", (css) => {
+    expect(findLayoutCssViolations(css).map((violation) => violation.rule)).toContain(
+      "physical value",
+    );
+  });
+
+  it("refuses a two-value overflow, which is ordered x then y, and allows one value", () => {
+    expect(findLayoutCssViolations(".a { overflow: hidden auto; }").map((v) => v.rule)).toEqual([
+      "physical shorthand",
+    ]);
+    expect(findLayoutCssViolations(".a { overflow: clip; }")).toEqual([]);
+    expect(findLayoutCssViolations(".a { overflow-block: clip; }")).toEqual([]);
+  });
+
+  it("does not count !important as a value", () => {
+    expect(findLayoutCssViolations(".a { margin: 0 auto !important; }")).toEqual([]);
+    expect(
+      findLayoutCssViolations(".a { margin: 0 auto 0 !important; }").map((v) => v.rule),
+    ).toEqual(["physical shorthand"]);
+    expect(findLayoutCssViolations(".a { margin:0 auto!important; }")).toEqual([]);
+  });
+
+  it("counts adjacent functions as separate values", () => {
+    expect(
+      findLayoutCssViolations(".a { margin: var(--a)var(--b)var(--c)var(--d); }").map(
+        (v) => v.rule,
+      ),
+    ).toEqual(["physical shorthand"]);
+    expect(findLayoutCssViolations(".a { margin: var(--a)var(--b); }")).toEqual([]);
   });
 
   it.each([

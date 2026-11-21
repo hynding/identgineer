@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { h, render } from "@stencil/vitest";
+import { removeHost } from "../../testing/remove-host";
 import { installSlotAssignment } from "../../testing/slot-assignment";
 import "./sidebar";
 
@@ -132,6 +133,27 @@ describe("idg-sidebar", () => {
         </idg-sidebar>,
       );
       expect(part(root, "side").classList.contains("empty")).toBe(false);
+    });
+
+    it("catches up on changes made while it was detached", async () => {
+      const { root, waitForChanges } = await render(
+        <div>
+          <idg-sidebar>
+            <nav slot="side" hidden id="nav">
+              Side
+            </nav>
+            Content
+          </idg-sidebar>
+        </div>,
+      );
+      const sidebar = root.querySelector<HTMLElement>("idg-sidebar");
+      if (!sidebar) throw new Error("no sidebar");
+      expect(part(sidebar, "side").classList.contains("empty")).toBe(true);
+      removeHost(sidebar);
+      sidebar.querySelector("#nav")?.removeAttribute("hidden");
+      root.append(sidebar);
+      await waitForChanges();
+      expect(part(sidebar, "side").classList.contains("empty")).toBe(false);
     });
 
     it("follows an item added to the side slot later", async () => {

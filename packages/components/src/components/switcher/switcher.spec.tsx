@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { h, render } from "@stencil/vitest";
+import { removeHost } from "../../testing/remove-host";
 import { installSlotAssignment } from "../../testing/slot-assignment";
 import { stubMutationObserver } from "../../testing/mutation-observer";
 import "./switcher";
@@ -134,6 +135,28 @@ describe("idg-switcher", () => {
     await waitForChanges();
     expect(overLimit(root)).toBe(false);
     watcher.restore();
+  });
+
+  it("catches up on changes made while it was detached", async () => {
+    const { root, waitForChanges } = await render(
+      <div>
+        <idg-switcher limit={2}>
+          <p>One</p>
+          <p>Two</p>
+          <p hidden id="third">
+            Three
+          </p>
+        </idg-switcher>
+      </div>,
+    );
+    const switcher = root.querySelector<HTMLElement>("idg-switcher");
+    if (!switcher) throw new Error("no switcher");
+    expect(overLimit(switcher)).toBe(false);
+    removeHost(switcher);
+    switcher.querySelector("#third")?.removeAttribute("hidden");
+    root.append(switcher);
+    await waitForChanges();
+    expect(overLimit(switcher)).toBe(true);
   });
 
   it("counts what the slot is given, so items forwarded through another slot count", async () => {
