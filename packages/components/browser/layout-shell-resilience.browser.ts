@@ -704,16 +704,63 @@ test.describe("a split hero taller than the window", () => {
   });
 });
 
-test.describe("the menu button does not move, in any UX mode or at larger text", () => {
+test.describe("the menu button does not move, in any UX mode, at larger text or in RTL", () => {
   const CASES: [string, number][] = [
     ["top-bar", 768],
     ["bento", 768],
     ["split-hero", 768],
     ["split-hero", 1024],
   ];
-  const opened = async (page: Page) => {
+
+  /** Asserts the closed bar is tidy, opens the panel, and asserts the button has not moved. */
+  const opened = async (page: Page, layout: string, width: number) => {
     const toggle = page.locator("#shell").locator('[part="toggle"]');
     await expect(toggle).toBeVisible();
+    const closed = await page.locator("#shell").evaluate((host) => {
+      const centre = (element: Element | null | undefined) => {
+        const box = element?.getBoundingClientRect();
+        return box ? box.top + box.height / 2 : Number.NaN;
+      };
+      const tree = host.shadowRoot;
+      const header = tree?.querySelector<HTMLElement>('[part="header"]');
+      const button = tree?.querySelector<HTMLElement>('[part="toggle"]');
+      if (!header || !button) throw new Error("missing");
+      const parts = [
+        button,
+        document.getElementById("brand-link"),
+        document.getElementById("action-last"),
+      ]
+        .filter((element): element is HTMLElement => element !== null)
+        .map((element) => element.getBoundingClientRect());
+      const style = getComputedStyle(header);
+      const around =
+        Number.parseFloat(style.paddingTop) +
+        Number.parseFloat(style.paddingBottom) +
+        Number.parseFloat(style.borderTopWidth) +
+        Number.parseFloat(style.borderBottomWidth);
+      return {
+        toggle: centre(button),
+        brand: centre(document.getElementById("brand-link")),
+        actions: centre(document.getElementById("action-last")),
+        height: header.getBoundingClientRect().height,
+        content:
+          Math.max(...parts.map((box) => box.bottom)) - Math.min(...parts.map((box) => box.top)),
+        around,
+      };
+    });
+    expect(
+      Math.abs(closed.toggle - closed.actions),
+      "toggle centred on the actions",
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(closed.toggle - closed.brand),
+      "toggle centred on the brand",
+    ).toBeLessThanOrEqual(1);
+    if (layout !== "split-hero" || width < 1000) {
+      expect(closed.height, "the bar is no taller than what is in it").toBeLessThanOrEqual(
+        closed.content + closed.around + 1,
+      );
+    }
     const before = await toggle.boundingBox();
     await toggle.click();
     await expect
@@ -725,16 +772,136 @@ test.describe("the menu button does not move, in any UX mode or at larger text",
       expect(after?.[key], key).toBeCloseTo(before?.[key] ?? Number.NaN, 0);
     }
   };
+
   for (const [layout, width] of CASES) {
     for (const ux of UX_MODES) {
       test(`${layout} at ${String(width)}px in the ${ux} UX mode`, async ({ page }) => {
         await openShell(page, { width, layout, ux });
-        await opened(page);
+        await opened(page, layout, width);
       });
     }
     test(`${layout} at ${String(width)}px with the root font at 150%`, async ({ page }) => {
       await openShell(page, { width: width * 1.5, layout, fontSize: "150%" });
-      await opened(page);
+      await opened(page, layout, width);
+    });
+    test(`${layout} at ${String(width)}px in a right-to-left page`, async ({ page }) => {
+      await openShell(page, { width, layout, direction: "rtl" });
+      await opened(page, layout, width);
+    });
+  }
+});
+
+test.describe("a window that shrinks and grows a pixel at a time", () => {
+  test("the split hero is pinned only while it fits, and a focused hero link is in the window", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    await openShell(page, { width: 1280, height: 900, layout: "split-hero" });
+    const state = () =>
+      page.locator("#shell").evaluate((host) => {
+        const tree = host.shadowRoot;
+        const hero = tree?.querySelector<HTMLElement>('[part="hero"]');
+        return {
+          tall: tree?.querySelector('[part="shell"]')?.classList.contains("hero-tall") ?? false,
+          position: hero ? getComputedStyle(hero).position : "",
+        };
+      });
+    expect(await state()).toEqual({ tall: false, position: "sticky" });
+    for (let height = 900; height >= 360; height -= 1) {
+      await page.setViewportSize({ width: 1280, height });
+      await frames(page, 1);
+    }
+    await frames(page, 3);
+    expect(await state()).toEqual({ tall: true, position: "static" });
+    await page.evaluate(() => {
+      window.scrollTo(0, 800);
+    });
+    await page.locator("#hero-link").focus();
+    await frames(page, 2);
+    const box = await page.locator("#hero-link").evaluate((link) => {
+      const rect = link.getBoundingClientRect();
+      return { top: rect.top, bottom: rect.bottom, window: window.innerHeight };
+    });
+    expect(box.top).toBeGreaterThanOrEqual(0);
+    expect(box.bottom).toBeLessThanOrEqual(box.window);
+    for (let height = 360; height <= 900; height += 1) {
+      await page.setViewportSize({ width: 1280, height });
+      await frames(page, 1);
+    }
+    await frames(page, 3);
+    expect(await state()).toEqual({ tall: false, position: "sticky" });
+  });
+});
+
+test.describe("scroll padding and the bar's own controls", () => {
+  const padding = (page: Page) =>
+    page.evaluate(() =>
+      Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop),
+    );
+
+  for (const layout of ["top-bar", "dashboard"]) {
+    test(`${layout}: Tab through the brand, navigation and actions leaves a scrolled page where it is`, async ({
+      page,
+    }) => {
+      await openShell(page, { width: 1280, height: 700, layout });
+      await page.evaluate(() => {
+        window.scrollTo(0, 900);
+      });
+      await frames(page, 2);
+      const scrollY = await page.evaluate(() => window.scrollY);
+      expect(scrollY).toBeGreaterThan(500);
+      await page.locator("#brand-link").focus();
+      expect(await page.evaluate(() => window.scrollY), "brand").toBe(scrollY);
+      for (let index = 0; index < 10; index += 1) {
+        await page.keyboard.press("Tab");
+        await frames(page, 1);
+        const info = await focusInfo(page);
+        if (!["brand", "navigation", "actions", "toggle"].includes(info.region)) break;
+        expect(await page.evaluate(() => window.scrollY), `${info.region}#${info.id}`).toBe(
+          scrollY,
+        );
+      }
+    });
+
+    test(`${layout}: a script that scrolls a target to the top lands it under the bar, not behind it`, async ({
+      page,
+    }) => {
+      await openShell(page, { width: 1280, height: 700, layout });
+      await page.evaluate(() => {
+        document.addEventListener("click", (event) => {
+          const link = event
+            .composedPath()
+            .find(
+              (node): node is HTMLAnchorElement =>
+                node instanceof HTMLAnchorElement && node.hash.length > 1,
+            );
+          if (!link) return;
+          event.preventDefault();
+          document.querySelector(link.hash)?.scrollIntoView({ block: "start" });
+        });
+      });
+      await page.locator('a[slot="navigation"][href="#components"]').click();
+      await frames(page, 3);
+      const top = await page.evaluate(
+        () => document.getElementById("components")?.getBoundingClientRect().top ?? Number.NaN,
+      );
+      const inset = await padding(page);
+      expect(inset, "the page pads its scroll by the bar").toBeGreaterThan(0);
+      expect(top, "the target is not under the bar").toBeGreaterThanOrEqual(inset - 1);
+    });
+
+    test(`${layout}: focusing the content still keeps it clear of the bar`, async ({ page }) => {
+      await openShell(page, { width: 1280, height: 700, layout });
+      await page.evaluate(() => {
+        const link = document.getElementById("main-link");
+        if (link) window.scrollTo(0, window.scrollY + link.getBoundingClientRect().top - 10);
+      });
+      await page.locator("#main-link").focus();
+      await frames(page, 2);
+      const top = await page.evaluate(
+        () => document.getElementById("main-link")?.getBoundingClientRect().top ?? Number.NaN,
+      );
+      expect(top).toBeGreaterThanOrEqual((await padding(page)) - 1);
     });
   }
 });

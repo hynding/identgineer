@@ -31,7 +31,14 @@ describe("reserveScrollPadding", () => {
     expect(SCROLL_PADDING_RULES).toContain(
       ":root { scroll-padding-block-start: var(--idg-layout-sticky-inset); }",
     );
-    expect(SCROLL_PADDING_RULES).toContain("scroll-padding-block-start: 0;");
+    expect(SCROLL_PADDING_RULES).not.toContain(":has(");
+    // The bar's own controls opt out through a property that components carry into their shadow roots.
+    expect(SCROLL_PADDING_RULES).toContain(
+      "--_idg-chrome-scroll-margin: calc(-1 * var(--idg-layout-sticky-inset))",
+    );
+    expect(SCROLL_PADDING_RULES).toContain(
+      "scroll-margin-block-start: var(--_idg-chrome-scroll-margin, 0px)",
+    );
     releaseScrollPadding(asDocument(document));
     expect(document.adoptedStyleSheets).toHaveLength(0);
   });

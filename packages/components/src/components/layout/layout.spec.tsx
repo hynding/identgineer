@@ -555,3 +555,36 @@ describe("idg-layout hero taller than the window", () => {
     expect(part(root, "shell").classList.contains("hero-tall")).toBe(false);
   });
 });
+
+describe("idg-layout hero height and the window", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("reads the hero again when the window is resized, since a pinned hero stops resizing", async () => {
+    vi.stubGlobal("innerHeight", 800);
+    const { root, waitForChanges } = await render(page);
+    Object.defineProperty(part(root, "hero"), "offsetHeight", { value: 800, configurable: true });
+    resize.notify();
+    await waitForChanges();
+    expect(part(root, "shell").classList.contains("hero-tall")).toBe(false);
+    // The window shrank; the hero is as tall as it was, and nothing resized it.
+    vi.stubGlobal("innerHeight", 500);
+    window.dispatchEvent(new Event("resize"));
+    await waitForChanges();
+    expect(part(root, "shell").classList.contains("hero-tall")).toBe(true);
+  });
+
+  it("stops listening to the window once it is removed", async () => {
+    vi.stubGlobal("innerHeight", 800);
+    const { root, waitForChanges } = await render(page);
+    const hero = part(root, "hero");
+    Object.defineProperty(hero, "offsetHeight", { value: 800, configurable: true });
+    const shell = part(root, "shell");
+    root.remove();
+    vi.stubGlobal("innerHeight", 500);
+    window.dispatchEvent(new Event("resize"));
+    await waitForChanges();
+    expect(shell.classList.contains("hero-tall")).toBe(false);
+  });
+});
