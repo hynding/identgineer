@@ -5,3 +5,5 @@ www
 coverage
 cms/generated
 pnpm-lock.yaml
+packages/components/loader
+packages/components/src/components.d.ts
