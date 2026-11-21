@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { h, render } from "@stencil/vitest";
+import { stubMutationObserver } from "../../testing/mutation-observer";
+import { removeHost } from "../../testing/remove-host";
 import "../breadcrumb-item/breadcrumb-item";
 import "./breadcrumb";
 
@@ -103,5 +105,53 @@ describe("idg-breadcrumb items", () => {
       </idg-breadcrumb>,
     );
     expect(items(root).map((item) => item.isLast)).toEqual([false, true, false]);
+  });
+});
+
+describe("idg-breadcrumb items changed after load", () => {
+  it("follows an item that becomes the current page", async () => {
+    const watcher = stubMutationObserver();
+    const { root, waitForChanges } = await render(trail);
+    const [, docs] = items(root);
+    (docs as unknown as { current: boolean }).current = true;
+    await waitForChanges();
+    watcher.notify([{ type: "attributes", target: docs as Node }]);
+    await waitForChanges();
+    expect(items(root).map((item) => item.isCurrent)).toEqual([false, true, false]);
+    watcher.restore();
+  });
+
+  it("follows an item that is hidden or shown", async () => {
+    const watcher = stubMutationObserver();
+    const { root, waitForChanges } = await render(trail);
+    const last = items(root)[2];
+    if (!last) throw new Error("no last item");
+    last.setAttribute("hidden", "");
+    watcher.notify([{ type: "attributes", target: last }]);
+    await waitForChanges();
+    expect(items(root).map((item) => item.isLast)).toEqual([false, true, false]);
+    last.removeAttribute("hidden");
+    watcher.notify([{ type: "attributes", target: last }]);
+    await waitForChanges();
+    expect(items(root).map((item) => item.isLast)).toEqual([false, false, true]);
+    watcher.restore();
+  });
+
+  it("stops watching when removed and catches up when it is put back", async () => {
+    const watcher = stubMutationObserver();
+    const { root, waitForChanges } = await render(<div>{trail}</div>);
+    const crumbs = root.querySelector<HTMLElement>("idg-breadcrumb");
+    if (!crumbs) throw new Error("no breadcrumb");
+    const watching = () =>
+      watcher.observers.some((observer) => observer.observing && observer.target === crumbs);
+    expect(watching()).toBe(true);
+    removeHost(crumbs);
+    expect(watching()).toBe(false);
+    items(crumbs)[2]?.setAttribute("hidden", "");
+    root.append(crumbs);
+    await waitForChanges();
+    expect(watching()).toBe(true);
+    expect(items(crumbs).map((item) => item.isLast)).toEqual([false, true, false]);
+    watcher.restore();
   });
 });
