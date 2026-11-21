@@ -51,12 +51,15 @@ function showPage(page) {
   summary.textContent = `Showing ${String(first)} to ${String(last)} of ${String(rows.length)} projects`;
 }
 
-pager.addEventListener("idgPageChange", (event) => {
-  showPage(event.detail.page);
-});
+// The CSP demo page shares this script and has no table.
+if (projects && pager && summary) {
+  pager.addEventListener("idgPageChange", (event) => {
+    showPage(event.detail.page);
+  });
 
-projects.addEventListener("idgSort", () => {
-  showPage(pager.page);
-});
+  projects.addEventListener("idgSort", () => {
+    showPage(pager.page);
+  });
 
-showPage(1);
+  showPage(1);
+}
