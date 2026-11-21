@@ -1283,7 +1283,7 @@ export namespace Components {
          */
         "setFocus": () => Promise<void>;
         /**
-          * The value of the selected tab. Without a match the first enabled tab is selected.
+          * The value of the selected tab. Without a match, the enabled tab nearest to where the selection was takes over, which is the first enabled tab until one has been selected. Values should be unique: a tab that repeats an earlier tab's value cannot be selected, and a warning is logged.
           * @default ""
          */
         "value": string;
@@ -3396,7 +3396,7 @@ declare namespace LocalJSX {
          */
         "orientation"?: TabsOrientation;
         /**
-          * The value of the selected tab. Without a match the first enabled tab is selected.
+          * The value of the selected tab. Without a match, the enabled tab nearest to where the selection was takes over, which is the first enabled tab until one has been selected. Values should be unique: a tab that repeats an earlier tab's value cannot be selected, and a warning is logged.
           * @default ""
          */
         "value"?: string;

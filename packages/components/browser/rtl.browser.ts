@@ -222,11 +222,29 @@ test.describe("navigation components in a right-to-left page", () => {
     await expect(page.locator("#vertical-security")).toBeFocused();
   });
 
-  test("the breadcrumb runs from the right and its slash separators mirror", async ({ page }) => {
+  test("the breadcrumb runs from the right with its chevrons mirrored and before the next item", async ({
+    page,
+  }) => {
     await openNavigationRightToLeft(page);
     const home = await boxOf(page, "#crumb-home");
     const docs = await boxOf(page, "#crumb-docs");
     expect(home.x).toBeGreaterThan(docs.x);
+    const chevron = page.locator("#crumb-home").locator('[part="separator"]');
+    await expect
+      .poll(() => chevron.evaluate((element) => getComputedStyle(element).transform))
+      .toBe("matrix(-1, 0, 0, 1, 0, 0)");
+    // The separator follows its item, so in right-to-left it sits at the item's left.
+    const separator = await boxOf(page, "#crumb-home", '[part="separator"]');
+    const link = await boxOf(page, "#crumb-home", '[part="link"]');
+    expect(separator.x + separator.width).toBeLessThanOrEqual(link.x + 1);
+  });
+
+  test("a left-to-right breadcrumb does not mirror its chevrons", async ({ page }) => {
+    await openNavigation(page);
+    const chevron = page.locator("#crumb-home").locator('[part="separator"]');
+    await expect
+      .poll(() => chevron.evaluate((element) => getComputedStyle(element).transform))
+      .toBe("none");
   });
 
   test("pagination puts the first page at the right", async ({ page }) => {
@@ -237,16 +255,16 @@ test.describe("navigation components in a right-to-left page", () => {
     expect(first?.x ?? 0).toBeGreaterThan(last?.x ?? 0);
   });
 
-  test("a table aligns its text at the inline start, on the right", async ({ page }) => {
+  test("a table starts its header text at the right", async ({ page }) => {
     await openNavigationRightToLeft(page);
+    const header = "#table thead th:first-child";
     await expect
-      .poll(() =>
-        page
-          .locator("#table th")
-          .first()
-          .evaluate((cell) => getComputedStyle(cell).textAlign),
-      )
-      .toMatch(/^(start|right)$/);
+      .poll(async () => {
+        const cell = await boxOf(page, header);
+        const label = await boxOf(page, header, "button.idg-table-sort");
+        return cell.x + cell.width - (label.x + label.width) < label.x - cell.x;
+      })
+      .toBe(true);
     await expectNoAxeViolations(page);
   });
 });
