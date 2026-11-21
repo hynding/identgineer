@@ -133,6 +133,22 @@ export namespace Components {
     }
     interface IdgButton {
         /**
+          * Set by an overlay this button opens: the element it opens (`aria-controls`).
+         */
+        "accessibleControls"?: Element[];
+        /**
+          * Set by idg-tooltip: the hint, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by an overlay this button opens: whether it is open (`aria-expanded`).
+         */
+        "accessibleExpanded"?: boolean;
+        /**
+          * Set by an overlay this button opens: what kind of popup it is (`aria-haspopup`).
+         */
+        "accessibleHaspopup"?: string;
+        /**
           * Blocks activation and takes the control out of the tab order.
           * @default false
          */
@@ -1244,6 +1260,22 @@ declare namespace LocalJSX {
     }
     interface IdgButton {
         /**
+          * Set by an overlay this button opens: the element it opens (`aria-controls`).
+         */
+        "accessibleControls"?: Element[];
+        /**
+          * Set by idg-tooltip: the hint, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by an overlay this button opens: whether it is open (`aria-expanded`).
+         */
+        "accessibleExpanded"?: boolean;
+        /**
+          * Set by an overlay this button opens: what kind of popup it is (`aria-haspopup`).
+         */
+        "accessibleHaspopup"?: string;
+        /**
           * Blocks activation and takes the control out of the tab order.
           * @default false
          */
@@ -1946,6 +1978,9 @@ declare namespace LocalJSX {
         "rel": string;
         "fullWidth": boolean;
         "shortcut": string;
+        "accessibleExpanded": boolean;
+        "accessibleHaspopup": string;
+        "accessibleDescription": string;
     }
     interface IdgCardAttributes {
         "variant": CardVariant;
