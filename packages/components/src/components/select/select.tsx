@@ -187,12 +187,13 @@ export class IdgSelect {
           </span>
         ) : null}
         <span class="chevron" aria-hidden="true" />
-        <slot
-          hidden
-          onSlotchange={() => {
-            this.mirror();
-          }}
-        />
+        <div hidden>
+          <slot
+            onSlotchange={() => {
+              this.mirror();
+            }}
+          />
+        </div>
         {description ? (
           <span id="description" class="visually-hidden">
             {description}
