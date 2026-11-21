@@ -1,0 +1,16 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.accordion {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+}

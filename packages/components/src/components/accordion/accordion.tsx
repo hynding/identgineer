@@ -1,5 +1,11 @@
-import { Component, Element, h, Prop } from "@stencil/core";
-import { DEFAULT_ACCORDION_HEADING_LEVEL } from "./accordion-options";
+import { Component, Element, h, Listen, Prop, Watch } from "@stencil/core";
+import { headingLevel } from "../../utils/heading-level";
+import { rovingMove } from "../../utils/roving";
+import {
+  DEFAULT_ACCORDION_HEADING_LEVEL,
+  MAX_REGION_ITEMS,
+  type AccordionToggleDetail,
+} from "./accordion-options";
 
 /**
  * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
@@ -10,6 +16,7 @@ import { DEFAULT_ACCORDION_HEADING_LEVEL } from "./accordion-options";
  */
 @Component({
   tag: "idg-accordion",
+  styleUrl: "accordion.css",
   shadow: true,
 })
 export class IdgAccordion {
@@ -27,7 +34,86 @@ export class IdgAccordion {
    */
   @Prop({ attribute: "find-in-page" }) findInPage = false;
 
+  connectedCallback(): void {
+    // Items may have come or gone while it was out of the page.
+    if (this.loaded) this.sync();
+  }
+
+  componentDidLoad(): void {
+    this.loaded = true;
+  }
+
+  componentDidRender(): void {
+    this.sync();
+  }
+
+  @Watch("multiple")
+  multipleChanged(): void {
+    this.sync();
+  }
+
+  @Listen("idgToggle")
+  handleToggle(event: CustomEvent<AccordionToggleDetail>): void {
+    if (this.multiple || !event.detail.open) return;
+    for (const item of this.items()) {
+      if (item !== event.target && item.open) item.open = false;
+    }
+  }
+
+  @Listen("keydown")
+  handleKeydown(event: KeyboardEvent): void {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    const items = this.items();
+    // Only a key pressed on a header's button moves between headers. One pressed in a panel is
+    // the panel's own, and the panel's content is not in the item's shadow root.
+    const origin = event.composedPath()[0] as Node | undefined;
+    const current = items.findIndex(
+      (item) => origin !== undefined && item.shadowRoot?.contains(origin),
+    );
+    if (current === -1) return;
+    const enabled = items.map((item) => !item.disabled);
+    const next = rovingMove(current, event.key, enabled, "vertical", false);
+    if (next === undefined) return;
+    event.preventDefault();
+    void items[next]?.setFocus();
+  }
+
+  private loaded = false;
+
+  private items(): HTMLIdgAccordionItemElement[] {
+    return Array.from(this.host.children).filter(
+      (child): child is HTMLIdgAccordionItemElement => child.localName === "idg-accordion-item",
+    );
+  }
+
+  // The items are drawn in their own shadow roots and cannot see each other, so what depends on
+  // the others is handed down: the heading level, whether a closed panel can be found, and
+  // whether there are few enough items for each panel to be a landmark.
+  private sync(): void {
+    const items = this.items();
+    const level = headingLevel(this.headingLevel, DEFAULT_ACCORDION_HEADING_LEVEL);
+    const regions = items.length <= MAX_REGION_ITEMS;
+    for (const item of items) {
+      item.headingLevel = level;
+      item.hasRegion = regions;
+      item.findInPage = this.findInPage;
+    }
+    if (!this.multiple) this.keepFirstOpen(items);
+  }
+
+  private keepFirstOpen(items: readonly HTMLIdgAccordionItemElement[]): void {
+    for (const item of items.filter((candidate) => candidate.open).slice(1)) item.open = false;
+  }
+
   render() {
-    return <div class="accordion" />;
+    return (
+      <div class="accordion" part="accordion">
+        <slot
+          onSlotchange={() => {
+            this.sync();
+          }}
+        />
+      </div>
+    );
   }
 }

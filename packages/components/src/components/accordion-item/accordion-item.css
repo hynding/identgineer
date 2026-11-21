@@ -1,0 +1,128 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+/* Each item is drawn in the design's own surface: a hard-edged box (brutalist), a frosted one
+   (glass), a raised one (soft, elevated), or rules above and below (editorial). */
+.item {
+  box-sizing: border-box;
+  border-width: var(--idg-surface-border-width);
+  border-style: var(--idg-surface-border-style);
+  border-color: var(--idg-surface-border-color);
+  border-radius: var(--idg-shape-radius-lg);
+  background: var(--idg-surface-background);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: var(--idg-elevation-sm);
+  color: var(--idg-color-text);
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+  letter-spacing: var(--idg-font-body-letter-spacing);
+  transition-property: box-shadow, border-color;
+  transition-duration: var(--idg-motion-duration-base);
+  transition-timing-function: var(--idg-motion-easing-standard);
+}
+
+.item.open {
+  box-shadow: var(--idg-elevation-md);
+}
+
+.heading {
+  margin: 0;
+  font: inherit;
+}
+
+.trigger {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  inline-size: 100%;
+  min-block-size: max(var(--idg-density-target-size), var(--idg-density-control-height));
+  margin: 0;
+  padding-block: var(--idg-density-control-padding-block);
+  padding-inline: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-family: var(--idg-font-family-display);
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+  text-align: start;
+  text-decoration: var(--idg-ornament-heading-decoration);
+  text-decoration-thickness: 2px;
+  text-transform: var(--idg-ornament-heading-transform);
+  text-underline-offset: 0.2em;
+  -webkit-tap-highlight-color: transparent;
+  transition-property: background-color, color;
+  transition-duration: var(--idg-motion-duration-fast);
+  transition-timing-function: var(--idg-motion-easing-standard);
+}
+
+.trigger:not(:disabled):hover {
+  background: var(--idg-color-accent-subtle);
+  color: var(--idg-color-on-accent-subtle);
+}
+
+/* The ring sits inside, where the item's own edge and the stack's neighbours cannot cover it. */
+.trigger:focus-visible {
+  outline-offset: calc(-1 * var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
+}
+
+.trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.title {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.chevron {
+  flex: none;
+  transition-property: transform;
+  transition-duration: var(--idg-motion-duration-base);
+  transition-timing-function: var(--idg-motion-easing-emphasized);
+}
+
+.open .chevron {
+  transform: rotate(calc(180deg * var(--idg-motion-enabled)));
+}
+
+/* A closed panel is hidden, or hidden until found, which leaves the display value alone and
+   skips its contents instead. Only the first needs display:none. */
+.panel[hidden]:not([hidden="until-found"]) {
+  display: none;
+}
+
+.content {
+  padding-block: var(--idg-space-xs) calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+  padding-inline: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+}
+
+@media (forced-colors: active) {
+  .item {
+    border: 1px solid CanvasText;
+  }
+
+  .trigger:disabled {
+    color: GrayText;
+    opacity: 1;
+  }
+
+  .trigger:not(:disabled):hover {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+}
