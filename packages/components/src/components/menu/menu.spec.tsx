@@ -55,6 +55,12 @@ function itemByValue(root: HTMLElement, value: string): MenuItem {
   return found;
 }
 
+function itemAt(root: HTMLElement, index: number): MenuItem {
+  const found = items(root)[index];
+  if (!found) throw new Error(`no item ${String(index)}`);
+  return found;
+}
+
 function trigger(root: HTMLElement): MenuTrigger {
   const element = root.querySelector<MenuTrigger>('[slot="trigger"]');
   if (!element) throw new Error("no trigger");
@@ -125,7 +131,7 @@ describe("idg-menu opening", () => {
     expect(press(trigger(root), "ArrowUp").defaultPrevented).toBe(true);
     await waitForChanges();
     expect(focus[focus.length - 1]).toHaveBeenCalled();
-    press(items(root)[0] as MenuItem, "Escape");
+    press(itemAt(root, 0), "Escape");
     await waitForChanges();
     press(trigger(root), "ArrowDown");
     await waitForChanges();
@@ -139,13 +145,13 @@ describe("idg-menu keyboard", () => {
     await openMenu(root, waitForChanges);
     const all = items(root);
     const focus = spyFocus(root);
-    press(all[0] as MenuItem, "ArrowDown");
+    press(itemAt(root, 0), "ArrowDown");
     expect(focus[1]).toHaveBeenCalledTimes(1);
-    press(all[0] as MenuItem, "ArrowUp");
+    press(itemAt(root, 0), "ArrowUp");
     expect(focus[all.length - 1]).toHaveBeenCalledTimes(1);
-    press(all[3] as MenuItem, "Home");
+    press(itemAt(root, 3), "Home");
     expect(focus[0]).toHaveBeenCalledTimes(1);
-    press(all[0] as MenuItem, "End");
+    press(itemAt(root, 0), "End");
     expect(focus[all.length - 1]).toHaveBeenCalledTimes(2);
   });
 
@@ -153,7 +159,7 @@ describe("idg-menu keyboard", () => {
     const { root, waitForChanges } = await render(actions);
     await openMenu(root, waitForChanges);
     const focus = spyFocus(root);
-    press(items(root)[1] as MenuItem, "ArrowDown");
+    press(itemAt(root, 1), "ArrowDown");
     expect(focus[2]).toHaveBeenCalled();
   });
 
@@ -161,9 +167,9 @@ describe("idg-menu keyboard", () => {
     const { root, waitForChanges } = await render(actions);
     await openMenu(root, waitForChanges);
     const focus = spyFocus(root);
-    press(items(root)[0] as MenuItem, "d");
+    press(itemAt(root, 0), "d");
     expect(focus[1]).toHaveBeenCalled();
-    press(items(root)[1] as MenuItem, "e");
+    press(itemAt(root, 1), "e");
     expect(focus[items(root).length - 1]).toHaveBeenCalled();
   });
 
@@ -216,7 +222,7 @@ describe("idg-menu keyboard", () => {
   it.each(["Escape", "Tab"])("closes on %s", async (key) => {
     const { root, waitForChanges } = await render(actions);
     await openMenu(root, waitForChanges);
-    press(items(root)[0] as MenuItem, key);
+    press(itemAt(root, 0), key);
     await waitForChanges();
     expect(root.hasAttribute("open")).toBe(false);
     expect(trigger(root).ariaExpanded).toBe("false");

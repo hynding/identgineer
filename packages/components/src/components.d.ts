@@ -17,6 +17,7 @@ import { IconName } from "./components/icon/icon-paths";
 import { IconSize } from "./components/icon/icon-options";
 import { InputSize, InputType } from "./components/input/input-options";
 import { Placement } from "./utils/position";
+import { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
 import { SkeletonVariant } from "./components/skeleton/skeleton-options";
@@ -33,6 +34,7 @@ export { IconName } from "./components/icon/icon-paths";
 export { IconSize } from "./components/icon/icon-options";
 export { InputSize, InputType } from "./components/input/input-options";
 export { Placement } from "./utils/position";
+export { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
 export { SkeletonVariant } from "./components/skeleton/skeleton-options";
@@ -527,6 +529,112 @@ export namespace Components {
         "target"?: string;
     }
     /**
+     * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
+     * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
+     * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
+     * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
+     * focus moves to the items themselves (roving focus). Each item carries its own role and state.
+     */
+    interface IdgMenu {
+        /**
+          * Closes the menu.
+         */
+        "hide": () => Promise<void>;
+        /**
+          * The menu's accessible name. Without it the menu is named by its trigger.
+         */
+        "label"?: string;
+        /**
+          * The gap between the trigger and the menu, in pixels.
+          * @default 4
+         */
+        "offset": number;
+        /**
+          * Whether the menu is open.
+          * @default false
+         */
+        "open": boolean;
+        /**
+          * Where the menu sits against the trigger. It flips to the opposite side when out of room.
+          * @default "bottom-start"
+         */
+        "placement": Placement;
+        /**
+          * Opens the menu and focuses its first item.
+         */
+        "show": () => Promise<void>;
+    }
+    /**
+     * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
+     * uncheck each other within their group.
+     */
+    interface IdgMenuGroup {
+        /**
+          * The group's visible label and accessible name.
+         */
+        "label"?: string;
+    }
+    /**
+     * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
+     * its own shadow root, so its role and state are set on the focusable element inside it, and the
+     * host is a plain wrapper that assistive technology passes through.
+     */
+    interface IdgMenuItem {
+        /**
+          * Whether a checkbox or radio item is on. The menu changes it when the item is chosen.
+          * @default false
+         */
+        "checked": boolean;
+        /**
+          * Keeps the item in the menu, where it can be found, but stops it being chosen.
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Follows the item's link, as a click on it would.
+         */
+        "follow": () => Promise<void>;
+        /**
+          * Makes the item a link. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * A leading icon, drawn as decoration.
+         */
+        "icon"?: IconName;
+        /**
+          * Link relationship.
+         */
+        "rel"?: string;
+        /**
+          * Focuses the item.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * A hint such as `Ctrl+E`, shown when the UX mode turns shortcuts on. Nothing binds the key.
+         */
+        "shortcut"?: string;
+        /**
+          * Where a link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
+         */
+        "target"?: string;
+        /**
+          * `item` does something, `checkbox` toggles, `radio` picks one of its group.
+          * @default "item"
+         */
+        "type": MenuItemType;
+        /**
+          * What `idgSelect` reports when this item is chosen.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * A rule between groups of items in an idg-menu.
+     */
+    interface IdgMenuSeparator {
+    }
+    /**
      * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
      * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
      * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
@@ -969,6 +1077,10 @@ export interface IdgInputCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgInputElement;
 }
+export interface IdgMenuCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgMenuElement;
+}
 export interface IdgPopoverCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgPopoverElement;
@@ -1167,6 +1279,62 @@ declare global {
         prototype: HTMLIdgLinkElement;
         new (): HTMLIdgLinkElement;
     };
+    interface HTMLIdgMenuElementEventMap {
+        "idgSelect": MenuSelectDetail;
+        "idgOpen": void;
+        "idgClose": void;
+    }
+    /**
+     * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
+     * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
+     * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
+     * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
+     * focus moves to the items themselves (roving focus). Each item carries its own role and state.
+     */
+    interface HTMLIdgMenuElement extends Components.IdgMenu, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgMenuElementEventMap>(type: K, listener: (this: HTMLIdgMenuElement, ev: IdgMenuCustomEvent<HTMLIdgMenuElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgMenuElementEventMap>(type: K, listener: (this: HTMLIdgMenuElement, ev: IdgMenuCustomEvent<HTMLIdgMenuElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgMenuElement: {
+        prototype: HTMLIdgMenuElement;
+        new (): HTMLIdgMenuElement;
+    };
+    /**
+     * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
+     * uncheck each other within their group.
+     */
+    interface HTMLIdgMenuGroupElement extends Components.IdgMenuGroup, HTMLStencilElement {
+    }
+    var HTMLIdgMenuGroupElement: {
+        prototype: HTMLIdgMenuGroupElement;
+        new (): HTMLIdgMenuGroupElement;
+    };
+    /**
+     * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
+     * its own shadow root, so its role and state are set on the focusable element inside it, and the
+     * host is a plain wrapper that assistive technology passes through.
+     */
+    interface HTMLIdgMenuItemElement extends Components.IdgMenuItem, HTMLStencilElement {
+    }
+    var HTMLIdgMenuItemElement: {
+        prototype: HTMLIdgMenuItemElement;
+        new (): HTMLIdgMenuItemElement;
+    };
+    /**
+     * A rule between groups of items in an idg-menu.
+     */
+    interface HTMLIdgMenuSeparatorElement extends Components.IdgMenuSeparator, HTMLStencilElement {
+    }
+    var HTMLIdgMenuSeparatorElement: {
+        prototype: HTMLIdgMenuSeparatorElement;
+        new (): HTMLIdgMenuSeparatorElement;
+    };
     interface HTMLIdgPopoverElementEventMap {
         "idgOpen": void;
         "idgClose": void;
@@ -1354,6 +1522,10 @@ declare global {
         "idg-icon": HTMLIdgIconElement;
         "idg-input": HTMLIdgInputElement;
         "idg-link": HTMLIdgLinkElement;
+        "idg-menu": HTMLIdgMenuElement;
+        "idg-menu-group": HTMLIdgMenuGroupElement;
+        "idg-menu-item": HTMLIdgMenuItemElement;
+        "idg-menu-separator": HTMLIdgMenuSeparatorElement;
         "idg-popover": HTMLIdgPopoverElement;
         "idg-progress": HTMLIdgProgressElement;
         "idg-radio": HTMLIdgRadioElement;
@@ -1862,6 +2034,108 @@ declare namespace LocalJSX {
           * Where the link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
          */
         "target"?: string;
+    }
+    /**
+     * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
+     * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
+     * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
+     * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
+     * focus moves to the items themselves (roving focus). Each item carries its own role and state.
+     */
+    interface IdgMenu {
+        /**
+          * The menu's accessible name. Without it the menu is named by its trigger.
+         */
+        "label"?: string;
+        /**
+          * The gap between the trigger and the menu, in pixels.
+          * @default 4
+         */
+        "offset"?: number;
+        /**
+          * Fires when the menu closes.
+         */
+        "onIdgClose"?: (event: IdgMenuCustomEvent<void>) => void;
+        /**
+          * Fires when the menu opens.
+         */
+        "onIdgOpen"?: (event: IdgMenuCustomEvent<void>) => void;
+        /**
+          * Fires when an item is chosen, with its value and, for a checkable item, its new state.
+         */
+        "onIdgSelect"?: (event: IdgMenuCustomEvent<MenuSelectDetail>) => void;
+        /**
+          * Whether the menu is open.
+          * @default false
+         */
+        "open"?: boolean;
+        /**
+          * Where the menu sits against the trigger. It flips to the opposite side when out of room.
+          * @default "bottom-start"
+         */
+        "placement"?: Placement;
+    }
+    /**
+     * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
+     * uncheck each other within their group.
+     */
+    interface IdgMenuGroup {
+        /**
+          * The group's visible label and accessible name.
+         */
+        "label"?: string;
+    }
+    /**
+     * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
+     * its own shadow root, so its role and state are set on the focusable element inside it, and the
+     * host is a plain wrapper that assistive technology passes through.
+     */
+    interface IdgMenuItem {
+        /**
+          * Whether a checkbox or radio item is on. The menu changes it when the item is chosen.
+          * @default false
+         */
+        "checked"?: boolean;
+        /**
+          * Keeps the item in the menu, where it can be found, but stops it being chosen.
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * Makes the item a link. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * A leading icon, drawn as decoration.
+         */
+        "icon"?: IconName;
+        /**
+          * Link relationship.
+         */
+        "rel"?: string;
+        /**
+          * A hint such as `Ctrl+E`, shown when the UX mode turns shortcuts on. Nothing binds the key.
+         */
+        "shortcut"?: string;
+        /**
+          * Where a link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
+         */
+        "target"?: string;
+        /**
+          * `item` does something, `checkbox` toggles, `radio` picks one of its group.
+          * @default "item"
+         */
+        "type"?: MenuItemType;
+        /**
+          * What `idgSelect` reports when this item is chosen.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * A rule between groups of items in an idg-menu.
+     */
+    interface IdgMenuSeparator {
     }
     /**
      * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
@@ -2397,6 +2671,26 @@ declare namespace LocalJSX {
         "external": boolean;
         "externalLabel": string;
     }
+    interface IdgMenuAttributes {
+        "placement": Placement;
+        "offset": number;
+        "open": boolean;
+        "label": string;
+    }
+    interface IdgMenuGroupAttributes {
+        "label": string;
+    }
+    interface IdgMenuItemAttributes {
+        "value": string;
+        "type": MenuItemType;
+        "checked": boolean;
+        "disabled": boolean;
+        "href": string;
+        "target": string;
+        "rel": string;
+        "shortcut": string;
+        "icon": IconName;
+    }
     interface IdgPopoverAttributes {
         "placement": Placement;
         "offset": number;
@@ -2506,6 +2800,10 @@ declare namespace LocalJSX {
         "idg-icon": Omit<IdgIcon, keyof IdgIconAttributes> & { [K in keyof IdgIcon & keyof IdgIconAttributes]?: IdgIcon[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `attr:${K}`]?: IdgIconAttributes[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `prop:${K}`]?: IdgIcon[K] };
         "idg-input": Omit<IdgInput, keyof IdgInputAttributes> & { [K in keyof IdgInput & keyof IdgInputAttributes]?: IdgInput[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `attr:${K}`]?: IdgInputAttributes[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `prop:${K}`]?: IdgInput[K] };
         "idg-link": Omit<IdgLink, keyof IdgLinkAttributes> & { [K in keyof IdgLink & keyof IdgLinkAttributes]?: IdgLink[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `attr:${K}`]?: IdgLinkAttributes[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `prop:${K}`]?: IdgLink[K] };
+        "idg-menu": Omit<IdgMenu, keyof IdgMenuAttributes> & { [K in keyof IdgMenu & keyof IdgMenuAttributes]?: IdgMenu[K] } & { [K in keyof IdgMenu & keyof IdgMenuAttributes as `attr:${K}`]?: IdgMenuAttributes[K] } & { [K in keyof IdgMenu & keyof IdgMenuAttributes as `prop:${K}`]?: IdgMenu[K] };
+        "idg-menu-group": Omit<IdgMenuGroup, keyof IdgMenuGroupAttributes> & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes]?: IdgMenuGroup[K] } & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes as `attr:${K}`]?: IdgMenuGroupAttributes[K] } & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes as `prop:${K}`]?: IdgMenuGroup[K] };
+        "idg-menu-item": Omit<IdgMenuItem, keyof IdgMenuItemAttributes> & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes]?: IdgMenuItem[K] } & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `attr:${K}`]?: IdgMenuItemAttributes[K] } & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `prop:${K}`]?: IdgMenuItem[K] };
+        "idg-menu-separator": IdgMenuSeparator;
         "idg-popover": Omit<IdgPopover, keyof IdgPopoverAttributes> & { [K in keyof IdgPopover & keyof IdgPopoverAttributes]?: IdgPopover[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `attr:${K}`]?: IdgPopoverAttributes[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `prop:${K}`]?: IdgPopover[K] };
         "idg-progress": Omit<IdgProgress, keyof IdgProgressAttributes> & { [K in keyof IdgProgress & keyof IdgProgressAttributes]?: IdgProgress[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `attr:${K}`]?: IdgProgressAttributes[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `prop:${K}`]?: IdgProgress[K] };
         "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
@@ -2583,6 +2881,29 @@ declare module "@stencil/core" {
              * noreferrer`.
              */
             "idg-link": LocalJSX.IntrinsicElements["idg-link"] & JSXBase.HTMLAttributes<HTMLIdgLinkElement>;
+            /**
+             * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
+             * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
+             * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
+             * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
+             * focus moves to the items themselves (roving focus). Each item carries its own role and state.
+             */
+            "idg-menu": LocalJSX.IntrinsicElements["idg-menu"] & JSXBase.HTMLAttributes<HTMLIdgMenuElement>;
+            /**
+             * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
+             * uncheck each other within their group.
+             */
+            "idg-menu-group": LocalJSX.IntrinsicElements["idg-menu-group"] & JSXBase.HTMLAttributes<HTMLIdgMenuGroupElement>;
+            /**
+             * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
+             * its own shadow root, so its role and state are set on the focusable element inside it, and the
+             * host is a plain wrapper that assistive technology passes through.
+             */
+            "idg-menu-item": LocalJSX.IntrinsicElements["idg-menu-item"] & JSXBase.HTMLAttributes<HTMLIdgMenuItemElement>;
+            /**
+             * A rule between groups of items in an idg-menu.
+             */
+            "idg-menu-separator": LocalJSX.IntrinsicElements["idg-menu-separator"] & JSXBase.HTMLAttributes<HTMLIdgMenuSeparatorElement>;
             /**
              * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
              * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
