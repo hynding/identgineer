@@ -8,6 +8,7 @@ import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { AlertVariant } from "./components/alert/alert-options";
 import { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 import { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
+import { BreadcrumbSeparator } from "./components/breadcrumb/breadcrumb-options";
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 import { CardPadding, CardVariant } from "./components/card/card-options";
 import { CheckedDetail, ValueDetail } from "./utils/event-details";
@@ -27,6 +28,7 @@ import { ToastPosition } from "./components/toast-region/toast-region-options";
 export { AlertVariant } from "./components/alert/alert-options";
 export { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 export { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
+export { BreadcrumbSeparator } from "./components/breadcrumb/breadcrumb-options";
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 export { CardPadding, CardVariant } from "./components/card/card-options";
 export { CheckedDetail, ValueDetail } from "./utils/event-details";
@@ -140,6 +142,52 @@ export namespace Components {
           * @default "neutral"
          */
         "variant": BadgeVariant;
+    }
+    /**
+     * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
+     * idg-breadcrumb-item. The last item is the current page unless another item says it is.
+     */
+    interface IdgBreadcrumb {
+        /**
+          * The landmark's accessible name. Give each breadcrumb on a page its own.
+          * @default "Breadcrumb"
+         */
+        "label": string;
+        /**
+          * The mark between items. It is decoration and hidden from assistive technology.
+          * @default BREADCRUMB_SEPARATORS[0]
+         */
+        "separator": BreadcrumbSeparator;
+    }
+    /**
+     * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
+     * one, and separator are drawn in its own shadow root.
+     */
+    interface IdgBreadcrumbItem {
+        /**
+          * Marks this step as the current page, in place of the last one.
+          * @default false
+         */
+        "current": boolean;
+        /**
+          * Where the step goes. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * Set by the breadcrumb: whether this step is the current page.
+          * @default false
+         */
+        "isCurrent": boolean;
+        /**
+          * Set by the breadcrumb: whether this is the last step, which has no separator after it.
+          * @default false
+         */
+        "isLast": boolean;
+        /**
+          * Set by the breadcrumb: the mark after the step.
+          * @default "chevron"
+         */
+        "separator": BreadcrumbSeparator;
     }
     interface IdgButton {
         /**
@@ -1246,6 +1294,26 @@ declare global {
         prototype: HTMLIdgBadgeElement;
         new (): HTMLIdgBadgeElement;
     };
+    /**
+     * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
+     * idg-breadcrumb-item. The last item is the current page unless another item says it is.
+     */
+    interface HTMLIdgBreadcrumbElement extends Components.IdgBreadcrumb, HTMLStencilElement {
+    }
+    var HTMLIdgBreadcrumbElement: {
+        prototype: HTMLIdgBreadcrumbElement;
+        new (): HTMLIdgBreadcrumbElement;
+    };
+    /**
+     * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
+     * one, and separator are drawn in its own shadow root.
+     */
+    interface HTMLIdgBreadcrumbItemElement extends Components.IdgBreadcrumbItem, HTMLStencilElement {
+    }
+    var HTMLIdgBreadcrumbItemElement: {
+        prototype: HTMLIdgBreadcrumbItemElement;
+        new (): HTMLIdgBreadcrumbItemElement;
+    };
     interface HTMLIdgButtonElement extends Components.IdgButton, HTMLStencilElement {
     }
     var HTMLIdgButtonElement: {
@@ -1643,6 +1711,8 @@ declare global {
         "idg-avatar": HTMLIdgAvatarElement;
         "idg-avatar-group": HTMLIdgAvatarGroupElement;
         "idg-badge": HTMLIdgBadgeElement;
+        "idg-breadcrumb": HTMLIdgBreadcrumbElement;
+        "idg-breadcrumb-item": HTMLIdgBreadcrumbItemElement;
         "idg-button": HTMLIdgButtonElement;
         "idg-card": HTMLIdgCardElement;
         "idg-checkbox": HTMLIdgCheckboxElement;
@@ -1771,6 +1841,52 @@ declare namespace LocalJSX {
           * @default "neutral"
          */
         "variant"?: BadgeVariant;
+    }
+    /**
+     * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
+     * idg-breadcrumb-item. The last item is the current page unless another item says it is.
+     */
+    interface IdgBreadcrumb {
+        /**
+          * The landmark's accessible name. Give each breadcrumb on a page its own.
+          * @default "Breadcrumb"
+         */
+        "label"?: string;
+        /**
+          * The mark between items. It is decoration and hidden from assistive technology.
+          * @default BREADCRUMB_SEPARATORS[0]
+         */
+        "separator"?: BreadcrumbSeparator;
+    }
+    /**
+     * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
+     * one, and separator are drawn in its own shadow root.
+     */
+    interface IdgBreadcrumbItem {
+        /**
+          * Marks this step as the current page, in place of the last one.
+          * @default false
+         */
+        "current"?: boolean;
+        /**
+          * Where the step goes. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * Set by the breadcrumb: whether this step is the current page.
+          * @default false
+         */
+        "isCurrent"?: boolean;
+        /**
+          * Set by the breadcrumb: whether this is the last step, which has no separator after it.
+          * @default false
+         */
+        "isLast"?: boolean;
+        /**
+          * Set by the breadcrumb: the mark after the step.
+          * @default "chevron"
+         */
+        "separator"?: BreadcrumbSeparator;
     }
     interface IdgButton {
         /**
@@ -2793,6 +2909,17 @@ declare namespace LocalJSX {
         "size": BadgeSize;
         "dot": boolean;
     }
+    interface IdgBreadcrumbAttributes {
+        "label": string;
+        "separator": BreadcrumbSeparator;
+    }
+    interface IdgBreadcrumbItemAttributes {
+        "href": string;
+        "current": boolean;
+        "isCurrent": boolean;
+        "isLast": boolean;
+        "separator": BreadcrumbSeparator;
+    }
     interface IdgButtonAttributes {
         "variant": ButtonVariant;
         "size": ButtonSize;
@@ -3024,6 +3151,8 @@ declare namespace LocalJSX {
         "idg-avatar": Omit<IdgAvatar, keyof IdgAvatarAttributes> & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes]?: IdgAvatar[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `attr:${K}`]?: IdgAvatarAttributes[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `prop:${K}`]?: IdgAvatar[K] };
         "idg-avatar-group": Omit<IdgAvatarGroup, keyof IdgAvatarGroupAttributes> & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes]?: IdgAvatarGroup[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `attr:${K}`]?: IdgAvatarGroupAttributes[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `prop:${K}`]?: IdgAvatarGroup[K] };
         "idg-badge": Omit<IdgBadge, keyof IdgBadgeAttributes> & { [K in keyof IdgBadge & keyof IdgBadgeAttributes]?: IdgBadge[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `attr:${K}`]?: IdgBadgeAttributes[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `prop:${K}`]?: IdgBadge[K] };
+        "idg-breadcrumb": Omit<IdgBreadcrumb, keyof IdgBreadcrumbAttributes> & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes]?: IdgBreadcrumb[K] } & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes as `attr:${K}`]?: IdgBreadcrumbAttributes[K] } & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes as `prop:${K}`]?: IdgBreadcrumb[K] };
+        "idg-breadcrumb-item": Omit<IdgBreadcrumbItem, keyof IdgBreadcrumbItemAttributes> & { [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes]?: IdgBreadcrumbItem[K] } & { [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes as `attr:${K}`]?: IdgBreadcrumbItemAttributes[K] } & { [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes as `prop:${K}`]?: IdgBreadcrumbItem[K] };
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
         "idg-card": Omit<IdgCard, keyof IdgCardAttributes> & { [K in keyof IdgCard & keyof IdgCardAttributes]?: IdgCard[K] } & { [K in keyof IdgCard & keyof IdgCardAttributes as `attr:${K}`]?: IdgCardAttributes[K] } & { [K in keyof IdgCard & keyof IdgCardAttributes as `prop:${K}`]?: IdgCard[K] };
         "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`]?: IdgCheckboxAttributes[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
@@ -3075,6 +3204,16 @@ declare module "@stencil/core" {
              * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
              */
             "idg-badge": LocalJSX.IntrinsicElements["idg-badge"] & JSXBase.HTMLAttributes<HTMLIdgBadgeElement>;
+            /**
+             * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
+             * idg-breadcrumb-item. The last item is the current page unless another item says it is.
+             */
+            "idg-breadcrumb": LocalJSX.IntrinsicElements["idg-breadcrumb"] & JSXBase.HTMLAttributes<HTMLIdgBreadcrumbElement>;
+            /**
+             * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
+             * one, and separator are drawn in its own shadow root.
+             */
+            "idg-breadcrumb-item": LocalJSX.IntrinsicElements["idg-breadcrumb-item"] & JSXBase.HTMLAttributes<HTMLIdgBreadcrumbItemElement>;
             "idg-button": LocalJSX.IntrinsicElements["idg-button"] & JSXBase.HTMLAttributes<HTMLIdgButtonElement>;
             /**
              * A surface that groups related content, drawn in the design language's own surface, border and
