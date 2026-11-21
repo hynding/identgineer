@@ -23,7 +23,8 @@ import {
 import { TypeaheadBuffer, typeaheadMatch } from "../../utils/typeahead";
 import type { MenuSelectDetail } from "../menu-item/menu-item-options";
 
-type FocusTarget = "first" | "last";
+/** Where focus goes as the menu opens; `none` when it was open in the page's markup. */
+type FocusTarget = "first" | "last" | "none";
 
 interface ToggleEventLike extends globalThis.Event {
   newState?: string;
@@ -100,10 +101,16 @@ export class IdgMenu {
 
   componentDidLoad(): void {
     this.attachTrigger();
-    if (this.open) this.showSurface("first");
+    if (this.open) this.showSurface("none");
   }
 
+  // A browser hides a removed popover without a toggle event, so the closing is done here: the
+  // state is reset and idgClose fires. Focus is left where it is.
   disconnectedCallback(): void {
+    if (this.shown) {
+      this.settleClosed();
+      this.idgClose.emit();
+    }
     this.position?.stop();
     this.detachTrigger();
   }
@@ -298,6 +305,7 @@ export class IdgMenu {
   }
 
   private focusItem(focus: FocusTarget): void {
+    if (focus === "none") return;
     const items = this.items();
     void items[focus === "first" ? 0 : items.length - 1]?.setFocus();
   }
@@ -318,11 +326,15 @@ export class IdgMenu {
     this.idgOpen.emit();
   }
 
-  private closed(): void {
+  private settleClosed(): void {
     this.shown = false;
     this.open = false;
     this.position?.stop();
     this.syncTrigger();
+  }
+
+  private closed(): void {
+    this.settleClosed();
     const active = deepActiveElement();
     const trigger = this.trigger;
     const lost = active === null || active === document.body;

@@ -4,6 +4,7 @@ import { installPopoverElement } from "../../testing/popover-element";
 import "../menu-group/menu-group";
 import "../menu-item/menu-item";
 import "../menu-separator/menu-separator";
+import { removeHost } from "../../testing/remove-host";
 import "./menu";
 
 interface MenuItem extends HTMLElement {
@@ -260,7 +261,7 @@ describe("idg-menu moved or loaded open", () => {
     menu.addEventListener("idgClose", closed);
     await openMenu(menu, waitForChanges);
     expect(menu.open).toBe(true);
-    menu.remove();
+    removeHost(menu);
     // A browser hides a removed popover without a toggle event.
     menu.shadowRoot?.querySelector('[part="surface"]')?.removeAttribute("data-popover-open");
     expect(closed).toHaveBeenCalledTimes(1);

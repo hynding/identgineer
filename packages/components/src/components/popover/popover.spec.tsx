@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { h, render } from "@stencil/vitest";
 import { installPopoverElement } from "../../testing/popover-element";
 import "../button/button";
+import { removeHost } from "../../testing/remove-host";
 import "./popover";
 
 interface PopoverHost extends HTMLElement {
@@ -208,7 +209,7 @@ describe("idg-popover moved or loaded open", () => {
     trigger(host).click();
     await waitForChanges();
     expect(host.open).toBe(true);
-    host.remove();
+    removeHost(host);
     // A browser hides a removed popover without a toggle event.
     surface(host).removeAttribute("data-popover-open");
     expect(closed).toHaveBeenCalledTimes(1);

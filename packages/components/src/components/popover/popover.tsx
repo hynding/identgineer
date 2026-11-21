@@ -72,6 +72,8 @@ export class IdgPopover {
   private shown = false;
   private openAtPress = false;
   private position?: SurfacePosition;
+  /** False when the popover was open in the page's markup, which must not move focus. */
+  private focusOnOpen = true;
 
   connectedCallback(): void {
     if (this.surface) this.attachTrigger();
@@ -79,10 +81,19 @@ export class IdgPopover {
 
   componentDidLoad(): void {
     this.attachTrigger();
-    if (this.open) this.showSurface();
+    if (this.open) {
+      this.focusOnOpen = false;
+      this.showSurface();
+    }
   }
 
+  // A browser hides a removed popover without a toggle event, so the closing is done here: the
+  // state is reset and idgClose fires. Focus is left where it is.
   disconnectedCallback(): void {
+    if (this.shown) {
+      this.settleClosed();
+      this.idgClose.emit();
+    }
     this.position?.stop();
     this.detachTrigger();
   }
@@ -172,18 +183,25 @@ export class IdgPopover {
       }));
       this.position.start();
     }
-    const marked = Array.from(this.host.querySelectorAll("[autofocus]"))[0];
-    if (!(marked && focusInto(marked))) this.surface?.focus();
+    if (this.focusOnOpen) {
+      const marked = Array.from(this.host.querySelectorAll("[autofocus]"))[0];
+      if (!(marked && focusInto(marked))) this.surface?.focus();
+    }
+    this.focusOnOpen = true;
     this.idgOpen.emit();
   }
 
   // Focus goes back to the trigger when it was in the popover, or was lost with it. A click on
   // another control has already moved focus there, and it stays.
-  private closed(): void {
+  private settleClosed(): void {
     this.shown = false;
     this.open = false;
     this.position?.stop();
     this.syncTrigger();
+  }
+
+  private closed(): void {
+    this.settleClosed();
     const active = deepActiveElement();
     const trigger = this.trigger;
     const lost = active === null || active === document.body;
