@@ -463,18 +463,29 @@ test.describe("idg-stack", () => {
       ]);
       return b.y - (a.y + a.height);
     };
-    await page.locator("#stack").evaluate((element) => {
-      element.setAttribute("gap", "xs");
-    });
-    await expect.poll(space).toBeGreaterThan(8);
-    const small = await space();
-    await page.locator("#stack").evaluate((element) => {
-      element.setAttribute("gap", "2xl");
-    });
-    await expect.poll(space).toBeGreaterThan(small * 3);
-    await page.locator("#stack").evaluate((element) => {
-      element.setAttribute("gap", "none");
-    });
+    // What a gap step comes to on this page: the fluid space token times the density scale.
+    const expected = (step: string) =>
+      page.evaluate((name) => {
+        const probe = document.createElement("div");
+        probe.style.inlineSize = `calc(var(--idg-space-${name}) * var(--idg-density-gap-scale))`;
+        document.body.append(probe);
+        const width = probe.getBoundingClientRect().width;
+        probe.remove();
+        return width;
+      }, step);
+    const setGap = (value: string) =>
+      page.locator("#stack").evaluate((element, gap) => {
+        element.setAttribute("gap", gap);
+      }, value);
+    // Each step is waited for by its own size, since the gap before it may already be above any bound.
+    const small = await expected("xs");
+    const large = await expected("2xl");
+    expect(large).toBeGreaterThan(small + 8);
+    await setGap("xs");
+    await expect.poll(space).toBeCloseTo(small, 0);
+    await setGap("2xl");
+    await expect.poll(space).toBeCloseTo(large, 0);
+    await setGap("none");
     await expect.poll(space).toBeLessThan(2);
   });
 
