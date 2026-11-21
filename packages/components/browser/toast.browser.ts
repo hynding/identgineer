@@ -262,11 +262,61 @@ test.describe("idg-toast pointer and layout", () => {
       const surface = toast.shadowRoot?.querySelector('[part="toast"]');
       const box = surface?.getBoundingClientRect();
       if (!surface || !box) throw new Error("the toast has no surface");
-      const init = { bubbles: true, composed: true, pointerId: 7, clientY: box.y + 8 };
+      const init = {
+        bubbles: true,
+        composed: true,
+        pointerId: 7,
+        isPrimary: true,
+        clientY: box.y + 8,
+      };
       surface.dispatchEvent(new PointerEvent("pointerdown", { ...init, clientX: box.x + 40 }));
       document.body.dispatchEvent(new PointerEvent("pointerup", { ...init, clientX: box.x + 240 }));
     });
     await expect(toasts(page)).toHaveCount(0);
+  });
+
+  test("a press whose release a page handler stops does not dismiss it on a later click", async ({
+    page,
+  }) => {
+    await openOverlays(page);
+    await showToast(page, { title: "Saved", duration: 0 });
+    await settle(page);
+    const box = await toasts(page).boundingBox();
+    if (!box) throw new Error("the toast has no box");
+    await page.evaluate(() => {
+      window.addEventListener(
+        "pointerup",
+        (event) => {
+          event.stopPropagation();
+        },
+        {
+          capture: true,
+          once: true,
+        },
+      );
+    });
+    await page.mouse.move(box.x + 20, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.up();
+    await page.locator("#before").click();
+    await expect(page.locator("#before")).toBeFocused();
+    await expect(toasts(page)).toHaveCount(1);
+  });
+
+  test("a press of the right button does not start a swipe", async ({ page }) => {
+    await openOverlays(page);
+    await showToast(page, { title: "Saved", duration: 0 });
+    await settle(page);
+    const box = await toasts(page).boundingBox();
+    if (!box) throw new Error("the toast has no box");
+    const y = box.y + box.height / 2;
+    await page.mouse.move(box.x + 20, y);
+    await page.mouse.down({ button: "right" });
+    await page.mouse.move(box.x - 300, y, { steps: 5 });
+    await page.mouse.up({ button: "right" });
+    await page.locator("#before").click();
+    await expect(page.locator("#before")).toBeFocused();
+    await expect(toasts(page)).toHaveCount(1);
   });
 
   test("gathers at the corner it is told, and lets clicks through around the toasts", async ({

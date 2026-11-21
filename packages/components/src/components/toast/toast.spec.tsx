@@ -57,17 +57,26 @@ function reasons(root: HTMLElement): string[] {
   return seen;
 }
 
-function pointer(target: HTMLElement, type: string, clientX: number): void {
+function pointer(
+  target: EventTarget,
+  type: string,
+  clientX: number,
+  { button = 0, isPrimary = true } = {},
+): void {
   const event = new Event(type, { bubbles: true, composed: true }) as Event & {
     clientX: number;
     clientY: number;
     pointerId: number;
     pointerType: string;
+    button: number;
+    isPrimary: boolean;
   };
   event.clientX = clientX;
   event.clientY = 0;
   event.pointerId = 1;
-  event.pointerType = "touch";
+  event.pointerType = "mouse";
+  event.button = button;
+  event.isPrimary = isPrimary;
   target.dispatchEvent(event);
 }
 
@@ -200,6 +209,39 @@ describe("idg-toast dismissal", () => {
     pointer(part(toast, "toast"), "pointerdown", 200);
     pointer(document.documentElement, "pointerup", 400);
     expect(seen).toEqual(["swipe"]);
+  });
+
+  it("does not start a swipe from a press of a secondary button or a secondary pointer", async () => {
+    const { root } = await render(<div>{saved}</div>);
+    const toast = toastIn(root);
+    const seen = reasons(toast);
+    pointer(part(toast, "toast"), "pointerdown", 200, { button: 2 });
+    pointer(document.documentElement, "pointerup", 400, { button: 2 });
+    pointer(part(toast, "toast"), "pointerdown", 200, { isPrimary: false });
+    pointer(document.documentElement, "pointerup", 400, { isPrimary: false });
+    expect(seen).toEqual([]);
+  });
+
+  // The release can be lost: a page handler stops it, or a context menu takes it. The next press
+  // anywhere, a context menu or the window losing focus then ends the swipe, so that a later
+  // release elsewhere is not taken for it.
+  it.each([
+    [
+      "a press elsewhere",
+      () => {
+        pointer(document.documentElement, "pointerdown", 0);
+      },
+    ],
+    ["a context menu", () => document.dispatchEvent(new Event("contextmenu", { bubbles: true }))],
+    ["the window losing focus", () => window.dispatchEvent(new Event("blur"))],
+  ])("ends a swipe whose release was lost on %s", async (_name, interrupt) => {
+    const { root } = await render(<div>{saved}</div>);
+    const toast = toastIn(root);
+    const seen = reasons(toast);
+    pointer(part(toast, "toast"), "pointerdown", 200);
+    interrupt();
+    pointer(document.documentElement, "pointerup", 400);
+    expect(seen).toEqual([]);
   });
 });
 
