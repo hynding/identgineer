@@ -114,7 +114,14 @@ export class IdgAccordion {
     if (open.length < 2) return;
     const added = this.loaded ? open.filter((item) => !this.seen.has(item)) : [];
     const winner = added[0] ?? open[0];
-    for (const item of open) if (item !== winner) item.open = false;
+    // At load the correction is not a change anyone made, so it is not announced. Whether the
+    // item had already rendered would otherwise decide that.
+    for (const item of open) {
+      if (item === winner) continue;
+      item.quiet = !this.loaded;
+      item.open = false;
+      item.quiet = false;
+    }
   }
 
   render() {

@@ -50,6 +50,9 @@ export class IdgAccordionItem {
   /** Set by the accordion: whether a closed panel can be found by the browser. */
   @Prop({ attribute: "find-in-page" }) findInPage = false;
 
+  /** Set by the accordion while it settles the items at load: a change then is not announced. */
+  @Prop() quiet = false;
+
   /** Fires when the item opens or closes, whether the user did it or a script. */
   @Event() idgToggle!: EventEmitter<AccordionToggleDetail>;
 
@@ -76,6 +79,7 @@ export class IdgAccordionItem {
   // record of what is open stays right when a script or the accordion changes an item.
   @Watch("open")
   openChanged(open: boolean): void {
+    if (this.quiet) return;
     this.idgToggle.emit({ value: this.value, open });
   }
 

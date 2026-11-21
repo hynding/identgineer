@@ -71,8 +71,13 @@ export class IdgPagination {
     if (!this.keepFocus) return;
     this.keepFocus = false;
     const active = this.host.shadowRoot?.activeElement;
-    const lost =
-      !active || active.hasAttribute("disabled") || active.getAttribute("aria-disabled") === "true";
+    const unavailable =
+      active?.hasAttribute("disabled") === true || active?.getAttribute("aria-disabled") === "true";
+    // Focus that is somewhere else was put there on purpose, by a listener of idgPageChange for
+    // instance, so only focus that fell to the page itself is brought back.
+    const focused = document.activeElement;
+    const fellToPage = !focused || focused === document.body;
+    const lost = unavailable || (!active && fellToPage);
     if (lost) this.host.shadowRoot?.querySelector<HTMLElement>("[aria-current='page']")?.focus();
   }
 
