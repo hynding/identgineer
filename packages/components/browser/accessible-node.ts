@@ -7,10 +7,13 @@ export interface AccessibleNode {
   /** The value of a control such as a progress bar, when the browser reports one. */
   value: string | number | boolean | undefined;
   properties: Record<string, unknown>;
+  /** How many elements each relation (such as `controls` or `describedby`) points at. */
+  relations: Record<string, number>;
 }
 
 interface AxValue {
   value?: string | number | boolean;
+  relatedNodes?: unknown[];
 }
 
 interface AxNode {
@@ -54,6 +57,11 @@ export async function accessibleNode(
       description: String(ax.description?.value ?? ""),
       value: ax.value?.value,
       properties: Object.fromEntries((ax.properties ?? []).map((p) => [p.name, p.value.value])),
+      relations: Object.fromEntries(
+        (ax.properties ?? [])
+          .filter((p) => p.value.relatedNodes !== undefined)
+          .map((p) => [p.name, p.value.relatedNodes?.length ?? 0]),
+      ),
     };
   } finally {
     await client.detach();
