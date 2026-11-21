@@ -54,10 +54,12 @@ test.describe("idg-toast semantics", () => {
     await openOverlays(page);
     await showToast(page, { title: "Saved", description: "Your changes are live." });
     await expect(shownToasts(page)).toHaveCount(1);
-    expect(await accessibleNode(page, "toasts", '[part="region"]')).toMatchObject({
-      role: "region",
-      name: "Notifications",
-    });
+    await expect
+      .poll(() => accessibleNode(page, "toasts", '[part="region"]'))
+      .toMatchObject({
+        role: "region",
+        name: "Notifications",
+      });
     const tree = async () =>
       (await accessibleDescendants(page, "toasts")).filter(
         // The announcer's paragraphs come and go, so paragraphs are left out.
@@ -202,6 +204,8 @@ test.describe("idg-toast pointer and layout", () => {
   test("a sideways swipe dismisses it, and a short drag does not", async ({ page }) => {
     await openOverlays(page);
     await showToast(page, { title: "Saved", duration: 0 });
+    // Measured once the toast has finished rising into place.
+    await settle(page);
     const box = await toasts(page).boundingBox();
     if (!box) throw new Error("the toast has no box");
     const y = box.y + box.height / 2;
@@ -215,6 +219,24 @@ test.describe("idg-toast pointer and layout", () => {
     await page.mouse.down();
     await page.mouse.move(x + 200, y, { steps: 10 });
     await page.mouse.up();
+    await expect(toasts(page)).toHaveCount(0);
+  });
+
+  test("a flick whose release lands off the toast, with no move reported, dismisses it", async ({
+    page,
+  }) => {
+    await openOverlays(page);
+    await showToast(page, { title: "Saved", duration: 0 });
+    // A busy machine can coalesce the moves of a quick flick, so the toast hears only the press
+    // and then a release somewhere else on the page.
+    await page.locator("#toasts idg-toast").evaluate((toast) => {
+      const surface = toast.shadowRoot?.querySelector('[part="toast"]');
+      const box = surface?.getBoundingClientRect();
+      if (!surface || !box) throw new Error("the toast has no surface");
+      const init = { bubbles: true, composed: true, pointerId: 7, clientY: box.y + 8 };
+      surface.dispatchEvent(new PointerEvent("pointerdown", { ...init, clientX: box.x + 40 }));
+      document.body.dispatchEvent(new PointerEvent("pointerup", { ...init, clientX: box.x + 240 }));
+    });
     await expect(toasts(page)).toHaveCount(0);
   });
 
