@@ -106,6 +106,8 @@ export class IdgAccordionItem {
   };
 
   render() {
+    // A closed panel that the browser can still find would be an empty landmark.
+    const landmark = this.hasRegion && this.open;
     const Heading = `h${String(headingLevel(this.headingLevel, DEFAULT_ACCORDION_HEADING_LEVEL))}`;
     return (
       <Host>
@@ -133,8 +135,8 @@ export class IdgAccordionItem {
             id={PANEL_ID}
             class="panel"
             part="panel"
-            role={this.hasRegion ? "region" : undefined}
-            aria-labelledby={this.hasRegion ? TRIGGER_ID : undefined}
+            role={landmark ? "region" : undefined}
+            aria-labelledby={landmark ? TRIGGER_ID : undefined}
           >
             <div class="content" part="content">
               <slot />
