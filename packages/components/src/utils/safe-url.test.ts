@@ -37,7 +37,6 @@ describe("safeUrl", () => {
       "&#106;avascript:alert(1)",
       "javascript&colon;alert(1)",
       "javascript%3Aalert(1)",
-      "%6Aavascript:alert(1)",
     ])("keeps %s, which is inert as a relative url", (url) => {
       expect(safeUrl(url)).toBe(url);
     });
@@ -58,6 +57,7 @@ describe("safeUrl", () => {
       "about:blank",
       "chrome://settings",
       "custom-scheme:payload",
+      "%6Aavascript:alert(1)",
     ])("refuses %s", (url) => {
       expect(safeUrl(url)).toBeUndefined();
     });
