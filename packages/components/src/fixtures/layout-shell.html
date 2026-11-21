@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-layout="top-bar" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>layout shell fixture</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/fixtures/layout-shell.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+    <script type="module" src="/fixtures/layout-shell.js"></script>
+  </head>
+  <body>
+    <idg-layout id="shell">
+      <a slot="brand" id="brand-link" class="brand" href="#top">
+        <idg-icon name="sparkles"></idg-icon>
+        <span>Identgineer</span>
+      </a>
+
+      <a slot="navigation" id="nav-first" href="#overview" aria-current="page">Overview</a>
+      <a slot="navigation" href="#components">Components</a>
+      <a slot="navigation" href="#tokens">Tokens</a>
+      <a slot="navigation" href="#layouts">Layouts</a>
+      <a slot="navigation" href="#docs">Docs</a>
+      <a slot="navigation" id="nav-last" href="#support">Support</a>
+
+      <idg-button slot="actions" id="action-first" variant="ghost" size="sm">Sign in</idg-button>
+      <idg-button slot="actions" id="action-last" size="sm">Get started</idg-button>
+
+      <div slot="hero" class="hero-content">
+        <p class="eyebrow">One page, eight structures</p>
+        <h1>Build the page once, then pick how it is housed</h1>
+        <p class="lede">
+          The same markup is re-housed by a single attribute on the root. Try each layout below and
+          watch the navigation, the aside and the hero change places.
+        </p>
+        <a id="hero-link" class="hero-link" href="#layouts">Try the layouts</a>
+      </div>
+
+      <section class="plain" id="layouts" aria-labelledby="try-title">
+        <h2 id="try-title">Try a layout</h2>
+        <div class="layout-buttons" role="group" aria-label="Page layout">
+          <button type="button" data-set-layout="top-bar">Top bar</button>
+          <button type="button" data-set-layout="side-rail">Side rail</button>
+          <button type="button" data-set-layout="split-hero">Split hero</button>
+          <button type="button" data-set-layout="magazine">Magazine</button>
+          <button type="button" data-set-layout="dashboard">Dashboard</button>
+          <button type="button" data-set-layout="centered">Centered</button>
+          <button type="button" data-set-layout="bento">Bento</button>
+          <button type="button" data-set-layout="immersive">Immersive</button>
+        </div>
+      </section>
+
+      <section class="plain" id="overview" aria-labelledby="overview-title">
+        <h2 id="overview-title">Overview</h2>
+        <idg-grid id="cards">
+          <idg-card heading="Projects">
+            Fourteen active, three waiting for review.
+            <a id="main-link" href="#projects">Open projects</a>
+          </idg-card>
+          <idg-card heading="Members">
+            Forty-one people across six teams. <a href="#members">See the directory</a>
+          </idg-card>
+          <idg-card heading="Deploys">
+            Twenty-two this week, none rolled back. <a href="#deploys">View the log</a>
+          </idg-card>
+          <idg-card heading="Reviews">
+            Median turnaround of five hours. <a href="#reviews">Read the report</a>
+          </idg-card>
+          <idg-card heading="Budget">
+            Eighty-two percent of the quarter is planned. <a href="#budget">Check the plan</a>
+          </idg-card>
+          <idg-card heading="Incidents">
+            One minor incident, resolved in minutes. <a href="#incidents">Read the review</a>
+          </idg-card>
+        </idg-grid>
+      </section>
+
+      <section class="plain" id="components" aria-labelledby="table-title">
+        <h2 id="table-title">Recent activity</h2>
+        <idg-table label="Recent activity" striped>
+          <table>
+            <caption>
+              Recent activity
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Project</th>
+                <th scope="col">Owner</th>
+                <th scope="col">Status</th>
+                <th scope="col">Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Atlas</td>
+                <td>Ada Lovelace</td>
+                <td>On track</td>
+                <td>Today</td>
+              </tr>
+              <tr>
+                <td>Beacon</td>
+                <td>Grace Hopper</td>
+                <td>In review</td>
+                <td>Yesterday</td>
+              </tr>
+              <tr>
+                <td>Cascade</td>
+                <td>Alan Turing</td>
+                <td>On track</td>
+                <td>Tuesday</td>
+              </tr>
+              <tr>
+                <td>Delta</td>
+                <td>Margaret Hamilton</td>
+                <td>Blocked</td>
+                <td>Monday</td>
+              </tr>
+              <tr>
+                <td>Ember</td>
+                <td>Edsger Dijkstra</td>
+                <td>On track</td>
+                <td>Last week</td>
+              </tr>
+              <tr>
+                <td>Fathom</td>
+                <td>Barbara Liskov</td>
+                <td>Planned</td>
+                <td>Last week</td>
+              </tr>
+              <tr>
+                <td>Garnet</td>
+                <td>Donald Knuth</td>
+                <td>In review</td>
+                <td>Two weeks ago</td>
+              </tr>
+              <tr>
+                <td>Harbor</td>
+                <td>Katherine Johnson</td>
+                <td>On track</td>
+                <td>Two weeks ago</td>
+              </tr>
+            </tbody>
+          </table>
+        </idg-table>
+      </section>
+
+      <section class="plain" id="tokens" aria-labelledby="story-title">
+        <h2 id="story-title">Why a shell</h2>
+        <p>
+          A page is more than its content. The landmarks, the skip link and the order a keyboard
+          user meets things in belong to the shell, so that every layout gets them right and the
+          page author writes them once.
+        </p>
+        <p>
+          Layouts only place regions on a grid. They never reorder the markup, so what a screen
+          reader announces and what the Tab key reaches is the same in all eight, and each layout
+          chooses a small, a medium and a large arrangement from the width of its own container.
+        </p>
+        <p>
+          Switching layout at run time keeps focus where it was and the page where it was scrolled,
+          and a navigation that has collapsed hands focus to its toggle.
+        </p>
+      </section>
+
+      <section class="plain" id="more" aria-labelledby="more-title">
+        <h2 id="more-title">More from the team</h2>
+        <idg-grid>
+          <idg-card heading="Design notes">
+            How the eight layouts share one set of tokens.
+            <a href="#notes">Read the notes</a>
+          </idg-card>
+          <idg-card heading="Release plan">
+            What ships next and what waits for the next quarter.
+            <a href="#plan">Open the plan</a>
+          </idg-card>
+          <idg-card heading="Accessibility">
+            Landmarks, focus order and motion preferences.
+            <a href="#a11y">Read the checklist</a>
+          </idg-card>
+        </idg-grid>
+      </section>
+
+      <div slot="aside" class="aside-content">
+        <h2 class="aside-title">On this page</h2>
+        <ul class="aside-list">
+          <li><a id="aside-first" href="#overview">Overview</a></li>
+          <li><a href="#components">Recent activity</a></li>
+          <li><a id="aside-last" href="#more">More from the team</a></li>
+        </ul>
+      </div>
+
+      <div slot="footer" class="footer-content">
+        <p class="footer-text">Identgineer. Identity, tracking and a UI that adapts.</p>
+        <ul class="footer-list">
+          <li><a id="footer-first" href="#privacy">Privacy</a></li>
+          <li><a href="#terms">Terms</a></li>
+          <li><a id="footer-last" href="#contact">Contact</a></li>
+        </ul>
+      </div>
+    </idg-layout>
+  </body>
+</html>

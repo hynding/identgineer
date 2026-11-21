@@ -86,6 +86,7 @@ describe("built tokens", () => {
       "--idg-density-target-size",
       "--idg-density-gap-scale",
       "--idg-size-m",
+      "--idg-size-3xl",
       "--idg-size-screen",
       "--idg-layout-content-max",
       "--idg-layout-page-gutter",
