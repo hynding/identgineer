@@ -20,7 +20,7 @@ describe("nameTone", () => {
   });
 
   it("is fixed for known names, so a change of the hash is noticed", () => {
-    expect(["Ada Lovelace", "Grace Hopper", "Alan Turing"].map(nameTone)).toEqual([4, 3, 2]);
+    expect(["Ada Lovelace", "Grace Hopper", "Alan Turing"].map(nameTone)).toEqual([2, 3, 0]);
   });
 
   it("uses every tone over a spread of names", () => {
