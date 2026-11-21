@@ -775,6 +775,45 @@ describe("idg-table spanning cells added later", () => {
     watcher.restore();
   });
 
+  it("does not carry a queued focus over to a later change when a write fails", async () => {
+    const watcher = stubMutationObserver();
+    const focus = vi.spyOn(
+      Object.getPrototypeOf(Object.getPrototypeOf(document.createElement("div"))) as HTMLElement,
+      "focus",
+    );
+    const { root, waitForChanges } = await render(
+      <idg-table>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col" data-sortable="a">
+                A
+              </th>
+            </tr>
+          </thead>
+          <tbody>{rows}</tbody>
+        </table>
+      </idg-table>,
+    );
+    const button = sortButton(root, 0);
+    Object.defineProperty(document, "activeElement", { configurable: true, get: () => button });
+    vi.spyOn(header(root, 0), "removeAttribute").mockImplementationOnce(() => {
+      throw new Error("a write failed");
+    });
+    const body = within(root, "tbody");
+    while (body.firstChild) body.firstChild.remove();
+    body.append(loading());
+    expect(() => {
+      watcher.notify([{ type: "childList", target: body }]);
+    }).toThrow("a write failed");
+    expect(focus).not.toHaveBeenCalled();
+    Reflect.deleteProperty(document, "activeElement");
+    watcher.notify([{ type: "childList", target: body }]);
+    await waitForChanges();
+    expect(focus).not.toHaveBeenCalled();
+    watcher.restore();
+  });
+
   it("keeps a tabindex the page gave the header when the button is taken away", async () => {
     const watcher = stubMutationObserver();
     const { root, waitForChanges } = await render(

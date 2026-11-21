@@ -987,11 +987,12 @@ test.describe("idg-pagination and focus the page moved", () => {
 });
 
 test.describe("idg-table and a page that reacts to focus", () => {
-  test("sorts a row added by a focus handler while the rows were being moved", async ({ page }) => {
-    await openNavigation(page);
-    await page.evaluate(async () => {
+  async function addTable(page: Page, withInput: boolean): Promise<void> {
+    await page.evaluate(async (inputInCell) => {
       const host = document.createElement("idg-table");
       host.id = "reacting";
+      host.setAttribute("sort-key", "n");
+      host.setAttribute("sort-direction", "descending");
       const native = document.createElement("table");
       const head = document.createElement("thead");
       const headRow = document.createElement("tr");
@@ -1002,42 +1003,81 @@ test.describe("idg-table and a page that reacts to focus", () => {
       headRow.append(header);
       head.append(headRow);
       const body = document.createElement("tbody");
-      for (const value of ["0", "1", "2"]) {
+      for (const value of ["5", "3", "1"]) {
         const row = document.createElement("tr");
         const cell = document.createElement("td");
-        cell.textContent = value;
-        cell.tabIndex = 0;
+        if (inputInCell && value === "3") {
+          const input = document.createElement("idg-input");
+          input.setAttribute("label", "Cell input");
+          cell.setAttribute("data-sort-value", value);
+          cell.append(input);
+        } else {
+          cell.textContent = value;
+          cell.tabIndex = 0;
+        }
         row.append(cell);
         body.append(row);
       }
       native.append(head, body);
       host.append(native);
-      host.setAttribute("sort-key", "n");
       document.body.append(host);
       await (host as unknown as { componentOnReady: () => Promise<void> }).componentOnReady();
+      // A page that adds a row whenever focus arrives, capped so a regression fails and does not hang.
+      const counts = { focusin: 0, focusout: 0 };
+      Object.assign(window, { counts });
       host.addEventListener("focusin", () => {
-        if (!(window as unknown as { armed?: boolean }).armed) return;
-        (window as unknown as { armed?: boolean }).armed = false;
+        counts.focusin += 1;
+        if (counts.focusin > 20) return;
         const row = document.createElement("tr");
         const cell = document.createElement("td");
-        cell.textContent = "5";
+        cell.textContent = "9";
         row.append(cell);
         body.append(row);
       });
-    });
-    const column = () =>
-      page
-        .locator("#reacting tbody td")
-        .evaluateAll((cells) => cells.map((cell) => cell.textContent));
-    await expect.poll(column).toEqual(["0", "1", "2"]);
-    await page.locator("#reacting tbody td").nth(1).focus();
-    // Only the focus that comes with moving the rows adds the row.
-    await page.evaluate(() => {
-      Object.assign(window, { armed: true });
-    });
+      host.addEventListener("focusout", () => {
+        counts.focusout += 1;
+      });
+    }, withInput);
+  }
+
+  const counts = (page: Page) =>
+    page.evaluate(
+      () => (window as unknown as { counts: { focusin: number; focusout: number } }).counts,
+    );
+  const column = (page: Page) =>
+    page
+      .locator("#reacting tbody tr")
+      .evaluateAll((rows) =>
+        rows.map((row) => row.children[0]?.getAttribute("data-sort-value") ?? row.textContent),
+      );
+
+  test("sorting leaves focus where it is and runs no focus handler", async ({ page }) => {
+    await openNavigation(page);
+    await addTable(page, false);
+    await page.locator("#reacting tbody td").nth(2).focus();
+    await expect.poll(() => counts(page)).toEqual({ focusin: 1, focusout: 0 });
+    // The row with the focus is the last of three and will be the first once sorted up.
     await page.locator("#reacting").evaluate((host) => {
-      host.setAttribute("sort-direction", "descending");
+      host.setAttribute("sort-direction", "ascending");
     });
-    await expect.poll(column).toEqual(["5", "2", "1", "0"]);
+    await expect.poll(() => column(page)).toEqual(["1", "3", "5", "9"]);
+    await expect(page.locator("#reacting tbody td").first()).toBeFocused();
+    expect(await counts(page)).toEqual({ focusin: 1, focusout: 0 });
+  });
+
+  test("keeps focus on a control inside a cell, and inside a shadow root, through a sort", async ({
+    page,
+  }) => {
+    await openNavigation(page);
+    await addTable(page, true);
+    const input = page.locator("#reacting idg-input input");
+    await input.focus();
+    await expect.poll(() => counts(page)).toMatchObject({ focusin: 1 });
+    await page.locator("#reacting").evaluate((host) => {
+      host.setAttribute("sort-direction", "ascending");
+    });
+    await expect.poll(() => column(page)).toEqual(["1", "3", "5", "9"]);
+    await expect(input).toBeFocused();
+    expect(await counts(page)).toEqual({ focusin: 1, focusout: 0 });
   });
 });
