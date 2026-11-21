@@ -775,6 +775,36 @@ describe("idg-table spanning cells added later", () => {
     watcher.restore();
   });
 
+  it("keeps a tabindex the page gave the header when the button is taken away", async () => {
+    const watcher = stubMutationObserver();
+    const { root, waitForChanges } = await render(
+      <idg-table>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col" data-sortable="a" tabindex="0">
+                A
+              </th>
+            </tr>
+          </thead>
+          <tbody>{rows}</tbody>
+        </table>
+      </idg-table>,
+    );
+    const button = sortButton(root, 0);
+    Object.defineProperty(document, "activeElement", { configurable: true, get: () => button });
+    const body = within(root, "tbody");
+    while (body.firstChild) body.firstChild.remove();
+    body.append(loading());
+    watcher.notify([{ type: "childList", target: body }]);
+    await waitForChanges();
+    expect(header(root, 0).getAttribute("tabindex")).toBe("0");
+    header(root, 0).dispatchEvent(new Event("blur"));
+    expect(header(root, 0).getAttribute("tabindex")).toBe("0");
+    Reflect.deleteProperty(document, "activeElement");
+    watcher.restore();
+  });
+
   it("moves focus to the header when the button it was on is taken away", async () => {
     const watcher = stubMutationObserver();
     const focus = vi.spyOn(

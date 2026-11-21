@@ -985,3 +985,59 @@ test.describe("idg-pagination and focus the page moved", () => {
     });
   }
 });
+
+test.describe("idg-table and a page that reacts to focus", () => {
+  test("sorts a row added by a focus handler while the rows were being moved", async ({ page }) => {
+    await openNavigation(page);
+    await page.evaluate(async () => {
+      const host = document.createElement("idg-table");
+      host.id = "reacting";
+      const native = document.createElement("table");
+      const head = document.createElement("thead");
+      const headRow = document.createElement("tr");
+      const header = document.createElement("th");
+      header.setAttribute("scope", "col");
+      header.setAttribute("data-sortable", "n");
+      header.textContent = "N";
+      headRow.append(header);
+      head.append(headRow);
+      const body = document.createElement("tbody");
+      for (const value of ["0", "1", "2"]) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.textContent = value;
+        cell.tabIndex = 0;
+        row.append(cell);
+        body.append(row);
+      }
+      native.append(head, body);
+      host.append(native);
+      host.setAttribute("sort-key", "n");
+      document.body.append(host);
+      await (host as unknown as { componentOnReady: () => Promise<void> }).componentOnReady();
+      host.addEventListener("focusin", () => {
+        if (!(window as unknown as { armed?: boolean }).armed) return;
+        (window as unknown as { armed?: boolean }).armed = false;
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.textContent = "5";
+        row.append(cell);
+        body.append(row);
+      });
+    });
+    const column = () =>
+      page
+        .locator("#reacting tbody td")
+        .evaluateAll((cells) => cells.map((cell) => cell.textContent));
+    await expect.poll(column).toEqual(["0", "1", "2"]);
+    await page.locator("#reacting tbody td").nth(1).focus();
+    // Only the focus that comes with moving the rows adds the row.
+    await page.evaluate(() => {
+      Object.assign(window, { armed: true });
+    });
+    await page.locator("#reacting").evaluate((host) => {
+      host.setAttribute("sort-direction", "descending");
+    });
+    await expect.poll(column).toEqual(["5", "2", "1", "0"]);
+  });
+});
