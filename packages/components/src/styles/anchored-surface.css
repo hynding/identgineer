@@ -1,7 +1,9 @@
 /* Shared by idg-popover, idg-tooltip and idg-menu: a top-layer surface (the Popover API) placed
    beside its trigger. Where CSS anchor positioning exists and the trigger is slotted, the trigger is
    named as the anchor with ::slotted() and the browser places the surface and flips it when there
-   is no room. Elsewhere SurfacePosition computes the same in script and writes --_x and --_y. */
+   is no room. Elsewhere SurfacePosition computes the same in script and writes --_x and --_y.
+   A start or end placement follows the surface's own direction, which it takes from the
+   overlay, so a right-to-left page or subtree mirrors it; left and right stay physical. */
 
 .surface {
   position: fixed;
@@ -30,11 +32,11 @@
 }
 
 .anchored.placement-top-start {
-  position-area: top span-right;
+  position-area: top span-self-x-end;
 }
 
 .anchored.placement-top-end {
-  position-area: top span-left;
+  position-area: top span-self-x-start;
 }
 
 .anchored.placement-bottom {
@@ -42,11 +44,11 @@
 }
 
 .anchored.placement-bottom-start {
-  position-area: bottom span-right;
+  position-area: bottom span-self-x-end;
 }
 
 .anchored.placement-bottom-end {
-  position-area: bottom span-left;
+  position-area: bottom span-self-x-start;
 }
 
 .anchored.placement-left {
@@ -73,7 +75,8 @@
   position-area: right span-top;
 }
 
-/* The gap to the trigger is a margin on the side facing it, which flipping mirrors. */
+/* The gap to the trigger is a margin on the side facing it, which flipping mirrors. Left and right
+   are physical sides, so their margins are too. */
 .anchored[class*="placement-top"] {
   margin-block-end: var(--_offset);
 }
@@ -83,9 +86,9 @@
 }
 
 .anchored[class*="placement-left"] {
-  margin-inline-end: var(--_offset);
+  margin-right: var(--_offset);
 }
 
 .anchored[class*="placement-right"] {
-  margin-inline-start: var(--_offset);
+  margin-left: var(--_offset);
 }
