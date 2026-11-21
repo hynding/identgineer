@@ -90,16 +90,16 @@
       <section aria-labelledby="menus-title">
         <h2 id="menus-title">Menus</h2>
         <idg-menu id="actions">
-          <idg-button slot="trigger" variant="secondary">Actions</idg-button>
-          <idg-menu-item value="edit" icon="edit" shortcut="E">Edit</idg-menu-item>
+          <idg-button slot="trigger" variant="secondary" id="actions-trigger">Actions</idg-button>
+          <idg-menu-item id="item-edit" value="edit" icon="edit" shortcut="E">Edit</idg-menu-item>
           <idg-menu-item value="duplicate" icon="copy" shortcut="D">Duplicate</idg-menu-item>
-          <idg-menu-item value="archive" disabled>Archive</idg-menu-item>
+          <idg-menu-item id="item-archive" value="archive" disabled>Archive</idg-menu-item>
           <idg-menu-separator></idg-menu-separator>
           <idg-menu-group label="Sort by">
-            <idg-menu-item type="radio" value="name" checked>Name</idg-menu-item>
-            <idg-menu-item type="radio" value="date">Date</idg-menu-item>
+            <idg-menu-item id="item-name" type="radio" value="name" checked>Name</idg-menu-item>
+            <idg-menu-item id="item-date" type="radio" value="date">Date</idg-menu-item>
           </idg-menu-group>
-          <idg-menu-item type="checkbox" value="grid">Show grid</idg-menu-item>
+          <idg-menu-item id="item-grid" type="checkbox" value="grid">Show grid</idg-menu-item>
           <idg-menu-separator></idg-menu-separator>
           <idg-menu-item value="help" href="#help" icon="external-link">Help centre</idg-menu-item>
           <idg-menu-item value="delete" icon="trash">Delete</idg-menu-item>
