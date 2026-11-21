@@ -43,7 +43,7 @@ Field names are the IR's neutral camelCase; each target maps them to its own col
   `secondaryColor`, `neutralColor` (`#rrggbb`), `typePairing` (component: `headingFamily`,
   `bodyFamily`, restricted to characters that cannot break out of a CSS font string), `corners`
   (`sharp`, `subtle`, `rounded`, `pill`), `tone` (`calm`, `friendly`, `bold`, `formal`, `playful`),
-  `themeTokens` (JSON generated from the kit), `isPublic` (default off; see gaps).
+  `themeTokens` (JSON generated from the kit), `isPublic` (default off; no public read yet, see gaps).
 
 ### Tracking (owner only)
 
@@ -110,8 +110,9 @@ visitor:
   endpoints, which are public by declaration in `camis.json`, not by a grant.
 - "owner = me" is the grant's `assign: { owner: "user.id" }`: the server fills the owner from the
   session on create and ignores an owner sent by the client.
-- Every grant above is enforced as written on strapi-php. Strapi does not enforce conditions or
-  `assign` at its REST API; see [Capability gaps](#capability-gaps).
+- Every grant above is enforced as written on both targets: strapi-php, and Strapi's generated
+  content API controllers (REST only; custom API tokens are refused there). See
+  [Capability gaps](#capability-gaps).
 
 ## Event ingestion
 
@@ -179,35 +180,74 @@ commit the `camis.json` and `roles.json` it writes.
 
 ## Capability gaps
 
-`pnpm cms:generate` reports these today. Each is a camis limitation, not a choice made here.
+`pnpm cms:generate` reports these today (camis `master`, Phases 94 and 95). Each is a camis
+limitation, not a choice made here.
 
-**Strapi (local development) is not safe for real user data.**
+**What Strapi enforces now.** camis' generated Strapi project enforces grant conditions and
+`assign` on the content API, so ownership is enforced on local Strapi as on strapi-php (generated
+controllers, scoped queries, relation-write checks, write body validation and the upload API;
+details in camis' `packages/cli/README.md` and `docs/PLAN.md`, Phases 94 and 95):
 
-- `apiGrantCondition`: Strapi's users-permissions API ignores grant conditions, so any signed-in
-  user can list and change every Profile, BrandKit and Property and read every Event and
-  ConsentRecord. `conditionContext`: the admin-panel copies of those conditions read
-  `record.ownerId`, which Strapi's condition handlers cannot see, so they deny.
-- `assign` is ignored: the client sends the owner, and can send someone else's.
-- `userRelationWrite`: to let a role write a relation to the user, camis also grants
-  `users-permissions.user.find`, which lets every signed-in user list every username and email at
-  `GET /api/users`.
+- `find` is narrowed to the caller's own rows in the query; `findOne`, `update` and `delete` answer
+  404 for a row the caller cannot read and 403 for one it can read but not change.
+- `create` evaluates the grant's condition on the fields sent, and `assign` sets the owner from the
+  session, replacing an owner sent on create and dropping one sent on an update.
+- A populate or filter that reaches Profile, BrandKit, Property, Event or ConsentRecord carries
+  the same scope; a write that links a row the caller cannot read is 403.
+- A write body with an unknown key, a malformed relation or media item, or a non-object `data` is 400. Populating a file's `related` entries (a polymorphic relation) is refused with 400.
+- The upload API attaches only to an entry the caller may update, and records the uploader.
 
-Use Strapi with throwaway accounts only. Ownership is enforced on strapi-php, and the tests in
-`tests/roles.test.ts` check the grants it enforces.
+Limits that remain on Strapi, for this model:
 
-**Both targets.**
+- **REST only.** GraphQL, if added by hand, and a `protected/` file that replaces a generated
+  controller are not enforced.
+- **Custom API tokens are refused (403) on enforced routes.** Only full-access and read-only
+  tokens work there, and they are not narrowed by row conditions; keep them off any client.
+- **The media library is not scoped by uploader.** `GET /api/upload/files` and `/files/:id` answer
+  as Strapi's plugin does, so a role that may read files lists every file. In this model only `super-admin` reads files;
+  `authenticated` may only upload.
+- On MySQL a string comparison in a list filter follows the column's collation, so a filter may
+  let through rows the condition would deny; entry checks are exact. This model's conditions
+  compare numeric ids, so it is not affected today (unverified for future string conditions).
+- Deleting an entry drops its links without asking for update on the entries at their other ends.
+- **How far this is verified.** camis tests the controllers against a fake of Strapi and the
+  scoped queries on Strapi's query engine over sqlite; its live boot job runs Strapi on sqlite
+  only and does not cover drafts, nested populates, MySQL or Postgres.
+- **A database created before this camis version** keeps the `users-permissions.user.find` that
+  camis used to grant the `authenticated` role, which lets every signed-in user list usernames
+  and emails at `GET /api/users`. Recreate the local database, or remove that permission from the
+  Authenticated role by hand.
 
-- `draftPublish @ Page.slug`: a draft and its published version share the slug, so the database
-  does not enforce its uniqueness.
+**Reported by `pnpm cms:generate`.**
+
+- `conditionContext @ <type>.authenticated` (Profile, BrandKit, Property, Event, ConsentRecord):
+  the admin-panel copy of the role cannot read `record.ownerId`, so in the admin panel its
+  condition denies every entry; the content API enforces it. Use the `super-admin` role in the
+  admin.
+- `userRelationWrite @ <type>.super-admin` (the same five types): to let the role write a relation
+  to the user, camis also grants it `users-permissions.user.find`. That adds nothing here:
+  `super-admin` already holds every action on users. The `authenticated` role is not reported and
+  gets no `user.find`.
+- `draftPublish @ Page.slug` (strapi-php): a draft and its published version share the slug, so the
+  database does not enforce its uniqueness.
 - `remoteDataTransfer` (strapi-php): `strapi transfer` needs a WebSocket server; move data as an
   archive instead (see `DEPLOY.md`).
-- Not reported by camis but limiting this model: conditions cannot follow a relation (hence the
-  denormalised `owner` on Event and ConsentRecord); public endpoints have no declarative throttle,
-  body limit or origin list (hence the hand-written checks); JSON fields cannot be bounded; media
-  fields cannot name MIME types (strapi-php's global `CAMIS_UPLOAD_ALLOWED_TYPES` is used instead,
-  without SVG); relations have no delete behaviour, so on strapi-php a property with events cannot
-  be deleted until its events are purged; there is no read-only field, so an owner can change
-  `ingestKey` after it is issued; and one `protected/` directory is mirrored into both targets.
-- No public read of brand kits marked `isPublic`. A public grant conditioned on
-  `record.isPublic == true` would be enforced on strapi-php but open every brand kit on Strapi, so
-  it waits until camis enforces conditions on Strapi. The field is in the model already.
+
+**Not reported by camis but limiting this model.** Conditions cannot follow a relation (hence the
+denormalised `owner` on Event and ConsentRecord); public endpoints have no declarative throttle,
+body limit or origin list (hence the hand-written checks); JSON fields cannot be bounded; media
+fields cannot name MIME types (strapi-php's global `CAMIS_UPLOAD_ALLOWED_TYPES` is used instead,
+without SVG); relations have no delete behaviour, so on strapi-php a property with events cannot
+be deleted until its events are purged; there is no read-only field, so an owner can change
+`ingestKey` after it is issued; and one `protected/` directory is mirrored into both targets.
+
+**Public brand kits.** There is still no public read of brand kits marked `isPublic`, but it can
+now be modelled safely on both targets: a `public` read grant on BrandKit conditioned on
+`record.isPublic == true` is within what camis enforces on Strapi (a read condition of `eq` over
+`record.<field>` against a literal, with the public role as the caller without a session), where
+before it would have opened every brand kit. The model is left unchanged until the brand identity
+feature (issue #18), which owns the public-read decision; the field is in the model already. A
+signed-in user does not inherit the public role on Strapi, so showing other users' public kits to
+signed-in users needs its own read-only grant for `authenticated`; widening the existing owner grant
+would let anyone change a public kit. When it is added, `tests/roles.test.ts` ("holds no
+conditioned grant") must change with it.
