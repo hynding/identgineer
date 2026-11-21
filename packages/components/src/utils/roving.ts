@@ -19,3 +19,17 @@ export function nextRovingIndex(
   }
   return undefined;
 }
+
+export type RovingOrientation = "horizontal" | "vertical";
+
+export function rovingMove(
+  current: number,
+  key: string,
+  enabled: readonly boolean[],
+  orientation: RovingOrientation,
+  rightToLeft: boolean,
+): number | undefined {
+  return orientation === "horizontal"
+    ? nextRovingIndex(current, key, enabled, rightToLeft)
+    : undefined;
+}
