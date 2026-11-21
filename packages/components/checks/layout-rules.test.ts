@@ -332,6 +332,51 @@ describe("findLayoutCssViolations", () => {
   });
 });
 
+describe("container query thresholds", () => {
+  // A container query cannot take a custom property, so a page shell that changes arrangement with
+  // its container must write the threshold out. The checker takes the sizes of the token scale and
+  // lets a threshold be exactly one of them, so it cannot drift to an arbitrary length.
+  const options = { containerSizes: ["40rem", "56rem"] };
+
+  it.each([
+    "@container (min-inline-size: 40rem) { .a { gap: 0; } }",
+    "@container idg-shell (inline-size >= 56rem) { .a { gap: 0; } }",
+    "@container (40rem <= inline-size < 56rem) { .a { gap: 0; } }",
+    "@container style(--idg-layout-shell: top-bar) and (min-inline-size: 40rem) { .a { gap: 0; } }",
+  ])("accepts a threshold that is a size of the scale in %s", (css) => {
+    expect(findLayoutCssViolations(css, options)).toEqual([]);
+  });
+
+  it.each([
+    ["a length that is not on the scale", "@container (min-inline-size: 41rem) { .a { gap: 0; } }"],
+    ["the same size in pixels", "@container (min-inline-size: 640px) { .a { gap: 0; } }"],
+    [
+      "the same size written differently",
+      "@container (min-inline-size: 40.0rem) { .a { gap: 0; } }",
+    ],
+    ["one end of a range", "@container (40rem <= inline-size < 57rem) { .a { gap: 0; } }"],
+  ])("refuses %s", (_name, css) => {
+    const rules = findLayoutCssViolations(css, options).map((violation) => violation.rule);
+    expect(rules).toEqual(["hard-coded length"]);
+  });
+
+  it("refuses every threshold when no sizes are given", () => {
+    const css = "@container (min-inline-size: 40rem) { .a { gap: 0; } }";
+    expect(findLayoutCssViolations(css, { containerSizes: [] })).toHaveLength(1);
+    expect(findLayoutCssViolations(css)).toHaveLength(1);
+  });
+
+  it("allows the sizes only in a container query, not in a media query or a declaration", () => {
+    const rules = (css: string) =>
+      findLayoutCssViolations(css, options).map((violation) => violation.rule);
+    expect(rules("@media (min-width: 40rem) { .a { gap: 0; } }")).toEqual([
+      "viewport media query",
+      "hard-coded length",
+    ]);
+    expect(rules(".a { min-inline-size: 40rem; }")).toEqual(["hard-coded length"]);
+  });
+});
+
 const PRIMITIVES = ["stack", "cluster", "grid", "sidebar", "switcher", "cover"];
 const STYLESHEETS = [
   ...PRIMITIVES.map((name) => `../src/components/${name}/${name}.css`),
