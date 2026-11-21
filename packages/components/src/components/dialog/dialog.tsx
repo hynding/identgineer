@@ -107,7 +107,6 @@ export class IdgDialog {
 
   private native?: HTMLDialogElement;
   private observer?: MutationObserver;
-  private pendingReason?: DialogCloseReason;
   private invoker?: Element;
   private invokerAncestors: Node[] = [];
   private openedModal = false;
@@ -219,8 +218,8 @@ export class IdgDialog {
     const native = this.native;
     if (!native?.open) return;
     this.closeNestedDialogs();
-    this.pendingReason = reason;
     native.close(returnValue);
+    this.settleClosed(reason, true);
   }
 
   // A nested dialog left open would stay in the top layer once this one is hidden: an invisible
@@ -291,7 +290,6 @@ export class IdgDialog {
   }
 
   private settleClosed(reason: DialogCloseReason, restoreFocus: boolean): void {
-    this.pendingReason = undefined;
     this.releaseScroll();
     this.open = false;
     if (restoreFocus) this.restoreFocus();
@@ -302,9 +300,11 @@ export class IdgDialog {
   }
 
   private handleClose = (): void => {
-    // The close a removal settled has already been reported.
-    if (!this.open && this.pendingReason === undefined) return;
-    this.settleClosed(this.pendingReason ?? "escape", true);
+    // A close this component started was settled and reported when it closed the dialog, and the
+    // browser's event for it comes a task later, perhaps after the dialog has opened again. Only a
+    // close it did not start, such as the browser's forced Escape, is still to be reported here.
+    if (!this.open || this.native?.open === true) return;
+    this.settleClosed("escape", true);
   };
 
   // Escape arrives as the browser's close request. It is always taken over, so that a refusal
