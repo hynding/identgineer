@@ -9,6 +9,12 @@ export default defineConfig({
           include: ["tests/**/*.test.ts"],
         },
       },
+      {
+        test: {
+          name: "tokens",
+          include: ["packages/tokens/src/**/*.test.ts"],
+        },
+      },
     ],
   },
 });

@@ -4,9 +4,13 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./css": "./dist/index.css",
+    "./tokens.css": "./dist/tokens.css",
+    "./themes/*.css": "./dist/themes/*.css"
   },
   "scripts": {
+    "build": "node scripts/build.ts",
     "typecheck": "tsc -p tsconfig.json"
   }
 }
