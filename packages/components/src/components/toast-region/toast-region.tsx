@@ -78,21 +78,32 @@ export class IdgToastRegion {
   private motion?: MediaQueryList;
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
 
+  connectedCallback(): void {
+    this.followMotionPreference();
+    // Moved back into a page: its popover was hidden on the way out, so it is shown again.
+    if (this.region) this.sync();
+  }
+
   componentDidLoad(): void {
     this.region?.addEventListener("pointerenter", this.handlePointerEnter);
     this.region?.addEventListener("pointerleave", this.handlePointerLeave);
-    if (typeof window.matchMedia === "function") {
-      this.motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-      this.motion.addEventListener("change", this.motionChanged);
-      this.motionChanged();
-    }
     this.sync();
   }
 
+  // A browser hides a removed popover without a toggle event, so it is marked hidden here.
   disconnectedCallback(): void {
     this.motion?.removeEventListener("change", this.motionChanged);
+    this.motion = undefined;
+    this.shown = false;
     for (const timer of this.timers) clearTimeout(timer);
     this.timers.clear();
+  }
+
+  private followMotionPreference(): void {
+    if (typeof window.matchMedia !== "function") return;
+    this.motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    this.motion.addEventListener("change", this.motionChanged);
+    this.motionChanged();
   }
 
   @Watch("max")
