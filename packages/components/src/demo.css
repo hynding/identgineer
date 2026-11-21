@@ -1,0 +1,24 @@
+html {
+  background: var(--idg-color-bg);
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+main {
+  display: grid;
+  gap: var(--idg-space-m);
+  padding: var(--idg-space-l);
+}
+
+section,
+form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--idg-space-s);
+  align-items: center;
+}
+
+/* Avoids a flash of unstyled content without the inline <style> Stencil would otherwise inject. */
+idg-button:not(.hydrated) {
+  visibility: hidden;
+}
