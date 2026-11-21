@@ -99,7 +99,9 @@ export class IdgPagination {
         !control.hasAttribute("disabled") &&
         control.getAttribute("aria-disabled") !== "true",
     );
-    (same ?? shadow?.querySelector<HTMLElement>("[aria-current='page']"))?.focus();
+    (same ?? shadow?.querySelector<HTMLElement>("[aria-current='page']"))?.focus({
+      preventScroll: true,
+    });
   }
 
   private pageCountValue(): number {
