@@ -78,7 +78,7 @@ export class IdgAvatar {
             part="image"
             src={src}
             alt={name}
-            referrerpolicy="no-referrer"
+            referrerPolicy="no-referrer"
             loading="lazy"
             decoding="async"
             onError={this.handleError}
