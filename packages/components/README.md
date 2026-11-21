@@ -153,6 +153,8 @@ inferred from attributes. For example the email input is a `textbox` named "Emai
 - **Slots:** default (the one control), `label`, `hint`, `error` (rich content in place of the
   props; their text is what is handed to the control).
 - **Label click** focuses the control (`setFocus()`, which for a radio group is its tab stop).
+- **Load order.** The field hands its label, hint and error to its control whichever is defined
+  first: a control whose element is defined after the field picks them up when it is.
 - **Hints** are shown when `--idg-ux-hints` is `1` (the `guided` mode). It is done with `calc()` on
   the number (`max-block-size` and `opacity`), so it needs no style query. The hint is only
   collapsed, and the same text is in the control's accessible description in every mode.
@@ -431,6 +433,16 @@ trigger. Surfaces take the design language's border, radius and elevation over t
 transparent design stays readable and glass stays frosted; they fade in, and slide only by
 `--idg-motion-enabled`. In `forced-colors` every surface has a 2px `CanvasText` border.
 
+- **Right to left.** Every overlay uses logical properties where a side depends on the direction. A
+  `-start` or `-end` placement follows the overlay's direction, from `dir` on the page or any
+  ancestor: `bottom-start` lines up with the trigger's right edge in right-to-left text. `left` and
+  `right` stay physical sides. The script fallback reads the trigger's computed direction.
+- **Removed while open.** A dialog, popover or menu taken out of the page while open closes as if
+  by its method: it emits `idgClose`, its trigger is no longer marked expanded, and it opens
+  normally when put back. Focus is left where the move put it. A toast region shows its toasts
+  again when put back. An `open` attribute in the page's markup shows a popover or menu without
+  taking focus.
+
 ### Triggers across shadow roots
 
 An overlay tells its trigger it is expanded and what it controls. The trigger may be an `idg-button`
@@ -506,7 +518,9 @@ description, which is why tooltips use the description properties above.
   and release both outside the dialog box.
 - **`<form method="dialog">`** in slotted content closes the dialog with the submitter's `value`
   as `returnValue` and the reason `form`. A form inside a nested `idg-dialog` closes only that one.
-- **Nested dialogs** stack in the top layer; Escape closes the top one.
+- **Nested dialogs** stack in the top layer; Escape closes the top one. Closing a dialog closes the
+  dialogs open inside it first, innermost first, each reporting the reason `method`, so none is left
+  in the top layer once its parent is hidden.
 - **Looks.** The scrim is the theme's text colour at low opacity, then varies by design through
   style queries: translucent and blurred for glass, a hatch for hard-shadow designs, a checker for
   pixel, a pale frosted veil where a design has no surface border, a paper wash for editorial. The
@@ -595,23 +609,28 @@ which the toast removes itself. Parts `toast`, `icon`, `heading`, `description`,
 `queued` and `paused` are set by the region.
 
 `idg-toast-region`: `position` (`top-start`, `top-center`, `top-end`, `bottom-start`,
-`bottom-center`, `bottom-end`; default `bottom-end`), `max` (shown at once, default 3), `label`
+`bottom-center`, `bottom-end`, logical, so `start` is the right in right-to-left text; default
+`bottom-end`), `max` (shown at once, default 3), `label`
 (default `Notifications`) and `hotkey` (default `F8`). Part `region`.
 
 - **Announcements.** The region has one polite live region, and an assertive one used only for
   `danger`. Each toast is announced as it comes into view (a queued one when its turn comes), as
   text, 100ms after the change so the live region is in place, and cleared after 5s so browsing the
-  page does not meet it twice. Focus never moves on its own.
+  page does not meet it twice. Toasts that come into view within those 100ms are announced together,
+  so a second one does not cut the first short. Focus never moves on its own.
 - **Reaching it.** The region is a landmark (`<section>` with a name) and `hotkey` focuses it while
   it holds a toast (`aria-keyshortcuts`). Tab then reaches the action and close buttons. Escape in a
-  toast dismisses it; focus moves to the next toast, or back where it was before the hotkey.
+  toast dismisses it; focus moves to the next toast, or back where it was before focus entered the
+  region, whether by the hotkey, Tab or a click (the last focused element outside it when nothing
+  had focus at that moment).
 - **Timing.** Six seconds by default. A toast with an action never dismisses itself unless it is
   given a duration. Every toast stands still while the pointer is over the region, focus is inside
   it, the window is in the background, or the user prefers reduced motion (then toasts stay until
   dismissed), and runs on with the time it had left.
 - **Queue.** At most `max` show at once, oldest first; the rest wait hidden and do not count down.
 - **Swipe.** A sideways drag of 64px, or 35% of the width if more, dismisses a toast; a shorter one
-  springs back. Vertical drags still scroll (`touch-action: pan-y`).
+  springs back. The distance is measured at the release, which is heard on the document, so a fast
+  flick that ends off the toast counts. Vertical drags still scroll (`touch-action: pan-y`).
 - **Top layer.** The region is a `popover="manual"`, shown while it holds a toast, so it is above
   other overlays, and lets clicks through around the toasts.
 
