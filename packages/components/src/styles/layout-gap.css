@@ -1,0 +1,43 @@
+/* The gap steps of the layout primitives. Each is a step of the space scale, scaled by the UX
+   mode's density so a compact mode tightens every layout. Without a step the primitive keeps the
+   gap its own stylesheet takes from the layout. */
+
+.gap-none {
+  --_gap: 0;
+}
+
+.gap-3xs {
+  --_gap: calc(var(--idg-space-3xs) * var(--idg-density-gap-scale));
+}
+
+.gap-2xs {
+  --_gap: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
+}
+
+.gap-xs {
+  --_gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+}
+
+.gap-s {
+  --_gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+}
+
+.gap-m {
+  --_gap: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+}
+
+.gap-l {
+  --_gap: calc(var(--idg-space-l) * var(--idg-density-gap-scale));
+}
+
+.gap-xl {
+  --_gap: calc(var(--idg-space-xl) * var(--idg-density-gap-scale));
+}
+
+.gap-2xl {
+  --_gap: calc(var(--idg-space-2xl) * var(--idg-density-gap-scale));
+}
+
+.gap-3xl {
+  --_gap: calc(var(--idg-space-3xl) * var(--idg-density-gap-scale));
+}
