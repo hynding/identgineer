@@ -260,17 +260,20 @@ describe("idg-layout drawer", () => {
 
   it("has a close button of its own, which closes it", async () => {
     const { root, waitForChanges } = await render(
-      <idg-layout close-label="Dismiss">{page}</idg-layout>,
+      <idg-layout close-label="Dismiss">
+        <a slot="navigation" href="/one">
+          One
+        </a>
+        Content
+      </idg-layout>,
     );
-    const layout = root.querySelector<LayoutHost>("idg-layout");
-    if (!layout) throw new Error("no layout");
-    toggle(layout).click();
+    toggle(root).click();
     await waitForChanges();
-    const close = part(layout, "close");
-    expect(close.getAttribute("aria-label") ?? close.textContent).toBeTruthy();
+    const close = part(root, "close");
+    expect(close.getAttribute("aria-label")).toBe("Dismiss");
     close.click();
     await waitForChanges();
-    expect(layout.navigationOpen).toBe(false);
+    expect((root as LayoutHost).navigationOpen).toBe(false);
   });
 
   it("opens when navigation-open is set, and tells the page", async () => {
