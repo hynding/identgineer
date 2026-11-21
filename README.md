@@ -15,12 +15,12 @@ Built with HTML5, CSS3 design tokens and strict TypeScript.
 The UI has four independent, interchangeable axes. Each is set as an attribute on the root
 element and takes one of eight values, so any combination can be mixed freely.
 
-| Attribute     | Axis                |
-| ------------- | ------------------- |
-| `data-theme`  | Color theme         |
-| `data-design` | Design language     |
-| `data-layout` | Page layout         |
-| `data-ux`     | UX mode             |
+| Attribute     | Axis            |
+| ------------- | --------------- |
+| `data-theme`  | Color theme     |
+| `data-design` | Design language |
+| `data-layout` | Page layout     |
+| `data-ux`     | UX mode         |
 
 ## Repository layout
 
@@ -43,11 +43,13 @@ docs/PLAN.md          Feature plan and working process
 ## Common commands
 
 ```sh
-pnpm install   # install workspace dependencies
+pnpm install       # install workspace dependencies
+pnpm format        # format with Prettier (format:check to verify only)
+pnpm lint          # ESLint with type-aware typescript-eslint
+pnpm typecheck     # tsc across every workspace package
+pnpm test          # Vitest
+pnpm build         # build every package that defines a build script
 ```
-
-Lint, typecheck, test and build scripts arrive with the tooling in Feature 1 and are listed
-here as they land.
 
 ## Roadmap
 
