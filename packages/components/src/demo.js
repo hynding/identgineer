@@ -33,3 +33,30 @@ dialog.addEventListener("idgClose", (event) => {
     },
   });
 });
+
+// Pages the projects table four rows at a time. The table sorts all of its rows, and showing a page
+// is only a matter of which of them are hidden, so a sort is followed by showing the page again.
+const PAGE_SIZE = 4;
+const projects = document.getElementById("projects-table");
+const pager = document.getElementById("projects-pager");
+const summary = document.getElementById("projects-summary");
+
+function showPage(page) {
+  const rows = Array.from(projects.querySelectorAll("tbody tr"));
+  rows.forEach((row, index) => {
+    row.hidden = Math.floor(index / PAGE_SIZE) + 1 !== page;
+  });
+  const first = (page - 1) * PAGE_SIZE + 1;
+  const last = Math.min(page * PAGE_SIZE, rows.length);
+  summary.textContent = `Showing ${String(first)} to ${String(last)} of ${String(rows.length)} projects`;
+}
+
+pager.addEventListener("idgPageChange", (event) => {
+  showPage(event.detail.page);
+});
+
+projects.addEventListener("idgSort", () => {
+  showPage(pager.page);
+});
+
+showPage(1);

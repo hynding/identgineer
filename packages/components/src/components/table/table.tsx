@@ -26,6 +26,7 @@ import {
   sortKeyOf,
   sortValueOf,
   sortableHeaders,
+  textOf,
 } from "./table-dom";
 import { SORT_DIRECTIONS, type TableSortDetail } from "./table-options";
 import { tableSheet } from "./table-light-styles";
@@ -148,7 +149,7 @@ export class IdgTable {
     this.sortDirection = direction;
     this.status = this.sortStatus
       .split("{column}")
-      .join(header.textContent.trim())
+      .join(textOf(header).trim())
       .split("{direction}")
       .join(direction);
     this.idgSort.emit({ key, direction });

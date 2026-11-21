@@ -56,6 +56,12 @@ export const TABLE_LIGHT_CSS = `@layer idg.components {
     border-block-end-width: 0;
   }
 
+  /* A page that hides rows (to page through them) still ends on a row with no rule below it. A
+     browser without this selector keeps the rule, which is harmless. */
+  idg-table > table > tbody > tr:nth-last-child(1 of :not([hidden])) > :is(th, td) {
+    border-block-end-width: 0;
+  }
+
   /* The header is drawn as the design draws a heading, on an opaque fill so rows scrolling under a
      sticky header do not show through it. */
   idg-table > table > thead > tr > th {
@@ -83,6 +89,17 @@ export const TABLE_LIGHT_CSS = `@layer idg.components {
 
   idg-table[striped] > table > tbody > tr:nth-child(even) {
     background: var(--idg-color-bg-subtle);
+  }
+
+  /* Stripes count the rows that show, so hiding some to page through them keeps them alternating. */
+  @supports selector(:nth-child(1 of :not([hidden]))) {
+    idg-table[striped] > table > tbody > tr:nth-child(even) {
+      background: transparent;
+    }
+
+    idg-table[striped] > table > tbody > tr:nth-child(even of :not([hidden])) {
+      background: var(--idg-color-bg-subtle);
+    }
   }
 
   idg-table > table > tbody > tr:hover > :is(th, td) {

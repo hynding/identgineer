@@ -160,6 +160,171 @@
           </idg-card>
         </div>
       </section>
+      <h1>Navigation and data</h1>
+      <section class="dashboard" id="navigation" aria-labelledby="navigation-title">
+        <header class="dashboard-header">
+          <div class="dashboard-crumbs">
+            <idg-breadcrumb label="You are here">
+              <idg-breadcrumb-item href="#navigation">Studio</idg-breadcrumb-item>
+              <idg-breadcrumb-item href="#navigation">Projects</idg-breadcrumb-item>
+              <idg-breadcrumb-item>Atlas</idg-breadcrumb-item>
+            </idg-breadcrumb>
+            <h2 id="navigation-title">Atlas</h2>
+          </div>
+        </header>
+
+        <div class="dashboard-split">
+          <idg-card variant="raised">
+            <idg-tabs label="Project views">
+              <idg-tab value="overview">Overview</idg-tab>
+              <idg-tab value="activity">Activity</idg-tab>
+              <idg-tab value="settings" disabled>Settings</idg-tab>
+              <idg-tab value="billing">Billing</idg-tab>
+              <idg-tab-panel value="overview">
+                <p>
+                  Atlas has 14 files, 3 collaborators and no open reviews. Sprint 14 is 64% done.
+                </p>
+                <idg-progress label="Sprint 14" value="64" show-value></idg-progress>
+              </idg-tab-panel>
+              <idg-tab-panel value="activity">
+                <ul class="activity">
+                  <li>
+                    <idg-avatar name="Ada Lovelace" size="sm" alt=""></idg-avatar>
+                    <span class="who">Ada edited the brief</span>
+                  </li>
+                  <li>
+                    <idg-avatar name="Alan Turing" size="sm" alt=""></idg-avatar>
+                    <span class="who">Alan opened a review</span>
+                  </li>
+                </ul>
+              </idg-tab-panel>
+              <idg-tab-panel value="settings">
+                <p>Settings are managed by the studio owner.</p>
+              </idg-tab-panel>
+              <idg-tab-panel value="billing">
+                <p>Billed monthly to the studio card, next on 1 October.</p>
+              </idg-tab-panel>
+            </idg-tabs>
+          </idg-card>
+
+          <idg-accordion find-in-page>
+            <idg-accordion-item heading="How are projects shared?" open>
+              <p>Invite people by email. They see every file until you restrict a folder.</p>
+            </idg-accordion-item>
+            <idg-accordion-item heading="Can I restore an archived project?">
+              <p>Yes. Archived projects stay read-only and can be restored for 90 days.</p>
+            </idg-accordion-item>
+            <idg-accordion-item heading="Who can see billing?" disabled>
+              <p>Only the studio owner.</p>
+            </idg-accordion-item>
+            <idg-accordion-item>
+              <span slot="heading">What is new in 2.4?</span>
+              <p>Faster builds and a keyboard shortcut for everything.</p>
+            </idg-accordion-item>
+          </idg-accordion>
+        </div>
+
+        <idg-card variant="raised" padding="sm">
+          <idg-table id="projects-table" striped>
+            <table>
+              <caption>
+                Projects
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col" data-sortable="name">Name</th>
+                  <th scope="col" data-sortable="files">Files</th>
+                  <th scope="col">Owner</th>
+                  <th scope="col" data-sortable="updated">Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Atlas</th>
+                  <td>14</td>
+                  <td>Ada Lovelace</td>
+                  <td data-sort-value="2026-03-02">2 March</td>
+                </tr>
+                <tr>
+                  <th scope="row">Borealis</th>
+                  <td>9</td>
+                  <td>Grace Hopper</td>
+                  <td data-sort-value="2026-02-11">11 February</td>
+                </tr>
+                <tr>
+                  <th scope="row">Cinder</th>
+                  <td>120</td>
+                  <td>Alan Turing</td>
+                  <td data-sort-value="2026-03-20">20 March</td>
+                </tr>
+                <tr>
+                  <th scope="row">Delta</th>
+                  <td>3</td>
+                  <td>Margaret Hamilton</td>
+                  <td data-sort-value="2026-01-05">5 January</td>
+                </tr>
+                <tr>
+                  <th scope="row">Ember</th>
+                  <td>57</td>
+                  <td>Edsger Dijkstra</td>
+                  <td data-sort-value="2026-03-28">28 March</td>
+                </tr>
+                <tr>
+                  <th scope="row">Fjord</th>
+                  <td>8</td>
+                  <td>Barbara Liskov</td>
+                  <td data-sort-value="2026-02-27">27 February</td>
+                </tr>
+                <tr>
+                  <th scope="row">Glacier</th>
+                  <td>31</td>
+                  <td>Katherine Johnson</td>
+                  <td data-sort-value="2026-02-02">2 February</td>
+                </tr>
+                <tr>
+                  <th scope="row">Harbor</th>
+                  <td>76</td>
+                  <td>Dennis Ritchie</td>
+                  <td data-sort-value="2026-03-09">9 March</td>
+                </tr>
+                <tr>
+                  <th scope="row">Iris</th>
+                  <td>22</td>
+                  <td>Radia Perlman</td>
+                  <td data-sort-value="2026-01-19">19 January</td>
+                </tr>
+                <tr>
+                  <th scope="row">Juno</th>
+                  <td>5</td>
+                  <td>Donald Knuth</td>
+                  <td data-sort-value="2026-03-14">14 March</td>
+                </tr>
+                <tr>
+                  <th scope="row">Kestrel</th>
+                  <td>88</td>
+                  <td>Frances Allen</td>
+                  <td data-sort-value="2026-02-21">21 February</td>
+                </tr>
+                <tr>
+                  <th scope="row">Lumen</th>
+                  <td>17</td>
+                  <td>Tim Berners-Lee</td>
+                  <td data-sort-value="2026-03-30">30 March</td>
+                </tr>
+              </tbody>
+            </table>
+          </idg-table>
+          <div class="table-footer">
+            <p class="table-summary" id="projects-summary">Showing 1 to 4 of 12 projects</p>
+            <idg-pagination
+              id="projects-pager"
+              label="Projects pages"
+              page-count="3"
+              page="1"
+            ></idg-pagination>
+          </div>
+        </idg-card>
+      </section>
       <h1>Sign in</h1>
       <form id="signin" class="stack" method="get" action="/csp-demo.html">
         <idg-field label="Email" hint="The address you registered with" required>

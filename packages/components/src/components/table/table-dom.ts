@@ -33,11 +33,17 @@ export function columnIndex(cell: Element): number {
   return cell.parentElement ? Array.from(cell.parentElement.children).indexOf(cell) : -1;
 }
 
+// Typed explicitly because Stencil's DOM typings allow null here and the editor's do not.
+export function textOf(node: Node): string {
+  const text: string | null = node.textContent;
+  return text ?? "";
+}
+
 /** What a cell sorts by: its `data-sort-value`, else its text with the white space tidied. */
 export function sortValueOf(row: Element, column: number): string {
   const cell = Array.from(row.children)[column];
   if (!cell) return "";
-  const text = cell.getAttribute("data-sort-value") ?? cell.textContent;
+  const text = cell.getAttribute("data-sort-value") ?? textOf(cell);
   return text.replace(/\s+/g, " ").trim();
 }
 

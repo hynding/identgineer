@@ -45,13 +45,22 @@ idg-menu:not(.hydrated),
 idg-menu-item:not(.hydrated),
 idg-menu-group:not(.hydrated),
 idg-menu-separator:not(.hydrated),
-idg-toast:not(.hydrated) {
+idg-toast:not(.hydrated),
+idg-tabs:not(.hydrated),
+idg-tab:not(.hydrated),
+idg-accordion:not(.hydrated),
+idg-accordion-item:not(.hydrated),
+idg-table:not(.hydrated),
+idg-pagination:not(.hydrated),
+idg-breadcrumb:not(.hydrated),
+idg-breadcrumb-item:not(.hydrated) {
   visibility: hidden;
 }
 
 /* Their content is not on the page until they open, so it never flashes in unstyled. */
 idg-dialog:not(.hydrated),
-idg-toast-region:not(.hydrated) {
+idg-toast-region:not(.hydrated),
+idg-tab-panel:not(.hydrated) {
   display: none;
 }
 
@@ -260,4 +269,33 @@ section.dashboard::after {
 /* Makes the overlays fixture taller than the viewport, so the scroll lock has a scrollbar to keep. */
 .spacer {
   block-size: 150vh;
+}
+
+/* Navigation and data: tabs and an accordion side by side, then a table with its pagination. The
+   minimum is capped at the container so a 320px viewport never scrolls sideways. */
+.dashboard-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: var(--idg-space-m);
+  align-items: start;
+}
+
+.dashboard-crumbs {
+  display: grid;
+  gap: var(--idg-space-2xs);
+  min-inline-size: 0;
+}
+
+.table-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--idg-space-s);
+  padding-block-start: var(--idg-space-s);
+}
+
+.table-summary {
+  margin: 0;
+  color: var(--idg-color-text-muted);
 }

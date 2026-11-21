@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>navigation and data components fixture</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Navigation and data</h1>
+
+      <idg-breadcrumb id="crumbs" label="You are here">
+        <idg-breadcrumb-item id="crumb-home" href="/">Home</idg-breadcrumb-item>
+        <idg-breadcrumb-item id="crumb-docs" href="/docs">Docs</idg-breadcrumb-item>
+        <idg-breadcrumb-item id="crumb-components" href="/docs/components">
+          Components
+        </idg-breadcrumb-item>
+        <idg-breadcrumb-item id="crumb-tabs">Tabs</idg-breadcrumb-item>
+      </idg-breadcrumb>
+
+      <section aria-labelledby="tabs-title" class="stack">
+        <h2 id="tabs-title">Tabs</h2>
+        <idg-tabs id="tabs" label="Project views">
+          <idg-tab id="tab-overview" value="overview">Overview</idg-tab>
+          <idg-tab id="tab-activity" value="activity">Activity</idg-tab>
+          <idg-tab id="tab-settings" value="settings" disabled>Settings</idg-tab>
+          <idg-tab id="tab-billing" value="billing">Billing</idg-tab>
+          <idg-tab-panel id="panel-overview" value="overview">
+            <p>Atlas has 14 files, 3 collaborators and no open reviews.</p>
+          </idg-tab-panel>
+          <idg-tab-panel id="panel-activity" value="activity">
+            <p>Two people edited this project today.</p>
+            <idg-button id="activity-refresh" variant="secondary">Refresh</idg-button>
+          </idg-tab-panel>
+          <idg-tab-panel id="panel-settings" value="settings">
+            <p>Settings are managed by the studio owner.</p>
+          </idg-tab-panel>
+          <idg-tab-panel id="panel-billing" value="billing">
+            <p>Billed monthly to the studio card.</p>
+          </idg-tab-panel>
+        </idg-tabs>
+
+        <idg-tabs id="tabs-manual" label="Report sections" activation="manual">
+          <idg-tab id="manual-summary" value="summary">Summary</idg-tab>
+          <idg-tab id="manual-details" value="details">Details</idg-tab>
+          <idg-tab id="manual-notes" value="notes">Notes</idg-tab>
+          <idg-tab-panel id="manual-summary-panel" value="summary">
+            <p>The summary of the report.</p>
+          </idg-tab-panel>
+          <idg-tab-panel id="manual-details-panel" value="details">
+            <p>The details of the report.</p>
+          </idg-tab-panel>
+          <idg-tab-panel id="manual-notes-panel" value="notes">
+            <p>The notes on the report.</p>
+          </idg-tab-panel>
+        </idg-tabs>
+
+        <idg-tabs id="tabs-vertical" label="Preferences" orientation="vertical">
+          <idg-tab id="vertical-profile" value="profile">Profile</idg-tab>
+          <idg-tab id="vertical-security" value="security">Security</idg-tab>
+          <idg-tab id="vertical-alerts" value="alerts">Alerts</idg-tab>
+          <idg-tab-panel id="vertical-profile-panel" value="profile">
+            <p>Your name, picture and pronouns.</p>
+          </idg-tab-panel>
+          <idg-tab-panel id="vertical-security-panel" value="security">
+            <p>Passwords, passkeys and sessions.</p>
+          </idg-tab-panel>
+          <idg-tab-panel id="vertical-alerts-panel" value="alerts">
+            <p>What we email you about.</p>
+          </idg-tab-panel>
+        </idg-tabs>
+      </section>
+
+      <section aria-labelledby="accordion-title" class="stack">
+        <h2 id="accordion-title">Accordion</h2>
+        <idg-accordion id="accordion" find-in-page>
+          <idg-accordion-item id="item-shipping" value="shipping" heading="Shipping" open>
+            <p>Orders ship within two working days.</p>
+          </idg-accordion-item>
+          <idg-accordion-item id="item-returns" value="returns" heading="Returns">
+            <p>Return anything within thirty days. The word zanzibar is only here.</p>
+            <a id="returns-link" href="#returns">Start a return</a>
+          </idg-accordion-item>
+          <idg-accordion-item id="item-warranty" value="warranty" heading="Warranty" disabled>
+            <p>One year, parts and labour.</p>
+          </idg-accordion-item>
+          <idg-accordion-item id="item-contact" value="contact">
+            <span slot="heading">Contact <idg-badge variant="info" size="sm">New</idg-badge></span>
+            <p id="contact-text">Write to help@example.com.</p>
+          </idg-accordion-item>
+        </idg-accordion>
+
+        <idg-accordion id="accordion-multiple" multiple heading-level="4">
+          <idg-accordion-item id="multi-a" heading="First" open>
+            <p>The first answer.</p>
+          </idg-accordion-item>
+          <idg-accordion-item id="multi-b" heading="Second" open>
+            <p>The second answer.</p>
+          </idg-accordion-item>
+          <idg-accordion-item id="multi-c" heading="Third">
+            <p>The third answer.</p>
+          </idg-accordion-item>
+        </idg-accordion>
+      </section>
+
+      <section aria-labelledby="table-title" class="stack">
+        <h2 id="table-title">Table</h2>
+        <idg-table id="table" striped sticky-header max-height="14rem" label="Projects, scrollable">
+          <table>
+            <caption>
+              Projects
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col" data-sortable="name">Name</th>
+                <th scope="col" data-sortable="files">Files</th>
+                <th scope="col">Owner</th>
+                <th scope="col" data-sortable="updated">Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Atlas</th>
+                <td>14</td>
+                <td>Ada Lovelace</td>
+                <td data-sort-value="2026-03-02">2 March</td>
+              </tr>
+              <tr>
+                <th scope="row">Borealis</th>
+                <td>9</td>
+                <td>Grace Hopper</td>
+                <td data-sort-value="2026-02-11">11 February</td>
+              </tr>
+              <tr>
+                <th scope="row">Cinder</th>
+                <td>120</td>
+                <td>Alan Turing</td>
+                <td data-sort-value="2026-03-20">20 March</td>
+              </tr>
+              <tr>
+                <th scope="row">Delta</th>
+                <td>3</td>
+                <td>Margaret Hamilton</td>
+                <td data-sort-value="2026-01-05">5 January</td>
+              </tr>
+              <tr>
+                <th scope="row">Ember</th>
+                <td>57</td>
+                <td>Edsger Dijkstra</td>
+                <td data-sort-value="2026-03-28">28 March</td>
+              </tr>
+              <tr>
+                <th scope="row">Fjord</th>
+                <td>8</td>
+                <td>Barbara Liskov</td>
+                <td data-sort-value="2026-02-27">27 February</td>
+              </tr>
+            </tbody>
+          </table>
+        </idg-table>
+
+        <idg-table id="table-wide">
+          <table>
+            <caption>
+              Quarterly figures, in thousands
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Region</th>
+                <th scope="col">January</th>
+                <th scope="col">February</th>
+                <th scope="col">March</th>
+                <th scope="col">April</th>
+                <th scope="col">May</th>
+                <th scope="col">June</th>
+                <th scope="col">Total for the half year</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">North</th>
+                <td>120</td>
+                <td>132</td>
+                <td>141</td>
+                <td>150</td>
+                <td>161</td>
+                <td>170</td>
+                <td>874</td>
+              </tr>
+              <tr>
+                <th scope="row">South</th>
+                <td>98</td>
+                <td>101</td>
+                <td>110</td>
+                <td>117</td>
+                <td>119</td>
+                <td>130</td>
+                <td>675</td>
+              </tr>
+            </tbody>
+          </table>
+        </idg-table>
+      </section>
+
+      <section aria-labelledby="pagination-title" class="stack">
+        <h2 id="pagination-title">Pagination</h2>
+        <idg-pagination id="pagination-buttons" label="Projects pages" page-count="12" page="6">
+        </idg-pagination>
+        <idg-pagination
+          id="pagination-links"
+          label="Archive pages"
+          page-count="9"
+          page="1"
+          href-template="#page-{page}"
+        ></idg-pagination>
+        <idg-pagination
+          id="pagination-unsafe"
+          label="Unsafe pages"
+          page-count="3"
+          page="2"
+          href-template="javascript:alert({page})"
+        ></idg-pagination>
+      </section>
+
+      <p>
+        <button id="before-tabs" type="button">A plain button</button>
+        <a id="after" href="#after">A plain link</a>
+      </p>
+    </main>
+  </body>
+</html>
