@@ -668,6 +668,10 @@ and the selection state on the light-DOM `idg-tab` and `idg-tab-panel` elements 
 `label`. Event `idgChange` (`{ value }`); method `setFocus()`; parts `tablist`.
 `idg-tab`: `value`, `disabled`. `idg-tab-panel`: `value`.
 
+- **Values.** Keep them unique: a tab that repeats an earlier tab's value is paired with the same
+  panel and can never be selected, and a warning naming the value is logged. When `value` names no
+  tab, the enabled tab nearest to where the selection was takes over (the first, at load).
+
 - **Keyboard.** Arrows move along the orientation (mirrored in right-to-left), Home and End jump,
   disabled tabs are skipped. Only the selected tab is in the tab order, and the panel takes
   `tabindex="0"` only when its content has nothing focusable.
@@ -688,7 +692,11 @@ content); parts `item`, `heading`, `trigger`, `title`, `chevron`, `panel`, `cont
 - **Keyboard.** Enter and Space toggle; ArrowUp, ArrowDown, Home and End move between enabled
   headers.
 - Closed panels use `hidden="until-found"`, so browser find-in-page and fragment links open them
-  (a disabled item is plainly hidden). With six items or fewer the panel is a named `region`.
+  (a disabled item is plainly hidden). With six items or fewer an open panel is a named `region`; a
+  closed one is not, so a panel the browser can still find is not an empty landmark.
+- **Single-open.** An item opened, or added already open, wins and the others close, each with one
+  `idgToggle`. At first load the first item marked `open` wins. Nested accordions are independent:
+  an item opening inside a panel does not close the item holding it.
 
 ### `idg-table`
 
@@ -697,12 +705,19 @@ stylesheet in the `idg.components` layer, built from the `--idg-*` tokens, is ad
 document or shadow root the table is in; no inline styles are used, so the strict CSP holds.
 
 Props: `label`, `stickyHeader` (`sticky-header`), `striped`, `maxHeight` (`max-height`), `minWidth`
-(`min-width`), `sortKey`, `sortDirection`, `manualSort`, `sortStatus` (the live-region text pattern).
+(`min-width`), `sortKey`, `sortDirection`, `manualSort`, `sortStatus` (the live-region text pattern, with `{column}` and `{direction}`), `sortAscendingLabel`
+and `sortDescendingLabel` (the words for `{direction}`, default "ascending" and "descending"; set
+them with `sortStatus` to translate the announcement).
 Event `idgSort` (`{ key, direction }`); parts `scroller`, `status`.
 
 - **Sorting.** Put `data-sortable` (its value is the key reported, else the column) on a `th` in the
   `thead`; it becomes a button, the header gets `aria-sort`, and the rows are reordered stably,
-  numbers by value, empty cells last. A cell may give `data-sort-value`. With `manual-sort` the table only reports `idgSort` and the page orders the rows.
+  numbers by value, empty cells last. A cell may give `data-sort-value`, which is what it sorts by;
+  use it for anything the text does not order correctly, such as `1,200` (text sorts as a string
+  unless it reads as a plain number) or dates written as words.
+- **Spanning cells.** A table whose body has a cell with `rowspan` or `colspan` is not sortable: no
+  sort buttons are drawn and `sortKey` does nothing, since moving its rows would break it. Sort
+  such data in the page and use `manual-sort` on a table without spans. With `manual-sort` the table only reports `idgSort` and the page orders the rows.
 - **Wide tables** scroll inside the component's own region, which is focusable and named by `label`
   or the caption, so the page never scrolls sideways.
 
@@ -717,7 +732,8 @@ The list keeps a constant number of slots so it does not jump as the page change
 `hrefTemplate` the controls are buttons; with it they are links, through `safeUrl`, and a template
 that gives an unsafe url falls back to buttons. Modified clicks (Ctrl, Shift, middle button) are left
 to the browser. The unavailable previous and next controls are disabled, and focus moves to the
-current page when the control that was pressed becomes unavailable.
+current page when the control that was used is redrawn elsewhere or becomes unavailable, but only
+if focus was inside the component, and not after a press the page cancelled.
 
 ### `idg-breadcrumb` and `idg-breadcrumb-item`
 
