@@ -234,7 +234,7 @@ anchored on the first radio. `idg-radio-group` emits `idgChange` `{ value }`; th
 
 ## Strict CSP and Trusted Types
 
-Verified in Chromium against
+Every component is verified in Chromium against
 `default-src 'self'; style-src 'self'; script-src 'self'; require-trusted-types-for 'script'`
 with the lazy build loaded from an external script: components define and hydrate and styles apply,
 with no console violation.
