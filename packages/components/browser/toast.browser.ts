@@ -218,6 +218,8 @@ test.describe("idg-toast timing", () => {
     await expect(toasts(page)).toHaveCount(4);
     await expect(shownToasts(page)).toHaveCount(3);
     await expect(toasts(page).nth(3)).toBeHidden();
+    // The three that came into view together are announced together, and only those.
+    await expect.poll(() => liveText(page, "polite")).toBe("OneTwoThree");
     await page.evaluate(() => {
       (window as unknown as { handles: { dismiss: () => void }[] }).handles[0]?.dismiss();
     });
