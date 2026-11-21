@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { settle } from "./axes";
 import { expectNoAxeViolations } from "./accessibility";
 import { expect, test } from "./fixtures";
+import { openNavigation } from "./navigation-page";
 import { openOverlays, wire } from "./overlay-page";
 
 const surface = (page: Page, id: string) => page.locator(`#${id}`).locator('[part="surface"]');
@@ -190,4 +191,62 @@ test.describe("idg-toast-region in a right-to-left page", () => {
       await expectNoAxeViolations(page);
     });
   }
+});
+
+test.describe("navigation components in a right-to-left page", () => {
+  const openNavigationRightToLeft = async (page: Page): Promise<void> => {
+    await openNavigation(page);
+    await page.locator("html").evaluate((element) => {
+      element.setAttribute("dir", "rtl");
+    });
+  };
+
+  test("tabs start at the right and the arrow keys follow the reading direction", async ({
+    page,
+  }) => {
+    await openNavigationRightToLeft(page);
+    const first = await boxOf(page, "#tab-overview");
+    const second = await boxOf(page, "#tab-activity");
+    expect(first.x).toBeGreaterThan(second.x);
+    await page.locator("#tab-overview").focus();
+    await page.keyboard.press("ArrowLeft");
+    await expect(page.locator("#tab-activity")).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    await expect(page.locator("#tab-overview")).toBeFocused();
+  });
+
+  test("vertical tabs keep up and down regardless of direction", async ({ page }) => {
+    await openNavigationRightToLeft(page);
+    await page.locator("#vertical-profile").focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(page.locator("#vertical-security")).toBeFocused();
+  });
+
+  test("the breadcrumb runs from the right and its slash separators mirror", async ({ page }) => {
+    await openNavigationRightToLeft(page);
+    const home = await boxOf(page, "#crumb-home");
+    const docs = await boxOf(page, "#crumb-docs");
+    expect(home.x).toBeGreaterThan(docs.x);
+  });
+
+  test("pagination puts the first page at the right", async ({ page }) => {
+    await openNavigationRightToLeft(page);
+    const pager = page.locator("#pagination-buttons");
+    const first = await pager.locator('[part="page"]').first().boundingBox();
+    const last = await pager.locator('[part="page"]').last().boundingBox();
+    expect(first?.x ?? 0).toBeGreaterThan(last?.x ?? 0);
+  });
+
+  test("a table aligns its text at the inline start, on the right", async ({ page }) => {
+    await openNavigationRightToLeft(page);
+    await expect
+      .poll(() =>
+        page
+          .locator("#table th")
+          .first()
+          .evaluate((cell) => getComputedStyle(cell).textAlign),
+      )
+      .toMatch(/^(start|right)$/);
+    await expectNoAxeViolations(page);
+  });
 });
