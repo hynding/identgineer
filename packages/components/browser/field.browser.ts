@@ -7,18 +7,23 @@ const PAGE = "/fixtures/forms.html";
 
 test.beforeEach(async ({ page }) => {
   await page.goto(PAGE);
-  await expect(page.locator("idg-field:not(.hydrated), idg-input:not(.hydrated)")).toHaveCount(0);
+  await expect(
+    page.locator(
+      ":is(idg-field, idg-input, idg-textarea, idg-select, idg-checkbox, idg-switch, idg-radio-group, idg-radio):not(.hydrated)",
+    ),
+  ).toHaveCount(0);
 });
 
 test.describe("accessible names and descriptions computed by the browser", () => {
   test("a field names and describes its input across the shadow boundary", async ({ page }) => {
-    const email = await accessibleNode(page, "email", "input");
-    expect(email).toMatchObject({
-      role: "textbox",
-      name: "Email",
-      description: "We never share it",
-    });
-    expect(email.properties).toMatchObject({ required: true });
+    await expect
+      .poll(() => accessibleNode(page, "email", "input"))
+      .toMatchObject({
+        role: "textbox",
+        name: "Email",
+        description: "We never share it",
+        properties: { required: true },
+      });
   });
 
   eachControlHasAName();
@@ -26,21 +31,24 @@ test.describe("accessible names and descriptions computed by the browser", () =>
   test("an invalid field is described by its hint and error and marked invalid", async ({
     page,
   }) => {
-    const node = await accessibleNode(page, "bad-name", "input");
-    expect(node).toMatchObject({
-      role: "textbox",
-      name: "Username",
-      description: "Letters only That name is taken",
-    });
-    expect(node.properties).toMatchObject({ invalid: "true" });
+    await expect
+      .poll(() => accessibleNode(page, "bad-name", "input"))
+      .toMatchObject({
+        role: "textbox",
+        name: "Username",
+        description: "Letters only That name is taken",
+        properties: { invalid: "true" },
+      });
   });
 
   test("a radio group is named and described, and each radio knows its place", async ({ page }) => {
-    expect(await accessibleNode(page, "billing", '[role="radiogroup"]')).toMatchObject({
-      role: "radiogroup",
-      name: "Billing",
-      description: "You can change this later",
-    });
+    await expect
+      .poll(() => accessibleNode(page, "billing", '[role="radiogroup"]'))
+      .toMatchObject({
+        role: "radiogroup",
+        name: "Billing",
+        description: "You can change this later",
+      });
     const radios = await page.locator("#billing idg-radio").evaluateAll((elements) =>
       elements.map((element) => {
         const input = element.shadowRoot?.querySelector("input");
@@ -55,17 +63,23 @@ test.describe("accessible names and descriptions computed by the browser", () =>
   });
 
   test("checkboxes and switches are named by their text", async ({ page }) => {
-    expect(await accessibleNode(page, "terms", "input")).toMatchObject({
-      role: "checkbox",
-      name: "Accept the terms",
-    });
-    expect(await accessibleNode(page, "alerts", "input")).toMatchObject({
-      role: "switch",
-      name: "Email alerts",
-    });
-    expect((await accessibleNode(page, "partial", "input")).properties).toMatchObject({
-      checked: "mixed",
-    });
+    await expect
+      .poll(() => accessibleNode(page, "terms", "input"))
+      .toMatchObject({
+        role: "checkbox",
+        name: "Accept the terms",
+      });
+    await expect
+      .poll(() => accessibleNode(page, "alerts", "input"))
+      .toMatchObject({
+        role: "switch",
+        name: "Email alerts",
+      });
+    await expect
+      .poll(async () => (await accessibleNode(page, "partial", "input")).properties)
+      .toMatchObject({
+        checked: "mixed",
+      });
   });
 
   test("a changed error reaches the control's description", async ({ page }) => {
@@ -124,7 +138,9 @@ test.describe("hints follow the UX mode", () => {
   test("the description is the same whether or not the hint is visible", async ({ page }) => {
     for (const ux of ["comfortable", "guided"]) {
       await applyAxes(page, { ux });
-      expect((await accessibleNode(page, "email", "input")).description).toBe("We never share it");
+      await expect
+        .poll(async () => (await accessibleNode(page, "email", "input")).description)
+        .toBe("We never share it");
     }
   });
 });
@@ -156,7 +172,9 @@ function eachControlHasAName(): void {
   ] as const;
   for (const [id, inner, role, name, description] of cases) {
     test(`${id} is a ${role} named ${name}`, async ({ page }) => {
-      expect(await accessibleNode(page, id, inner)).toMatchObject({ role, name, description });
+      await expect
+        .poll(() => accessibleNode(page, id, inner))
+        .toMatchObject({ role, name, description });
     });
   }
 }

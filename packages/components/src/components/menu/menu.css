@@ -1,0 +1,23 @@
+:host {
+  display: inline-block;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+::slotted([slot="trigger"]) {
+  anchor-name: --idg-trigger;
+}
+
+.surface {
+  min-inline-size: 12rem;
+  max-inline-size: min(20rem, 100vw - 16px);
+  padding: var(--idg-space-3xs);
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}

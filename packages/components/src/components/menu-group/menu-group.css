@@ -1,0 +1,12 @@
+:host {
+  display: block;
+}
+
+.label {
+  padding-block: var(--idg-space-2xs) var(--idg-space-3xs);
+  padding-inline: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-semibold);
+  letter-spacing: var(--idg-font-letter-spacing-wide);
+}

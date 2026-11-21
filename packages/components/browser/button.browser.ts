@@ -1,9 +1,19 @@
+import type { Page } from "@playwright/test";
 import { DESIGNS, SCHEMES, UX_MODES, applyAxes } from "./axes";
 import { expectNoAxeViolations } from "./accessibility";
 import { CONTENT_SECURITY_POLICY } from "./content-security-policy";
 import { expect, test } from "./fixtures";
 
 const PAGE = "/fixtures/button.html";
+
+/**
+ * Opens the fixture once every button has hydrated. Until then a button is hidden and the page
+ * reflows as each one draws, so a click aimed at it can land outside the viewport or miss.
+ */
+async function open(page: Page): Promise<void> {
+  await page.goto(PAGE);
+  await expect(page.locator("idg-button:not(.hydrated)")).toHaveCount(0);
+}
 
 test.describe("idg-button hydration under the strict policy", () => {
   test("hydrates every button and applies its styles from a constructable stylesheet", async ({
@@ -28,14 +38,14 @@ test.describe("idg-button hydration under the strict policy", () => {
 
 test.describe("idg-button in a form", () => {
   test("submit sends the form's values", async ({ page }) => {
-    await page.goto(PAGE);
+    await open(page);
     await page.locator("#live input").fill("Lovelace");
     await page.locator("#live-submit").click();
     await expect(page).toHaveURL(/\?name=Lovelace$/);
   });
 
   test("reset restores the form's initial values", async ({ page }) => {
-    await page.goto(PAGE);
+    await open(page);
     const input = page.locator("#live input");
     await input.fill("Changed");
     await page.locator("#live-reset").click();
@@ -46,7 +56,7 @@ test.describe("idg-button in a form", () => {
   test.describe("blocked", () => {
     for (const id of ["blocked-disabled", "blocked-loading"]) {
       test(`${id} does not submit`, async ({ page }) => {
-        await page.goto(PAGE);
+        await open(page);
         await page.locator(`#${id}`).click({ force: true });
         await page.locator(`#${id}`).press("Enter");
         expect(new URL(page.url()).search).toBe("");
@@ -54,7 +64,7 @@ test.describe("idg-button in a form", () => {
     }
 
     test("a blocked click never reaches a listener on the host", async ({ page }) => {
-      await page.goto(PAGE);
+      await open(page);
       const received = await page.evaluate(() => {
         const host = document.querySelector("#blocked-loading");
         let count = 0;
@@ -66,7 +76,7 @@ test.describe("idg-button in a form", () => {
     });
 
     test("a loading button stays focusable and a disabled one does not", async ({ page }) => {
-      await page.goto(PAGE);
+      await open(page);
       await page.locator("#blocked-loading").locator("button").focus();
       await expect(page.locator("#blocked-loading").locator("button")).toBeFocused();
       await page.locator("#blocked-disabled").locator("button").focus();
@@ -78,7 +88,7 @@ test.describe("idg-button in a form", () => {
 test.describe("idg-button keyboard", () => {
   for (const key of ["Enter", "Space"]) {
     test(`${key} activates a submit button`, async ({ page }) => {
-      await page.goto(PAGE);
+      await open(page);
       await page.locator("#live input").fill("Keys");
       await page.locator("#live-submit").locator("button").focus();
       await page.keyboard.press(key);
@@ -87,7 +97,7 @@ test.describe("idg-button keyboard", () => {
   }
 
   test("tabs from the field to the button and shows a focus ring", async ({ page }) => {
-    await page.goto(PAGE);
+    await open(page);
     await page.locator("#live input").focus();
     await page.keyboard.press("Tab");
     const control = page.locator("#live-submit").locator("button");
@@ -99,7 +109,7 @@ test.describe("idg-button keyboard", () => {
 
 test.describe("idg-button unsafe href", () => {
   test("renders an inert link that goes nowhere", async ({ page }) => {
-    await page.goto(PAGE);
+    await open(page);
     const link = page.locator("#unsafe-link").locator("a");
     await expect(link).not.toHaveAttribute("href", /.*/);
     await expect(link).toHaveAttribute("aria-disabled", "true");
@@ -112,7 +122,7 @@ test.describe("idg-button accessibility", () => {
   for (const design of DESIGNS) {
     for (const scheme of SCHEMES) {
       test(`has no axe violations in ${design} ${scheme}`, async ({ page }) => {
-        await page.goto(PAGE);
+        await open(page);
         await applyAxes(page, { design, scheme });
         await expectNoAxeViolations(page);
       });
@@ -121,7 +131,7 @@ test.describe("idg-button accessibility", () => {
 
   for (const ux of UX_MODES) {
     test(`has no axe violations in the ${ux} UX mode`, async ({ page }) => {
-      await page.goto(PAGE);
+      await open(page);
       await applyAxes(page, { ux });
       await expectNoAxeViolations(page);
     });

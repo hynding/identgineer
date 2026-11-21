@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>overlay components fixture</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Overlays</h1>
+
+      <section aria-labelledby="dialogs-title">
+        <h2 id="dialogs-title">Dialogs</h2>
+        <button id="before" type="button">Before</button>
+        <button id="open-basic" type="button">Invite</button>
+        <idg-button id="shadow-invoker" variant="secondary">Rename</idg-button>
+        <span id="removable-wrap"><button id="removable" type="button">Remove me</button></span>
+        <button id="after" type="button">After</button>
+      </section>
+
+      <idg-dialog id="basic" heading="Invite teammates" close-on-backdrop>
+        <p>People you invite can see every project in the studio.</p>
+        <idg-field label="Email" hint="Separate addresses with commas">
+          <idg-input id="invite-email" type="email" name="email"></idg-input>
+        </idg-field>
+        <idg-button slot="footer" variant="secondary" id="basic-cancel">Cancel</idg-button>
+        <idg-button slot="footer" id="basic-send">Send invites</idg-button>
+      </idg-dialog>
+
+      <idg-dialog id="rename" heading="Rename project" size="sm">
+        <idg-field label="Name">
+          <idg-input id="rename-input" value="Atlas" autofocus></idg-input>
+        </idg-field>
+      </idg-dialog>
+
+      <idg-dialog id="confirm" heading="Delete project?" alert size="sm">
+        <p>Atlas and its 14 files are deleted for everyone. This cannot be undone.</p>
+        <form method="dialog" class="row" slot="footer" id="confirm-form">
+          <button value="keep" id="confirm-keep">Keep</button>
+          <button value="delete" id="confirm-delete">Delete</button>
+        </form>
+      </idg-dialog>
+
+      <idg-dialog id="outer" heading="Project settings">
+        <p>Change the name, the owner or the region.</p>
+        <button id="open-inner" type="button">Transfer ownership</button>
+        <idg-dialog id="inner" heading="Transfer ownership" size="sm">
+          <p>The new owner is told by email.</p>
+          <button id="inner-done" type="button">Done</button>
+        </idg-dialog>
+      </idg-dialog>
+
+      <idg-dialog id="locked" heading="Accept the terms" dismissible="false">
+        <p>You need to accept the updated terms to continue.</p>
+        <button id="locked-accept" type="button" slot="footer">Accept</button>
+      </idg-dialog>
+
+      <idg-dialog id="quiet" heading="Saved" dismissible="false" size="sm">
+        <p>Your changes are saved.</p>
+      </idg-dialog>
+
+      <idg-dialog id="panel" heading="Filters" modal="false">
+        <button id="panel-apply" type="button">Apply</button>
+      </idg-dialog>
+
+      <section aria-labelledby="popovers-title">
+        <h2 id="popovers-title">Popovers and tooltips</h2>
+        <idg-popover id="share" placement="bottom-start">
+          <idg-button slot="trigger" variant="secondary" id="share-trigger">Share</idg-button>
+          <div class="stack">
+            <p>Anyone with the link can view.</p>
+            <a href="#copied" id="share-link">Copy link</a>
+          </div>
+        </idg-popover>
+        <button id="external-trigger" type="button">Details</button>
+        <idg-popover id="details" for="external-trigger" placement="top">
+          <p>Created by Ada Lovelace on 3 March.</p>
+        </idg-popover>
+        <idg-tooltip id="tip" text="Copies the link to the clipboard">
+          <idg-button variant="ghost" id="tip-trigger">Copy</idg-button>
+        </idg-tooltip>
+        <idg-tooltip id="tip-native" text="Opens in a new tab" placement="bottom">
+          <button type="button" id="tip-native-trigger">Preview</button>
+        </idg-tooltip>
+      </section>
+
+      <section aria-labelledby="menus-title">
+        <h2 id="menus-title">Menus</h2>
+        <idg-menu id="actions">
+          <idg-button slot="trigger" variant="secondary" id="actions-trigger">Actions</idg-button>
+          <idg-menu-item id="item-edit" value="edit" icon="edit" shortcut="E">Edit</idg-menu-item>
+          <idg-menu-item value="duplicate" icon="copy" shortcut="D">Duplicate</idg-menu-item>
+          <idg-menu-item id="item-archive" value="archive" disabled>Archive</idg-menu-item>
+          <idg-menu-separator></idg-menu-separator>
+          <idg-menu-group label="Sort by">
+            <idg-menu-item id="item-name" type="radio" value="name" checked>Name</idg-menu-item>
+            <idg-menu-item id="item-date" type="radio" value="date">Date</idg-menu-item>
+          </idg-menu-group>
+          <idg-menu-item id="item-grid" type="checkbox" value="grid">Show grid</idg-menu-item>
+          <idg-menu-separator></idg-menu-separator>
+          <idg-menu-item value="help" href="#help" icon="external-link">Help centre</idg-menu-item>
+          <idg-menu-item value="delete" icon="trash">Delete</idg-menu-item>
+        </idg-menu>
+        <idg-menu id="native-menu" placement="bottom-end">
+          <button slot="trigger" type="button" id="native-menu-trigger">More</button>
+          <idg-menu-item value="one">One</idg-menu-item>
+          <idg-menu-item value="two">Two</idg-menu-item>
+        </idg-menu>
+      </section>
+
+      <div class="spacer" aria-hidden="true"></div>
+      <button id="end" type="button">End of page</button>
+    </main>
+    <idg-toast-region id="toasts"></idg-toast-region>
+  </body>
+</html>

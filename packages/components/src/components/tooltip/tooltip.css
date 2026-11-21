@@ -1,0 +1,62 @@
+:host {
+  display: inline-block;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+::slotted(*) {
+  anchor-name: --idg-trigger;
+}
+
+/* A small, high-contrast label: the theme's text colour as the fill and its background as the
+   text, in the design's small radius and border. It never holds anything but text. */
+.tooltip {
+  --_slide: calc(var(--idg-space-3xs) * var(--idg-motion-enabled));
+
+  inline-size: max-content;
+  max-inline-size: min(18rem, 100vw - 16px);
+  padding-block: var(--idg-space-3xs);
+  padding-inline: var(--idg-space-xs);
+  overflow: visible;
+  border-width: var(--idg-border-width);
+  border-style: var(--idg-border-style);
+  border-color: var(--idg-color-text);
+  border-radius: var(--idg-shape-radius-sm);
+  background: var(--idg-color-text);
+  box-shadow: var(--idg-elevation-sm);
+  color: var(--idg-color-bg);
+  font-family: var(--idg-font-family-body);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-semibold);
+  line-height: var(--idg-font-line-height-snug);
+  letter-spacing: var(--idg-font-body-letter-spacing);
+  overflow-wrap: anywhere;
+  opacity: 0;
+  translate: 0 var(--_slide);
+  transition-property: opacity, translate, overlay, display;
+  transition-duration: var(--idg-motion-duration-fast);
+  transition-timing-function: var(--idg-motion-easing-standard);
+  transition-behavior: allow-discrete;
+}
+
+.tooltip:popover-open {
+  opacity: 1;
+  translate: 0 0;
+}
+
+@starting-style {
+  .tooltip:popover-open {
+    opacity: 0;
+    translate: 0 var(--_slide);
+  }
+}
+
+@media (forced-colors: active) {
+  .tooltip {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}

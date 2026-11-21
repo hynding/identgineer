@@ -79,6 +79,10 @@
       "press-scale": {
         "$type": "number",
         "$value": 1
+      },
+      "hover-delay": {
+        "$type": "duration",
+        "$value": "700ms"
       }
     },
     "focus": {

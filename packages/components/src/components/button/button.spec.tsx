@@ -349,3 +349,45 @@ describe("idg-button in a form", () => {
     }).not.toThrow();
   });
 });
+
+describe("idg-button as an overlay trigger", () => {
+  it("exposes the expanded state and popup type it is given", async () => {
+    const { root } = await render(
+      <idg-button accessibleExpanded={false} accessibleHaspopup="menu">
+        Actions
+      </idg-button>,
+    );
+    expect(control(root).getAttribute("aria-expanded")).toBe("false");
+    expect(control(root).getAttribute("aria-haspopup")).toBe("menu");
+  });
+
+  it("says nothing about expansion when it opens nothing", async () => {
+    const { root } = await render(<idg-button>Save</idg-button>);
+    expect(control(root).hasAttribute("aria-expanded")).toBe(false);
+    expect(control(root).hasAttribute("aria-haspopup")).toBe(false);
+  });
+
+  it("follows a change of the expanded state", async () => {
+    const { root, waitForChanges } = await render(
+      <idg-button accessibleExpanded={false}>Actions</idg-button>,
+    );
+    (root as HTMLElement & { accessibleExpanded: boolean }).accessibleExpanded = true;
+    await waitForChanges();
+    expect(control(root).getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("describes the control with text kept in its own root", async () => {
+    const { root } = await render(
+      <idg-button accessibleDescription="Copies the link">Copy</idg-button>,
+    );
+    const id = control(root).getAttribute("aria-describedby") ?? "";
+    const description = root.shadowRoot?.getElementById(id);
+    expect(description?.textContent).toBe("Copies the link");
+    expect(description?.classList.contains("visually-hidden")).toBe(true);
+  });
+
+  it("has no description without one", async () => {
+    const { root } = await render(<idg-button>Copy</idg-button>);
+    expect(control(root).hasAttribute("aria-describedby")).toBe(false);
+  });
+});

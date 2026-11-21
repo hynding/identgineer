@@ -217,3 +217,27 @@ describe("idg-field label click", () => {
     expect(setFocus).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("idg-field with a control defined later", () => {
+  // With the custom-elements build a page may define idg-field before the control. The control
+  // is then a plain element when the field first renders, and must still get the field's state.
+  it("hands its label and description to a control defined after the field rendered", async () => {
+    const { root } = await render(
+      <idg-field label="Name" hint="As on your passport">
+        <idg-late-control />
+      </idg-field>,
+    );
+    customElements.define(
+      "idg-late-control",
+      class extends HTMLElement {
+        accessibleLabel: string | undefined = undefined;
+        accessibleDescription: string | undefined = undefined;
+      },
+    );
+    const late = root.querySelector<ControlElement>("idg-late-control");
+    await vi.waitFor(() => {
+      expect(late?.accessibleLabel).toBe("Name");
+    });
+    expect(late?.accessibleDescription).toBe("As on your passport");
+  });
+});

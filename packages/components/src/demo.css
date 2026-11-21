@@ -38,8 +38,21 @@ idg-alert:not(.hydrated),
 idg-progress:not(.hydrated),
 idg-skeleton:not(.hydrated),
 idg-stat:not(.hydrated),
-idg-divider:not(.hydrated) {
+idg-divider:not(.hydrated),
+idg-popover:not(.hydrated),
+idg-tooltip:not(.hydrated),
+idg-menu:not(.hydrated),
+idg-menu-item:not(.hydrated),
+idg-menu-group:not(.hydrated),
+idg-menu-separator:not(.hydrated),
+idg-toast:not(.hydrated) {
   visibility: hidden;
+}
+
+/* Their content is not on the page until they open, so it never flashes in unstyled. */
+idg-dialog:not(.hydrated),
+idg-toast-region:not(.hydrated) {
+  display: none;
 }
 
 .stack {
@@ -171,6 +184,19 @@ section.dashboard::after {
   gap: var(--idg-space-s);
 }
 
+.dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--idg-space-xs);
+}
+
+.filters {
+  display: grid;
+  gap: var(--idg-space-xs);
+  padding: var(--idg-space-s);
+}
+
 .dashboard h2 {
   margin: 0;
   font-family: var(--idg-font-family-display);
@@ -229,4 +255,9 @@ section.dashboard::after {
 .banner {
   block-size: 7rem;
   background: var(--idg-gradient-brand);
+}
+
+/* Makes the overlays fixture taller than the viewport, so the scroll lock has a scrollbar to keep. */
+.spacer {
+  block-size: 150vh;
 }

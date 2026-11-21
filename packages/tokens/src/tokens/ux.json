@@ -82,6 +82,11 @@
       "$type": "number",
       "$value": 0.98,
       "$description": "Scale of a control while pressed; 1 means no squash."
+    },
+    "hover-delay": {
+      "$type": "duration",
+      "$value": "500ms",
+      "$description": "How long a pointer rests on a control before a hint such as a tooltip appears. Not motion, so reduced-motion preferences leave it alone."
     }
   },
   "focus": {

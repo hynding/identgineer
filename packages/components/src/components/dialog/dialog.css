@@ -1,0 +1,271 @@
+:host {
+  display: contents;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+/* The native dialog is the surface. It takes the design language's surface border, radius and
+   largest elevation, so a brutalist dialog has a thick black edge and a hard offset shadow, a pixel
+   one a double edge and stepped shadow, an editorial one rules above and below, and so on. Designs
+   whose surfaces are transparent (outline, editorial) are laid over the page colour, so text stays
+   readable above the backdrop. */
+.dialog {
+  --_size: 32rem;
+  --_gutter: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  --_pad: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+  --_gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  /* Movement is scaled by --idg-motion-enabled, so where it is 0 the dialog only fades. */
+  --_rise: calc(var(--idg-space-l) * var(--idg-motion-enabled));
+  --_shrink: calc(1 - 0.04 * var(--idg-motion-enabled));
+  --_scrim: color-mix(in srgb, color-mix(in srgb, var(--idg-color-bg) 30%, black) 58%, transparent);
+  --_scrim-pattern: none;
+  --_scrim-filter: var(--idg-surface-backdrop-filter);
+
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  flex-direction: column;
+  inline-size: min(var(--_size), 100% - 2 * var(--_gutter));
+  max-inline-size: none;
+  block-size: fit-content;
+  max-block-size: calc(100% - 2 * var(--_gutter));
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border-width: var(--idg-surface-border-width);
+  border-style: var(--idg-surface-border-style);
+  border-color: var(--idg-surface-border-color);
+  border-radius: var(--idg-shape-radius-lg);
+  background: linear-gradient(var(--idg-surface-background) 0 0), var(--idg-color-bg);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: var(--idg-elevation-lg);
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+  letter-spacing: var(--idg-font-body-letter-spacing);
+  opacity: 0;
+  translate: 0 var(--_rise);
+  scale: var(--_shrink);
+  transition-property: opacity, translate, scale, overlay, display;
+  transition-duration: var(--idg-motion-duration-base);
+  transition-timing-function: var(--idg-motion-easing-standard);
+  transition-behavior: allow-discrete;
+}
+
+.dialog[open] {
+  display: flex;
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+}
+
+@starting-style {
+  .dialog[open] {
+    opacity: 0;
+    translate: 0 var(--_rise);
+    scale: var(--_shrink);
+  }
+}
+
+.dialog:focus-visible {
+  outline-width: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
+  outline-style: var(--idg-focus-ring-style);
+  outline-color: var(--idg-color-focus-ring);
+  outline-offset: var(--idg-focus-ring-offset);
+}
+
+/* The backdrop inherits the dialog's custom properties, so the design's choices below reach it. */
+.dialog::backdrop {
+  background-color: var(--_scrim);
+  background-image: var(--_scrim-pattern);
+  backdrop-filter: var(--_scrim-filter);
+  opacity: 0;
+  transition-property: opacity, overlay, display;
+  transition-duration: var(--idg-motion-duration-base);
+  transition-timing-function: var(--idg-motion-easing-standard);
+  transition-behavior: allow-discrete;
+}
+
+.dialog[open]::backdrop {
+  opacity: 1;
+}
+
+@starting-style {
+  .dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+/* Translucent designs (glass) keep the surface see-through, frosted by the design's backdrop
+   filter, which also blurs the page behind the backdrop. */
+@container not style(--idg-surface-backdrop-filter: none) {
+  .dialog {
+    --_scrim: color-mix(
+      in srgb,
+      color-mix(in srgb, var(--idg-color-bg) 40%, black) 38%,
+      transparent
+    );
+
+    background: color-mix(in srgb, var(--idg-color-surface) 72%, transparent);
+  }
+}
+
+/* Hard-shadow designs (brutalist, pixel) get a hard-edged hatched backdrop to match. */
+@container not style(--idg-ornament-hard-shadow-x: 0px) {
+  .dialog {
+    --_scrim: color-mix(in srgb, var(--idg-color-bg) 72%, transparent);
+    --_scrim-pattern: repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--idg-color-text) 22%, transparent) 0 2px,
+      transparent 2px 9px
+    );
+  }
+}
+
+/* A double surface border is pixel's: a dithered checkerboard instead of hatching. */
+@container style(--idg-surface-border-style: double) {
+  .dialog {
+    --_scrim-pattern: repeating-conic-gradient(
+      color-mix(in srgb, var(--idg-color-text) 26%, transparent) 0 25%,
+      transparent 0 50%
+    );
+  }
+
+  .dialog::backdrop {
+    background-size: 4px 4px;
+  }
+}
+
+/* Borderless designs (soft, elevated) draw depth with shadows cast from the page colour, which
+   read best over a pale frosted veil of that colour rather than a dark one. */
+@container style(--idg-border-control-style: none) {
+  .dialog {
+    --_scrim: color-mix(in srgb, var(--idg-color-bg) 62%, transparent);
+    --_scrim-filter: blur(6px);
+  }
+}
+
+/* Underlined headings are editorial's: a paper-coloured wash, like a sheet laid over the page. */
+@container style(--idg-ornament-heading-decoration: underline) {
+  .dialog {
+    --_scrim: color-mix(in srgb, var(--idg-color-bg) 86%, transparent);
+  }
+}
+
+/* Size */
+
+.size-sm {
+  --_size: 24rem;
+}
+
+.size-lg {
+  --_size: 48rem;
+}
+
+.size-full {
+  --_size: 100%;
+
+  block-size: calc(100% - 2 * var(--_gutter));
+}
+
+/* Regions */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--_gap);
+  padding-block: var(--_pad) 0;
+  padding-inline: var(--_pad);
+}
+
+.titles {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--idg-space-3xs);
+  min-inline-size: 0;
+  align-self: center;
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--idg-font-family-display);
+  font-size: calc(var(--idg-font-size-step-2) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+  text-decoration-line: var(--idg-ornament-heading-decoration);
+  text-decoration-thickness: 2px;
+  text-transform: var(--idg-ornament-heading-transform);
+  text-underline-offset: 0.2em;
+  overflow-wrap: anywhere;
+}
+
+.close {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-inline-size: var(--idg-density-target-size);
+  min-block-size: var(--idg-density-target-size);
+  margin-block-start: calc(-1 * var(--idg-space-2xs));
+  margin-inline-end: calc(-1 * var(--idg-space-2xs));
+  padding: 0;
+  border: 0;
+  border-radius: var(--idg-shape-radius-sm);
+  background: transparent;
+  color: var(--idg-color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  transition-property: background-color, color;
+  transition-duration: var(--idg-motion-duration-fast);
+  transition-timing-function: var(--idg-motion-easing-standard);
+}
+
+.close:hover {
+  background: color-mix(in srgb, currentcolor 14%, transparent);
+  color: var(--idg-color-text);
+}
+
+.body {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  padding: var(--_gap) var(--_pad) var(--_pad);
+  overflow: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+}
+
+/* The design's own rule above the actions, empty in designs that draw no border. */
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+  padding: var(--_gap) var(--_pad);
+  border-block-start-width: var(--idg-border-width);
+  border-block-start-style: var(--idg-border-style);
+  border-block-start-color: var(--idg-border-color);
+  background: color-mix(in srgb, var(--idg-color-bg-subtle) 55%, transparent);
+}
+
+@media (forced-colors: active) {
+  .dialog {
+    border: 2px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .dialog::backdrop {
+    background: color-mix(in srgb, Canvas 70%, transparent);
+  }
+
+  .footer {
+    border-block-start: 1px solid CanvasText;
+  }
+}

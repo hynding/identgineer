@@ -11,28 +11,38 @@ import { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 import { CardPadding, CardVariant } from "./components/card/card-options";
 import { CheckedDetail, ValueDetail } from "./utils/event-details";
+import { DialogCancelDetail, DialogCloseDetail, DialogOpenDetail, DialogSize } from "./components/dialog/dialog-options";
 import { DividerOrientation } from "./components/divider/divider-options";
 import { IconName } from "./components/icon/icon-paths";
 import { IconSize } from "./components/icon/icon-options";
 import { InputSize, InputType } from "./components/input/input-options";
+import { Placement } from "./utils/position";
+import { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
 import { SkeletonVariant } from "./components/skeleton/skeleton-options";
 import { StatDirection, StatSentiment } from "./components/stat/stat-options";
+import { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
+import { ToastPosition } from "./components/toast-region/toast-region-options";
 export { AlertVariant } from "./components/alert/alert-options";
 export { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 export { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 export { CardPadding, CardVariant } from "./components/card/card-options";
 export { CheckedDetail, ValueDetail } from "./utils/event-details";
+export { DialogCancelDetail, DialogCloseDetail, DialogOpenDetail, DialogSize } from "./components/dialog/dialog-options";
 export { DividerOrientation } from "./components/divider/divider-options";
 export { IconName } from "./components/icon/icon-paths";
 export { IconSize } from "./components/icon/icon-options";
 export { InputSize, InputType } from "./components/input/input-options";
+export { Placement } from "./utils/position";
+export { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
 export { SkeletonVariant } from "./components/skeleton/skeleton-options";
 export { StatDirection, StatSentiment } from "./components/stat/stat-options";
+export { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
+export { ToastPosition } from "./components/toast-region/toast-region-options";
 export namespace Components {
     /**
      * A message that stays on the page until it is read or dismissed. For a message that appears in
@@ -132,6 +142,22 @@ export namespace Components {
         "variant": BadgeVariant;
     }
     interface IdgButton {
+        /**
+          * Set by an overlay this button opens: the element it opens (`aria-controls`).
+         */
+        "accessibleControls"?: Element[];
+        /**
+          * Set by idg-tooltip: the hint, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by an overlay this button opens: whether it is open (`aria-expanded`).
+         */
+        "accessibleExpanded"?: boolean;
+        /**
+          * Set by an overlay this button opens: what kind of popup it is (`aria-haspopup`).
+         */
+        "accessibleHaspopup"?: string;
         /**
           * Blocks activation and takes the control out of the tab order.
           * @default false
@@ -273,6 +299,67 @@ export namespace Components {
           * @default "on"
          */
         "value": string;
+    }
+    /**
+     * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
+     * of the page inert and contains focus, and Escape is the browser's close request. The component
+     * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
+     * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
+     * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
+     * closed.
+     */
+    interface IdgDialog {
+        /**
+          * Makes it an `alertdialog`: an urgent message that needs a response, described by its body.
+          * @default false
+         */
+        "alert": boolean;
+        /**
+          * Closes the dialog. `idgClose` reports the return value and the reason `method`.
+         */
+        "close": (returnValue?: string) => Promise<void>;
+        /**
+          * The close button's accessible name.
+          * @default "Close"
+         */
+        "closeLabel": string;
+        /**
+          * Whether a click on the backdrop of a modal dialog dismisses it. Needs `dismissible`.
+          * @default false
+         */
+        "closeOnBackdrop": boolean;
+        /**
+          * Whether the user can dismiss the dialog with Escape and the close button.
+          * @default true
+         */
+        "dismissible": boolean;
+        /**
+          * The title, drawn as a heading. It is the dialog's accessible name.
+         */
+        "heading"?: string;
+        /**
+          * Whether setting `open` opens a modal dialog. The methods choose for themselves.
+          * @default true
+         */
+        "modal": boolean;
+        /**
+          * Whether the dialog is open. Setting it opens (as `modal` says) or closes the dialog.
+          * @default false
+         */
+        "open": boolean;
+        /**
+          * Opens the dialog without a modal: the page stays usable and focus is not contained.
+         */
+        "show": () => Promise<void>;
+        /**
+          * Opens the dialog as a modal: the rest of the page is inert until it closes.
+         */
+        "showModal": () => Promise<void>;
+        /**
+          * Width: `sm`, `md`, `lg`, or `full` for the whole viewport less a margin.
+          * @default "md"
+         */
+        "size": DialogSize;
     }
     /**
      * A rule between groups of content, drawn in the design language's own border.
@@ -444,6 +531,151 @@ export namespace Components {
           * Where the link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
          */
         "target"?: string;
+    }
+    /**
+     * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
+     * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
+     * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
+     * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
+     * focus moves to the items themselves (roving focus). Each item carries its own role and state.
+     */
+    interface IdgMenu {
+        /**
+          * Closes the menu.
+         */
+        "hide": () => Promise<void>;
+        /**
+          * The menu's accessible name. Without it the menu is named by its trigger.
+         */
+        "label"?: string;
+        /**
+          * The gap between the trigger and the menu, in pixels.
+          * @default 4
+         */
+        "offset": number;
+        /**
+          * Whether the menu is open.
+          * @default false
+         */
+        "open": boolean;
+        /**
+          * Where the menu sits against the trigger. It flips to the opposite side when out of room.
+          * @default "bottom-start"
+         */
+        "placement": Placement;
+        /**
+          * Opens the menu and focuses its first item.
+         */
+        "show": () => Promise<void>;
+    }
+    /**
+     * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
+     * uncheck each other within their group.
+     */
+    interface IdgMenuGroup {
+        /**
+          * The group's visible label and accessible name.
+         */
+        "label"?: string;
+    }
+    /**
+     * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
+     * its own shadow root, so its role and state are set on the focusable element inside it, and the
+     * host is a plain wrapper that assistive technology passes through.
+     */
+    interface IdgMenuItem {
+        /**
+          * Whether a checkbox or radio item is on. The menu changes it when the item is chosen.
+          * @default false
+         */
+        "checked": boolean;
+        /**
+          * Keeps the item in the menu, where it can be found, but stops it being chosen.
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Follows the item's link, as a click on it would.
+         */
+        "follow": () => Promise<void>;
+        /**
+          * Makes the item a link. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * A leading icon, drawn as decoration.
+         */
+        "icon"?: IconName;
+        /**
+          * Link relationship.
+         */
+        "rel"?: string;
+        /**
+          * Focuses the item.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * A hint such as `Ctrl+E`, shown when the UX mode turns shortcuts on. Nothing binds the key.
+         */
+        "shortcut"?: string;
+        /**
+          * Where a link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
+         */
+        "target"?: string;
+        /**
+          * `item` does something, `checkbox` toggles, `radio` picks one of its group.
+          * @default "item"
+         */
+        "type": MenuItemType;
+        /**
+          * What `idgSelect` reports when this item is chosen.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * A rule between groups of items in an idg-menu.
+     */
+    interface IdgMenuSeparator {
+    }
+    /**
+     * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
+     * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
+     * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
+     * not contained, and Tab moves on from the content.
+     */
+    interface IdgPopover {
+        /**
+          * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
+         */
+        "for"?: string;
+        /**
+          * Closes the popover.
+         */
+        "hide": () => Promise<void>;
+        /**
+          * The gap between the trigger and the surface, in pixels.
+          * @default 8
+         */
+        "offset": number;
+        /**
+          * Whether the popover is open.
+          * @default false
+         */
+        "open": boolean;
+        /**
+          * Where the surface sits against the trigger. It flips to the opposite side when out of room.
+          * @default "bottom-start"
+         */
+        "placement": Placement;
+        /**
+          * Opens the popover.
+         */
+        "show": () => Promise<void>;
+        /**
+          * Opens the popover when closed and closes it when open.
+         */
+        "toggle": () => Promise<void>;
     }
     /**
      * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
@@ -803,6 +1035,116 @@ export namespace Components {
          */
         "value": string;
     }
+    /**
+     * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
+     * time, announces each as it appears, pauses them while they are being read and lets the keyboard
+     * reach them; the `toast()` function does all of that from script.
+     * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
+     * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
+     * is given a duration, so nobody loses the chance to act on it.
+     */
+    interface IdgToast {
+        /**
+          * The label of an action button, such as "Undo". Choosing it fires `idgAction`.
+         */
+        "actionLabel"?: string;
+        /**
+          * The close button's accessible name.
+          * @default "Dismiss"
+         */
+        "closeLabel": string;
+        /**
+          * More detail under the heading. Set as text, never as markup.
+         */
+        "description"?: string;
+        /**
+          * Dismisses the toast, as if its close button had been chosen but with the reason `api`.
+         */
+        "dismiss": () => Promise<void>;
+        /**
+          * How long the toast stays, in milliseconds. `0` keeps it until it is dismissed. Without a duration it stays for six seconds, or until dismissed when it has an action.
+         */
+        "duration"?: number;
+        /**
+          * The heading, and the toast's accessible name. Set as text, never as markup.
+         */
+        "heading"?: string;
+        /**
+          * Set by the region while the toasts are being read: the countdown stands still.
+          * @default false
+         */
+        "paused": boolean;
+        /**
+          * Set by the region while the toast waits its turn: it is hidden and does not count down.
+          * @default false
+         */
+        "queued": boolean;
+        /**
+          * Meaning. A danger toast is announced at once; the others wait for a pause in speech.
+          * @default "neutral"
+         */
+        "variant": ToastVariant;
+    }
+    /**
+     * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
+     * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
+     * rest, and announces each toast as it comes into view through a live region of its own: politely,
+     * or at once for danger. Focus never moves on its own.
+     * While the pointer is over it, focus is inside it, the window is in the background or the user
+     * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
+     * and nothing slides under the pointer.
+     */
+    interface IdgToastRegion {
+        /**
+          * The key, as `KeyboardEvent.key` names it, that moves focus to the toasts.
+          * @default "F8"
+         */
+        "hotkey": string;
+        /**
+          * The landmark's accessible name.
+          * @default "Notifications"
+         */
+        "label": string;
+        /**
+          * How many toasts show at once. The rest wait their turn.
+          * @default 3
+         */
+        "max": number;
+        /**
+          * The corner or edge the toasts gather at.
+          * @default "bottom-end"
+         */
+        "position": ToastPosition;
+    }
+    /**
+     * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
+     * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
+     * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
+     * only: put anything interactive in an idg-popover.
+     * The text is also the trigger's accessible description, given to the trigger itself, so it is
+     * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
+     * technology so it is not read twice.
+     */
+    interface IdgTooltip {
+        /**
+          * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
+         */
+        "for"?: string;
+        /**
+          * The gap between the trigger and the hint, in pixels.
+          * @default 8
+         */
+        "offset": number;
+        /**
+          * Where the hint sits against the trigger. It flips to the opposite side when out of room.
+          * @default "top"
+         */
+        "placement": Placement;
+        /**
+          * The hint. Set as text, never as markup.
+         */
+        "text"?: string;
+    }
 }
 export interface IdgAlertCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -812,9 +1154,21 @@ export interface IdgCheckboxCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgCheckboxElement;
 }
+export interface IdgDialogCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgDialogElement;
+}
 export interface IdgInputCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgInputElement;
+}
+export interface IdgMenuCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgMenuElement;
+}
+export interface IdgPopoverCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgPopoverElement;
 }
 export interface IdgRadioCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -835,6 +1189,10 @@ export interface IdgSwitchCustomEvent<T> extends CustomEvent<T> {
 export interface IdgTextareaCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgTextareaElement;
+}
+export interface IdgToastCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgToastElement;
 }
 declare global {
     interface HTMLIdgAlertElementEventMap {
@@ -924,6 +1282,33 @@ declare global {
         prototype: HTMLIdgCheckboxElement;
         new (): HTMLIdgCheckboxElement;
     };
+    interface HTMLIdgDialogElementEventMap {
+        "idgOpen": DialogOpenDetail;
+        "idgClose": DialogCloseDetail;
+        "idgCancel": DialogCancelDetail;
+    }
+    /**
+     * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
+     * of the page inert and contains focus, and Escape is the browser's close request. The component
+     * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
+     * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
+     * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
+     * closed.
+     */
+    interface HTMLIdgDialogElement extends Components.IdgDialog, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgDialogElementEventMap>(type: K, listener: (this: HTMLIdgDialogElement, ev: IdgDialogCustomEvent<HTMLIdgDialogElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgDialogElementEventMap>(type: K, listener: (this: HTMLIdgDialogElement, ev: IdgDialogCustomEvent<HTMLIdgDialogElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgDialogElement: {
+        prototype: HTMLIdgDialogElement;
+        new (): HTMLIdgDialogElement;
+    };
     /**
      * A rule between groups of content, drawn in the design language's own border.
      */
@@ -982,6 +1367,86 @@ declare global {
     var HTMLIdgLinkElement: {
         prototype: HTMLIdgLinkElement;
         new (): HTMLIdgLinkElement;
+    };
+    interface HTMLIdgMenuElementEventMap {
+        "idgSelect": MenuSelectDetail;
+        "idgOpen": void;
+        "idgClose": void;
+    }
+    /**
+     * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
+     * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
+     * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
+     * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
+     * focus moves to the items themselves (roving focus). Each item carries its own role and state.
+     */
+    interface HTMLIdgMenuElement extends Components.IdgMenu, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgMenuElementEventMap>(type: K, listener: (this: HTMLIdgMenuElement, ev: IdgMenuCustomEvent<HTMLIdgMenuElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgMenuElementEventMap>(type: K, listener: (this: HTMLIdgMenuElement, ev: IdgMenuCustomEvent<HTMLIdgMenuElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgMenuElement: {
+        prototype: HTMLIdgMenuElement;
+        new (): HTMLIdgMenuElement;
+    };
+    /**
+     * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
+     * uncheck each other within their group.
+     */
+    interface HTMLIdgMenuGroupElement extends Components.IdgMenuGroup, HTMLStencilElement {
+    }
+    var HTMLIdgMenuGroupElement: {
+        prototype: HTMLIdgMenuGroupElement;
+        new (): HTMLIdgMenuGroupElement;
+    };
+    /**
+     * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
+     * its own shadow root, so its role and state are set on the focusable element inside it, and the
+     * host is a plain wrapper that assistive technology passes through.
+     */
+    interface HTMLIdgMenuItemElement extends Components.IdgMenuItem, HTMLStencilElement {
+    }
+    var HTMLIdgMenuItemElement: {
+        prototype: HTMLIdgMenuItemElement;
+        new (): HTMLIdgMenuItemElement;
+    };
+    /**
+     * A rule between groups of items in an idg-menu.
+     */
+    interface HTMLIdgMenuSeparatorElement extends Components.IdgMenuSeparator, HTMLStencilElement {
+    }
+    var HTMLIdgMenuSeparatorElement: {
+        prototype: HTMLIdgMenuSeparatorElement;
+        new (): HTMLIdgMenuSeparatorElement;
+    };
+    interface HTMLIdgPopoverElementEventMap {
+        "idgOpen": void;
+        "idgClose": void;
+    }
+    /**
+     * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
+     * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
+     * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
+     * not contained, and Tab moves on from the content.
+     */
+    interface HTMLIdgPopoverElement extends Components.IdgPopover, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgPopoverElementEventMap>(type: K, listener: (this: HTMLIdgPopoverElement, ev: IdgPopoverCustomEvent<HTMLIdgPopoverElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgPopoverElementEventMap>(type: K, listener: (this: HTMLIdgPopoverElement, ev: IdgPopoverCustomEvent<HTMLIdgPopoverElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgPopoverElement: {
+        prototype: HTMLIdgPopoverElement;
+        new (): HTMLIdgPopoverElement;
     };
     /**
      * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
@@ -1117,6 +1582,62 @@ declare global {
         prototype: HTMLIdgTextareaElement;
         new (): HTMLIdgTextareaElement;
     };
+    interface HTMLIdgToastElementEventMap {
+        "idgAction": void;
+        "idgDismiss": ToastDismissDetail;
+    }
+    /**
+     * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
+     * time, announces each as it appears, pauses them while they are being read and lets the keyboard
+     * reach them; the `toast()` function does all of that from script.
+     * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
+     * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
+     * is given a duration, so nobody loses the chance to act on it.
+     */
+    interface HTMLIdgToastElement extends Components.IdgToast, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgToastElementEventMap>(type: K, listener: (this: HTMLIdgToastElement, ev: IdgToastCustomEvent<HTMLIdgToastElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgToastElementEventMap>(type: K, listener: (this: HTMLIdgToastElement, ev: IdgToastCustomEvent<HTMLIdgToastElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgToastElement: {
+        prototype: HTMLIdgToastElement;
+        new (): HTMLIdgToastElement;
+    };
+    /**
+     * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
+     * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
+     * rest, and announces each toast as it comes into view through a live region of its own: politely,
+     * or at once for danger. Focus never moves on its own.
+     * While the pointer is over it, focus is inside it, the window is in the background or the user
+     * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
+     * and nothing slides under the pointer.
+     */
+    interface HTMLIdgToastRegionElement extends Components.IdgToastRegion, HTMLStencilElement {
+    }
+    var HTMLIdgToastRegionElement: {
+        prototype: HTMLIdgToastRegionElement;
+        new (): HTMLIdgToastRegionElement;
+    };
+    /**
+     * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
+     * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
+     * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
+     * only: put anything interactive in an idg-popover.
+     * The text is also the trigger's accessible description, given to the trigger itself, so it is
+     * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
+     * technology so it is not read twice.
+     */
+    interface HTMLIdgTooltipElement extends Components.IdgTooltip, HTMLStencilElement {
+    }
+    var HTMLIdgTooltipElement: {
+        prototype: HTMLIdgTooltipElement;
+        new (): HTMLIdgTooltipElement;
+    };
     interface HTMLElementTagNameMap {
         "idg-alert": HTMLIdgAlertElement;
         "idg-avatar": HTMLIdgAvatarElement;
@@ -1125,11 +1646,17 @@ declare global {
         "idg-button": HTMLIdgButtonElement;
         "idg-card": HTMLIdgCardElement;
         "idg-checkbox": HTMLIdgCheckboxElement;
+        "idg-dialog": HTMLIdgDialogElement;
         "idg-divider": HTMLIdgDividerElement;
         "idg-field": HTMLIdgFieldElement;
         "idg-icon": HTMLIdgIconElement;
         "idg-input": HTMLIdgInputElement;
         "idg-link": HTMLIdgLinkElement;
+        "idg-menu": HTMLIdgMenuElement;
+        "idg-menu-group": HTMLIdgMenuGroupElement;
+        "idg-menu-item": HTMLIdgMenuItemElement;
+        "idg-menu-separator": HTMLIdgMenuSeparatorElement;
+        "idg-popover": HTMLIdgPopoverElement;
         "idg-progress": HTMLIdgProgressElement;
         "idg-radio": HTMLIdgRadioElement;
         "idg-radio-group": HTMLIdgRadioGroupElement;
@@ -1138,6 +1665,9 @@ declare global {
         "idg-stat": HTMLIdgStatElement;
         "idg-switch": HTMLIdgSwitchElement;
         "idg-textarea": HTMLIdgTextareaElement;
+        "idg-toast": HTMLIdgToastElement;
+        "idg-toast-region": HTMLIdgToastRegionElement;
+        "idg-tooltip": HTMLIdgTooltipElement;
     }
 }
 declare namespace LocalJSX {
@@ -1243,6 +1773,22 @@ declare namespace LocalJSX {
         "variant"?: BadgeVariant;
     }
     interface IdgButton {
+        /**
+          * Set by an overlay this button opens: the element it opens (`aria-controls`).
+         */
+        "accessibleControls"?: Element[];
+        /**
+          * Set by idg-tooltip: the hint, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by an overlay this button opens: whether it is open (`aria-expanded`).
+         */
+        "accessibleExpanded"?: boolean;
+        /**
+          * Set by an overlay this button opens: what kind of popup it is (`aria-haspopup`).
+         */
+        "accessibleHaspopup"?: string;
         /**
           * Blocks activation and takes the control out of the tab order.
           * @default false
@@ -1388,6 +1934,67 @@ declare namespace LocalJSX {
           * @default "on"
          */
         "value"?: string;
+    }
+    /**
+     * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
+     * of the page inert and contains focus, and Escape is the browser's close request. The component
+     * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
+     * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
+     * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
+     * closed.
+     */
+    interface IdgDialog {
+        /**
+          * Makes it an `alertdialog`: an urgent message that needs a response, described by its body.
+          * @default false
+         */
+        "alert"?: boolean;
+        /**
+          * The close button's accessible name.
+          * @default "Close"
+         */
+        "closeLabel"?: string;
+        /**
+          * Whether a click on the backdrop of a modal dialog dismisses it. Needs `dismissible`.
+          * @default false
+         */
+        "closeOnBackdrop"?: boolean;
+        /**
+          * Whether the user can dismiss the dialog with Escape and the close button.
+          * @default true
+         */
+        "dismissible"?: boolean;
+        /**
+          * The title, drawn as a heading. It is the dialog's accessible name.
+         */
+        "heading"?: string;
+        /**
+          * Whether setting `open` opens a modal dialog. The methods choose for themselves.
+          * @default true
+         */
+        "modal"?: boolean;
+        /**
+          * Fires when the user tries to dismiss the dialog (Escape, the backdrop or the close button). Call `preventDefault()` to keep it open. Browsers close the dialog anyway on a second Escape without other input in between, so that a page cannot trap the user.
+         */
+        "onIdgCancel"?: (event: IdgDialogCustomEvent<DialogCancelDetail>) => void;
+        /**
+          * Fires after the dialog has closed, with the return value and why it closed.
+         */
+        "onIdgClose"?: (event: IdgDialogCustomEvent<DialogCloseDetail>) => void;
+        /**
+          * Fires when the dialog opens.
+         */
+        "onIdgOpen"?: (event: IdgDialogCustomEvent<DialogOpenDetail>) => void;
+        /**
+          * Whether the dialog is open. Setting it opens (as `modal` says) or closes the dialog.
+          * @default false
+         */
+        "open"?: boolean;
+        /**
+          * Width: `sm`, `md`, `lg`, or `full` for the whole viewport less a margin.
+          * @default "md"
+         */
+        "size"?: DialogSize;
     }
     /**
      * A rule between groups of content, drawn in the design language's own border.
@@ -1559,6 +2166,143 @@ declare namespace LocalJSX {
           * Where the link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
          */
         "target"?: string;
+    }
+    /**
+     * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
+     * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
+     * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
+     * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
+     * focus moves to the items themselves (roving focus). Each item carries its own role and state.
+     */
+    interface IdgMenu {
+        /**
+          * The menu's accessible name. Without it the menu is named by its trigger.
+         */
+        "label"?: string;
+        /**
+          * The gap between the trigger and the menu, in pixels.
+          * @default 4
+         */
+        "offset"?: number;
+        /**
+          * Fires when the menu closes.
+         */
+        "onIdgClose"?: (event: IdgMenuCustomEvent<void>) => void;
+        /**
+          * Fires when the menu opens.
+         */
+        "onIdgOpen"?: (event: IdgMenuCustomEvent<void>) => void;
+        /**
+          * Fires when an item is chosen, with its value and, for a checkable item, its new state.
+         */
+        "onIdgSelect"?: (event: IdgMenuCustomEvent<MenuSelectDetail>) => void;
+        /**
+          * Whether the menu is open.
+          * @default false
+         */
+        "open"?: boolean;
+        /**
+          * Where the menu sits against the trigger. It flips to the opposite side when out of room.
+          * @default "bottom-start"
+         */
+        "placement"?: Placement;
+    }
+    /**
+     * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
+     * uncheck each other within their group.
+     */
+    interface IdgMenuGroup {
+        /**
+          * The group's visible label and accessible name.
+         */
+        "label"?: string;
+    }
+    /**
+     * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
+     * its own shadow root, so its role and state are set on the focusable element inside it, and the
+     * host is a plain wrapper that assistive technology passes through.
+     */
+    interface IdgMenuItem {
+        /**
+          * Whether a checkbox or radio item is on. The menu changes it when the item is chosen.
+          * @default false
+         */
+        "checked"?: boolean;
+        /**
+          * Keeps the item in the menu, where it can be found, but stops it being chosen.
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * Makes the item a link. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * A leading icon, drawn as decoration.
+         */
+        "icon"?: IconName;
+        /**
+          * Link relationship.
+         */
+        "rel"?: string;
+        /**
+          * A hint such as `Ctrl+E`, shown when the UX mode turns shortcuts on. Nothing binds the key.
+         */
+        "shortcut"?: string;
+        /**
+          * Where a link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
+         */
+        "target"?: string;
+        /**
+          * `item` does something, `checkbox` toggles, `radio` picks one of its group.
+          * @default "item"
+         */
+        "type"?: MenuItemType;
+        /**
+          * What `idgSelect` reports when this item is chosen.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * A rule between groups of items in an idg-menu.
+     */
+    interface IdgMenuSeparator {
+    }
+    /**
+     * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
+     * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
+     * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
+     * not contained, and Tab moves on from the content.
+     */
+    interface IdgPopover {
+        /**
+          * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
+         */
+        "for"?: string;
+        /**
+          * The gap between the trigger and the surface, in pixels.
+          * @default 8
+         */
+        "offset"?: number;
+        /**
+          * Fires when the popover closes, however it was closed.
+         */
+        "onIdgClose"?: (event: IdgPopoverCustomEvent<void>) => void;
+        /**
+          * Fires when the popover opens.
+         */
+        "onIdgOpen"?: (event: IdgPopoverCustomEvent<void>) => void;
+        /**
+          * Whether the popover is open.
+          * @default false
+         */
+        "open"?: boolean;
+        /**
+          * Where the surface sits against the trigger. It flips to the opposite side when out of room.
+          * @default "bottom-start"
+         */
+        "placement"?: Placement;
     }
     /**
      * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
@@ -1910,6 +2654,120 @@ declare namespace LocalJSX {
          */
         "value"?: string;
     }
+    /**
+     * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
+     * time, announces each as it appears, pauses them while they are being read and lets the keyboard
+     * reach them; the `toast()` function does all of that from script.
+     * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
+     * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
+     * is given a duration, so nobody loses the chance to act on it.
+     */
+    interface IdgToast {
+        /**
+          * The label of an action button, such as "Undo". Choosing it fires `idgAction`.
+         */
+        "actionLabel"?: string;
+        /**
+          * The close button's accessible name.
+          * @default "Dismiss"
+         */
+        "closeLabel"?: string;
+        /**
+          * More detail under the heading. Set as text, never as markup.
+         */
+        "description"?: string;
+        /**
+          * How long the toast stays, in milliseconds. `0` keeps it until it is dismissed. Without a duration it stays for six seconds, or until dismissed when it has an action.
+         */
+        "duration"?: number;
+        /**
+          * The heading, and the toast's accessible name. Set as text, never as markup.
+         */
+        "heading"?: string;
+        /**
+          * Fires when the action button is chosen, just before the toast is dismissed.
+         */
+        "onIdgAction"?: (event: IdgToastCustomEvent<void>) => void;
+        /**
+          * Fires when the toast is dismissed, with the reason. The toast then removes itself, unless a listener calls `preventDefault()`.
+         */
+        "onIdgDismiss"?: (event: IdgToastCustomEvent<ToastDismissDetail>) => void;
+        /**
+          * Set by the region while the toasts are being read: the countdown stands still.
+          * @default false
+         */
+        "paused"?: boolean;
+        /**
+          * Set by the region while the toast waits its turn: it is hidden and does not count down.
+          * @default false
+         */
+        "queued"?: boolean;
+        /**
+          * Meaning. A danger toast is announced at once; the others wait for a pause in speech.
+          * @default "neutral"
+         */
+        "variant"?: ToastVariant;
+    }
+    /**
+     * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
+     * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
+     * rest, and announces each toast as it comes into view through a live region of its own: politely,
+     * or at once for danger. Focus never moves on its own.
+     * While the pointer is over it, focus is inside it, the window is in the background or the user
+     * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
+     * and nothing slides under the pointer.
+     */
+    interface IdgToastRegion {
+        /**
+          * The key, as `KeyboardEvent.key` names it, that moves focus to the toasts.
+          * @default "F8"
+         */
+        "hotkey"?: string;
+        /**
+          * The landmark's accessible name.
+          * @default "Notifications"
+         */
+        "label"?: string;
+        /**
+          * How many toasts show at once. The rest wait their turn.
+          * @default 3
+         */
+        "max"?: number;
+        /**
+          * The corner or edge the toasts gather at.
+          * @default "bottom-end"
+         */
+        "position"?: ToastPosition;
+    }
+    /**
+     * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
+     * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
+     * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
+     * only: put anything interactive in an idg-popover.
+     * The text is also the trigger's accessible description, given to the trigger itself, so it is
+     * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
+     * technology so it is not read twice.
+     */
+    interface IdgTooltip {
+        /**
+          * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
+         */
+        "for"?: string;
+        /**
+          * The gap between the trigger and the hint, in pixels.
+          * @default 8
+         */
+        "offset"?: number;
+        /**
+          * Where the hint sits against the trigger. It flips to the opposite side when out of room.
+          * @default "top"
+         */
+        "placement"?: Placement;
+        /**
+          * The hint. Set as text, never as markup.
+         */
+        "text"?: string;
+    }
 
     interface IdgAlertAttributes {
         "variant": AlertVariant;
@@ -1946,6 +2804,9 @@ declare namespace LocalJSX {
         "rel": string;
         "fullWidth": boolean;
         "shortcut": string;
+        "accessibleExpanded": boolean;
+        "accessibleHaspopup": string;
+        "accessibleDescription": string;
     }
     interface IdgCardAttributes {
         "variant": CardVariant;
@@ -1967,6 +2828,16 @@ declare namespace LocalJSX {
         "accessibleLabel": string;
         "accessibleDescription": string;
         "invalid": boolean;
+    }
+    interface IdgDialogAttributes {
+        "open": boolean;
+        "modal": boolean;
+        "heading": string;
+        "size": DialogSize;
+        "dismissible": boolean;
+        "closeOnBackdrop": boolean;
+        "alert": boolean;
+        "closeLabel": string;
     }
     interface IdgDividerAttributes {
         "orientation": DividerOrientation;
@@ -2016,6 +2887,32 @@ declare namespace LocalJSX {
         "rel": string;
         "external": boolean;
         "externalLabel": string;
+    }
+    interface IdgMenuAttributes {
+        "placement": Placement;
+        "offset": number;
+        "open": boolean;
+        "label": string;
+    }
+    interface IdgMenuGroupAttributes {
+        "label": string;
+    }
+    interface IdgMenuItemAttributes {
+        "value": string;
+        "type": MenuItemType;
+        "checked": boolean;
+        "disabled": boolean;
+        "href": string;
+        "target": string;
+        "rel": string;
+        "shortcut": string;
+        "icon": IconName;
+    }
+    interface IdgPopoverAttributes {
+        "placement": Placement;
+        "offset": number;
+        "open": boolean;
+        "for": string;
     }
     interface IdgProgressAttributes {
         "label": string;
@@ -2099,6 +2996,28 @@ declare namespace LocalJSX {
         "accessibleDescription": string;
         "invalid": boolean;
     }
+    interface IdgToastAttributes {
+        "heading": string;
+        "description": string;
+        "variant": ToastVariant;
+        "duration": number;
+        "actionLabel": string;
+        "closeLabel": string;
+        "queued": boolean;
+        "paused": boolean;
+    }
+    interface IdgToastRegionAttributes {
+        "position": ToastPosition;
+        "max": number;
+        "label": string;
+        "hotkey": string;
+    }
+    interface IdgTooltipAttributes {
+        "text": string;
+        "placement": Placement;
+        "offset": number;
+        "for": string;
+    }
 
     interface IntrinsicElements {
         "idg-alert": Omit<IdgAlert, keyof IdgAlertAttributes> & { [K in keyof IdgAlert & keyof IdgAlertAttributes]?: IdgAlert[K] } & { [K in keyof IdgAlert & keyof IdgAlertAttributes as `attr:${K}`]?: IdgAlertAttributes[K] } & { [K in keyof IdgAlert & keyof IdgAlertAttributes as `prop:${K}`]?: IdgAlert[K] };
@@ -2108,11 +3027,17 @@ declare namespace LocalJSX {
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
         "idg-card": Omit<IdgCard, keyof IdgCardAttributes> & { [K in keyof IdgCard & keyof IdgCardAttributes]?: IdgCard[K] } & { [K in keyof IdgCard & keyof IdgCardAttributes as `attr:${K}`]?: IdgCardAttributes[K] } & { [K in keyof IdgCard & keyof IdgCardAttributes as `prop:${K}`]?: IdgCard[K] };
         "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`]?: IdgCheckboxAttributes[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
+        "idg-dialog": Omit<IdgDialog, keyof IdgDialogAttributes> & { [K in keyof IdgDialog & keyof IdgDialogAttributes]?: IdgDialog[K] } & { [K in keyof IdgDialog & keyof IdgDialogAttributes as `attr:${K}`]?: IdgDialogAttributes[K] } & { [K in keyof IdgDialog & keyof IdgDialogAttributes as `prop:${K}`]?: IdgDialog[K] };
         "idg-divider": Omit<IdgDivider, keyof IdgDividerAttributes> & { [K in keyof IdgDivider & keyof IdgDividerAttributes]?: IdgDivider[K] } & { [K in keyof IdgDivider & keyof IdgDividerAttributes as `attr:${K}`]?: IdgDividerAttributes[K] } & { [K in keyof IdgDivider & keyof IdgDividerAttributes as `prop:${K}`]?: IdgDivider[K] };
         "idg-field": Omit<IdgField, keyof IdgFieldAttributes> & { [K in keyof IdgField & keyof IdgFieldAttributes]?: IdgField[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `attr:${K}`]?: IdgFieldAttributes[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `prop:${K}`]?: IdgField[K] };
         "idg-icon": Omit<IdgIcon, keyof IdgIconAttributes> & { [K in keyof IdgIcon & keyof IdgIconAttributes]?: IdgIcon[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `attr:${K}`]?: IdgIconAttributes[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `prop:${K}`]?: IdgIcon[K] };
         "idg-input": Omit<IdgInput, keyof IdgInputAttributes> & { [K in keyof IdgInput & keyof IdgInputAttributes]?: IdgInput[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `attr:${K}`]?: IdgInputAttributes[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `prop:${K}`]?: IdgInput[K] };
         "idg-link": Omit<IdgLink, keyof IdgLinkAttributes> & { [K in keyof IdgLink & keyof IdgLinkAttributes]?: IdgLink[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `attr:${K}`]?: IdgLinkAttributes[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `prop:${K}`]?: IdgLink[K] };
+        "idg-menu": Omit<IdgMenu, keyof IdgMenuAttributes> & { [K in keyof IdgMenu & keyof IdgMenuAttributes]?: IdgMenu[K] } & { [K in keyof IdgMenu & keyof IdgMenuAttributes as `attr:${K}`]?: IdgMenuAttributes[K] } & { [K in keyof IdgMenu & keyof IdgMenuAttributes as `prop:${K}`]?: IdgMenu[K] };
+        "idg-menu-group": Omit<IdgMenuGroup, keyof IdgMenuGroupAttributes> & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes]?: IdgMenuGroup[K] } & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes as `attr:${K}`]?: IdgMenuGroupAttributes[K] } & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes as `prop:${K}`]?: IdgMenuGroup[K] };
+        "idg-menu-item": Omit<IdgMenuItem, keyof IdgMenuItemAttributes> & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes]?: IdgMenuItem[K] } & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `attr:${K}`]?: IdgMenuItemAttributes[K] } & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `prop:${K}`]?: IdgMenuItem[K] };
+        "idg-menu-separator": IdgMenuSeparator;
+        "idg-popover": Omit<IdgPopover, keyof IdgPopoverAttributes> & { [K in keyof IdgPopover & keyof IdgPopoverAttributes]?: IdgPopover[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `attr:${K}`]?: IdgPopoverAttributes[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `prop:${K}`]?: IdgPopover[K] };
         "idg-progress": Omit<IdgProgress, keyof IdgProgressAttributes> & { [K in keyof IdgProgress & keyof IdgProgressAttributes]?: IdgProgress[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `attr:${K}`]?: IdgProgressAttributes[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `prop:${K}`]?: IdgProgress[K] };
         "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
         "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
@@ -2121,6 +3046,9 @@ declare namespace LocalJSX {
         "idg-stat": Omit<IdgStat, keyof IdgStatAttributes> & { [K in keyof IdgStat & keyof IdgStatAttributes]?: IdgStat[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `attr:${K}`]?: IdgStatAttributes[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `prop:${K}`]?: IdgStat[K] };
         "idg-switch": Omit<IdgSwitch, keyof IdgSwitchAttributes> & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes]?: IdgSwitch[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `attr:${K}`]?: IdgSwitchAttributes[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `prop:${K}`]?: IdgSwitch[K] };
         "idg-textarea": Omit<IdgTextarea, keyof IdgTextareaAttributes> & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes]?: IdgTextarea[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `attr:${K}`]?: IdgTextareaAttributes[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `prop:${K}`]?: IdgTextarea[K] };
+        "idg-toast": Omit<IdgToast, keyof IdgToastAttributes> & { [K in keyof IdgToast & keyof IdgToastAttributes]?: IdgToast[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `attr:${K}`]?: IdgToastAttributes[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `prop:${K}`]?: IdgToast[K] };
+        "idg-toast-region": Omit<IdgToastRegion, keyof IdgToastRegionAttributes> & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes]?: IdgToastRegion[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `attr:${K}`]?: IdgToastRegionAttributes[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `prop:${K}`]?: IdgToastRegion[K] };
+        "idg-tooltip": Omit<IdgTooltip, keyof IdgTooltipAttributes> & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes]?: IdgTooltip[K] } & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `attr:${K}`]?: IdgTooltipAttributes[K] } & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `prop:${K}`]?: IdgTooltip[K] };
     }
 }
 export { LocalJSX as JSX };
@@ -2158,6 +3086,15 @@ declare module "@stencil/core" {
             "idg-card": LocalJSX.IntrinsicElements["idg-card"] & JSXBase.HTMLAttributes<HTMLIdgCardElement>;
             "idg-checkbox": LocalJSX.IntrinsicElements["idg-checkbox"] & JSXBase.HTMLAttributes<HTMLIdgCheckboxElement>;
             /**
+             * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
+             * of the page inert and contains focus, and Escape is the browser's close request. The component
+             * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
+             * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
+             * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
+             * closed.
+             */
+            "idg-dialog": LocalJSX.IntrinsicElements["idg-dialog"] & JSXBase.HTMLAttributes<HTMLIdgDialogElement>;
+            /**
              * A rule between groups of content, drawn in the design language's own border.
              */
             "idg-divider": LocalJSX.IntrinsicElements["idg-divider"] & JSXBase.HTMLAttributes<HTMLIdgDividerElement>;
@@ -2179,6 +3116,36 @@ declare module "@stencil/core" {
              * noreferrer`.
              */
             "idg-link": LocalJSX.IntrinsicElements["idg-link"] & JSXBase.HTMLAttributes<HTMLIdgLinkElement>;
+            /**
+             * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
+             * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
+             * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
+             * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
+             * focus moves to the items themselves (roving focus). Each item carries its own role and state.
+             */
+            "idg-menu": LocalJSX.IntrinsicElements["idg-menu"] & JSXBase.HTMLAttributes<HTMLIdgMenuElement>;
+            /**
+             * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
+             * uncheck each other within their group.
+             */
+            "idg-menu-group": LocalJSX.IntrinsicElements["idg-menu-group"] & JSXBase.HTMLAttributes<HTMLIdgMenuGroupElement>;
+            /**
+             * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
+             * its own shadow root, so its role and state are set on the focusable element inside it, and the
+             * host is a plain wrapper that assistive technology passes through.
+             */
+            "idg-menu-item": LocalJSX.IntrinsicElements["idg-menu-item"] & JSXBase.HTMLAttributes<HTMLIdgMenuItemElement>;
+            /**
+             * A rule between groups of items in an idg-menu.
+             */
+            "idg-menu-separator": LocalJSX.IntrinsicElements["idg-menu-separator"] & JSXBase.HTMLAttributes<HTMLIdgMenuSeparatorElement>;
+            /**
+             * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
+             * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
+             * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
+             * not contained, and Tab moves on from the content.
+             */
+            "idg-popover": LocalJSX.IntrinsicElements["idg-popover"] & JSXBase.HTMLAttributes<HTMLIdgPopoverElement>;
             /**
              * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
              * the browser's own. Without a value it is indeterminate.
@@ -2216,6 +3183,35 @@ declare module "@stencil/core" {
             "idg-stat": LocalJSX.IntrinsicElements["idg-stat"] & JSXBase.HTMLAttributes<HTMLIdgStatElement>;
             "idg-switch": LocalJSX.IntrinsicElements["idg-switch"] & JSXBase.HTMLAttributes<HTMLIdgSwitchElement>;
             "idg-textarea": LocalJSX.IntrinsicElements["idg-textarea"] & JSXBase.HTMLAttributes<HTMLIdgTextareaElement>;
+            /**
+             * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
+             * time, announces each as it appears, pauses them while they are being read and lets the keyboard
+             * reach them; the `toast()` function does all of that from script.
+             * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
+             * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
+             * is given a duration, so nobody loses the chance to act on it.
+             */
+            "idg-toast": LocalJSX.IntrinsicElements["idg-toast"] & JSXBase.HTMLAttributes<HTMLIdgToastElement>;
+            /**
+             * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
+             * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
+             * rest, and announces each toast as it comes into view through a live region of its own: politely,
+             * or at once for danger. Focus never moves on its own.
+             * While the pointer is over it, focus is inside it, the window is in the background or the user
+             * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
+             * and nothing slides under the pointer.
+             */
+            "idg-toast-region": LocalJSX.IntrinsicElements["idg-toast-region"] & JSXBase.HTMLAttributes<HTMLIdgToastRegionElement>;
+            /**
+             * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
+             * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
+             * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
+             * only: put anything interactive in an idg-popover.
+             * The text is also the trigger's accessible description, given to the trigger itself, so it is
+             * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
+             * technology so it is not read twice.
+             */
+            "idg-tooltip": LocalJSX.IntrinsicElements["idg-tooltip"] & JSXBase.HTMLAttributes<HTMLIdgTooltipElement>;
         }
     }
 }

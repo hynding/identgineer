@@ -21,7 +21,7 @@ import {
  */
 @Component({
   tag: "idg-button",
-  styleUrls: ["../../styles/control.css", "button.css"],
+  styleUrls: ["../../styles/control.css", "../../styles/visually-hidden.css", "button.css"],
   shadow: true,
   formAssociated: true,
 })
@@ -57,6 +57,30 @@ export class IdgButton {
 
   /** A hint such as `Enter`, shown only when the UX mode turns shortcuts on. */
   @Prop() shortcut?: string;
+
+  /** Set by an overlay this button opens: whether it is open (`aria-expanded`). */
+  @Prop() accessibleExpanded?: boolean;
+
+  /** Set by an overlay this button opens: what kind of popup it is (`aria-haspopup`). */
+  @Prop() accessibleHaspopup?: string;
+
+  /** Set by an overlay this button opens: the element it opens (`aria-controls`). */
+  @Prop() accessibleControls?: Element[];
+
+  /** Set by idg-tooltip: the hint, as the control's accessible description. */
+  @Prop() accessibleDescription?: string;
+
+  private native?: HTMLElement;
+
+  // An element reference cannot be an attribute, so the controls relation is set as a property.
+  // Pointing out of this root to the overlay's host is allowed by element reflection.
+  componentDidRender(): void {
+    const native = this.native as
+      (HTMLElement & { ariaControlsElements?: Element[] | null }) | undefined;
+    if (native && "ariaControlsElements" in native) {
+      native.ariaControlsElements = this.accessibleControls ?? null;
+    }
+  }
 
   // Handled on the inner control, which every pointer and keyboard activation passes through,
   // so a blocked click never reaches the consumer's listeners on the host.
@@ -94,16 +118,27 @@ export class IdgButton {
       onClick: this.handleClick,
       "aria-busy": this.loading ? "true" : undefined,
       "aria-keyshortcuts": this.shortcut === "" ? undefined : this.shortcut,
+      "aria-expanded":
+        this.accessibleExpanded === undefined ? undefined : String(this.accessibleExpanded),
+      "aria-haspopup": this.accessibleHaspopup === "" ? undefined : this.accessibleHaspopup,
+      "aria-describedby": this.accessibleDescription ? "description" : undefined,
+      ref: (element?: HTMLElement) => (this.native = element),
     };
 
     const content = <Content loading={this.loading} shortcut={this.shortcut} />;
+    // Outside the control, so the description is not read as part of the button's name.
+    const description = this.accessibleDescription ? (
+      <span id="description" class="visually-hidden">
+        {this.accessibleDescription}
+      </span>
+    ) : null;
 
     if (this.isLink()) {
       // Without an href an anchor is neither focusable nor a link, so it is given the role back
       // and marked unavailable, which is also how a disabled or unsafe link is shown.
       const href = this.isBlocked() ? undefined : safeUrl(this.href);
       const unavailable = href === undefined;
-      return (
+      return [
         <a
           {...shared}
           href={href}
@@ -113,11 +148,12 @@ export class IdgButton {
           rel={unavailable ? undefined : linkRel(this.target, this.rel)}
         >
           {content}
-        </a>
-      );
+        </a>,
+        description,
+      ];
     }
 
-    return (
+    return [
       <button
         {...shared}
         type={oneOf(BUTTON_TYPES, this.type, "button")}
@@ -125,8 +161,9 @@ export class IdgButton {
         aria-disabled={this.loading && !this.disabled ? "true" : undefined}
       >
         {content}
-      </button>
-    );
+      </button>,
+      description,
+    ];
   }
 }
 

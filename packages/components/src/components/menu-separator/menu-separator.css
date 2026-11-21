@@ -1,0 +1,22 @@
+:host {
+  display: block;
+}
+
+.separator {
+  margin-block: var(--idg-space-3xs);
+  border-block-start-width: max(1px, var(--idg-border-width));
+  border-block-start-style: var(--idg-border-style);
+  border-block-start-color: var(--idg-color-border);
+}
+
+@container style(--idg-border-style: none) {
+  .separator {
+    border-block-start-style: solid;
+  }
+}
+
+@media (forced-colors: active) {
+  .separator {
+    border-block-start: 1px solid CanvasText;
+  }
+}

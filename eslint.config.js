@@ -43,5 +43,10 @@ export default tseslint.config(
     extends: [tseslint.configs.disableTypeChecked],
     languageOptions: { globals: globals.node },
   },
+  {
+    // The demo pages' script runs in the browser.
+    files: ["packages/components/src/demo.js"],
+    languageOptions: { globals: globals.browser },
+  },
   prettier,
 );
