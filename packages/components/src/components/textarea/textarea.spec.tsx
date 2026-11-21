@@ -68,8 +68,8 @@ describe("idg-textarea auto-grow", () => {
     const { root } = await render(<idg-textarea autogrow value="a" rows={3} />);
     const sizer = root.shadowRoot?.querySelector(".sizer");
     expect(sizer?.getAttribute("aria-hidden")).toBe("true");
-    expect(sizer?.textContent?.startsWith("a\n")).toBe(true);
-    expect(sizer?.textContent?.split("\n")).toHaveLength(4);
+    expect(sizer?.textContent.startsWith("a\n")).toBe(true);
+    expect(sizer?.textContent.split("\n")).toHaveLength(4);
   });
 
   it("follows the value as it is typed", async () => {
