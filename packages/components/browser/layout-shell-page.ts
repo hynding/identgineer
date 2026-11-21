@@ -115,6 +115,27 @@ export function boxOfSlotted(page: Page, selector: string): Promise<Rect> {
   });
 }
 
+/** The computed value of a property on one of the shell's own parts. */
+export function partStyle(page: Page, part: string, property: string): Promise<string> {
+  return page.locator("#shell").evaluate(
+    (host, [name, key]) => {
+      const element = host.shadowRoot?.querySelector(`[part="${String(name)}"]`);
+      if (!element) throw new Error(`no ${String(name)} part`);
+      return getComputedStyle(element).getPropertyValue(String(key));
+    },
+    [part, property],
+  );
+}
+
+/** The distance from the top of the window to one of the shell's own parts, rounded. */
+export function partTop(page: Page, part: string): Promise<number> {
+  return page.locator("#shell").evaluate((host, name) => {
+    const element = host.shadowRoot?.querySelector(`[part="${name}"]`);
+    if (!element) throw new Error(`no ${name} part`);
+    return Math.round(element.getBoundingClientRect().top);
+  }, part);
+}
+
 export function setLayout(page: Page, layout: string): Promise<void> {
   return page.evaluate((next) => {
     document.documentElement.dataset.layout = next;
@@ -161,4 +182,51 @@ export function focusInfo(page: Page): Promise<FocusInfo> {
     if (!current) return { region: "outside", id };
     return { region: current.getAttribute("slot") ?? "main", id };
   });
+}
+
+export interface Stop extends FocusInfo {
+  rect: Rect;
+}
+
+/**
+ * Presses Tab from the top of the page until focus comes back round or leaves the document, and
+ * returns every stop with its box measured at the top of the page, where a layout's own placement
+ * shows and a pinned bar has not moved.
+ */
+export async function tabStops(page: Page, limit = 90): Promise<Stop[]> {
+  await page.evaluate(() => {
+    window.scrollTo(0, 0);
+    (document.activeElement as HTMLElement | null)?.blur();
+    (window as unknown as { __stops: Element[] }).__stops = [];
+  });
+  const stops: FocusInfo[] = [];
+  for (let index = 0; index < limit; index += 1) {
+    await page.keyboard.press("Tab");
+    const info = await focusInfo(page);
+    if (info.region === "none") break;
+    const first = stops[0];
+    if (first?.id === info.id && first.region === info.region) break;
+    stops.push(info);
+    await page.evaluate(() => {
+      let active: Element | null = document.activeElement;
+      while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+      if (active) (window as unknown as { __stops: Element[] }).__stops.push(active);
+    });
+  }
+  const rects = await page.evaluate(() => {
+    window.scrollTo(0, 0);
+    return (window as unknown as { __stops: Element[] }).__stops.map((element) => {
+      const box = element.getBoundingClientRect();
+      return {
+        x: box.x,
+        y: box.y,
+        width: box.width,
+        height: box.height,
+        right: box.right,
+        bottom: box.bottom,
+        shown: box.width > 0 && box.height > 0,
+      };
+    });
+  });
+  return stops.map((info, index) => ({ ...info, rect: rects[index] as Rect }));
 }
