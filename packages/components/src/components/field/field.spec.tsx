@@ -89,14 +89,14 @@ describe("idg-field rendering", () => {
     expect(hint?.getAttribute("aria-hidden")).toBeNull();
   });
 
-  it("has no hint or error elements when it has no hint or error", async () => {
+  it("has no hint element, and an empty error region, when it has neither", async () => {
     const { root } = await render(
       <idg-field label="A">
         <idg-input />
       </idg-field>,
     );
     expect(root.shadowRoot?.querySelector(".hint")).toBeNull();
-    expect(root.shadowRoot?.querySelector(".error")).toBeNull();
+    expect(root.shadowRoot?.querySelector(".error")?.textContent).toBe("");
   });
 });
 

@@ -112,6 +112,35 @@ export namespace Components {
          */
         "value": string;
     }
+    /**
+     * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
+     * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
+     * reference cannot cross a shadow boundary, so their text is handed to the control as properties
+     * and the control applies it to its own native element.
+     */
+    interface IdgField {
+        /**
+          * The error message. Setting it marks the control invalid and announces the message.
+         */
+        "error"?: string;
+        /**
+          * Help text. Shown when the UX mode turns hints on, and always read with the control.
+         */
+        "hint"?: string;
+        /**
+          * The visible label, and the control's accessible name.
+         */
+        "label"?: string;
+        /**
+          * Text such as "optional" shown beside the label of a field that is not required.
+         */
+        "optionalText"?: string;
+        /**
+          * Marks the control required and shows a star.
+          * @default false
+         */
+        "required": boolean;
+    }
     interface IdgInput {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -509,6 +538,18 @@ declare global {
         prototype: HTMLIdgCheckboxElement;
         new (): HTMLIdgCheckboxElement;
     };
+    /**
+     * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
+     * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
+     * reference cannot cross a shadow boundary, so their text is handed to the control as properties
+     * and the control applies it to its own native element.
+     */
+    interface HTMLIdgFieldElement extends Components.IdgField, HTMLStencilElement {
+    }
+    var HTMLIdgFieldElement: {
+        prototype: HTMLIdgFieldElement;
+        new (): HTMLIdgFieldElement;
+    };
     interface HTMLIdgInputElementEventMap {
         "idgInput": ValueDetail;
         "idgChange": ValueDetail;
@@ -632,6 +673,7 @@ declare global {
     interface HTMLElementTagNameMap {
         "idg-button": HTMLIdgButtonElement;
         "idg-checkbox": HTMLIdgCheckboxElement;
+        "idg-field": HTMLIdgFieldElement;
         "idg-input": HTMLIdgInputElement;
         "idg-radio": HTMLIdgRadioElement;
         "idg-radio-group": HTMLIdgRadioGroupElement;
@@ -742,6 +784,35 @@ declare namespace LocalJSX {
           * @default "on"
          */
         "value"?: string;
+    }
+    /**
+     * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
+     * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
+     * reference cannot cross a shadow boundary, so their text is handed to the control as properties
+     * and the control applies it to its own native element.
+     */
+    interface IdgField {
+        /**
+          * The error message. Setting it marks the control invalid and announces the message.
+         */
+        "error"?: string;
+        /**
+          * Help text. Shown when the UX mode turns hints on, and always read with the control.
+         */
+        "hint"?: string;
+        /**
+          * The visible label, and the control's accessible name.
+         */
+        "label"?: string;
+        /**
+          * Text such as "optional" shown beside the label of a field that is not required.
+         */
+        "optionalText"?: string;
+        /**
+          * Marks the control required and shows a star.
+          * @default false
+         */
+        "required"?: boolean;
     }
     interface IdgInput {
         /**
@@ -1103,6 +1174,13 @@ declare namespace LocalJSX {
         "accessibleDescription": string;
         "invalid": boolean;
     }
+    interface IdgFieldAttributes {
+        "label": string;
+        "hint": string;
+        "error": string;
+        "required": boolean;
+        "optionalText": string;
+    }
     interface IdgInputAttributes {
         "type": InputType;
         "name": string;
@@ -1193,6 +1271,7 @@ declare namespace LocalJSX {
     interface IntrinsicElements {
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
         "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`]?: IdgCheckboxAttributes[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
+        "idg-field": Omit<IdgField, keyof IdgFieldAttributes> & { [K in keyof IdgField & keyof IdgFieldAttributes]?: IdgField[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `attr:${K}`]?: IdgFieldAttributes[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `prop:${K}`]?: IdgField[K] };
         "idg-input": Omit<IdgInput, keyof IdgInputAttributes> & { [K in keyof IdgInput & keyof IdgInputAttributes]?: IdgInput[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `attr:${K}`]?: IdgInputAttributes[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `prop:${K}`]?: IdgInput[K] };
         "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
         "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
@@ -1207,6 +1286,13 @@ declare module "@stencil/core" {
         interface IntrinsicElements {
             "idg-button": LocalJSX.IntrinsicElements["idg-button"] & JSXBase.HTMLAttributes<HTMLIdgButtonElement>;
             "idg-checkbox": LocalJSX.IntrinsicElements["idg-checkbox"] & JSXBase.HTMLAttributes<HTMLIdgCheckboxElement>;
+            /**
+             * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
+             * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
+             * reference cannot cross a shadow boundary, so their text is handed to the control as properties
+             * and the control applies it to its own native element.
+             */
+            "idg-field": LocalJSX.IntrinsicElements["idg-field"] & JSXBase.HTMLAttributes<HTMLIdgFieldElement>;
             "idg-input": LocalJSX.IntrinsicElements["idg-input"] & JSXBase.HTMLAttributes<HTMLIdgInputElement>;
             /**
              * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
