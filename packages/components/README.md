@@ -695,7 +695,7 @@ content); parts `item`, `heading`, `trigger`, `title`, `chevron`, `panel`, `cont
   (a disabled item is plainly hidden). With six items or fewer an open panel is a named `region`; a
   closed one is not, so a panel the browser can still find is not an empty landmark.
 - **Single-open.** An item opened, or added already open, wins and the others close, each with one
-  `idgToggle`. At first load the first item marked `open` wins. Nested accordions are independent:
+  `idgToggle`. At first load the first item marked `open` wins, and the others close without an `idgToggle`, since nobody changed them. Nested accordions are independent:
   an item opening inside a panel does not close the item holding it.
 
 ### `idg-table`
@@ -716,8 +716,12 @@ Event `idgSort` (`{ key, direction }`); parts `scroller`, `status`.
   use it for anything the text does not order correctly, such as `1,200` (text sorts as a string
   unless it reads as a plain number) or dates written as words.
 - **Spanning cells.** A table whose body has a cell with `rowspan` or `colspan` is not sortable: no
-  sort buttons are drawn and `sortKey` does nothing, since moving its rows would break it. Sort
-  such data in the page and use `manual-sort` on a table without spans. With `manual-sort` the table only reports `idgSort` and the page orders the rows.
+  sort buttons are drawn and `sortKey` does nothing, since moving its rows would break it. With
+  `manual-sort` the table moves no rows, only reports `idgSort` and marks the column, so the buttons
+  stay and the page may swap the body, for a loading row for instance. Focus on a button that is
+  taken away goes to its header cell.
+- **Nested tables.** A table nested in a cell, whether another `idg-table` or a plain `<table>`, is
+  left to itself: the outer table sorts and watches only its own header and body rows.
 - **Wide tables** scroll inside the component's own region, which is focusable and named by `label`
   or the caption, so the page never scrolls sideways.
 
@@ -733,7 +737,8 @@ The list keeps a constant number of slots so it does not jump as the page change
 that gives an unsafe url falls back to buttons. Modified clicks (Ctrl, Shift, middle button) are left
 to the browser. The unavailable previous and next controls are disabled, and focus moves to the
 current page when the control that was used is redrawn elsewhere or becomes unavailable, but only
-if focus was inside the component, and not after a press the page cancelled.
+if focus was inside the component and fell to the page, so not after a press the page cancelled or
+when a listener of `idgPageChange` moved focus to something else.
 
 ### `idg-breadcrumb` and `idg-breadcrumb-item`
 
