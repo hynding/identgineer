@@ -30,8 +30,14 @@ function sizeClasses(element: HTMLElement): string[] {
   return element.className.split(" ").filter((name) => name.startsWith("size-"));
 }
 
-function limitClasses(element: HTMLElement): string[] {
-  return element.className.split(" ").filter((name) => name.startsWith("limit-"));
+function overLimit(root: HTMLElement): boolean {
+  return part(root, "switcher").classList.contains("over-limit");
+}
+
+const items = (count: number) => Array.from({ length: count }, () => <p>Item</p>);
+
+function slotchange(root: HTMLElement): void {
+  root.shadowRoot?.querySelector("slot:not([name])")?.dispatchEvent(new Event("slotchange"));
 }
 
 describe("idg-switcher", () => {
@@ -39,7 +45,7 @@ describe("idg-switcher", () => {
     const { root } = await render(<idg-switcher>Item</idg-switcher>);
     const switcher = part(root, "switcher");
     expect(sizeClasses(switcher)).toEqual(["size-l"]);
-    expect(limitClasses(switcher)).toEqual([]);
+    expect(switcher.classList.contains("over-limit")).toBe(false);
     expect(gapClasses(switcher)).toEqual([]);
     expect(switcher.querySelector("slot:not([name])")).not.toBeNull();
   });
@@ -61,19 +67,62 @@ describe("idg-switcher", () => {
     },
   );
 
-  it.each([2, 3, 4, 5, 6])("applies limit %i", async (limit) => {
+  it.each([2, 3, 4, 5, 6])("reflects limit %i", async (limit) => {
     const { root } = await render(<idg-switcher limit={limit}>Item</idg-switcher>);
-    expect(limitClasses(part(root, "switcher"))).toEqual([`limit-${String(limit)}`]);
     expect(root.getAttribute("limit")).toBe(String(limit));
   });
 
-  it.each([0, 1, 7, 2.5, -3, Number.NaN, Number.POSITIVE_INFINITY])(
-    "sets no limit for %s",
+  it("stacks at any width when there are more items than the limit", async () => {
+    const { root } = await render(<idg-switcher limit={3}>{items(5)}</idg-switcher>);
+    expect(overLimit(root)).toBe(true);
+  });
+
+  it.each([3, 2])("keeps a row for %i items under a limit of 3", async (count) => {
+    const { root } = await render(<idg-switcher limit={3}>{items(count)}</idg-switcher>);
+    expect(overLimit(root)).toBe(false);
+  });
+
+  it("counts only the items in the default slot", async () => {
+    const { root } = await render(
+      <idg-switcher limit={2}>
+        <p>One</p>
+        <p>Two</p>
+        <p slot="elsewhere">Not an item</p>
+      </idg-switcher>,
+    );
+    expect(overLimit(root)).toBe(false);
+  });
+
+  it.each([0, 1, 7, 2.5, -3, Number.NaN, Number.POSITIVE_INFINITY, undefined])(
+    "never stacks for the limit %s, which is not 2 to 6",
     async (limit) => {
-      const { root } = await render(<idg-switcher limit={limit}>Item</idg-switcher>);
-      expect(limitClasses(part(root, "switcher"))).toEqual([]);
+      const { root } = await render(<idg-switcher limit={limit}>{items(9)}</idg-switcher>);
+      expect(overLimit(root)).toBe(false);
     },
   );
+
+  it("follows items added and removed after it first drew", async () => {
+    const { root } = await render(<idg-switcher limit={2}>{items(2)}</idg-switcher>);
+    expect(overLimit(root)).toBe(false);
+    root.append(document.createElement("p"));
+    slotchange(root);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(overLimit(root)).toBe(true);
+    root.lastElementChild?.remove();
+    slotchange(root);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(overLimit(root)).toBe(false);
+  });
+
+  it("follows a limit changed after it first drew", async () => {
+    const { root, waitForChanges } = await render(
+      <idg-switcher limit={4}>{items(3)}</idg-switcher>,
+    );
+    expect(overLimit(root)).toBe(false);
+    root.setAttribute("limit", "2");
+    await waitForChanges();
+    expect(overLimit(root)).toBe(true);
+  });
 
   it.each(["none", "3xs", "2xs", "xs", "s", "m", "l", "xl", "2xl", "3xl"] as const)(
     "applies gap %s",
