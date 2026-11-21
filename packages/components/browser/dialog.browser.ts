@@ -137,6 +137,65 @@ test.describe("idg-dialog focus", () => {
   });
 });
 
+test.describe("idg-dialog closed over a nested dialog or moved while open", () => {
+  /** Whether any dialog in the page, in any shadow tree, is still modal. */
+  const anyModal = (page: Page) =>
+    page.evaluate(() => {
+      const roots: (Document | ShadowRoot)[] = [document];
+      for (const root of roots) {
+        for (const element of root.querySelectorAll("*")) {
+          if (element.shadowRoot) roots.push(element.shadowRoot);
+        }
+      }
+      return roots.some((root) => root.querySelector("dialog:modal") !== null);
+    });
+
+  test("closing the outer dialog closes the nested one too and frees the page", async ({
+    page,
+  }) => {
+    await openOverlays(page);
+    await recordEvents(page, "inner", ["idgClose"]);
+    await openWithClick(page, "open-basic", "outer");
+    await wire(page, "open-inner", "inner", "showModal");
+    await page.locator("#open-inner").click();
+    await expect(dialog(page, "inner")).toBeVisible();
+    await page.evaluate(() =>
+      (document.getElementById("outer") as unknown as { close: () => Promise<void> }).close(),
+    );
+    await expect(dialog(page, "outer")).toBeHidden();
+    await expect.poll(() => anyModal(page)).toBe(false);
+    expect(await events(page, "inner")).toEqual([
+      { type: "idgClose", detail: { returnValue: "", reason: "method" } },
+    ]);
+    await page.locator("#after").click();
+    expect(await focusedId(page)).toBe("after");
+  });
+
+  test("a modal dialog moved while open closes, reports it, and opens as a modal again", async ({
+    page,
+  }) => {
+    await openOverlays(page);
+    await recordEvents(page, "basic", ["idgClose"]);
+    await openWithClick(page, "open-basic", "basic");
+    await page.evaluate(() => {
+      const host = document.getElementById("basic");
+      if (host) document.body.append(host);
+    });
+    await expect.poll(() => anyModal(page)).toBe(false);
+    await expect(page.locator("#basic")).not.toHaveAttribute("open");
+    expect(await events(page, "basic")).toEqual([
+      { type: "idgClose", detail: { returnValue: "", reason: "method" } },
+    ]);
+    await page.evaluate(() =>
+      (
+        document.getElementById("basic") as unknown as { showModal: () => Promise<void> }
+      ).showModal(),
+    );
+    await expect(dialog(page, "basic")).toBeVisible();
+    expect(await dialog(page, "basic").evaluate((element) => element.matches(":modal"))).toBe(true);
+  });
+});
+
 test.describe("idg-dialog keeps the page behind it out of reach", () => {
   test("a click on the page behind a modal does not reach it", async ({ page }) => {
     await openOverlays(page);
