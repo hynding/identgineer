@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { h, render } from "@stencil/vitest";
 import { installPopoverElement } from "../../testing/popover-element";
+import { removeHost } from "../../testing/remove-host";
 import "../toast/toast";
 import "./toast-region";
 
@@ -206,5 +207,43 @@ describe("idg-toast-region hotkey", () => {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "F6", bubbles: true }));
     expect(focus).toHaveBeenCalledTimes(1);
     expect(part(root, "region").getAttribute("aria-keyshortcuts")).toBe("F6");
+  });
+});
+
+describe("idg-toast-region moved", () => {
+  it("shows its toasts again after it is moved while showing them", async () => {
+    const { root } = await render(<div>{empty}</div>);
+    const region = root.querySelector("idg-toast-region") as HTMLElement;
+    addToast(region, "Saved");
+    removeHost(region);
+    // A browser hides a removed popover without a toggle event.
+    part(region, "region").removeAttribute("data-popover-open");
+    root.append(region);
+    slotChanged(region);
+    expect(part(region, "region").hasAttribute("data-popover-open")).toBe(true);
+  });
+
+  it("keeps following the reduced-motion preference after it is moved", async () => {
+    const listeners = new Set<() => void>();
+    const query = {
+      matches: false,
+      addEventListener: (_type: string, listener: () => void) => listeners.add(listener),
+      removeEventListener: (_type: string, listener: () => void) => listeners.delete(listener),
+    };
+    const matchMedia = vi.fn(() => query);
+    vi.stubGlobal("matchMedia", matchMedia);
+    try {
+      const { root } = await render(<div>{empty}</div>);
+      const region = root.querySelector("idg-toast-region") as HTMLElement;
+      const toast = addToast(region, "Saved");
+      removeHost(region);
+      root.append(region);
+      slotChanged(region);
+      query.matches = true;
+      for (const listener of listeners) listener();
+      expect(toast.paused).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
