@@ -1,0 +1,63 @@
+:host {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.badge {
+  --_font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--idg-space-2xs);
+  max-inline-size: 100%;
+  padding-block: var(--idg-space-3xs);
+  padding-inline: var(--idg-space-xs);
+  border-width: var(--idg-border-control-width);
+  border-style: var(--idg-border-control-style);
+  border-color: var(--idg-border-control-color);
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--_tone-background);
+  color: var(--_tone-text);
+  font-family: var(--idg-font-family-body);
+  font-size: var(--_font-size);
+  font-weight: var(--idg-font-weight-semibold);
+  line-height: var(--idg-font-line-height-snug);
+  letter-spacing: var(--idg-font-body-letter-spacing);
+  text-transform: var(--idg-ornament-control-transform);
+  white-space: nowrap;
+}
+
+.size-sm {
+  padding-block: 0;
+  padding-inline: var(--idg-space-2xs);
+  font-size: calc(var(--_font-size) * 0.85);
+}
+
+.label {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The dot is the text colour, which is always legible on the tone's background. */
+.dot {
+  flex: none;
+  inline-size: 0.5em;
+  block-size: 0.5em;
+  border-radius: var(--idg-shape-radius-pill);
+  background: currentcolor;
+}
+
+@media (forced-colors: active) {
+  .badge {
+    forced-color-adjust: none;
+    border-color: ButtonText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}

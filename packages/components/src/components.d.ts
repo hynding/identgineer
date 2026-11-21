@@ -5,12 +5,14 @@
  * It contains typing information for all components that exist in this project.
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
+import { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 import { CheckedDetail, ValueDetail } from "./utils/event-details";
 import { IconName } from "./components/icon/icon-paths";
 import { IconSize } from "./components/icon/icon-options";
 import { InputSize, InputType } from "./components/input/input-options";
 import { RadioSelectDetail } from "./components/radio/radio";
+export { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 export { CheckedDetail, ValueDetail } from "./utils/event-details";
 export { IconName } from "./components/icon/icon-paths";
@@ -18,6 +20,26 @@ export { IconSize } from "./components/icon/icon-options";
 export { InputSize, InputType } from "./components/input/input-options";
 export { RadioSelectDetail } from "./components/radio/radio";
 export namespace Components {
+    /**
+     * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
+     */
+    interface IdgBadge {
+        /**
+          * Shows a dot before the label.
+          * @default false
+         */
+        "dot": boolean;
+        /**
+          * Badge size.
+          * @default "md"
+         */
+        "size": BadgeSize;
+        /**
+          * Emphasis and meaning.
+          * @default "neutral"
+         */
+        "variant": BadgeVariant;
+    }
     interface IdgButton {
         /**
           * Blocks activation and takes the control out of the tab order.
@@ -566,6 +588,15 @@ export interface IdgTextareaCustomEvent<T> extends CustomEvent<T> {
     target: HTMLIdgTextareaElement;
 }
 declare global {
+    /**
+     * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
+     */
+    interface HTMLIdgBadgeElement extends Components.IdgBadge, HTMLStencilElement {
+    }
+    var HTMLIdgBadgeElement: {
+        prototype: HTMLIdgBadgeElement;
+        new (): HTMLIdgBadgeElement;
+    };
     interface HTMLIdgButtonElement extends Components.IdgButton, HTMLStencilElement {
     }
     var HTMLIdgButtonElement: {
@@ -742,6 +773,7 @@ declare global {
         new (): HTMLIdgTextareaElement;
     };
     interface HTMLElementTagNameMap {
+        "idg-badge": HTMLIdgBadgeElement;
         "idg-button": HTMLIdgButtonElement;
         "idg-checkbox": HTMLIdgCheckboxElement;
         "idg-field": HTMLIdgFieldElement;
@@ -756,6 +788,26 @@ declare global {
     }
 }
 declare namespace LocalJSX {
+    /**
+     * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
+     */
+    interface IdgBadge {
+        /**
+          * Shows a dot before the label.
+          * @default false
+         */
+        "dot"?: boolean;
+        /**
+          * Badge size.
+          * @default "md"
+         */
+        "size"?: BadgeSize;
+        /**
+          * Emphasis and meaning.
+          * @default "neutral"
+         */
+        "variant"?: BadgeVariant;
+    }
     interface IdgButton {
         /**
           * Blocks activation and takes the control out of the tab order.
@@ -1271,6 +1323,11 @@ declare namespace LocalJSX {
         "value"?: string;
     }
 
+    interface IdgBadgeAttributes {
+        "variant": BadgeVariant;
+        "size": BadgeSize;
+        "dot": boolean;
+    }
     interface IdgButtonAttributes {
         "variant": ButtonVariant;
         "size": ButtonSize;
@@ -1401,6 +1458,7 @@ declare namespace LocalJSX {
     }
 
     interface IntrinsicElements {
+        "idg-badge": Omit<IdgBadge, keyof IdgBadgeAttributes> & { [K in keyof IdgBadge & keyof IdgBadgeAttributes]?: IdgBadge[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `attr:${K}`]?: IdgBadgeAttributes[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `prop:${K}`]?: IdgBadge[K] };
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
         "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`]?: IdgCheckboxAttributes[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
         "idg-field": Omit<IdgField, keyof IdgFieldAttributes> & { [K in keyof IdgField & keyof IdgFieldAttributes]?: IdgField[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `attr:${K}`]?: IdgFieldAttributes[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `prop:${K}`]?: IdgField[K] };
@@ -1418,6 +1476,10 @@ export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
+            /**
+             * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
+             */
+            "idg-badge": LocalJSX.IntrinsicElements["idg-badge"] & JSXBase.HTMLAttributes<HTMLIdgBadgeElement>;
             "idg-button": LocalJSX.IntrinsicElements["idg-button"] & JSXBase.HTMLAttributes<HTMLIdgButtonElement>;
             "idg-checkbox": LocalJSX.IntrinsicElements["idg-checkbox"] & JSXBase.HTMLAttributes<HTMLIdgCheckboxElement>;
             /**
