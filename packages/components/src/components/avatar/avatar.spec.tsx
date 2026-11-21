@@ -122,7 +122,9 @@ describe("idg-avatar without a picture", () => {
     const first = await render(<idg-avatar name="Grace Hopper" />);
     const second = await render(<idg-avatar name="  grace hopper" />);
     const tone = (root: HTMLElement) =>
-      [...avatar(root).classList].find((name) => name.startsWith("tone-"));
+      avatar(root)
+        .className.split(" ")
+        .find((name) => name.startsWith("tone-"));
     expect(tone(first.root)).toMatch(/^tone-[0-5]$/);
     expect(tone(first.root)).toBe(tone(second.root));
     expect(avatar(first.root).hasAttribute("style")).toBe(false);
