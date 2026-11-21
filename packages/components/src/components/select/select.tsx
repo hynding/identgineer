@@ -149,11 +149,13 @@ export class IdgSelect {
 
   private handleInput = (event: globalThis.Event): void => {
     this.value = (event.target as HTMLSelectElement).value;
+    this.syncForm();
     this.idgInput.emit({ value: this.value });
   };
 
   private handleChange = (event: globalThis.Event): void => {
     this.value = (event.target as HTMLSelectElement).value;
+    this.syncForm();
     this.idgChange.emit({ value: this.value });
   };
 

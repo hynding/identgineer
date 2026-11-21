@@ -141,6 +141,7 @@ export class IdgRadioGroup {
   private choose(value: string): void {
     if (this.isDisabled() || value === this.value) return;
     this.value = value;
+    this.syncForm();
     this.idgChange.emit({ value });
   }
 

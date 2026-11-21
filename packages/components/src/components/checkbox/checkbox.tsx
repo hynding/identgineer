@@ -115,6 +115,7 @@ export class IdgCheckbox {
   private handleChange = (event: globalThis.Event): void => {
     this.checked = (event.target as HTMLInputElement).checked;
     this.indeterminate = false;
+    this.syncForm();
     this.idgChange.emit({ checked: this.checked, value: this.value });
   };
 

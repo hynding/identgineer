@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Form controls fixture</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Form controls</h1>
+
+      <form id="values" class="stack" method="get" action="/fixtures/forms.html">
+        <h2>Filled</h2>
+        <idg-field label="Email" hint="We never share it" required>
+          <idg-input id="email" name="email" type="email" value="ada@example.com"></idg-input>
+        </idg-field>
+        <idg-field label="Password" hint="At least 12 characters">
+          <idg-input
+            id="password"
+            name="password"
+            type="password"
+            value="correct horse battery"
+            autocomplete="current-password"
+            reveal
+          ></idg-input>
+        </idg-field>
+        <idg-field label="Age" optional-text="optional">
+          <idg-input id="age" name="age" type="number" min="18" max="99" value="36"></idg-input>
+        </idg-field>
+        <idg-field label="Website">
+          <idg-input id="website" name="website" type="url" value="https://example.com">
+            <span slot="start" aria-hidden="true">https</span>
+          </idg-input>
+        </idg-field>
+        <idg-field label="About you" hint="A sentence or two">
+          <idg-textarea
+            id="about"
+            name="about"
+            autogrow
+            counter
+            maxlength="120"
+            value="Analyst and engineer."
+          ></idg-textarea>
+        </idg-field>
+        <idg-field label="Plan">
+          <idg-select id="plan" name="plan" value="pro">
+            <option value="free">Free</option>
+            <optgroup label="Paid">
+              <option value="pro">Pro</option>
+              <option value="team">Team</option>
+            </optgroup>
+          </idg-select>
+        </idg-field>
+        <idg-field label="Billing" hint="You can change this later">
+          <idg-radio-group id="billing" name="billing" value="yearly">
+            <idg-radio value="monthly">Monthly</idg-radio>
+            <idg-radio value="yearly">Yearly</idg-radio>
+            <idg-radio value="never" disabled>Never</idg-radio>
+          </idg-radio-group>
+        </idg-field>
+        <idg-checkbox id="terms" name="terms" value="accepted" checked
+          >Accept the terms</idg-checkbox
+        >
+        <idg-checkbox id="partial" name="partial" indeterminate>Select all</idg-checkbox>
+        <idg-switch id="alerts" name="alerts" checked>Email alerts</idg-switch>
+        <div class="row">
+          <idg-button type="submit">Save</idg-button>
+          <idg-button type="reset" variant="secondary">Reset</idg-button>
+        </div>
+      </form>
+
+      <section class="stack" aria-labelledby="empty-heading">
+        <h2 id="empty-heading">Default</h2>
+        <idg-field label="Name" hint="As on your card">
+          <idg-input id="empty-name" placeholder="Ada Lovelace"></idg-input>
+        </idg-field>
+        <idg-field label="Notes">
+          <idg-textarea id="empty-notes" placeholder="Anything else"></idg-textarea>
+        </idg-field>
+        <idg-field label="Country">
+          <idg-select id="empty-country">
+            <option value="">Choose a country</option>
+            <option value="nz">New Zealand</option>
+            <option value="se">Sweden</option>
+          </idg-select>
+        </idg-field>
+        <idg-field label="Contact by">
+          <idg-radio-group id="empty-contact">
+            <idg-radio value="email">Email</idg-radio>
+            <idg-radio value="phone">Phone</idg-radio>
+          </idg-radio-group>
+        </idg-field>
+        <idg-checkbox id="empty-check">Subscribe</idg-checkbox>
+        <idg-switch id="empty-switch">Dark mode</idg-switch>
+      </section>
+
+      <section class="stack" aria-labelledby="invalid-heading">
+        <h2 id="invalid-heading">Invalid</h2>
+        <idg-field label="Username" hint="Letters only" error="That name is taken">
+          <idg-input id="bad-name" value="ada"></idg-input>
+        </idg-field>
+        <idg-field label="Message" error="Write at least ten characters">
+          <idg-textarea id="bad-message" value="Hi"></idg-textarea>
+        </idg-field>
+        <idg-field label="Role" error="Pick a role">
+          <idg-select id="bad-role">
+            <option value="">Choose a role</option>
+            <option value="dev">Developer</option>
+          </idg-select>
+        </idg-field>
+        <idg-field label="Delivery" error="Pick one">
+          <idg-radio-group id="bad-delivery">
+            <idg-radio value="post">Post</idg-radio>
+            <idg-radio value="pickup">Pickup</idg-radio>
+          </idg-radio-group>
+        </idg-field>
+        <idg-checkbox id="bad-check" invalid>Agree to the policy</idg-checkbox>
+        <idg-switch id="bad-switch" invalid>Share data</idg-switch>
+      </section>
+
+      <section class="stack" aria-labelledby="disabled-heading">
+        <h2 id="disabled-heading">Disabled and read only</h2>
+        <idg-field label="Locked name">
+          <idg-input id="off-name" value="Ada" disabled></idg-input>
+        </idg-field>
+        <idg-field label="Read only name">
+          <idg-input id="ro-name" value="Grace" readonly></idg-input>
+        </idg-field>
+        <idg-field label="Locked notes">
+          <idg-textarea id="off-notes" value="Fixed" disabled></idg-textarea>
+        </idg-field>
+        <idg-field label="Locked plan">
+          <idg-select id="off-plan" disabled>
+            <option value="free">Free</option>
+          </idg-select>
+        </idg-field>
+        <idg-field label="Locked choice">
+          <idg-radio-group id="off-group" value="a" disabled>
+            <idg-radio value="a">A</idg-radio>
+            <idg-radio value="b">B</idg-radio>
+          </idg-radio-group>
+        </idg-field>
+        <idg-checkbox id="off-check" checked disabled>Locked box</idg-checkbox>
+        <idg-switch id="off-switch" disabled>Locked switch</idg-switch>
+      </section>
+
+      <form id="validation" class="stack" method="get" action="/fixtures/forms.html">
+        <h2>Validation</h2>
+        <idg-field label="Required name">
+          <idg-input id="v-name" name="v-name" required></idg-input>
+        </idg-field>
+        <idg-field label="Short code">
+          <idg-input id="v-code" name="v-code" minlength="4" pattern="[A-Z]+"></idg-input>
+        </idg-field>
+        <idg-field label="Required note">
+          <idg-textarea id="v-note" name="v-note" required></idg-textarea>
+        </idg-field>
+        <idg-field label="Required pick">
+          <idg-select id="v-pick" name="v-pick" required>
+            <option value="">Choose</option>
+            <option value="a">A</option>
+          </idg-select>
+        </idg-field>
+        <idg-field label="Required choice">
+          <idg-radio-group id="v-choice" name="v-choice" required>
+            <idg-radio value="x">X</idg-radio>
+            <idg-radio value="y">Y</idg-radio>
+          </idg-radio-group>
+        </idg-field>
+        <idg-checkbox id="v-agree" name="v-agree" required>Agree</idg-checkbox>
+        <div class="row">
+          <idg-button id="v-submit" type="submit">Send</idg-button>
+        </div>
+      </form>
+    </main>
+  </body>
+</html>

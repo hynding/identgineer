@@ -123,6 +123,8 @@ export class IdgInput {
     if (typeof state === "string") this.value = state;
   }
 
+  // Also called from the event handlers, not only after a render, so a form submitted in the same
+  // frame as the keystroke already has the new value.
   // The native input sits in a shadow root, so it takes no part in the form itself: the host
   // submits the value and carries the validity, which is read back from the native input so the
   // rules and the messages are the browser's own.
@@ -135,11 +137,13 @@ export class IdgInput {
 
   private handleInput = (event: globalThis.Event): void => {
     this.value = (event.target as HTMLInputElement).value;
+    this.syncForm();
     this.idgInput.emit({ value: this.value });
   };
 
   private handleChange = (event: globalThis.Event): void => {
     this.value = (event.target as HTMLInputElement).value;
+    this.syncForm();
     this.idgChange.emit({ value: this.value });
   };
 

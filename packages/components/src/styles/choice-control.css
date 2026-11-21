@@ -14,6 +14,8 @@
   display: none;
 }
 
+/* The ring is always drawn, even in designs with their own border: a small box needs a closed
+   outline, and a design such as editorial draws only an underline. */
 .choice {
   --_font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
   --_box: calc(var(--_font-size) * 1.25);
@@ -33,14 +35,6 @@
   line-height: var(--idg-font-body-line-height);
   letter-spacing: var(--idg-font-body-letter-spacing);
   -webkit-tap-highlight-color: transparent;
-}
-
-/* The same boundary rule as the text controls: always a ring, withdrawn where the design has its
-   own border and style queries exist. */
-@container not style(--idg-border-control-style: none) {
-  .choice {
-    --_ring-width: 0px;
-  }
 }
 
 .native {
@@ -85,8 +79,10 @@
   --_edge: var(--idg-color-text-muted);
 }
 
+/* A radio group with nothing chosen matches :indeterminate too, so the mixed state is limited to
+   checkboxes. */
 .native:checked,
-.native:indeterminate {
+.native[type="checkbox"]:indeterminate {
   border-color: var(--_fill);
   background: var(--_fill);
   --_edge: var(--_fill);
@@ -139,7 +135,7 @@
   }
 
   .native:checked,
-  .native:indeterminate {
+  .native[type="checkbox"]:indeterminate {
     border-color: Highlight;
     background: Highlight;
   }

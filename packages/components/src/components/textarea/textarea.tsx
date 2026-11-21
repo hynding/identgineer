@@ -124,11 +124,13 @@ export class IdgTextarea {
 
   private handleInput = (event: globalThis.Event): void => {
     this.value = (event.target as HTMLTextAreaElement).value;
+    this.syncForm();
     this.idgInput.emit({ value: this.value });
   };
 
   private handleChange = (event: globalThis.Event): void => {
     this.value = (event.target as HTMLTextAreaElement).value;
+    this.syncForm();
     this.idgChange.emit({ value: this.value });
   };
 
@@ -150,7 +152,7 @@ export class IdgTextarea {
             disabled,
           }}
         >
-          <div class="grow">
+          <div class={{ grow: true, autogrow: this.autogrow }}>
             {this.autogrow ? (
               <div class="sizer native" aria-hidden="true">
                 {growSizerText(this.value, this.rows)}

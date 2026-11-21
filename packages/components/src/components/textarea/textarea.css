@@ -29,14 +29,14 @@
   white-space: pre-wrap;
 }
 
-.grow .native {
+.grow.autogrow .native {
   block-size: 100%;
   overflow: hidden;
   resize: none;
 }
 
 @supports (field-sizing: content) {
-  .grow .native {
+  .grow.autogrow .native {
     field-sizing: content;
   }
 }

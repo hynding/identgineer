@@ -11,7 +11,7 @@
 }
 
 /* The mixed state is a bar, and wins over a check. */
-.native:indeterminate::before {
+.native[type="checkbox"]:indeterminate::before {
   clip-path: inset(40% 0);
   opacity: 1;
   transform: scale(1);
