@@ -1,6 +1,12 @@
 /* Shared by idg-input, idg-textarea and idg-select: the box that holds a native text control.
    Every colour, size and edge comes from --idg-* tokens, which inherit through the shadow root. */
 
+/* Where a layout pins a bar to the top of the page, what sits in the bar must not be scrolled for
+   the page's own scroll padding, which is meant for what the bar covers. */
+* {
+  scroll-margin-block-start: var(--_idg-chrome-scroll-margin, 0px);
+}
+
 :host {
   position: relative;
   display: block;

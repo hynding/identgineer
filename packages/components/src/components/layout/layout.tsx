@@ -145,6 +145,8 @@ export class IdgLayout {
   private main?: HTMLElement;
   private navigationElement?: HTMLElement;
   private heroElement?: HTMLElement;
+  private headerElement?: HTMLElement;
+  private heldBar?: CSSStyleSheet;
   private mode: NavigationMode = "inline";
   private scrollLocked = false;
   private skipFocusRestore = false;
@@ -177,6 +179,7 @@ export class IdgLayout {
     this.waiting = undefined;
     // A drawer left open would keep the page inert and locked once it has gone.
     if (this.drawer?.open === true) this.drawer.close();
+    this.releaseBar();
     this.releaseScroll();
     this.modalOpen = false;
     this.navigationOpen = false;
@@ -229,6 +232,13 @@ export class IdgLayout {
     if (target?.closest('[slot="navigation"]')?.closest("[href]") != null) {
       this.navigationOpen = false;
     }
+  }
+
+  // A pinned hero stops resizing once it is as tall as its content, however much the window shrinks
+  // after that, so the window is watched as well as the hero.
+  @Listen("resize", { target: "window" })
+  handleWindowResize(): void {
+    this.readHero();
   }
 
   // Focus alone does not bring a half-hidden item of a navigation that scrolls into view. Only the
@@ -327,6 +337,7 @@ export class IdgLayout {
       firstFocusable(native)?.focus();
     } else {
       const before = deepActiveElement();
+      this.holdBar();
       native.show();
       this.modalOpen = false;
       // show() moves focus into the panel; a disclosure leaves it on the toggle that opened it.
@@ -345,6 +356,7 @@ export class IdgLayout {
     const hadFocusInside =
       wasOpen && (!active || active === document.body || this.isInNavigation(active));
     if (wasOpen) native.close();
+    this.releaseBar();
     this.releaseScroll();
     this.modalOpen = false;
     if (!wasOpen) return;
@@ -381,8 +393,35 @@ export class IdgLayout {
     const native = this.drawer;
     if (!native?.open) return;
     native.close();
+    this.releaseBar();
     this.releaseScroll();
     this.show(native);
+  }
+
+  // The first row of the header holds the menu button, and it is as tall as the actions made it. An
+  // open panel moves the actions out of it, so the row is held at the height it had, which keeps the
+  // button, and the pointer that just pressed it, where they were. The rule lives in a stylesheet of
+  // the shadow root, which a strict `style-src` does not govern, and only a measured length is used.
+  private holdBar(): void {
+    const header = this.headerElement;
+    const root = this.host.shadowRoot;
+    if (!header || !root || typeof CSSStyleSheet === "undefined") return;
+    // A stubbed style, as under test, may know nothing of grid rows, and then nothing matches.
+    const rows = getComputedStyle(header).gridTemplateRows as string | undefined;
+    const row = rows?.split(" ")[0] ?? "";
+    if (!/^\d+(\.\d+)?px$/.test(row)) return;
+    const held = (this.heldBar ??= new CSSStyleSheet());
+    held.replaceSync(`.shell .header:has(.drawer[open]) { grid-template-rows: ${row}; }`);
+    if (!root.adoptedStyleSheets.includes(held)) {
+      root.adoptedStyleSheets = [...root.adoptedStyleSheets, held];
+    }
+  }
+
+  private releaseBar(): void {
+    const held = this.heldBar;
+    const root = this.host.shadowRoot;
+    if (!held || !root) return;
+    root.adoptedStyleSheets = root.adoptedStyleSheets.filter((other) => other !== held);
   }
 
   private releaseScroll(): void {
@@ -473,7 +512,12 @@ export class IdgLayout {
         <a class="skip focusable" part="skip" href="#main" onClick={this.skip}>
           {this.skipLabel}
         </a>
-        <header class="header" part="header" hidden={!hasHeader}>
+        <header
+          class="header"
+          part="header"
+          hidden={!hasHeader}
+          ref={(element) => (this.headerElement = element)}
+        >
           <div class="start">
             <div class="brand" part="brand" hidden={!presence.brand}>
               <slot name="brand" onSlotchange={this.readPresence} />

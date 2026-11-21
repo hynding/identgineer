@@ -2,6 +2,12 @@
    whole label row is the target, so it is never smaller than the design's minimum target size
    even where the drawn box is small. */
 
+/* Where a layout pins a bar to the top of the page, what sits in the bar must not be scrolled for
+   the page's own scroll padding, which is meant for what the bar covers. */
+* {
+  scroll-margin-block-start: var(--_idg-chrome-scroll-margin, 0px);
+}
+
 :host {
   display: inline-flex;
   max-inline-size: 100%;

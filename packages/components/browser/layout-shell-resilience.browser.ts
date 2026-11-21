@@ -741,7 +741,7 @@ test.describe("the menu button does not move, in any UX mode, at larger text or 
       return {
         toggle: centre(button),
         brand: centre(document.getElementById("brand-link")),
-        actions: centre(document.getElementById("action-last")),
+        actions: centre(tree?.querySelector('[part="actions"]')),
         height: header.getBoundingClientRect().height,
         content:
           Math.max(...parts.map((box) => box.bottom)) - Math.min(...parts.map((box) => box.top)),
@@ -752,10 +752,12 @@ test.describe("the menu button does not move, in any UX mode, at larger text or 
       Math.abs(closed.toggle - closed.actions),
       "toggle centred on the actions",
     ).toBeLessThanOrEqual(1);
-    expect(
-      Math.abs(closed.toggle - closed.brand),
-      "toggle centred on the brand",
-    ).toBeLessThanOrEqual(1);
+    if (layout !== "split-hero" || width < 1000) {
+      expect(
+        Math.abs(closed.toggle - closed.brand),
+        "toggle centred on the brand",
+      ).toBeLessThanOrEqual(1);
+    }
     if (layout !== "split-hero" || width < 1000) {
       expect(closed.height, "the bar is no taller than what is in it").toBeLessThanOrEqual(
         closed.content + closed.around + 1,

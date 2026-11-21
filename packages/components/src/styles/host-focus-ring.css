@@ -1,5 +1,11 @@
 /* The focus ring of the design language, for a component whose host is itself the focusable
    element. It matches focus-ring.css, which serves a native element inside a shadow root. */
+/* Where a layout pins a bar to the top of the page, what sits in the bar must not be scrolled for
+   the page's own scroll padding, which is meant for what the bar covers. */
+:host {
+  scroll-margin-block-start: var(--_idg-chrome-scroll-margin, 0px);
+}
+
 :host(:focus-visible) {
   outline-width: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
   outline-style: var(--idg-focus-ring-style);

@@ -928,7 +928,7 @@ While a panel is open in `top-bar`, `bento` and `split-hero`, the actions move b
 from the menu button through the navigation to the actions without jumping back up the page. In
 `top-bar` at 72rem and wider the navigation is one row that scrolls along itself when it is longer
 than the bar (a focused item is scrolled into view, and the scrollbar fits in the bar); in `side-rail` and `dashboard` the rail is a column of the brand, which takes the height it needs,
-and the navigation under it, which scrolls. The menu button does not move when the panel opens.
+and the navigation under it, which scrolls. The menu button does not move when the panel opens: the first row of the header is held at the height it had while the panel is open.
 
 **Missing regions.** A layout that has no hero arranges itself without one: the `immersive` header
 becomes a bar of the page on a surface of its own instead of being laid over the hero, and
@@ -953,11 +953,17 @@ the page, is stretched.
 
 **Scroll padding.** `scroll-padding-block-start` is set on the root element from
 `--idg-layout-sticky-inset`, so it applies at every width and to every scroller that is the page, not
-only while a layout pins its chrome. The inset is `0` in the layouts that pin nothing. It is turned
-off while focus is in the brand, the navigation or the actions, and the menu button opts out of it:
-the browser would otherwise treat the pinned bar's own controls as too near the top and scroll the
-page up to the top whenever one is focused. A navigation that scrolls along the top bar scrolls only
-itself to bring a focused item into view, never the page.
+only while a layout pins its chrome. The inset is `0` in the layouts that pin nothing. The browser
+would otherwise treat the pinned bar's own controls as too near the top and scroll the page up
+whenever one was focused, so the brand, navigation and actions the page slots in cancel the padding
+for themselves: each sets `--_idg-chrome-scroll-margin` to the negative inset, and their `idg-`
+controls (buttons, links, inputs, checkboxes and the rest) read it in their own shadow roots as
+`scroll-margin-block-start`. The padding stays on for everything else, so a script that scrolls a
+target into view while the bar has focus still lands it under the bar, not behind it. A control from
+outside this library that has its own shadow root and a focusable element in the bar must read the
+same property (`scroll-margin-block-start: var(--_idg-chrome-scroll-margin, 0px)`), or focusing it
+can scroll the page. A navigation that scrolls along the top bar scrolls only itself to bring a
+focused item into view, never the page.
 
 **Open from the start.** `navigation-open` in the markup opens the navigation once the shell has
 loaded, if the layout collapses it at that width.

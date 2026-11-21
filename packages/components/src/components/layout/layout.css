@@ -131,8 +131,6 @@
   font-weight: var(--idg-font-weight-semibold);
   text-transform: var(--idg-ornament-control-transform);
   cursor: pointer;
-  /* The page's scroll padding, for what the pinned bar covers, is not for the bar's own controls. */
-  scroll-margin-block-start: calc(-1 * var(--idg-layout-sticky-inset));
   transition-property: background-color, border-color;
   transition-duration: var(--idg-motion-duration-fast);
 }
@@ -450,18 +448,6 @@
 
     /* While the panel is open the actions come after it, which is where Tab reaches them. The
        menu button keeps its place, and so keeps the pointer that just pressed it. */
-    /* The button sits at the same place whatever the actions are, in any mode: it is placed
-       from the top of the row, not centred in a row the actions may make taller. */
-    .toggle {
-      align-self: start;
-      margin-block-start: max(
-        0px,
-        calc(
-          (var(--_bar) - max(var(--idg-density-target-size), var(--idg-density-control-height))) / 2
-        )
-      );
-    }
-
     .header:has(.drawer[open]) {
       grid-template-areas:
         "brand toggle ."
@@ -670,18 +656,6 @@
       padding-block-start: 0;
     }
 
-    /* The button sits at the same place whatever the actions are, in any mode: it is placed
-       from the top of the row, not centred in a row the actions may make taller. */
-    .toggle {
-      align-self: start;
-      margin-block-start: max(
-        0px,
-        calc(
-          (var(--_bar) - max(var(--idg-density-target-size), var(--idg-density-control-height))) / 2
-        )
-      );
-    }
-
     .header:has(.drawer[open]) {
       grid-template-areas:
         "brand toggle ."
@@ -722,10 +696,6 @@
       padding-inline: var(--_gutter);
       border-block-end: 0;
       background: transparent;
-    }
-
-    .shell:not(.no-hero) .toggle {
-      margin-block-start: max(0px, calc((var(--_bar) - var(--idg-density-target-size)) / 2));
     }
 
     .shell:not(.no-hero) .header:has(.drawer[open]) {
@@ -995,6 +965,9 @@
       box-sizing: border-box;
       padding: var(--_pad);
       overflow: auto;
+      /* The items opt out of the page's scroll padding with a negative scroll margin of the same
+         size, which this scroller would otherwise take as room above its first item. */
+      scroll-padding-block-start: var(--idg-layout-sticky-inset);
       font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
     }
 
@@ -1184,18 +1157,6 @@
 
     .actions {
       padding-block-start: 0;
-    }
-
-    /* The button sits at the same place whatever the actions are, in any mode: it is placed
-       from the top of the row, not centred in a row the actions may make taller. */
-    .toggle {
-      align-self: start;
-      margin-block-start: max(
-        0px,
-        calc(
-          (var(--_bar) - max(var(--idg-density-target-size), var(--idg-density-control-height))) / 2
-        )
-      );
     }
 
     .header:has(.drawer[open]) {

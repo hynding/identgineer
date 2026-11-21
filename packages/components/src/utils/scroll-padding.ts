@@ -1,9 +1,14 @@
-// Chrome applies the padding to a focused element inside the pinned bar itself, and, finding it
-// "too near the top", scrolls the page to the top. So while focus is in the bar's own regions the
-// padding is off; it is on for every other element, which is what it is for.
+const CHROME = 'idg-layout > :is([slot="brand"], [slot="navigation"], [slot="actions"])';
+
+// Chrome applies the padding to a focused element inside the pinned bar itself and, finding it "too
+// near the top", scrolls the page to the top. So the bar's own regions cancel the padding for what
+// they hold, through a property that inherits into the shadow roots of idg- controls, which read it
+// in their own sheets. A script that scrolls a target into view while the bar has focus still lands
+// it under the bar, because the padding stays on for everything else.
 export const SCROLL_PADDING_RULES = [
   ":root { scroll-padding-block-start: var(--idg-layout-sticky-inset); }",
-  ':root:has(idg-layout > :is([slot="brand"], [slot="navigation"], [slot="actions"]):focus-within) { scroll-padding-block-start: 0; }',
+  `${CHROME} { --_idg-chrome-scroll-margin: calc(-1 * var(--idg-layout-sticky-inset)); }`,
+  `${CHROME}, ${CHROME} * { scroll-margin-block-start: var(--_idg-chrome-scroll-margin, 0px); }`,
 ].join("\n");
 
 let holders = 0;
