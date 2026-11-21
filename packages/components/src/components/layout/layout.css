@@ -1,8 +1,1281 @@
+/* The page shell. One tree, eight arrangements.
+
+   The shadow tree is always: skip link, header (brand, toggle, navigation, actions), hero, main,
+   aside, footer. A layout never reorders it: it only places the regions on a grid, so the order a
+   reader and the Tab key meet them in is the order of the markup in every layout.
+
+   The host is a size container, so each layout chooses its small, medium and large arrangement from
+   the width of its own container and never from the viewport. A container query cannot read a
+   custom property, so the thresholds are written out; each is a size of the token scale, and a test
+   holds them to it: 40rem is --idg-size-xl, 56rem is 2xl and 72rem is 3xl. Small is below 40rem,
+   medium from 40rem and large from 72rem. Everything else is a token.
+
+   The layout is read with a style query on --idg-layout-shell, which every layout names. Each
+   arrangement says in --_nav how it draws the navigation (inline, disclosure or drawer), which the
+   script reads back instead of measuring anything itself. */
+
 :host {
   display: block;
   min-inline-size: 0;
+  container-type: inline-size;
+  container-name: idg-shell;
+  /* A new layout changes the height of the page. The script puts the scroll back, so the browser's
+     own anchoring must not move it first. */
+  overflow-anchor: none;
+  background: var(--idg-color-bg);
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+  letter-spacing: var(--idg-font-body-letter-spacing);
 }
 
 :host([hidden]) {
   display: none;
+}
+
+/* A region nothing is slotted into is hidden, so no empty landmark is drawn or announced. */
+[hidden] {
+  display: none !important;
+}
+
+/* The grid. Columns are an edge, the content and an edge. The edge is the page gutter, or half of
+   what is left once the content has its maximum measure, so the content is centred and full-bleed
+   regions can still pad themselves to line up with it. */
+.shell {
+  --_nav: disclosure;
+  --_gap: calc(var(--idg-layout-gap) * var(--idg-density-gap-scale));
+  --_pad: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  /* The gutter gives way where the container is so narrow, or the text so large, that it would
+     take most of the width. */
+  --_gutter: min(var(--idg-layout-page-gutter), 8cqi);
+  --_measure: var(--idg-layout-content-max);
+  --_edge: max(var(--_gutter), calc((100% - var(--_measure)) / 2));
+  --_bar: var(--idg-layout-nav-size);
+  --_rail: var(--idg-layout-rail-width);
+  --_aside: var(--idg-layout-aside-width);
+  --_section: var(--idg-layout-section-gap);
+  --_rule: var(--idg-border-width) var(--idg-border-style) var(--idg-border-color);
+  --_surface: linear-gradient(var(--idg-surface-background) 0 0), var(--idg-color-bg);
+  --_panel-border-width: var(--idg-surface-border-width);
+  --_ring-width: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
+
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: var(--_edge) minmax(0, 1fr) var(--_edge);
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  min-block-size: var(--idg-size-screen);
+  min-inline-size: 0;
+}
+
+/* Regions */
+
+.header {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "brand toggle"
+    "nav nav"
+    "actions actions";
+  align-items: center;
+  column-gap: var(--_gap);
+  min-inline-size: 0;
+  padding-block: var(--_pad);
+  padding-inline: var(--_edge);
+  background: var(--_surface);
+  border-block-end: var(--_rule);
+}
+
+.brand {
+  grid-area: brand;
+  display: flex;
+  align-items: center;
+  min-inline-size: 0;
+  font-family: var(--idg-font-family-display);
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  overflow-wrap: anywhere;
+}
+
+.toggle {
+  grid-area: toggle;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--idg-space-2xs);
+  min-block-size: max(var(--idg-density-target-size), var(--idg-density-control-height));
+  padding-block: var(--idg-density-control-padding-block);
+  padding-inline: var(--idg-density-control-padding-inline);
+  border-width: var(--idg-border-control-width);
+  border-style: var(--idg-border-control-style);
+  border-color: var(--idg-border-control-color);
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--idg-color-surface);
+  color: var(--idg-color-text);
+  font: inherit;
+  font-weight: var(--idg-font-weight-semibold);
+  text-transform: var(--idg-ornament-control-transform);
+  cursor: pointer;
+  transition-property: background-color, border-color;
+  transition-duration: var(--idg-motion-duration-fast);
+}
+
+.toggle:hover {
+  background: var(--idg-color-accent-subtle);
+  color: var(--idg-color-on-accent-subtle);
+}
+
+.actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--idg-space-xs);
+  min-inline-size: 0;
+  padding-block-start: var(--idg-space-2xs);
+}
+
+.hero {
+  grid-column: 2;
+  grid-row: 2;
+  min-inline-size: 0;
+  padding-block: var(--_pad);
+  padding-inline: var(--_pad);
+  margin-block-start: var(--_pad);
+  border-radius: var(--idg-shape-radius-lg);
+  background:
+    radial-gradient(
+      circle at 100% 0%,
+      color-mix(in srgb, var(--idg-color-accent) 34%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      circle at 0% 100%,
+      color-mix(in srgb, var(--idg-color-info) 26%, transparent),
+      transparent 55%
+    ),
+    var(--idg-color-accent-subtle);
+  color: var(--idg-color-on-accent-subtle);
+}
+
+.main {
+  grid-column: 2;
+  grid-row: 3;
+  min-inline-size: 0;
+  padding-block: var(--_section);
+}
+
+.main:focus {
+  outline: none;
+}
+
+.aside {
+  grid-column: 2;
+  grid-row: 4;
+  min-inline-size: 0;
+  padding: var(--_pad);
+  margin-block-end: var(--_section);
+  border-width: var(--idg-surface-border-width);
+  border-style: var(--idg-surface-border-style);
+  border-color: var(--idg-surface-border-color);
+  border-radius: var(--idg-shape-radius-lg);
+  background: var(--idg-surface-background);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: var(--idg-elevation-sm);
+}
+
+.footer {
+  grid-column: 1 / -1;
+  grid-row: 5;
+  min-inline-size: 0;
+  padding-block: var(--_section);
+  padding-inline: var(--_edge);
+  background: var(--idg-color-bg-subtle);
+  border-block-start: var(--_rule);
+  color: var(--idg-color-text-muted);
+}
+
+/* The skip link is the first control on the page. It is drawn only while it has focus. */
+.skip {
+  position: absolute;
+  z-index: 10;
+  inset-block-start: var(--idg-space-2xs);
+  inset-inline-start: var(--idg-space-2xs);
+  box-sizing: border-box;
+  inline-size: 0;
+  block-size: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--idg-color-accent);
+  color: var(--idg-color-on-accent);
+  font-weight: var(--idg-font-weight-semibold);
+  white-space: nowrap;
+}
+
+.skip:focus {
+  inline-size: auto;
+  block-size: auto;
+  padding-block: var(--idg-space-2xs);
+  padding-inline: var(--idg-space-s);
+  overflow: visible;
+  clip-path: none;
+}
+
+/* The navigation. Its items are whatever the page puts in the slot, as direct children, laid out
+   in a row, or in a column where the navigation is a rail, a panel or a drawer. */
+.navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--idg-space-3xs);
+  min-inline-size: 0;
+}
+
+::slotted([slot="navigation"]) {
+  box-sizing: border-box;
+  display: block;
+  padding-block: var(--idg-space-2xs);
+  padding-inline: var(--idg-space-xs);
+  border-radius: var(--idg-shape-radius-md);
+  color: inherit;
+  text-decoration: none;
+  transition-property: background-color, color;
+  transition-duration: var(--idg-motion-duration-fast);
+}
+
+::slotted([slot="navigation"]:hover) {
+  background: var(--idg-color-accent-subtle);
+  color: var(--idg-color-on-accent-subtle);
+}
+
+::slotted([slot="navigation"][aria-current]) {
+  background: var(--idg-color-accent-subtle);
+  color: var(--idg-color-on-accent-subtle);
+  font-weight: var(--idg-font-weight-semibold);
+}
+
+::slotted([slot="navigation"]:focus-visible),
+::slotted([slot="brand"]:focus-visible),
+::slotted([slot="actions"]:focus-visible) {
+  outline-width: var(--_ring-width);
+  outline-style: var(--idg-focus-ring-style);
+  outline-color: var(--idg-color-focus-ring);
+  outline-offset: var(--idg-focus-ring-offset);
+}
+
+/* The drawer holds the navigation. It is a native dialog so that, as a modal, it takes the top
+   layer, makes the rest of the page inert, contains focus and answers Escape. Inline it draws
+   nothing of its own. It slides in but does not animate out: a discrete transition of `display`
+   would keep a drawer that a wider container has retired on screen until it ended. */
+.drawer {
+  box-sizing: border-box;
+  position: static;
+  inset: auto;
+  inline-size: auto;
+  block-size: auto;
+  max-inline-size: none;
+  max-block-size: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  min-inline-size: 0;
+  grid-area: nav;
+}
+
+.close {
+  display: none;
+}
+
+/* Navigation modes */
+
+@container style(--_nav: inline) {
+  .toggle {
+    display: none;
+  }
+
+  .drawer {
+    display: contents;
+  }
+
+  /* A drawer still open when the container grows is gone before it is closed, so no frame draws it. */
+  .drawer[open] {
+    display: none;
+  }
+
+  .navigation {
+    grid-area: nav;
+  }
+}
+
+@container style(--_nav: disclosure) {
+  .drawer[open] {
+    display: block;
+    padding-block-start: var(--idg-space-xs);
+  }
+
+  .navigation {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@container style(--_nav: drawer) {
+  .drawer {
+    --_slide: calc(-100% * var(--idg-motion-enabled));
+
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: min(var(--_rail), 100%);
+    block-size: 100%;
+    max-inline-size: 100%;
+    max-block-size: 100%;
+    flex-direction: column;
+    gap: var(--_gap);
+    padding: var(--_pad);
+    overflow: auto;
+    border-inline-end: var(--_rule);
+    background: var(--_surface);
+    box-shadow: var(--idg-elevation-lg);
+    opacity: 0;
+    translate: var(--_slide) 0;
+    transition-property: opacity, translate;
+    transition-duration: var(--idg-motion-duration-base);
+    transition-timing-function: var(--idg-motion-easing-standard);
+  }
+
+  .drawer:dir(rtl) {
+    --_slide: calc(100% * var(--idg-motion-enabled));
+  }
+
+  .drawer[open] {
+    display: flex;
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  @starting-style {
+    .drawer[open] {
+      opacity: 0;
+      translate: var(--_slide) 0;
+    }
+  }
+
+  .drawer::backdrop {
+    background: color-mix(
+      in srgb,
+      color-mix(in srgb, var(--idg-color-bg) 30%, black) 58%,
+      transparent
+    );
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: var(--idg-motion-duration-base);
+    transition-timing-function: var(--idg-motion-easing-standard);
+  }
+
+  .drawer[open]::backdrop {
+    opacity: 1;
+  }
+
+  @starting-style {
+    .drawer[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  .close {
+    display: inline-flex;
+    align-self: flex-end;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--idg-density-target-size);
+    min-block-size: var(--idg-density-target-size);
+    padding: 0;
+    border-width: var(--idg-border-control-width);
+    border-style: var(--idg-border-control-style);
+    border-color: var(--idg-border-control-color);
+    border-radius: var(--idg-shape-radius-md);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .navigation {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* top-bar: a bar across the top, which stays in view where it is one row; the aside at the end. */
+@container idg-shell style(--idg-layout-shell: top-bar) {
+  .shell {
+    --_nav: disclosure;
+  }
+
+  @container idg-shell (min-inline-size: 40rem) {
+    .header {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-areas:
+        "brand toggle actions"
+        "nav nav nav";
+    }
+
+    .actions {
+      padding-block-start: 0;
+    }
+  }
+
+  @container idg-shell (min-inline-size: 72rem) {
+    .shell {
+      --_nav: inline;
+
+      grid-template-columns: var(--_edge) minmax(0, 1fr) calc(var(--_aside) + var(--_gap)) var(
+          --_edge
+        );
+      grid-template-rows: var(--_bar) auto minmax(0, 1fr) auto auto;
+    }
+
+    .header {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 2;
+      grid-row: 1 / -1;
+      align-self: start;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas: "brand nav actions";
+      column-gap: var(--_section);
+      block-size: var(--_bar);
+      padding-block: 0;
+    }
+
+    .navigation {
+      justify-content: center;
+    }
+
+    .hero {
+      grid-column: 2 / 4;
+      grid-row: 2;
+      margin-block-start: var(--_section);
+      padding: var(--_section);
+    }
+
+    .main {
+      grid-column: 2;
+      grid-row: 3;
+    }
+
+    .aside {
+      grid-column: 3;
+      grid-row: 3;
+      align-self: start;
+      margin-block: var(--_section);
+      margin-inline-start: var(--_gap);
+    }
+  }
+}
+
+/* side-rail: a rail for the whole block size, with the brand at its top; the actions in a slim strip
+   over the content, and the aside below it. Below 40rem the rail is a drawer. */
+@container idg-shell style(--idg-layout-shell: side-rail) {
+  .shell {
+    --_nav: drawer;
+  }
+
+  @container idg-shell (min-inline-size: 40rem) {
+    .shell {
+      --_nav: inline;
+
+      grid-template-columns: var(--_rail) minmax(0, 1fr);
+      grid-template-rows: var(--_bar) auto minmax(0, 1fr) auto auto;
+    }
+
+    .header {
+      display: contents;
+    }
+
+    /* The brand sits on the rail's top, and both stay in view while the page scrolls. */
+    .brand {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 1;
+      grid-column: 1;
+      grid-row: 1 / -1;
+      align-self: start;
+      box-sizing: border-box;
+      block-size: var(--_bar);
+      padding-inline: var(--_pad);
+    }
+
+    .navigation {
+      position: sticky;
+      inset-block-start: 0;
+      grid-column: 1;
+      grid-row: 1 / -1;
+      align-self: start;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      justify-content: flex-start;
+      box-sizing: border-box;
+      block-size: var(--idg-size-screen);
+      padding-block: calc(var(--_bar) + var(--_pad)) var(--_pad);
+      padding-inline: var(--_pad);
+      overflow: auto;
+      border-inline-end: var(--_rule);
+      background: var(--_surface);
+    }
+
+    .actions {
+      grid-column: 2;
+      grid-row: 1;
+      justify-content: flex-end;
+      box-sizing: border-box;
+      padding-block: 0;
+      padding-inline: var(--_gutter);
+      border-block-end: var(--_rule);
+    }
+
+    .hero,
+    .main,
+    .aside {
+      grid-column: 2;
+      margin-inline: var(--_gutter);
+    }
+
+    .footer {
+      grid-column: 2;
+      padding-inline: var(--_gutter);
+    }
+
+    .main {
+      padding-block: var(--_section);
+    }
+  }
+
+  @container idg-shell (min-inline-size: 72rem) {
+    .hero {
+      padding: var(--_section);
+    }
+
+    .hero,
+    .main,
+    .aside {
+      margin-inline: calc(var(--_gutter) * 1.5);
+    }
+  }
+}
+
+/* split-hero: the hero keeps the start half in view while the content scrolls beside it, under a
+   minimal bar of a menu button and the actions. The navigation is always a panel: half a container
+   has no room for the whole of it beside the actions. */
+@container idg-shell style(--idg-layout-shell: split-hero) {
+  .shell {
+    --_nav: disclosure;
+  }
+
+  .hero {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-block-size: var(--idg-size-l);
+    padding-block: var(--_section);
+    padding-inline: var(--_pad);
+  }
+
+  @container idg-shell (min-inline-size: 40rem) {
+    .header {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-areas:
+        "brand toggle actions"
+        "nav nav nav";
+    }
+
+    .actions {
+      padding-block-start: 0;
+    }
+
+    .hero {
+      min-block-size: var(--idg-size-xl);
+      padding-inline: var(--_section);
+    }
+  }
+
+  @container idg-shell (min-inline-size: 56rem) {
+    .shell {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr) auto auto;
+    }
+
+    .header {
+      grid-column: 2;
+      grid-row: 1;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-areas:
+        ". toggle actions"
+        "nav nav nav";
+      box-sizing: border-box;
+      min-block-size: var(--_bar);
+      padding-block: 0;
+      padding-inline: var(--_gutter);
+      border-block-end: 0;
+      background: transparent;
+    }
+
+    /* The brand sits on the hero, where the bar would have been, and scrolls away with the page. */
+    .brand {
+      position: absolute;
+      z-index: 3;
+      inset-block-start: 0;
+      inset-inline-start: var(--_gutter);
+      block-size: var(--_bar);
+      color: var(--idg-color-on-accent-subtle);
+    }
+
+    .hero {
+      position: sticky;
+      inset-block-start: 0;
+      grid-column: 1;
+      grid-row: 1 / 4;
+      align-self: start;
+      box-sizing: border-box;
+      block-size: var(--idg-size-screen);
+      margin: 0;
+      padding-block: calc(var(--_bar) + var(--_section)) var(--_section);
+      padding-inline: var(--_section);
+      border-radius: 0;
+    }
+
+    .main,
+    .aside {
+      grid-column: 2;
+      inline-size: calc(100% - 2 * var(--_gutter));
+      max-inline-size: var(--_measure);
+      margin-inline: auto;
+    }
+
+    .main {
+      grid-row: 2;
+    }
+
+    .aside {
+      grid-row: 3;
+    }
+
+    .footer {
+      grid-row: 4;
+    }
+  }
+}
+
+/* magazine: a masthead with a large, centred name, the navigation a ruled strip beneath it, and an
+   editorial column of content with a narrow column of related items beside it. */
+@container idg-shell style(--idg-layout-shell: magazine) {
+  .shell {
+    --_nav: disclosure;
+  }
+
+  .header {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "brand"
+      "toggle"
+      "nav"
+      "actions";
+    justify-items: center;
+    row-gap: var(--idg-space-xs);
+    padding-block: var(--_section);
+    border-block-end: 0;
+    background: transparent;
+    text-align: center;
+  }
+
+  .brand {
+    justify-content: center;
+    font-size: calc(var(--idg-font-size-step-4) * var(--idg-ux-type-scale));
+    line-height: var(--idg-font-display-line-height);
+    text-transform: var(--idg-ornament-heading-transform);
+  }
+
+  .actions {
+    justify-content: center;
+    padding-block-start: 0;
+  }
+
+  .hero {
+    padding-block: var(--_section);
+    padding-inline: 0;
+    border-radius: 0;
+    border-block-end: var(--_rule);
+    background: transparent;
+    color: inherit;
+  }
+
+  .aside {
+    padding-inline: 0;
+    border: 0;
+    border-block-start: thin solid var(--idg-color-text);
+    border-radius: 0;
+    background: transparent;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  .footer {
+    padding-block: var(--_section);
+    border-block-start: medium solid var(--idg-color-text);
+    background: transparent;
+    text-align: center;
+  }
+
+  @container idg-shell (min-inline-size: 40rem) {
+    .shell {
+      --_nav: inline;
+    }
+
+    .header {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "brand brand"
+        "nav actions";
+      justify-items: stretch;
+      column-gap: 0;
+      row-gap: var(--_section);
+      padding-block: var(--_section) 0;
+    }
+
+    .brand {
+      justify-self: center;
+      font-size: calc(var(--idg-font-size-step-6) * var(--idg-ux-type-scale));
+    }
+
+    .navigation,
+    .actions {
+      align-self: stretch;
+      padding-block: var(--idg-space-xs);
+      border-block-start: medium solid var(--idg-color-text);
+      border-block-end: thin solid var(--idg-color-text);
+    }
+
+    .navigation {
+      justify-content: center;
+      padding-inline: var(--_pad);
+    }
+
+    .actions {
+      justify-content: flex-end;
+      padding-inline: 0 var(--_pad);
+    }
+  }
+
+  @container idg-shell (min-inline-size: 72rem) {
+    .shell {
+      grid-template-columns: var(--_edge) minmax(0, 1fr) calc(var(--_aside) + var(--_gap)) var(
+          --_edge
+        );
+    }
+
+    .hero {
+      grid-column: 2 / 4;
+    }
+
+    .aside {
+      grid-column: 3;
+      grid-row: 3;
+      align-self: start;
+      margin-block: var(--_section);
+      margin-inline-start: var(--_gap);
+      padding-block: var(--_pad);
+      padding-inline-start: var(--_pad);
+      border-block-start: 0;
+      border-inline-start: thin solid var(--idg-color-text);
+    }
+  }
+}
+
+/* dashboard: dense chrome. A slim rail of navigation, a strip of actions that stays in view, the
+   content as a canvas of small tiles, and the aside as an inspector at the end. */
+@container idg-shell style(--idg-layout-shell: dashboard) {
+  .shell {
+    --_nav: drawer;
+    --_pad: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+
+    background: var(--idg-color-bg-subtle);
+  }
+
+  .header {
+    background: var(--idg-color-surface);
+  }
+
+  .brand {
+    font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  }
+
+  .hero {
+    margin-block-start: var(--_gap);
+    padding: var(--_pad);
+  }
+
+  .main {
+    padding-block: var(--_gap);
+  }
+
+  .aside {
+    margin-block-end: var(--_gap);
+  }
+
+  .footer {
+    padding-block: var(--_pad);
+  }
+
+  @container idg-shell (min-inline-size: 40rem) {
+    .shell {
+      --_nav: inline;
+
+      grid-template-columns: var(--_rail) minmax(0, 1fr);
+      grid-template-rows: var(--_bar) auto minmax(0, 1fr) auto auto;
+    }
+
+    .header {
+      display: contents;
+    }
+
+    .brand {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 1;
+      grid-column: 1;
+      grid-row: 1 / -1;
+      align-self: start;
+      box-sizing: border-box;
+      block-size: var(--_bar);
+      padding-inline: var(--_pad);
+    }
+
+    .navigation {
+      position: sticky;
+      inset-block-start: 0;
+      grid-column: 1;
+      grid-row: 1 / -1;
+      align-self: start;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      justify-content: flex-start;
+      box-sizing: border-box;
+      block-size: var(--idg-size-screen);
+      padding-block: calc(var(--_bar) + var(--_pad)) var(--_pad);
+      padding-inline: var(--_pad);
+      overflow: auto;
+      border-inline-end: var(--_rule);
+      background: var(--idg-color-surface);
+      font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+    }
+
+    /* The strip is as tall as the first row and stays in view, so it also spans the rest. */
+    .actions {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 2;
+      grid-column: 2;
+      grid-row: 1 / -1;
+      align-self: start;
+      justify-content: flex-end;
+      box-sizing: border-box;
+      block-size: var(--_bar);
+      padding-block: 0;
+      padding-inline: var(--_gap);
+      border-block-end: var(--_rule);
+      background: var(--idg-color-surface);
+    }
+
+    .hero,
+    .main,
+    .aside {
+      grid-column: 2;
+      margin-inline: var(--_gap);
+    }
+
+    .main {
+      inline-size: calc(100% - 2 * var(--_gap));
+      max-inline-size: var(--_measure);
+      margin-inline: auto;
+    }
+
+    .footer {
+      grid-column: 2;
+      padding-inline: var(--_gap);
+    }
+  }
+
+  @container idg-shell (min-inline-size: 72rem) {
+    .shell {
+      grid-template-columns: var(--_rail) minmax(0, 1fr) var(--_aside);
+    }
+
+    .aside {
+      position: sticky;
+      inset-block-start: 0;
+      grid-column: 3;
+      grid-row: 1 / -1;
+      align-self: start;
+      box-sizing: border-box;
+      block-size: var(--idg-size-screen);
+      margin: 0;
+      padding: var(--_pad);
+      overflow: auto;
+      border: 0;
+      border-inline-start: var(--_rule);
+      border-radius: 0;
+      background: var(--idg-color-surface);
+      box-shadow: none;
+    }
+  }
+}
+
+/* centered: one narrow column in the middle of the page. The brand and the navigation are centred
+   above it, the aside and the footer below, with a lot of room around all of it. */
+@container idg-shell style(--idg-layout-shell: centered) {
+  .shell {
+    --_nav: disclosure;
+  }
+
+  .header {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "brand"
+      "toggle"
+      "nav"
+      "actions";
+    justify-items: center;
+    row-gap: var(--idg-space-xs);
+    padding-block: var(--_section);
+    border-block-end: 0;
+    background: transparent;
+    text-align: center;
+  }
+
+  .brand {
+    justify-content: center;
+    font-size: calc(var(--idg-font-size-step-2) * var(--idg-ux-type-scale));
+  }
+
+  .actions {
+    justify-content: center;
+    padding-block-start: 0;
+  }
+
+  .hero {
+    text-align: center;
+  }
+
+  .main {
+    padding-block: calc(var(--_section) * 1.5);
+  }
+
+  .aside {
+    margin-block-end: calc(var(--_section) * 1.5);
+  }
+
+  .footer {
+    text-align: center;
+  }
+
+  @container idg-shell (min-inline-size: 40rem) {
+    .shell {
+      --_nav: inline;
+    }
+
+    .navigation {
+      justify-content: center;
+    }
+  }
+}
+
+/* bento: every region is a tile on one grid, a small gap apart, and the tiles rearrange with the
+   width of the container: one column, two, then four. */
+@container idg-shell style(--idg-layout-shell: bento) {
+  .shell {
+    --_nav: disclosure;
+    --_pad: min(calc(var(--idg-space-s) * var(--idg-density-gap-scale)), 5cqi);
+
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    gap: var(--_gap);
+    padding: var(--_gap) var(--_edge);
+    background: var(--idg-color-bg-subtle);
+  }
+
+  .header,
+  .hero,
+  .main,
+  .aside,
+  .footer {
+    grid-column: 1;
+    box-sizing: border-box;
+    margin: 0;
+    padding: var(--_pad);
+    border-width: var(--idg-surface-border-width);
+    border-style: var(--idg-surface-border-style);
+    border-color: var(--idg-surface-border-color);
+    border-radius: var(--idg-shape-radius-lg);
+    backdrop-filter: var(--idg-surface-backdrop-filter);
+    box-shadow: var(--idg-elevation-sm);
+  }
+
+  .header,
+  .main,
+  .aside,
+  .footer {
+    background: var(--idg-surface-background);
+  }
+
+  .main {
+    padding: calc(var(--_pad) * 2);
+  }
+
+  .footer {
+    color: inherit;
+  }
+
+  @container idg-shell (min-inline-size: 40rem) {
+    .shell {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .header,
+    .hero,
+    .main {
+      grid-column: 1 / -1;
+    }
+
+    .header {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-areas:
+        "brand toggle actions"
+        "nav nav nav";
+    }
+
+    .actions {
+      padding-block-start: 0;
+    }
+
+    .aside {
+      grid-column: 1;
+      grid-row: 4;
+    }
+
+    .footer {
+      grid-column: 2;
+      grid-row: 4;
+    }
+  }
+
+  @container idg-shell (min-inline-size: 72rem) {
+    .shell {
+      --_nav: inline;
+
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+    }
+
+    /* The header is a row of tiles of its own: the brand, the navigation and the actions. */
+    .header {
+      grid-column: 1 / -1;
+      grid-row: 1;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas: "brand nav actions";
+      gap: var(--_gap);
+      padding: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+    }
+
+    .brand,
+    .navigation,
+    .actions {
+      box-sizing: border-box;
+      align-self: stretch;
+      padding: var(--_pad);
+      border-width: var(--idg-surface-border-width);
+      border-style: var(--idg-surface-border-style);
+      border-color: var(--idg-surface-border-color);
+      border-radius: var(--idg-shape-radius-lg);
+      background: var(--idg-surface-background);
+      backdrop-filter: var(--idg-surface-backdrop-filter);
+      box-shadow: var(--idg-elevation-sm);
+    }
+
+    .navigation {
+      justify-content: center;
+    }
+
+    .actions {
+      justify-content: flex-end;
+    }
+
+    .hero {
+      grid-column: 1 / 4;
+      grid-row: 2;
+    }
+
+    .main {
+      grid-column: 1 / 4;
+      grid-row: 3;
+    }
+
+    .aside {
+      grid-column: 4;
+      grid-row: 2 / 4;
+    }
+
+    .footer {
+      grid-column: 1 / -1;
+      grid-row: 4;
+    }
+  }
+}
+
+/* immersive: a full-bleed hero under a transparent header laid over it, the navigation behind a
+   button at every width, content that breaks out to the full width with a measure inside it, and
+   a footer that runs edge to edge. */
+@container idg-shell style(--idg-layout-shell: immersive) {
+  .shell {
+    --_nav: drawer;
+
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .header {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    z-index: 3;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--idg-space-xs) var(--_gap);
+    padding-block: var(--_gap);
+    border-block-end: 0;
+    background: transparent;
+    color: var(--idg-color-on-accent-subtle);
+  }
+
+  .brand {
+    flex: 1 1 auto;
+  }
+
+  .actions {
+    padding-block-start: 0;
+  }
+
+  .hero {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-sizing: border-box;
+    min-block-size: var(--idg-size-screen);
+    margin: 0;
+    padding-block: calc(var(--_bar) * 3) var(--_section);
+    padding-inline: var(--_edge);
+    border-radius: 0;
+  }
+
+  ::slotted([slot="hero"]) {
+    max-inline-size: var(--idg-size-2xl);
+  }
+
+  .main {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    padding-inline: var(--_edge);
+  }
+
+  ::slotted(:not([slot])) {
+    max-inline-size: var(--idg-size-3xl);
+    margin-inline: auto;
+  }
+
+  .aside {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    margin: 0;
+    padding-block: var(--_section);
+    padding-inline: var(--_edge);
+    border: 0;
+    border-radius: 0;
+    background: var(--idg-color-accent-subtle);
+    color: var(--idg-color-on-accent-subtle);
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .footer {
+    grid-row: 4;
+  }
+
+  /* Wide enough, the related items leave their band for a tile beside the content. */
+  @container idg-shell (min-inline-size: 72rem) {
+    .shell {
+      grid-template-columns: var(--_edge) minmax(0, 1fr) calc(var(--_aside) + var(--_gap)) var(
+          --_edge
+        );
+      grid-template-rows: auto auto auto;
+    }
+
+    .main {
+      grid-column: 2;
+      padding-inline: 0;
+    }
+
+    .aside {
+      grid-column: 3;
+      grid-row: 2;
+      align-self: start;
+      box-sizing: border-box;
+      margin-block: var(--_section);
+      margin-inline-start: var(--_gap);
+      padding: var(--_pad);
+      border-width: var(--idg-surface-border-width);
+      border-style: var(--idg-surface-border-style);
+      border-color: var(--idg-surface-border-color);
+      border-radius: var(--idg-shape-radius-lg);
+      background: var(--idg-surface-background);
+      backdrop-filter: var(--idg-surface-backdrop-filter);
+      color: inherit;
+      box-shadow: var(--idg-elevation-sm);
+    }
+
+    .footer {
+      grid-row: 3;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .toggle,
+  .close {
+    border-color: ButtonText;
+  }
+
+  .drawer {
+    border-inline-end: medium solid CanvasText;
+  }
+
+  .skip:focus {
+    background: Highlight;
+    color: HighlightText;
+  }
 }

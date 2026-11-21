@@ -257,8 +257,13 @@ export class IdgLayout {
       this.scrollLocked = true;
       firstFocusable(native)?.focus();
     } else {
+      const before = deepActiveElement();
       native.show();
       this.modalOpen = false;
+      // show() moves focus into the panel; a disclosure leaves it on the toggle that opened it.
+      if (before && before !== document.body && deepActiveElement() !== before) {
+        (before as HTMLElement).focus({ preventScroll: true });
+      }
     }
   }
 
@@ -408,7 +413,8 @@ export class IdgLayout {
             class="drawer"
             part="drawer"
             hidden={!presence.navigation}
-            role={this.modalOpen ? undefined : "none"}
+            // Chrome keeps a dialog's own role under role=none, and axe rejects generic, so a group stands in.
+            role={this.modalOpen ? undefined : "group"}
             aria-label={this.modalOpen ? this.menuLabel : undefined}
             ref={(element) => (this.drawer = element)}
             onCancel={this.handleCancel}

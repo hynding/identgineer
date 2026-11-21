@@ -211,7 +211,7 @@ describe("idg-layout navigation toggle", () => {
 
   it("does not take the navigation out of the page while the stylesheet draws it inline", async () => {
     const { root } = await render(page);
-    expect(drawer(root).getAttribute("role")).toBe("none");
+    expect(drawer(root).getAttribute("role")).toBe("group");
     expect(dialog.showModal).not.toHaveBeenCalled();
     expect(dialog.show).not.toHaveBeenCalled();
   });
@@ -299,7 +299,7 @@ describe("idg-layout drawer", () => {
     await waitForChanges();
     expect((root as LayoutHost).navigationOpen).toBe(false);
     expect(drawer(root).hasAttribute("open")).toBe(false);
-    expect(drawer(root).getAttribute("role")).toBe("none");
+    expect(drawer(root).getAttribute("role")).toBe("group");
     expect(sheets.sheets().some((sheet) => sheet.css.includes("overflow: hidden"))).toBe(false);
   });
 
@@ -343,7 +343,7 @@ describe("idg-layout disclosure", () => {
     expect(dialog.showModal).not.toHaveBeenCalled();
     expect(toggle(root).getAttribute("aria-expanded")).toBe("true");
     expect(sheets.sheets().some((sheet) => sheet.css.includes("overflow: hidden"))).toBe(false);
-    expect(drawer(root).getAttribute("role")).toBe("none");
+    expect(drawer(root).getAttribute("role")).toBe("group");
   });
 
   it("closes with Escape and returns focus to the toggle", async () => {
