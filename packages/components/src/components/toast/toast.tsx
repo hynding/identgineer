@@ -27,6 +27,8 @@ const SWIPE_MIN_PX = 64;
 const SWIPE_SHARE = 0.35;
 
 interface Swipe {
+  /** The press that started it, which the document's press listener must not take for another. */
+  press: PointerEvent;
   pointerId: number;
   startX: number;
   distance: number;
@@ -188,11 +190,19 @@ export class IdgToast {
   };
 
   private handlePointerDown = (event: PointerEvent): void => {
-    this.swipe = { pointerId: event.pointerId, startX: event.clientX, distance: 0 };
-    // The release is heard on the document: a quick flick can end off the toast before any move,
-    // and so before the pointer is captured, has been reported.
-    document.addEventListener("pointerup", this.handlePointerUp);
-    document.addEventListener("pointercancel", this.resetSwipe);
+    this.resetSwipe();
+    if (!event.isPrimary || event.button !== 0) return;
+    this.swipe = { press: event, pointerId: event.pointerId, startX: event.clientX, distance: 0 };
+    // The release is heard on the document, in the capture phase: a quick flick can end off the
+    // toast before any move, and so before the pointer is captured, has been reported. A release
+    // can still be lost, to a handler that stops it first or to a context menu, so the next press
+    // anywhere, a context menu or the window losing focus ends the swipe, rather than leaving it
+    // for an unrelated release to finish.
+    document.addEventListener("pointerup", this.handlePointerUp, true);
+    document.addEventListener("pointercancel", this.resetSwipe, true);
+    document.addEventListener("pointerdown", this.handleOtherPress, true);
+    document.addEventListener("contextmenu", this.resetSwipe, true);
+    window.addEventListener("blur", this.resetSwipe);
   };
 
   private handlePointerMove = (event: PointerEvent): void => {
@@ -221,9 +231,16 @@ export class IdgToast {
     }
   };
 
+  private handleOtherPress = (event: PointerEvent): void => {
+    if (event !== this.swipe?.press) this.resetSwipe();
+  };
+
   private resetSwipe = (): void => {
-    document.removeEventListener("pointerup", this.handlePointerUp);
-    document.removeEventListener("pointercancel", this.resetSwipe);
+    document.removeEventListener("pointerup", this.handlePointerUp, true);
+    document.removeEventListener("pointercancel", this.resetSwipe, true);
+    document.removeEventListener("pointerdown", this.handleOtherPress, true);
+    document.removeEventListener("contextmenu", this.resetSwipe, true);
+    window.removeEventListener("blur", this.resetSwipe);
     this.swipe = undefined;
     this.surface?.style.removeProperty("--_swipe");
   };
