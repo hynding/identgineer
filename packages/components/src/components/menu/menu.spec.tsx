@@ -250,3 +250,42 @@ describe("idg-menu pointer", () => {
     expect(selected).not.toHaveBeenCalled();
   });
 });
+
+describe("idg-menu moved or loaded open", () => {
+  it("closes when removed while open, so it collapses its trigger and opens again", async () => {
+    const { root, waitForChanges } = await render(<div>{actions}</div>);
+    const menu = root.querySelector("idg-menu") as HTMLElement & { open: boolean };
+    spyFocus(menu);
+    const closed = vi.fn();
+    menu.addEventListener("idgClose", closed);
+    await openMenu(menu, waitForChanges);
+    expect(menu.open).toBe(true);
+    menu.remove();
+    // A browser hides a removed popover without a toggle event.
+    menu.shadowRoot?.querySelector('[part="surface"]')?.removeAttribute("data-popover-open");
+    expect(closed).toHaveBeenCalledTimes(1);
+    expect(menu.open).toBe(false);
+    root.append(menu);
+    await waitForChanges();
+    expect(trigger(menu).ariaExpanded).toBe("false");
+    await openMenu(menu, waitForChanges);
+    expect(menu.open).toBe(true);
+    expect(trigger(menu).ariaExpanded).toBe("true");
+  });
+
+  it("does not take focus when it is open in the page's markup", async () => {
+    const focus = vi.spyOn(
+      Object.getPrototypeOf(Object.getPrototypeOf(document.createElement("div"))) as HTMLElement,
+      "focus",
+    );
+    const { root } = await render(
+      <idg-menu open>
+        <button slot="trigger">Actions</button>
+        <idg-menu-item value="edit">Edit</idg-menu-item>
+      </idg-menu>,
+    );
+    expect(root.open).toBe(true);
+    expect(focus).not.toHaveBeenCalled();
+    focus.mockRestore();
+  });
+});

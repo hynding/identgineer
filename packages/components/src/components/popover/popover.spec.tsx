@@ -198,3 +198,43 @@ describe("idg-popover open state", () => {
     expect(trigger(root).ariaExpanded).toBe("false");
   });
 });
+
+describe("idg-popover moved or loaded open", () => {
+  it("closes when removed while open, so it collapses its trigger and opens again", async () => {
+    const { root, waitForChanges } = await render(<div>{basic}</div>);
+    const host = find(root, "idg-popover") as unknown as PopoverHost;
+    const closed = vi.fn();
+    host.addEventListener("idgClose", closed);
+    trigger(host).click();
+    await waitForChanges();
+    expect(host.open).toBe(true);
+    host.remove();
+    // A browser hides a removed popover without a toggle event.
+    surface(host).removeAttribute("data-popover-open");
+    expect(closed).toHaveBeenCalledTimes(1);
+    expect(host.open).toBe(false);
+    root.append(host);
+    await waitForChanges();
+    expect(trigger(host).ariaExpanded).toBe("false");
+    trigger(host).click();
+    await waitForChanges();
+    expect(host.open).toBe(true);
+    expect(trigger(host).ariaExpanded).toBe("true");
+  });
+
+  it("does not take focus when it is open in the page's markup", async () => {
+    const focus = vi.spyOn(
+      Object.getPrototypeOf(Object.getPrototypeOf(document.createElement("div"))) as HTMLElement,
+      "focus",
+    );
+    const { root } = await render(
+      <idg-popover open>
+        <button slot="trigger">Share</button>
+        <p>Anyone with the link can view.</p>
+      </idg-popover>,
+    );
+    expect(surface(root).hasAttribute("data-popover-open")).toBe(true);
+    expect(focus).not.toHaveBeenCalled();
+    focus.mockRestore();
+  });
+});
