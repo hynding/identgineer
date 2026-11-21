@@ -1,9 +1,6 @@
 :host {
   display: block;
   min-inline-size: 0;
-  /* Inherited by the items, so a word wider than its container breaks instead of overflowing. Unlike
-     break-word it also lowers the width the item needs, so a flex or grid item can shrink to fit. */
-  overflow-wrap: anywhere;
 }
 
 :host([hidden]) {
@@ -23,9 +20,5 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, max(var(--_size), var(--_share))), 1fr));
   gap: var(--_gap);
-  min-inline-size: 0;
-}
-
-.grid ::slotted(*) {
   min-inline-size: 0;
 }

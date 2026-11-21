@@ -85,9 +85,12 @@ describe("idg-stack", () => {
         <p hidden>Two</p>
       </idg-stack>,
     );
-    expect(Array.from(root.children).map((child) => child.getAttributeNames())).toEqual([
-      [],
-      ["hidden"],
-    ]);
+    expect(
+      Array.from(root.children).map((child) =>
+        Array.from(child.attributes)
+          .map((attribute) => attribute.name)
+          .filter((name) => !name.startsWith("__")),
+      ),
+    ).toEqual([[], ["hidden"]]);
   });
 });

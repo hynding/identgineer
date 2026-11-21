@@ -11,4 +11,17 @@ class ForwardItems extends HTMLElement {
   }
 }
 
+// The same for an idg-stack with dividers.
+class ForwardStack extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: "open" });
+    const stack = document.createElement("idg-stack");
+    stack.setAttribute("dividers", "");
+    stack.append(document.createElement("slot"));
+    root.append(stack);
+  }
+}
+
 customElements.define("forward-items", ForwardItems);
+customElements.define("forward-stack", ForwardStack);

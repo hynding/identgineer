@@ -768,9 +768,9 @@ layout with a **step** of a token scale; it never takes a length.
 `gap="none"` is a gap of zero. A gap is multiplied by `--idg-density-gap-scale`, so a compact UX mode tightens every layout. A
 value that is not a step (`"12px"`, `"var(--x)"`, a typo) is ignored and the layout's own value
 applies, so a prop can never put a length or a declaration in a stylesheet. None of the primitives
-sets an inline style. Each sets `overflow-wrap: anywhere` on its host, which the items inherit, so
-a word wider than its container breaks instead of overflowing it, and the items may shrink below
-their content's width.
+sets an inline style. A word that is wider than its container, with nothing to break it, is the
+content's concern: the primitives set no `overflow-wrap` and no minimum width on their items, so a
+table, a button or an image keeps the behaviour it has outside them.
 
 ### `idg-stack`
 
@@ -784,12 +784,11 @@ Children one under another. **Slot:** default. **Part:** `stack`. With `dividers
 theme's border colour (`--idg-color-border`, which every design language shows, even those with no
 border) is drawn above every child that is drawn except the first, with half the gap on each side of
 it. Hidden children, templates, scripts and children for another slot are not drawn, so they never
-get a rule. To tell which child is first, the stack sets `data-idg-stack-first` on it (and removes
-it from the others, and when `dividers` is turned off); that attribute is the only thing any
-primitive writes to your markup. The gap moves into the children's block padding to draw the rule,
-so give those children no block padding of their own: a style of your own on a child wins over the
-stack's. Keep the children direct children of the stack: items another component forwards through
-a slot are not ruled.
+get a rule, and the first child that is drawn has none above it, whichever child that is. This is
+done in CSS alone and writes nothing to your markup. The gap moves into the children's block padding
+to draw the rule, so give those children no block padding of their own: a style of your own on a
+child wins over the stack's. Items another component forwards through a slot are ruled like direct
+children.
 
 ### `idg-cluster`
 
@@ -828,7 +827,10 @@ less than half of the container, the regions stack: the classic wrapping row, wi
 **Slots:** `side` and default. **Parts:** `sidebar`, `side`, `content`. The side region is drawn
 first at the `start` and last at the `end`, so the reading and Tab order always match what is shown;
 stacked, a side region at the `start` is above the content and one at the `end` is below it. With
-nothing drawn in the `side` slot, it takes neither its width nor its gap.
+nothing drawn in the `side` slot, it takes neither its width nor its gap. "Nothing" means no
+element, or only elements with the `hidden` attribute (a class-hidden element counts), and an empty
+element still counts as content. A change while the sidebar is detached is read again when it is put
+back, and hiding or showing a forwarded item is not observed, only `slotchange`.
 `start` and `end` follow the text direction.
 
 ### `idg-switcher`
@@ -843,9 +845,11 @@ Items of equal width in one row, which become one column when the container is n
 `threshold`. With `limit`, more items than that stack at any width. This is the one primitive that
 reads script state: it counts the items its slot is given, including items another component forwards
 to it, on load, on `slotchange` and when a child is hidden or shown, because CSS cannot count a
-host's children from inside its shadow tree. Hidden items, templates, scripts and styles are not
-counted. It reads no size. **Slot:** default. **Part:**
-`switcher`.
+host's children from inside its shadow tree. "Hidden" means the `hidden` attribute: an item hidden
+by a class or a style is counted. Templates, scripts and styles are not counted, and neither are
+text nodes. Hiding or showing an item that another component forwards is not observed, only a
+change of what is forwarded (`slotchange`). A change made while the element is detached is read
+again when it is put back. It reads no size. **Slot:** default. **Part:** `switcher`.
 
 ### `idg-cover`
 
@@ -880,9 +884,12 @@ with no console violation.
 Component sources are scanned by `checks/` for `innerHTML`, `outerHTML`, `insertAdjacentHTML`,
 `document.write`, `eval`, `new Function`, string event handlers and inline style strings, and the
 stylesheets for hex, `rgb()`, `hsl()` and similar colour literals and raw `ms` or `s` durations. The
-layout primitives' stylesheets are held to more: no length with a unit, signed or not (every size is a token; a zero is
-allowed), no physical property such as `margin-left` or `width`, no `left` or `right` keyword in
-`text-align`, `justify-content`, `justify-items` and the like, no three- or four-value `margin`,
+layout primitives' stylesheets are held to more: no length with a unit, signed or not, in any unit including the container,
+viewport (`sv*`, `lv*`, `dv*`, `vi`, `vb`), font-relative (`rex`, `rch`, `ric`, `rlh`, `ic`, `lh`,
+`cap`) ones (every size is a token; a plain zero is allowed, a number written with an exponent is
+not), no `!important` taken as a value, no physical property such as `margin-left` or `width`, no
+`left` or `right` keyword in `text-align`, `justify-content`, `justify-items`, `place-items`,
+`place-content`, `place-self` and the like, a two-value `overflow`, no three- or four-value `margin`,
 `padding`, `inset`, `border-width`, `border-style` or `border-color` and no multi-value
 `border-radius` (those are ordered by physical side or corner), and no viewport media query.
 

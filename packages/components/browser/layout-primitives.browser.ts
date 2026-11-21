@@ -49,13 +49,13 @@ async function pixelsNear(page: Page, clip: Box, color: string): Promise<number>
   const png = (await page.screenshot({ clip: region })).toString("base64");
   return page.evaluate(
     async ([encoded, target]) => {
-      const bytes = Uint8Array.from(atob(encoded ?? ""), (character) => character.charCodeAt(0));
+      const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
       const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/png" }));
       const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
       const context = canvas.getContext("2d");
       if (!context) throw new Error("no canvas");
       context.drawImage(bitmap, 0, 0);
-      const wanted = (target ?? "").match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+      const wanted = target.match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
       const { data } = context.getImageData(0, 0, bitmap.width, bitmap.height);
       let count = 0;
       for (let index = 0; index < data.length; index += 4) {
@@ -76,7 +76,14 @@ async function ruleAbove(page: Page, selector: string): Promise<boolean> {
   const item = page.locator(selector);
   await item.scrollIntoViewIfNeeded();
   const box = await boxOf(item);
-  const color = await item.evaluate((element) => getComputedStyle(element).borderBlockStartColor);
+  const color = await page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.style.color = "var(--idg-color-border)";
+    document.body.append(probe);
+    const resolved = getComputedStyle(probe).color;
+    probe.remove();
+    return resolved;
+  });
   const strip = { x: box.x, y: box.y - 2, width: Math.min(box.width, 160), height: 5 };
   return (await pixelsNear(page, strip, color)) > 0;
 }
@@ -756,8 +763,9 @@ test.describe("idg-stack dividers", () => {
         await page.locator("#stack-leading").evaluate((stack) => {
           const parent = stack.parentElement;
           const next = stack.nextSibling;
+          const first = stack.querySelector("#leading-first");
           stack.remove();
-          document.getElementById("leading-first")?.setAttribute("hidden", "");
+          first?.setAttribute("hidden", "");
           parent?.insertBefore(stack, next);
         });
         expect(await ruleAbove(page, "#leading-second")).toBe(false);
@@ -824,15 +832,13 @@ test.describe("idg-stack dividers", () => {
     });
   }
 
-  test("do not rule items another component forwards through a slot, and leave no stray rule", async ({
+  test("rule items another component forwards through a slot like direct children", async ({
     page,
   }) => {
     await open(page);
-    await page.locator("#forwarded-stack").scrollIntoViewIfNeeded();
-    const second = page.locator("#forwarded-stack > p").nth(1);
     expect(await ruleAbove(page, "#forwarded-stack > p:first-child")).toBe(false);
-    expect(await ruleAbove(page, "#forwarded-stack > p:nth-child(2)")).toBe(false);
-    expect((await boxOf(second)).height).toBeGreaterThan(0);
+    expect(await ruleAbove(page, "#forwarded-stack > p:nth-child(2)")).toBe(true);
+    expect(await ruleAbove(page, "#forwarded-stack > p:nth-child(3)")).toBe(true);
   });
 });
 
@@ -863,21 +869,27 @@ test.describe("the primitives leave their content alone", () => {
         expect(page_).toBeLessThanOrEqual(0);
       });
 
-      test("a button label and a flex label keep the width their text needs", async ({ page }) => {
+      test("a button label and a flex label break no word and keep the width of their longest", async ({
+        page,
+      }) => {
         await open(page);
-        const alone = {
-          button: await boxOf(page.locator("#alone-button")),
-          label: await boxOf(page.locator("#alone-label")),
-        };
+        const word = await boxOf(page.locator("#alone-label"));
         await setInlineSize(page, `#${host}-box`, "8rem");
-        const inside = {
-          button: await boxOf(page.locator(`#${host} idg-button`)),
-          label: await boxOf(page.locator(`#${host} .pill`)),
-        };
-        expect(inside.button.width).toBeGreaterThanOrEqual(alone.button.width - 1);
-        expect(inside.button.height).toBeLessThanOrEqual(alone.button.height + 1);
-        expect(inside.label.width).toBeGreaterThanOrEqual(alone.label.width - 1);
-        expect(inside.label.height).toBeLessThanOrEqual(alone.label.height + 1);
+        const wraps = await page
+          .locator(`#${host}`)
+          .evaluate((element) =>
+            [
+              element.querySelector("idg-button")?.shadowRoot?.querySelector(".label"),
+              element.querySelector(".pill"),
+            ].map((label) => (label ? getComputedStyle(label).overflowWrap : "missing")),
+          );
+        expect(wraps).toEqual(["normal", "normal"]);
+        expect((await boxOf(page.locator(`#${host} .pill`))).width).toBeGreaterThanOrEqual(
+          word.width - 1,
+        );
+        expect((await boxOf(page.locator(`#${host} idg-button`))).width).toBeGreaterThanOrEqual(
+          word.width,
+        );
       });
 
       test("an image keeps its aspect ratio", async ({ page }) => {

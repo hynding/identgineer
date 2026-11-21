@@ -13,20 +13,22 @@ export interface LayoutCssViolation {
 // structural and pass, and so does a zero, which is a length with no size to hard-code. The
 // lookbehind keeps a custom property name such as `--space-4px` from being read as a length.
 const LENGTH =
-  /(?<![\w.#-])[+-]?(?:\d*\.?\d+)(?:e[+-]?\d+)?(?:px|rem|em|ex|ch|cap|lh|rlh|vw|vh|vi|vb|svh|lvh|dvh|svw|lvw|dvw|vmin|vmax|cm|mm|q|in|pt|pc)\b/gi;
+  /(?<![\w.#-])[+-]?(?:\d*\.?\d+)(?:e[+-]?\d+)?(?:px|rem|em|ex|ch|ic|cap|lh|rex|rch|ric|rcap|rlh|vw|vh|vi|vb|vmin|vmax|[sld]v(?:w|h|i|b|min|max)|cq(?:w|h|i|b|min|max)|cm|mm|q|in|pt|pc)\b/gi;
 
 const PHYSICAL_PROPERTY =
   /^(?:(?:margin|padding|border|scroll-margin|scroll-padding)-(?:left|right|top|bottom)(?:-[a-z]+)*|left|right|top|bottom|(?:min-|max-)?(?:width|height)|overflow-[xy]|float|clear)$/;
 
 // Properties whose keywords can name a side. Their values may not.
 const DIRECTIONAL_KEYWORDS =
-  /^(?:text-align|text-align-last|float|clear|justify-content|justify-items|justify-self|align-content)$/;
+  /^(?:text-align|text-align-last|float|clear|justify-content|justify-items|justify-self|align-content|place-items|place-content|place-self)$/;
 const DIRECTIONAL = /\b(?:left|right)\b/;
 
 // Shorthands that take one value per side. One value and two (block, inline) say the same in
 // either text direction, but three and four are ordered top, right, bottom, left.
 const SIDED_SHORTHANDS =
   /^(?:margin|padding|inset|border-width|border-style|border-color|scroll-margin|scroll-padding)$/;
+// `overflow` takes x then y, so two values are physical.
+const AXIS_SHORTHANDS = /^overflow$/;
 // A radius is ordered by corner, so even two values name physical corners.
 const CORNER_SHORTHANDS = /^border-radius$/;
 
@@ -39,6 +41,9 @@ function countValues(value: string): number {
     if (character === "(") depth += 1;
     if (character === ")") depth -= 1;
     if (/\s/.test(character) && depth === 0) {
+      inValue = false;
+    } else if (character === ")" && depth === 0) {
+      // A function ends a value even with nothing after it, so `var(--a)var(--b)` is two.
       inValue = false;
     } else if (!inValue) {
       inValue = true;
@@ -65,9 +70,11 @@ function lineAt(css: string, index: number): number {
  * and react to their container, never to the viewport.
  *
  * Refused: lengths with a unit; physical properties; `left` and `right` as the value of a
- * property that takes them; margin, padding, inset, border-width, border-style, border-color and
- * scroll-margin or scroll-padding with three or four values, and any border-radius with more than
- * one value, because those are ordered by physical side or corner. One and two values are allowed.
+ * property that takes them (`text-align`, `justify-*`, `place-*`, `float` and the like); margin,
+ * padding, inset, border-width, border-style, border-color and scroll-margin or scroll-padding
+ * with three or four values, and any border-radius with more than one value, because those are ordered by physical side or corner; a two-value `overflow`, which is
+ * ordered x then y. One and two values are allowed, `!important` is not a value, and an exponent
+ * in a length is refused whatever it works out to.
  * Not checked: keywords in other properties such as `background-position`.
  */
 export function findLayoutCssViolations(source: string): LayoutCssViolation[] {
@@ -83,7 +90,7 @@ export function findLayoutCssViolations(source: string): LayoutCssViolation[] {
   }
   for (const declaration of css.matchAll(DECLARATION)) {
     const property = (declaration[1] ?? "").toLowerCase();
-    const value = declaration[2] ?? "";
+    const value = (declaration[2] ?? "").replace(/\s*!\s*important\s*$/i, "");
     const line = lineAt(css, declaration.index);
     if (PHYSICAL_PROPERTY.test(property)) {
       violations.push({ line, text: property, rule: "physical property" });
@@ -94,12 +101,14 @@ export function findLayoutCssViolations(source: string): LayoutCssViolation[] {
     const count = countValues(value);
     if (
       (SIDED_SHORTHANDS.test(property) && count > 2) ||
+      (AXIS_SHORTHANDS.test(property) && count > 1) ||
       (CORNER_SHORTHANDS.test(property) && (count > 1 || value.includes("/")))
     ) {
       violations.push({ line, text: `${property}: ${value.trim()}`, rule: "physical shorthand" });
     }
     for (const length of value.matchAll(LENGTH)) {
-      if (parseFloat(length[0]) !== 0) {
+      // An exponent is refused whatever it works out to, so `1e-400px` is not read as a zero.
+      if (/\de[+-]?\d/i.test(length[0]) || parseFloat(length[0]) !== 0) {
         violations.push({ line, text: length[0], rule: "hard-coded length" });
       }
     }

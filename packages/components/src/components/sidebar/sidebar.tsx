@@ -47,7 +47,11 @@ export class IdgSidebar {
 
   private stopWatching?: () => void;
 
+  private loaded = false;
+
   connectedCallback(): void {
+    // Items may have changed while it was detached, and nothing was watching.
+    if (this.loaded) this.readSide();
     this.stopWatching = watchItems(this.host, () => {
       this.readSide();
     });
@@ -62,6 +66,7 @@ export class IdgSidebar {
   }
 
   componentDidLoad(): void {
+    this.loaded = true;
     this.readSide();
   }
 

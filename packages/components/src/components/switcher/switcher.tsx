@@ -39,7 +39,11 @@ export class IdgSwitcher {
 
   private stopWatching?: () => void;
 
+  private loaded = false;
+
   connectedCallback(): void {
+    // Items may have changed while it was detached, and nothing was watching.
+    if (this.loaded) this.countItems();
     this.stopWatching = watchItems(this.host, () => {
       this.countItems();
     });
@@ -54,6 +58,7 @@ export class IdgSwitcher {
   }
 
   componentDidLoad(): void {
+    this.loaded = true;
     // The slot exists now, so items forwarded to it by another component are counted too.
     this.countItems();
   }

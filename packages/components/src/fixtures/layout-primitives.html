@@ -11,7 +11,7 @@
   </head>
   <body>
     <main class="layout-page">
-      <h1>Layout primitives</h1>
+      <h1>Layout</h1>
 
       <section class="plain" aria-labelledby="stack-title">
         <h2 id="stack-title">Stack</h2>
@@ -25,7 +25,14 @@
           <p class="flush">It is drawn in the theme's border colour.</p>
           <p class="flush">The gap sits on either side of it.</p>
         </idg-stack>
+        <idg-button id="focus-before" variant="secondary">Before the stack</idg-button>
+        <idg-stack id="stack-focus" dividers gap="m">
+          <idg-button id="focus-first" variant="secondary">First</idg-button>
+          <idg-button id="focus-middle" variant="secondary">Middle</idg-button>
+          <idg-button id="focus-last" variant="secondary">Last</idg-button>
+        </idg-stack>
         <idg-stack id="stack-leading" dividers gap="m">
+          <p class="flush gone">Hidden by a class, first in the source</p>
           <p class="flush" hidden>Hidden, first in the source</p>
           <template></template>
           <p class="flush" slot="elsewhere">Assigned to a slot the stack does not have</p>
@@ -43,13 +50,13 @@
         <div class="box" id="cluster-box">
           <idg-cluster id="cluster">
             <idg-badge>Design</idg-badge>
-            <idg-badge>Engineering</idg-badge>
-            <idg-badge>Research</idg-badge>
-            <idg-badge>Operations</idg-badge>
-            <idg-badge>Finance</idg-badge>
+            <idg-badge>Dev</idg-badge>
+            <idg-badge>Study</idg-badge>
+            <idg-badge>Ops</idg-badge>
+            <idg-badge>Money</idg-badge>
             <idg-badge>Legal</idg-badge>
-            <idg-badge>Support</idg-badge>
-            <idg-badge>Marketing</idg-badge>
+            <idg-badge>Help</idg-badge>
+            <idg-badge>Ads</idg-badge>
           </idg-cluster>
         </div>
       </section>
@@ -57,16 +64,16 @@
       <section class="plain" aria-labelledby="grid-title">
         <h2 id="grid-title">Grid</h2>
         <idg-grid id="grid">
-          <idg-card heading="Item 1">Revenue by region for the quarter.</idg-card>
+          <idg-card heading="Item 1">Sales by region.</idg-card>
           <idg-card heading="Item 2">Active users across every plan.</idg-card>
-          <idg-card heading="Item 3">Support requests answered in time.</idg-card>
-          <idg-card heading="Item 4">Build duration on the main branch.</idg-card>
-          <idg-card heading="Item 5">Pages served from the edge cache.</idg-card>
+          <idg-card heading="Item 3">Help answered in time.</idg-card>
+          <idg-card heading="Item 4">Build time on main.</idg-card>
+          <idg-card heading="Item 5">Pages from the cache.</idg-card>
           <idg-card heading="Item 6">New sign-ups this week.</idg-card>
-          <idg-card heading="Item 7">Churn among annual accounts.</idg-card>
+          <idg-card heading="Item 7">Churn among accounts.</idg-card>
           <idg-card heading="Item 8">Deploys that needed a rollback.</idg-card>
           <idg-card heading="Item 9">Tickets waiting for a reply.</idg-card>
-          <idg-card heading="Item 10">Documents shared outside the team.</idg-card>
+          <idg-card heading="Item 10">Files shared outside.</idg-card>
           <idg-card heading="Item 11">Invoices paid late.</idg-card>
           <idg-card heading="Item 12">Seats unused this month.</idg-card>
         </idg-grid>
@@ -110,9 +117,9 @@
         <h2 id="switcher-title">Switcher</h2>
         <div class="box" id="switcher-box">
           <idg-switcher id="switcher">
-            <idg-card heading="Free">One project and community support.</idg-card>
-            <idg-card heading="Team">Unlimited projects and shared workspaces.</idg-card>
-            <idg-card heading="Scale">Single sign-on and audit logs.</idg-card>
+            <idg-card heading="Free">One project, basic help.</idg-card>
+            <idg-card heading="Team">Many projects, shared.</idg-card>
+            <idg-card heading="Scale">Sign-on and logs.</idg-card>
           </idg-switcher>
         </div>
         <div class="box" id="switcher-small-box">
@@ -141,6 +148,231 @@
           <p class="flush">Three</p>
           <p class="flush">Four</p>
         </forward-items>
+      </section>
+
+      <section class="plain" aria-labelledby="forward-stack-title">
+        <h2 id="forward-stack-title">Dividers through another slot</h2>
+        <forward-stack id="forwarded-stack">
+          <p class="flush">One</p>
+          <p class="flush">Two</p>
+          <p class="flush">Three</p>
+        </forward-stack>
+      </section>
+
+      <section class="plain" aria-labelledby="regress-title">
+        <h2 id="regress-title">Left alone</h2>
+        <p class="flush">
+          <idg-button id="alone-button" variant="secondary">Settings</idg-button>
+          <span class="pill" id="alone-label">Notifications</span>
+        </p>
+        <div class="regress">
+          <div class="box" id="r-stack-box">
+            <idg-stack id="r-stack">
+              <idg-table>
+                <table>
+                  <caption>
+                    Figures
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Notifications</th>
+                      <th scope="col">Subscriptions</th>
+                      <th scope="col">Integrations</th>
+                      <th scope="col">Authorisations</th>
+                      <th scope="col">Registrations</th>
+                      <th scope="col">Organisations</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Notifications</td>
+                      <td>Subscriptions</td>
+                      <td>Integrations</td>
+                      <td>Authorisations</td>
+                      <td>Registrations</td>
+                      <td>Organisations</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </idg-table>
+              <idg-button variant="secondary">Settings</idg-button>
+              <span class="pill">Notifications</span>
+              <img src="/fixtures/wide.svg" class="fluid" width="300" height="100" alt="" />
+            </idg-stack>
+          </div>
+          <div class="box" id="r-cluster-box">
+            <idg-cluster id="r-cluster">
+              <idg-table>
+                <table>
+                  <caption>
+                    Figures
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Notifications</th>
+                      <th scope="col">Subscriptions</th>
+                      <th scope="col">Integrations</th>
+                      <th scope="col">Authorisations</th>
+                      <th scope="col">Registrations</th>
+                      <th scope="col">Organisations</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Notifications</td>
+                      <td>Subscriptions</td>
+                      <td>Integrations</td>
+                      <td>Authorisations</td>
+                      <td>Registrations</td>
+                      <td>Organisations</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </idg-table>
+              <idg-button variant="secondary">Settings</idg-button>
+              <span class="pill">Notifications</span>
+              <img src="/fixtures/wide.svg" class="fluid" width="300" height="100" alt="" />
+            </idg-cluster>
+          </div>
+          <div class="box" id="r-grid-box">
+            <idg-grid id="r-grid">
+              <idg-table>
+                <table>
+                  <caption>
+                    Figures
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Notifications</th>
+                      <th scope="col">Subscriptions</th>
+                      <th scope="col">Integrations</th>
+                      <th scope="col">Authorisations</th>
+                      <th scope="col">Registrations</th>
+                      <th scope="col">Organisations</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Notifications</td>
+                      <td>Subscriptions</td>
+                      <td>Integrations</td>
+                      <td>Authorisations</td>
+                      <td>Registrations</td>
+                      <td>Organisations</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </idg-table>
+              <idg-button variant="secondary">Settings</idg-button>
+              <span class="pill">Notifications</span>
+              <img src="/fixtures/wide.svg" class="fluid" width="300" height="100" alt="" />
+            </idg-grid>
+          </div>
+          <div class="box" id="r-sidebar-box">
+            <idg-sidebar id="r-sidebar">
+              <div slot="side">
+                <idg-button variant="secondary">Settings</idg-button>
+                <span class="pill">Notifications</span>
+                <img src="/fixtures/wide.svg" class="fluid" width="300" height="100" alt="" />
+              </div>
+              <idg-table>
+                <table>
+                  <caption>
+                    Figures
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Notifications</th>
+                      <th scope="col">Subscriptions</th>
+                      <th scope="col">Integrations</th>
+                      <th scope="col">Authorisations</th>
+                      <th scope="col">Registrations</th>
+                      <th scope="col">Organisations</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Notifications</td>
+                      <td>Subscriptions</td>
+                      <td>Integrations</td>
+                      <td>Authorisations</td>
+                      <td>Registrations</td>
+                      <td>Organisations</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </idg-table>
+            </idg-sidebar>
+          </div>
+          <div class="box" id="r-switcher-box">
+            <idg-switcher id="r-switcher">
+              <idg-table>
+                <table>
+                  <caption>
+                    Figures
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Notifications</th>
+                      <th scope="col">Subscriptions</th>
+                      <th scope="col">Integrations</th>
+                      <th scope="col">Authorisations</th>
+                      <th scope="col">Registrations</th>
+                      <th scope="col">Organisations</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Notifications</td>
+                      <td>Subscriptions</td>
+                      <td>Integrations</td>
+                      <td>Authorisations</td>
+                      <td>Registrations</td>
+                      <td>Organisations</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </idg-table>
+              <idg-button variant="secondary">Settings</idg-button>
+              <span class="pill">Notifications</span>
+              <img src="/fixtures/wide.svg" class="fluid" width="300" height="100" alt="" />
+            </idg-switcher>
+          </div>
+          <div class="box" id="r-cover-box">
+            <idg-cover id="r-cover" min-height="xs">
+              <idg-table>
+                <table>
+                  <caption>
+                    Figures
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Notifications</th>
+                      <th scope="col">Subscriptions</th>
+                      <th scope="col">Integrations</th>
+                      <th scope="col">Authorisations</th>
+                      <th scope="col">Registrations</th>
+                      <th scope="col">Organisations</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Notifications</td>
+                      <td>Subscriptions</td>
+                      <td>Integrations</td>
+                      <td>Authorisations</td>
+                      <td>Registrations</td>
+                      <td>Organisations</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </idg-table>
+              <idg-button variant="secondary">Settings</idg-button>
+              <span class="pill">Notifications</span>
+              <img src="/fixtures/wide.svg" class="fluid" width="300" height="100" alt="" />
+            </idg-cover>
+          </div>
+        </div>
       </section>
 
       <section class="plain" aria-labelledby="cover-title">
