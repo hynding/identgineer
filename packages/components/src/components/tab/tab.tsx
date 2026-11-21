@@ -1,4 +1,4 @@
-import { Component, h, Prop } from "@stencil/core";
+import { Component, h, Host, Prop } from "@stencil/core";
 import type { TabsOrientation } from "../tabs/tabs-options";
 
 /**
@@ -11,6 +11,7 @@ import type { TabsOrientation } from "../tabs/tabs-options";
  */
 @Component({
   tag: "idg-tab",
+  styleUrls: ["../../styles/host-focus-ring.css", "tab.css"],
   shadow: true,
 })
 export class IdgTab {
@@ -30,6 +31,17 @@ export class IdgTab {
   @Prop() orientation: TabsOrientation = "horizontal";
 
   render() {
-    return <div />;
+    return (
+      <Host
+        role="tab"
+        tabindex={this.tabbable && !this.disabled ? "0" : "-1"}
+        aria-selected={String(this.selected)}
+        aria-disabled={this.disabled ? "true" : undefined}
+      >
+        <span class="tab" part="tab">
+          <slot />
+        </span>
+      </Host>
+    );
   }
 }

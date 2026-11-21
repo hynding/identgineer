@@ -1,0 +1,13 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  border-radius: var(--idg-shape-radius-sm);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.panel {
+  min-inline-size: 0;
+}

@@ -1,0 +1,60 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.tabs {
+  --_pad: calc(
+    var(--idg-focus-ring-offset) + var(--idg-focus-ring-width) * var(--idg-focus-emphasis)
+  );
+
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  min-inline-size: 0;
+}
+
+:host([orientation="vertical"]) .tabs {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+/* A list too wide for the page scrolls, and the tabs stay reachable by keyboard because focus
+   moves into view with them. The padding keeps a tab's focus ring and shadow from being clipped by
+   the scroll box. */
+.list {
+  display: flex;
+  flex: none;
+  gap: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
+  max-inline-size: 100%;
+  padding: max(var(--_pad), var(--idg-space-xs));
+  border-block-end-width: var(--idg-border-width);
+  border-block-end-style: var(--idg-border-style);
+  border-block-end-color: var(--idg-border-color);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+:host([orientation="vertical"]) .list {
+  flex-direction: column;
+  max-inline-size: 40%;
+  padding: max(var(--_pad), var(--idg-space-xs));
+  border-block-end: 0;
+  border-inline-end-width: var(--idg-border-width);
+  border-inline-end-style: var(--idg-border-style);
+  border-inline-end-color: var(--idg-border-color);
+  overflow-x: visible;
+  overflow-y: auto;
+}
+
+.panels {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}

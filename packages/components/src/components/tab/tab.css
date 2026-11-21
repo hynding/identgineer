@@ -1,0 +1,103 @@
+:host {
+  display: inline-flex;
+  flex: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+:host([disabled]) {
+  cursor: not-allowed;
+}
+
+/* Every tab keeps a transparent border of the design's width, so choosing one does not move the
+   others. The chosen tab is drawn in the design's own surface (a hard box in brutalist, a frosted
+   one in glass, a raised one in soft, rules above and below in editorial) with an accent bar. */
+.tab {
+  position: relative;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: var(--idg-density-target-size);
+  min-inline-size: var(--idg-density-target-size);
+  padding-block: var(--idg-density-control-padding-block);
+  padding-inline: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+  border-width: var(--idg-surface-border-width);
+  border-style: var(--idg-surface-border-style);
+  border-color: transparent;
+  border-radius: var(--idg-shape-radius-md);
+  color: var(--idg-color-text-muted);
+  font-family: var(--idg-font-family-body);
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-semibold);
+  letter-spacing: var(--idg-font-body-letter-spacing);
+  line-height: var(--idg-font-body-line-height);
+  text-transform: var(--idg-ornament-control-transform);
+  white-space: nowrap;
+  transition-property: background-color, border-color, box-shadow, color;
+  transition-duration: var(--idg-motion-duration-fast);
+  transition-timing-function: var(--idg-motion-easing-standard);
+}
+
+.tab::after {
+  content: "";
+  position: absolute;
+  inset-inline: var(--idg-space-xs);
+  inset-block-end: 0;
+  block-size: 3px;
+  border-radius: var(--idg-shape-radius-sm);
+  background: var(--idg-color-accent);
+  transform: scaleX(0);
+  transition-property: transform;
+  transition-duration: var(--idg-motion-duration-base);
+  transition-timing-function: var(--idg-motion-easing-emphasized);
+}
+
+:host([orientation="vertical"]) .tab {
+  justify-content: flex-start;
+}
+
+:host([selected]) .tab {
+  border-color: var(--idg-surface-border-color);
+  background: var(--idg-surface-background);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: var(--idg-elevation-sm);
+  color: var(--idg-color-text);
+}
+
+:host([selected]) .tab::after {
+  transform: scaleX(1);
+}
+
+:host(:not([selected]):not([disabled])) .tab:hover {
+  background: var(--idg-color-accent-subtle);
+  color: var(--idg-color-on-accent-subtle);
+}
+
+:host([disabled]) .tab {
+  opacity: 0.55;
+}
+
+@media (forced-colors: active) {
+  :host([selected]) .tab {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  :host([selected]) .tab::after {
+    forced-color-adjust: none;
+    background: HighlightText;
+  }
+
+  :host([disabled]) .tab {
+    color: GrayText;
+    opacity: 1;
+  }
+}
