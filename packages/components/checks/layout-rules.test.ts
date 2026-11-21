@@ -42,6 +42,77 @@ describe("findLayoutCssViolations", () => {
     expect(findLayoutCssViolations(css).map((violation) => violation.rule)).toEqual([rule]);
   });
 
+  it.each([
+    ["a negative length", ".a { margin-block: -4px; }"],
+    ["a positive sign", ".a { margin-block: +4px; }"],
+    ["an exponent length", ".a { gap: 1e1px; }"],
+    ["an uppercase unit", ".a { gap: 4PX; }"],
+    ["a negative length in calc", ".a { gap: calc(var(--x) * 1 + -2rem); }"],
+  ])("refuses %s", (_name, css) => {
+    expect(findLayoutCssViolations(css).map((violation) => violation.rule)).toEqual([
+      "hard-coded length",
+    ]);
+  });
+
+  it.each(["0", "0px", "0.0rem", "-0em", "0e3px"])(
+    "accepts the zero %s, which is a length with no size to hard-code",
+    (zero) => {
+      expect(findLayoutCssViolations(`.a { --_gap: ${zero}; }`)).toEqual([]);
+    },
+  );
+
+  it("does not mistake a custom property name for a length", () => {
+    expect(findLayoutCssViolations(".a { gap: var(--space-4px); }")).toEqual([]);
+  });
+
+  it.each([
+    ["margin with four values", ".a { margin: 0 var(--x) 0 var(--y); }"],
+    ["margin with three values", ".a { margin: 0 var(--x) 0; }"],
+    ["padding with four values", ".a { padding: 0 1fr 0 1fr; }"],
+    ["inset with four values", ".a { inset: 0 auto auto 0; }"],
+    ["border-width with four values", ".a { border-width: thin 0 thin 0; }"],
+    ["border-style with three values", ".a { border-style: solid none solid; }"],
+    ["border-color with four values", ".a { border-color: red blue red blue; }"],
+    ["scroll-margin with four values", ".a { scroll-margin: 0 0 0 0; }"],
+    ["border-radius with two values", ".a { border-radius: 0 var(--r); }"],
+    ["border-radius with an elliptical radius", ".a { border-radius: var(--r) / var(--s); }"],
+  ])("refuses %s, whose values are ordered by physical side", (_name, css) => {
+    expect(findLayoutCssViolations(css).map((violation) => violation.rule)).toEqual([
+      "physical shorthand",
+    ]);
+  });
+
+  it.each([
+    ["margin with one value", ".a { margin: 0; }"],
+    ["margin with two values", ".a { margin: 0 auto; }"],
+    ["padding with two values, each side of an axis equal", ".a { padding: var(--a) var(--b); }"],
+    ["inset with one value", ".a { inset: 0; }"],
+    ["a function value that holds spaces", ".a { margin: calc(var(--a) + var(--b)) auto; }"],
+    ["a single radius", ".a { border-radius: var(--idg-shape-radius-md); }"],
+    ["logical margins", ".a { margin-inline: 0 var(--x); }"],
+  ])("accepts %s", (_name, css) => {
+    expect(findLayoutCssViolations(css)).toEqual([]);
+  });
+
+  it.each([
+    [".a { justify-content: left; }"],
+    [".a { justify-content: right; }"],
+    [".a { justify-items: right; }"],
+    [".a { justify-self: left; }"],
+    [".a { justify-self: safe right; }"],
+    [".a { float: left; }"],
+  ])("refuses the physical keyword in %s", (css) => {
+    const rules = findLayoutCssViolations(css).map((violation) => violation.rule);
+    expect(rules).toContain("physical value");
+  });
+
+  it.each([".a { justify-content: flex-start; }", ".a { justify-items: start; }"])(
+    "accepts the logical keyword in %s",
+    (css) => {
+      expect(findLayoutCssViolations(css)).toEqual([]);
+    },
+  );
+
   it("allows a forced-colors media query, which is not a viewport one", () => {
     expect(
       findLayoutCssViolations(

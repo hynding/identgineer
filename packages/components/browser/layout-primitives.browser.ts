@@ -212,6 +212,60 @@ test.describe("idg-grid", () => {
   });
 });
 
+test.describe("gap none", () => {
+  const PRIMITIVES = [
+    ["idg-stack", "#stack", "stack"],
+    ["idg-cluster", "#cluster", "cluster"],
+    ["idg-grid", "#grid", "grid"],
+    ["idg-sidebar", "#sidebar", "sidebar"],
+    ["idg-switcher", "#switcher", "switcher"],
+    ["idg-cover", "#cover-plain", "cover"],
+  ] as const;
+
+  for (const [tag, selector, part] of PRIMITIVES) {
+    test(`${tag} has no gap`, async ({ page }) => {
+      await open(page);
+      await page.locator(selector).evaluate((element) => {
+        element.setAttribute("gap", "none");
+      });
+      const gaps = () =>
+        page
+          .locator(selector)
+          .locator(`[part="${part}"]`)
+          .evaluate((element) => {
+            const style = getComputedStyle(element);
+            return [style.rowGap, style.columnGap];
+          });
+      await expect.poll(gaps).toEqual(["0px", "0px"]);
+    });
+  }
+
+  test("idg-grid keeps its columns", async ({ page }) => {
+    await open(page, 1280, "top-bar");
+    const before = await distinct(page.locator("#grid > idg-card"), "x");
+    expect(before).toBeGreaterThan(1);
+    await page.locator("#grid").evaluate((element) => {
+      element.setAttribute("gap", "none");
+    });
+    await expect.poll(() => distinct(page.locator("#grid > idg-card"), "x")).toBeGreaterThan(1);
+  });
+
+  test("idg-stack draws dividers with no gap around them", async ({ page }) => {
+    await open(page);
+    await page.locator("#stack-dividers").evaluate((element) => {
+      element.setAttribute("gap", "none");
+    });
+    await expect
+      .poll(() =>
+        page
+          .locator("#stack-dividers > p")
+          .nth(1)
+          .evaluate((element) => getComputedStyle(element).paddingBlockStart),
+      )
+      .toBe("0px");
+  });
+});
+
 test.describe("idg-sidebar", () => {
   const side = (page: Page, id: string) => page.locator(`#${id}`).locator('[part="side"]');
   const content = (page: Page, id: string) => page.locator(`#${id}`).locator('[part="content"]');
