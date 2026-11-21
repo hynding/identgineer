@@ -31,7 +31,8 @@ interface AxNode {
 /**
  * What the browser itself computes for an element inside a shadow root: its role, accessible name
  * and description, read from the accessibility tree through the DevTools protocol rather than
- * inferred from attributes. `inner` is a selector inside the host's shadow root.
+ * inferred from attributes. `inner` is a selector inside the host's shadow root, or `""` for the
+ * element itself.
  */
 export async function accessibleNode(
   page: Page,
@@ -41,7 +42,10 @@ export async function accessibleNode(
   const client = await page.context().newCDPSession(page);
   try {
     const { result } = await client.send("Runtime.evaluate", {
-      expression: `document.getElementById(${JSON.stringify(hostId)}).shadowRoot.querySelector(${JSON.stringify(inner)})`,
+      expression:
+        inner === ""
+          ? `document.getElementById(${JSON.stringify(hostId)})`
+          : `document.getElementById(${JSON.stringify(hostId)}).shadowRoot.querySelector(${JSON.stringify(inner)})`,
     });
     if (!result.objectId) throw new Error(`no ${inner} inside #${hostId}`);
     const { node } = await client.send("DOM.describeNode", { objectId: result.objectId });
