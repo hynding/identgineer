@@ -12,7 +12,7 @@ import {
 import { reflectLabelledBy } from "../../utils/aria-reflection";
 import { safeCssLength } from "../../utils/css-length";
 import { oneOf } from "../../utils/choice";
-import { deepActiveElement } from "../../utils/focus";
+import { deepActiveElement, isWithin } from "../../utils/focus";
 import { adoptStyles, type StyleRoot } from "../../utils/light-styles";
 import { sortedRowOrder, type SortDirection } from "../../utils/sort-rows";
 import {
@@ -207,19 +207,20 @@ export class IdgTable {
   private quietly(write: () => void): void {
     const observer = this.mutationObserver;
     observer?.disconnect();
+    const queued: (() => void)[] = [];
     try {
       write();
     } finally {
+      queued.push(...this.focusAfterWrite);
+      this.focusAfterWrite.length = 0;
       if (observer) this.observeTable();
     }
     // Focusing runs the page's focus handlers, which may change the table, so it is done once the
-    // observer is watching again.
-    const focusing = this.focusAfterWrite;
-    this.focusAfterWrite = [];
-    for (const focus of focusing) focus();
+    // observer is watching again, and only for a write that succeeded.
+    for (const focus of queued) focus();
   }
 
-  private focusAfterWrite: (() => void)[] = [];
+  private readonly focusAfterWrite: (() => void)[] = [];
 
   private watchSize(): void {
     this.sizeObserver?.disconnect();
@@ -289,7 +290,7 @@ export class IdgTable {
     const button = Array.from(header.children).find((child) =>
       child.classList.contains("idg-table-sort"),
     );
-    const focused = button?.contains(deepActiveElement()) === true;
+    const focused = button !== undefined && isWithin(deepActiveElement(), button);
     removeSortButton(header);
     if (!focused) return;
     // A tabindex the page gave the header is its own and is left as it is.
@@ -355,15 +356,21 @@ export class IdgTable {
     }
   }
 
-  // Moving a row takes focus from anything inside it, so focus is put back.
+  // The row that holds focus is never taken out of the table, since that would drop focus, so
+  // the rows are placed around it: those that sort before it before it, the rest after it.
   private moveRows(group: HTMLElement, rows: readonly HTMLElement[]): void {
-    const active = deepActiveElement() as HTMLElement | null;
-    const focused = active && group.contains(active) ? active : undefined;
-    for (const row of rows) group.append(row);
-    if (focused) {
-      this.focusAfterWrite.push(() => {
-        focused.focus({ preventScroll: true });
-      });
+    const active = deepActiveElement();
+    const held = active ? rows.find((row) => isWithin(active, row)) : undefined;
+    if (!held) {
+      for (const row of rows) group.append(row);
+      return;
+    }
+    const at = rows.indexOf(held);
+    for (const row of rows.slice(0, at)) group.insertBefore(row, held);
+    let anchor: Node = held;
+    for (const row of rows.slice(at + 1)) {
+      group.insertBefore(row, anchor.nextSibling);
+      anchor = row;
     }
   }
 

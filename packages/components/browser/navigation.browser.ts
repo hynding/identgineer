@@ -604,6 +604,9 @@ test.describe("idg-pagination", () => {
     const focused = () =>
       pager.evaluate((host) => host.shadowRoot?.activeElement?.textContent.trim() ?? "none");
     const label = (name: RegExp) => pager.locator('[part="page"]').filter({ hasText: name });
+    // The list is drawn for the new count and page before it is used.
+    await expect(label(/^20$/)).toHaveCount(1);
+    await expect(label(/^5$/)).toHaveAttribute("aria-label", "Page 5");
     // Each press moves the window of pages, so the buttons are redrawn around the ellipsis.
     for (const next of ["5", "4", "3"]) {
       await label(new RegExp(`^${next}$`)).focus();
