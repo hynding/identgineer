@@ -47,7 +47,8 @@ describe("paginationRange", () => {
   });
 
   it("shows a page rather than an ellipsis that would stand for only that page", () => {
-    expect(paginationRange({ page: 5, pageCount: 8 })).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    // Page 2 is the only page the start would hide, so it is listed instead of a gap.
+    expect(paginationRange({ page: 3, pageCount: 9 })).toEqual([1, 2, 3, 4, 5, GAP_END, 9]);
   });
 
   it("widens the window with siblings and boundaries", () => {
