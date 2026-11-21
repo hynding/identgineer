@@ -239,9 +239,10 @@ test.describe("the eight arrangements", () => {
     await openShell(page, { layout: "side-rail" });
     const found = await regions(page);
     expectBeside(found.navigation, found.main, "rail beside main");
-    expect(found.navigation.height, "the rail is as tall as the window").toBeGreaterThanOrEqual(
-      800,
-    );
+    expect(
+      found.brand.height + found.navigation.height,
+      "the rail, brand and navigation, is as tall as the window",
+    ).toBeGreaterThanOrEqual(800);
     expect(found.navigation.x).toBeLessThanOrEqual(1);
     expectAbove(found.actions, found.main, "actions strip over main");
     expect(found.actions.x, "the strip starts where the rail ends").toBeGreaterThanOrEqual(
@@ -253,7 +254,7 @@ test.describe("the eight arrangements", () => {
     await page.evaluate(() => {
       window.scrollTo(0, 700);
     });
-    await expect.poll(() => partTop(page, "navigation")).toBe(0);
+    await expect.poll(() => partTop(page, "brand")).toBe(0);
   });
 
   test("split-hero: the hero keeps the start half in view while main scrolls beside it", async ({

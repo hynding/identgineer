@@ -266,19 +266,6 @@ test.describe("a long navigation in a rail", () => {
         expect(covered, `${id} under the brand`).toBeLessThanOrEqual(1);
       }
     });
-
-    test(`${layout}: the brand has a surface of its own, so items scrolling past it are not seen through it`, async ({
-      page,
-    }) => {
-      await openShell(page, { width: 1280, layout });
-      const background = await page.locator("#shell").evaluate((host) => {
-        const brand = host.shadowRoot?.querySelector<HTMLElement>('[part="brand"]');
-        if (!brand) throw new Error("no brand");
-        const style = getComputedStyle(brand);
-        return `${style.backgroundColor} ${style.backgroundImage}`;
-      });
-      expect(background).not.toBe("rgba(0, 0, 0, 0) none");
-    });
   }
 });
 
@@ -523,7 +510,11 @@ test.describe("the menu button stays under the pointer while the panel opens", (
         .toBe(true);
       await frames(page, 3);
       const after = await toggle.boundingBox();
-      expect(after).toEqual(before);
+      expect(before).not.toBeNull();
+      // Within half a pixel: the rows of the header settle on fractions of one.
+      for (const key of ["x", "y", "width", "height"] as const) {
+        expect(after?.[key], key).toBeCloseTo(before?.[key] ?? Number.NaN, 0);
+      }
     });
   }
 });

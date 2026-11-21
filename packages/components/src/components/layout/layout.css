@@ -76,6 +76,11 @@
 
 /* Regions */
 
+/* The brand, the menu button and the navigation: a wrapper that only a rail draws. */
+.start {
+  display: contents;
+}
+
 .header {
   grid-column: 1 / -1;
   grid-row: 1;
@@ -152,8 +157,9 @@
   padding-block: var(--_pad);
   padding-inline: var(--_pad);
   margin-block-start: var(--_pad);
-  /* A word the hero cannot break may not push the page sideways, whatever the font makes of it. */
-  overflow: clip;
+  /* A word the hero cannot fit breaks, so the page never scrolls sideways and nothing is clipped. It
+     is inherited by what the page puts in the hero, and only the hero does this. */
+  overflow-wrap: anywhere;
   border-radius: var(--idg-shape-radius-lg);
   background:
     radial-gradient(
@@ -440,13 +446,13 @@
       padding-block-start: 0;
     }
 
-    /* While the panel is open the actions come after it, which is where Tab reaches them. */
+    /* While the panel is open the actions come after it, which is where Tab reaches them. The
+       menu button keeps its place, and so keeps the pointer that just pressed it. */
     .header:has(.drawer[open]) {
-      grid-template-columns: minmax(0, 1fr) auto;
       grid-template-areas:
-        "brand toggle"
-        "nav nav"
-        "actions actions";
+        "brand toggle ."
+        "nav nav nav"
+        ". . actions";
     }
 
     .header:has(.drawer[open]) .actions {
@@ -480,11 +486,15 @@
     /* The bar is one row of a fixed height. A long navigation stays on it and scrolls along it,
        and what it scrolls to is kept clear of the brand and of the actions. */
     .navigation {
+      box-sizing: border-box;
+      max-block-size: 100%;
       flex-wrap: nowrap;
       justify-content: safe center;
       overflow: auto;
-      padding-block: var(--idg-space-3xs);
+      padding-block: 0;
       scroll-padding-inline: var(--_pad);
+      /* The scrollbar takes room from the bar, not from beyond it. */
+      scrollbar-width: thin;
     }
 
     ::slotted([slot="navigation"]) {
@@ -533,8 +543,9 @@
       display: contents;
     }
 
-    /* The brand sits on the rail's top, and both stay in view while the page scrolls. */
-    .brand {
+    /* The rail is the start of the header: the brand, then the navigation, which scrolls under
+       it. Both stay in view while the page scrolls. */
+    .start {
       position: sticky;
       inset-block-start: 0;
       z-index: 1;
@@ -542,32 +553,32 @@
       grid-row: 1 / -1;
       align-self: start;
       box-sizing: border-box;
-      block-size: var(--_bar);
-      padding-inline: var(--_pad);
-      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      block-size: var(--idg-size-screen);
       border-inline-end: var(--_rule);
       background: var(--_surface);
     }
 
+    .brand {
+      flex: none;
+      box-sizing: border-box;
+      min-block-size: var(--_bar);
+      padding-inline: var(--_pad);
+      padding-block: var(--idg-space-2xs);
+      border-block-end: var(--_rule);
+    }
+
     .navigation {
-      position: sticky;
-      inset-block-start: 0;
-      grid-column: 1;
-      grid-row: 1 / -1;
-      align-self: start;
+      flex: 1 1 0;
+      min-block-size: 0;
       flex-direction: column;
       flex-wrap: nowrap;
       align-items: stretch;
       justify-content: flex-start;
       box-sizing: border-box;
-      block-size: var(--idg-size-screen);
-      padding-block: calc(var(--_bar) + var(--_pad)) var(--_pad);
-      padding-inline: var(--_pad);
-      /* The brand sits over the top of the rail, so an item scrolled into view stops below it. */
-      scroll-padding-block-start: var(--_bar);
+      padding: var(--_pad);
       overflow: auto;
-      border-inline-end: var(--_rule);
-      background: var(--_surface);
     }
 
     .actions {
@@ -646,11 +657,10 @@
     }
 
     .header:has(.drawer[open]) {
-      grid-template-columns: minmax(0, 1fr) auto;
       grid-template-areas:
-        "brand toggle"
-        "nav nav"
-        "actions actions";
+        "brand toggle ."
+        "nav nav nav"
+        ". . actions";
     }
 
     .header:has(.drawer[open]) .actions {
@@ -679,7 +689,9 @@
         ". toggle actions"
         "nav nav nav";
       box-sizing: border-box;
-      min-block-size: var(--_bar);
+      /* The bar is the first row, whatever else the header holds, so the button never moves. */
+      grid-template-rows: minmax(var(--_bar), auto);
+      align-content: start;
       padding-block: 0;
       padding-inline: var(--_gutter);
       border-block-end: 0;
@@ -687,11 +699,10 @@
     }
 
     .shell:not(.no-hero) .header:has(.drawer[open]) {
-      grid-template-columns: minmax(0, 1fr) auto;
       grid-template-areas:
-        ". toggle"
-        "nav nav"
-        "actions actions";
+        ". toggle ."
+        "nav nav nav"
+        ". . actions";
     }
 
     /* The brand sits on the hero, where the bar would have been, and scrolls away with the page. */
@@ -711,9 +722,8 @@
       grid-row: 1 / 4;
       align-self: start;
       box-sizing: border-box;
-      block-size: var(--idg-size-screen);
+      min-block-size: var(--idg-size-screen);
       margin: 0;
-      overflow: auto;
       padding-block: calc(var(--_bar) + var(--_section)) var(--_section);
       padding-inline: var(--_section);
       border-radius: 0;
@@ -913,7 +923,9 @@
       display: contents;
     }
 
-    .brand {
+    /* The rail is the start of the header: the brand, then the navigation, which scrolls under
+       it. Both stay in view while the page scrolls. */
+    .start {
       position: sticky;
       inset-block-start: 0;
       z-index: 1;
@@ -921,31 +933,32 @@
       grid-row: 1 / -1;
       align-self: start;
       box-sizing: border-box;
-      block-size: var(--_bar);
-      padding-inline: var(--_pad);
-      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      block-size: var(--idg-size-screen);
       border-inline-end: var(--_rule);
       background: var(--idg-color-surface);
     }
 
+    .brand {
+      flex: none;
+      box-sizing: border-box;
+      min-block-size: var(--_bar);
+      padding-inline: var(--_pad);
+      padding-block: var(--idg-space-2xs);
+      border-block-end: var(--_rule);
+    }
+
     .navigation {
-      position: sticky;
-      inset-block-start: 0;
-      grid-column: 1;
-      grid-row: 1 / -1;
-      align-self: start;
+      flex: 1 1 0;
+      min-block-size: 0;
       flex-direction: column;
       flex-wrap: nowrap;
       align-items: stretch;
       justify-content: flex-start;
       box-sizing: border-box;
-      block-size: var(--idg-size-screen);
-      padding-block: calc(var(--_bar) + var(--_pad)) var(--_pad);
-      padding-inline: var(--_pad);
-      scroll-padding-block-start: var(--_bar);
+      padding: var(--_pad);
       overflow: auto;
-      border-inline-end: var(--_rule);
-      background: var(--idg-color-surface);
       font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
     }
 
@@ -1138,11 +1151,10 @@
     }
 
     .header:has(.drawer[open]) {
-      grid-template-columns: minmax(0, 1fr) auto;
       grid-template-areas:
-        "brand toggle"
-        "nav nav"
-        "actions actions";
+        "brand toggle ."
+        "nav nav nav"
+        ". . actions";
     }
 
     .header:has(.drawer[open]) .actions {
@@ -1359,6 +1371,28 @@
       grid-row: 3;
     }
   }
+}
+
+/* A shell inside a page takes the height its content needs, in every layout: nothing is sized to
+   the window, so a rail, a hero or an inspector that is pinned to it stops being. */
+:host([embedded]) .shell .start,
+:host([embedded]) .shell .aside {
+  position: static;
+  align-self: stretch;
+  block-size: auto;
+}
+
+:host([embedded]) .shell .start .navigation {
+  flex: 1 1 auto;
+  min-block-size: auto;
+  overflow: visible;
+}
+
+:host([embedded]) .shell .hero {
+  position: static;
+  align-self: stretch;
+  block-size: auto;
+  min-block-size: 0;
 }
 
 @media (forced-colors: active) {

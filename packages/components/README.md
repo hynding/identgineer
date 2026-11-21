@@ -927,8 +927,8 @@ document from `--idg-layout-sticky-inset`, so a focused or targeted element is n
 While a panel is open in `top-bar`, `bento` and `split-hero`, the actions move below it, so Tab goes
 from the menu button through the navigation to the actions without jumping back up the page. In
 `top-bar` at 72rem and wider the navigation is one row that scrolls along itself when it is longer
-than the bar; in `side-rail` and `dashboard` a long navigation scrolls inside the rail, below the
-brand.
+than the bar (a focused item is scrolled into view, and the scrollbar fits in the bar); in `side-rail` and `dashboard` the rail is a column of the brand, which takes the height it needs,
+and the navigation under it, which scrolls. The menu button does not move when the panel opens.
 
 **Missing regions.** A layout that has no hero arranges itself without one: the `immersive` header
 becomes a bar of the page on a surface of its own instead of being laid over the hero, and
@@ -938,12 +938,15 @@ into it is not drawn, and the layouts leave no gap for it.
 **Escape and focus.** Escape closes an open panel only when it happens in the menu button or the
 navigation and nothing has already used it. Closing the navigation from the page (setting
 `navigationOpen` to `false`) does not move focus the page has put elsewhere. If the container grows
-while a drawer is open with focus inside it, focus goes to the first item of the navigation that is
-now drawn on the page, or to the menu button if that is shown. A click on a link with a modifier key,
+while a drawer is open and the navigation is now drawn on the page, a focused navigation item that is
+still visible keeps focus; focus that was on the Close button, which is gone, moves to the first
+navigation item (or to the menu button if that is shown). A click on a link with a modifier key,
 or with a button other than the primary one, does not close the navigation.
 
 **Embedded.** A shell is the page and claims at least the height of the window. Set `embedded` on one
-that sits inside a page, or inside another shell, and it takes the height its content needs.
+that sits inside a page, or inside another shell, and in all eight layouts it takes the height its
+content needs: a rail, a sticky hero, an inspector or a hero that is as tall as the window stops
+being.
 
 **Scroll padding.** `scroll-padding-block-start` is set on the root element from
 `--idg-layout-sticky-inset`, so it applies at every width and to every scroller that is the page, not
@@ -957,9 +960,10 @@ its small arrangement: a bar of brand, menu button and actions above one column,
 as a panel under the menu button. It is plain and fully usable, and the eight layouts differ again
 once the browser supports them.
 
-**Text wider than its column.** The hero clips what it cannot break, rather than let the page scroll
-sideways, so a word of the hero that does not fit loses a few pixels at the edge of the hero instead
-of the reader losing the layout.
+**Text wider than its column.** The hero lets a word it cannot fit break (`overflow-wrap: anywhere`,
+inherited by what the page puts in the hero, and set on the hero alone). Nothing is clipped and the
+page does not scroll sideways; ordinary words never break, because a word only breaks where it is
+wider than the line.
 
 ## Strict CSP and Trusted Types
 

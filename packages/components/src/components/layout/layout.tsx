@@ -140,6 +140,7 @@ export class IdgLayout {
   private toggle?: HTMLButtonElement;
   private drawer?: HTMLDialogElement;
   private main?: HTMLElement;
+  private navigationElement?: HTMLElement;
   private mode: NavigationMode = "inline";
   private scrollLocked = false;
   private skipFocusRestore = false;
@@ -222,6 +223,18 @@ export class IdgLayout {
     const target = event.target as Element | null;
     if (target?.closest('[slot="navigation"]')?.closest("[href]") != null) {
       this.navigationOpen = false;
+    }
+  }
+
+  // Focus alone does not bring a half-hidden item of a navigation that scrolls into view.
+  @Listen("focusin")
+  handleFocusIn(event: FocusEvent): void {
+    const navigation = this.navigationElement;
+    const target = event.target as Element | null;
+    if (!navigation || !target || navigation.scrollWidth <= navigation.clientWidth) return;
+    if (!itemsInSlot(this.host, "navigation").some((item) => isWithin(target, item))) return;
+    if (typeof target.scrollIntoView === "function") {
+      target.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
   }
 
@@ -433,46 +446,53 @@ export class IdgLayout {
           {this.skipLabel}
         </a>
         <header class="header" part="header" hidden={!hasHeader}>
-          <div class="brand" part="brand" hidden={!presence.brand}>
-            <slot name="brand" onSlotchange={this.readPresence} />
-          </div>
-          <button
-            class="toggle focusable"
-            part="toggle"
-            type="button"
-            hidden={!presence.navigation}
-            aria-expanded={this.navigationOpen ? "true" : "false"}
-            ref={(element) => (this.toggle = element)}
-            onClick={this.toggleNavigation}
-          >
-            <idg-icon name={this.navigationOpen ? "close" : "menu"} />
-            <span class="toggle-label">{this.menuLabel}</span>
-          </button>
-          <dialog
-            class="drawer"
-            part="drawer"
-            hidden={!presence.navigation}
-            // Chrome keeps a dialog's own role under role=none, and axe rejects generic, so a group stands in.
-            role={this.modalOpen ? undefined : "group"}
-            aria-label={this.modalOpen ? this.menuLabel : undefined}
-            ref={(element) => (this.drawer = element)}
-            onCancel={this.handleCancel}
-            onClose={this.handleClose}
-            onClick={this.handleDrawerClick}
-          >
+          <div class="start">
+            <div class="brand" part="brand" hidden={!presence.brand}>
+              <slot name="brand" onSlotchange={this.readPresence} />
+            </div>
             <button
-              class="close focusable"
-              part="close"
+              class="toggle focusable"
+              part="toggle"
               type="button"
-              aria-label={this.closeLabel}
-              onClick={this.closeNavigation}
+              hidden={!presence.navigation}
+              aria-expanded={this.navigationOpen ? "true" : "false"}
+              ref={(element) => (this.toggle = element)}
+              onClick={this.toggleNavigation}
             >
-              <idg-icon name="close" />
+              <idg-icon name={this.navigationOpen ? "close" : "menu"} />
+              <span class="toggle-label">{this.menuLabel}</span>
             </button>
-            <nav class="navigation" part="navigation" aria-label={this.navigationLabel}>
-              <slot name="navigation" onSlotchange={this.readPresence} />
-            </nav>
-          </dialog>
+            <dialog
+              class="drawer"
+              part="drawer"
+              hidden={!presence.navigation}
+              // Chrome keeps a dialog's own role under role=none, and axe rejects generic, so a group stands in.
+              role={this.modalOpen ? undefined : "group"}
+              aria-label={this.modalOpen ? this.menuLabel : undefined}
+              ref={(element) => (this.drawer = element)}
+              onCancel={this.handleCancel}
+              onClose={this.handleClose}
+              onClick={this.handleDrawerClick}
+            >
+              <button
+                class="close focusable"
+                part="close"
+                type="button"
+                aria-label={this.closeLabel}
+                onClick={this.closeNavigation}
+              >
+                <idg-icon name="close" />
+              </button>
+              <nav
+                class="navigation"
+                part="navigation"
+                aria-label={this.navigationLabel}
+                ref={(element) => (this.navigationElement = element)}
+              >
+                <slot name="navigation" onSlotchange={this.readPresence} />
+              </nav>
+            </dialog>
+          </div>
           <div class="actions" part="actions" hidden={!presence.actions}>
             <slot name="actions" onSlotchange={this.readPresence} />
           </div>

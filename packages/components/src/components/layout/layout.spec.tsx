@@ -115,10 +115,12 @@ describe("idg-layout landmarks", () => {
     const shell = part(root, "shell");
     const regions = Array.from(shell.children).map((child) => child.getAttribute("part"));
     expect(regions).toEqual(["skip", "header", "hero", "main", "aside", "footer"]);
-    const header = Array.from(part(root, "header").children).map((child) =>
-      child.getAttribute("part"),
-    );
-    expect(header).toEqual(["brand", "toggle", "drawer", "actions"]);
+    // The start of the header is a wrapper no layout draws; a rail is made of it.
+    const header = Array.from(part(root, "header").children);
+    expect(header.map((child) => child.getAttribute("part"))).toEqual([null, "actions"]);
+    expect(
+      Array.from(header[0]?.children ?? []).map((child) => child.getAttribute("part")),
+    ).toEqual(["brand", "toggle", "drawer"]);
   });
 
   it("gives each region its own slot, and the content the default slot", async () => {
