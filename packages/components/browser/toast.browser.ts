@@ -225,7 +225,15 @@ test.describe("idg-toast timing", () => {
     });
     await expect(toasts(page)).toHaveCount(3);
     await expect(toasts(page).nth(2)).toBeVisible();
-    await expect.poll(() => liveText(page, "polite")).toBe("Four");
+    // Added to the announcement still showing, so a screen reader reads the new line alone.
+    await expect
+      .poll(() =>
+        page
+          .locator("#toasts")
+          .locator('[aria-live="polite"]')
+          .evaluate((element) => Array.from(element.children, (line) => line.textContent)),
+      )
+      .toEqual(["One", "Two", "Three", "Four"]);
   });
 });
 

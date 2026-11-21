@@ -140,6 +140,23 @@ describe("idg-toast-region announcements", () => {
     expect(polite.textContent).toContain("Second");
   });
 
+  it("adds to an announcement still showing, rather than replacing it, and clears it later", async () => {
+    const { root } = await render(empty);
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    addToast(root, "First");
+    vi.advanceTimersByTime(100);
+    const polite = live(root, "polite");
+    const first = polite.firstElementChild;
+    expect(first?.textContent).toBe("First");
+    vi.advanceTimersByTime(30);
+    addToast(root, "Second");
+    vi.advanceTimersByTime(100);
+    expect(Array.from(polite.children, (line) => line.textContent)).toEqual(["First", "Second"]);
+    expect(polite.firstElementChild).toBe(first);
+    vi.advanceTimersByTime(5000);
+    expect(polite.textContent).toBe("");
+  });
+
   it("announces only a danger toast assertively", async () => {
     const { root } = await render(empty);
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
@@ -233,6 +250,32 @@ describe("idg-toast-region moved", () => {
     root.append(region);
     slotChanged(region);
     expect(part(region, "region").hasAttribute("data-popover-open")).toBe(true);
+  });
+
+  it("announces a toast that was waiting to be announced when it was moved", async () => {
+    const { root } = await render(<div>{empty}</div>);
+    const region = root.querySelector("idg-toast-region") as HTMLElement;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    addToast(region, "Saved");
+    vi.advanceTimersByTime(50);
+    removeHost(region);
+    root.append(region);
+    vi.advanceTimersByTime(100);
+    expect(live(region, "polite").textContent).toBe("Saved");
+  });
+
+  it("clears an announcement whose time ran out while it was away", async () => {
+    const { root } = await render(<div>{empty}</div>);
+    const region = root.querySelector("idg-toast-region") as HTMLElement;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    addToast(region, "Saved");
+    vi.advanceTimersByTime(100);
+    expect(live(region, "polite").textContent).toBe("Saved");
+    removeHost(region);
+    vi.advanceTimersByTime(6000);
+    root.append(region);
+    vi.advanceTimersByTime(0);
+    expect(live(region, "polite").textContent).toBe("");
   });
 
   it("keeps following the reduced-motion preference after it is moved", async () => {
