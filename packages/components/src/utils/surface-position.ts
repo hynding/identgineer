@@ -1,0 +1,70 @@
+import { computePosition, type Placement } from "./position";
+
+/** The distance the fallback keeps a surface from the viewport's edges, in pixels. */
+const VIEWPORT_PADDING = 8;
+
+/** Whether the browser can tie a surface to its trigger with CSS anchor positioning. */
+export function supportsAnchorPositioning(): boolean {
+  return (
+    typeof CSS !== "undefined" &&
+    typeof CSS.supports === "function" &&
+    CSS.supports("anchor-name: --idg-trigger") &&
+    CSS.supports("position-area: bottom")
+  );
+}
+
+export interface SurfaceAnchor {
+  anchor: Element | undefined;
+  placement: Placement;
+  offset: number;
+}
+
+/**
+ * Keeps a top-layer surface beside its anchor where CSS anchor positioning cannot: in a browser
+ * without it, or for a trigger outside the overlay that the overlay's stylesheet cannot name. The
+ * coordinates go into two custom properties through the CSSOM, which `style-src` does not govern,
+ * and the stylesheet places the surface with them. It follows scrolling and resizing while open.
+ */
+export class SurfacePosition {
+  private frame = 0;
+
+  constructor(
+    private readonly surface: HTMLElement,
+    private readonly read: () => SurfaceAnchor,
+  ) {}
+
+  start(): void {
+    this.update();
+    window.addEventListener("scroll", this.schedule, { capture: true, passive: true });
+    window.addEventListener("resize", this.schedule, { passive: true });
+  }
+
+  stop(): void {
+    window.removeEventListener("scroll", this.schedule, { capture: true });
+    window.removeEventListener("resize", this.schedule);
+    cancelAnimationFrame(this.frame);
+  }
+
+  update = (): void => {
+    const { anchor, placement, offset } = this.read();
+    if (!anchor) return;
+    const root = document.documentElement;
+    const surface = this.surface.getBoundingClientRect();
+    const position = computePosition({
+      anchor: anchor.getBoundingClientRect(),
+      floating: { width: surface.width, height: surface.height },
+      viewport: { width: root.clientWidth, height: root.clientHeight },
+      placement,
+      offset,
+      padding: VIEWPORT_PADDING,
+    });
+    this.surface.style.setProperty("--_x", `${String(Math.round(position.x))}px`);
+    this.surface.style.setProperty("--_y", `${String(Math.round(position.y))}px`);
+    this.surface.dataset.placement = position.placement;
+  };
+
+  private schedule = (): void => {
+    cancelAnimationFrame(this.frame);
+    this.frame = requestAnimationFrame(this.update);
+  };
+}
