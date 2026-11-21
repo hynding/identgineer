@@ -56,3 +56,7 @@ pnpm build         # build every package that defines a build script
 The work is split into 14 features, each tracked as a GitHub issue. See
 [docs/PLAN.md](docs/PLAN.md) for order, dependencies and process, or browse the
 [issues](https://github.com/hynding/identgineer/issues?q=label%3Afeature).
+
+## Security
+
+Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
