@@ -2,7 +2,7 @@ const LETTER_OR_NUMBER = /[\p{L}\p{N}]/u;
 
 function firstCharacter(word: string): string {
   // Spread by code point, so a character outside the basic plane is not cut in half.
-  return [...word].find((character) => LETTER_OR_NUMBER.test(character)) ?? "";
+  return Array.from(word).find((character) => LETTER_OR_NUMBER.test(character)) ?? "";
 }
 
 /**

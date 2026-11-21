@@ -90,7 +90,11 @@ export class IdgAvatar {
           class={{ status: true, [`status-${status}`]: true, [`size-${size}`]: true }}
           part="status"
           role="img"
-          aria-label={this.statusLabel || STATUS_LABELS[status]}
+          aria-label={
+            this.statusLabel === undefined || this.statusLabel === ""
+              ? STATUS_LABELS[status]
+              : this.statusLabel
+          }
         />
       ),
     ];

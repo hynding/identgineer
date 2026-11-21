@@ -50,6 +50,10 @@ export class IdgAlert {
     );
   }
 
+  private titleChanged = (): void => {
+    this.readTitle();
+  };
+
   private dismiss = (): void => {
     const event = this.idgDismiss.emit();
     if (!event.defaultPrevented) this.host.setAttribute("hidden", "");
@@ -73,10 +77,10 @@ export class IdgAlert {
         <div class="content">
           {this.hasTitle ? (
             <div class="title" part="title">
-              <slot name="title" onSlotchange={() => this.readTitle()} />
+              <slot name="title" onSlotchange={this.titleChanged} />
             </div>
           ) : (
-            <slot name="title" onSlotchange={() => this.readTitle()} />
+            <slot name="title" onSlotchange={this.titleChanged} />
           )}
           <div class="body" part="body">
             <slot />

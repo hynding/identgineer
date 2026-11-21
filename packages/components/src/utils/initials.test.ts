@@ -24,6 +24,6 @@ describe("initials", () => {
   });
 
   it("keeps a letter outside the basic plane whole", () => {
-    expect([...initials("𝒜da 𝒷ob")]).toHaveLength(2);
+    expect(Array.from(initials("𝒜da 𝒷ob"))).toHaveLength(2);
   });
 });
