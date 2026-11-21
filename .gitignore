@@ -5,3 +5,4 @@ www
 coverage
 cms/generated
 .env*
+!.env.example
