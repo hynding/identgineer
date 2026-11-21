@@ -74,6 +74,13 @@
   }
 }
 
+/* With movement off the shape is already one flat colour, so there is nothing to animate. */
+@container style(--idg-motion-enabled: 0) {
+  .shape {
+    animation: none;
+  }
+}
+
 @keyframes idg-shimmer {
   from {
     background-position: 100% 0;

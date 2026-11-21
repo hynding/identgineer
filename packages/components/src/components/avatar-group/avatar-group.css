@@ -20,7 +20,7 @@
 
 .group ::slotted(idg-avatar:not(:first-child)),
 .more {
-  margin-inline-start: -0.6rem;
+  margin-inline-start: -0.4rem;
 }
 
 .more {

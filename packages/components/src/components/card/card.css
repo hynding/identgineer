@@ -24,7 +24,7 @@
   --_gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
   --_shadow: var(--idg-elevation-sm);
   --_shadow-hover: var(--idg-elevation-md);
-  --_ring: 0 0 0 0 transparent;
+  --_ring: none;
 
   position: relative;
   box-sizing: border-box;
@@ -40,7 +40,7 @@
   border-radius: var(--idg-shape-radius-lg);
   background: var(--idg-surface-background);
   backdrop-filter: var(--idg-surface-backdrop-filter);
-  box-shadow: var(--_ring), var(--_shadow);
+  box-shadow: var(--_shadow);
   color: var(--idg-color-text);
   font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
   line-height: var(--idg-font-body-line-height);
@@ -48,6 +48,17 @@
   transition-property: transform, box-shadow, background-color, border-color;
   transition-duration: var(--idg-motion-duration-base);
   transition-timing-function: var(--idg-motion-easing-standard);
+}
+
+/* The strong edge of the outlined variant is drawn on a layer of its own, because "none" (the
+   elevation of a flat design) cannot share a box-shadow list with it. */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: var(--_ring);
+  pointer-events: none;
 }
 
 /* Padding */
@@ -86,9 +97,18 @@
   backdrop-filter: none;
 }
 
+/* Everything inside an accent card sits on the accent colour, so the tokens its content reads are
+   re-pointed for it: text, muted text and links take the on-accent colour, and a surface (a
+   secondary button, a field) becomes a tint of it. A design whose surfaces are transparent
+   (editorial, outline) would otherwise leave dark text on the accent. */
 .variant-accent {
   --_shadow: var(--idg-elevation-md);
   --_shadow-hover: var(--idg-elevation-lg);
+  --idg-color-text: var(--idg-color-on-accent);
+  --idg-color-text-muted: var(--idg-color-on-accent);
+  --idg-color-link: var(--idg-color-on-accent);
+  --idg-surface-background: color-mix(in srgb, var(--idg-color-on-accent) 16%, transparent);
+  --idg-surface-backdrop-filter: none;
 
   background: var(--idg-color-accent);
   backdrop-filter: none;
