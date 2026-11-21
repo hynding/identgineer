@@ -19,6 +19,7 @@ type Change =
   | "long-label"
   | "long-brand"
   | "wide-hero-text"
+  | "long-hero-word"
   | "no-hero"
   | "no-aside"
   | "no-actions"
@@ -60,6 +61,9 @@ async function change(page: Page, kind: Change): Promise<void> {
       host
         .querySelectorAll<HTMLElement>('[slot="hero"] *')
         .forEach((element) => (element.style.letterSpacing = "0.06em"));
+    }
+    if (what === "long-hero-word") {
+      host.querySelector('[slot="hero"] .lede')?.append(` ${"w".repeat(80)}`);
     }
     if (what === "no-hero" || what === "no-hero-or-aside") remove("hero");
     if (what === "no-aside" || what === "no-hero-or-aside") remove("aside");
@@ -162,17 +166,33 @@ test.describe("a page that puts more in the shell than the fixture does", () => 
     }
   });
 
-  test("hero text wider than its column does not scroll the page sideways at 320px with the root font at 200%", async ({
-    page,
-  }) => {
-    await openShell(page, { width: 320, fontSize: "200%" });
-    await change(page, "wide-hero-text");
-    for (const layout of LAYOUTS) {
-      await setLayout(page, layout);
-      await frames(page, 3);
-      expect(await sideways(page), layout).toBeLessThanOrEqual(0);
-    }
-  });
+  for (const kind of ["wide-hero-text", "long-hero-word"] as const) {
+    test(`${kind}: the hero holds its text, with nothing clipped and no sideways scroll, at 320px with the root font at 200%`, async ({
+      page,
+    }) => {
+      test.setTimeout(120_000);
+      await openShell(page, { width: 320, fontSize: "200%" });
+      await change(page, kind);
+      for (const layout of LAYOUTS) {
+        await setLayout(page, layout);
+        await frames(page, 3);
+        const hero = await page.locator("#shell").evaluate((host) => {
+          const element = host.shadowRoot?.querySelector<HTMLElement>('[part="hero"]');
+          if (!element) throw new Error("no hero");
+          const style = getComputedStyle(element);
+          return {
+            overflow: `${style.overflowX} ${style.overflowY}`,
+            wider: element.scrollWidth - element.clientWidth,
+          };
+        });
+        expect(hero.overflow, `${layout} hides or scrolls the hero`).toBe("visible visible");
+        expect(hero.wider, `${layout}: the hero's content runs past the hero`).toBeLessThanOrEqual(
+          1,
+        );
+        expect(await sideways(page), layout).toBeLessThanOrEqual(0);
+      }
+    });
+  }
 
   for (const kind of ["no-hero", "no-aside", "no-actions", "no-hero-or-aside"] as const) {
     test(`${kind}: nothing sits over anything else, in every layout`, async ({ page }) => {
@@ -276,43 +296,49 @@ test.describe("Tab order with the navigation open as a panel", () => {
     "footer",
   ];
 
-  for (const width of [390, 768]) {
-    for (const layout of ["top-bar", "bento", "split-hero", "magazine", "centered"]) {
-      test(`${layout} at ${String(width)}px: the panel is followed by the actions, never preceded by a jump up`, async ({
-        page,
-      }) => {
-        await openShell(page, { width, layout });
-        const toggle = page.locator("#shell").locator('[part="toggle"]');
-        if (!(await toggle.isVisible())) return;
-        await toggle.click();
-        await expect
-          .poll(() =>
-            page.locator("#shell").evaluate((host) => host.hasAttribute("navigation-open")),
-          )
-          .toBe(true);
-        await frames(page, 3);
-        const modal = await page
-          .locator("#shell")
-          .evaluate((host) => host.shadowRoot?.querySelector("dialog")?.matches(":modal") ?? false);
-        if (modal) return;
-        const stops = await tabStops(page);
-        const ranks = stops.map((stop) => RANK.indexOf(stop.region));
-        expect(ranks, "regions in the order of the markup").toEqual(
-          [...ranks].sort((a, b) => a - b),
-        );
-        for (let index = 1; index < stops.length; index += 1) {
-          const previous = stops[index - 1];
-          const next = stops[index];
-          if (!previous || !next) continue;
-          const above = next.rect.bottom <= previous.rect.y + 1;
-          const before = next.rect.x < previous.rect.right - 1;
-          expect(
-            above && before,
-            `${previous.region}#${previous.id} -> ${next.region}#${next.id} jumps back up`,
-          ).toBe(false);
-        }
-      });
-    }
+  // The layouts that show the navigation as a panel, not a drawer, at each width.
+  const PANEL_CASES: [string, number][] = [
+    ...(["top-bar", "bento", "split-hero", "magazine", "centered"] as const).map(
+      (layout): [string, number] => [layout, 390],
+    ),
+    ...(["top-bar", "bento", "split-hero"] as const).map((layout): [string, number] => [
+      layout,
+      768,
+    ]),
+  ];
+
+  for (const [layout, width] of PANEL_CASES) {
+    test(`${layout} at ${String(width)}px: the panel is followed by the actions, never preceded by a jump up`, async ({
+      page,
+    }) => {
+      await openShell(page, { width, layout });
+      const toggle = page.locator("#shell").locator('[part="toggle"]');
+      await expect(toggle).toBeVisible();
+      await toggle.click();
+      await expect
+        .poll(() => page.locator("#shell").evaluate((host) => host.hasAttribute("navigation-open")))
+        .toBe(true);
+      await frames(page, 3);
+      const modal = await page
+        .locator("#shell")
+        .evaluate((host) => host.shadowRoot?.querySelector("dialog")?.matches(":modal"));
+      expect(modal, "a panel is not modal").toBe(false);
+      const stops = await tabStops(page);
+      const ranks = stops.map((stop) => RANK.indexOf(stop.region));
+      expect(ranks.includes(RANK.indexOf("navigation")), "the navigation is reached").toBe(true);
+      expect(ranks, "regions in the order of the markup").toEqual([...ranks].sort((a, b) => a - b));
+      for (let index = 1; index < stops.length; index += 1) {
+        const previous = stops[index - 1];
+        const next = stops[index];
+        if (!previous || !next) continue;
+        const above = next.rect.bottom <= previous.rect.y + 1;
+        const before = next.rect.x < previous.rect.right - 1;
+        expect(
+          above && before,
+          `${previous.region}#${previous.id} -> ${next.region}#${next.id} jumps back up`,
+        ).toBe(false);
+      }
+    });
   }
 });
 
@@ -442,4 +468,123 @@ test.describe("details of the arrangements", () => {
       1,
     );
   });
+});
+
+test.describe("a long navigation scrolling along the top bar", () => {
+  test("every item Tab reaches lies inside the bar's navigation", async ({ page }) => {
+    await openShell(page, { width: 1280, layout: "top-bar" });
+    await change(page, "many-items");
+    const stops = await tabStops(page, 40);
+    const items = stops.filter((stop) => stop.region === "navigation");
+    expect(items.length).toBeGreaterThanOrEqual(26);
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
+    for (let index = 0; index < items.length + 4; index += 1) {
+      await page.keyboard.press("Tab");
+      await frames(page, 1);
+      const outside = await page.evaluate(() => {
+        const host = document.getElementById("shell");
+        const navigation = host?.shadowRoot?.querySelector<HTMLElement>('[part="navigation"]');
+        const active = document.activeElement;
+        if (!navigation || active?.getAttribute("slot") !== "navigation") return 0;
+        const box = active.getBoundingClientRect();
+        const bar = navigation.getBoundingClientRect();
+        return Math.max(bar.left - box.left, box.right - bar.right, 0);
+      });
+      expect(
+        outside,
+        `step ${String(index)}: the focused item is cut by the bar`,
+      ).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
+test.describe("the menu button stays under the pointer while the panel opens", () => {
+  const CASES: [string, number][] = [
+    ["top-bar", 768],
+    ["top-bar", 1024],
+    ["bento", 768],
+    ["bento", 1024],
+    ["split-hero", 768],
+    ["split-hero", 1024],
+    ["split-hero", 1280],
+  ];
+  for (const [layout, width] of CASES) {
+    test(`${layout} at ${String(width)}px`, async ({ page }) => {
+      await openShell(page, { width, layout });
+      const toggle = page.locator("#shell").locator('[part="toggle"]');
+      await expect(toggle).toBeVisible();
+      const before = await toggle.boundingBox();
+      await toggle.click();
+      await expect
+        .poll(() => page.locator("#shell").evaluate((host) => host.hasAttribute("navigation-open")))
+        .toBe(true);
+      await frames(page, 3);
+      const after = await toggle.boundingBox();
+      expect(after).toEqual(before);
+    });
+  }
+});
+
+test.describe("a long brand in a rail", () => {
+  for (const layout of ["side-rail", "dashboard"]) {
+    for (const fontSize of ["100%", "200%"]) {
+      test(`${layout} at ${fontSize} text: the brand is whole and the rail still scrolls its navigation`, async ({
+        page,
+      }) => {
+        await openShell(page, { width: 1600, height: 600, layout, fontSize });
+        await change(page, "long-brand");
+        await change(page, "many-items");
+        await frames(page, 3);
+        const brand = await page.locator("#shell").evaluate((host) => {
+          const element = host.shadowRoot?.querySelector<HTMLElement>('[part="brand"]');
+          const navigation = host.shadowRoot?.querySelector<HTMLElement>('[part="navigation"]');
+          if (!element || !navigation) throw new Error("missing");
+          return {
+            tall: element.scrollHeight - element.clientHeight,
+            wide: element.scrollWidth - element.clientWidth,
+            gap: navigation.getBoundingClientRect().top - element.getBoundingClientRect().bottom,
+          };
+        });
+        expect(brand.tall, "brand clipped above or below").toBeLessThanOrEqual(1);
+        expect(brand.wide, "brand clipped at the side").toBeLessThanOrEqual(1);
+        expect(brand.gap, "the navigation starts under the brand").toBeGreaterThanOrEqual(-1);
+        for (const id of ["nav-first", "item-19", "nav-first"]) {
+          await page.locator(`#${id}`).focus();
+          await frames(page, 1);
+          const covered = await page.locator("#shell").evaluate((host, target) => {
+            const element = host.shadowRoot?.querySelector<HTMLElement>('[part="brand"]');
+            const item = document.getElementById(target);
+            if (!element || !item) throw new Error("missing");
+            return element.getBoundingClientRect().bottom - item.getBoundingClientRect().top;
+          }, id);
+          expect(covered, `${id} under the brand`).toBeLessThanOrEqual(1);
+        }
+      });
+    }
+  }
+});
+
+test.describe("an embedded shell takes the height its content needs", () => {
+  for (const layout of LAYOUTS) {
+    test(layout, async ({ page }) => {
+      await openShell(page, { width: 1280, height: 1400, layout });
+      await page.locator("#shell").evaluate((host) => {
+        host.setAttribute("embedded", "");
+        host.querySelectorAll(":scope > :not([slot]), [slot=aside], [slot=footer]").forEach((n) => {
+          n.remove();
+        });
+        const text = document.createElement("p");
+        text.textContent = "A short page.";
+        host.append(text);
+      });
+      await frames(page, 3);
+      const height = await page
+        .locator("#shell")
+        .evaluate((host) => host.getBoundingClientRect().height);
+      expect(height, "the shell is as tall as its content").toBeLessThan(1000);
+    });
+  }
 });
