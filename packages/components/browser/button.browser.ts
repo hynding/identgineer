@@ -88,6 +88,8 @@ test.describe("idg-button keyboard", () => {
 
   test("tabs from the field to the button and shows a focus ring", async ({ page }) => {
     await page.goto(PAGE);
+    // Until the button hydrates it has no control to take focus, and Tab would pass it by.
+    await expect(page.locator("#live-submit.hydrated")).toHaveCount(1);
     await page.locator("#live input").focus();
     await page.keyboard.press("Tab");
     const control = page.locator("#live-submit").locator("button");
