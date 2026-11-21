@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { h } from "@stencil/vitest";
-import { renderControl as render, renderWithInternals, stubValidity } from "../../testing/form-internals";
+import {
+  renderControl as render,
+  renderWithInternals,
+  stubValidity,
+} from "../../testing/form-internals";
 import "./select";
 
 function native(root: HTMLElement): HTMLSelectElement {
@@ -33,7 +37,12 @@ describe("idg-select rendering", () => {
     const { root } = await render(<idg-select>{options}</idg-select>);
     const select = native(root);
     const mirrored = Array.from(select.querySelectorAll("option"));
-    expect(mirrored.map((option) => option.textContent)).toEqual(["Alpha", "Beta", "Gamma", "Delta"]);
+    expect(mirrored.map((option) => option.textContent)).toEqual([
+      "Alpha",
+      "Beta",
+      "Gamma",
+      "Delta",
+    ]);
     expect(mirrored[0]?.getAttribute("value")).toBe("a");
     expect(mirrored[1]?.hasAttribute("disabled")).toBe(true);
     expect(mirrored[2]?.hasAttribute("selected")).toBe(true);

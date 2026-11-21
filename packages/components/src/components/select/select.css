@@ -1,0 +1,39 @@
+.native {
+  cursor: pointer;
+  padding-inline-end: calc(1.5em + var(--idg-space-2xs));
+  text-overflow: ellipsis;
+}
+
+.native option,
+.native optgroup {
+  background: var(--idg-color-surface);
+  color: var(--idg-color-text);
+}
+
+.chevron {
+  position: absolute;
+  inset-inline-end: var(--idg-density-control-padding-inline);
+  inset-block-start: 50%;
+  box-sizing: border-box;
+  inline-size: 0.55em;
+  block-size: 0.55em;
+  border-inline-end: 2px solid currentcolor;
+  border-block-end: 2px solid currentcolor;
+  color: var(--idg-color-text-muted);
+  pointer-events: none;
+  transform: translateY(-70%) rotate(45deg);
+}
+
+.invalid-mark {
+  margin-inline-end: 1.5em;
+}
+
+.disabled .native {
+  cursor: not-allowed;
+}
+
+@media (forced-colors: active) {
+  .chevron {
+    color: FieldText;
+  }
+}

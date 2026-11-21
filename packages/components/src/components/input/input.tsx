@@ -139,7 +139,8 @@ export class IdgInput {
   };
 
   private handleChange = (event: globalThis.Event): void => {
-    this.idgChange.emit({ value: (event.target as HTMLInputElement).value });
+    this.value = (event.target as HTMLInputElement).value;
+    this.idgChange.emit({ value: this.value });
   };
 
   private toggleReveal = (): void => {

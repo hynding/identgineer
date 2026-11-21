@@ -44,15 +44,19 @@ export async function renderWithInternals(vnode: ReturnType<typeof h>, form: obj
 function installDefaultValidity(prototype: object): void {
   if (Object.prototype.hasOwnProperty.call(prototype, "validity")) return;
   stubValidity(prototype as HTMLElement, {});
-  // Only inputs have a value in the mock DOM; this gives a textarea or select one as a browser does.
+  // Only inputs have a value in the mock DOM. A textarea and a select get one as a browser gives
+  // them, and any other element reflects it as an attribute, as an option does.
   const values = new WeakMap<object, string>();
   Object.defineProperty(prototype, "value", {
     configurable: true,
-    get(this: object) {
-      return values.get(this) ?? "";
+    get(this: HTMLElement) {
+      return ["TEXTAREA", "SELECT"].includes(this.nodeName)
+        ? (values.get(this) ?? "")
+        : this.getAttribute("value");
     },
-    set(this: object, next: string) {
-      values.set(this, next);
+    set(this: HTMLElement, next: string) {
+      if (["TEXTAREA", "SELECT"].includes(this.nodeName)) values.set(this, next);
+      else this.setAttribute("value", next);
     },
   });
 }

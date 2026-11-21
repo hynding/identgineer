@@ -128,7 +128,8 @@ export class IdgTextarea {
   };
 
   private handleChange = (event: globalThis.Event): void => {
-    this.idgChange.emit({ value: (event.target as HTMLTextAreaElement).value });
+    this.value = (event.target as HTMLTextAreaElement).value;
+    this.idgChange.emit({ value: this.value });
   };
 
   render() {
