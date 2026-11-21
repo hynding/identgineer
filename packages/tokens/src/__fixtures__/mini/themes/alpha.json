@@ -1,0 +1,26 @@
+{
+  "$description": "The default fixture theme.",
+  "$extensions": { "identgineer": { "label": "Alpha" } },
+  "common": {
+    "palette": {
+      "$type": "color",
+      "navy": { "$value": "#001133" },
+      "sky": { "$value": "#99ccff" }
+    },
+    "font": { "family": { "body": { "$type": "fontFamily", "$value": ["Georgia", "serif"] } } }
+  },
+  "light": {
+    "color": {
+      "$type": "color",
+      "bg": { "$value": "{palette.sky}" },
+      "text": { "$value": "{palette.navy}" }
+    }
+  },
+  "dark": {
+    "color": {
+      "$type": "color",
+      "bg": { "$value": "{palette.navy}" },
+      "text": { "$value": "{palette.sky}" }
+    }
+  }
+}
