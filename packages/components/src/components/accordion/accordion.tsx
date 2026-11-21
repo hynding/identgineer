@@ -55,7 +55,11 @@ export class IdgAccordion {
   @Listen("idgToggle")
   handleToggle(event: CustomEvent<AccordionToggleDetail>): void {
     if (this.multiple || !event.detail.open) return;
-    for (const item of this.items()) {
+    const items = this.items();
+    // The event bubbles out of items of an accordion nested in a panel, which are not this
+    // accordion's to arrange.
+    if (!items.some((item) => item === event.target)) return;
+    for (const item of items) {
       if (item !== event.target && item.open) item.open = false;
     }
   }
@@ -79,6 +83,7 @@ export class IdgAccordion {
   }
 
   private loaded = false;
+  private readonly seen = new WeakSet<Element>();
 
   private items(): HTMLIdgAccordionItemElement[] {
     return Array.from(this.host.children).filter(
@@ -98,11 +103,18 @@ export class IdgAccordion {
       item.hasRegion = regions;
       item.findInPage = this.findInPage;
     }
-    if (!this.multiple) this.keepFirstOpen(items);
+    if (!this.multiple) this.keepOneOpen(items);
+    for (const item of items) this.seen.add(item);
   }
 
-  private keepFirstOpen(items: readonly HTMLIdgAccordionItemElement[]): void {
-    for (const item of items.filter((candidate) => candidate.open).slice(1)) item.open = false;
+  // One item stays open: one that has just been added open wins, since it is the newest request,
+  // and otherwise the first. At first load every item is new, so the first one marked open wins.
+  private keepOneOpen(items: readonly HTMLIdgAccordionItemElement[]): void {
+    const open = items.filter((item) => item.open);
+    if (open.length < 2) return;
+    const added = this.loaded ? open.filter((item) => !this.seen.has(item)) : [];
+    const winner = added[0] ?? open[0];
+    for (const item of open) if (item !== winner) item.open = false;
   }
 
   render() {

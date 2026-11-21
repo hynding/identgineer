@@ -293,7 +293,7 @@ describe("idg-accordion nested in an item", () => {
     await waitForChanges();
     expect(inner.open).toBe(true);
     expect(opens(root).slice(0, 1)).toEqual([true]);
-    expect(itemAt(root, 1).open).toBe(false);
+    expect(itemAt(root, 2).open).toBe(false);
   });
 
   it("still closes its own other items when an item opens", async () => {
