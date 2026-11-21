@@ -116,6 +116,12 @@ export class IdgLayout {
    */
   @Prop({ mutable: true, reflect: true, attribute: "navigation-open" }) navigationOpen = false;
 
+  /**
+   * Whether the shell sits inside a page rather than being the page. An embedded shell does not
+   * claim the height of the window, which a shell that is the page does.
+   */
+  @Prop({ reflect: true }) embedded = false;
+
   /** Fires when the collapsed navigation opens or closes. */
   @Event() idgNavigationToggle!: EventEmitter<NavigationToggleDetail>;
 
@@ -180,6 +186,8 @@ export class IdgLayout {
     this.readPresence();
     this.observeSizes();
     this.readMode();
+    // The attribute was in the markup, so nothing changed for the watcher to see.
+    if (this.navigationOpen) this.openDrawer();
   }
 
   componentDidRender(): void {
@@ -194,8 +202,11 @@ export class IdgLayout {
 
   @Listen("keydown")
   handleKeyDown(event: KeyboardEvent): void {
-    // A modal drawer is closed by the browser's own close request, handled as `cancel`.
-    if (event.key !== "Escape" || !this.navigationOpen || this.modalOpen) return;
+    // A modal drawer is closed by the browser's own close request, handled as `cancel`. Escape that
+    // something else already used, or that happens elsewhere on the page, is not a request to
+    // close the panel.
+    if (event.key !== "Escape" || event.defaultPrevented) return;
+    if (!this.navigationOpen || this.modalOpen || !this.isInPanel(event)) return;
     this.navigationOpen = false;
   }
 
@@ -204,10 +215,27 @@ export class IdgLayout {
   @Listen("click")
   handleClick(event: MouseEvent): void {
     if (!this.navigationOpen) return;
+    // A click that opens the link somewhere else, or is not the primary button, leaves the page.
+    if (event.button > 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+      return;
+    }
     const target = event.target as Element | null;
     if (target?.closest('[slot="navigation"]')?.closest("[href]") != null) {
       this.navigationOpen = false;
     }
+  }
+
+  private isInPanel(event: Event): boolean {
+    const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+    if (path.some((node) => node === this.toggle || node === this.drawer)) return true;
+    return this.isInNavigation(event.target as Node | null);
+  }
+
+  // The panel is the toggle and the drawer, whose navigation items belong to the page.
+  private isInNavigation(node: Node | null): boolean {
+    if (!node) return false;
+    if (node === this.toggle || (this.drawer && isWithin(node, this.drawer))) return true;
+    return itemsInSlot(this.host, "navigation").some((item) => isWithin(node, item));
   }
 
   private readonly readPresence = (): void => {
@@ -274,7 +302,7 @@ export class IdgLayout {
     // it, goes back to the toggle. Focus the page's own code put elsewhere stays there.
     const active = deepActiveElement();
     const hadFocusInside =
-      wasOpen && (!active || active === document.body || isWithin(active, this.host));
+      wasOpen && (!active || active === document.body || this.isInNavigation(active));
     if (wasOpen) native.close();
     this.releaseScroll();
     this.modalOpen = false;
@@ -290,9 +318,20 @@ export class IdgLayout {
     this.skipFocusRestore = true;
     this.navigationOpen = false;
     this.skipFocusRestore = false;
-    if (focused && isVisible(focused) && deepActiveElement() !== focused) {
-      (focused as HTMLElement).focus({ preventScroll: true });
+    if (focused && isVisible(focused)) {
+      if (deepActiveElement() !== focused) (focused as HTMLElement).focus({ preventScroll: true });
+      return;
     }
+    // What had focus is gone, a Close button for one: the navigation it opened is now on the page.
+    if (focused && this.isInNavigation(focused)) this.focusNavigation();
+  }
+
+  private focusNavigation(): void {
+    const target =
+      this.toggle && isVisible(this.toggle)
+        ? this.toggle
+        : firstFocusable(this.drawer ?? this.host);
+    target?.focus({ preventScroll: true });
   }
 
   // Modal and non-modal are different calls, so a change from one to the other while open closes
@@ -341,11 +380,7 @@ export class IdgLayout {
       previous === this.toggle ||
       itemsInSlot(this.host, "navigation").some((item) => item.contains(previous));
     if (!inNavigation) return;
-    const target =
-      this.toggle && isVisible(this.toggle)
-        ? this.toggle
-        : firstFocusable(this.drawer ?? this.host);
-    target?.focus({ preventScroll: true });
+    this.focusNavigation();
   }
 
   private readonly skip = (event: MouseEvent): void => {
@@ -389,7 +424,11 @@ export class IdgLayout {
     const { presence } = this;
     const hasHeader = presence.brand || presence.navigation || presence.actions;
     return (
-      <div class="shell" part="shell" ref={(element) => (this.shell = element)}>
+      <div
+        class={{ shell: true, "no-hero": !presence.hero }}
+        part="shell"
+        ref={(element) => (this.shell = element)}
+      >
         <a class="skip focusable" part="skip" href="#main" onClick={this.skip}>
           {this.skipLabel}
         </a>

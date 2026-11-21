@@ -891,6 +891,7 @@ drawn and is not announced.
 | `skipLabel`               | `skip-label`                | `Skip to content`   |
 | `menuLabel`, `closeLabel` | `menu-label`, `close-label` | `Menu`, `Close`     |
 | `navigationOpen`          | `navigation-open`           | `false` (reflected) |
+| `embedded`                | `embedded`                  | `false` (reflected) |
 
 **Event:** `idgNavigationToggle`, with `{ open }`. **Parts:** `shell`, `skip`, `header`, `brand`,
 `toggle`, `drawer`, `close`, `navigation`, `actions`, `hero`, `main`, `aside`, `footer`.
@@ -923,8 +924,42 @@ element; focus that was in a navigation the new layout collapses goes to the men
 layout pins its chrome (`top-bar` at large, `dashboard`), `scroll-padding-block-start` is set on the
 document from `--idg-layout-sticky-inset`, so a focused or targeted element is never left under it.
 
-Known limit: while a panel is open in a layout whose actions sit on the first row, the Tab order
-(menu button, navigation, actions) jumps up the page once.
+While a panel is open in `top-bar`, `bento` and `split-hero`, the actions move below it, so Tab goes
+from the menu button through the navigation to the actions without jumping back up the page. In
+`top-bar` at 72rem and wider the navigation is one row that scrolls along itself when it is longer
+than the bar; in `side-rail` and `dashboard` a long navigation scrolls inside the rail, below the
+brand.
+
+**Missing regions.** A layout that has no hero arranges itself without one: the `immersive` header
+becomes a bar of the page on a surface of its own instead of being laid over the hero, and
+`split-hero` stays one column instead of leaving half of the page empty. A region with nothing slotted
+into it is not drawn, and the layouts leave no gap for it.
+
+**Escape and focus.** Escape closes an open panel only when it happens in the menu button or the
+navigation and nothing has already used it. Closing the navigation from the page (setting
+`navigationOpen` to `false`) does not move focus the page has put elsewhere. If the container grows
+while a drawer is open with focus inside it, focus goes to the first item of the navigation that is
+now drawn on the page, or to the menu button if that is shown. A click on a link with a modifier key,
+or with a button other than the primary one, does not close the navigation.
+
+**Embedded.** A shell is the page and claims at least the height of the window. Set `embedded` on one
+that sits inside a page, or inside another shell, and it takes the height its content needs.
+
+**Scroll padding.** `scroll-padding-block-start` is set on the root element from
+`--idg-layout-sticky-inset`, so it applies at every width and to every scroller that is the page, not
+only while a layout pins its chrome. The inset is `0` in the layouts that pin nothing.
+
+**Open from the start.** `navigation-open` in the markup opens the navigation once the shell has
+loaded, if the layout collapses it at that width.
+
+**Without container style queries.** A browser that cannot read a style query draws every layout as
+its small arrangement: a bar of brand, menu button and actions above one column, with the navigation
+as a panel under the menu button. It is plain and fully usable, and the eight layouts differ again
+once the browser supports them.
+
+**Text wider than its column.** The hero clips what it cannot break, rather than let the page scroll
+sideways, so a word of the hero that does not fit loses a few pixels at the edge of the hero instead
+of the reader losing the layout.
 
 ## Strict CSP and Trusted Types
 

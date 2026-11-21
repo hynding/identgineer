@@ -717,6 +717,11 @@ export namespace Components {
          */
         "closeLabel": string;
         /**
+          * Whether the shell sits inside a page rather than being the page. An embedded shell does not claim the height of the window, which a shell that is the page does.
+          * @default false
+         */
+        "embedded": boolean;
+        /**
           * The text of the button that opens the collapsed navigation.
           * @default "Menu"
          */
@@ -3103,6 +3108,11 @@ declare namespace LocalJSX {
          */
         "closeLabel"?: string;
         /**
+          * Whether the shell sits inside a page rather than being the page. An embedded shell does not claim the height of the window, which a shell that is the page does.
+          * @default false
+         */
+        "embedded"?: boolean;
+        /**
           * The text of the button that opens the collapsed navigation.
           * @default "Menu"
          */
@@ -4183,6 +4193,7 @@ declare namespace LocalJSX {
         "menuLabel": string;
         "closeLabel": string;
         "navigationOpen": boolean;
+        "embedded": boolean;
     }
     interface IdgLinkAttributes {
         "href": string;

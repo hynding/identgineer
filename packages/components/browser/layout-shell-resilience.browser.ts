@@ -57,9 +57,9 @@ async function change(page: Page, kind: Change): Promise<void> {
       if (brand) brand.append(" International Association of Engineers and Designers");
     }
     if (what === "wide-hero-text") {
-      const style = document.createElement("style");
-      style.textContent = "idg-layout [slot=hero] * { letter-spacing: 0.06em; }";
-      document.head.append(style);
+      host
+        .querySelectorAll<HTMLElement>('[slot="hero"] *')
+        .forEach((element) => (element.style.letterSpacing = "0.06em"));
     }
     if (what === "no-hero" || what === "no-hero-or-aside") remove("hero");
     if (what === "no-aside" || what === "no-hero-or-aside") remove("aside");
@@ -76,7 +76,7 @@ function overlap(a: Rect, b: Rect): boolean {
 }
 
 /** The pairs of regions that sit over one another, other than where a layout means them to. */
-function collisions(layout: string, found: Regions): string[] {
+function collisions(layout: string, found: Regions, overHero = true): string[] {
   const names = [
     "brand",
     "toggle",
@@ -96,8 +96,8 @@ function collisions(layout: string, found: Regions): string[] {
       if (!a || !b || !overlap(found[a], found[b])) continue;
       const heroPair = a === "hero" || b === "hero" ? (a === "hero" ? b : a) : undefined;
       // The header is laid over the hero in immersive, and the brand over it in a split hero.
-      if (layout === "immersive" && heroPair && header.has(heroPair)) continue;
-      if (layout === "split-hero" && heroPair === "brand") continue;
+      if (overHero && layout === "immersive" && heroPair && header.has(heroPair)) continue;
+      if (overHero && layout === "split-hero" && heroPair === "brand") continue;
       // The brand sits on the top of a rail, over the padding the navigation leaves for it.
       if ((layout === "side-rail" || layout === "dashboard") && a === "brand" && b === "navigation")
         continue;
@@ -187,7 +187,7 @@ test.describe("a page that puts more in the shell than the fixture does", () => 
           const found = await regions(page);
           const label = `${layout} at ${String(width)}`;
           // Without a hero there is nothing for a header to be laid over.
-          const only = found.hero.shown ? collisions(layout, found) : collisions("none", found);
+          const only = collisions(layout, found, found.hero.shown);
           expect(only, label).toEqual([]);
           expect(await sideways(page), label).toBeLessThanOrEqual(0);
         }

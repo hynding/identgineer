@@ -471,8 +471,11 @@ describe("idg-layout navigation that is open from the start, and the Escape key"
     it("is closed from the page without moving focus the page has put elsewhere", async () => {
       const { root, waitForChanges } = await opened();
       const focus = vi.spyOn(toggle(root), "focus");
+      const content = root.querySelector("p");
+      Object.defineProperty(document, "activeElement", { value: content, configurable: true });
       (root as LayoutHost).navigationOpen = false;
       await waitForChanges();
+      Reflect.deleteProperty(document, "activeElement");
       expect(focus).not.toHaveBeenCalled();
     });
 

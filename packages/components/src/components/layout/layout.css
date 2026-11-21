@@ -69,6 +69,11 @@
   min-inline-size: 0;
 }
 
+/* A shell inside a page does not claim the height of the window. */
+:host([embedded]) .shell {
+  min-block-size: 0;
+}
+
 /* Regions */
 
 .header {
@@ -147,6 +152,8 @@
   padding-block: var(--_pad);
   padding-inline: var(--_pad);
   margin-block-start: var(--_pad);
+  /* A word the hero cannot break may not push the page sideways, whatever the font makes of it. */
+  overflow: clip;
   border-radius: var(--idg-shape-radius-lg);
   background:
     radial-gradient(
@@ -432,6 +439,19 @@
     .actions {
       padding-block-start: 0;
     }
+
+    /* While the panel is open the actions come after it, which is where Tab reaches them. */
+    .header:has(.drawer[open]) {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "brand toggle"
+        "nav nav"
+        "actions actions";
+    }
+
+    .header:has(.drawer[open]) .actions {
+      padding-block-start: var(--idg-space-xs);
+    }
   }
 
   @container idg-shell (min-inline-size: 72rem) {
@@ -457,8 +477,19 @@
       padding-block: 0;
     }
 
+    /* The bar is one row of a fixed height. A long navigation stays on it and scrolls along it,
+       and what it scrolls to is kept clear of the brand and of the actions. */
     .navigation {
-      justify-content: center;
+      flex-wrap: nowrap;
+      justify-content: safe center;
+      overflow: auto;
+      padding-block: var(--idg-space-3xs);
+      scroll-padding-inline: var(--_pad);
+    }
+
+    ::slotted([slot="navigation"]) {
+      flex: none;
+      white-space: nowrap;
     }
 
     .hero {
@@ -513,6 +544,9 @@
       box-sizing: border-box;
       block-size: var(--_bar);
       padding-inline: var(--_pad);
+      overflow: hidden;
+      border-inline-end: var(--_rule);
+      background: var(--_surface);
     }
 
     .navigation {
@@ -529,6 +563,8 @@
       block-size: var(--idg-size-screen);
       padding-block: calc(var(--_bar) + var(--_pad)) var(--_pad);
       padding-inline: var(--_pad);
+      /* The brand sits over the top of the rail, so an item scrolled into view stops below it. */
+      scroll-padding-block-start: var(--_bar);
       overflow: auto;
       border-inline-end: var(--_rule);
       background: var(--_surface);
@@ -582,6 +618,12 @@
     --_nav: disclosure;
   }
 
+  /* The button sits in a bar of small controls, so it is no taller than they are. */
+  .toggle {
+    min-block-size: var(--idg-density-target-size);
+    padding-block: var(--idg-space-3xs);
+  }
+
   .hero {
     display: flex;
     flex-direction: column;
@@ -603,19 +645,33 @@
       padding-block-start: 0;
     }
 
+    .header:has(.drawer[open]) {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "brand toggle"
+        "nav nav"
+        "actions actions";
+    }
+
+    .header:has(.drawer[open]) .actions {
+      padding-block-start: var(--idg-space-xs);
+    }
+
     .hero {
       min-block-size: var(--idg-size-xl);
       padding-inline: var(--_section);
     }
   }
 
+  /* With a hero, from 56rem it takes the start half. Without one there is nothing to put there,
+     so the page stays one column under its bar. */
   @container idg-shell (min-inline-size: 56rem) {
-    .shell {
+    .shell:not(.no-hero) {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       grid-template-rows: auto minmax(0, 1fr) auto auto;
     }
 
-    .header {
+    .shell:not(.no-hero) .header {
       grid-column: 2;
       grid-row: 1;
       grid-template-columns: minmax(0, 1fr) auto auto;
@@ -630,8 +686,16 @@
       background: transparent;
     }
 
+    .shell:not(.no-hero) .header:has(.drawer[open]) {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        ". toggle"
+        "nav nav"
+        "actions actions";
+    }
+
     /* The brand sits on the hero, where the bar would have been, and scrolls away with the page. */
-    .brand {
+    .shell:not(.no-hero) .brand {
       position: absolute;
       z-index: 3;
       inset-block-start: 0;
@@ -640,7 +704,7 @@
       color: var(--idg-color-on-accent-subtle);
     }
 
-    .hero {
+    .shell:not(.no-hero) .hero {
       position: sticky;
       inset-block-start: 0;
       grid-column: 1;
@@ -649,28 +713,29 @@
       box-sizing: border-box;
       block-size: var(--idg-size-screen);
       margin: 0;
+      overflow: auto;
       padding-block: calc(var(--_bar) + var(--_section)) var(--_section);
       padding-inline: var(--_section);
       border-radius: 0;
     }
 
-    .main,
-    .aside {
+    .shell:not(.no-hero) .main,
+    .shell:not(.no-hero) .aside {
       grid-column: 2;
       inline-size: calc(100% - 2 * var(--_gutter));
       max-inline-size: var(--_measure);
       margin-inline: auto;
     }
 
-    .main {
+    .shell:not(.no-hero) .main {
       grid-row: 2;
     }
 
-    .aside {
+    .shell:not(.no-hero) .aside {
       grid-row: 3;
     }
 
-    .footer {
+    .shell:not(.no-hero) .footer {
       grid-row: 4;
     }
   }
@@ -817,7 +882,6 @@
 
   .brand {
     font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
-    white-space: nowrap;
   }
 
   .hero {
@@ -859,6 +923,9 @@
       box-sizing: border-box;
       block-size: var(--_bar);
       padding-inline: var(--_pad);
+      overflow: hidden;
+      border-inline-end: var(--_rule);
+      background: var(--idg-color-surface);
     }
 
     .navigation {
@@ -875,6 +942,7 @@
       block-size: var(--idg-size-screen);
       padding-block: calc(var(--_bar) + var(--_pad)) var(--_pad);
       padding-inline: var(--_pad);
+      scroll-padding-block-start: var(--_bar);
       overflow: auto;
       border-inline-end: var(--_rule);
       background: var(--idg-color-surface);
@@ -1069,6 +1137,18 @@
       padding-block-start: 0;
     }
 
+    .header:has(.drawer[open]) {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "brand toggle"
+        "nav nav"
+        "actions actions";
+    }
+
+    .header:has(.drawer[open]) .actions {
+      padding-block-start: var(--idg-space-xs);
+    }
+
     .aside {
       grid-column: 1;
       grid-row: 4;
@@ -1225,6 +1305,22 @@
 
   .footer {
     grid-row: 4;
+  }
+
+  /* With no hero there is nothing for the header to be laid over: it is a bar of the page. */
+  .shell.no-hero .header {
+    position: static;
+    padding-inline: var(--_edge);
+    border-block-end: var(--_rule);
+    background: var(--_surface);
+    color: inherit;
+  }
+
+  /* Above a small container the hero and the content keep a page gutter, not the narrow one. */
+  @container idg-shell (min-inline-size: 40rem) {
+    .shell {
+      --_edge: max(calc(var(--_gutter) * 2), calc((100% - var(--_measure)) / 2));
+    }
   }
 
   /* Wide enough, the related items leave their band for a tile beside the content. */
