@@ -108,6 +108,7 @@ export class IdgToast {
 
   disconnectedCallback(): void {
     this.countdown.stop();
+    this.resetSwipe();
   }
 
   componentDidLoad(): void {
@@ -115,8 +116,6 @@ export class IdgToast {
     if (!surface) return;
     surface.addEventListener("pointerdown", this.handlePointerDown);
     surface.addEventListener("pointermove", this.handlePointerMove);
-    surface.addEventListener("pointerup", this.handlePointerUp);
-    surface.addEventListener("pointercancel", this.resetSwipe);
   }
 
   /** Dismisses the toast, as if its close button had been chosen but with the reason `api`. */
@@ -190,6 +189,10 @@ export class IdgToast {
 
   private handlePointerDown = (event: PointerEvent): void => {
     this.swipe = { pointerId: event.pointerId, startX: event.clientX, distance: 0 };
+    // The release is heard on the document: a quick flick can end off the toast before any move,
+    // and so before the pointer is captured, has been reported.
+    document.addEventListener("pointerup", this.handlePointerUp);
+    document.addEventListener("pointercancel", this.resetSwipe);
   };
 
   private handlePointerMove = (event: PointerEvent): void => {
@@ -209,6 +212,7 @@ export class IdgToast {
   private handlePointerUp = (event: PointerEvent): void => {
     const swipe = this.swipe;
     if (swipe?.pointerId !== event.pointerId) return;
+    swipe.distance = event.clientX - swipe.startX;
     const width = this.surface?.getBoundingClientRect().width ?? 0;
     if (Math.abs(swipe.distance) >= Math.max(SWIPE_MIN_PX, width * SWIPE_SHARE)) {
       this.finish("swipe");
@@ -218,6 +222,8 @@ export class IdgToast {
   };
 
   private resetSwipe = (): void => {
+    document.removeEventListener("pointerup", this.handlePointerUp);
+    document.removeEventListener("pointercancel", this.resetSwipe);
     this.swipe = undefined;
     this.surface?.style.removeProperty("--_swipe");
   };

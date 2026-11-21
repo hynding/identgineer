@@ -58,7 +58,7 @@ function reasons(root: HTMLElement): string[] {
 }
 
 function pointer(target: HTMLElement, type: string, clientX: number): void {
-  const event = new Event(type, { bubbles: true }) as Event & {
+  const event = new Event(type, { bubbles: true, composed: true }) as Event & {
     clientX: number;
     clientY: number;
     pointerId: number;
