@@ -3,7 +3,7 @@
    gap its own stylesheet takes from the layout. */
 
 .gap-none {
-  --_gap: 0;
+  --_gap: 0px;
 }
 
 .gap-3xs {
