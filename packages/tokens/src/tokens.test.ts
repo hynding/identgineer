@@ -132,7 +132,7 @@ describe("built tokens", () => {
     expect(preferences).toContain("@media (prefers-contrast: more)");
     expect(preferences).toContain("@media (forced-colors: active)");
     expect(preferences).toContain("--idg-motion-enabled: 0;");
-    expect(preferences).toContain("--idg-border-color: var(--idg-color-border-strong);");
+    expect(preferences).toContain("--idg-border-color: var(--idg-color-text);");
     expect(preferences).toContain("--idg-elevation-md: none;");
     expect(preferences).toContain("--idg-surface-backdrop-filter: none;");
   });
