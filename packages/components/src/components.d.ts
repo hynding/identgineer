@@ -244,6 +244,35 @@ export namespace Components {
         "value": string;
     }
     /**
+     * An inline text link. It takes the same hardening as the button's link mode: the url goes
+     * through `safeUrl` and a link that opens another browsing context always gets `noopener
+     * noreferrer`.
+     */
+    interface IdgLink {
+        /**
+          * Marks a link to another site: shows an indicator and opens a new tab unless `target` is set.
+          * @default false
+         */
+        "external": boolean;
+        /**
+          * The accessible name of the external indicator.
+          * @default "External link"
+         */
+        "externalLabel": string;
+        /**
+          * Where the link goes. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * Link relationship.
+         */
+        "rel"?: string;
+        /**
+          * Where the link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
+         */
+        "target"?: string;
+    }
+    /**
      * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
      * as set by the group are how it passes state down, because radios in separate shadow roots are
      * not a native radio group.
@@ -599,6 +628,17 @@ declare global {
         prototype: HTMLIdgInputElement;
         new (): HTMLIdgInputElement;
     };
+    /**
+     * An inline text link. It takes the same hardening as the button's link mode: the url goes
+     * through `safeUrl` and a link that opens another browsing context always gets `noopener
+     * noreferrer`.
+     */
+    interface HTMLIdgLinkElement extends Components.IdgLink, HTMLStencilElement {
+    }
+    var HTMLIdgLinkElement: {
+        prototype: HTMLIdgLinkElement;
+        new (): HTMLIdgLinkElement;
+    };
     interface HTMLIdgRadioElementEventMap {
         "idgSelect": RadioSelectDetail;
     }
@@ -707,6 +747,7 @@ declare global {
         "idg-field": HTMLIdgFieldElement;
         "idg-icon": HTMLIdgIconElement;
         "idg-input": HTMLIdgInputElement;
+        "idg-link": HTMLIdgLinkElement;
         "idg-radio": HTMLIdgRadioElement;
         "idg-radio-group": HTMLIdgRadioGroupElement;
         "idg-select": HTMLIdgSelectElement;
@@ -943,6 +984,35 @@ declare namespace LocalJSX {
           * @default ""
          */
         "value"?: string;
+    }
+    /**
+     * An inline text link. It takes the same hardening as the button's link mode: the url goes
+     * through `safeUrl` and a link that opens another browsing context always gets `noopener
+     * noreferrer`.
+     */
+    interface IdgLink {
+        /**
+          * Marks a link to another site: shows an indicator and opens a new tab unless `target` is set.
+          * @default false
+         */
+        "external"?: boolean;
+        /**
+          * The accessible name of the external indicator.
+          * @default "External link"
+         */
+        "externalLabel"?: string;
+        /**
+          * Where the link goes. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * Link relationship.
+         */
+        "rel"?: string;
+        /**
+          * Where the link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
+         */
+        "target"?: string;
     }
     /**
      * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
@@ -1262,6 +1332,13 @@ declare namespace LocalJSX {
         "accessibleDescription": string;
         "invalid": boolean;
     }
+    interface IdgLinkAttributes {
+        "href": string;
+        "target": string;
+        "rel": string;
+        "external": boolean;
+        "externalLabel": string;
+    }
     interface IdgRadioAttributes {
         "value": string;
         "checked": boolean;
@@ -1329,6 +1406,7 @@ declare namespace LocalJSX {
         "idg-field": Omit<IdgField, keyof IdgFieldAttributes> & { [K in keyof IdgField & keyof IdgFieldAttributes]?: IdgField[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `attr:${K}`]?: IdgFieldAttributes[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `prop:${K}`]?: IdgField[K] };
         "idg-icon": Omit<IdgIcon, keyof IdgIconAttributes> & { [K in keyof IdgIcon & keyof IdgIconAttributes]?: IdgIcon[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `attr:${K}`]?: IdgIconAttributes[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `prop:${K}`]?: IdgIcon[K] };
         "idg-input": Omit<IdgInput, keyof IdgInputAttributes> & { [K in keyof IdgInput & keyof IdgInputAttributes]?: IdgInput[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `attr:${K}`]?: IdgInputAttributes[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `prop:${K}`]?: IdgInput[K] };
+        "idg-link": Omit<IdgLink, keyof IdgLinkAttributes> & { [K in keyof IdgLink & keyof IdgLinkAttributes]?: IdgLink[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `attr:${K}`]?: IdgLinkAttributes[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `prop:${K}`]?: IdgLink[K] };
         "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
         "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
         "idg-select": Omit<IdgSelect, keyof IdgSelectAttributes> & { [K in keyof IdgSelect & keyof IdgSelectAttributes]?: IdgSelect[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `attr:${K}`]?: IdgSelectAttributes[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `prop:${K}`]?: IdgSelect[K] };
@@ -1354,6 +1432,12 @@ declare module "@stencil/core" {
              */
             "idg-icon": LocalJSX.IntrinsicElements["idg-icon"] & JSXBase.HTMLAttributes<HTMLIdgIconElement>;
             "idg-input": LocalJSX.IntrinsicElements["idg-input"] & JSXBase.HTMLAttributes<HTMLIdgInputElement>;
+            /**
+             * An inline text link. It takes the same hardening as the button's link mode: the url goes
+             * through `safeUrl` and a link that opens another browsing context always gets `noopener
+             * noreferrer`.
+             */
+            "idg-link": LocalJSX.IntrinsicElements["idg-link"] & JSXBase.HTMLAttributes<HTMLIdgLinkElement>;
             /**
              * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
              * as set by the group are how it passes state down, because radios in separate shadow roots are
