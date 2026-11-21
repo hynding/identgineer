@@ -131,6 +131,8 @@
   font-weight: var(--idg-font-weight-semibold);
   text-transform: var(--idg-ornament-control-transform);
   cursor: pointer;
+  /* The page's scroll padding, for what the pinned bar covers, is not for the bar's own controls. */
+  scroll-margin-block-start: calc(-1 * var(--idg-layout-sticky-inset));
   transition-property: background-color, border-color;
   transition-duration: var(--idg-motion-duration-fast);
 }
@@ -448,6 +450,18 @@
 
     /* While the panel is open the actions come after it, which is where Tab reaches them. The
        menu button keeps its place, and so keeps the pointer that just pressed it. */
+    /* The button sits at the same place whatever the actions are, in any mode: it is placed
+       from the top of the row, not centred in a row the actions may make taller. */
+    .toggle {
+      align-self: start;
+      margin-block-start: max(
+        0px,
+        calc(
+          (var(--_bar) - max(var(--idg-density-target-size), var(--idg-density-control-height))) / 2
+        )
+      );
+    }
+
     .header:has(.drawer[open]) {
       grid-template-areas:
         "brand toggle ."
@@ -656,6 +670,18 @@
       padding-block-start: 0;
     }
 
+    /* The button sits at the same place whatever the actions are, in any mode: it is placed
+       from the top of the row, not centred in a row the actions may make taller. */
+    .toggle {
+      align-self: start;
+      margin-block-start: max(
+        0px,
+        calc(
+          (var(--_bar) - max(var(--idg-density-target-size), var(--idg-density-control-height))) / 2
+        )
+      );
+    }
+
     .header:has(.drawer[open]) {
       grid-template-areas:
         "brand toggle ."
@@ -698,6 +724,10 @@
       background: transparent;
     }
 
+    .shell:not(.no-hero) .toggle {
+      margin-block-start: max(0px, calc((var(--_bar) - var(--idg-density-target-size)) / 2));
+    }
+
     .shell:not(.no-hero) .header:has(.drawer[open]) {
       grid-template-areas:
         ". toggle ."
@@ -727,6 +757,12 @@
       padding-block: calc(var(--_bar) + var(--_section)) var(--_section);
       padding-inline: var(--_section);
       border-radius: 0;
+    }
+
+    /* A hero taller than the window cannot be pinned without hiding its end, so it scrolls with the
+       page, and the content still scrolls beside it. */
+    .shell:not(.no-hero).hero-tall .hero {
+      position: static;
     }
 
     .shell:not(.no-hero) .main,
@@ -1150,6 +1186,18 @@
       padding-block-start: 0;
     }
 
+    /* The button sits at the same place whatever the actions are, in any mode: it is placed
+       from the top of the row, not centred in a row the actions may make taller. */
+    .toggle {
+      align-self: start;
+      margin-block-start: max(
+        0px,
+        calc(
+          (var(--_bar) - max(var(--idg-density-target-size), var(--idg-density-control-height))) / 2
+        )
+      );
+    }
+
     .header:has(.drawer[open]) {
       grid-template-areas:
         "brand toggle ."
@@ -1378,8 +1426,11 @@
 :host([embedded]) .shell .start,
 :host([embedded]) .shell .aside {
   position: static;
-  align-self: stretch;
   block-size: auto;
+}
+
+:host([embedded]) .shell .start {
+  align-self: stretch;
 }
 
 :host([embedded]) .shell .start .navigation {
@@ -1393,6 +1444,15 @@
   align-self: stretch;
   block-size: auto;
   min-block-size: 0;
+}
+
+/* The inspector of a dashboard is a column the height of the page; an aside anywhere else is a card. */
+@container idg-shell style(--idg-layout-shell: dashboard) {
+  @container idg-shell (min-inline-size: 72rem) {
+    :host([embedded]) .shell .aside {
+      align-self: stretch;
+    }
+  }
 }
 
 @media (forced-colors: active) {

@@ -932,7 +932,9 @@ and the navigation under it, which scrolls. The menu button does not move when t
 
 **Missing regions.** A layout that has no hero arranges itself without one: the `immersive` header
 becomes a bar of the page on a surface of its own instead of being laid over the hero, and
-`split-hero` stays one column instead of leaving half of the page empty. A region with nothing slotted
+`split-hero` stays one column instead of leaving half of the page empty. A split hero is pinned
+only while it fits in the window: one taller than the window (a short window, larger text, a long
+hero) scrolls with the page, and the content still scrolls beside it, so nothing of it is hidden. A region with nothing slotted
 into it is not drawn, and the layouts leave no gap for it.
 
 **Escape and focus.** Escape closes an open panel only when it happens in the menu button or the
@@ -946,11 +948,16 @@ or with a button other than the primary one, does not close the navigation.
 **Embedded.** A shell is the page and claims at least the height of the window. Set `embedded` on one
 that sits inside a page, or inside another shell, and in all eight layouts it takes the height its
 content needs: a rail, a sticky hero, an inspector or a hero that is as tall as the window stops
-being.
+being. An aside that is a card stays a card; only the dashboard's inspector, a column the height of
+the page, is stretched.
 
 **Scroll padding.** `scroll-padding-block-start` is set on the root element from
 `--idg-layout-sticky-inset`, so it applies at every width and to every scroller that is the page, not
-only while a layout pins its chrome. The inset is `0` in the layouts that pin nothing.
+only while a layout pins its chrome. The inset is `0` in the layouts that pin nothing. It is turned
+off while focus is in the brand, the navigation or the actions, and the menu button opts out of it:
+the browser would otherwise treat the pinned bar's own controls as too near the top and scroll the
+page up to the top whenever one is focused. A navigation that scrolls along the top bar scrolls only
+itself to bring a focused item into view, never the page.
 
 **Open from the start.** `navigation-open` in the markup opens the navigation once the shell has
 loaded, if the layout collapses it at that width.

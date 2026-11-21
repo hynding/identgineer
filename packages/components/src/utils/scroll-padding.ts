@@ -1,3 +1,11 @@
+// Chrome applies the padding to a focused element inside the pinned bar itself, and, finding it
+// "too near the top", scrolls the page to the top. So while focus is in the bar's own regions the
+// padding is off; it is on for every other element, which is what it is for.
+export const SCROLL_PADDING_RULES = [
+  ":root { scroll-padding-block-start: var(--idg-layout-sticky-inset); }",
+  ':root:has(idg-layout > :is([slot="brand"], [slot="navigation"], [slot="actions"]):focus-within) { scroll-padding-block-start: 0; }',
+].join("\n");
+
 let holders = 0;
 let sheet: CSSStyleSheet | undefined;
 
@@ -12,7 +20,7 @@ export function reserveScrollPadding(document: Document): void {
   holders += 1;
   if (holders > 1 || typeof CSSStyleSheet === "undefined") return;
   sheet = new CSSStyleSheet();
-  sheet.replaceSync(":root { scroll-padding-block-start: var(--idg-layout-sticky-inset); }");
+  sheet.replaceSync(SCROLL_PADDING_RULES);
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
 }
 

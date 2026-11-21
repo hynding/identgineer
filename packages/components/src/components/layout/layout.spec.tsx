@@ -5,6 +5,7 @@ import { installDialogElement } from "../../testing/dialog-element";
 import { installSlotAssignment } from "../../testing/slot-assignment";
 import { stubConstructableStylesheets } from "../../testing/constructable-stylesheet";
 import { stubResizeObserver } from "../../testing/resize-observer";
+import { SCROLL_PADDING_RULES } from "../../utils/scroll-padding";
 import type { NavigationMode } from "./layout-options";
 import "./layout";
 
@@ -372,9 +373,7 @@ describe("idg-layout disclosure", () => {
 describe("idg-layout page chrome", () => {
   it("pads the page's own scroll while a shell is on it, and takes the padding away with it", async () => {
     const { root } = await render(page);
-    expect(sheets.sheets().map((sheet) => sheet.css)).toContain(
-      ":root { scroll-padding-block-start: var(--idg-layout-sticky-inset); }",
-    );
+    expect(sheets.sheets().map((sheet) => sheet.css)).toContain(SCROLL_PADDING_RULES);
     root.remove();
     expect(sheets.sheets()).toHaveLength(0);
   });
@@ -518,5 +517,41 @@ describe("idg-layout regions that are missing and a shell that is embedded", () 
     expect(root.hasAttribute("embedded")).toBe(true);
     const plain = await render(<idg-layout>Content</idg-layout>);
     expect(plain.root.hasAttribute("embedded")).toBe(false);
+  });
+});
+
+describe("idg-layout hero taller than the window", () => {
+  async function withHeroOf(height: number) {
+    vi.stubGlobal("innerHeight", 800);
+    const rendered = await render(page);
+    Object.defineProperty(part(rendered.root, "hero"), "offsetHeight", {
+      value: height,
+      configurable: true,
+    });
+    resize.notify();
+    await rendered.waitForChanges();
+    return rendered;
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("says on the shell that the hero is taller than the window, so a layout stops pinning it", async () => {
+    const { root } = await withHeroOf(1400);
+    expect(part(root, "shell").classList.contains("hero-tall")).toBe(true);
+  });
+
+  it("does not say so of a hero that is as tall as the window, which is what a pinned hero is", async () => {
+    const { root } = await withHeroOf(800);
+    expect(part(root, "shell").classList.contains("hero-tall")).toBe(false);
+  });
+
+  it("takes it back when the hero fits again", async () => {
+    const { root, waitForChanges } = await withHeroOf(1400);
+    Object.defineProperty(part(root, "hero"), "offsetHeight", { value: 700, configurable: true });
+    resize.notify();
+    await waitForChanges();
+    expect(part(root, "shell").classList.contains("hero-tall")).toBe(false);
   });
 });

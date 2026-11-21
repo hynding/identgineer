@@ -136,11 +136,15 @@ export class IdgLayout {
 
   @State() private modalOpen = false;
 
+  // The hero is taller than the window, which a layout that pins the hero cannot show whole.
+  @State() private heroTall = false;
+
   private shell?: HTMLElement;
   private toggle?: HTMLButtonElement;
   private drawer?: HTMLDialogElement;
   private main?: HTMLElement;
   private navigationElement?: HTMLElement;
+  private heroElement?: HTMLElement;
   private mode: NavigationMode = "inline";
   private scrollLocked = false;
   private skipFocusRestore = false;
@@ -187,6 +191,7 @@ export class IdgLayout {
     this.readPresence();
     this.observeSizes();
     this.readMode();
+    this.readHero();
     // The attribute was in the markup, so nothing changed for the watcher to see.
     if (this.navigationOpen) this.openDrawer();
   }
@@ -226,16 +231,25 @@ export class IdgLayout {
     }
   }
 
-  // Focus alone does not bring a half-hidden item of a navigation that scrolls into view.
+  // Focus alone does not bring a half-hidden item of a navigation that scrolls into view. Only the
+  // navigation is scrolled: scrollIntoView would scroll every ancestor too, and the page with it.
   @Listen("focusin")
   handleFocusIn(event: FocusEvent): void {
     const navigation = this.navigationElement;
     const target = event.target as Element | null;
     if (!navigation || !target || navigation.scrollWidth <= navigation.clientWidth) return;
     if (!itemsInSlot(this.host, "navigation").some((item) => isWithin(target, item))) return;
-    if (typeof target.scrollIntoView === "function") {
-      target.scrollIntoView({ block: "nearest", inline: "nearest" });
-    }
+    if (typeof navigation.scrollBy !== "function") return;
+    const style = getComputedStyle(navigation);
+    const padding = (side: string) =>
+      Number.parseFloat(style.getPropertyValue(`scroll-padding-${side}`)) || 0;
+    const item = target.getBoundingClientRect();
+    const bar = navigation.getBoundingClientRect();
+    const before = item.left - (bar.left + padding("left"));
+    const after = item.right - (bar.right - padding("right"));
+    // Boxes are physical, so the same arithmetic holds in a right-to-left page.
+    if (before < 0) navigation.scrollBy({ left: before });
+    else if (after > 0) navigation.scrollBy({ left: after });
   }
 
   private isInPanel(event: Event): boolean {
@@ -262,10 +276,24 @@ export class IdgLayout {
   private observeSizes(): void {
     if (typeof ResizeObserver === "undefined") return;
     this.resizeObserver?.disconnect();
-    this.resizeObserver = new ResizeObserver(this.readMode);
+    this.resizeObserver = new ResizeObserver(this.readSizes);
     this.resizeObserver.observe(this.host);
     if (this.toggle) this.resizeObserver.observe(this.toggle);
     if (this.drawer) this.resizeObserver.observe(this.drawer);
+    if (this.heroElement) this.resizeObserver.observe(this.heroElement);
+  }
+
+  private readonly readSizes = (): void => {
+    this.readMode();
+    this.readHero();
+  };
+
+  // A hero is at least as tall as the window where a layout pins it, so a taller one is the hero's
+  // own content, and it stays at that height once it is let go, so the answer does not flip back.
+  private readHero(): void {
+    const height = this.heroElement?.offsetHeight ?? 0;
+    const tall = height > window.innerHeight + 1;
+    if (tall !== this.heroTall) this.heroTall = tall;
   }
 
   private readonly readMode = (): void => {
@@ -438,7 +466,7 @@ export class IdgLayout {
     const hasHeader = presence.brand || presence.navigation || presence.actions;
     return (
       <div
-        class={{ shell: true, "no-hero": !presence.hero }}
+        class={{ shell: true, "no-hero": !presence.hero, "hero-tall": this.heroTall }}
         part="shell"
         ref={(element) => (this.shell = element)}
       >
@@ -497,7 +525,12 @@ export class IdgLayout {
             <slot name="actions" onSlotchange={this.readPresence} />
           </div>
         </header>
-        <div class="hero" part="hero" hidden={!presence.hero}>
+        <div
+          class="hero"
+          part="hero"
+          hidden={!presence.hero}
+          ref={(element) => (this.heroElement = element)}
+        >
           <slot name="hero" onSlotchange={this.readPresence} />
         </div>
         <main

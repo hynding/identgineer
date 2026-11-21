@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { reserveScrollPadding, releaseScrollPadding } from "./scroll-padding";
+import { SCROLL_PADDING_RULES, reserveScrollPadding, releaseScrollPadding } from "./scroll-padding";
 
 class FakeSheet {
   text = "";
@@ -27,9 +27,11 @@ describe("reserveScrollPadding", () => {
     const document = fakeDocument();
     reserveScrollPadding(asDocument(document));
     expect(document.adoptedStyleSheets).toHaveLength(1);
-    expect(document.adoptedStyleSheets[0]?.text).toBe(
+    expect(document.adoptedStyleSheets[0]?.text).toBe(SCROLL_PADDING_RULES);
+    expect(SCROLL_PADDING_RULES).toContain(
       ":root { scroll-padding-block-start: var(--idg-layout-sticky-inset); }",
     );
+    expect(SCROLL_PADDING_RULES).toContain("scroll-padding-block-start: 0;");
     releaseScrollPadding(asDocument(document));
     expect(document.adoptedStyleSheets).toHaveLength(0);
   });

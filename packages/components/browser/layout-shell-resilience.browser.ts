@@ -591,7 +591,9 @@ test.describe("an embedded shell keeps the shape of its aside", () => {
         });
       const before = await asideHeight();
       expect(before, "an aside is drawn").toBeGreaterThan(0);
-      await page.locator("#shell").evaluate((host) => { host.setAttribute("embedded", ""); });
+      await page.locator("#shell").evaluate((host) => {
+        host.setAttribute("embedded", "");
+      });
       await frames(page, 3);
       expect(await asideHeight()).toBeCloseTo(before, 0);
     });
@@ -606,9 +608,13 @@ test.describe("scrolling a navigation does not scroll the page", () => {
       await openShell(page, { width: 1280, height: 800, layout: "top-bar", direction });
       await change(page, "many-items");
       await page.evaluate(() => {
-        document.addEventListener("click", (event) => { event.preventDefault(); });
+        document.addEventListener("click", (event) => {
+          event.preventDefault();
+        });
       });
-      await page.evaluate(() => { window.scrollTo(0, 1100); });
+      await page.evaluate(() => {
+        window.scrollTo(0, 1100);
+      });
       await frames(page, 2);
       const scrollY = await page.evaluate(() => window.scrollY);
       expect(scrollY, "the page is scrolled").toBeGreaterThan(500);
@@ -685,7 +691,9 @@ test.describe("a split hero taller than the window", () => {
 
   test("1280x800: a hero that fits stays in view while the content scrolls", async ({ page }) => {
     await openShell(page, { width: 1280, height: 800, layout: "split-hero" });
-    await page.evaluate(() => { window.scrollTo(0, 700); });
+    await page.evaluate(() => {
+      window.scrollTo(0, 700);
+    });
     await frames(page, 2);
     const top = await page
       .locator("#shell")

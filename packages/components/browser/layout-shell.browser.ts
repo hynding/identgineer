@@ -716,12 +716,14 @@ test.describe("collapsed navigation", () => {
     await openShell(page, { width: 390, layout: "side-rail" });
     await openNavigation(page);
     await page.setViewportSize({ width: 1280, height: 800 });
-    await expect.poll(async () => (await drawerState(page)).open).toBe(false);
-    expect(await drawerState(page)).toMatchObject({
-      expanded: "false",
-      attribute: false,
-      scrollLocked: false,
-    });
+    await expect
+      .poll(() => drawerState(page))
+      .toMatchObject({
+        open: false,
+        expanded: "false",
+        attribute: false,
+        scrollLocked: false,
+      });
     expect(await isToggleDrawn(page)).toBe(false);
     expect(await isNavigationDrawn(page)).toBe(true);
     await page.locator("#main-link").focus();
