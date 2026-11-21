@@ -1222,6 +1222,16 @@ export namespace Components {
          */
         "minWidth"?: string;
         /**
+          * The word for an ascending sort in the announcement. Translate it with `sortStatus`.
+          * @default "ascending"
+         */
+        "sortAscendingLabel": string;
+        /**
+          * The word for a descending sort in the announcement. Translate it with `sortStatus`.
+          * @default "descending"
+         */
+        "sortDescendingLabel": string;
+        /**
           * The direction of the sort.
           * @default "ascending"
          */
@@ -3325,6 +3335,16 @@ declare namespace LocalJSX {
          */
         "onIdgSort"?: (event: IdgTableCustomEvent<TableSortDetail>) => void;
         /**
+          * The word for an ascending sort in the announcement. Translate it with `sortStatus`.
+          * @default "ascending"
+         */
+        "sortAscendingLabel"?: string;
+        /**
+          * The word for a descending sort in the announcement. Translate it with `sortStatus`.
+          * @default "descending"
+         */
+        "sortDescendingLabel"?: string;
+        /**
           * The direction of the sort.
           * @default "ascending"
          */
@@ -3830,6 +3850,8 @@ declare namespace LocalJSX {
         "sortDirection": SortDirection;
         "manualSort": boolean;
         "sortStatus": string;
+        "sortAscendingLabel": string;
+        "sortDescendingLabel": string;
     }
     interface IdgTabsAttributes {
         "value": string;

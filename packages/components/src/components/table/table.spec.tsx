@@ -348,6 +348,40 @@ describe("idg-table sortable headers", () => {
     );
   });
 
+  it("announces the direction in the words it is given", async () => {
+    const { root, waitForChanges } = await render(
+      <idg-table sortAscendingLabel="croissant" sortDescendingLabel="décroissant">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col" data-sortable="name">
+                Nom
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Ada</td>
+            </tr>
+            <tr>
+              <td>Alan</td>
+            </tr>
+          </tbody>
+        </table>
+      </idg-table>,
+    );
+    sortButton(root, 0).click();
+    await waitForChanges();
+    expect(root.shadowRoot?.querySelector('[role="status"]')?.textContent).toBe(
+      "Sorted by Nom, croissant",
+    );
+    sortButton(root, 0).click();
+    await waitForChanges();
+    expect(root.shadowRoot?.querySelector('[role="status"]')?.textContent).toBe(
+      "Sorted by Nom, décroissant",
+    );
+  });
+
   it("ignores a click on a button that is not a sort button of its table", async () => {
     const { root, spyOnEvent } = await render(
       <idg-table>
@@ -485,5 +519,108 @@ describe("idg-table scroll region", () => {
     await waitForChanges();
     expect(watched()).toHaveLength(1);
     sizes.restore();
+  });
+});
+
+describe("idg-table nested and spanning", () => {
+  it("does not sort by a header of a table nested in one of its cells", async () => {
+    const { root, spyOnEvent, waitForChanges } = await render(
+      <idg-table>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col" data-sortable="outer">
+                Outer
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <idg-table id="inner">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col" data-sortable="inner">
+                          Inner
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>b</td>
+                      </tr>
+                      <tr>
+                        <td>a</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </idg-table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </idg-table>,
+    );
+    const spy = spyOnEvent("idgSort");
+    within(root, "#inner button.idg-table-sort").click();
+    await waitForChanges();
+    expect(spy.length).toBe(1);
+    expect((root as TableElement).sortKey).toBe("");
+    expect(within(root, "thead th").hasAttribute("aria-sort")).toBe(false);
+  });
+
+  const spanning = (
+    <idg-table>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col" data-sortable="name">
+              Name
+            </th>
+            <th scope="col" data-sortable="age">
+              Age
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Grace</td>
+            <td>45</td>
+          </tr>
+          <tr>
+            <td colSpan={2}>Ada, 9</td>
+          </tr>
+        </tbody>
+      </table>
+    </idg-table>
+  );
+
+  it("draws no sort buttons for a body with cells that span rows or columns", async () => {
+    const { root } = await render(spanning);
+    expect(root.querySelectorAll("button.idg-table-sort")).toHaveLength(0);
+    expect(header(root, 0).textContent.trim()).toBe("Name");
+  });
+
+  it("does not sort such a table from script either", async () => {
+    const { root, waitForChanges } = await render(spanning);
+    (root as TableElement).sortKey = "name";
+    await waitForChanges();
+    expect(Array.from(root.querySelectorAll("tbody tr")).map((row) => row.textContent)).toEqual([
+      "Grace45",
+      "Ada, 9",
+    ]);
+    expect(header(root, 0).hasAttribute("aria-sort")).toBe(false);
+  });
+
+  it("offers sorting once the spanning cell is gone", async () => {
+    const watcher = stubMutationObserver();
+    const { root, waitForChanges } = await render(spanning);
+    const cell = within(root, "td[colspan]");
+    cell.removeAttribute("colspan");
+    watcher.notify([{ type: "attributes", target: cell }]);
+    await waitForChanges();
+    expect(root.querySelectorAll("button.idg-table-sort")).toHaveLength(2);
+    watcher.restore();
   });
 });

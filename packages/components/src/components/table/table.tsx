@@ -85,6 +85,12 @@ export class IdgTable {
   /** Announced after a sort, where `{column}` is the column and `{direction}` is ascending or descending. */
   @Prop({ attribute: "sort-status" }) sortStatus = "Sorted by {column}, {direction}";
 
+  /** The word for an ascending sort in the announcement. Translate it with `sortStatus`. */
+  @Prop({ attribute: "sort-ascending-label" }) sortAscendingLabel = "ascending";
+
+  /** The word for a descending sort in the announcement. Translate it with `sortStatus`. */
+  @Prop({ attribute: "sort-descending-label" }) sortDescendingLabel = "descending";
+
   /** Fires when the user chooses a column to sort by, and not when `sortKey` is set from script. */
   @Event() idgSort!: EventEmitter<TableSortDetail>;
 
