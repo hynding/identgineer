@@ -1106,3 +1106,127 @@ test.describe("the brand stays on one line wherever it has room", () => {
     });
   }
 });
+
+test.describe("nothing in the chrome covers or crowds anything else in it", () => {
+  const WIDTHS_FOR_CHROME = [640, 768, 900, 1024, 1152, 1280, 1920] as const;
+
+  /** What is wrong with the chrome now, as one line each, read in the page. */
+  const problems = (page: Page): Promise<string[]> =>
+    page.locator("#shell").evaluate((host) => {
+      const found: string[] = [];
+      const deepAt = (x: number, y: number): Element | null => {
+        let hit = document.elementFromPoint(x, y);
+        while (hit?.shadowRoot) {
+          const inner = hit.shadowRoot.elementFromPoint(x, y);
+          if (!inner || inner === hit) break;
+          hit = inner;
+        }
+        return hit;
+      };
+      const within = (hit: Element | null, target: Element): boolean => {
+        for (let node: Node | null = hit; node;) {
+          if (node === target) return true;
+          node = node.parentNode instanceof ShadowRoot ? node.parentNode.host : node.parentNode;
+        }
+        return false;
+      };
+      const shown = (element: Element): boolean => {
+        const box = element.getBoundingClientRect();
+        return (
+          box.width > 0 &&
+          box.height > 0 &&
+          (element as HTMLElement).checkVisibility({ visibilityProperty: true }) &&
+          box.top >= 0 &&
+          box.bottom <= window.innerHeight
+        );
+      };
+      const tree = host.shadowRoot;
+      const navigation = tree?.querySelector<HTMLElement>('[part="navigation"]');
+      const toggle = tree?.querySelector<HTMLElement>('[part="toggle"]');
+      const brandLink = document.getElementById("brand-link");
+      const navLinks = [...host.querySelectorAll('[slot="navigation"]')];
+      const actions = [...host.querySelectorAll('[slot="actions"]')];
+      const targets: [string, Element | null | undefined][] = [
+        ["menu button", toggle],
+        ["brand", brandLink],
+        ...navLinks.map((link): [string, Element] => [`navigation ${link.id}`, link]),
+        ...actions.map((action): [string, Element] => [`action ${action.id}`, action]),
+      ];
+      for (const [name, element] of targets) {
+        if (!element || !shown(element)) continue;
+        const box = element.getBoundingClientRect();
+        const hit = deepAt(box.left + box.width / 2, box.top + box.height / 2);
+        if (!within(hit, element)) found.push(`${name} is covered by ${hit?.tagName ?? "nothing"}`);
+      }
+      if (navigation) {
+        const room = navigation.getBoundingClientRect();
+        const scrolls =
+          navigation.scrollWidth > navigation.clientWidth + 1 &&
+          getComputedStyle(navigation).overflowInline !== "visible";
+        if (!scrolls) {
+          for (const link of navLinks) {
+            if (!shown(link)) continue;
+            const box = link.getBoundingClientRect();
+            if (box.left < room.left - 1 || box.right > room.right + 1) {
+              found.push(`navigation ${link.id} leaves the navigation`);
+            }
+          }
+        }
+      }
+      if (brandLink) {
+        const range = document.createRange();
+        range.selectNodeContents(brandLink);
+        const texts = [...range.getClientRects()].filter((box) => box.width > 0);
+        const others: [string, Element | null | undefined][] = [
+          ["menu button", toggle],
+          ...actions.map((action): [string, Element] => [`action ${action.id}`, action]),
+        ];
+        for (const [name, other] of others) {
+          if (!other || !shown(other)) continue;
+          const box = other.getBoundingClientRect();
+          const crowded = texts.some(
+            (text) =>
+              Math.min(text.right, box.right) - Math.max(text.left, box.left) > 1 &&
+              Math.min(text.bottom, box.bottom) - Math.max(text.top, box.top) > 1,
+          );
+          if (crowded) found.push(`the brand text runs under the ${name}`);
+        }
+      }
+      const reach = Math.max(
+        document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        document.body.scrollWidth - document.documentElement.clientWidth,
+      );
+      if (reach > 1) found.push(`the page scrolls sideways by ${String(reach)}px`);
+      return found;
+    });
+
+  for (const layout of LAYOUTS) {
+    test(`${layout}: with the fixture brand and a long one, every control can be hit and nothing is crowded`, async ({
+      page,
+    }) => {
+      test.setTimeout(300_000);
+      await openShell(page, { width: 1280, layout });
+      for (const brand of ["the fixture brand", "a long brand"]) {
+        if (brand === "a long brand") await change(page, "long-brand");
+        for (const fontSize of ["100%", "125%"]) {
+          await page.evaluate((size) => {
+            document.documentElement.style.fontSize = size;
+          }, fontSize);
+          for (const ux of UX_MODES) {
+            await page.evaluate((mode) => {
+              document.documentElement.setAttribute("data-ux", mode);
+            }, ux);
+            for (const width of WIDTHS_FOR_CHROME) {
+              await page.setViewportSize({ width, height: 900 });
+              await frames(page, 2);
+              expect(
+                await problems(page),
+                `${layout} at ${String(width)}px, ${ux}, ${fontSize}, ${brand}`,
+              ).toEqual([]);
+            }
+          }
+        }
+      }
+    });
+  }
+});
