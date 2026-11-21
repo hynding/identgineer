@@ -8,3 +8,5 @@ cms/generated
 !.env.example
 packages/components/loader
 .claude
+test-results
+playwright-report

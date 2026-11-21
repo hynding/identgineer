@@ -18,6 +18,7 @@ export const config: Config = {
       copy: [
         { src: "demo.css" },
         { src: "csp-demo.html" },
+        { src: "fixtures" },
         { src: "../../tokens/dist", dest: "tokens" },
       ],
     },
