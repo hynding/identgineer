@@ -212,4 +212,21 @@ describe("source verification", () => {
   it("finds no problem in the shipped themes, designs, UX modes and preferences", () => {
     expect(findSourceProblems(TOKEN_SOURCES, ROLE_SOURCES)).toEqual([]);
   });
+
+  it("reports a preference that sets a token no design or UX mode owns", () => {
+    const broken = {
+      ...TOKEN_SOURCES,
+      preferences: {
+        file: "tokens/preferences.json",
+        json: {
+          "reduced-motion": { color: { $type: "color", bg: { $value: "#000000" } } },
+          "more-contrast": {},
+          "forced-colors": {},
+        },
+      },
+    };
+    expect(findSourceProblems(broken, ROLE_SOURCES)).toEqual([
+      'tokens/preferences.json: preference "reduced-motion" sets "color.bg", which no design or UX mode owns',
+    ]);
+  });
 });

@@ -26,7 +26,7 @@
     "border": {
       "width": {
         "$type": "dimension",
-        "$value": "4px"
+        "$value": "6px"
       },
       "style": {
         "$type": "string",
@@ -72,7 +72,7 @@
       },
       "border-width": {
         "$type": "dimension",
-        "$value": "4px"
+        "$value": "6px"
       },
       "border-style": {
         "$type": "string",

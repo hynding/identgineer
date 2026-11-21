@@ -64,7 +64,7 @@
     "surface": {
       "background": {
         "$type": "string",
-        "$value": "color-mix(in srgb, var(--idg-color-surface) 48%, transparent)"
+        "$value": "color-mix(in srgb, var(--idg-color-surface) 42%, transparent)"
       },
       "backdrop-filter": {
         "$type": "string",

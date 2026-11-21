@@ -52,13 +52,13 @@
     "elevation": {
       "$type": "shadow",
       "sm": {
-        "$value": "3px 3px 6px color-mix(in srgb, var(--idg-color-bg) 62%, black), -3px -3px 6px light-dark(color-mix(in srgb, var(--idg-color-bg) 15%, white), color-mix(in srgb, var(--idg-color-bg) 86%, white))"
+        "$value": "4px 4px 8px color-mix(in srgb, var(--idg-color-bg) 55%, black), -4px -4px 8px light-dark(white, color-mix(in srgb, var(--idg-color-bg) 78%, white))"
       },
       "md": {
-        "$value": "6px 6px 14px color-mix(in srgb, var(--idg-color-bg) 62%, black), -6px -6px 14px light-dark(color-mix(in srgb, var(--idg-color-bg) 15%, white), color-mix(in srgb, var(--idg-color-bg) 86%, white))"
+        "$value": "8px 8px 18px color-mix(in srgb, var(--idg-color-bg) 55%, black), -8px -8px 18px light-dark(white, color-mix(in srgb, var(--idg-color-bg) 78%, white))"
       },
       "lg": {
-        "$value": "10px 10px 24px color-mix(in srgb, var(--idg-color-bg) 62%, black), -10px -10px 24px light-dark(color-mix(in srgb, var(--idg-color-bg) 15%, white), color-mix(in srgb, var(--idg-color-bg) 86%, white))"
+        "$value": "14px 14px 30px color-mix(in srgb, var(--idg-color-bg) 55%, black), -14px -14px 30px light-dark(white, color-mix(in srgb, var(--idg-color-bg) 78%, white))"
       }
     },
     "surface": {
