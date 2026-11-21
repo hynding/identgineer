@@ -8,8 +8,8 @@ import { TOAST_POSITIONS, type ToastPosition } from "./toast-region-options";
 const ANNOUNCE_DELAY_MS = 100;
 
 /**
- * The announcement is cleared this long after its last line was added, so browsing the page does
- * not meet each toast twice.
+ * Each announced line is removed this long after it was added, so browsing the page does not meet
+ * each toast twice, and a steady stream of toasts does not pile lines up.
  */
 const ANNOUNCEMENT_LIFETIME_MS = 5000;
 
@@ -25,15 +25,6 @@ type PauseReason = "hover" | "focus" | "background" | "motion";
 
 function isToast(element: Element): element is RegionToast {
   return element.localName === "idg-toast";
-}
-
-/** Adds each line in a paragraph of its own, as text, so a screen reader pauses between them. */
-function addLines(announcer: HTMLElement, lines: readonly string[]): void {
-  for (const line of lines) {
-    const paragraph = document.createElement("p");
-    paragraph.textContent = line;
-    announcer.append(paragraph);
-  }
 }
 
 /**
@@ -83,9 +74,8 @@ export class IdgToastRegion {
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
   /** Lines waiting to be announced, per live region. */
   private readonly pending = new Map<HTMLElement, string[]>();
-  /** When each live region's current announcement is to be cleared, as a `Date.now()` time. */
-  private readonly clearAt = new Map<HTMLElement, number>();
-  private readonly clearTimers = new Map<HTMLElement, ReturnType<typeof setTimeout>>();
+  /** Each announced line, with the `Date.now()` time at which it is removed. */
+  private readonly lines = new Map<HTMLElement, number>();
 
   connectedCallback(): void {
     this.followMotionPreference();
@@ -109,7 +99,6 @@ export class IdgToastRegion {
     this.shown = false;
     for (const timer of this.timers) clearTimeout(timer);
     this.timers.clear();
-    this.clearTimers.clear();
   }
 
   private followMotionPreference(): void {
@@ -246,43 +235,40 @@ export class IdgToastRegion {
     }
   }
 
-  // While an announcement is showing, new lines are added to it rather than replacing it: a live
-  // region reads what is added, and a replacement could cut short the line being read.
+  // Each line is a paragraph of its own, set as text, so a screen reader pauses between them. The
+  // live regions are not atomic, so only the lines added are read, never the ones still held, and
+  // nothing is replaced, so no line cuts short the one being read.
   private flush(announcer: HTMLElement): void {
     const lines = this.pending.get(announcer);
     this.pending.delete(announcer);
     if (!lines) return;
-    if (!this.clearAt.has(announcer)) announcer.textContent = "";
-    addLines(announcer, lines);
-    this.clearAt.set(announcer, Date.now() + ANNOUNCEMENT_LIFETIME_MS);
-    this.clearLater(announcer, ANNOUNCEMENT_LIFETIME_MS);
+    for (const line of lines) {
+      const paragraph = document.createElement("p");
+      paragraph.textContent = line;
+      announcer.append(paragraph);
+      this.lines.set(paragraph, Date.now() + ANNOUNCEMENT_LIFETIME_MS);
+      this.removeLineLater(paragraph, ANNOUNCEMENT_LIFETIME_MS);
+    }
   }
 
-  private clearLater(announcer: HTMLElement, delay: number): void {
-    const previous = this.clearTimers.get(announcer);
-    if (previous !== undefined) {
-      clearTimeout(previous);
-      this.timers.delete(previous);
-    }
-    const timer = this.later(delay, () => {
-      this.clearTimers.delete(announcer);
-      this.clearAt.delete(announcer);
-      announcer.textContent = "";
+  private removeLineLater(line: HTMLElement, delay: number): void {
+    this.later(delay, () => {
+      this.removeLine(line);
     });
-    this.clearTimers.set(announcer, timer);
+  }
+
+  private removeLine(line: HTMLElement): void {
+    this.lines.delete(line);
+    line.remove();
   }
 
   // Timers stop while the region is out of the page. Back in it, what was waiting is announced and
-  // an announcement whose time ran out meanwhile is cleared.
+  // a line whose time ran out meanwhile is removed.
   private resumeAnnouncements(): void {
     const now = Date.now();
-    for (const [announcer, at] of this.clearAt) {
-      if (at > now) {
-        this.clearLater(announcer, at - now);
-        continue;
-      }
-      this.clearAt.delete(announcer);
-      announcer.textContent = "";
+    for (const [line, removeAt] of this.lines) {
+      if (removeAt > now) this.removeLineLater(line, removeAt - now);
+      else this.removeLine(line);
     }
     for (const announcer of this.pending.keys()) {
       this.later(ANNOUNCE_DELAY_MS, () => {
@@ -291,13 +277,12 @@ export class IdgToastRegion {
     }
   }
 
-  private later(delay: number, callback: () => void): ReturnType<typeof setTimeout> {
+  private later(delay: number, callback: () => void): void {
     const timer = setTimeout(() => {
       this.timers.delete(timer);
       callback();
     }, delay);
     this.timers.add(timer);
-    return timer;
   }
 
   private setPause(reason: PauseReason, on: boolean): void {
@@ -335,17 +320,11 @@ export class IdgToastRegion {
       >
         <slot onSlotchange={this.sync} />
       </section>,
-      <div
-        ref={(element) => (this.polite = element)}
-        class="visually-hidden"
-        aria-live="polite"
-        aria-atomic="true"
-      />,
+      <div ref={(element) => (this.polite = element)} class="visually-hidden" aria-live="polite" />,
       <div
         ref={(element) => (this.assertive = element)}
         class="visually-hidden"
         aria-live="assertive"
-        aria-atomic="true"
       />,
     ];
   }
