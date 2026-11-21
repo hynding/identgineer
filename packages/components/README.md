@@ -615,11 +615,12 @@ which the toast removes itself. Parts `toast`, `icon`, `heading`, `description`,
 
 - **Announcements.** The region has one polite live region, and an assertive one used only for
   `danger`. Each toast is announced as it comes into view (a queued one when its turn comes), as
-  text, 100ms after the change so the live region is in place. Toasts that come into view within
-  those 100ms are announced together, and a toast that comes while an announcement is still showing
-  is added to it rather than replacing it, so no line cuts another short. The announcement is
-  cleared 5s after its last line, so browsing the page does not meet it twice. A region moved in
-  the page announces what was waiting and clears what had expired. Focus never moves on its own.
+  text, 100ms after the change so the live region is in place. Each toast's lines are added as
+  paragraphs of their own to live regions that are not atomic, so a screen reader reads only what
+  was added, and nothing is replaced, so no toast cuts another short. Each line is removed 5s after
+  it was added, so browsing the page does not meet it twice and a steady stream does not pile up. A
+  region moved in the page announces what was waiting and removes lines whose time ran out. Focus
+  never moves on its own.
 - **Reaching it.** The region is a landmark (`<section>` with a name) and `hotkey` focuses it while
   it holds a toast (`aria-keyshortcuts`). Tab then reaches the action and close buttons. Escape in a
   toast dismisses it; focus moves to the next toast, or back where it was before focus entered the
