@@ -21,7 +21,7 @@ export class IdgBreadcrumbItem {
   @Prop() href?: string;
 
   /** Marks this step as the current page, in place of the last one. */
-  @Prop() current = false;
+  @Prop({ reflect: true }) current = false;
 
   /** Set by the breadcrumb: whether this step is the current page. */
   @Prop() isCurrent = false;
