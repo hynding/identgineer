@@ -48,7 +48,7 @@
   --_pad: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
   /* The gutter gives way where the container is so narrow, or the text so large, that it would
      take most of the width. */
-  --_gutter: min(var(--idg-layout-page-gutter), 8cqi);
+  --_gutter: min(var(--idg-layout-page-gutter), 8%);
   --_measure: var(--idg-layout-content-max);
   --_edge: max(var(--_gutter), calc((100% - var(--_measure)) / 2));
   --_bar: var(--idg-layout-nav-size);
@@ -817,6 +817,7 @@
 
   .brand {
     font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+    white-space: nowrap;
   }
 
   .hero {
@@ -1005,7 +1006,7 @@
 @container idg-shell style(--idg-layout-shell: bento) {
   .shell {
     --_nav: disclosure;
-    --_pad: min(calc(var(--idg-space-s) * var(--idg-density-gap-scale)), 5cqi);
+    --_pad: min(calc(var(--idg-space-s) * var(--idg-density-gap-scale)), 5%);
 
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto minmax(0, 1fr) auto auto;

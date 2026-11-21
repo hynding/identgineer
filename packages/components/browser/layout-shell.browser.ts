@@ -660,13 +660,15 @@ test.describe("collapsed navigation", () => {
     await openShell(page, { width: 390, layout: "side-rail" });
     await openNavigation(page);
     await page.keyboard.press("Escape");
-    await expect.poll(async () => (await drawerState(page)).open).toBe(false);
-    expect(await drawerState(page)).toMatchObject({
-      expanded: "false",
-      modal: false,
-      attribute: false,
-      scrollLocked: false,
-    });
+    await expect
+      .poll(() => drawerState(page))
+      .toMatchObject({
+        open: false,
+        expanded: "false",
+        modal: false,
+        attribute: false,
+        scrollLocked: false,
+      });
     expect(await focusInfo(page)).toMatchObject({ region: "toggle" });
     await page.locator("#main-link").focus();
     expect(await focusInfo(page)).toEqual({ region: "main", id: "main-link" });

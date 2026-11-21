@@ -48,9 +48,16 @@ idg-layout p {
   gap: var(--idg-space-2xs);
   color: inherit;
   font-family: var(--idg-font-family-display);
-  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
   font-weight: var(--idg-font-display-weight);
   text-decoration: none;
+}
+
+idg-layout a:not(.brand, .hero-link) {
+  color: var(--idg-color-link);
+}
+
+[data-layout="centered"] .hero-content {
+  justify-items: center;
 }
 
 .eyebrow {

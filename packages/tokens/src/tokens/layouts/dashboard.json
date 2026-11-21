@@ -34,7 +34,7 @@
         "$value": "3.5rem"
       },
       "rail-width": {
-        "$value": "11rem"
+        "$value": "12rem"
       },
       "sticky-inset": {
         "$value": "{layout.nav-size}"

@@ -762,10 +762,10 @@ Their defaults come from the layout axis (`data-layout`, see the
 different measure, gap and column count under each of the eight layouts. A prop overrides the
 layout with a **step** of a token scale; it never takes a length.
 
-| Step set                                               | Values                                                                           | Used by                                        |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Gap steps, from the space scale (`--idg-space-<step>`) | `none`, `3xs`, `2xs`, `xs`, `s`, `m`, `l`, `xl`, `2xl`, `3xl`                    | `gap` on every primitive                       |
-| Size steps, from the size scale (`--idg-size-<step>`)  | `xs` (10rem), `s` (14rem), `m` (20rem), `l` (28rem), `xl` (40rem), `2xl` (56rem) | `min`, `side-width`, `threshold`, `min-height` |
+| Step set                                               | Values                                                                                          | Used by                                        |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Gap steps, from the space scale (`--idg-space-<step>`) | `none`, `3xs`, `2xs`, `xs`, `s`, `m`, `l`, `xl`, `2xl`, `3xl`                                   | `gap` on every primitive                       |
+| Size steps, from the size scale (`--idg-size-<step>`)  | `xs` (10rem), `s` (14rem), `m` (20rem), `l` (28rem), `xl` (40rem), `2xl` (56rem), `3xl` (72rem) | `min`, `side-width`, `threshold`, `min-height` |
 
 `gap="none"` is a gap of zero. Every other gap, a step or the layout's `--idg-layout-gap` by default, is multiplied by `--idg-density-gap-scale`, so a compact UX mode tightens every layout. A
 value that is not a step (`"12px"`, `"var(--x)"`, a typo) is ignored and the layout's own value
@@ -865,6 +865,67 @@ A block at least as tall as `min-height` (`screen` is the height of the viewport
 content. It grows when the content needs more room. **Slots:** `top` (pinned to the top), default
 (centred in the space the others leave) and `bottom`. **Parts:** `cover`, `center`.
 
+### `idg-layout`
+
+The page shell. One page, written once, is housed by whichever of the eight layouts `data-layout`
+names, on the root or on any ancestor, with no change of markup. Its shadow tree is always the same:
+a skip link, a `header` (brand, menu button, navigation, actions), the hero, `main`, `aside` and
+`footer`. No layout reorders it, so the order a reader and the Tab key meet things in is the order of
+the markup, and the shell adds no heading of its own. A region with nothing slotted into it is not
+drawn and is not announced.
+
+| Slot         | Region                                                   |
+| ------------ | -------------------------------------------------------- |
+| `brand`      | The name or logo, usually a link                         |
+| `navigation` | The navigation items, as direct children (links)         |
+| `actions`    | Buttons and links of the header, such as a sign-in       |
+| `hero`       | An introduction above or beside the content              |
+| default      | The content, inside `main` (the target of the skip link) |
+| `aside`      | Related content, a `complementary` landmark              |
+| `footer`     | The footer, a `contentinfo` landmark                     |
+
+| Prop                      | Attribute                   | Default             |
+| ------------------------- | --------------------------- | ------------------- |
+| `navigationLabel`         | `navigation-label`          | `Main navigation`   |
+| `asideLabel`              | `aside-label`               | `Related content`   |
+| `skipLabel`               | `skip-label`                | `Skip to content`   |
+| `menuLabel`, `closeLabel` | `menu-label`, `close-label` | `Menu`, `Close`     |
+| `navigationOpen`          | `navigation-open`           | `false` (reflected) |
+
+**Event:** `idgNavigationToggle`, with `{ open }`. **Parts:** `shell`, `skip`, `header`, `brand`,
+`toggle`, `drawer`, `close`, `navigation`, `actions`, `hero`, `main`, `aside`, `footer`.
+
+The host is a size container: each layout picks its small (below 40rem), medium (from 40rem) and
+large (from 72rem) arrangement from the width of the shell, not of the viewport. The thresholds are
+the `xl` and `3xl` steps of the size scale (`--idg-size-3xl` is 72rem, added for this).
+
+| Layout       | Arrangement                                                                       | Navigation small / medium / large |
+| ------------ | --------------------------------------------------------------------------------- | --------------------------------- |
+| `top-bar`    | A bar across the top, pinned at large; the aside beside the content               | panel / panel / inline            |
+| `side-rail`  | A rail for the full height with the brand on top; actions in a strip; aside below | drawer / inline / inline          |
+| `split-hero` | The hero keeps the start half in view while the content scrolls beside it         | panel / panel / panel             |
+| `magazine`   | A centred masthead, a ruled strip of navigation, a narrow column of related items | panel / inline / inline           |
+| `dashboard`  | A slim rail, a pinned strip of actions, the aside as an inspector at the end      | drawer / inline / inline          |
+| `centered`   | One narrow column; brand and navigation above, aside and footer below             | panel / inline / inline           |
+| `bento`      | Every region a tile on one grid of one, two, then four columns                    | panel / panel / inline            |
+| `immersive`  | A full-bleed hero under a transparent header; the aside a band, then a tile       | drawer / drawer / drawer          |
+
+"Multi-column" in `magazine` is the layout's column count, read by `idg-grid` in the content, not CSS
+columns. A **panel** is the navigation opened under the menu button, without trapping focus or making the page
+inert; a **drawer** is a modal dialog (`showModal`): focus moves in, the page behind is inert and
+scroll-locked, Escape or the close button or a press on the backdrop closes it and focus returns to
+the menu button. Following a link closes either. If the container grows until the navigation is drawn
+inline, an open panel or drawer is reset without moving focus. The drawer slides in but does not
+animate out.
+
+Changing `data-layout` while the page is open keeps the scroll position and keeps focus on the same
+element; focus that was in a navigation the new layout collapses goes to the menu button. Where a
+layout pins its chrome (`top-bar` at large, `dashboard`), `scroll-padding-block-start` is set on the
+document from `--idg-layout-sticky-inset`, so a focused or targeted element is never left under it.
+
+Known limit: while a panel is open in a layout whose actions sit on the first row, the Tab order
+(menu button, navigation, actions) jumps up the page once.
+
 ## Strict CSP and Trusted Types
 
 Every component is verified in Chromium against
@@ -934,7 +995,7 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   viewport and forced colours for every overlay (axe runs with each one open), boundary contrast, text contrast of badges, alerts,
   avatars and changes in all 8 themes in light and dark, and axe (wcag2a, wcag2aa, wcag21aa, wcag22aa) across the 8 designs in light and dark and
   the 8 UX modes, no sideways page scroll at 320, 768, 1280 and 2560px under all 8 layouts, and the
-  layout primitives' wrapping, column counts and right-to-left placement, on pages in `src/fixtures/` (`button.html`, `forms.html`, `surfaces.html`, `overlays.html`, `navigation.html`, `layout-primitives.html`; copied to `www/fixtures/`; static HTML, no inline
+  layout primitives' wrapping, column counts and right-to-left placement, on pages in `src/fixtures/` (`button.html`, `forms.html`, `surfaces.html`, `overlays.html`, `navigation.html`, `layout-primitives.html`, `layout-shell.html`; copied to `www/fixtures/`; static HTML, no inline
   script or style). Build first. Playwright's own Chromium is installed with
   `pnpm --filter @identgineer/components exec playwright install --with-deps chromium`; where that is
   not possible, set `IDG_CHROMIUM_PATH` to a Chromium binary (`/opt/pw-browsers/chromium` is used if it
