@@ -35,9 +35,9 @@ test.describe("idg-menu semantics", () => {
     expect(closed.properties).toMatchObject({ expanded: false, hasPopup: "menu" });
     expect(closed.relations).toMatchObject({ controls: 1 });
     await openByKeyboard(page);
-    expect((await accessibleNode(page, "actions-trigger", "button")).properties).toMatchObject({
-      expanded: true,
-    });
+    await expect
+      .poll(async () => (await accessibleNode(page, "actions-trigger", "button")).properties)
+      .toMatchObject({ expanded: true });
   });
 
   test("the accessibility tree has a named menu of items with their roles, though each item has its own shadow root", async ({
@@ -129,9 +129,9 @@ test.describe("idg-menu keyboard", () => {
     await page.keyboard.type("sh");
     await page.keyboard.press(" ");
     await expect(surface(page)).toBeVisible();
-    expect((await accessibleNode(page, "item-grid", '[part="item"]')).properties).toMatchObject({
-      checked: "true",
-    });
+    await expect
+      .poll(async () => (await accessibleNode(page, "item-grid", '[part="item"]')).properties)
+      .toMatchObject({ checked: "true" });
   });
 
   test("choosing a radio item checks it and unchecks the other", async ({ page }) => {

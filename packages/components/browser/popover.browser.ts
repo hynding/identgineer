@@ -3,7 +3,7 @@ import { accessibleNode } from "./accessible-node";
 import { DESIGNS, SCHEMES, UX_MODES, applyAxes, settle } from "./axes";
 import { expectNoAxeViolations } from "./accessibility";
 import { expect, test } from "./fixtures";
-import { focusIsWithin, openOverlays } from "./overlay-page";
+import { openOverlays } from "./overlay-page";
 
 const surface = (page: Page, id: string) => page.locator(`#${id}`).locator('[part="surface"]');
 
@@ -30,7 +30,7 @@ test.describe("idg-popover", () => {
     expect((await accessibleNode(page, "share-trigger", "button")).properties).toMatchObject({
       expanded: true,
     });
-    expect(await focusIsWithin(page, "share")).toBe(true);
+    await expect(surface(page, "share")).toBeFocused();
   });
 
   test("sits below its trigger, anchored by CSS", async ({ page }) => {
@@ -58,6 +58,9 @@ test.describe("idg-popover", () => {
   test("Tab moves through its content", async ({ page }) => {
     await openOverlays(page);
     await page.locator("#share-trigger").click();
+    // The popover moves focus to its surface once its toggle event fires, a task after the click.
+    // The trigger is inside the host too, so focus merely within the host would not show it.
+    await expect(surface(page, "share")).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.locator("#share-link")).toBeFocused();
   });
