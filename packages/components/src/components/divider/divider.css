@@ -1,0 +1,48 @@
+:host {
+  display: block;
+  color: var(--idg-color-border);
+}
+
+:host([orientation="vertical"]) {
+  display: inline-block;
+  align-self: stretch;
+  min-block-size: 1em;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+/* The rule is the design's own border (thick and black in brutalist, double in pixel), over a
+   hairline in the theme's border colour that stands in where the design draws no border at all
+   (soft, elevated). It is never thinner than 1px. */
+.line {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border-width: 0;
+  border-style: var(--idg-border-style);
+  border-color: var(--idg-border-color);
+  background: var(--idg-color-border);
+}
+
+.horizontal {
+  inline-size: 100%;
+  block-size: max(1px, var(--idg-border-width));
+  border-block-start-width: var(--idg-border-width);
+}
+
+.vertical {
+  block-size: 100%;
+  min-block-size: inherit;
+  inline-size: max(1px, var(--idg-border-width));
+  border-inline-start-width: var(--idg-border-width);
+}
+
+@media (forced-colors: active) {
+  .line {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    background: CanvasText;
+  }
+}

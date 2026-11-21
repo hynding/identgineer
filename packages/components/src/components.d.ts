@@ -5,23 +5,53 @@
  * It contains typing information for all components that exist in this project.
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
+import { AlertVariant } from "./components/alert/alert-options";
 import { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 import { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 import { CheckedDetail, ValueDetail } from "./utils/event-details";
+import { DividerOrientation } from "./components/divider/divider-options";
 import { IconName } from "./components/icon/icon-paths";
 import { IconSize } from "./components/icon/icon-options";
 import { InputSize, InputType } from "./components/input/input-options";
+import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
+import { SkeletonVariant } from "./components/skeleton/skeleton-options";
+export { AlertVariant } from "./components/alert/alert-options";
 export { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 export { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 export { CheckedDetail, ValueDetail } from "./utils/event-details";
+export { DividerOrientation } from "./components/divider/divider-options";
 export { IconName } from "./components/icon/icon-paths";
 export { IconSize } from "./components/icon/icon-options";
 export { InputSize, InputType } from "./components/input/input-options";
+export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
+export { SkeletonVariant } from "./components/skeleton/skeleton-options";
 export namespace Components {
+    /**
+     * A message that stays on the page until it is read or dismissed. For a message that appears in
+     * response to what the user did, render the alert at that moment: a live region announces what is
+     * inserted, not what was already there.
+     */
+    interface IdgAlert {
+        /**
+          * The dismiss button's accessible name.
+          * @default "Dismiss"
+         */
+        "dismissLabel": string;
+        /**
+          * Adds a button that dismisses the alert.
+          * @default false
+         */
+        "dismissible": boolean;
+        /**
+          * Meaning and urgency. Warning and danger interrupt assistive technology; info and success do not.
+          * @default "info"
+         */
+        "variant": AlertVariant;
+    }
     /**
      * A person or account, as a picture or, when there is none or it fails to load, their initials on a
      * colour chosen from their name.
@@ -196,6 +226,21 @@ export namespace Components {
         "value": string;
     }
     /**
+     * A rule between groups of content, drawn in the design language's own border.
+     */
+    interface IdgDivider {
+        /**
+          * Takes the divider out of the accessibility tree, for a rule that only decorates.
+          * @default false
+         */
+        "decorative": boolean;
+        /**
+          * Direction of the rule. A vertical divider needs a parent that gives it a height.
+          * @default "horizontal"
+         */
+        "orientation": DividerOrientation;
+    }
+    /**
      * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
      * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
      * reference cannot cross a shadow boundary, so their text is handed to the control as properties
@@ -352,6 +397,40 @@ export namespace Components {
         "target"?: string;
     }
     /**
+     * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
+     * the browser's own. Without a value it is indeterminate.
+     */
+    interface IdgProgress {
+        /**
+          * Marks work of unknown length, whatever the value.
+          * @default false
+         */
+        "indeterminate": boolean;
+        /**
+          * What is progressing. Visible, and the bar's accessible name, so it should always be set.
+         */
+        "label"?: string;
+        /**
+          * The value that means done.
+          * @default 100
+         */
+        "max": number;
+        /**
+          * Shows the percentage beside the label. Only for determinate progress.
+          * @default false
+         */
+        "showValue": boolean;
+        /**
+          * Bar thickness.
+          * @default "md"
+         */
+        "size": ProgressSize;
+        /**
+          * How much is done. Without it the progress is indeterminate.
+         */
+        "value"?: number;
+    }
+    /**
      * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
      * as set by the group are how it passes state down, because radios in separate shadow roots are
      * not a native radio group.
@@ -500,6 +579,25 @@ export namespace Components {
          */
         "value": string;
     }
+    /**
+     * A placeholder shaped like content that is still loading. It is always hidden from assistive
+     * technology, so it announces nothing by itself. Mark the region being loaded with
+     * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
+     * and replace the skeletons when the content arrives.
+     * Size it with the page's own CSS on the element, for example `idg-skeleton { inline-size: 12rem }`.
+     */
+    interface IdgSkeleton {
+        /**
+          * How many lines of text to draw. The last of several is shorter. Only for `text`.
+          * @default 1
+         */
+        "lines": number;
+        /**
+          * The shape of what is loading.
+          * @default "text"
+         */
+        "variant": SkeletonVariant;
+    }
     interface IdgSwitch {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -616,6 +714,10 @@ export namespace Components {
         "value": string;
     }
 }
+export interface IdgAlertCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgAlertElement;
+}
 export interface IdgCheckboxCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgCheckboxElement;
@@ -645,6 +747,28 @@ export interface IdgTextareaCustomEvent<T> extends CustomEvent<T> {
     target: HTMLIdgTextareaElement;
 }
 declare global {
+    interface HTMLIdgAlertElementEventMap {
+        "idgDismiss": void;
+    }
+    /**
+     * A message that stays on the page until it is read or dismissed. For a message that appears in
+     * response to what the user did, render the alert at that moment: a live region announces what is
+     * inserted, not what was already there.
+     */
+    interface HTMLIdgAlertElement extends Components.IdgAlert, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgAlertElementEventMap>(type: K, listener: (this: HTMLIdgAlertElement, ev: IdgAlertCustomEvent<HTMLIdgAlertElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgAlertElementEventMap>(type: K, listener: (this: HTMLIdgAlertElement, ev: IdgAlertCustomEvent<HTMLIdgAlertElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgAlertElement: {
+        prototype: HTMLIdgAlertElement;
+        new (): HTMLIdgAlertElement;
+    };
     /**
      * A person or account, as a picture or, when there is none or it fails to load, their initials on a
      * colour chosen from their name.
@@ -698,6 +822,15 @@ declare global {
         new (): HTMLIdgCheckboxElement;
     };
     /**
+     * A rule between groups of content, drawn in the design language's own border.
+     */
+    interface HTMLIdgDividerElement extends Components.IdgDivider, HTMLStencilElement {
+    }
+    var HTMLIdgDividerElement: {
+        prototype: HTMLIdgDividerElement;
+        new (): HTMLIdgDividerElement;
+    };
+    /**
      * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
      * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
      * reference cannot cross a shadow boundary, so their text is handed to the control as properties
@@ -746,6 +879,16 @@ declare global {
     var HTMLIdgLinkElement: {
         prototype: HTMLIdgLinkElement;
         new (): HTMLIdgLinkElement;
+    };
+    /**
+     * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
+     * the browser's own. Without a value it is indeterminate.
+     */
+    interface HTMLIdgProgressElement extends Components.IdgProgress, HTMLStencilElement {
+    }
+    var HTMLIdgProgressElement: {
+        prototype: HTMLIdgProgressElement;
+        new (): HTMLIdgProgressElement;
     };
     interface HTMLIdgRadioElementEventMap {
         "idgSelect": RadioSelectDetail;
@@ -814,6 +957,19 @@ declare global {
         prototype: HTMLIdgSelectElement;
         new (): HTMLIdgSelectElement;
     };
+    /**
+     * A placeholder shaped like content that is still loading. It is always hidden from assistive
+     * technology, so it announces nothing by itself. Mark the region being loaded with
+     * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
+     * and replace the skeletons when the content arrives.
+     * Size it with the page's own CSS on the element, for example `idg-skeleton { inline-size: 12rem }`.
+     */
+    interface HTMLIdgSkeletonElement extends Components.IdgSkeleton, HTMLStencilElement {
+    }
+    var HTMLIdgSkeletonElement: {
+        prototype: HTMLIdgSkeletonElement;
+        new (): HTMLIdgSkeletonElement;
+    };
     interface HTMLIdgSwitchElementEventMap {
         "idgChange": CheckedDetail;
     }
@@ -850,23 +1006,53 @@ declare global {
         new (): HTMLIdgTextareaElement;
     };
     interface HTMLElementTagNameMap {
+        "idg-alert": HTMLIdgAlertElement;
         "idg-avatar": HTMLIdgAvatarElement;
         "idg-avatar-group": HTMLIdgAvatarGroupElement;
         "idg-badge": HTMLIdgBadgeElement;
         "idg-button": HTMLIdgButtonElement;
         "idg-checkbox": HTMLIdgCheckboxElement;
+        "idg-divider": HTMLIdgDividerElement;
         "idg-field": HTMLIdgFieldElement;
         "idg-icon": HTMLIdgIconElement;
         "idg-input": HTMLIdgInputElement;
         "idg-link": HTMLIdgLinkElement;
+        "idg-progress": HTMLIdgProgressElement;
         "idg-radio": HTMLIdgRadioElement;
         "idg-radio-group": HTMLIdgRadioGroupElement;
         "idg-select": HTMLIdgSelectElement;
+        "idg-skeleton": HTMLIdgSkeletonElement;
         "idg-switch": HTMLIdgSwitchElement;
         "idg-textarea": HTMLIdgTextareaElement;
     }
 }
 declare namespace LocalJSX {
+    /**
+     * A message that stays on the page until it is read or dismissed. For a message that appears in
+     * response to what the user did, render the alert at that moment: a live region announces what is
+     * inserted, not what was already there.
+     */
+    interface IdgAlert {
+        /**
+          * The dismiss button's accessible name.
+          * @default "Dismiss"
+         */
+        "dismissLabel"?: string;
+        /**
+          * Adds a button that dismisses the alert.
+          * @default false
+         */
+        "dismissible"?: boolean;
+        /**
+          * Fires when the dismiss button is activated. The alert then hides itself, unless a listener calls `preventDefault()` to remove or keep it some other way.
+         */
+        "onIdgDismiss"?: (event: IdgAlertCustomEvent<void>) => void;
+        /**
+          * Meaning and urgency. Warning and danger interrupt assistive technology; info and success do not.
+          * @default "info"
+         */
+        "variant"?: AlertVariant;
+    }
     /**
      * A person or account, as a picture or, when there is none or it fails to load, their initials on a
      * colour chosen from their name.
@@ -1045,6 +1231,21 @@ declare namespace LocalJSX {
         "value"?: string;
     }
     /**
+     * A rule between groups of content, drawn in the design language's own border.
+     */
+    interface IdgDivider {
+        /**
+          * Takes the divider out of the accessibility tree, for a rule that only decorates.
+          * @default false
+         */
+        "decorative"?: boolean;
+        /**
+          * Direction of the rule. A vertical divider needs a parent that gives it a height.
+          * @default "horizontal"
+         */
+        "orientation"?: DividerOrientation;
+    }
+    /**
      * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
      * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
      * reference cannot cross a shadow boundary, so their text is handed to the control as properties
@@ -1201,6 +1402,40 @@ declare namespace LocalJSX {
         "target"?: string;
     }
     /**
+     * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
+     * the browser's own. Without a value it is indeterminate.
+     */
+    interface IdgProgress {
+        /**
+          * Marks work of unknown length, whatever the value.
+          * @default false
+         */
+        "indeterminate"?: boolean;
+        /**
+          * What is progressing. Visible, and the bar's accessible name, so it should always be set.
+         */
+        "label"?: string;
+        /**
+          * The value that means done.
+          * @default 100
+         */
+        "max"?: number;
+        /**
+          * Shows the percentage beside the label. Only for determinate progress.
+          * @default false
+         */
+        "showValue"?: boolean;
+        /**
+          * Bar thickness.
+          * @default "md"
+         */
+        "size"?: ProgressSize;
+        /**
+          * How much is done. Without it the progress is indeterminate.
+         */
+        "value"?: number;
+    }
+    /**
      * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
      * as set by the group are how it passes state down, because radios in separate shadow roots are
      * not a native radio group.
@@ -1345,6 +1580,25 @@ declare namespace LocalJSX {
          */
         "value"?: string;
     }
+    /**
+     * A placeholder shaped like content that is still loading. It is always hidden from assistive
+     * technology, so it announces nothing by itself. Mark the region being loaded with
+     * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
+     * and replace the skeletons when the content arrives.
+     * Size it with the page's own CSS on the element, for example `idg-skeleton { inline-size: 12rem }`.
+     */
+    interface IdgSkeleton {
+        /**
+          * How many lines of text to draw. The last of several is shorter. Only for `text`.
+          * @default 1
+         */
+        "lines"?: number;
+        /**
+          * The shape of what is loading.
+          * @default "text"
+         */
+        "variant"?: SkeletonVariant;
+    }
     interface IdgSwitch {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -1457,6 +1711,11 @@ declare namespace LocalJSX {
         "value"?: string;
     }
 
+    interface IdgAlertAttributes {
+        "variant": AlertVariant;
+        "dismissible": boolean;
+        "dismissLabel": string;
+    }
     interface IdgAvatarAttributes {
         "src": string;
         "alt": string;
@@ -1498,6 +1757,10 @@ declare namespace LocalJSX {
         "accessibleLabel": string;
         "accessibleDescription": string;
         "invalid": boolean;
+    }
+    interface IdgDividerAttributes {
+        "orientation": DividerOrientation;
+        "decorative": boolean;
     }
     interface IdgFieldAttributes {
         "label": string;
@@ -1544,6 +1807,14 @@ declare namespace LocalJSX {
         "external": boolean;
         "externalLabel": string;
     }
+    interface IdgProgressAttributes {
+        "label": string;
+        "value": number;
+        "max": number;
+        "indeterminate": boolean;
+        "showValue": boolean;
+        "size": ProgressSize;
+    }
     interface IdgRadioAttributes {
         "value": string;
         "checked": boolean;
@@ -1573,6 +1844,10 @@ declare namespace LocalJSX {
         "accessibleLabel": string;
         "accessibleDescription": string;
         "invalid": boolean;
+    }
+    interface IdgSkeletonAttributes {
+        "variant": SkeletonVariant;
+        "lines": number;
     }
     interface IdgSwitchAttributes {
         "name": string;
@@ -1606,18 +1881,22 @@ declare namespace LocalJSX {
     }
 
     interface IntrinsicElements {
+        "idg-alert": Omit<IdgAlert, keyof IdgAlertAttributes> & { [K in keyof IdgAlert & keyof IdgAlertAttributes]?: IdgAlert[K] } & { [K in keyof IdgAlert & keyof IdgAlertAttributes as `attr:${K}`]?: IdgAlertAttributes[K] } & { [K in keyof IdgAlert & keyof IdgAlertAttributes as `prop:${K}`]?: IdgAlert[K] };
         "idg-avatar": Omit<IdgAvatar, keyof IdgAvatarAttributes> & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes]?: IdgAvatar[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `attr:${K}`]?: IdgAvatarAttributes[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `prop:${K}`]?: IdgAvatar[K] };
         "idg-avatar-group": Omit<IdgAvatarGroup, keyof IdgAvatarGroupAttributes> & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes]?: IdgAvatarGroup[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `attr:${K}`]?: IdgAvatarGroupAttributes[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `prop:${K}`]?: IdgAvatarGroup[K] };
         "idg-badge": Omit<IdgBadge, keyof IdgBadgeAttributes> & { [K in keyof IdgBadge & keyof IdgBadgeAttributes]?: IdgBadge[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `attr:${K}`]?: IdgBadgeAttributes[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `prop:${K}`]?: IdgBadge[K] };
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
         "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`]?: IdgCheckboxAttributes[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
+        "idg-divider": Omit<IdgDivider, keyof IdgDividerAttributes> & { [K in keyof IdgDivider & keyof IdgDividerAttributes]?: IdgDivider[K] } & { [K in keyof IdgDivider & keyof IdgDividerAttributes as `attr:${K}`]?: IdgDividerAttributes[K] } & { [K in keyof IdgDivider & keyof IdgDividerAttributes as `prop:${K}`]?: IdgDivider[K] };
         "idg-field": Omit<IdgField, keyof IdgFieldAttributes> & { [K in keyof IdgField & keyof IdgFieldAttributes]?: IdgField[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `attr:${K}`]?: IdgFieldAttributes[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `prop:${K}`]?: IdgField[K] };
         "idg-icon": Omit<IdgIcon, keyof IdgIconAttributes> & { [K in keyof IdgIcon & keyof IdgIconAttributes]?: IdgIcon[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `attr:${K}`]?: IdgIconAttributes[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `prop:${K}`]?: IdgIcon[K] };
         "idg-input": Omit<IdgInput, keyof IdgInputAttributes> & { [K in keyof IdgInput & keyof IdgInputAttributes]?: IdgInput[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `attr:${K}`]?: IdgInputAttributes[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `prop:${K}`]?: IdgInput[K] };
         "idg-link": Omit<IdgLink, keyof IdgLinkAttributes> & { [K in keyof IdgLink & keyof IdgLinkAttributes]?: IdgLink[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `attr:${K}`]?: IdgLinkAttributes[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `prop:${K}`]?: IdgLink[K] };
+        "idg-progress": Omit<IdgProgress, keyof IdgProgressAttributes> & { [K in keyof IdgProgress & keyof IdgProgressAttributes]?: IdgProgress[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `attr:${K}`]?: IdgProgressAttributes[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `prop:${K}`]?: IdgProgress[K] };
         "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
         "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
         "idg-select": Omit<IdgSelect, keyof IdgSelectAttributes> & { [K in keyof IdgSelect & keyof IdgSelectAttributes]?: IdgSelect[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `attr:${K}`]?: IdgSelectAttributes[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `prop:${K}`]?: IdgSelect[K] };
+        "idg-skeleton": Omit<IdgSkeleton, keyof IdgSkeletonAttributes> & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes]?: IdgSkeleton[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `attr:${K}`]?: IdgSkeletonAttributes[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `prop:${K}`]?: IdgSkeleton[K] };
         "idg-switch": Omit<IdgSwitch, keyof IdgSwitchAttributes> & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes]?: IdgSwitch[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `attr:${K}`]?: IdgSwitchAttributes[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `prop:${K}`]?: IdgSwitch[K] };
         "idg-textarea": Omit<IdgTextarea, keyof IdgTextareaAttributes> & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes]?: IdgTextarea[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `attr:${K}`]?: IdgTextareaAttributes[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `prop:${K}`]?: IdgTextarea[K] };
     }
@@ -1626,6 +1905,12 @@ export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
+            /**
+             * A message that stays on the page until it is read or dismissed. For a message that appears in
+             * response to what the user did, render the alert at that moment: a live region announces what is
+             * inserted, not what was already there.
+             */
+            "idg-alert": LocalJSX.IntrinsicElements["idg-alert"] & JSXBase.HTMLAttributes<HTMLIdgAlertElement>;
             /**
              * A person or account, as a picture or, when there is none or it fails to load, their initials on a
              * colour chosen from their name.
@@ -1642,6 +1927,10 @@ declare module "@stencil/core" {
             "idg-badge": LocalJSX.IntrinsicElements["idg-badge"] & JSXBase.HTMLAttributes<HTMLIdgBadgeElement>;
             "idg-button": LocalJSX.IntrinsicElements["idg-button"] & JSXBase.HTMLAttributes<HTMLIdgButtonElement>;
             "idg-checkbox": LocalJSX.IntrinsicElements["idg-checkbox"] & JSXBase.HTMLAttributes<HTMLIdgCheckboxElement>;
+            /**
+             * A rule between groups of content, drawn in the design language's own border.
+             */
+            "idg-divider": LocalJSX.IntrinsicElements["idg-divider"] & JSXBase.HTMLAttributes<HTMLIdgDividerElement>;
             /**
              * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
              * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
@@ -1661,6 +1950,11 @@ declare module "@stencil/core" {
              */
             "idg-link": LocalJSX.IntrinsicElements["idg-link"] & JSXBase.HTMLAttributes<HTMLIdgLinkElement>;
             /**
+             * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
+             * the browser's own. Without a value it is indeterminate.
+             */
+            "idg-progress": LocalJSX.IntrinsicElements["idg-progress"] & JSXBase.HTMLAttributes<HTMLIdgProgressElement>;
+            /**
              * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
              * as set by the group are how it passes state down, because radios in separate shadow roots are
              * not a native radio group.
@@ -1678,6 +1972,14 @@ declare module "@stencil/core" {
              * data has to be serialised into an attribute.
              */
             "idg-select": LocalJSX.IntrinsicElements["idg-select"] & JSXBase.HTMLAttributes<HTMLIdgSelectElement>;
+            /**
+             * A placeholder shaped like content that is still loading. It is always hidden from assistive
+             * technology, so it announces nothing by itself. Mark the region being loaded with
+             * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
+             * and replace the skeletons when the content arrives.
+             * Size it with the page's own CSS on the element, for example `idg-skeleton { inline-size: 12rem }`.
+             */
+            "idg-skeleton": LocalJSX.IntrinsicElements["idg-skeleton"] & JSXBase.HTMLAttributes<HTMLIdgSkeletonElement>;
             "idg-switch": LocalJSX.IntrinsicElements["idg-switch"] & JSXBase.HTMLAttributes<HTMLIdgSwitchElement>;
             "idg-textarea": LocalJSX.IntrinsicElements["idg-textarea"] & JSXBase.HTMLAttributes<HTMLIdgTextareaElement>;
         }
