@@ -603,7 +603,7 @@ test.describe("idg-pagination", () => {
     const pager = page.locator("#pagination-buttons");
     const focused = () =>
       pager.evaluate((host) => host.shadowRoot?.activeElement?.textContent.trim() ?? "none");
-    const label = (name: string) => pager.locator('[part="page"]').filter({ hasText: name });
+    const label = (name: RegExp) => pager.locator('[part="page"]').filter({ hasText: name });
     // Each press moves the window of pages, so the buttons are redrawn around the ellipsis.
     for (const next of ["5", "4", "3"]) {
       await label(new RegExp(`^${next}$`)).focus();
