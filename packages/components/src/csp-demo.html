@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>identgineer components (strict CSP)</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>idg-button</h1>
+      <section aria-label="Variants">
+        <idg-button>Primary</idg-button>
+        <idg-button variant="secondary">Secondary</idg-button>
+        <idg-button variant="ghost">Ghost</idg-button>
+        <idg-button variant="danger">Danger</idg-button>
+      </section>
+      <section aria-label="Sizes">
+        <idg-button size="sm">Small</idg-button>
+        <idg-button size="md">Medium</idg-button>
+        <idg-button size="lg">Large</idg-button>
+      </section>
+      <section aria-label="States">
+        <idg-button loading>Loading</idg-button>
+        <idg-button disabled>Disabled</idg-button>
+        <idg-button shortcut="Enter">With shortcut</idg-button>
+        <idg-button href="https://example.com" target="_blank">Link</idg-button>
+      </section>
+      <form id="demo-form">
+        <input name="name" value="Ada" aria-label="Name" />
+        <idg-button type="submit">Submit</idg-button>
+        <idg-button type="reset" variant="secondary">Reset</idg-button>
+      </form>
+    </main>
+  </body>
+</html>

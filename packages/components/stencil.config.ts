@@ -13,7 +13,13 @@ export const config: Config = {
     {
       type: "www",
       serviceWorker: null,
-      copy: [{ src: "demo.css" }, { src: "../../tokens/dist", dest: "tokens" }],
+      // csp-demo.html is copied untouched: the www build inlines scripts and styles into index.html,
+      // which a strict CSP forbids, and that page is what checks the library itself under one.
+      copy: [
+        { src: "demo.css" },
+        { src: "csp-demo.html" },
+        { src: "../../tokens/dist", dest: "tokens" },
+      ],
     },
   ],
 };
