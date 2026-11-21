@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { DESIGNS, SCHEMES, applyAxes } from "./axes";
+import { expectNoAxeViolations } from "./accessibility";
 import { contrastRatio } from "./contrast";
 import { expect, test } from "./fixtures";
 
@@ -358,4 +359,18 @@ test.describe("sizes", () => {
       for (const height of boxes) expect(height).toBeGreaterThanOrEqual(24);
     });
   }
+});
+
+test.describe("the demo page", () => {
+  test("hydrates the sign-in form under the strict policy and submits it", async ({ page }) => {
+    await page.goto("/csp-demo.html");
+    await expect(page.locator("idg-field:not(.hydrated), idg-input:not(.hydrated)")).toHaveCount(0);
+    await page.locator("#signin idg-input[type=email] input").fill("ada@example.com");
+    await page.locator('#signin idg-input[type="password"] input').fill("correct horse battery");
+    await expectNoAxeViolations(page);
+    await page.locator("#signin idg-button[type=submit]").locator("button").click();
+    await expect(page).toHaveURL(
+      /email=ada%40example\.com&password=correct\+horse\+battery&workspace=&second-step=app&note=&remember=on/,
+    );
+  });
 });
