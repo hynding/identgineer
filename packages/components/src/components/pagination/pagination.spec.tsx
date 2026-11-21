@@ -263,7 +263,10 @@ describe("idg-pagination as links", () => {
 
 describe("idg-pagination focus", () => {
   it("moves focus to the current page when the control that was used becomes unavailable", async () => {
-    const focus = vi.spyOn(HTMLElement.prototype, "focus");
+    const focus = vi.spyOn(
+      Object.getPrototypeOf(Object.getPrototypeOf(document.createElement("div"))) as HTMLElement,
+      "focus",
+    );
     const { root, waitForChanges } = await render(<idg-pagination pageCount={3} page={2} />);
     part(root, "next").click();
     await waitForChanges();

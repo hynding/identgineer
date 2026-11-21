@@ -1,0 +1,100 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+}
+
+/* Each control is drawn as the design draws a secondary button: its surface, control border,
+   radius and elevation. The current page takes the accent, as a primary button does. */
+.control {
+  padding-inline: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--idg-surface-background);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: var(--idg-elevation-sm);
+  color: var(--idg-color-text);
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  font-variant-numeric: tabular-nums;
+}
+
+.control:not([aria-disabled="true"]):not(:disabled):not([aria-current]):hover {
+  background: var(--idg-color-accent-subtle);
+  box-shadow: var(--idg-elevation-md);
+  color: var(--idg-color-on-accent-subtle);
+  transform: translateY(calc(-1 * var(--_lift)));
+}
+
+.control:not([aria-disabled="true"]):not(:disabled):active {
+  box-shadow: none;
+  transform: translate(
+      calc(var(--idg-ornament-hard-shadow-x) / 2),
+      calc(var(--idg-ornament-hard-shadow-y) / 2)
+    )
+    scale(var(--_press));
+}
+
+.control[aria-current="page"] {
+  background: var(--idg-color-accent);
+  color: var(--idg-color-on-accent);
+  cursor: default;
+}
+
+.control:disabled,
+.control[aria-disabled="true"] {
+  box-shadow: none;
+  opacity: 0.55;
+}
+
+/* Designs without control borders (soft, elevated) would leave a quiet control with no edge. */
+@container style(--idg-border-control-style: none) {
+  .control:not([aria-current]) {
+    box-shadow:
+      inset 0 0 0 1px var(--idg-color-border-strong),
+      var(--idg-elevation-sm);
+  }
+}
+
+.arrow {
+  flex: none;
+}
+
+/* The arrows point along the reading direction. */
+:host(:dir(rtl)) .arrow {
+  transform: scaleX(-1);
+}
+
+.gap {
+  align-items: center;
+  justify-content: center;
+  min-inline-size: var(--idg-density-target-size);
+  color: var(--idg-color-text-muted);
+}
+
+@media (forced-colors: active) {
+  .control[aria-current="page"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .control:disabled,
+  .control[aria-disabled="true"] {
+    color: GrayText;
+    opacity: 1;
+  }
+}
