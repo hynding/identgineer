@@ -5,6 +5,7 @@
  * It contains typing information for all components that exist in this project.
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
+import { AccordionToggleDetail } from "./components/accordion/accordion-options";
 import { AlertVariant } from "./components/alert/alert-options";
 import { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 import { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
@@ -27,6 +28,7 @@ import { StatDirection, StatSentiment } from "./components/stat/stat-options";
 import { TabsActivation, TabsOrientation } from "./components/tabs/tabs-options";
 import { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 import { ToastPosition } from "./components/toast-region/toast-region-options";
+export { AccordionToggleDetail } from "./components/accordion/accordion-options";
 export { AlertVariant } from "./components/alert/alert-options";
 export { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 export { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
@@ -50,6 +52,72 @@ export { TabsActivation, TabsOrientation } from "./components/tabs/tabs-options"
 export { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 export { ToastPosition } from "./components/toast-region/toast-region-options";
 export namespace Components {
+    /**
+     * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
+     * one item is open at a time. Up and Down, Home and End move between the headers.
+     */
+    interface IdgAccordion {
+        /**
+          * Lets the browser's find in page open a closed item that holds the text it finds, by hiding closed panels with `hidden="until-found"`. A browser without it hides them as usual.
+          * @default false
+         */
+        "findInPage": boolean;
+        /**
+          * The level of every item's heading, 1 to 6. Pick the one that follows the page's own heading.
+          * @default 3
+         */
+        "headingLevel": number;
+        /**
+          * Lets several items be open at once. Otherwise opening one closes the others.
+          * @default false
+         */
+        "multiple": boolean;
+    }
+    /**
+     * One item of an idg-accordion: a heading holding the button that shows or hides the panel
+     * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
+     * the panel's name are plain id references.
+     */
+    interface IdgAccordionItem {
+        /**
+          * Keeps the item where it is but stops the button being used.
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by the accordion: whether a closed panel can be found by the browser.
+          * @default false
+         */
+        "findInPage": boolean;
+        /**
+          * Set by the accordion: whether the panel is a region landmark.
+          * @default true
+         */
+        "hasRegion": boolean;
+        /**
+          * The text of the button. Use the heading slot for anything richer.
+         */
+        "heading"?: string;
+        /**
+          * Set by the accordion: the heading's level.
+          * @default 3
+         */
+        "headingLevel": number;
+        /**
+          * Whether the panel is showing.
+          * @default false
+         */
+        "open": boolean;
+        /**
+          * Focuses the button.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * Names the item in `idgToggle`.
+          * @default ""
+         */
+        "value": string;
+    }
     /**
      * A message that stays on the page until it is read or dismissed. For a message that appears in
      * response to what the user did, render the alert at that moment: a live region announces what is
@@ -1330,6 +1398,10 @@ export namespace Components {
         "text"?: string;
     }
 }
+export interface IdgAccordionItemCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgAccordionItemElement;
+}
 export interface IdgAlertCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgAlertElement;
@@ -1387,6 +1459,38 @@ export interface IdgToastCustomEvent<T> extends CustomEvent<T> {
     target: HTMLIdgToastElement;
 }
 declare global {
+    /**
+     * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
+     * one item is open at a time. Up and Down, Home and End move between the headers.
+     */
+    interface HTMLIdgAccordionElement extends Components.IdgAccordion, HTMLStencilElement {
+    }
+    var HTMLIdgAccordionElement: {
+        prototype: HTMLIdgAccordionElement;
+        new (): HTMLIdgAccordionElement;
+    };
+    interface HTMLIdgAccordionItemElementEventMap {
+        "idgToggle": AccordionToggleDetail;
+    }
+    /**
+     * One item of an idg-accordion: a heading holding the button that shows or hides the panel
+     * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
+     * the panel's name are plain id references.
+     */
+    interface HTMLIdgAccordionItemElement extends Components.IdgAccordionItem, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgAccordionItemElementEventMap>(type: K, listener: (this: HTMLIdgAccordionItemElement, ev: IdgAccordionItemCustomEvent<HTMLIdgAccordionItemElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgAccordionItemElementEventMap>(type: K, listener: (this: HTMLIdgAccordionItemElement, ev: IdgAccordionItemCustomEvent<HTMLIdgAccordionItemElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgAccordionItemElement: {
+        prototype: HTMLIdgAccordionItemElement;
+        new (): HTMLIdgAccordionItemElement;
+    };
     interface HTMLIdgAlertElementEventMap {
         "idgDismiss": void;
     }
@@ -1919,6 +2023,8 @@ declare global {
         new (): HTMLIdgTooltipElement;
     };
     interface HTMLElementTagNameMap {
+        "idg-accordion": HTMLIdgAccordionElement;
+        "idg-accordion-item": HTMLIdgAccordionItemElement;
         "idg-alert": HTMLIdgAlertElement;
         "idg-avatar": HTMLIdgAvatarElement;
         "idg-avatar-group": HTMLIdgAvatarGroupElement;
@@ -1957,6 +2063,72 @@ declare global {
     }
 }
 declare namespace LocalJSX {
+    /**
+     * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
+     * one item is open at a time. Up and Down, Home and End move between the headers.
+     */
+    interface IdgAccordion {
+        /**
+          * Lets the browser's find in page open a closed item that holds the text it finds, by hiding closed panels with `hidden="until-found"`. A browser without it hides them as usual.
+          * @default false
+         */
+        "findInPage"?: boolean;
+        /**
+          * The level of every item's heading, 1 to 6. Pick the one that follows the page's own heading.
+          * @default 3
+         */
+        "headingLevel"?: number;
+        /**
+          * Lets several items be open at once. Otherwise opening one closes the others.
+          * @default false
+         */
+        "multiple"?: boolean;
+    }
+    /**
+     * One item of an idg-accordion: a heading holding the button that shows or hides the panel
+     * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
+     * the panel's name are plain id references.
+     */
+    interface IdgAccordionItem {
+        /**
+          * Keeps the item where it is but stops the button being used.
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * Set by the accordion: whether a closed panel can be found by the browser.
+          * @default false
+         */
+        "findInPage"?: boolean;
+        /**
+          * Set by the accordion: whether the panel is a region landmark.
+          * @default true
+         */
+        "hasRegion"?: boolean;
+        /**
+          * The text of the button. Use the heading slot for anything richer.
+         */
+        "heading"?: string;
+        /**
+          * Set by the accordion: the heading's level.
+          * @default 3
+         */
+        "headingLevel"?: number;
+        /**
+          * Fires when the item opens or closes, whether the user did it or a script.
+         */
+        "onIdgToggle"?: (event: IdgAccordionItemCustomEvent<AccordionToggleDetail>) => void;
+        /**
+          * Whether the panel is showing.
+          * @default false
+         */
+        "open"?: boolean;
+        /**
+          * Names the item in `idgToggle`.
+          * @default ""
+         */
+        "value"?: string;
+    }
     /**
      * A message that stays on the page until it is read or dismissed. For a message that appears in
      * response to what the user did, render the alert at that moment: a live region announces what is
@@ -3237,6 +3409,20 @@ declare namespace LocalJSX {
         "text"?: string;
     }
 
+    interface IdgAccordionAttributes {
+        "multiple": boolean;
+        "headingLevel": number;
+        "findInPage": boolean;
+    }
+    interface IdgAccordionItemAttributes {
+        "heading": string;
+        "value": string;
+        "open": boolean;
+        "disabled": boolean;
+        "headingLevel": number;
+        "hasRegion": boolean;
+        "findInPage": boolean;
+    }
     interface IdgAlertAttributes {
         "variant": AlertVariant;
         "dismissible": boolean;
@@ -3527,6 +3713,8 @@ declare namespace LocalJSX {
     }
 
     interface IntrinsicElements {
+        "idg-accordion": Omit<IdgAccordion, keyof IdgAccordionAttributes> & { [K in keyof IdgAccordion & keyof IdgAccordionAttributes]?: IdgAccordion[K] } & { [K in keyof IdgAccordion & keyof IdgAccordionAttributes as `attr:${K}`]?: IdgAccordionAttributes[K] } & { [K in keyof IdgAccordion & keyof IdgAccordionAttributes as `prop:${K}`]?: IdgAccordion[K] };
+        "idg-accordion-item": Omit<IdgAccordionItem, keyof IdgAccordionItemAttributes> & { [K in keyof IdgAccordionItem & keyof IdgAccordionItemAttributes]?: IdgAccordionItem[K] } & { [K in keyof IdgAccordionItem & keyof IdgAccordionItemAttributes as `attr:${K}`]?: IdgAccordionItemAttributes[K] } & { [K in keyof IdgAccordionItem & keyof IdgAccordionItemAttributes as `prop:${K}`]?: IdgAccordionItem[K] };
         "idg-alert": Omit<IdgAlert, keyof IdgAlertAttributes> & { [K in keyof IdgAlert & keyof IdgAlertAttributes]?: IdgAlert[K] } & { [K in keyof IdgAlert & keyof IdgAlertAttributes as `attr:${K}`]?: IdgAlertAttributes[K] } & { [K in keyof IdgAlert & keyof IdgAlertAttributes as `prop:${K}`]?: IdgAlert[K] };
         "idg-avatar": Omit<IdgAvatar, keyof IdgAvatarAttributes> & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes]?: IdgAvatar[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `attr:${K}`]?: IdgAvatarAttributes[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `prop:${K}`]?: IdgAvatar[K] };
         "idg-avatar-group": Omit<IdgAvatarGroup, keyof IdgAvatarGroupAttributes> & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes]?: IdgAvatarGroup[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `attr:${K}`]?: IdgAvatarGroupAttributes[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `prop:${K}`]?: IdgAvatarGroup[K] };
@@ -3568,6 +3756,17 @@ export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
+            /**
+             * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
+             * one item is open at a time. Up and Down, Home and End move between the headers.
+             */
+            "idg-accordion": LocalJSX.IntrinsicElements["idg-accordion"] & JSXBase.HTMLAttributes<HTMLIdgAccordionElement>;
+            /**
+             * One item of an idg-accordion: a heading holding the button that shows or hides the panel
+             * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
+             * the panel's name are plain id references.
+             */
+            "idg-accordion-item": LocalJSX.IntrinsicElements["idg-accordion-item"] & JSXBase.HTMLAttributes<HTMLIdgAccordionItemElement>;
             /**
              * A message that stays on the page until it is read or dismissed. For a message that appears in
              * response to what the user did, render the alert at that moment: a live region announces what is
