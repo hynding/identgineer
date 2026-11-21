@@ -7,3 +7,4 @@ cms/generated
 .env*
 !.env.example
 packages/components/loader
+.claude
