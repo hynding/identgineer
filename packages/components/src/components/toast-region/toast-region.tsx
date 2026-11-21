@@ -7,7 +7,10 @@ import { TOAST_POSITIONS, type ToastPosition } from "./toast-region-options";
 /** A live region only speaks about a change it saw, so text is set once it has been rendered. */
 const ANNOUNCE_DELAY_MS = 100;
 
-/** The announcement is cleared afterwards, so browsing the page does not meet each toast twice. */
+/**
+ * The announcement is cleared this long after its last line was added, so browsing the page does
+ * not meet each toast twice.
+ */
 const ANNOUNCEMENT_LIFETIME_MS = 5000;
 
 interface RegionToast extends HTMLElement {
@@ -24,9 +27,8 @@ function isToast(element: Element): element is RegionToast {
   return element.localName === "idg-toast";
 }
 
-/** Puts each line in a paragraph of its own, as text, so a screen reader pauses between them. */
-function say(announcer: HTMLElement, lines: readonly string[]): void {
-  announcer.textContent = "";
+/** Adds each line in a paragraph of its own, as text, so a screen reader pauses between them. */
+function addLines(announcer: HTMLElement, lines: readonly string[]): void {
   for (const line of lines) {
     const paragraph = document.createElement("p");
     paragraph.textContent = line;
@@ -81,11 +83,17 @@ export class IdgToastRegion {
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
   /** Lines waiting to be announced, per live region. */
   private readonly pending = new Map<HTMLElement, string[]>();
+  /** When each live region's current announcement is to be cleared, as a `Date.now()` time. */
+  private readonly clearAt = new Map<HTMLElement, number>();
+  private readonly clearTimers = new Map<HTMLElement, ReturnType<typeof setTimeout>>();
 
   connectedCallback(): void {
     this.followMotionPreference();
-    // Moved back into a page: its popover was hidden on the way out, so it is shown again.
-    if (this.region) this.sync();
+    // Moved back into a page: its popover was hidden on the way out, so it is shown again, and
+    // the announcements its timers were keeping are taken up again.
+    if (!this.region) return;
+    this.sync();
+    this.resumeAnnouncements();
   }
 
   componentDidLoad(): void {
@@ -101,7 +109,7 @@ export class IdgToastRegion {
     this.shown = false;
     for (const timer of this.timers) clearTimeout(timer);
     this.timers.clear();
-    this.pending.clear();
+    this.clearTimers.clear();
   }
 
   private followMotionPreference(): void {
@@ -233,23 +241,63 @@ export class IdgToastRegion {
       }
       this.pending.set(announcer, parts);
       this.later(ANNOUNCE_DELAY_MS, () => {
-        const lines = this.pending.get(announcer) ?? [];
-        this.pending.delete(announcer);
-        say(announcer, lines);
-        const said = announcer.textContent;
-        this.later(ANNOUNCEMENT_LIFETIME_MS, () => {
-          if (announcer.textContent === said) say(announcer, []);
-        });
+        this.flush(announcer);
       });
     }
   }
 
-  private later(delay: number, callback: () => void): void {
+  // While an announcement is showing, new lines are added to it rather than replacing it: a live
+  // region reads what is added, and a replacement could cut short the line being read.
+  private flush(announcer: HTMLElement): void {
+    const lines = this.pending.get(announcer);
+    this.pending.delete(announcer);
+    if (!lines) return;
+    if (!this.clearAt.has(announcer)) announcer.textContent = "";
+    addLines(announcer, lines);
+    this.clearAt.set(announcer, Date.now() + ANNOUNCEMENT_LIFETIME_MS);
+    this.clearLater(announcer, ANNOUNCEMENT_LIFETIME_MS);
+  }
+
+  private clearLater(announcer: HTMLElement, delay: number): void {
+    const previous = this.clearTimers.get(announcer);
+    if (previous !== undefined) {
+      clearTimeout(previous);
+      this.timers.delete(previous);
+    }
+    const timer = this.later(delay, () => {
+      this.clearTimers.delete(announcer);
+      this.clearAt.delete(announcer);
+      announcer.textContent = "";
+    });
+    this.clearTimers.set(announcer, timer);
+  }
+
+  // Timers stop while the region is out of the page. Back in it, what was waiting is announced and
+  // an announcement whose time ran out meanwhile is cleared.
+  private resumeAnnouncements(): void {
+    const now = Date.now();
+    for (const [announcer, at] of this.clearAt) {
+      if (at > now) {
+        this.clearLater(announcer, at - now);
+        continue;
+      }
+      this.clearAt.delete(announcer);
+      announcer.textContent = "";
+    }
+    for (const announcer of this.pending.keys()) {
+      this.later(ANNOUNCE_DELAY_MS, () => {
+        this.flush(announcer);
+      });
+    }
+  }
+
+  private later(delay: number, callback: () => void): ReturnType<typeof setTimeout> {
     const timer = setTimeout(() => {
       this.timers.delete(timer);
       callback();
     }, delay);
     this.timers.add(timer);
+    return timer;
   }
 
   private setPause(reason: PauseReason, on: boolean): void {
