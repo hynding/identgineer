@@ -208,6 +208,26 @@ test.describe("idg-menu pointer and layout", () => {
     await expect(surface(page)).toBeHidden();
   });
 
+  test("a menu moved while open closes, reports it, and opens again", async ({ page }) => {
+    await openOverlays(page);
+    await recordEvents(page, "native-menu", ["idgClose"]);
+    const button = page.locator("#native-menu-trigger");
+    await button.click();
+    await expect(button).toHaveAttribute("aria-expanded", "true");
+    await page.evaluate(() => {
+      const menu = document.getElementById("native-menu");
+      if (menu) document.body.append(menu);
+    });
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(await events(page, "native-menu")).toEqual([{ type: "idgClose", detail: null }]);
+    await button.click();
+    await expect(page.locator("#native-menu").locator('[part="surface"]')).toBeVisible();
+    await expect(button).toHaveAttribute("aria-expanded", "true");
+    await page.keyboard.press("Escape");
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+    await expect(button).toBeFocused();
+  });
+
   test("a native trigger gets aria-expanded and aria-haspopup through its properties", async ({
     page,
   }) => {
