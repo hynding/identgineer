@@ -68,3 +68,24 @@ describe("computePosition", () => {
     expect(result.placement).toBe("bottom");
   });
 });
+
+describe("computePosition in a right-to-left context", () => {
+  // The anchor's right edge is at 180, so a start-aligned surface 200 wide begins at -20.
+  it.each([
+    ["bottom-start", -20],
+    ["bottom-end", 100],
+    ["top-start", -20],
+    ["top-end", 100],
+    ["bottom", 40],
+  ] as const)("aligns %s to the inline %s edge of the anchor", (placement, x) => {
+    const wide = { anchor: { ...ANCHOR, x: 300 }, viewport: { width: 2000, height: 800 } };
+    const result = place({ placement, direction: "rtl", ...wide });
+    expect(result.x).toBe(x + 200);
+  });
+
+  it("leaves a left or right side and its block alignment alone", () => {
+    expect(place({ placement: "right-start", direction: "rtl" })).toEqual(
+      place({ placement: "right-start" }),
+    );
+  });
+});
