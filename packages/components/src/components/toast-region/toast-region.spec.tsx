@@ -128,6 +128,18 @@ describe("idg-toast-region announcements", () => {
     expect(live(root, "assertive").textContent).toBe("");
   });
 
+  it("announces two toasts that come close together in one announcement", async () => {
+    const { root } = await render(empty);
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    addToast(root, "First");
+    vi.advanceTimersByTime(50);
+    addToast(root, "Second");
+    vi.advanceTimersByTime(150);
+    const polite = live(root, "polite");
+    expect(polite.textContent).toContain("First");
+    expect(polite.textContent).toContain("Second");
+  });
+
   it("announces only a danger toast assertively", async () => {
     const { root } = await render(empty);
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
