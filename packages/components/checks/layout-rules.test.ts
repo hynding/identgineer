@@ -166,6 +166,82 @@ describe("findLayoutCssViolations", () => {
     expect(findLayoutCssViolations(".a { overflow-block: clip; }")).toEqual([]);
   });
 
+  it.each([
+    [".a { place-self: Left; }"],
+    [".a { text-align: RIGHT; }"],
+    [".a { justify-content: Right; }"],
+    [".a { float: LEFT; }"],
+  ])("refuses a physical keyword in any case in %s", (css) => {
+    expect(findLayoutCssViolations(css).map((violation) => violation.rule)).toContain(
+      "physical value",
+    );
+  });
+
+  it.each([
+    [".a { float: inline-start; }"],
+    [".a { float: inline-end; }"],
+    [".a { clear: inline-start; }"],
+    [".a { clear: inline-end; }"],
+    [".a { float: none; }"],
+  ])("accepts the logical float or clear in %s", (css) => {
+    expect(findLayoutCssViolations(css)).toEqual([]);
+  });
+
+  it.each([[".a { clear: left; }"], [".a { clear: right; }"], [".a { float: right; }"]])(
+    "still refuses the physical float or clear in %s",
+    (css) => {
+      expect(findLayoutCssViolations(css).map((violation) => violation.rule)).toEqual([
+        "physical value",
+      ]);
+    },
+  );
+
+  it.each([
+    ["a container query", "@container (inline-size < 30em) { .a { display: block; } }"],
+    [
+      "a media query",
+      "@media (prefers-reduced-motion: reduce) and (min-resolution: 2dppx) { .a { gap: 0; } }",
+    ],
+  ])("accepts %s that holds no length", (_name, css) => {
+    expect(
+      findLayoutCssViolations(css).filter((violation) => violation.rule === "hard-coded length"),
+    ).toEqual([]);
+  });
+
+  it.each([
+    ["a container query", "@container (inline-size < 30rem) { .a { display: block; } }"],
+    ["a named container query", "@container card (min-inline-size: 400px) { .a { gap: 0; } }"],
+    [
+      "a media query",
+      "@media (forced-colors: active) and (min-resolution: 2x) and (hover: 1px) { .a { gap: 0; } }",
+    ],
+    ["a range container query", "@container (20em <= inline-size <= 40em) { .a { gap: 0; } }"],
+  ])("refuses a length in the prelude of %s", (_name, css) => {
+    const rules = findLayoutCssViolations(css).map((violation) => violation.rule);
+    expect(rules).toContain("hard-coded length");
+  });
+
+  it.each([
+    [".a { clip-path: inset(0 var(--x) 0 var(--y)); }"],
+    [".a { clip-path: inset(1fr 2fr 3fr); }"],
+    [
+      ".a { clip-path: inset(var(--a) calc(var(--b) + var(--c)) var(--d) var(--e) round var(--r)); }",
+    ],
+  ])("refuses an inset() clip with more than two values in %s", (css) => {
+    expect(findLayoutCssViolations(css).map((violation) => violation.rule)).toEqual([
+      "physical shorthand",
+    ]);
+  });
+
+  it.each([
+    [".a { clip-path: inset(0); }"],
+    [".a { clip-path: inset(var(--a) var(--b)); }"],
+    [".a { clip-path: inset(0 round var(--r) var(--s)); }"],
+    [".a { clip-path: none; }"],
+  ])("accepts an inset() clip with one or two values in %s", (css) => {
+    expect(findLayoutCssViolations(css)).toEqual([]);
+  });
+
   it("does not count !important as a value", () => {
     expect(findLayoutCssViolations(".a { margin: 0 auto !important; }")).toEqual([]);
     expect(

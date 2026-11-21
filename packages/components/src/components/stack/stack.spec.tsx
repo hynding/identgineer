@@ -31,7 +31,6 @@ describe("idg-stack", () => {
     const { root } = await render(<idg-stack>Item</idg-stack>);
     const stack = part(root, "stack");
     expect(stack.classList.contains("align-stretch")).toBe(true);
-    expect(stack.classList.contains("dividers")).toBe(false);
     expect(gapClasses(stack)).toEqual([]);
     expect(stack.querySelector("slot:not([name])")).not.toBeNull();
   });
@@ -63,34 +62,22 @@ describe("idg-stack", () => {
     expect(part(root, "stack").classList.contains("align-stretch")).toBe(true);
   });
 
-  it("draws dividers between children when asked", async () => {
-    const { root } = await render(<idg-stack dividers>Item</idg-stack>);
-    expect(part(root, "stack").classList.contains("dividers")).toBe(true);
-    expect(root.hasAttribute("dividers")).toBe(true);
+  it("has no dividers option: an attribute of that name changes nothing", async () => {
+    const { root } = await render(
+      <idg-stack {...({ dividers: true } as Record<string, boolean>)}>Item</idg-stack>,
+    );
+    const stack = part(root, "stack");
+    expect(stack.className.split(" ").sort()).toEqual(["align-stretch", "stack"]);
+    expect(stack.hasAttribute("style")).toBe(false);
+    expect(root.shadowRoot?.querySelectorAll("*").length).toBe(2);
   });
 
   it("adds no role, name, tab stop or inline style", async () => {
     const { root } = await render(
-      <idg-stack gap="l" align="center" dividers>
+      <idg-stack gap="l" align="center">
         Item
       </idg-stack>,
     );
     expectPresentational(root);
-  });
-
-  it("writes nothing to its children, so a framework that rebuilds them cannot undo it", async () => {
-    const { root } = await render(
-      <idg-stack dividers>
-        <p>One</p>
-        <p hidden>Two</p>
-      </idg-stack>,
-    );
-    expect(
-      Array.from(root.children).map((child) =>
-        Array.from(child.attributes)
-          .map((attribute) => attribute.name)
-          .filter((name) => !name.startsWith("__")),
-      ),
-    ).toEqual([[], ["hidden"]]);
   });
 });

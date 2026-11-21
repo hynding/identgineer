@@ -20,24 +20,20 @@
           <p class="flush">The gap comes from the layout until a step is set.</p>
           <p class="flush">Source order is reading order.</p>
         </idg-stack>
-        <idg-stack id="stack-dividers" dividers gap="m">
-          <p class="flush">A rule separates the items.</p>
-          <p class="flush">It is drawn in the theme's border colour.</p>
-          <p class="flush">The gap sits on either side of it.</p>
+        <idg-stack id="stack-dividers" gap="m">
+          <p class="flush">A rule between items is an idg-divider.</p>
+          <idg-divider></idg-divider>
+          <p class="flush">The stack's gap sits on either side of it.</p>
+          <idg-divider></idg-divider>
+          <p class="flush">Nothing is drawn by the stack itself.</p>
         </idg-stack>
-        <idg-button id="focus-before" variant="secondary">Before the stack</idg-button>
-        <idg-stack id="stack-focus" dividers gap="m">
-          <idg-button id="focus-first" variant="secondary">First</idg-button>
-          <idg-button id="focus-middle" variant="secondary">Middle</idg-button>
-          <idg-button id="focus-last" variant="secondary">Last</idg-button>
+        <idg-stack id="stack-unknown" dividers gap="m">
+          <p class="flush">An attribute the stack does not have.</p>
+          <p class="flush">It changes nothing.</p>
         </idg-stack>
-        <idg-stack id="stack-leading" dividers gap="m">
-          <p class="flush gone">Hidden by a class, first in the source</p>
-          <p class="flush" hidden>Hidden, first in the source</p>
-          <template></template>
-          <p class="flush" slot="elsewhere">Assigned to a slot the stack does not have</p>
-          <p class="flush" id="leading-first">First that draws</p>
-          <p class="flush" id="leading-second">Second that draws</p>
+        <idg-stack id="stack-glass" gap="m">
+          <idg-card heading="First">A card inside a stack.</idg-card>
+          <idg-card heading="Second">Its surface keeps its blur.</idg-card>
         </idg-stack>
         <idg-stack id="stack-aligned" gap="xs">
           <idg-badge class="tag">Short</idg-badge>
@@ -148,15 +144,6 @@
           <p class="flush">Three</p>
           <p class="flush">Four</p>
         </forward-items>
-      </section>
-
-      <section class="plain" aria-labelledby="forward-stack-title">
-        <h2 id="forward-stack-title">Dividers through another slot</h2>
-        <forward-stack id="forwarded-stack">
-          <p class="flush">One</p>
-          <p class="flush">Two</p>
-          <p class="flush">Three</p>
-        </forward-stack>
       </section>
 
       <section class="plain" aria-labelledby="regress-title">

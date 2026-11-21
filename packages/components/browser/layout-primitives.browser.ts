@@ -71,23 +71,6 @@ async function pixelsNear(page: Page, clip: Box, color: string): Promise<number>
   );
 }
 
-/** Whether the rule above a stack item is drawn: pixels of the border colour in the strip it occupies. */
-async function ruleAbove(page: Page, selector: string): Promise<boolean> {
-  const item = page.locator(selector);
-  await item.scrollIntoViewIfNeeded();
-  const box = await boxOf(item);
-  const color = await page.evaluate(() => {
-    const probe = document.createElement("div");
-    probe.style.color = "var(--idg-color-border)";
-    document.body.append(probe);
-    const resolved = getComputedStyle(probe).color;
-    probe.remove();
-    return resolved;
-  });
-  const strip = { x: box.x, y: box.y - 2, width: Math.min(box.width, 160), height: 5 };
-  return (await pixelsNear(page, strip, color)) > 0;
-}
-
 /** Sets how wide the container of a primitive is, through the style object the strict policy allows. */
 async function setInlineSize(page: Page, selector: string, size: string): Promise<void> {
   await page.locator(selector).evaluate((element, value) => {
@@ -298,21 +281,6 @@ test.describe("gap none", () => {
       element.setAttribute("gap", "none");
     });
     await expect.poll(() => distinct(page.locator("#grid > idg-card"), "x")).toBeGreaterThan(1);
-  });
-
-  test("idg-stack draws dividers with no gap around them", async ({ page }) => {
-    await open(page);
-    await page.locator("#stack-dividers").evaluate((element) => {
-      element.setAttribute("gap", "none");
-    });
-    await expect
-      .poll(() =>
-        page
-          .locator("#stack-dividers > p")
-          .nth(1)
-          .evaluate((element) => getComputedStyle(element).paddingBlockStart),
-      )
-      .toBe("0px");
   });
 });
 
@@ -714,131 +682,96 @@ test.describe("large text", () => {
   }
 });
 
-test.describe("idg-stack dividers", () => {
-  for (const direction of ["ltr", "rtl"] as const) {
-    test.describe(direction, () => {
-      test("draw no rule above the first item that is drawn, and one above each after it", async ({
-        page,
-      }) => {
-        await open(page);
-        await setDirection(page, direction);
-        expect(await ruleAbove(page, "#leading-first")).toBe(false);
-        expect(await ruleAbove(page, "#leading-second")).toBe(true);
-      });
-
-      test("follow an item that is hidden by class, by attribute and shown again", async ({
-        page,
-      }) => {
-        await open(page);
-        await setDirection(page, direction);
-        await page.locator("#leading-first").evaluate((element) => {
-          element.setAttribute("hidden", "");
-        });
-        expect(await ruleAbove(page, "#leading-second")).toBe(false);
-        await page.locator("#leading-first").evaluate((element) => {
-          element.removeAttribute("hidden");
-          element.classList.add("gone");
-        });
-        expect(await ruleAbove(page, "#leading-second")).toBe(false);
-        await page.locator("#leading-first").evaluate((element) => {
-          element.classList.remove("gone");
-        });
-        expect(await ruleAbove(page, "#leading-first")).toBe(false);
-        expect(await ruleAbove(page, "#leading-second")).toBe(true);
-      });
-
-      test("follow items that are reordered", async ({ page }) => {
-        await open(page);
-        await setDirection(page, direction);
-        await page.locator("#leading-second").evaluate((element) => {
-          element.parentElement?.insertBefore(element, document.getElementById("leading-first"));
-        });
-        expect(await ruleAbove(page, "#leading-second")).toBe(false);
-        expect(await ruleAbove(page, "#leading-first")).toBe(true);
-      });
-
-      test("follow changes made while the stack was detached", async ({ page }) => {
-        await open(page);
-        await setDirection(page, direction);
-        await page.locator("#stack-leading").evaluate((stack) => {
-          const parent = stack.parentElement;
-          const next = stack.nextSibling;
-          const first = stack.querySelector("#leading-first");
-          stack.remove();
-          first?.setAttribute("hidden", "");
-          parent?.insertBefore(stack, next);
-        });
-        expect(await ruleAbove(page, "#leading-second")).toBe(false);
-      });
-
-      test("keep the focus ring of the first and last item whole on every side", async ({
-        page,
-      }) => {
-        await open(page);
-        await setDirection(page, direction);
-        await page.locator("#focus-before").locator("button").focus();
-        await page.keyboard.press("Tab");
-        for (const [id, sides] of [
-          ["focus-first", ["top", "start", "end"]],
-          ["focus-last", ["bottom", "start", "end"]],
-        ] as const) {
-          if (id === "focus-last") {
-            await page.keyboard.press("Tab");
-            await page.keyboard.press("Tab");
-          }
-          const control = page.locator(`#${id}`).locator("button");
-          await expect(control).toBeFocused();
-          const ring = await control.evaluate((element) => {
-            const style = getComputedStyle(element);
-            return {
-              color: style.outlineColor,
-              reach: parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset),
-            };
-          });
-          const box = await boxOf(control);
-          const regions: Record<string, Box> = {
-            top: { x: box.x, y: box.y - ring.reach, width: box.width, height: ring.reach - 0.5 },
-            bottom: {
-              x: box.x,
-              y: box.y + box.height + 0.5,
-              width: box.width,
-              height: ring.reach - 0.5,
-            },
-            left: { x: box.x - ring.reach, y: box.y, width: ring.reach - 0.5, height: box.height },
-            right: {
-              x: box.x + box.width + 0.5,
-              y: box.y,
-              width: ring.reach - 0.5,
-              height: box.height,
-            },
-          };
-          const physical = (side: string) =>
-            side === "start"
-              ? direction === "ltr"
-                ? "left"
-                : "right"
-              : side === "end"
-                ? direction === "ltr"
-                  ? "right"
-                  : "left"
-                : side;
-          for (const side of sides) {
-            const region = regions[physical(side)];
-            if (!region) throw new Error(side);
-            expect(await pixelsNear(page, region, ring.color), `${id} ${side}`).toBeGreaterThan(0);
-          }
-        }
-      });
-    });
-  }
-
-  test("rule items another component forwards through a slot like direct children", async ({
+test.describe("a rule between stack items", () => {
+  test("an idg-divider between items is a rule with the stack's gap on both sides", async ({
     page,
   }) => {
     await open(page);
-    expect(await ruleAbove(page, "#forwarded-stack > p:first-child")).toBe(false);
-    expect(await ruleAbove(page, "#forwarded-stack > p:nth-child(2)")).toBe(true);
-    expect(await ruleAbove(page, "#forwarded-stack > p:nth-child(3)")).toBe(true);
+    const gap = await page
+      .locator("#stack-dividers")
+      .locator('[part="stack"]')
+      .evaluate((element) => parseFloat(getComputedStyle(element).rowGap));
+    expect(gap).toBeGreaterThan(8);
+    const boxes = await page
+      .locator("#stack-dividers > p, #stack-dividers > idg-divider")
+      .evaluateAll((elements) =>
+        elements.map((element) => {
+          const { y, height } = element.getBoundingClientRect();
+          return { tag: element.tagName, y, height };
+        }),
+      );
+    expect(boxes.map((box) => box.tag)).toEqual(["P", "IDG-DIVIDER", "P", "IDG-DIVIDER", "P"]);
+    for (let index = 1; index < boxes.length; index += 1) {
+      const above = boxes[index - 1];
+      const box = boxes[index];
+      if (!above || !box) throw new Error("missing box");
+      expect(box.y - (above.y + above.height)).toBeCloseTo(gap, 0);
+      if (box.tag === "IDG-DIVIDER") expect(box.height).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  test("a dividers attribute draws nothing and changes nothing", async ({ page }) => {
+    await open(page);
+    const seen = await page.locator("#stack-unknown").evaluate((element) => {
+      const stack = element.shadowRoot?.querySelector('[part="stack"]');
+      if (!stack) throw new Error("no stack part");
+      const style = getComputedStyle(stack);
+      return {
+        clipPath: style.clipPath,
+        marginBlockStart: style.marginBlockStart,
+        host: getComputedStyle(element).display,
+        borders: Array.from(element.children).map(
+          (child) => getComputedStyle(child).borderBlockStartWidth,
+        ),
+        padding: Array.from(element.children).map(
+          (child) => getComputedStyle(child).paddingBlockStart,
+        ),
+      };
+    });
+    expect(seen).toEqual({
+      clipPath: "none",
+      marginBlockStart: "0px",
+      host: "block",
+      borders: ["0px", "0px"],
+      padding: ["0px", "0px"],
+    });
+  });
+
+  test("glass cards in a stack keep their backdrop: nothing around them isolates it", async ({
+    page,
+  }) => {
+    await open(page);
+    await applyAxes(page, { design: "glass" });
+    const found = await page.locator("#stack-glass").evaluate((host) => {
+      const stack = host.shadowRoot?.querySelector('[part="stack"]');
+      if (!stack) throw new Error("no stack part");
+      const isolating = (element: Element) => {
+        const style = getComputedStyle(element);
+        const problems: string[] = [];
+        if (style.clipPath !== "none") problems.push("clip-path");
+        if (style.filter !== "none") problems.push("filter");
+        if (style.backdropFilter !== "none") problems.push("backdrop-filter");
+        if (style.overflowX !== "visible" || style.overflowY !== "visible")
+          problems.push("overflow");
+        if (style.contain !== "none") problems.push("contain");
+        if (style.mixBlendMode !== "normal") problems.push("mix-blend-mode");
+        if (style.opacity !== "1") problems.push("opacity");
+        if (style.willChange !== "auto") problems.push("will-change");
+        return problems;
+      };
+      return {
+        stack: isolating(stack),
+        host: isolating(host),
+        blur: Array.from(host.children).map((card) => {
+          const surface = card.shadowRoot?.querySelector('[part="card"]');
+          return surface ? getComputedStyle(surface).backdropFilter : "missing";
+        }),
+      };
+    });
+    expect(found.stack).toEqual([]);
+    expect(found.host).toEqual([]);
+    expect(found.blur).toHaveLength(2);
+    for (const blur of found.blur) expect(blur).toMatch(/blur/);
   });
 });
 

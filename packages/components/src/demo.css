@@ -345,10 +345,6 @@ section.plain > h2 {
   margin: 0;
 }
 
-.gone {
-  display: none;
-}
-
 .pill {
   display: inline-flex;
 }
