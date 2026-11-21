@@ -72,6 +72,33 @@ async function change(page: Page, kind: Change): Promise<void> {
   await frames(page, 3);
 }
 
+/**
+ * The text sizes a matrix test runs at. The wide variant renders in DejaVu Sans, a wider face than
+ * the design's own, as the fallback font does on a machine without it, so a bar that only fits in
+ * the fixture's font is caught here and not on a machine with different metrics.
+ */
+const TEXT_SIZES = [
+  { label: "100%", fontSize: "100%", wide: false },
+  { label: "125%", fontSize: "125%", wide: false },
+  { label: "100% with wide text", fontSize: "100%", wide: true },
+] as const;
+
+async function setTextSize(page: Page, size: (typeof TEXT_SIZES)[number]): Promise<void> {
+  await page.evaluate(({ fontSize, wide }) => {
+    document.documentElement.style.fontSize = fontSize;
+    const state = window as unknown as { __wide?: CSSStyleSheet };
+    state.__wide ??= new CSSStyleSheet();
+    state.__wide.replaceSync(
+      wide
+        ? ':root:root:root:root { --idg-font-family-body: "DejaVu Sans", sans-serif !important; --idg-font-family-display: "DejaVu Sans", sans-serif !important; }'
+        : "",
+    );
+    if (!document.adoptedStyleSheets.includes(state.__wide)) {
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, state.__wide];
+    }
+  }, size);
+}
+
 function overlap(a: Rect, b: Rect): boolean {
   if (!a.shown || !b.shown) return false;
   const across = Math.min(a.right, b.right) - Math.max(a.x, b.x);
@@ -1073,10 +1100,8 @@ test.describe("the brand stays on one line wherever it has room", () => {
     }) => {
       test.setTimeout(240_000);
       await openShell(page, { width: 1280, layout });
-      for (const fontSize of ["100%", "125%"]) {
-        await page.evaluate((size) => {
-          document.documentElement.style.fontSize = size;
-        }, fontSize);
+      for (const size of TEXT_SIZES) {
+        await setTextSize(page, size);
         for (const ux of UX_MODES) {
           await page.evaluate((mode) => {
             document.documentElement.setAttribute("data-ux", mode);
@@ -1084,7 +1109,7 @@ test.describe("the brand stays on one line wherever it has room", () => {
           for (const width of WIDTHS_FOR_BRAND) {
             await page.setViewportSize({ width, height: 800 });
             await frames(page, 2);
-            const where = `${layout} at ${String(width)}px, ${ux}, ${fontSize}`;
+            const where = `${layout} at ${String(width)}px, ${ux}, ${size.label}`;
             const lines = await page.evaluate(() => {
               const name = document.querySelector("#brand-link span");
               if (!name) throw new Error("no brand");
@@ -1198,6 +1223,28 @@ test.describe("nothing in the chrome covers or crowds anything else in it", () =
           if (crowded) found.push(`the brand text runs under the ${name}`);
         }
       }
+      const actionsPart = tree?.querySelector<HTMLElement>('[part="actions"]');
+      const header = tree?.querySelector<HTMLElement>('[part="header"]');
+      const bar = header?.getBoundingClientRect();
+      const barStyle = header ? getComputedStyle(header) : undefined;
+      const content =
+        bar && barStyle && bar.width > 0
+          ? {
+              left: bar.left + Number.parseFloat(barStyle.paddingLeft),
+              right: bar.right - Number.parseFloat(barStyle.paddingRight),
+            }
+          : undefined;
+      const holder = actionsPart?.getBoundingClientRect();
+      for (const action of actions) {
+        if (!shown(action)) continue;
+        const box = action.getBoundingClientRect();
+        if (holder && (box.left < holder.left - 1 || box.right > holder.right + 1)) {
+          found.push(`action ${action.id} leaves the actions`);
+        }
+        if (content && (box.left < content.left - 1 || box.right > content.right + 1)) {
+          found.push(`action ${action.id} leaves the bar's content`);
+        }
+      }
       const reach = Math.max(
         document.documentElement.scrollWidth - document.documentElement.clientWidth,
         document.body.scrollWidth - document.documentElement.clientWidth,
@@ -1214,10 +1261,8 @@ test.describe("nothing in the chrome covers or crowds anything else in it", () =
       await openShell(page, { width: 1280, layout });
       for (const brand of ["the fixture brand", "a long brand"]) {
         if (brand === "a long brand") await change(page, "long-brand");
-        for (const fontSize of ["100%", "125%"]) {
-          await page.evaluate((size) => {
-            document.documentElement.style.fontSize = size;
-          }, fontSize);
+        for (const size of TEXT_SIZES) {
+          await setTextSize(page, size);
           for (const ux of UX_MODES) {
             await page.evaluate((mode) => {
               document.documentElement.setAttribute("data-ux", mode);
@@ -1227,7 +1272,7 @@ test.describe("nothing in the chrome covers or crowds anything else in it", () =
               await frames(page, 2);
               expect(
                 await problems(page),
-                `${layout} at ${String(width)}px, ${ux}, ${fontSize}, ${brand}`,
+                `${layout} at ${String(width)}px, ${ux}, ${size.label}, ${brand}`,
               ).toEqual([]);
             }
           }
