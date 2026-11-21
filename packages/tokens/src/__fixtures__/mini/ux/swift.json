@@ -1,0 +1,8 @@
+{
+  "$description": "A fixture UX mode with faster motion.",
+  "$extensions": { "identgineer": { "label": "Swift" } },
+  "tokens": {
+    "density": { "control-height": { "$type": "dimension", "$value": "2rem" } },
+    "motion": { "duration": { "base": { "$type": "duration", "$value": "80ms" } } }
+  }
+}

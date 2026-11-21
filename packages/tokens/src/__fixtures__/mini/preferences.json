@@ -1,0 +1,12 @@
+{
+  "$description": "Fixture preference overrides.",
+  "reduced-motion": {
+    "motion": { "duration": { "base": { "$type": "duration", "$value": "1ms" } } }
+  },
+  "more-contrast": {
+    "border": { "color": { "$type": "string", "$value": "var(--idg-color-border-strong)" } }
+  },
+  "forced-colors": {
+    "border": { "color": { "$type": "string", "$value": "CanvasText" } }
+  }
+}

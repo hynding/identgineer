@@ -1,0 +1,106 @@
+{
+  "$description": "Overrides for user preferences. Emitted last, in idg.preferences, so they win over every design language and UX mode.",
+  "reduced-motion": {
+    "motion": {
+      "duration": {
+        "$type": "duration",
+        "fast": {
+          "$value": "1ms"
+        },
+        "base": {
+          "$value": "1ms"
+        },
+        "slow": {
+          "$value": "1ms"
+        }
+      },
+      "enabled": {
+        "$type": "number",
+        "$value": 0
+      }
+    },
+    "feedback": {
+      "hover-lift": {
+        "$type": "dimension",
+        "$value": "0px"
+      },
+      "press-scale": {
+        "$type": "number",
+        "$value": 1
+      }
+    }
+  },
+  "more-contrast": {
+    "border": {
+      "$type": "string",
+      "color": {
+        "$value": "var(--idg-color-border-strong)"
+      },
+      "control-color": {
+        "$value": "var(--idg-color-border-strong)"
+      }
+    },
+    "surface": {
+      "$type": "string",
+      "border-color": {
+        "$value": "var(--idg-color-border-strong)"
+      }
+    },
+    "focus": {
+      "$type": "dimension",
+      "ring-width": {
+        "$value": "4px"
+      }
+    }
+  },
+  "forced-colors": {
+    "elevation": {
+      "$type": "shadow",
+      "sm": {
+        "$value": "none"
+      },
+      "md": {
+        "$value": "none"
+      },
+      "lg": {
+        "$value": "none"
+      }
+    },
+    "border": {
+      "color": {
+        "$type": "string",
+        "$value": "CanvasText"
+      },
+      "control-width": {
+        "$type": "dimension",
+        "$value": "1px"
+      },
+      "control-style": {
+        "$type": "string",
+        "$value": "solid"
+      },
+      "control-color": {
+        "$type": "string",
+        "$value": "ButtonText"
+      }
+    },
+    "surface": {
+      "$type": "string",
+      "background": {
+        "$value": "Canvas"
+      },
+      "backdrop-filter": {
+        "$value": "none"
+      },
+      "border-color": {
+        "$value": "CanvasText"
+      }
+    },
+    "focus": {
+      "$type": "string",
+      "ring-style": {
+        "$value": "solid"
+      }
+    }
+  }
+}

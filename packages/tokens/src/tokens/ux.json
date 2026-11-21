@@ -1,0 +1,94 @@
+{
+  "$description": "Neutral UX-mode defaults for density, type scale, motion, feedback and focus emphasis. UX modes must redefine every one of these.",
+  "density": {
+    "target-size": {
+      "$type": "dimension",
+      "$value": "2.5rem",
+      "$description": "Minimum interactive target. Never below 24px (WCAG 2.2 AA, 2.5.8); the build enforces it."
+    },
+    "control-height": {
+      "$type": "dimension",
+      "$value": "2.5rem",
+      "$description": "Never below the 24px target floor."
+    },
+    "control-padding-inline": {
+      "$type": "dimension",
+      "$value": "1rem"
+    },
+    "control-padding-block": {
+      "$type": "dimension",
+      "$value": "0.5rem"
+    },
+    "gap-scale": {
+      "$type": "number",
+      "$value": 1,
+      "$description": "Multiplier for gaps; apply as calc(var(--idg-space-m) * var(--idg-density-gap-scale))."
+    },
+    "measure": {
+      "$type": "dimension",
+      "$value": "68ch"
+    }
+  },
+  "ux": {
+    "$type": "number",
+    "type-scale": {
+      "$value": 1,
+      "$description": "Multiplier for the type scale; apply as calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale))."
+    },
+    "hints": {
+      "$value": 0,
+      "$description": "1 shows helper and hint affordances by default, 0 hides them."
+    },
+    "shortcuts": {
+      "$value": 0,
+      "$description": "1 shows keyboard shortcut hints, 0 hides them."
+    }
+  },
+  "motion": {
+    "duration": {
+      "$type": "duration",
+      "fast": {
+        "$value": "120ms"
+      },
+      "base": {
+        "$value": "200ms"
+      },
+      "slow": {
+        "$value": "320ms"
+      }
+    },
+    "easing": {
+      "$type": "cubicBezier",
+      "standard": {
+        "$value": [0.2, 0, 0, 1]
+      },
+      "emphasized": {
+        "$value": [0.3, 0, 0.8, 0.15]
+      }
+    },
+    "enabled": {
+      "$type": "number",
+      "$value": 1,
+      "$description": "1 allows movement; 0 means fades only. Reduced-motion preferences force 0."
+    }
+  },
+  "feedback": {
+    "hover-lift": {
+      "$type": "dimension",
+      "$value": "1px",
+      "$description": "Distance a control rises on hover; apply with translateY(calc(var(--idg-feedback-hover-lift) * -1))."
+    },
+    "press-scale": {
+      "$type": "number",
+      "$value": 0.98,
+      "$description": "Scale of a control while pressed; 1 means no squash."
+    }
+  },
+  "focus": {
+    "$type": "number",
+    "emphasis": {
+      "$value": 1,
+      "$description": "Multiplier for the focus ring width; apply as calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis))."
+    }
+  }
+}

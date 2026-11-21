@@ -1,0 +1,8 @@
+{
+  "$description": "The default fixture UX mode.",
+  "$extensions": { "identgineer": { "label": "Steady" } },
+  "tokens": {
+    "density": { "control-height": { "$type": "dimension", "$value": "2.5rem" } },
+    "motion": { "duration": { "base": { "$type": "duration", "$value": "200ms" } } }
+  }
+}
