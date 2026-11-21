@@ -19,6 +19,7 @@ import { IconSize } from "./components/icon/icon-options";
 import { InputSize, InputType } from "./components/input/input-options";
 import { Placement } from "./utils/position";
 import { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
+import { PageChangeDetail } from "./components/pagination/pagination-options";
 import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
 import { SkeletonVariant } from "./components/skeleton/skeleton-options";
@@ -39,6 +40,7 @@ export { IconSize } from "./components/icon/icon-options";
 export { InputSize, InputType } from "./components/input/input-options";
 export { Placement } from "./utils/position";
 export { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
+export { PageChangeDetail } from "./components/pagination/pagination-options";
 export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
 export { SkeletonVariant } from "./components/skeleton/skeleton-options";
@@ -687,6 +689,58 @@ export namespace Components {
     interface IdgMenuSeparator {
     }
     /**
+     * Page controls for a long list: previous and next, the current page and a window of its
+     * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
+     * given, so each page is an address that can be opened, shared and followed without script, and
+     * buttons that fire `idgPageChange` otherwise.
+     */
+    interface IdgPagination {
+        /**
+          * Pages always shown at the start and the end.
+          * @default 1
+         */
+        "boundaries": number;
+        /**
+          * Makes the controls links. `{page}` is replaced by the page number, as in `/items?page={page}`. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "hrefTemplate"?: string;
+        /**
+          * The landmark's accessible name. Give each pagination on a page its own.
+          * @default "Pagination"
+         */
+        "label": string;
+        /**
+          * The accessible name of the next control.
+          * @default "Next page"
+         */
+        "nextLabel": string;
+        /**
+          * The current page, from 1.
+          * @default 1
+         */
+        "page": number;
+        /**
+          * How many pages there are.
+          * @default 1
+         */
+        "pageCount": number;
+        /**
+          * The accessible name of a page control, where `{page}` is the number.
+          * @default "Page {page}"
+         */
+        "pageLabel": string;
+        /**
+          * The accessible name of the previous control.
+          * @default "Previous page"
+         */
+        "previousLabel": string;
+        /**
+          * Pages shown on each side of the current one.
+          * @default 1
+         */
+        "siblings": number;
+    }
+    /**
      * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
      * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
      * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
@@ -1214,6 +1268,10 @@ export interface IdgMenuCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgMenuElement;
 }
+export interface IdgPaginationCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgPaginationElement;
+}
 export interface IdgPopoverCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgPopoverElement;
@@ -1492,6 +1550,29 @@ declare global {
         prototype: HTMLIdgMenuSeparatorElement;
         new (): HTMLIdgMenuSeparatorElement;
     };
+    interface HTMLIdgPaginationElementEventMap {
+        "idgPageChange": PageChangeDetail;
+    }
+    /**
+     * Page controls for a long list: previous and next, the current page and a window of its
+     * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
+     * given, so each page is an address that can be opened, shared and followed without script, and
+     * buttons that fire `idgPageChange` otherwise.
+     */
+    interface HTMLIdgPaginationElement extends Components.IdgPagination, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgPaginationElementEventMap>(type: K, listener: (this: HTMLIdgPaginationElement, ev: IdgPaginationCustomEvent<HTMLIdgPaginationElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgPaginationElementEventMap>(type: K, listener: (this: HTMLIdgPaginationElement, ev: IdgPaginationCustomEvent<HTMLIdgPaginationElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgPaginationElement: {
+        prototype: HTMLIdgPaginationElement;
+        new (): HTMLIdgPaginationElement;
+    };
     interface HTMLIdgPopoverElementEventMap {
         "idgOpen": void;
         "idgClose": void;
@@ -1726,6 +1807,7 @@ declare global {
         "idg-menu-group": HTMLIdgMenuGroupElement;
         "idg-menu-item": HTMLIdgMenuItemElement;
         "idg-menu-separator": HTMLIdgMenuSeparatorElement;
+        "idg-pagination": HTMLIdgPaginationElement;
         "idg-popover": HTMLIdgPopoverElement;
         "idg-progress": HTMLIdgProgressElement;
         "idg-radio": HTMLIdgRadioElement;
@@ -2386,6 +2468,62 @@ declare namespace LocalJSX {
     interface IdgMenuSeparator {
     }
     /**
+     * Page controls for a long list: previous and next, the current page and a window of its
+     * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
+     * given, so each page is an address that can be opened, shared and followed without script, and
+     * buttons that fire `idgPageChange` otherwise.
+     */
+    interface IdgPagination {
+        /**
+          * Pages always shown at the start and the end.
+          * @default 1
+         */
+        "boundaries"?: number;
+        /**
+          * Makes the controls links. `{page}` is replaced by the page number, as in `/items?page={page}`. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "hrefTemplate"?: string;
+        /**
+          * The landmark's accessible name. Give each pagination on a page its own.
+          * @default "Pagination"
+         */
+        "label"?: string;
+        /**
+          * The accessible name of the next control.
+          * @default "Next page"
+         */
+        "nextLabel"?: string;
+        /**
+          * Fires when the user chooses a page other than the current one. Call `preventDefault()` to keep the page where it is, for instance to load the page yourself first. On a link it also stops the link being followed.
+         */
+        "onIdgPageChange"?: (event: IdgPaginationCustomEvent<PageChangeDetail>) => void;
+        /**
+          * The current page, from 1.
+          * @default 1
+         */
+        "page"?: number;
+        /**
+          * How many pages there are.
+          * @default 1
+         */
+        "pageCount"?: number;
+        /**
+          * The accessible name of a page control, where `{page}` is the number.
+          * @default "Page {page}"
+         */
+        "pageLabel"?: string;
+        /**
+          * The accessible name of the previous control.
+          * @default "Previous page"
+         */
+        "previousLabel"?: string;
+        /**
+          * Pages shown on each side of the current one.
+          * @default 1
+         */
+        "siblings"?: number;
+    }
+    /**
      * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
      * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
      * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
@@ -3035,6 +3173,17 @@ declare namespace LocalJSX {
         "shortcut": string;
         "icon": IconName;
     }
+    interface IdgPaginationAttributes {
+        "page": number;
+        "pageCount": number;
+        "siblings": number;
+        "boundaries": number;
+        "hrefTemplate": string;
+        "label": string;
+        "previousLabel": string;
+        "nextLabel": string;
+        "pageLabel": string;
+    }
     interface IdgPopoverAttributes {
         "placement": Placement;
         "offset": number;
@@ -3166,6 +3315,7 @@ declare namespace LocalJSX {
         "idg-menu-group": Omit<IdgMenuGroup, keyof IdgMenuGroupAttributes> & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes]?: IdgMenuGroup[K] } & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes as `attr:${K}`]?: IdgMenuGroupAttributes[K] } & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes as `prop:${K}`]?: IdgMenuGroup[K] };
         "idg-menu-item": Omit<IdgMenuItem, keyof IdgMenuItemAttributes> & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes]?: IdgMenuItem[K] } & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `attr:${K}`]?: IdgMenuItemAttributes[K] } & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `prop:${K}`]?: IdgMenuItem[K] };
         "idg-menu-separator": IdgMenuSeparator;
+        "idg-pagination": Omit<IdgPagination, keyof IdgPaginationAttributes> & { [K in keyof IdgPagination & keyof IdgPaginationAttributes]?: IdgPagination[K] } & { [K in keyof IdgPagination & keyof IdgPaginationAttributes as `attr:${K}`]?: IdgPaginationAttributes[K] } & { [K in keyof IdgPagination & keyof IdgPaginationAttributes as `prop:${K}`]?: IdgPagination[K] };
         "idg-popover": Omit<IdgPopover, keyof IdgPopoverAttributes> & { [K in keyof IdgPopover & keyof IdgPopoverAttributes]?: IdgPopover[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `attr:${K}`]?: IdgPopoverAttributes[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `prop:${K}`]?: IdgPopover[K] };
         "idg-progress": Omit<IdgProgress, keyof IdgProgressAttributes> & { [K in keyof IdgProgress & keyof IdgProgressAttributes]?: IdgProgress[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `attr:${K}`]?: IdgProgressAttributes[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `prop:${K}`]?: IdgProgress[K] };
         "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
@@ -3278,6 +3428,13 @@ declare module "@stencil/core" {
              * A rule between groups of items in an idg-menu.
              */
             "idg-menu-separator": LocalJSX.IntrinsicElements["idg-menu-separator"] & JSXBase.HTMLAttributes<HTMLIdgMenuSeparatorElement>;
+            /**
+             * Page controls for a long list: previous and next, the current page and a window of its
+             * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
+             * given, so each page is an address that can be opened, shared and followed without script, and
+             * buttons that fire `idgPageChange` otherwise.
+             */
+            "idg-pagination": LocalJSX.IntrinsicElements["idg-pagination"] & JSXBase.HTMLAttributes<HTMLIdgPaginationElement>;
             /**
              * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
              * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
