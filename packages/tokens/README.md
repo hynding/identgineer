@@ -123,7 +123,7 @@ carrying an axis attribute.
 
 - `prefers-reduced-motion: reduce`: durations 1ms, `--idg-motion-enabled: 0`, no hover lift, no
   press squash.
-- `prefers-contrast: more`: border colours become `--idg-color-border-strong`; focus ring 4px.
+- `prefers-contrast: more`: border colours become `--idg-color-text`, the strongest colour every theme guarantees, so designs that already draw borders in the text colour are not weakened; focus ring 4px.
 - `forced-colors: active`: no shadows, no backdrop filter, borders in system colours.
 - `glass` also falls back to an opaque surface when `backdrop-filter` is unsupported
   (`@supports`) or under `prefers-reduced-transparency: reduce`. A design opts in with an

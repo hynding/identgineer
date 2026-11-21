@@ -34,16 +34,16 @@
     "border": {
       "$type": "string",
       "color": {
-        "$value": "var(--idg-color-border-strong)"
+        "$value": "var(--idg-color-text)"
       },
       "control-color": {
-        "$value": "var(--idg-color-border-strong)"
+        "$value": "var(--idg-color-text)"
       }
     },
     "surface": {
       "$type": "string",
       "border-color": {
-        "$value": "var(--idg-color-border-strong)"
+        "$value": "var(--idg-color-text)"
       }
     },
     "focus": {
