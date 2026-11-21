@@ -21,10 +21,12 @@ test.describe("idg-dialog semantics", () => {
     await openOverlays(page);
     await openWithClick(page, "open-basic", "basic");
     expect(await dialog(page, "basic").evaluate((element) => element.matches(":modal"))).toBe(true);
-    expect(await accessibleNode(page, "basic", "dialog")).toMatchObject({
-      role: "dialog",
-      name: "Invite teammates",
-    });
+    await expect
+      .poll(() => accessibleNode(page, "basic", "dialog"))
+      .toMatchObject({
+        role: "dialog",
+        name: "Invite teammates",
+      });
   });
 
   test("an alert dialog is an alertdialog named by its heading and described by its body", async ({
@@ -32,20 +34,24 @@ test.describe("idg-dialog semantics", () => {
   }) => {
     await openOverlays(page);
     await openWithClick(page, "open-basic", "confirm");
-    expect(await accessibleNode(page, "confirm", "dialog")).toMatchObject({
-      role: "alertdialog",
-      name: "Delete project?",
-      description: "Atlas and its 14 files are deleted for everyone. This cannot be undone.",
-    });
+    await expect
+      .poll(() => accessibleNode(page, "confirm", "dialog"))
+      .toMatchObject({
+        role: "alertdialog",
+        name: "Delete project?",
+        description: "Atlas and its 14 files are deleted for everyone. This cannot be undone.",
+      });
   });
 
   test("the close button is a named button at least 24px square", async ({ page }) => {
     await openOverlays(page);
     await openWithClick(page, "open-basic", "basic");
-    expect(await accessibleNode(page, "basic", '[part="close"]')).toMatchObject({
-      role: "button",
-      name: "Close",
-    });
+    await expect
+      .poll(() => accessibleNode(page, "basic", '[part="close"]'))
+      .toMatchObject({
+        role: "button",
+        name: "Close",
+      });
     const box = await page.locator("#basic").locator('[part="close"]').boundingBox();
     expect(box?.width).toBeGreaterThanOrEqual(24);
     expect(box?.height).toBeGreaterThanOrEqual(24);

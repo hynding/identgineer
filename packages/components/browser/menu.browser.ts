@@ -31,9 +31,12 @@ test.describe("idg-menu semantics", () => {
     page,
   }) => {
     await openOverlays(page);
-    const closed = await accessibleNode(page, "actions-trigger", "button");
-    expect(closed.properties).toMatchObject({ expanded: false, hasPopup: "menu" });
-    expect(closed.relations).toMatchObject({ controls: 1 });
+    await expect
+      .poll(() => accessibleNode(page, "actions-trigger", "button"))
+      .toMatchObject({
+        properties: { expanded: false, hasPopup: "menu" },
+        relations: { controls: 1 },
+      });
     await openByKeyboard(page);
     await expect
       .poll(async () => (await accessibleNode(page, "actions-trigger", "button")).properties)
@@ -45,10 +48,11 @@ test.describe("idg-menu semantics", () => {
   }) => {
     await openOverlays(page);
     await openByKeyboard(page);
-    const tree = (await accessibleDescendants(page, "actions")).filter(
-      (node) => !["StaticText", "InlineTextBox", "generic", "none", "image"].includes(node.role),
-    );
-    expect(tree).toEqual([
+    const tree = async () =>
+      (await accessibleDescendants(page, "actions")).filter(
+        (node) => !["StaticText", "InlineTextBox", "generic", "none", "image"].includes(node.role),
+      );
+    await expect.poll(tree).toEqual([
       { role: "button", name: "Actions" },
       { role: "menu", name: "Actions" },
       { role: "menuitem", name: "Edit" },
@@ -63,19 +67,27 @@ test.describe("idg-menu semantics", () => {
       { role: "menuitem", name: "Help centre" },
       { role: "menuitem", name: "Delete" },
     ]);
-    expect((await accessibleNode(page, "item-name", '[part="item"]')).properties).toMatchObject({
-      checked: "true",
-    });
-    expect((await accessibleNode(page, "item-grid", '[part="item"]')).properties).toMatchObject({
-      checked: "false",
-    });
-    expect((await accessibleNode(page, "item-archive", '[part="item"]')).properties).toMatchObject({
-      disabled: true,
-    });
-    expect(await accessibleNode(page, "item-edit", '[part="item"]')).toMatchObject({
-      role: "menuitem",
-      name: "Edit",
-    });
+    await expect
+      .poll(async () => (await accessibleNode(page, "item-name", '[part="item"]')).properties)
+      .toMatchObject({
+        checked: "true",
+      });
+    await expect
+      .poll(async () => (await accessibleNode(page, "item-grid", '[part="item"]')).properties)
+      .toMatchObject({
+        checked: "false",
+      });
+    await expect
+      .poll(async () => (await accessibleNode(page, "item-archive", '[part="item"]')).properties)
+      .toMatchObject({
+        disabled: true,
+      });
+    await expect
+      .poll(() => accessibleNode(page, "item-edit", '[part="item"]'))
+      .toMatchObject({
+        role: "menuitem",
+        name: "Edit",
+      });
   });
 });
 

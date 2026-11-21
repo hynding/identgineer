@@ -48,21 +48,20 @@ test.describe("idg-card", () => {
     page,
   }) => {
     await open(page);
-    const nodes = await accessibleDescendants(page, "card-linked");
-    expect(nodes.filter((node) => node.role === "link")).toEqual([
-      { role: "link", name: "One link" },
-    ]);
-    expect(nodes.filter((node) => node.role === "heading")).toHaveLength(1);
-    expect(nodes.filter((node) => node.role === "button")).toEqual([
-      { role: "button", name: "Share" },
-    ]);
+    const roles = async (role: string) =>
+      (await accessibleDescendants(page, "card-linked")).filter((node) => node.role === role);
+    await expect.poll(() => roles("link")).toEqual([{ role: "link", name: "One link" }]);
+    await expect.poll(() => roles("heading")).toHaveLength(1);
+    await expect.poll(() => roles("button")).toEqual([{ role: "button", name: "Share" }]);
   });
 
   test("a card whose link was unsafe exposes no link", async ({ page }) => {
     await open(page);
-    const nodes = await accessibleDescendants(page, "card-unsafe");
-    expect(nodes.filter((node) => node.role === "link")).toEqual([]);
-    expect(nodes.filter((node) => node.role === "heading")).toHaveLength(1);
+    const roles = async (role: string) =>
+      (await accessibleDescendants(page, "card-unsafe")).filter((node) => node.role === role);
+    // The heading is there first, so the tree is complete when no link is found.
+    await expect.poll(() => roles("heading")).toHaveLength(1);
+    expect(await roles("link")).toEqual([]);
   });
 
   test("a click anywhere on a linked card follows the heading's link", async ({ page }) => {
@@ -148,8 +147,9 @@ test.describe("idg-avatar", () => {
     const avatar = page.locator("#avatar-broken");
     await expect(avatar.locator(".initials")).toHaveText("GH");
     await expect(avatar.locator("img")).toHaveCount(0);
-    const node = await accessibleNode(page, "avatar-broken", '[part="avatar"]');
-    expect(node).toMatchObject({ role: "image", name: "Grace Hopper" });
+    await expect
+      .poll(() => accessibleNode(page, "avatar-broken", '[part="avatar"]'))
+      .toMatchObject({ role: "image", name: "Grace Hopper" });
   });
 
   test("never loads an unsafe source", async ({ page }) => {
@@ -167,8 +167,9 @@ test.describe("idg-avatar", () => {
       .locator("idg-avatar")
       .evaluateAll((avatars) => avatars.map((avatar) => avatar.hasAttribute("hidden")));
     expect(hidden).toEqual([false, false, false, true, true]);
-    const node = await accessibleNode(page, "avatar-group", '[part="more"]');
-    expect(node).toMatchObject({ role: "image", name: "2 more" });
+    await expect
+      .poll(() => accessibleNode(page, "avatar-group", '[part="more"]'))
+      .toMatchObject({ role: "image", name: "2 more" });
   });
 });
 
@@ -177,12 +178,16 @@ test.describe("idg-alert", () => {
     page,
   }) => {
     await open(page);
-    expect(await accessibleNode(page, "dismissible-alert", '[part="alert"]')).toMatchObject({
-      role: "alert",
-    });
-    expect(await accessibleNode(page, "info-alert", '[part="alert"]')).toMatchObject({
-      role: "status",
-    });
+    await expect
+      .poll(() => accessibleNode(page, "dismissible-alert", '[part="alert"]'))
+      .toMatchObject({
+        role: "alert",
+      });
+    await expect
+      .poll(() => accessibleNode(page, "info-alert", '[part="alert"]'))
+      .toMatchObject({
+        role: "status",
+      });
   });
 
   test("dismissing emits idgDismiss and hides the alert", async ({ page }) => {
@@ -200,10 +205,12 @@ test.describe("idg-alert", () => {
 
   test("the dismiss button is a named button", async ({ page }) => {
     await open(page);
-    expect(await accessibleNode(page, "dismissible-alert", "button")).toMatchObject({
-      role: "button",
-      name: "Dismiss",
-    });
+    await expect
+      .poll(() => accessibleNode(page, "dismissible-alert", "button"))
+      .toMatchObject({
+        role: "button",
+        name: "Dismiss",
+      });
   });
 });
 
@@ -212,22 +219,32 @@ test.describe("idg-progress, idg-skeleton and idg-stat", () => {
     page,
   }) => {
     await open(page);
-    const upload = await accessibleNode(page, "progress-upload", "progress");
-    expect(upload).toMatchObject({ role: "progressbar", name: "Uploading" });
-    expect(upload.properties).toMatchObject({ valuemin: 0, valuemax: 100 });
-    expect(upload.value).toBe(40);
-    const syncing = await accessibleNode(page, "progress-syncing", "progress");
-    expect(syncing).toMatchObject({ role: "progressbar", name: "Syncing" });
-    expect(syncing.value).toBeUndefined();
+    await expect
+      .poll(() => accessibleNode(page, "progress-upload", "progress"))
+      .toMatchObject({
+        role: "progressbar",
+        name: "Uploading",
+        properties: { valuemin: 0, valuemax: 100 },
+        value: 40,
+      });
+    await expect
+      .poll(() => accessibleNode(page, "progress-syncing", "progress"))
+      .toMatchObject({ role: "progressbar", name: "Syncing", value: undefined });
   });
 
   test("a skeleton is left out of the accessibility tree", async ({ page }) => {
     await open(page);
-    expect(await accessibleDescendants(page, "skeleton-text")).toEqual([]);
-    const region = await accessibleDescendants(page, "loading-region");
-    expect(new Set(region.map((node) => node.name).filter(Boolean))).toEqual(
-      new Set(["Loading profile"]),
-    );
+    await expect.poll(() => accessibleDescendants(page, "skeleton-text")).toEqual([]);
+    await expect
+      .poll(
+        async () =>
+          new Set(
+            (await accessibleDescendants(page, "loading-region"))
+              .map((node) => node.name)
+              .filter(Boolean),
+          ),
+      )
+      .toEqual(new Set(["Loading profile"]));
   });
 
   test("a skeleton shimmers only where movement is on", async ({ page }) => {
@@ -271,8 +288,12 @@ test.describe("idg-progress, idg-skeleton and idg-stat", () => {
     expect(up).toContain("Increased by 12.4%");
     const down = await page.locator("#stat-down").ariaSnapshot();
     expect(down).toContain("Decreased by 3.0%");
-    const nodes = await accessibleDescendants(page, "stat-up");
-    expect(nodes.filter((node) => node.name === "12.4%")).toEqual([]);
+    // The spoken change is there first, so the tree is complete when the visible one is not found.
+    const nodes = () => accessibleDescendants(page, "stat-up");
+    await expect
+      .poll(async () => (await nodes()).some((node) => node.name.includes("Increased by 12.4%")))
+      .toBe(true);
+    expect((await nodes()).filter((node) => node.name === "12.4%")).toEqual([]);
   });
 });
 
@@ -284,8 +305,13 @@ test.describe("idg-link", () => {
     const anchor = page.locator("#external-link").locator("a");
     await expect(anchor).toHaveAttribute("target", "_blank");
     await expect(anchor).toHaveAttribute("rel", "noopener noreferrer");
-    const nodes = await accessibleDescendants(page, "external-link");
-    expect(nodes.some((node) => node.role === "image" && node.name === "External link")).toBe(true);
+    await expect
+      .poll(async () =>
+        (await accessibleDescendants(page, "external-link")).some(
+          (node) => node.role === "image" && node.name === "External link",
+        ),
+      )
+      .toBe(true);
   });
 
   test("an unsafe link renders inert", async ({ page }) => {

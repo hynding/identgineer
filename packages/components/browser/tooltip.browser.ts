@@ -25,11 +25,13 @@ test.describe("idg-tooltip", () => {
     page,
   }) => {
     await openOverlays(page);
-    expect(await accessibleNode(page, "tip-trigger", "button")).toMatchObject({
-      role: "button",
-      name: "Copy",
-      description: "Copies the link to the clipboard",
-    });
+    await expect
+      .poll(() => accessibleNode(page, "tip-trigger", "button"))
+      .toMatchObject({
+        role: "button",
+        name: "Copy",
+        description: "Copies the link to the clipboard",
+      });
   });
 
   test("describes a native trigger with aria-description", async ({ page }) => {
@@ -38,11 +40,13 @@ test.describe("idg-tooltip", () => {
       "aria-description",
       "Opens in a new tab",
     );
-    expect(await accessibleNode(page, "tip-native-trigger", "")).toMatchObject({
-      role: "button",
-      name: "Preview",
-      description: "Opens in a new tab",
-    });
+    await expect
+      .poll(() => accessibleNode(page, "tip-native-trigger", ""))
+      .toMatchObject({
+        role: "button",
+        name: "Preview",
+        description: "Opens in a new tab",
+      });
   });
 
   test("shows on keyboard focus and hides on Escape, keeping focus on the trigger", async ({

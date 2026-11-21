@@ -19,17 +19,22 @@ test.describe("idg-popover", () => {
     page,
   }) => {
     await openOverlays(page);
-    const before = await accessibleNode(page, "share-trigger", "button");
-    expect(before.properties).toMatchObject({ expanded: false });
-    expect(before.relations).toMatchObject({ controls: 1 });
+    await expect
+      .poll(() => accessibleNode(page, "share-trigger", "button"))
+      .toMatchObject({
+        properties: { expanded: false },
+        relations: { controls: 1 },
+      });
     await page.locator("#share-trigger").click();
     await expect(surface(page, "share")).toBeVisible();
     expect(
       await surface(page, "share").evaluate((element) => element.matches(":popover-open")),
     ).toBe(true);
-    expect((await accessibleNode(page, "share-trigger", "button")).properties).toMatchObject({
-      expanded: true,
-    });
+    await expect
+      .poll(async () => (await accessibleNode(page, "share-trigger", "button")).properties)
+      .toMatchObject({
+        expanded: true,
+      });
     await expect(surface(page, "share")).toBeFocused();
   });
 
@@ -50,9 +55,11 @@ test.describe("idg-popover", () => {
     await page.keyboard.press("Escape");
     await expect(surface(page, "share")).toBeHidden();
     await expect(page.locator("#share-trigger button")).toBeFocused();
-    expect((await accessibleNode(page, "share-trigger", "button")).properties).toMatchObject({
-      expanded: false,
-    });
+    await expect
+      .poll(async () => (await accessibleNode(page, "share-trigger", "button")).properties)
+      .toMatchObject({
+        expanded: false,
+      });
   });
 
   test("Tab moves through its content", async ({ page }) => {
