@@ -210,8 +210,19 @@ export class IdgDialog {
   private closeNative(returnValue: string | undefined, reason: DialogCloseReason): void {
     const native = this.native;
     if (!native?.open) return;
+    this.closeNestedDialogs();
     this.pendingReason = reason;
     native.close(returnValue);
+  }
+
+  // A nested dialog left open would stay in the top layer once this one is hidden: an invisible
+  // modal over the page. Each closes as if by its method, innermost first, so focus unwinds the
+  // way it came in. Clearing `open` closes it at once, where a method call would wait a microtask.
+  private closeNestedDialogs(): void {
+    const nested = Array.from(this.host.querySelectorAll<HTMLIdgDialogElement>("idg-dialog"));
+    for (const dialog of nested.reverse()) {
+      if (dialog.open) dialog.open = false;
+    }
   }
 
   private requestDismiss(reason: DialogCancelReason): void {
