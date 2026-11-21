@@ -8,6 +8,7 @@ export const TOKEN_TYPES = [
   "cubicBezier",
   "shadow",
   "gradient",
+  "string",
 ] as const;
 
 export type TokenType = (typeof TOKEN_TYPES)[number];

@@ -8,7 +8,7 @@ import { SCHEMES } from "./scheme.ts";
 import type { Scheme } from "./scheme.ts";
 import { THEME_IDS } from "./theme-ids.ts";
 import type { ThemeId } from "./theme-ids.ts";
-import { TOKEN_SOURCES } from "./theme-sources.ts";
+import { TOKEN_SOURCES } from "./token-sources.ts";
 import type { TokenSources } from "./build-token-files.ts";
 import type { ResolvedToken } from "./token-types.ts";
 

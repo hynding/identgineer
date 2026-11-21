@@ -1,0 +1,8 @@
+{
+  "$description": "The default fixture design.",
+  "$extensions": { "identgineer": { "label": "Plain" } },
+  "tokens": {
+    "shape": { "radius": { "md": { "$type": "dimension", "$value": "4px" } } },
+    "border": { "style": { "$type": "string", "$value": "solid" } }
+  }
+}

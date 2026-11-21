@@ -7,7 +7,10 @@
     ".": "./src/index.ts",
     "./css": "./dist/index.css",
     "./tokens.css": "./dist/tokens.css",
-    "./themes/*.css": "./dist/themes/*.css"
+    "./themes/*.css": "./dist/themes/*.css",
+    "./designs/*.css": "./dist/designs/*.css",
+    "./ux/*.css": "./dist/ux/*.css",
+    "./preferences.css": "./dist/preferences.css"
   },
   "scripts": {
     "build": "node scripts/build.ts",

@@ -1,5 +1,6 @@
 import { flattenTokens } from "./flatten-tokens.ts";
 import type { FlatToken } from "./token-types.ts";
+import { isRecord } from "./is-record.ts";
 
 export interface ThemeSource {
   readonly id: string;
@@ -16,10 +17,6 @@ export interface ParsedTheme {
   readonly common: readonly FlatToken[];
   readonly light: readonly FlatToken[];
   readonly dark: readonly FlatToken[];
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function readMetadata(source: ThemeSource, json: Record<string, unknown>) {

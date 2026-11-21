@@ -1,9 +1,6 @@
 import type { FlatToken, TokenType, TokenValue } from "./token-types.ts";
 import { isGradientStopArray, isNumberArray, isStringArray, isTokenType } from "./token-types.ts";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+import { isRecord } from "./is-record.ts";
 
 function describeLocation(file: string, path: readonly string[]): string {
   return `${file}: token "${path.join(".")}"`;

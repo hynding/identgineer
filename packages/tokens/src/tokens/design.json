@@ -1,0 +1,122 @@
+{
+  "$description": "Neutral design-language defaults for shape, border, elevation, surface, focus ring and ornament. Design languages must redefine every one of these.",
+  "shape": {
+    "$type": "dimension",
+    "radius": {
+      "sm": {
+        "$value": "0.25rem"
+      },
+      "md": {
+        "$value": "0.5rem"
+      },
+      "lg": {
+        "$value": "0.75rem"
+      },
+      "pill": {
+        "$value": "9999px"
+      }
+    }
+  },
+  "border": {
+    "width": {
+      "$type": "dimension",
+      "$value": "1px"
+    },
+    "style": {
+      "$type": "string",
+      "$value": "solid"
+    },
+    "color": {
+      "$type": "string",
+      "$value": "var(--idg-color-border)"
+    },
+    "control-width": {
+      "$type": "dimension",
+      "$value": "1px",
+      "$description": "Width of control borders; one to four values, so editorial can rule the bottom edge only."
+    },
+    "control-style": {
+      "$type": "string",
+      "$value": "solid"
+    },
+    "control-color": {
+      "$type": "string",
+      "$value": "var(--idg-color-border-strong)"
+    }
+  },
+  "elevation": {
+    "$type": "shadow",
+    "sm": {
+      "$value": "none",
+      "$description": "Shadows are built from theme colours, so they tint correctly in every theme and scheme."
+    },
+    "md": {
+      "$value": "none"
+    },
+    "lg": {
+      "$value": "none"
+    }
+  },
+  "surface": {
+    "background": {
+      "$type": "string",
+      "$value": "var(--idg-color-surface)",
+      "$description": "Any CSS background value; glass and outline are translucent or transparent."
+    },
+    "backdrop-filter": {
+      "$type": "string",
+      "$value": "none",
+      "$description": "Apply together with -webkit-backdrop-filter."
+    },
+    "border-width": {
+      "$type": "dimension",
+      "$value": "1px",
+      "$description": "One to four values, so a surface can be ruled on some edges only; apply with border-width, border-style and border-color."
+    },
+    "border-style": {
+      "$type": "string",
+      "$value": "solid"
+    },
+    "border-color": {
+      "$type": "string",
+      "$value": "var(--idg-color-border)"
+    }
+  },
+  "focus": {
+    "ring-width": {
+      "$type": "dimension",
+      "$value": "2px"
+    },
+    "ring-offset": {
+      "$type": "dimension",
+      "$value": "2px"
+    },
+    "ring-style": {
+      "$type": "string",
+      "$value": "solid"
+    }
+  },
+  "ornament": {
+    "heading-transform": {
+      "$type": "string",
+      "$value": "none"
+    },
+    "heading-decoration": {
+      "$type": "string",
+      "$value": "none",
+      "$description": "Value for text-decoration-line on headings."
+    },
+    "control-transform": {
+      "$type": "string",
+      "$value": "none"
+    },
+    "hard-shadow-x": {
+      "$type": "dimension",
+      "$value": "0px"
+    },
+    "hard-shadow-y": {
+      "$type": "dimension",
+      "$value": "0px"
+    }
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "$description": "Neumorphic: large radius, paired light and dark shadows drawn from the page colour, no borders.",
+  "$extensions": {
+    "identgineer": {
+      "label": "Soft"
+    }
+  },
+  "tokens": {
+    "shape": {
+      "$type": "dimension",
+      "radius": {
+        "sm": {
+          "$value": "0.625rem"
+        },
+        "md": {
+          "$value": "1.25rem"
+        },
+        "lg": {
+          "$value": "1.75rem"
+        },
+        "pill": {
+          "$value": "9999px"
+        }
+      }
+    },
+    "border": {
+      "width": {
+        "$type": "dimension",
+        "$value": "0"
+      },
+      "style": {
+        "$type": "string",
+        "$value": "none"
+      },
+      "color": {
+        "$type": "string",
+        "$value": "transparent"
+      },
+      "control-width": {
+        "$type": "dimension",
+        "$value": "0"
+      },
+      "control-style": {
+        "$type": "string",
+        "$value": "none"
+      },
+      "control-color": {
+        "$type": "string",
+        "$value": "transparent"
+      }
+    },
+    "elevation": {
+      "$type": "shadow",
+      "sm": {
+        "$value": "4px 4px 8px color-mix(in srgb, var(--idg-color-bg) 55%, black), -4px -4px 8px light-dark(white, color-mix(in srgb, var(--idg-color-bg) 78%, white))"
+      },
+      "md": {
+        "$value": "8px 8px 18px color-mix(in srgb, var(--idg-color-bg) 55%, black), -8px -8px 18px light-dark(white, color-mix(in srgb, var(--idg-color-bg) 78%, white))"
+      },
+      "lg": {
+        "$value": "14px 14px 30px color-mix(in srgb, var(--idg-color-bg) 55%, black), -14px -14px 30px light-dark(white, color-mix(in srgb, var(--idg-color-bg) 78%, white))"
+      }
+    },
+    "surface": {
+      "background": {
+        "$type": "string",
+        "$value": "var(--idg-color-bg)"
+      },
+      "backdrop-filter": {
+        "$type": "string",
+        "$value": "none"
+      },
+      "border-width": {
+        "$type": "dimension",
+        "$value": "0"
+      },
+      "border-style": {
+        "$type": "string",
+        "$value": "none"
+      },
+      "border-color": {
+        "$type": "string",
+        "$value": "transparent"
+      }
+    },
+    "focus": {
+      "ring-width": {
+        "$type": "dimension",
+        "$value": "3px"
+      },
+      "ring-offset": {
+        "$type": "dimension",
+        "$value": "3px"
+      },
+      "ring-style": {
+        "$type": "string",
+        "$value": "solid"
+      }
+    },
+    "ornament": {
+      "heading-transform": {
+        "$type": "string",
+        "$value": "none"
+      },
+      "heading-decoration": {
+        "$type": "string",
+        "$value": "none"
+      },
+      "control-transform": {
+        "$type": "string",
+        "$value": "none"
+      },
+      "hard-shadow-x": {
+        "$type": "dimension",
+        "$value": "0px"
+      },
+      "hard-shadow-y": {
+        "$type": "dimension",
+        "$value": "0px"
+      }
+    }
+  }
+}

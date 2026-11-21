@@ -1,0 +1,123 @@
+{
+  "$description": "Retro: square corners, stepped hard shadows, double and dashed borders and uppercase headings.",
+  "$extensions": {
+    "identgineer": {
+      "label": "Pixel"
+    }
+  },
+  "tokens": {
+    "shape": {
+      "$type": "dimension",
+      "radius": {
+        "sm": {
+          "$value": "0"
+        },
+        "md": {
+          "$value": "0"
+        },
+        "lg": {
+          "$value": "0"
+        },
+        "pill": {
+          "$value": "0"
+        }
+      }
+    },
+    "border": {
+      "width": {
+        "$type": "dimension",
+        "$value": "6px"
+      },
+      "style": {
+        "$type": "string",
+        "$value": "double"
+      },
+      "color": {
+        "$type": "string",
+        "$value": "var(--idg-color-text)"
+      },
+      "control-width": {
+        "$type": "dimension",
+        "$value": "3px"
+      },
+      "control-style": {
+        "$type": "string",
+        "$value": "dashed"
+      },
+      "control-color": {
+        "$type": "string",
+        "$value": "var(--idg-color-text)"
+      }
+    },
+    "elevation": {
+      "$type": "shadow",
+      "sm": {
+        "$value": "2px 2px 0 0 var(--idg-color-text)"
+      },
+      "md": {
+        "$value": "4px 4px 0 0 var(--idg-color-text), 8px 8px 0 0 color-mix(in srgb, var(--idg-color-text) 40%, transparent)"
+      },
+      "lg": {
+        "$value": "6px 6px 0 0 var(--idg-color-text), 12px 12px 0 0 color-mix(in srgb, var(--idg-color-text) 40%, transparent), 18px 18px 0 0 color-mix(in srgb, var(--idg-color-text) 18%, transparent)"
+      }
+    },
+    "surface": {
+      "background": {
+        "$type": "string",
+        "$value": "var(--idg-color-surface)"
+      },
+      "backdrop-filter": {
+        "$type": "string",
+        "$value": "none"
+      },
+      "border-width": {
+        "$type": "dimension",
+        "$value": "6px"
+      },
+      "border-style": {
+        "$type": "string",
+        "$value": "double"
+      },
+      "border-color": {
+        "$type": "string",
+        "$value": "var(--idg-color-text)"
+      }
+    },
+    "focus": {
+      "ring-width": {
+        "$type": "dimension",
+        "$value": "4px"
+      },
+      "ring-offset": {
+        "$type": "dimension",
+        "$value": "2px"
+      },
+      "ring-style": {
+        "$type": "string",
+        "$value": "dashed"
+      }
+    },
+    "ornament": {
+      "heading-transform": {
+        "$type": "string",
+        "$value": "uppercase"
+      },
+      "heading-decoration": {
+        "$type": "string",
+        "$value": "none"
+      },
+      "control-transform": {
+        "$type": "string",
+        "$value": "none"
+      },
+      "hard-shadow-x": {
+        "$type": "dimension",
+        "$value": "4px"
+      },
+      "hard-shadow-y": {
+        "$type": "dimension",
+        "$value": "4px"
+      }
+    }
+  }
+}

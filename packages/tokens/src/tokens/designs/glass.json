@@ -1,0 +1,137 @@
+{
+  "$description": "Translucent frosted surfaces with a backdrop blur and a luminous hairline edge.",
+  "$extensions": {
+    "identgineer": {
+      "label": "Glass"
+    }
+  },
+  "tokens": {
+    "shape": {
+      "$type": "dimension",
+      "radius": {
+        "sm": {
+          "$value": "0.75rem"
+        },
+        "md": {
+          "$value": "1.25rem"
+        },
+        "lg": {
+          "$value": "1.75rem"
+        },
+        "pill": {
+          "$value": "9999px"
+        }
+      }
+    },
+    "border": {
+      "width": {
+        "$type": "dimension",
+        "$value": "1px"
+      },
+      "style": {
+        "$type": "string",
+        "$value": "solid"
+      },
+      "color": {
+        "$type": "string",
+        "$value": "color-mix(in srgb, var(--idg-color-border) 60%, transparent)"
+      },
+      "control-width": {
+        "$type": "dimension",
+        "$value": "1px"
+      },
+      "control-style": {
+        "$type": "string",
+        "$value": "solid"
+      },
+      "control-color": {
+        "$type": "string",
+        "$value": "var(--idg-color-border-strong)"
+      }
+    },
+    "elevation": {
+      "$type": "shadow",
+      "sm": {
+        "$value": "0 2px 8px color-mix(in srgb, color-mix(in srgb, var(--idg-color-bg) 40%, black) 22%, transparent)"
+      },
+      "md": {
+        "$value": "0 8px 24px color-mix(in srgb, color-mix(in srgb, var(--idg-color-bg) 40%, black) 26%, transparent)"
+      },
+      "lg": {
+        "$value": "0 18px 48px color-mix(in srgb, color-mix(in srgb, var(--idg-color-bg) 40%, black) 32%, transparent)"
+      }
+    },
+    "surface": {
+      "background": {
+        "$type": "string",
+        "$value": "color-mix(in srgb, var(--idg-color-surface) 42%, transparent)"
+      },
+      "backdrop-filter": {
+        "$type": "string",
+        "$value": "blur(18px) saturate(1.5)"
+      },
+      "border-width": {
+        "$type": "dimension",
+        "$value": "1px"
+      },
+      "border-style": {
+        "$type": "string",
+        "$value": "solid"
+      },
+      "border-color": {
+        "$type": "string",
+        "$value": "light-dark(rgb(255 255 255 / 0.75), rgb(255 255 255 / 0.22))"
+      }
+    },
+    "focus": {
+      "ring-width": {
+        "$type": "dimension",
+        "$value": "2px"
+      },
+      "ring-offset": {
+        "$type": "dimension",
+        "$value": "3px"
+      },
+      "ring-style": {
+        "$type": "string",
+        "$value": "solid"
+      }
+    },
+    "ornament": {
+      "heading-transform": {
+        "$type": "string",
+        "$value": "none"
+      },
+      "heading-decoration": {
+        "$type": "string",
+        "$value": "none"
+      },
+      "control-transform": {
+        "$type": "string",
+        "$value": "none"
+      },
+      "hard-shadow-x": {
+        "$type": "dimension",
+        "$value": "0px"
+      },
+      "hard-shadow-y": {
+        "$type": "dimension",
+        "$value": "0px"
+      }
+    }
+  },
+  "opaque": {
+    "surface": {
+      "$type": "string",
+      "background": {
+        "$value": "var(--idg-color-surface)"
+      },
+      "backdrop-filter": {
+        "$value": "none"
+      },
+      "border-color": {
+        "$value": "var(--idg-color-border)"
+      }
+    }
+  }
+}
