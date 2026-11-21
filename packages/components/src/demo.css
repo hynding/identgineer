@@ -38,7 +38,14 @@ idg-alert:not(.hydrated),
 idg-progress:not(.hydrated),
 idg-skeleton:not(.hydrated),
 idg-stat:not(.hydrated),
-idg-divider:not(.hydrated) {
+idg-divider:not(.hydrated),
+idg-popover:not(.hydrated),
+idg-tooltip:not(.hydrated),
+idg-menu:not(.hydrated),
+idg-menu-item:not(.hydrated),
+idg-menu-group:not(.hydrated),
+idg-menu-separator:not(.hydrated),
+idg-toast:not(.hydrated) {
   visibility: hidden;
 }
 
@@ -229,4 +236,9 @@ section.dashboard::after {
 .banner {
   block-size: 7rem;
   background: var(--idg-gradient-brand);
+}
+
+/* Makes the overlays fixture taller than the viewport, so the scroll lock has a scrollbar to keep. */
+.spacer {
+  block-size: 150vh;
 }
