@@ -923,6 +923,35 @@ export namespace Components {
          */
         "value": string;
     }
+    /**
+     * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
+     * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
+     * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
+     * only: put anything interactive in an idg-popover.
+     * The text is also the trigger's accessible description, given to the trigger itself, so it is
+     * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
+     * technology so it is not read twice.
+     */
+    interface IdgTooltip {
+        /**
+          * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
+         */
+        "for"?: string;
+        /**
+          * The gap between the trigger and the hint, in pixels.
+          * @default 8
+         */
+        "offset": number;
+        /**
+          * Where the hint sits against the trigger. It flips to the opposite side when out of room.
+          * @default "top"
+         */
+        "placement": Placement;
+        /**
+          * The hint. Set as text, never as markup.
+         */
+        "text"?: string;
+    }
 }
 export interface IdgAlertCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -1296,6 +1325,21 @@ declare global {
         prototype: HTMLIdgTextareaElement;
         new (): HTMLIdgTextareaElement;
     };
+    /**
+     * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
+     * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
+     * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
+     * only: put anything interactive in an idg-popover.
+     * The text is also the trigger's accessible description, given to the trigger itself, so it is
+     * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
+     * technology so it is not read twice.
+     */
+    interface HTMLIdgTooltipElement extends Components.IdgTooltip, HTMLStencilElement {
+    }
+    var HTMLIdgTooltipElement: {
+        prototype: HTMLIdgTooltipElement;
+        new (): HTMLIdgTooltipElement;
+    };
     interface HTMLElementTagNameMap {
         "idg-alert": HTMLIdgAlertElement;
         "idg-avatar": HTMLIdgAvatarElement;
@@ -1319,6 +1363,7 @@ declare global {
         "idg-stat": HTMLIdgStatElement;
         "idg-switch": HTMLIdgSwitchElement;
         "idg-textarea": HTMLIdgTextareaElement;
+        "idg-tooltip": HTMLIdgTooltipElement;
     }
 }
 declare namespace LocalJSX {
@@ -2203,6 +2248,35 @@ declare namespace LocalJSX {
          */
         "value"?: string;
     }
+    /**
+     * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
+     * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
+     * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
+     * only: put anything interactive in an idg-popover.
+     * The text is also the trigger's accessible description, given to the trigger itself, so it is
+     * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
+     * technology so it is not read twice.
+     */
+    interface IdgTooltip {
+        /**
+          * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
+         */
+        "for"?: string;
+        /**
+          * The gap between the trigger and the hint, in pixels.
+          * @default 8
+         */
+        "offset"?: number;
+        /**
+          * Where the hint sits against the trigger. It flips to the opposite side when out of room.
+          * @default "top"
+         */
+        "placement"?: Placement;
+        /**
+          * The hint. Set as text, never as markup.
+         */
+        "text"?: string;
+    }
 
     interface IdgAlertAttributes {
         "variant": AlertVariant;
@@ -2411,6 +2485,12 @@ declare namespace LocalJSX {
         "accessibleDescription": string;
         "invalid": boolean;
     }
+    interface IdgTooltipAttributes {
+        "text": string;
+        "placement": Placement;
+        "offset": number;
+        "for": string;
+    }
 
     interface IntrinsicElements {
         "idg-alert": Omit<IdgAlert, keyof IdgAlertAttributes> & { [K in keyof IdgAlert & keyof IdgAlertAttributes]?: IdgAlert[K] } & { [K in keyof IdgAlert & keyof IdgAlertAttributes as `attr:${K}`]?: IdgAlertAttributes[K] } & { [K in keyof IdgAlert & keyof IdgAlertAttributes as `prop:${K}`]?: IdgAlert[K] };
@@ -2435,6 +2515,7 @@ declare namespace LocalJSX {
         "idg-stat": Omit<IdgStat, keyof IdgStatAttributes> & { [K in keyof IdgStat & keyof IdgStatAttributes]?: IdgStat[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `attr:${K}`]?: IdgStatAttributes[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `prop:${K}`]?: IdgStat[K] };
         "idg-switch": Omit<IdgSwitch, keyof IdgSwitchAttributes> & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes]?: IdgSwitch[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `attr:${K}`]?: IdgSwitchAttributes[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `prop:${K}`]?: IdgSwitch[K] };
         "idg-textarea": Omit<IdgTextarea, keyof IdgTextareaAttributes> & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes]?: IdgTextarea[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `attr:${K}`]?: IdgTextareaAttributes[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `prop:${K}`]?: IdgTextarea[K] };
+        "idg-tooltip": Omit<IdgTooltip, keyof IdgTooltipAttributes> & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes]?: IdgTooltip[K] } & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `attr:${K}`]?: IdgTooltipAttributes[K] } & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `prop:${K}`]?: IdgTooltip[K] };
     }
 }
 export { LocalJSX as JSX };
@@ -2546,6 +2627,16 @@ declare module "@stencil/core" {
             "idg-stat": LocalJSX.IntrinsicElements["idg-stat"] & JSXBase.HTMLAttributes<HTMLIdgStatElement>;
             "idg-switch": LocalJSX.IntrinsicElements["idg-switch"] & JSXBase.HTMLAttributes<HTMLIdgSwitchElement>;
             "idg-textarea": LocalJSX.IntrinsicElements["idg-textarea"] & JSXBase.HTMLAttributes<HTMLIdgTextareaElement>;
+            /**
+             * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
+             * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
+             * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
+             * only: put anything interactive in an idg-popover.
+             * The text is also the trigger's accessible description, given to the trigger itself, so it is
+             * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
+             * technology so it is not read twice.
+             */
+            "idg-tooltip": LocalJSX.IntrinsicElements["idg-tooltip"] & JSXBase.HTMLAttributes<HTMLIdgTooltipElement>;
         }
     }
 }

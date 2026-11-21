@@ -4,16 +4,12 @@ import { installPopoverElement } from "../../testing/popover-element";
 import "../button/button";
 import "./tooltip";
 
-interface DescribedTrigger extends HTMLElement {
-  ariaDescription?: string | null;
-  accessibleDescription?: string;
-}
+type DescribedTrigger = HTMLElement & { accessibleDescription?: string };
 
 let popover: ReturnType<typeof installPopoverElement>;
 
 beforeEach(() => {
   popover = installPopoverElement();
-  vi.useFakeTimers();
 });
 
 afterEach(() => {
@@ -36,6 +32,13 @@ function pointer(target: HTMLElement, type: string, pointerType = "mouse"): void
   const event = new Event(type) as Event & { pointerType: string };
   event.pointerType = pointerType;
   target.dispatchEvent(event);
+}
+
+// Fake timers are installed only once the component has rendered, which needs real ones.
+async function renderTimed(vnode: ReturnType<typeof h>) {
+  const rendered = await render(vnode);
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  return rendered;
 }
 
 const isShown = (root: HTMLElement) => surface(root).hasAttribute("data-popover-open");
@@ -105,7 +108,7 @@ describe("idg-tooltip description", () => {
 
 describe("idg-tooltip showing and hiding", () => {
   it("shows after the hover delay, not before", async () => {
-    const { root } = await render(native);
+    const { root } = await renderTimed(native);
     pointer(trigger(root), "pointerenter");
     vi.advanceTimersByTime(450);
     expect(isShown(root)).toBe(false);
@@ -114,7 +117,7 @@ describe("idg-tooltip showing and hiding", () => {
   });
 
   it("does not show for a pointer that leaves before the delay", async () => {
-    const { root } = await render(native);
+    const { root } = await renderTimed(native);
     pointer(trigger(root), "pointerenter");
     vi.advanceTimersByTime(200);
     pointer(trigger(root), "pointerleave");
@@ -123,14 +126,14 @@ describe("idg-tooltip showing and hiding", () => {
   });
 
   it("ignores touch, so a long press does not cover the control", async () => {
-    const { root } = await render(native);
+    const { root } = await renderTimed(native);
     pointer(trigger(root), "pointerenter", "touch");
     vi.advanceTimersByTime(2000);
     expect(isShown(root)).toBe(false);
   });
 
   it("shows at once on keyboard focus and hides on blur", async () => {
-    const { root } = await render(native);
+    const { root } = await renderTimed(native);
     trigger(root).dispatchEvent(new Event("focusin", { bubbles: true }));
     expect(isShown(root)).toBe(true);
     trigger(root).dispatchEvent(new Event("focusout", { bubbles: true }));
@@ -138,7 +141,7 @@ describe("idg-tooltip showing and hiding", () => {
   });
 
   it("stays while the pointer moves from the trigger onto the tooltip", async () => {
-    const { root } = await render(native);
+    const { root } = await renderTimed(native);
     pointer(trigger(root), "pointerenter");
     vi.advanceTimersByTime(500);
     pointer(trigger(root), "pointerleave");
@@ -152,7 +155,7 @@ describe("idg-tooltip showing and hiding", () => {
   });
 
   it("hides on Escape, taking the key so nothing else closes", async () => {
-    const { root } = await render(native);
+    const { root } = await renderTimed(native);
     trigger(root).dispatchEvent(new Event("focusin", { bubbles: true }));
     const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
     document.dispatchEvent(event);
@@ -161,21 +164,21 @@ describe("idg-tooltip showing and hiding", () => {
   });
 
   it("leaves Escape alone while hidden", async () => {
-    await render(native);
+    await renderTimed(native);
     const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
     document.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(false);
   });
 
   it("hides when the page scrolls", async () => {
-    const { root } = await render(native);
+    const { root } = await renderTimed(native);
     trigger(root).dispatchEvent(new Event("focusin", { bubbles: true }));
     window.dispatchEvent(new Event("scroll"));
     expect(isShown(root)).toBe(false);
   });
 
   it("shows nothing without text", async () => {
-    const { root } = await render(
+    const { root } = await renderTimed(
       <idg-tooltip>
         <button>Copy</button>
       </idg-tooltip>,

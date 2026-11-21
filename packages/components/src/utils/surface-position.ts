@@ -78,3 +78,16 @@ export function showPopoverFrom(surface: HTMLElement, source: HTMLElement | unde
   const popover: { showPopover(options?: { source: HTMLElement }): void } = surface;
   popover.showPopover(source ? { source } : undefined);
 }
+
+/**
+ * `hint` where the browser has it: a hint closes other hints but leaves menus and other auto
+ * popovers open. Elsewhere `manual`, which the component opens and closes itself.
+ */
+export function hintPopoverType(): "hint" | "manual" {
+  if (typeof document === "undefined") return "manual";
+  const probe = document.createElement("div");
+  probe.setAttribute("popover", "hint");
+  return (probe as HTMLElement & { popover?: string | null }).popover === "hint"
+    ? "hint"
+    : "manual";
+}
