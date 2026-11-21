@@ -1,5 +1,5 @@
 {
-  "$description": "Neutral layout defaults for content measure, gutters, gaps, grid and navigation size. Layouts must redefine every one of these. The shell and the layout primitives (idg-stack, idg-cluster, idg-grid, idg-sidebar, idg-switcher, idg-cover) read them.",
+  "$description": "Neutral layout defaults for content measure, gutters, gaps, grid, navigation size and shell arrangement. Layouts must redefine every one of these. The shell and the layout primitives (idg-stack, idg-cluster, idg-grid, idg-sidebar, idg-switcher, idg-cover) read them.",
   "layout": {
     "$type": "dimension",
     "content-max": {
@@ -33,7 +33,20 @@
     },
     "nav-size": {
       "$value": "4rem",
-      "$description": "Thickness of the navigation: the height of a bar or the width of a rail."
+      "$description": "Thickness of the bar or strip across the top that carries the navigation or the page actions."
+    },
+    "rail-width": {
+      "$value": "14rem",
+      "$description": "Width of a navigation rail, and of the drawer that replaces the navigation when it collapses."
+    },
+    "sticky-inset": {
+      "$value": "0",
+      "$description": "Block size of chrome that stays pinned to the top of the viewport, so scrolling a focused element into view leaves it clear of that chrome; 0 when nothing is pinned."
+    },
+    "shell": {
+      "$type": "string",
+      "$value": "top-bar",
+      "$description": "Which of the eight arrangements idg-layout draws. Each layout names itself, so the shell can tell them apart with a style query."
     }
   }
 }

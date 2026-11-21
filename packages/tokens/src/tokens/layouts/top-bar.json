@@ -32,6 +32,16 @@
       },
       "nav-size": {
         "$value": "4rem"
+      },
+      "rail-width": {
+        "$value": "14rem"
+      },
+      "sticky-inset": {
+        "$value": "{layout.nav-size}"
+      },
+      "shell": {
+        "$type": "string",
+        "$value": "top-bar"
       }
     }
   }

@@ -32,6 +32,16 @@
       },
       "nav-size": {
         "$value": "3rem"
+      },
+      "rail-width": {
+        "$value": "20rem"
+      },
+      "sticky-inset": {
+        "$value": "0"
+      },
+      "shell": {
+        "$type": "string",
+        "$value": "immersive"
       }
     }
   }

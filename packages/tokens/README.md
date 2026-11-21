@@ -120,9 +120,15 @@ are never below 24px (WCAG 2.2 AA, 2.5.8); the build fails otherwise.
 Layout tokens: `layout.content-max` (maximum inline size of the page content, `100%` for edge to
 edge), `layout.page-gutter`, `layout.section-gap`, `layout.gap` (the default gap inside the layout
 primitives), `layout.columns` (most columns `idg-grid` draws), `layout.grid-min` (default minimum
-track size), `layout.aside-width` (default side region of `idg-sidebar`) and `layout.nav-size`
-(the height of a bar or the width of a rail). Gaps and gutters alias the space scale, so they stay
-fluid; multiply `layout.gap` by `--idg-density-gap-scale` to follow the UX mode.
+track size), `layout.aside-width` (default side region of `idg-sidebar`), `layout.nav-size` (the
+thickness of the bar or strip across the top that carries the navigation or the page actions),
+`layout.rail-width` (the width of a navigation rail, and of the drawer that replaces the navigation
+when it collapses), `layout.sticky-inset` (the block size of chrome pinned to the top of the viewport,
+`0` when nothing is, so scrolling a focused element into view leaves it clear of that chrome) and
+`layout.shell` (the layout's own id, which `idg-layout` reads with a style query to choose its
+arrangement; it is the one token that is not a length or a number). Gaps and gutters alias the
+space scale, so they stay fluid; multiply `layout.gap` by `--idg-density-gap-scale` to follow the UX
+mode.
 
 | `data-layout` | Character                                                                    | Measure | Columns | Track | Gap  |
 | ------------- | ---------------------------------------------------------------------------- | ------- | ------- | ----- | ---- |

@@ -32,6 +32,16 @@
       },
       "nav-size": {
         "$value": "5rem"
+      },
+      "rail-width": {
+        "$value": "14rem"
+      },
+      "sticky-inset": {
+        "$value": "0"
+      },
+      "shell": {
+        "$type": "string",
+        "$value": "magazine"
       }
     }
   }
