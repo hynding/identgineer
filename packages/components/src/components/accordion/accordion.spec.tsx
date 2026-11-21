@@ -270,3 +270,102 @@ describe("idg-accordion moved in the page", () => {
     expect((added as ItemElement).headingLevel).toBe(5);
   });
 });
+
+describe("idg-accordion nested in an item", () => {
+  it("leaves its parent item open when an item inside it opens", async () => {
+    const { root, waitForChanges } = await render(
+      <idg-accordion>
+        <idg-accordion-item heading="Outer" value="outer" open>
+          <idg-accordion>
+            <idg-accordion-item heading="Inner" value="inner">
+              Inner text.
+            </idg-accordion-item>
+          </idg-accordion>
+        </idg-accordion-item>
+        <idg-accordion-item heading="Other" value="other">
+          Other.
+        </idg-accordion-item>
+      </idg-accordion>,
+    );
+    const inner = root.querySelector<ItemElement>("idg-accordion-item idg-accordion-item");
+    if (!inner) throw new Error("no inner item");
+    trigger(inner).click();
+    await waitForChanges();
+    expect(inner.open).toBe(true);
+    expect(opens(root).slice(0, 1)).toEqual([true]);
+    expect(itemAt(root, 1).open).toBe(false);
+  });
+
+  it("still closes its own other items when an item opens", async () => {
+    const { root, waitForChanges } = await render(
+      <idg-accordion>
+        <idg-accordion-item heading="Outer" value="outer" open>
+          <idg-accordion>
+            <idg-accordion-item heading="Inner" value="inner">
+              Inner text.
+            </idg-accordion-item>
+          </idg-accordion>
+        </idg-accordion-item>
+        <idg-accordion-item heading="Other" value="other">
+          Other.
+        </idg-accordion-item>
+      </idg-accordion>,
+    );
+    const outer = Array.from(root.children).filter(
+      (child): child is ItemElement => child.localName === "idg-accordion-item",
+    );
+    trigger(outer[1] as HTMLElement).click();
+    await waitForChanges();
+    expect(outer.map((item) => item.open)).toEqual([false, true]);
+  });
+});
+
+describe("idg-accordion single mode with items added open", () => {
+  const toggles = (root: HTMLElement) => {
+    const log: string[] = [];
+    root.addEventListener("idgToggle", (event) => {
+      const detail = (event as CustomEvent<{ value: string; open: boolean }>).detail;
+      log.push(`${detail.value}:${String(detail.open)}`);
+    });
+    return log;
+  };
+
+  function add(root: HTMLElement, value: string, before?: Element): void {
+    const added = document.createElement("idg-accordion-item");
+    added.setAttribute("value", value);
+    added.setAttribute("heading", value);
+    added.setAttribute("open", "");
+    root.insertBefore(added, before ?? null);
+    root.shadowRoot?.querySelector("slot")?.dispatchEvent(new Event("slotchange"));
+  }
+
+  it("lets an item added open after the open one win", async () => {
+    const { root, waitForChanges } = await render(
+      <idg-accordion>
+        <idg-accordion-item heading="A" value="a" open>
+          A
+        </idg-accordion-item>
+      </idg-accordion>,
+    );
+    const log = toggles(root);
+    add(root, "b");
+    await waitForChanges();
+    expect(opens(root)).toEqual([false, true]);
+    expect(log).toEqual(["a:false"]);
+  });
+
+  it("lets an item added open before the open one win as well", async () => {
+    const { root, waitForChanges } = await render(
+      <idg-accordion>
+        <idg-accordion-item heading="A" value="a" open>
+          A
+        </idg-accordion-item>
+      </idg-accordion>,
+    );
+    const log = toggles(root);
+    add(root, "b", itemAt(root, 0));
+    await waitForChanges();
+    expect(opens(root)).toEqual([true, false]);
+    expect(log).toEqual(["a:false"]);
+  });
+});
