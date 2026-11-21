@@ -3,7 +3,19 @@ import { expect } from "./fixtures";
 
 export const OVERLAYS_PAGE = "/fixtures/overlays.html";
 
-const TAGS = ["idg-dialog", "idg-button", "idg-input", "idg-field"];
+const TAGS = [
+  "idg-dialog",
+  "idg-popover",
+  "idg-tooltip",
+  "idg-menu",
+  "idg-menu-item",
+  "idg-menu-group",
+  "idg-menu-separator",
+  "idg-toast-region",
+  "idg-button",
+  "idg-input",
+  "idg-field",
+];
 
 /** Opens the overlays fixture and waits until every component on it has hydrated. */
 export async function openOverlays(page: Page): Promise<void> {
