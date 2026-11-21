@@ -343,6 +343,9 @@
 
 @container style(--_nav: drawer) {
   .drawer {
+    /* The slotted items carry a negative scroll margin for the page's sake, so the drawer that
+       scrolls them is padded to match and keeps a focused item inside its own top edge. */
+    scroll-padding-block-start: var(--idg-layout-sticky-inset);
     --_slide: calc(-100% * var(--idg-motion-enabled));
 
     position: fixed;
@@ -685,12 +688,14 @@
       grid-column: 2;
       grid-row: 1;
       grid-template-columns: minmax(0, 1fr) auto auto;
+      /* The actions may wrap onto a second row, so they span two, and the button stays in the first,
+         level with the brand, whatever else the header holds. */
       grid-template-areas:
         ". toggle actions"
+        ". . actions"
         "nav nav nav";
       box-sizing: border-box;
-      /* The bar is the first row, whatever else the header holds, so the button never moves. */
-      grid-template-rows: minmax(var(--_bar), auto);
+      grid-template-rows: var(--_bar) auto auto;
       align-content: start;
       padding-block: 0;
       padding-inline: var(--_gutter);

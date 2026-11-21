@@ -411,7 +411,9 @@ export class IdgLayout {
     const row = rows?.split(" ")[0] ?? "";
     if (!/^\d+(\.\d+)?px$/.test(row)) return;
     const held = (this.heldBar ??= new CSSStyleSheet());
-    held.replaceSync(`.shell .header:has(.drawer[open]) { grid-template-rows: ${row}; }`);
+    held.replaceSync(
+      `.shell .header:has(.drawer[open]) { grid-template-rows: minmax(${row}, auto); }`,
+    );
     if (!root.adoptedStyleSheets.includes(held)) {
       root.adoptedStyleSheets = [...root.adoptedStyleSheets, held];
     }

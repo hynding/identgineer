@@ -962,7 +962,13 @@ controls (buttons, links, inputs, checkboxes and the rest) read it in their own 
 target into view while the bar has focus still lands it under the bar, not behind it. A control from
 outside this library that has its own shadow root and a focusable element in the bar must read the
 same property (`scroll-margin-block-start: var(--_idg-chrome-scroll-margin, 0px)`), or focusing it
-can scroll the page. A navigation that scrolls along the top bar scrolls only itself to bring a
+can scroll the page. The exception is a text field: the browser's reveal of an editable element
+ignores `scroll-margin` and uses the root padding, so while a text-entry element in the bar has focus
+(a native `input` other than a checkbox, radio or button, a `textarea`, a `contenteditable`, or an
+`idg-input` or `idg-textarea` with focus inside) the root padding is `0`, and the page stays put. A
+text-entry component from outside this library is not recognised unless it is a native element or
+reports focus on its host. The drawer that holds a long navigation is padded by the same inset, so a
+focused item stays inside its top edge. A navigation that scrolls along the top bar scrolls only itself to bring a
 focused item into view, never the page.
 
 **Open from the start.** `navigation-open` in the markup opens the navigation once the shell has

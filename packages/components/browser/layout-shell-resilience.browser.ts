@@ -945,10 +945,14 @@ test.describe("a text field in the pinned bar", () => {
         await field.focus();
         await frames(page, 2);
         expect(await page.evaluate(() => window.scrollY), "focus()").toBe(scrollY);
-        await page.locator("#action-last").focus();
-        await page.keyboard.press("Tab");
-        await frames(page, 2);
-        expect(await page.evaluate(() => window.scrollY), "Tab").toBe(scrollY);
+        await page.locator("#brand-link").focus();
+        for (let step = 0; step < 12; step += 1) {
+          await page.keyboard.press("Tab");
+          await frames(page, 1);
+          expect(await page.evaluate(() => window.scrollY), `Tab ${String(step)}`).toBe(scrollY);
+          if (await page.evaluate(() => document.activeElement?.id === "bar-field")) break;
+        }
+        expect(await page.evaluate(() => document.activeElement?.id)).toBe("bar-field");
         await page.locator("#main-link").focus();
         await page.evaluate((y) => {
           window.scrollTo(0, y);
@@ -1016,7 +1020,8 @@ test.describe("the held bar row yields to a larger bar", () => {
       const drawer = tree?.querySelector<HTMLElement>('[part="drawer"]')?.getBoundingClientRect();
       if (!button || !header || !drawer) throw new Error("missing");
       const rows = getComputedStyle(header).gridTemplateRows.split(" ");
-      const top = header.getBoundingClientRect().top;
+      const top =
+        header.getBoundingClientRect().top + Number.parseFloat(getComputedStyle(header).paddingTop);
       return {
         button,
         firstRow: Number.parseFloat(rows[0] ?? "0"),
