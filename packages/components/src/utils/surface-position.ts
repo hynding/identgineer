@@ -68,3 +68,13 @@ export class SurfacePosition {
     this.frame = requestAnimationFrame(this.update);
   };
 }
+
+/**
+ * Shows a popover with its trigger as the source, so Tab from the trigger enters the surface and
+ * the trigger counts as the popover's invoker. Browsers that predate the option ignore it.
+ */
+export function showPopoverFrom(surface: HTMLElement, source: HTMLElement | undefined): void {
+  // Stencil compiles with DOM typings that predate the option, hence the widened type.
+  const popover: { showPopover(options?: { source: HTMLElement }): void } = surface;
+  popover.showPopover(source ? { source } : undefined);
+}

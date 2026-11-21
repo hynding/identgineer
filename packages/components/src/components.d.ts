@@ -16,6 +16,7 @@ import { DividerOrientation } from "./components/divider/divider-options";
 import { IconName } from "./components/icon/icon-paths";
 import { IconSize } from "./components/icon/icon-options";
 import { InputSize, InputType } from "./components/input/input-options";
+import { Placement } from "./utils/position";
 import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
 import { SkeletonVariant } from "./components/skeleton/skeleton-options";
@@ -31,6 +32,7 @@ export { DividerOrientation } from "./components/divider/divider-options";
 export { IconName } from "./components/icon/icon-paths";
 export { IconSize } from "./components/icon/icon-options";
 export { InputSize, InputType } from "./components/input/input-options";
+export { Placement } from "./utils/position";
 export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
 export { SkeletonVariant } from "./components/skeleton/skeleton-options";
@@ -525,6 +527,45 @@ export namespace Components {
         "target"?: string;
     }
     /**
+     * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
+     * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
+     * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
+     * not contained, and Tab moves on from the content.
+     */
+    interface IdgPopover {
+        /**
+          * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
+         */
+        "for"?: string;
+        /**
+          * Closes the popover.
+         */
+        "hide": () => Promise<void>;
+        /**
+          * The gap between the trigger and the surface, in pixels.
+          * @default 8
+         */
+        "offset": number;
+        /**
+          * Whether the popover is open.
+          * @default false
+         */
+        "open": boolean;
+        /**
+          * Where the surface sits against the trigger. It flips to the opposite side when out of room.
+          * @default "bottom-start"
+         */
+        "placement": Placement;
+        /**
+          * Opens the popover.
+         */
+        "show": () => Promise<void>;
+        /**
+          * Opens the popover when closed and closes it when open.
+         */
+        "toggle": () => Promise<void>;
+    }
+    /**
      * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
      * the browser's own. Without a value it is indeterminate.
      */
@@ -899,6 +940,10 @@ export interface IdgInputCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgInputElement;
 }
+export interface IdgPopoverCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgPopoverElement;
+}
 export interface IdgRadioCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgRadioElement;
@@ -1093,6 +1138,30 @@ declare global {
         prototype: HTMLIdgLinkElement;
         new (): HTMLIdgLinkElement;
     };
+    interface HTMLIdgPopoverElementEventMap {
+        "idgOpen": void;
+        "idgClose": void;
+    }
+    /**
+     * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
+     * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
+     * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
+     * not contained, and Tab moves on from the content.
+     */
+    interface HTMLIdgPopoverElement extends Components.IdgPopover, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgPopoverElementEventMap>(type: K, listener: (this: HTMLIdgPopoverElement, ev: IdgPopoverCustomEvent<HTMLIdgPopoverElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgPopoverElementEventMap>(type: K, listener: (this: HTMLIdgPopoverElement, ev: IdgPopoverCustomEvent<HTMLIdgPopoverElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgPopoverElement: {
+        prototype: HTMLIdgPopoverElement;
+        new (): HTMLIdgPopoverElement;
+    };
     /**
      * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
      * the browser's own. Without a value it is indeterminate.
@@ -1241,6 +1310,7 @@ declare global {
         "idg-icon": HTMLIdgIconElement;
         "idg-input": HTMLIdgInputElement;
         "idg-link": HTMLIdgLinkElement;
+        "idg-popover": HTMLIdgPopoverElement;
         "idg-progress": HTMLIdgProgressElement;
         "idg-radio": HTMLIdgRadioElement;
         "idg-radio-group": HTMLIdgRadioGroupElement;
@@ -1749,6 +1819,41 @@ declare namespace LocalJSX {
         "target"?: string;
     }
     /**
+     * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
+     * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
+     * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
+     * not contained, and Tab moves on from the content.
+     */
+    interface IdgPopover {
+        /**
+          * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
+         */
+        "for"?: string;
+        /**
+          * The gap between the trigger and the surface, in pixels.
+          * @default 8
+         */
+        "offset"?: number;
+        /**
+          * Fires when the popover closes, however it was closed.
+         */
+        "onIdgClose"?: (event: IdgPopoverCustomEvent<void>) => void;
+        /**
+          * Fires when the popover opens.
+         */
+        "onIdgOpen"?: (event: IdgPopoverCustomEvent<void>) => void;
+        /**
+          * Whether the popover is open.
+          * @default false
+         */
+        "open"?: boolean;
+        /**
+          * Where the surface sits against the trigger. It flips to the opposite side when out of room.
+          * @default "bottom-start"
+         */
+        "placement"?: Placement;
+    }
+    /**
      * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
      * the browser's own. Without a value it is indeterminate.
      */
@@ -2218,6 +2323,12 @@ declare namespace LocalJSX {
         "external": boolean;
         "externalLabel": string;
     }
+    interface IdgPopoverAttributes {
+        "placement": Placement;
+        "offset": number;
+        "open": boolean;
+        "for": string;
+    }
     interface IdgProgressAttributes {
         "label": string;
         "value": number;
@@ -2315,6 +2426,7 @@ declare namespace LocalJSX {
         "idg-icon": Omit<IdgIcon, keyof IdgIconAttributes> & { [K in keyof IdgIcon & keyof IdgIconAttributes]?: IdgIcon[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `attr:${K}`]?: IdgIconAttributes[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `prop:${K}`]?: IdgIcon[K] };
         "idg-input": Omit<IdgInput, keyof IdgInputAttributes> & { [K in keyof IdgInput & keyof IdgInputAttributes]?: IdgInput[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `attr:${K}`]?: IdgInputAttributes[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `prop:${K}`]?: IdgInput[K] };
         "idg-link": Omit<IdgLink, keyof IdgLinkAttributes> & { [K in keyof IdgLink & keyof IdgLinkAttributes]?: IdgLink[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `attr:${K}`]?: IdgLinkAttributes[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `prop:${K}`]?: IdgLink[K] };
+        "idg-popover": Omit<IdgPopover, keyof IdgPopoverAttributes> & { [K in keyof IdgPopover & keyof IdgPopoverAttributes]?: IdgPopover[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `attr:${K}`]?: IdgPopoverAttributes[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `prop:${K}`]?: IdgPopover[K] };
         "idg-progress": Omit<IdgProgress, keyof IdgProgressAttributes> & { [K in keyof IdgProgress & keyof IdgProgressAttributes]?: IdgProgress[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `attr:${K}`]?: IdgProgressAttributes[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `prop:${K}`]?: IdgProgress[K] };
         "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
         "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
@@ -2390,6 +2502,13 @@ declare module "@stencil/core" {
              * noreferrer`.
              */
             "idg-link": LocalJSX.IntrinsicElements["idg-link"] & JSXBase.HTMLAttributes<HTMLIdgLinkElement>;
+            /**
+             * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
+             * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
+             * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
+             * not contained, and Tab moves on from the content.
+             */
+            "idg-popover": LocalJSX.IntrinsicElements["idg-popover"] & JSXBase.HTMLAttributes<HTMLIdgPopoverElement>;
             /**
              * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
              * the browser's own. Without a value it is indeterminate.

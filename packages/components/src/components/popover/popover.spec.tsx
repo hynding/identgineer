@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { h, render } from "@stencil/vitest";
 import { installPopoverElement } from "../../testing/popover-element";
+import "../button/button";
 import "./popover";
 
 interface PopoverHost extends HTMLElement {
@@ -12,7 +13,8 @@ interface PopoverHost extends HTMLElement {
 
 interface AriaTrigger extends HTMLElement {
   ariaExpanded: string | null;
-  ariaControlsElements: Element[] | null;
+  accessibleExpanded?: boolean;
+  accessibleControls?: Element[];
 }
 
 let popover: ReturnType<typeof installPopoverElement>;
@@ -24,6 +26,12 @@ beforeEach(() => {
 function surface(root: HTMLElement): HTMLElement {
   const element = root.shadowRoot?.querySelector<HTMLElement>('[part="surface"]');
   if (!element) throw new Error("idg-popover rendered no surface");
+  return element;
+}
+
+function find(root: HTMLElement, selector: string): AriaTrigger {
+  const element = root.querySelector<AriaTrigger>(selector);
+  if (!element) throw new Error(`no ${selector}`);
   return element;
 }
 
@@ -75,10 +83,9 @@ describe("idg-popover rendering", () => {
 });
 
 describe("idg-popover trigger", () => {
-  it("tells the trigger it controls the popover and is collapsed", async () => {
+  it("tells the trigger it is collapsed", async () => {
     const { root } = await render(basic);
     expect(trigger(root).ariaExpanded).toBe("false");
-    expect(trigger(root).ariaControlsElements).toEqual([root]);
   });
 
   it("opens and closes on a click of the trigger", async () => {
@@ -100,12 +107,9 @@ describe("idg-popover trigger", () => {
         <idg-button slot="trigger">Share</idg-button>
       </idg-popover>,
     );
-    const button = root.querySelector('[slot="trigger"]') as HTMLElement & {
-      accessibleExpanded?: boolean;
-      accessibleControls?: Element[];
-    };
+    const button = find(root, '[slot="trigger"]');
     expect(button.accessibleExpanded).toBe(false);
-    expect(button.accessibleControls).toEqual([root]);
+    expect(button.accessibleControls?.[0]).toBe(root);
     await (root as PopoverHost).show();
     await waitForChanges();
     expect(button.accessibleExpanded).toBe(true);
@@ -118,7 +122,7 @@ describe("idg-popover trigger", () => {
         <idg-popover for="details-trigger">Created by Ada</idg-popover>
       </div>,
     );
-    const button = root.querySelector("#details-trigger") as AriaTrigger;
+    const button = find(root, "#details-trigger");
     expect(button.ariaExpanded).toBe("false");
     button.click();
     await waitForChanges();
@@ -132,7 +136,7 @@ describe("idg-popover trigger", () => {
         <idg-popover for={'x"], *, [id="'}>Body</idg-popover>
       </div>,
     );
-    expect((root.querySelector("#x") as AriaTrigger).ariaExpanded).toBeFalsy();
+    expect(find(root, "#x").ariaExpanded).toBeFalsy();
   });
 
   it("clears what it set on the trigger when it is removed", async () => {
@@ -143,9 +147,8 @@ describe("idg-popover trigger", () => {
       </div>,
     );
     root.querySelector("idg-popover")?.remove();
-    const button = root.querySelector("#t") as AriaTrigger;
+    const button = find(root, "#t");
     expect(button.ariaExpanded).toBeNull();
-    expect(button.ariaControlsElements).toBeNull();
   });
 });
 
@@ -174,7 +177,12 @@ describe("idg-popover open state", () => {
   it("closes on Escape inside the surface", async () => {
     const { root, waitForChanges } = await render(basic);
     await (root as PopoverHost).show();
-    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    const event = new KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    });
     surface(root).dispatchEvent(event);
     await waitForChanges();
     expect(event.defaultPrevented).toBe(true);

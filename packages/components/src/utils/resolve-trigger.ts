@@ -10,11 +10,10 @@ export function resolveTrigger(
 ): HTMLElement | undefined {
   if (forId !== undefined && forId !== "") {
     const root = host.getRootNode() as Document | ShadowRoot;
-    const found = root.getElementById(forId);
-    return found instanceof HTMLElement ? found : undefined;
+    return root.getElementById(forId) ?? undefined;
   }
   const child = Array.from(host.children).find((candidate) =>
     slot === null ? !candidate.hasAttribute("slot") : candidate.getAttribute("slot") === slot,
   );
-  return child instanceof HTMLElement ? child : undefined;
+  return child as HTMLElement | undefined;
 }

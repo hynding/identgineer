@@ -1,0 +1,61 @@
+/* The look shared by popovers and menus: the design language's surface border, radius and middle
+   elevation over the page colour, so a transparent design (outline, editorial) stays readable over
+   the content below, while a translucent one (glass) stays frosted. It fades in from the top layer
+   and, where movement is on, slides from its trigger. */
+
+.overlay-surface {
+  --_slide: calc(var(--idg-space-2xs) * var(--idg-motion-enabled));
+
+  padding: 0;
+  border-width: var(--idg-surface-border-width);
+  border-style: var(--idg-surface-border-style);
+  border-color: var(--idg-surface-border-color);
+  border-radius: var(--idg-shape-radius-md);
+  background: linear-gradient(var(--idg-surface-background) 0 0), var(--idg-color-bg);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: var(--idg-elevation-md);
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+  letter-spacing: var(--idg-font-body-letter-spacing);
+  opacity: 0;
+  translate: 0 calc(-1 * var(--_slide));
+  transition-property: opacity, translate, overlay, display;
+  transition-duration: var(--idg-motion-duration-fast);
+  transition-timing-function: var(--idg-motion-easing-standard);
+  transition-behavior: allow-discrete;
+}
+
+.overlay-surface:popover-open {
+  opacity: 1;
+  translate: 0 0;
+}
+
+@starting-style {
+  .overlay-surface:popover-open {
+    opacity: 0;
+    translate: 0 calc(-1 * var(--_slide));
+  }
+}
+
+@container not style(--idg-surface-backdrop-filter: none) {
+  .overlay-surface {
+    background: color-mix(in srgb, var(--idg-color-surface) 78%, transparent);
+  }
+}
+
+.overlay-surface:focus-visible {
+  outline-width: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
+  outline-style: var(--idg-focus-ring-style);
+  outline-color: var(--idg-color-focus-ring);
+  outline-offset: var(--idg-focus-ring-offset);
+}
+
+@media (forced-colors: active) {
+  .overlay-surface {
+    border: 2px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}

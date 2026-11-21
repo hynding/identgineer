@@ -1,0 +1,91 @@
+/* Shared by idg-popover, idg-tooltip and idg-menu: a top-layer surface (the Popover API) placed
+   beside its trigger. Where CSS anchor positioning exists and the trigger is slotted, the trigger is
+   named as the anchor with ::slotted() and the browser places the surface and flips it when there
+   is no room. Elsewhere SurfacePosition computes the same in script and writes --_x and --_y. */
+
+.surface {
+  position: fixed;
+  inset: auto;
+  left: var(--_x, 0px);
+  top: var(--_y, 0px);
+  box-sizing: border-box;
+  max-inline-size: calc(100vw - 16px);
+  max-block-size: calc(100vh - 16px);
+  margin: 0;
+  overflow: auto;
+}
+
+.surface.anchored {
+  left: auto;
+  top: auto;
+  position-anchor: --idg-trigger;
+  position-try-fallbacks:
+    flip-block,
+    flip-inline,
+    flip-block flip-inline;
+}
+
+.anchored.placement-top {
+  position-area: top;
+}
+
+.anchored.placement-top-start {
+  position-area: top span-right;
+}
+
+.anchored.placement-top-end {
+  position-area: top span-left;
+}
+
+.anchored.placement-bottom {
+  position-area: bottom;
+}
+
+.anchored.placement-bottom-start {
+  position-area: bottom span-right;
+}
+
+.anchored.placement-bottom-end {
+  position-area: bottom span-left;
+}
+
+.anchored.placement-left {
+  position-area: left;
+}
+
+.anchored.placement-left-start {
+  position-area: left span-bottom;
+}
+
+.anchored.placement-left-end {
+  position-area: left span-top;
+}
+
+.anchored.placement-right {
+  position-area: right;
+}
+
+.anchored.placement-right-start {
+  position-area: right span-bottom;
+}
+
+.anchored.placement-right-end {
+  position-area: right span-top;
+}
+
+/* The gap to the trigger is a margin on the side facing it, which flipping mirrors. */
+.anchored[class*="placement-top"] {
+  margin-block-end: var(--_offset);
+}
+
+.anchored[class*="placement-bottom"] {
+  margin-block-start: var(--_offset);
+}
+
+.anchored[class*="placement-left"] {
+  margin-inline-end: var(--_offset);
+}
+
+.anchored[class*="placement-right"] {
+  margin-inline-start: var(--_offset);
+}
