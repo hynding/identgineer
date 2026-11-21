@@ -62,7 +62,9 @@ export class IdgPagination {
    */
   @Event({ cancelable: true }) idgPageChange!: EventEmitter<PageChangeDetail>;
 
-  // Set when the user used previous or next, which may leave the control they pressed unavailable.
+  // Set when a control was used with focus in the component. The control may be left unavailable
+  // (previous and next at the ends) or be redrawn elsewhere in the list (a page number), and
+  // either way focus would fall to the page.
   private keepFocus = false;
 
   componentDidRender(): void {
@@ -98,12 +100,12 @@ export class IdgPagination {
     }
     const target = this.targetPage(kind, page);
     if (target === this.currentPage()) return;
-    if (kind !== "page") this.keepFocus = true;
     const change = this.idgPageChange.emit({ page: target });
     if (change.defaultPrevented) {
       event.preventDefault();
       return;
     }
+    this.keepFocus = (this.host.shadowRoot?.activeElement ?? null) !== null;
     this.page = target;
   }
 
