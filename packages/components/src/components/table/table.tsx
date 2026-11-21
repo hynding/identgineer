@@ -212,7 +212,14 @@ export class IdgTable {
     } finally {
       if (observer) this.observeTable();
     }
+    // Focusing runs the page's focus handlers, which may change the table, so it is done once the
+    // observer is watching again.
+    const focusing = this.focusAfterWrite;
+    this.focusAfterWrite = [];
+    for (const focus of focusing) focus();
   }
+
+  private focusAfterWrite: (() => void)[] = [];
 
   private watchSize(): void {
     this.sizeObserver?.disconnect();
@@ -285,15 +292,20 @@ export class IdgTable {
     const focused = button?.contains(deepActiveElement()) === true;
     removeSortButton(header);
     if (!focused) return;
-    header.setAttribute("tabindex", "-1");
-    header.addEventListener(
-      "blur",
-      () => {
-        header.removeAttribute("tabindex");
-      },
-      { once: true },
-    );
-    header.focus({ preventScroll: true });
+    // A tabindex the page gave the header is its own and is left as it is.
+    if (!header.hasAttribute("tabindex")) {
+      header.setAttribute("tabindex", "-1");
+      header.addEventListener(
+        "blur",
+        () => {
+          header.removeAttribute("tabindex");
+        },
+        { once: true },
+      );
+    }
+    this.focusAfterWrite.push(() => {
+      header.focus({ preventScroll: true });
+    });
   }
 
   private applySort(): void {
@@ -348,7 +360,11 @@ export class IdgTable {
     const active = deepActiveElement() as HTMLElement | null;
     const focused = active && group.contains(active) ? active : undefined;
     for (const row of rows) group.append(row);
-    focused?.focus({ preventScroll: true });
+    if (focused) {
+      this.focusAfterWrite.push(() => {
+        focused.focus({ preventScroll: true });
+      });
+    }
   }
 
   render() {
