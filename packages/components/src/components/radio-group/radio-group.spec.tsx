@@ -124,7 +124,7 @@ describe("idg-radio-group selection and keys", () => {
   it("moves to the next enabled radio on ArrowDown, skipping a disabled one, and selects it", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(plans);
     const spy = spyOnEvent("idgChange");
-    const event = press(inner(radios(root)[0] as HTMLElement), "ArrowDown");
+    const event = press(radios(root)[0] as HTMLElement, "ArrowDown");
     await waitForChanges();
     expect(event.defaultPrevented).toBe(true);
     expect((root as unknown as { value: string }).value).toBe("c");
@@ -134,17 +134,17 @@ describe("idg-radio-group selection and keys", () => {
 
   it("wraps around with ArrowUp and ArrowLeft", async () => {
     const { root, waitForChanges } = await render(plans);
-    press(inner(radios(root)[0] as HTMLElement), "ArrowUp");
+    press(radios(root)[0] as HTMLElement, "ArrowUp");
     await waitForChanges();
     expect((root as unknown as { value: string }).value).toBe("c");
-    press(inner(radios(root)[2] as HTMLElement), "ArrowLeft");
+    press(radios(root)[2] as HTMLElement, "ArrowLeft");
     await waitForChanges();
     expect((root as unknown as { value: string }).value).toBe("a");
   });
 
   it("leaves other keys alone", async () => {
     const { root } = await render(plans);
-    const event = press(inner(radios(root)[0] as HTMLElement), "a");
+    const event = press(radios(root)[0] as HTMLElement, "a");
     expect(event.defaultPrevented).toBe(false);
   });
 
@@ -155,7 +155,7 @@ describe("idg-radio-group selection and keys", () => {
         <idg-radio value="b">B</idg-radio>
       </idg-radio-group>,
     );
-    press(inner(radios(root)[0] as HTMLElement), "ArrowDown");
+    press(radios(root)[0] as HTMLElement, "ArrowDown");
     expect((root as unknown as { value: string }).value).toBe("");
   });
 });
@@ -164,7 +164,7 @@ describe("idg-radio-group as a form control", () => {
   it("submits the chosen value, or nothing", async () => {
     const { internals, root, waitForChanges } = await renderWithInternals(plans);
     expect(internals.setFormValue).toHaveBeenLastCalledWith(null);
-    press(inner(radios(root)[0] as HTMLElement), "ArrowDown");
+    press(radios(root)[0] as HTMLElement, "ArrowDown");
     await waitForChanges();
     expect(internals.setFormValue).toHaveBeenLastCalledWith("c");
   });
@@ -185,7 +185,7 @@ describe("idg-radio-group as a form control", () => {
     expect(flags).toEqual({ valueMissing: true });
     expect(message).not.toBe("");
     expect(anchor).toBe(inner(radios(root)[0] as HTMLElement));
-    press(inner(radios(root)[0] as HTMLElement), "ArrowDown");
+    press(radios(root)[0] as HTMLElement, "ArrowDown");
     await waitForChanges();
     expect(internals.setValidity).toHaveBeenLastCalledWith({});
   });
@@ -208,7 +208,7 @@ describe("idg-radio-group as a form control", () => {
       formDisabledCallback: (disabled: boolean) => void;
       formStateRestoreCallback: (state: string | null) => void;
     };
-    press(inner(radios(root)[0] as HTMLElement), "ArrowDown");
+    press(radios(root)[0] as HTMLElement, "ArrowDown");
     await waitForChanges();
     element.formResetCallback();
     await waitForChanges();

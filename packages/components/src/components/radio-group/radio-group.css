@@ -1,0 +1,23 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--idg-space-3xs) * var(--idg-density-gap-scale));
+}
+
+:host([orientation="horizontal"]) .group {
+  flex-flow: row wrap;
+  align-items: center;
+  column-gap: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+}

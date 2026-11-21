@@ -8,9 +8,11 @@ import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 import { CheckedDetail, ValueDetail } from "./utils/event-details";
 import { InputSize, InputType } from "./components/input/input-options";
+import { RadioSelectDetail } from "./components/radio/radio";
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 export { CheckedDetail, ValueDetail } from "./utils/event-details";
 export { InputSize, InputType } from "./components/input/input-options";
+export { RadioSelectDetail } from "./components/radio/radio";
 export namespace Components {
     interface IdgButton {
         /**
@@ -191,6 +193,105 @@ export namespace Components {
         "value": string;
     }
     /**
+     * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
+     * as set by the group are how it passes state down, because radios in separate shadow roots are
+     * not a native radio group.
+     */
+    interface IdgRadio {
+        /**
+          * Set by the group from its value.
+          * @default false
+         */
+        "checked": boolean;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by the group: whether the whole group is disabled.
+          * @default false
+         */
+        "groupDisabled": boolean;
+        /**
+          * Set by the group: marks the group's value as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        /**
+          * Set by the group: this radio's place, from 1.
+         */
+        "position"?: number;
+        /**
+          * Focuses the native radio.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * Set by the group: how many radios the group holds.
+         */
+        "setSize"?: number;
+        /**
+          * Set by the group: whether this radio is the group's one tab stop.
+          * @default true
+         */
+        "tabbable": boolean;
+        /**
+          * What the group takes as its value when this radio is chosen.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
+     * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
+     * its radios, is the form control.
+     */
+    interface IdgRadioGroup {
+        /**
+          * Set by idg-field: the hint and error text, as the group's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: the group's accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * Whether a choice has been made when one is required.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by idg-field, or by you: marks the choice as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "name"?: string;
+        /**
+          * How the radios are laid out.
+          * @default "vertical"
+         */
+        "orientation": Orientation;
+        /**
+          * Whether a choice has been made, showing the browser's message when it has not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Focuses the radio that is the group's tab stop.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * The value of the chosen radio. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
      * Options are written as children, exactly as for a native select, and copied into the native
      * select inside the component: the same markup works with or without a framework, and no option
      * data has to be serialised into an attribute.
@@ -364,6 +465,14 @@ export interface IdgInputCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgInputElement;
 }
+export interface IdgRadioCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgRadioElement;
+}
+export interface IdgRadioGroupCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgRadioGroupElement;
+}
 export interface IdgSelectCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgSelectElement;
@@ -417,6 +526,50 @@ declare global {
     var HTMLIdgInputElement: {
         prototype: HTMLIdgInputElement;
         new (): HTMLIdgInputElement;
+    };
+    interface HTMLIdgRadioElementEventMap {
+        "idgSelect": RadioSelectDetail;
+    }
+    /**
+     * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
+     * as set by the group are how it passes state down, because radios in separate shadow roots are
+     * not a native radio group.
+     */
+    interface HTMLIdgRadioElement extends Components.IdgRadio, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgRadioElementEventMap>(type: K, listener: (this: HTMLIdgRadioElement, ev: IdgRadioCustomEvent<HTMLIdgRadioElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgRadioElementEventMap>(type: K, listener: (this: HTMLIdgRadioElement, ev: IdgRadioCustomEvent<HTMLIdgRadioElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgRadioElement: {
+        prototype: HTMLIdgRadioElement;
+        new (): HTMLIdgRadioElement;
+    };
+    interface HTMLIdgRadioGroupElementEventMap {
+        "idgChange": ValueDetail;
+    }
+    /**
+     * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
+     * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
+     * its radios, is the form control.
+     */
+    interface HTMLIdgRadioGroupElement extends Components.IdgRadioGroup, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgRadioGroupElementEventMap>(type: K, listener: (this: HTMLIdgRadioGroupElement, ev: IdgRadioGroupCustomEvent<HTMLIdgRadioGroupElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgRadioGroupElementEventMap>(type: K, listener: (this: HTMLIdgRadioGroupElement, ev: IdgRadioGroupCustomEvent<HTMLIdgRadioGroupElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgRadioGroupElement: {
+        prototype: HTMLIdgRadioGroupElement;
+        new (): HTMLIdgRadioGroupElement;
     };
     interface HTMLIdgSelectElementEventMap {
         "idgInput": ValueDetail;
@@ -480,6 +633,8 @@ declare global {
         "idg-button": HTMLIdgButtonElement;
         "idg-checkbox": HTMLIdgCheckboxElement;
         "idg-input": HTMLIdgInputElement;
+        "idg-radio": HTMLIdgRadioElement;
+        "idg-radio-group": HTMLIdgRadioGroupElement;
         "idg-select": HTMLIdgSelectElement;
         "idg-switch": HTMLIdgSwitchElement;
         "idg-textarea": HTMLIdgTextareaElement;
@@ -664,6 +819,101 @@ declare namespace LocalJSX {
         "type"?: InputType;
         /**
           * The current value. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
+     * as set by the group are how it passes state down, because radios in separate shadow roots are
+     * not a native radio group.
+     */
+    interface IdgRadio {
+        /**
+          * Set by the group from its value.
+          * @default false
+         */
+        "checked"?: boolean;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * Set by the group: whether the whole group is disabled.
+          * @default false
+         */
+        "groupDisabled"?: boolean;
+        /**
+          * Set by the group: marks the group's value as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        /**
+          * Fires when the user chooses this radio. The group listens; you listen to the group.
+         */
+        "onIdgSelect"?: (event: IdgRadioCustomEvent<RadioSelectDetail>) => void;
+        /**
+          * Set by the group: this radio's place, from 1.
+         */
+        "position"?: number;
+        /**
+          * Set by the group: how many radios the group holds.
+         */
+        "setSize"?: number;
+        /**
+          * Set by the group: whether this radio is the group's one tab stop.
+          * @default true
+         */
+        "tabbable"?: boolean;
+        /**
+          * What the group takes as its value when this radio is chosen.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
+     * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
+     * its radios, is the form control.
+     */
+    interface IdgRadioGroup {
+        /**
+          * Set by idg-field: the hint and error text, as the group's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: the group's accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Set by idg-field, or by you: marks the choice as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "name"?: string;
+        /**
+          * Fires when the user chooses a radio.
+         */
+        "onIdgChange"?: (event: IdgRadioGroupCustomEvent<ValueDetail>) => void;
+        /**
+          * How the radios are laid out.
+          * @default "vertical"
+         */
+        "orientation"?: Orientation;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * The value of the chosen radio. Reset restores the value the element started with.
           * @default ""
          */
         "value"?: string;
@@ -879,6 +1129,26 @@ declare namespace LocalJSX {
         "accessibleDescription": string;
         "invalid": boolean;
     }
+    interface IdgRadioAttributes {
+        "value": string;
+        "checked": boolean;
+        "disabled": boolean;
+        "groupDisabled": boolean;
+        "tabbable": boolean;
+        "position": number;
+        "setSize": number;
+        "invalid": boolean;
+    }
+    interface IdgRadioGroupAttributes {
+        "name": string;
+        "value": string;
+        "required": boolean;
+        "disabled": boolean;
+        "orientation": Orientation;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
     interface IdgSelectAttributes {
         "name": string;
         "value": string;
@@ -924,6 +1194,8 @@ declare namespace LocalJSX {
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
         "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`]?: IdgCheckboxAttributes[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
         "idg-input": Omit<IdgInput, keyof IdgInputAttributes> & { [K in keyof IdgInput & keyof IdgInputAttributes]?: IdgInput[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `attr:${K}`]?: IdgInputAttributes[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `prop:${K}`]?: IdgInput[K] };
+        "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
+        "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
         "idg-select": Omit<IdgSelect, keyof IdgSelectAttributes> & { [K in keyof IdgSelect & keyof IdgSelectAttributes]?: IdgSelect[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `attr:${K}`]?: IdgSelectAttributes[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `prop:${K}`]?: IdgSelect[K] };
         "idg-switch": Omit<IdgSwitch, keyof IdgSwitchAttributes> & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes]?: IdgSwitch[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `attr:${K}`]?: IdgSwitchAttributes[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `prop:${K}`]?: IdgSwitch[K] };
         "idg-textarea": Omit<IdgTextarea, keyof IdgTextareaAttributes> & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes]?: IdgTextarea[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `attr:${K}`]?: IdgTextareaAttributes[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `prop:${K}`]?: IdgTextarea[K] };
@@ -936,6 +1208,18 @@ declare module "@stencil/core" {
             "idg-button": LocalJSX.IntrinsicElements["idg-button"] & JSXBase.HTMLAttributes<HTMLIdgButtonElement>;
             "idg-checkbox": LocalJSX.IntrinsicElements["idg-checkbox"] & JSXBase.HTMLAttributes<HTMLIdgCheckboxElement>;
             "idg-input": LocalJSX.IntrinsicElements["idg-input"] & JSXBase.HTMLAttributes<HTMLIdgInputElement>;
+            /**
+             * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
+             * as set by the group are how it passes state down, because radios in separate shadow roots are
+             * not a native radio group.
+             */
+            "idg-radio": LocalJSX.IntrinsicElements["idg-radio"] & JSXBase.HTMLAttributes<HTMLIdgRadioElement>;
+            /**
+             * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
+             * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
+             * its radios, is the form control.
+             */
+            "idg-radio-group": LocalJSX.IntrinsicElements["idg-radio-group"] & JSXBase.HTMLAttributes<HTMLIdgRadioGroupElement>;
             /**
              * Options are written as children, exactly as for a native select, and copied into the native
              * select inside the component: the same markup works with or without a framework, and no option
