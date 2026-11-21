@@ -80,8 +80,8 @@ describe("the public role", () => {
     expect(allows(publicRole, contentType, "read")).toBe(true);
   });
 
-  // The Strapi target applies no grant condition at its REST API, so a conditioned public grant
-  // would be an unconditioned one there.
+  // Both targets can enforce a conditioned public read now, but the model adds none until the
+  // brand identity feature decides which brand kits are public (issue #18).
   it("holds no conditioned grant", () => {
     expect(publicRole.grants.filter((g) => g.condition !== undefined)).toEqual([]);
   });
