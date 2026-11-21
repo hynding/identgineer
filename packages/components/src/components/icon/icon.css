@@ -1,0 +1,43 @@
+:host {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  vertical-align: -0.2em;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+/* Sizes are in em, so an icon follows the type around it and the UX mode's type scale. */
+.icon {
+  --_size: 1.25em;
+
+  box-sizing: border-box;
+  display: block;
+  inline-size: var(--_size);
+  block-size: var(--_size);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.size-sm {
+  --_size: 1em;
+}
+
+.size-lg {
+  --_size: 1.5em;
+}
+
+.size-xl {
+  --_size: 2em;
+}
+
+@media (forced-colors: active) {
+  .icon {
+    forced-color-adjust: auto;
+  }
+}

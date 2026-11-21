@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { Build } from "@stencil/core";
 import { h, render } from "@stencil/vitest";
 import "./icon";
 
@@ -71,6 +72,9 @@ describe("idg-icon with a name it does not have", () => {
   });
 
   it("warns once per name in development", async () => {
+    // The specs compile in production mode; the warning is for development builds.
+    const development = Build.isDev;
+    Build.isDev = true;
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     try {
       await render(<idg-icon name={"missing-one" as "check"} />);
@@ -80,6 +84,7 @@ describe("idg-icon with a name it does not have", () => {
       await render(<idg-icon name={"missing-two" as "check"} />);
       expect(warn).toHaveBeenCalledTimes(2);
     } finally {
+      Build.isDev = development;
       warn.mockRestore();
     }
   });

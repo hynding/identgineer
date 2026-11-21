@@ -7,10 +7,14 @@
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 import { CheckedDetail, ValueDetail } from "./utils/event-details";
+import { IconName } from "./components/icon/icon-paths";
+import { IconSize } from "./components/icon/icon-options";
 import { InputSize, InputType } from "./components/input/input-options";
 import { RadioSelectDetail } from "./components/radio/radio";
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 export { CheckedDetail, ValueDetail } from "./utils/event-details";
+export { IconName } from "./components/icon/icon-paths";
+export { IconSize } from "./components/icon/icon-options";
 export { InputSize, InputType } from "./components/input/input-options";
 export { RadioSelectDetail } from "./components/radio/radio";
 export namespace Components {
@@ -140,6 +144,24 @@ export namespace Components {
           * @default false
          */
         "required": boolean;
+    }
+    /**
+     * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
+     */
+    interface IdgIcon {
+        /**
+          * Gives the icon an accessible name. Without it the icon is decoration and hidden.
+         */
+        "label"?: string;
+        /**
+          * Which icon to draw. An unknown name draws nothing.
+         */
+        "name"?: IconName;
+        /**
+          * Size relative to the surrounding text.
+          * @default "md"
+         */
+        "size": IconSize;
     }
     interface IdgInput {
         /**
@@ -550,6 +572,15 @@ declare global {
         prototype: HTMLIdgFieldElement;
         new (): HTMLIdgFieldElement;
     };
+    /**
+     * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
+     */
+    interface HTMLIdgIconElement extends Components.IdgIcon, HTMLStencilElement {
+    }
+    var HTMLIdgIconElement: {
+        prototype: HTMLIdgIconElement;
+        new (): HTMLIdgIconElement;
+    };
     interface HTMLIdgInputElementEventMap {
         "idgInput": ValueDetail;
         "idgChange": ValueDetail;
@@ -674,6 +705,7 @@ declare global {
         "idg-button": HTMLIdgButtonElement;
         "idg-checkbox": HTMLIdgCheckboxElement;
         "idg-field": HTMLIdgFieldElement;
+        "idg-icon": HTMLIdgIconElement;
         "idg-input": HTMLIdgInputElement;
         "idg-radio": HTMLIdgRadioElement;
         "idg-radio-group": HTMLIdgRadioGroupElement;
@@ -813,6 +845,24 @@ declare namespace LocalJSX {
           * @default false
          */
         "required"?: boolean;
+    }
+    /**
+     * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
+     */
+    interface IdgIcon {
+        /**
+          * Gives the icon an accessible name. Without it the icon is decoration and hidden.
+         */
+        "label"?: string;
+        /**
+          * Which icon to draw. An unknown name draws nothing.
+         */
+        "name"?: IconName;
+        /**
+          * Size relative to the surrounding text.
+          * @default "md"
+         */
+        "size"?: IconSize;
     }
     interface IdgInput {
         /**
@@ -1181,6 +1231,11 @@ declare namespace LocalJSX {
         "required": boolean;
         "optionalText": string;
     }
+    interface IdgIconAttributes {
+        "name": IconName;
+        "size": IconSize;
+        "label": string;
+    }
     interface IdgInputAttributes {
         "type": InputType;
         "name": string;
@@ -1272,6 +1327,7 @@ declare namespace LocalJSX {
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
         "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`]?: IdgCheckboxAttributes[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
         "idg-field": Omit<IdgField, keyof IdgFieldAttributes> & { [K in keyof IdgField & keyof IdgFieldAttributes]?: IdgField[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `attr:${K}`]?: IdgFieldAttributes[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `prop:${K}`]?: IdgField[K] };
+        "idg-icon": Omit<IdgIcon, keyof IdgIconAttributes> & { [K in keyof IdgIcon & keyof IdgIconAttributes]?: IdgIcon[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `attr:${K}`]?: IdgIconAttributes[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `prop:${K}`]?: IdgIcon[K] };
         "idg-input": Omit<IdgInput, keyof IdgInputAttributes> & { [K in keyof IdgInput & keyof IdgInputAttributes]?: IdgInput[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `attr:${K}`]?: IdgInputAttributes[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `prop:${K}`]?: IdgInput[K] };
         "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
         "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
@@ -1293,6 +1349,10 @@ declare module "@stencil/core" {
              * and the control applies it to its own native element.
              */
             "idg-field": LocalJSX.IntrinsicElements["idg-field"] & JSXBase.HTMLAttributes<HTMLIdgFieldElement>;
+            /**
+             * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
+             */
+            "idg-icon": LocalJSX.IntrinsicElements["idg-icon"] & JSXBase.HTMLAttributes<HTMLIdgIconElement>;
             "idg-input": LocalJSX.IntrinsicElements["idg-input"] & JSXBase.HTMLAttributes<HTMLIdgInputElement>;
             /**
              * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
