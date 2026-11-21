@@ -1156,3 +1156,43 @@ test.describe("idg-pagination redrawn by script with a control focused", () => {
     });
   }
 });
+
+test.describe("idg-pagination restoring focus after the page scrolled away", () => {
+  for (const id of ["pagination-buttons", "pagination-links"]) {
+    test(`${id === "pagination-buttons" ? "buttons" : "links"}: the restore does not scroll the page back down`, async ({
+      page,
+    }) => {
+      await openNavigation(page);
+      const pager = page.locator(`#${id}`);
+      await pager.evaluate((host) => {
+        host.setAttribute("page-count", "12");
+        host.setAttribute("page", "6");
+        const spacer = document.createElement("div");
+        spacer.style.blockSize = "2400px";
+        host.before(spacer);
+        // The documented flow: cancel the change, scroll to the top, load, then set the page.
+        host.addEventListener("idgPageChange", (event) => {
+          event.preventDefault();
+          window.scrollTo(0, 0);
+          setTimeout(() => {
+            host.setAttribute("page", "7");
+          }, 50);
+        });
+      });
+      const seven = pager.locator('[part="page"]').filter({ hasText: /^7$/ });
+      await expect(seven).toHaveCount(1);
+      await seven.focus();
+      await page.keyboard.press("Enter");
+      await expect(pager).toHaveAttribute("page", "7");
+      await expect
+        .poll(() =>
+          pager.evaluate((host) => host.shadowRoot?.activeElement?.textContent.trim() ?? "none"),
+        )
+        .toBe("7");
+      await page.evaluate(
+        () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+      );
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    });
+  }
+});
