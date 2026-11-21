@@ -21,6 +21,7 @@ export default defineConfig({
           include: ["cms/tests/**/*.test.ts"],
         },
       },
+      "packages/components/vitest.*.config.ts",
     ],
   },
 });
