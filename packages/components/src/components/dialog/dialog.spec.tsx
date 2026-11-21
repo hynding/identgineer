@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { h, render } from "@stencil/vitest";
 import { installDialogElement } from "../../testing/dialog-element";
+import { removeHost } from "../../testing/remove-host";
 import type { DialogCloseDetail } from "./dialog-options";
 import "./dialog";
 
@@ -273,5 +274,56 @@ describe("idg-dialog forms", () => {
     if (!form) throw new Error("no form");
     submit(form);
     expect(native(root).open).toBe(true);
+  });
+});
+
+describe("idg-dialog nested and moved", () => {
+  const nextTask = () => new Promise((resolve) => setTimeout(resolve));
+
+  it("closes an open nested dialog before itself, innermost first, with reason method", async () => {
+    const { root } = await render(
+      <idg-dialog open id="outer">
+        <idg-dialog open id="middle">
+          <idg-dialog open id="inner">
+            Body
+          </idg-dialog>
+        </idg-dialog>
+      </idg-dialog>,
+    );
+    const closes: string[] = [];
+    root.addEventListener("idgClose", (event) => {
+      const detail = (event as CustomEvent<DialogCloseDetail>).detail;
+      closes.push(`${(event.target as HTMLElement).id}:${detail.reason}`);
+    });
+    const middle = root.querySelector<HTMLElement>("#middle");
+    const inner = root.querySelector<HTMLElement>("#inner");
+    if (!middle || !inner) throw new Error("no nested dialogs");
+    await (root as DialogHost).close();
+    expect(native(inner).open).toBe(false);
+    expect(native(middle).open).toBe(false);
+    await nextTask();
+    expect(closes).toEqual(["inner:method", "middle:method", "outer:method"]);
+  });
+
+  it("closes and reports it when removed while open, and opens as a modal again", async () => {
+    const { root } = await render(
+      <div>
+        <idg-dialog open>Body</idg-dialog>
+      </div>,
+    );
+    const dialog = root.querySelector("idg-dialog") as DialogHost;
+    const closes: DialogCloseDetail[] = [];
+    dialog.addEventListener("idgClose", (event) => {
+      closes.push((event as CustomEvent<DialogCloseDetail>).detail);
+    });
+    removeHost(dialog);
+    expect(dialog.open).toBe(false);
+    expect(closes).toEqual([{ returnValue: "", reason: "method" }]);
+    root.append(dialog);
+    await nextTask();
+    expect(closes).toHaveLength(1);
+    await dialog.showModal();
+    expect(native(dialog).open).toBe(true);
+    expect(methods.showModal).toHaveBeenCalledTimes(2);
   });
 });
