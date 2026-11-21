@@ -86,6 +86,7 @@ describe("built tokens", () => {
       "--idg-ux-type-scale",
       "--idg-motion-enabled",
       "--idg-feedback-press-scale",
+      "--idg-feedback-hover-delay",
       "--idg-focus-emphasis",
     ]) {
       expect(names.has(required), required).toBe(true);
