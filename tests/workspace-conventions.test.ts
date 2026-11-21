@@ -1,8 +1,10 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const ROOT = new URL("..", import.meta.url).pathname;
+// fileURLToPath, not URL.pathname: pathname keeps percent-encoding, so a checkout path with a space would not resolve.
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const WORKSPACE_PARENTS = ["packages", "apps"];
 
 interface WorkspacePackage {
