@@ -1,6 +1,6 @@
 import { TOKEN_NAMES } from "@identgineer/tokens";
 import { describe, expect, it } from "vitest";
-import { GAP_STEPS, SIZE_STEPS } from "./layout-steps";
+import { GAP_STEPS, SIZE_STEPS, stepOf } from "./layout-steps";
 
 describe("layout steps", () => {
   it.each(GAP_STEPS.filter((step) => step !== "none"))(
@@ -27,4 +27,17 @@ describe("layout steps", () => {
     expect(SIZE_STEPS[0]).toBe("xs");
     expect(SIZE_STEPS.at(-1)).toBe("2xl");
   });
+});
+
+describe("stepOf", () => {
+  it("returns an allowed step", () => {
+    expect(stepOf(SIZE_STEPS, "xl")).toBe("xl");
+  });
+
+  it.each([undefined, null, "", "huge", "XL", "20rem", "var(--x)", 3])(
+    "returns undefined for %j, so the layout's own value applies",
+    (value) => {
+      expect(stepOf(SIZE_STEPS, value)).toBeUndefined();
+    },
+  );
 });
