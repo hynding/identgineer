@@ -1,4 +1,4 @@
-import { Component, h, Prop } from "@stencil/core";
+import { Component, Element, h, Prop, State } from "@stencil/core";
 import {
   GAP_STEPS,
   SIZE_STEPS,
@@ -23,14 +23,31 @@ import { limitOf } from "./switcher-options";
   shadow: true,
 })
 export class IdgSwitcher {
+  @Element() host!: HTMLElement;
+
   /** Container width below which the items stack, a step of the size scale. */
   @Prop({ reflect: true }) threshold: SizeStep = "l";
 
-  /** Most items allowed in a row, 2 to 6. With more items than that, they stack at any width. */
+  /** Most items allowed in a row, 2 to 6. With more items than that, they stack at any width. Items are counted again when they are added or removed. */
   @Prop({ reflect: true }) limit?: number;
 
   /** Space between items, in both directions, a step of the space scale. Without it the layout's gap is used. */
   @Prop({ reflect: true }) gap?: GapStep;
+
+  @State() private itemCount = 0;
+
+  componentWillLoad(): void {
+    this.countItems();
+  }
+
+  // Only a count is read, never a size. CSS cannot count the host's children from inside the
+  // shadow tree (:host() takes no :has()), and the limit needs the total to stack every item.
+  private countItems(): void {
+    const count = Array.from(this.host.children).filter(
+      (child) => (child.getAttribute("slot") ?? "") === "",
+    ).length;
+    if (count !== this.itemCount) this.itemCount = count;
+  }
 
   render() {
     const threshold = stepOf(SIZE_STEPS, this.threshold) ?? "l";
@@ -41,12 +58,16 @@ export class IdgSwitcher {
         class={{
           switcher: true,
           [`size-${threshold}`]: true,
-          [`limit-${String(limit)}`]: limit !== undefined,
+          "over-limit": limit !== undefined && this.itemCount > limit,
           [`gap-${String(gap)}`]: gap !== undefined,
         }}
         part="switcher"
       >
-        <slot />
+        <slot
+          onSlotchange={() => {
+            this.countItems();
+          }}
+        />
       </div>
     );
   }
