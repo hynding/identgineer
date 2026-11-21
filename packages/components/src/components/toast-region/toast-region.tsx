@@ -79,6 +79,8 @@ export class IdgToastRegion {
   private lastOutside: Element | undefined;
   private motion?: MediaQueryList;
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
+  /** Lines waiting to be announced, per live region. */
+  private readonly pending = new Map<HTMLElement, string[]>();
 
   connectedCallback(): void {
     this.followMotionPreference();
@@ -99,6 +101,7 @@ export class IdgToastRegion {
     this.shown = false;
     for (const timer of this.timers) clearTimeout(timer);
     this.timers.clear();
+    this.pending.clear();
   }
 
   private followMotionPreference(): void {
@@ -215,18 +218,24 @@ export class IdgToastRegion {
     this.shown = (event as Event & { newState?: string }).newState === "open";
   };
 
+  // Toasts that come into view close together are gathered into one announcement, since a newer
+  // text in the same live region can cut off the one before it.
   private announce(toasts: readonly RegionToast[]): void {
-    const lines = new Map<HTMLElement, string[]>();
     for (const toast of toasts) {
       const announcer = toast.variant === "danger" ? this.assertive : this.polite;
       if (!announcer) continue;
       const parts = [toast.heading ?? "", toast.description ?? ""].filter((part) => part !== "");
-      lines.set(announcer, [...(lines.get(announcer) ?? []), ...parts]);
-    }
-    for (const [announcer, parts] of lines) {
       if (parts.length === 0) continue;
+      const pending = this.pending.get(announcer);
+      if (pending) {
+        pending.push(...parts);
+        continue;
+      }
+      this.pending.set(announcer, parts);
       this.later(ANNOUNCE_DELAY_MS, () => {
-        say(announcer, parts);
+        const lines = this.pending.get(announcer) ?? [];
+        this.pending.delete(announcer);
+        say(announcer, lines);
         const said = announcer.textContent;
         this.later(ANNOUNCEMENT_LIFETIME_MS, () => {
           if (announcer.textContent === said) say(announcer, []);
