@@ -728,6 +728,31 @@ test.describe("a rule between stack items", () => {
     }
   }
 
+  for (const [name, selector] of [
+    ["a flex row that centres its items", "#row-centred"],
+    ["an idg-cluster", "#cluster-hdivider"],
+    ["a grid that centres its items", "#grid-centred"],
+  ] as const) {
+    test(`a horizontal idg-divider keeps its line in the middle of ${name}`, async ({ page }) => {
+      await open(page);
+      const centres = await page.locator(selector).evaluate((row) => {
+        const card = row.querySelector("idg-card");
+        const lines = Array.from(row.querySelectorAll("idg-divider")).map((divider) => {
+          const line = divider.shadowRoot?.querySelector(".line");
+          if (!line) throw new Error("no line");
+          const box = line.getBoundingClientRect();
+          return { centre: box.y + box.height / 2, width: box.width };
+        });
+        if (!card) throw new Error("no card");
+        const box = card.getBoundingClientRect();
+        return { row: box.y + box.height / 2, height: box.height, lines };
+      });
+      expect(centres.height).toBeGreaterThan(40);
+      expect(centres.lines.length).toBeGreaterThan(0);
+      for (const line of centres.lines) expect(line.centre).toBeCloseTo(centres.row, 0);
+    });
+  }
+
   test("a vertical idg-divider in a cluster spans the height of the row", async ({ page }) => {
     await open(page);
     const heights = await page.locator("#cluster-divider").evaluate((element) => {

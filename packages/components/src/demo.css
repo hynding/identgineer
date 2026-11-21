@@ -355,3 +355,22 @@ section.plain > h2 {
   max-inline-size: 100%;
   block-size: auto;
 }
+
+/* Rows that centre their items, for the horizontal divider's line to sit in the middle of. */
+.centred-row {
+  display: flex;
+  align-items: center;
+  gap: var(--idg-space-s);
+}
+
+.centred-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: var(--idg-space-s);
+}
+
+.grow {
+  flex: 1 1 0;
+  min-inline-size: 0;
+}
