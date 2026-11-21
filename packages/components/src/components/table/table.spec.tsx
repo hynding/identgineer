@@ -767,7 +767,8 @@ describe("idg-table spanning cells added later", () => {
       </idg-table>,
     );
     const body = within(root, "tbody");
-    body.replaceChildren(loading());
+    while (body.firstChild) body.firstChild.remove();
+    body.append(loading());
     watcher.notify([{ type: "childList", target: body }]);
     await waitForChanges();
     expect(root.querySelectorAll("button.idg-table-sort")).toHaveLength(1);
@@ -797,7 +798,8 @@ describe("idg-table spanning cells added later", () => {
     const button = sortButton(root, 0);
     Object.defineProperty(document, "activeElement", { configurable: true, get: () => button });
     const body = within(root, "tbody");
-    body.replaceChildren(loading());
+    while (body.firstChild) body.firstChild.remove();
+    body.append(loading());
     watcher.notify([{ type: "childList", target: body }]);
     await waitForChanges();
     expect(root.querySelectorAll("button.idg-table-sort")).toHaveLength(0);

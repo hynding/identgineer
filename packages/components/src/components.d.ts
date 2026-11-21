@@ -113,6 +113,11 @@ export namespace Components {
          */
         "open": boolean;
         /**
+          * Set by the accordion while it settles the items at load: a change then is not announced.
+          * @default false
+         */
+        "quiet": boolean;
+        /**
           * Focuses the button.
          */
         "setFocus": () => Promise<void>;
@@ -2230,6 +2235,11 @@ declare namespace LocalJSX {
          */
         "open"?: boolean;
         /**
+          * Set by the accordion while it settles the items at load: a change then is not announced.
+          * @default false
+         */
+        "quiet"?: boolean;
+        /**
           * Names the item in `idgToggle`.
           * @default ""
          */
@@ -3599,6 +3609,7 @@ declare namespace LocalJSX {
         "headingLevel": number;
         "hasRegion": boolean;
         "findInPage": boolean;
+        "quiet": boolean;
     }
     interface IdgAlertAttributes {
         "variant": AlertVariant;

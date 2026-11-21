@@ -140,8 +140,7 @@ export class IdgTable {
   @Watch("sortDirection")
   @Watch("manualSort")
   sortChanged(): void {
-    this.applySort();
-    this.mutationObserver?.takeRecords();
+    this.refresh();
   }
 
   @Listen("click")
@@ -179,15 +178,40 @@ export class IdgTable {
   private watchTable(): void {
     this.mutationObserver?.disconnect();
     if (typeof MutationObserver === "undefined") return;
-    this.mutationObserver = new MutationObserver(() => {
-      this.refresh();
+    this.mutationObserver = new MutationObserver((records) => {
+      if (records.some((record) => this.concernsTable(record.target))) this.refresh();
     });
-    this.mutationObserver.observe(this.host, {
+    this.observeTable();
+  }
+
+  private observeTable(): void {
+    this.mutationObserver?.observe(this.host, {
       childList: true,
       subtree: true,
       attributes: true,
       attributeFilter: ["rowspan", "colspan"],
     });
+  }
+
+  // What happens inside a table nested in a cell is that table's own business, and its own
+  // component looks after it.
+  private concernsTable(target: Node): boolean {
+    if (target === this.host) return true;
+    const element = target.nodeType === 1 ? (target as Element) : target.parentElement;
+    const owner = element?.closest("table");
+    return owner === slottedTable(this.host);
+  }
+
+  // Everything this component writes to its table is written with the observer disconnected, so
+  // that its own changes, or those of a nested table's component, can never wake it again.
+  private quietly(write: () => void): void {
+    const observer = this.mutationObserver;
+    observer?.disconnect();
+    try {
+      write();
+    } finally {
+      if (observer) this.observeTable();
+    }
   }
 
   private watchSize(): void {
@@ -232,17 +256,44 @@ export class IdgTable {
   }
 
   private refresh(): void {
-    const table = slottedTable(this.host);
-    if (table) {
-      const sortable = !hasSpanningCells(table);
-      for (const header of sortableHeaders(table)) {
-        if (sortable && !hasSortButton(header)) addSortButton(header);
-        if (!sortable) removeSortButton(header);
-      }
+    this.quietly(() => {
+      const table = slottedTable(this.host);
+      if (table) this.offerSorting(table);
+      this.applySort();
+    });
+  }
+
+  // A table with cells that span cannot have its rows moved, but with manual-sort the page does
+  // the sorting and no rows are moved here, so the buttons stay.
+  private isSortable(table: HTMLElement): boolean {
+    return this.manualSort || !hasSpanningCells(table);
+  }
+
+  private offerSorting(table: HTMLElement): void {
+    const sortable = this.isSortable(table);
+    for (const header of sortableHeaders(table)) {
+      if (sortable && !hasSortButton(header)) addSortButton(header);
+      if (!sortable && hasSortButton(header)) this.withdrawSorting(header);
     }
-    this.applySort();
-    // What was changed above is this component's own doing, and need not wake it again.
-    this.mutationObserver?.takeRecords();
+  }
+
+  // Taking the button away would drop focus to the page, so the header takes it.
+  private withdrawSorting(header: HTMLElement): void {
+    const button = Array.from(header.children).find((child) =>
+      child.classList.contains("idg-table-sort"),
+    );
+    const focused = button?.contains(deepActiveElement()) === true;
+    removeSortButton(header);
+    if (!focused) return;
+    header.setAttribute("tabindex", "-1");
+    header.addEventListener(
+      "blur",
+      () => {
+        header.removeAttribute("tabindex");
+      },
+      { once: true },
+    );
+    header.focus({ preventScroll: true });
   }
 
   private applySort(): void {
@@ -251,7 +302,7 @@ export class IdgTable {
     const direction = oneOf(SORT_DIRECTIONS, this.sortDirection, "ascending");
     const headers = sortableHeaders(table);
     const active =
-      this.sortKey === "" || hasSpanningCells(table)
+      this.sortKey === "" || !this.isSortable(table)
         ? undefined
         : headers.find((header) => sortKeyOf(header) === this.sortKey);
     for (const header of headers) {

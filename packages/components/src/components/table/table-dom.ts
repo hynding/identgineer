@@ -14,9 +14,13 @@ export function captionOf(table: Element): HTMLElement | undefined {
   return childrenNamed(table, "caption")[0];
 }
 
-/** The header cells marked sortable. */
+/** The header cells marked sortable, in the table's own header rows and not a nested table's. */
 export function sortableHeaders(table: Element): HTMLElement[] {
-  return Array.from(table.querySelectorAll<HTMLElement>("thead > tr > th[data-sortable]"));
+  return childrenNamed(table, "thead").flatMap((group) =>
+    childrenNamed(group, "tr").flatMap((row) =>
+      childrenNamed(row, "th").filter((cell) => cell.hasAttribute("data-sortable")),
+    ),
+  );
 }
 
 /** The body row groups, each sorted on its own so a table with several keeps its sections. */
