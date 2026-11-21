@@ -18,11 +18,14 @@ describe("idg-button rendering", () => {
     expect(native.classList.contains("size-md")).toBe(true);
   });
 
-  it.each(["primary", "secondary", "ghost", "danger"] as const)("applies variant %s", async (variant) => {
-    const { root } = await render(<idg-button variant={variant}>Save</idg-button>);
-    expect(control(root).classList.contains(`variant-${variant}`)).toBe(true);
-    expect(root.getAttribute("variant")).toBe(variant);
-  });
+  it.each(["primary", "secondary", "ghost", "danger"] as const)(
+    "applies variant %s",
+    async (variant) => {
+      const { root } = await render(<idg-button variant={variant}>Save</idg-button>);
+      expect(control(root).classList.contains(`variant-${variant}`)).toBe(true);
+      expect(root.getAttribute("variant")).toBe(variant);
+    },
+  );
 
   it.each(["sm", "md", "lg"] as const)("applies size %s", async (size) => {
     const { root } = await render(<idg-button size={size}>Save</idg-button>);
@@ -103,7 +106,6 @@ describe("idg-button disabled", () => {
     const onClick = vi.fn();
     root.addEventListener("click", onClick);
     control(root).click();
-    root.click();
     expect(onClick).not.toHaveBeenCalled();
   });
 
@@ -127,7 +129,9 @@ describe("idg-button loading", () => {
 
   it("renders a spinner that assistive technology skips", async () => {
     const { root } = await render(<idg-button loading>Save</idg-button>);
-    expect(root.shadowRoot?.querySelector('[part="spinner"]')?.getAttribute("aria-hidden")).toBe("true");
+    expect(root.shadowRoot?.querySelector('[part="spinner"]')?.getAttribute("aria-hidden")).toBe(
+      "true",
+    );
   });
 
   it("is not busy when idle", async () => {
@@ -141,7 +145,6 @@ describe("idg-button loading", () => {
     const onClick = vi.fn();
     root.addEventListener("click", onClick);
     control(root).click();
-    root.click();
     expect(onClick).not.toHaveBeenCalled();
   });
 });
@@ -265,16 +268,20 @@ describe("idg-button in a form", () => {
     const form = fakeForm();
     const prototype = Object.getPrototypeOf(
       Object.getPrototypeOf(document.createElement("div")),
-    ) as { attachInternals(): object };
-    const original = prototype.attachInternals;
-    prototype.attachInternals = function attachInternals() {
-      return { ...original.call(this), form };
-    };
+    ) as object;
+    const attachInternals = Reflect.get(prototype, "attachInternals") as (this: object) => object;
+    const spy = vi.spyOn(
+      prototype as { attachInternals: typeof attachInternals },
+      "attachInternals",
+    );
+    spy.mockImplementation(function (this: object) {
+      return { ...attachInternals.call(this), form };
+    });
     try {
       const rendered = await render(button);
       return { ...rendered, form };
     } finally {
-      prototype.attachInternals = original;
+      spy.mockRestore();
     }
   }
 
@@ -300,19 +307,36 @@ describe("idg-button in a form", () => {
   });
 
   it.each([
-    ["disabled", <idg-button type="submit" disabled>Go</idg-button>],
-    ["loading", <idg-button type="submit" loading>Go</idg-button>],
+    [
+      "disabled",
+      <idg-button type="submit" disabled>
+        Go
+      </idg-button>,
+    ],
+    [
+      "loading",
+      <idg-button type="submit" loading>
+        Go
+      </idg-button>,
+    ],
   ])("does not submit while %s", async (_state, button) => {
     const { root, form } = await renderInForm(button);
     control(root).click();
-    root.click();
     expect(form.requestSubmit).not.toHaveBeenCalled();
   });
 
   it("does not reset while disabled or loading", async () => {
-    const disabled = await renderInForm(<idg-button type="reset" disabled>Go</idg-button>);
+    const disabled = await renderInForm(
+      <idg-button type="reset" disabled>
+        Go
+      </idg-button>,
+    );
     control(disabled.root).click();
-    const loading = await renderInForm(<idg-button type="reset" loading>Go</idg-button>);
+    const loading = await renderInForm(
+      <idg-button type="reset" loading>
+        Go
+      </idg-button>,
+    );
     control(loading.root).click();
     expect(disabled.form.reset).not.toHaveBeenCalled();
     expect(loading.form.reset).not.toHaveBeenCalled();

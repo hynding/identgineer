@@ -1,0 +1,173 @@
+.control {
+  --_height-scale: 1;
+  --_padding-scale: 1;
+
+  min-block-size: max(
+    var(--idg-density-target-size),
+    calc(var(--idg-density-control-height) * var(--_height-scale))
+  );
+  padding-inline: calc(var(--idg-density-control-padding-inline) * var(--_padding-scale));
+  padding-block: var(--idg-density-control-padding-block);
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  box-shadow: var(--idg-elevation-sm);
+}
+
+:host([full-width]) {
+  display: flex;
+}
+
+:host([full-width]) .control {
+  inline-size: 100%;
+}
+
+/* Size */
+
+.size-sm {
+  --_height-scale: 0.8;
+  --_padding-scale: 0.75;
+
+  border-radius: var(--idg-shape-radius-sm);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+}
+
+.size-md {
+  border-radius: var(--idg-shape-radius-md);
+}
+
+.size-lg {
+  --_height-scale: 1.25;
+  --_padding-scale: 1.25;
+
+  border-radius: var(--idg-shape-radius-lg);
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+}
+
+/* Variant */
+
+.variant-primary {
+  background: var(--idg-color-accent);
+  color: var(--idg-color-on-accent);
+}
+
+.variant-secondary {
+  background: var(--idg-surface-background);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  color: var(--idg-color-text);
+}
+
+.variant-ghost {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--idg-color-link);
+}
+
+.variant-danger {
+  background: var(--idg-color-danger);
+  color: var(--idg-color-on-danger);
+}
+
+/* State. The :not() guards keep a blocked control from reacting as if it were live. */
+
+.control:not(:disabled):not([aria-disabled="true"]):hover {
+  box-shadow: var(--idg-elevation-md);
+  transform: translateY(calc(-1 * var(--_lift)));
+}
+
+.variant-primary:not(:disabled):not([aria-disabled="true"]):hover {
+  background: var(--idg-color-accent-hover);
+}
+
+.variant-secondary:not(:disabled):not([aria-disabled="true"]):hover,
+.variant-ghost:not(:disabled):not([aria-disabled="true"]):hover {
+  background: var(--idg-color-accent-subtle);
+  color: var(--idg-color-on-accent-subtle);
+}
+
+.variant-danger:not(:disabled):not([aria-disabled="true"]):hover {
+  background: color-mix(in srgb, var(--idg-color-danger) 88%, var(--idg-color-text));
+}
+
+/* A hard-shadow design presses the control into its own shadow by half the offset. */
+.control:not(:disabled):not([aria-disabled="true"]):active {
+  box-shadow: none;
+  transform: translate(
+      calc(var(--idg-ornament-hard-shadow-x) / 2),
+      calc(var(--idg-ornament-hard-shadow-y) / 2)
+    )
+    scale(var(--_press));
+}
+
+.control:disabled,
+.control[aria-disabled="true"] {
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+/* Designs without control borders (soft, elevated) would leave a quiet variant with no edge. */
+@container style(--idg-border-control-style: none) {
+  .variant-secondary {
+    box-shadow:
+      inset 0 0 0 1px var(--idg-color-border-strong),
+      var(--idg-elevation-sm);
+  }
+}
+
+/* Parts */
+
+.label {
+  min-inline-size: 0;
+}
+
+.spinner {
+  box-sizing: border-box;
+  flex: none;
+  inline-size: 1em;
+  block-size: 1em;
+  border: 0.15em solid currentcolor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  /* Rotation is scaled by --idg-motion-enabled, leaving a still arc where movement is off, and
+     the opacity pulse takes over there so the control still reads as busy. */
+  animation:
+    idg-spin calc(var(--idg-motion-duration-slow) * 3) linear infinite,
+    idg-pulse calc(var(--idg-motion-duration-slow) * 4) ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
+@keyframes idg-spin {
+  to {
+    transform: rotate(calc(360deg * var(--idg-motion-enabled)));
+  }
+}
+
+@keyframes idg-pulse {
+  to {
+    opacity: calc(1 - 0.6 * (1 - var(--idg-motion-enabled)));
+  }
+}
+
+/* The hint is hidden unless the UX mode turns shortcuts on. A style query reads the token without
+   any script; where unsupported the hint stays hidden, and aria-keyshortcuts still applies. */
+.shortcut {
+  display: none;
+  padding-inline: var(--idg-space-2xs);
+  border: 1px solid currentcolor;
+  border-radius: var(--idg-shape-radius-sm);
+  font-family: var(--idg-font-family-mono);
+  font-size: 0.8em;
+  font-weight: var(--idg-font-weight-regular);
+  line-height: var(--idg-font-line-height-snug);
+  text-transform: none;
+}
+
+@container style(--idg-ux-shortcuts: 1) {
+  .shortcut {
+    display: inline-block;
+  }
+}

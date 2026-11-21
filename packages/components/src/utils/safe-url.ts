@@ -2,8 +2,15 @@ const ALLOWED_SCHEMES: ReadonlySet<string> = new Set(["http", "https", "mailto",
 
 // Browsers drop tabs and newlines inside a url and read a backslash as a slash, so a value
 // containing either is parsed differently from how it looks. Refusing them removes the ambiguity.
-const CONTROL_CHARACTER = /[\u0000-\u001f\u007f-\u009f]/;
 const SCHEME = /^([^:/?#]*):/;
+
+function hasControlCharacter(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code <= 0x1f || (code >= 0x7f && code <= 0x9f)) return true;
+  }
+  return false;
+}
 
 /**
  * Returns the url when it is safe to put in an `href`, otherwise `undefined`.
@@ -12,7 +19,7 @@ const SCHEME = /^([^:/?#]*):/;
  */
 export function safeUrl(url: string | null | undefined): string | undefined {
   if (typeof url !== "string" || url === "") return undefined;
-  if (url !== url.trim() || CONTROL_CHARACTER.test(url) || url.includes("\\")) return undefined;
+  if (url !== url.trim() || hasControlCharacter(url) || url.includes("\\")) return undefined;
 
   const scheme = SCHEME.exec(url)?.[1];
   if (scheme === undefined) return url;
