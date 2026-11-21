@@ -261,11 +261,17 @@ describe("idg-pagination as links", () => {
   });
 });
 
-// The mock DOM has no focus, so what the shadow root reports as focused is set by hand.
-function focusIn(root: HTMLElement, current: () => Element | null): void {
+// The mock DOM has no focus, so what the shadow root reports as focused is set by hand: the
+// answers are given in turn, the last one for good. The component asks before it draws, and
+// again after, so `[control, null]` is focus that was on a control and fell out when it was moved.
+function focusIn(root: HTMLElement, ...answers: (Element | null)[]): void {
   const shadow = root.shadowRoot;
   if (!shadow) throw new Error("no shadow root");
-  Object.defineProperty(shadow, "activeElement", { configurable: true, get: current });
+  let asked = 0;
+  Object.defineProperty(shadow, "activeElement", {
+    configurable: true,
+    get: () => answers[Math.min(asked++, answers.length - 1)] ?? null,
+  });
 }
 
 const watchFocus = () =>
@@ -274,14 +280,15 @@ const watchFocus = () =>
     "focus",
   );
 
+const focusedControls = (focus: ReturnType<typeof watchFocus>) =>
+  focus.mock.contexts.map((context) => (context as HTMLElement).textContent.trim());
+
 describe("idg-pagination focus", () => {
   it("moves focus to the current page when the control that was used becomes unavailable", async () => {
     const focus = watchFocus();
     const { root, waitForChanges } = await render(<idg-pagination pageCount={3} page={2} />);
-    let active: Element | null = part(root, "next");
-    focusIn(root, () => active);
+    focusIn(root, part(root, "next"), part(root, "next"));
     part(root, "next").click();
-    active = null;
     await waitForChanges();
     expect(focus).toHaveBeenCalled();
     focus.mockRestore();
@@ -291,55 +298,69 @@ describe("idg-pagination focus", () => {
     const focus = watchFocus();
     const { root, waitForChanges } = await render(<idg-pagination pageCount={20} page={1} />);
     const pressed = pageControl(root, 3);
-    let active: Element | null = pressed;
-    focusIn(root, () => active);
+    focusIn(root, pressed, null);
     pressed.click();
-    active = null;
     await waitForChanges();
-    expect(focus).toHaveBeenCalled();
+    expect(focusedControls(focus)).toEqual(["3"]);
     focus.mockRestore();
   });
 
-  it("leaves focus alone when it was not in the component when a control was used", async () => {
+  it("puts focus back on the same page number when the list is redrawn by script", async () => {
     const focus = watchFocus();
-    const { root, waitForChanges } = await render(<idg-pagination pageCount={3} page={2} />);
-    focusIn(root, () => null);
-    part(root, "next").click();
+    const { root, waitForChanges } = await render(<idg-pagination pageCount={12} page={6} />);
+    focusIn(root, pageControl(root, 5), null);
+    (root as unknown as { pageCount: number; page: number }).pageCount = 20;
+    (root as unknown as { pageCount: number; page: number }).page = 1;
     await waitForChanges();
-    expect(focus).not.toHaveBeenCalled();
+    expect(focusedControls(focus)).toEqual(["5"]);
     focus.mockRestore();
   });
 
-  it("does not pull focus on a later change from script after a cancelled press", async () => {
+  it("puts focus on the current page when the control it was on is gone", async () => {
     const focus = watchFocus();
-    const { root, waitForChanges } = await render(<idg-pagination pageCount={3} page={2} />);
+    const { root, waitForChanges } = await render(<idg-pagination pageCount={12} page={1} />);
+    focusIn(root, pageControl(root, 4), null);
+    (root as unknown as { page: number }).page = 12;
+    await waitForChanges();
+    expect(focusedControls(focus)).toEqual(["12"]);
+    focus.mockRestore();
+  });
+
+  it("puts focus back after a press the page cancelled once the page is set from script", async () => {
+    const focus = watchFocus();
+    const { root, waitForChanges } = await render(<idg-pagination pageCount={12} page={6} />);
     root.addEventListener("idgPageChange", (event) => {
       event.preventDefault();
     });
-    let active: Element | null = part(root, "next");
-    focusIn(root, () => active);
-    part(root, "next").click();
+    const pressed = pageControl(root, 7);
+    focusIn(root, pressed, pressed, null);
+    pressed.click();
     await waitForChanges();
-    active = null;
-    (root as unknown as { page: number }).page = 3;
+    expect(focus).not.toHaveBeenCalled();
+    (root as unknown as { page: number }).page = 7;
+    await waitForChanges();
+    expect(focusedControls(focus)).toEqual(["7"]);
+    focus.mockRestore();
+  });
+
+  it("leaves focus alone when it was not in the component", async () => {
+    const focus = watchFocus();
+    const { root, waitForChanges } = await render(<idg-pagination pageCount={3} page={2} />);
+    focusIn(root, null);
+    part(root, "next").click();
     await waitForChanges();
     expect(focus).not.toHaveBeenCalled();
     focus.mockRestore();
   });
 
-  it("leaves focus alone when the page moved it to another element after the change", async () => {
+  it("leaves focus alone when the page moved it to another element", async () => {
     const focus = watchFocus();
     const { root, waitForChanges } = await render(<idg-pagination pageCount={20} page={1} />);
     const pressed = pageControl(root, 3);
-    let active: Element | null = pressed;
-    focusIn(root, () => active);
+    focusIn(root, pressed, null);
     const elsewhere = document.createElement("button");
-    Object.defineProperty(document, "activeElement", {
-      configurable: true,
-      get: () => (active === null ? elsewhere : root),
-    });
+    Object.defineProperty(document, "activeElement", { configurable: true, get: () => elsewhere });
     pressed.click();
-    active = null;
     await waitForChanges();
     expect(focus).not.toHaveBeenCalled();
     Reflect.deleteProperty(document, "activeElement");

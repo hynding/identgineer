@@ -1084,3 +1084,72 @@ test.describe("idg-table and a page that reacts to focus", () => {
     expect(await counts(page)).toEqual({ focusin: 1, focusout: 0 });
   });
 });
+
+test.describe("idg-pagination redrawn by script with a control focused", () => {
+  for (const id of ["pagination-buttons", "pagination-links"]) {
+    const mode = id === "pagination-buttons" ? "buttons" : "links";
+    const focused = (page: Page) =>
+      page
+        .locator(`#${id}`)
+        .evaluate((host) => host.shadowRoot?.activeElement?.textContent.trim() ?? "none");
+    const settled = async (page: Page, expected: string) => {
+      await expect.poll(() => focused(page)).toBe(expected);
+      // A late loss shows itself a frame or two on.
+      await page.evaluate(
+        () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+      );
+      expect(await focused(page)).toBe(expected);
+    };
+    const control = (page: Page, name: string) =>
+      page
+        .locator(`#${id}`)
+        .locator('[part="page"]')
+        .filter({ hasText: new RegExp(`^${name}$`) });
+    const set = (page: Page, attributes: Record<string, string>) =>
+      page.locator(`#${id}`).evaluate((host, values) => {
+        for (const [key, value] of Object.entries(values)) host.setAttribute(key, value);
+      }, attributes);
+
+    test(`${mode}: the focused page number keeps focus when the count and page are set from script`, async ({
+      page,
+    }) => {
+      await openNavigation(page);
+      await set(page, { "page-count": "12", page: "6" });
+      await expect(control(page, "5")).toHaveCount(1);
+      await control(page, "5").focus();
+      await set(page, { "page-count": "20", page: "1" });
+      await settled(page, "5");
+      await set(page, { page: "10" });
+      await expect(control(page, "7")).toHaveCount(0);
+      await set(page, { page: "6" });
+      await control(page, "7").focus();
+      await set(page, { page: "10" });
+      await settled(page, "7");
+    });
+
+    test(`${mode}: focus stays on the pressed number when the page cancels the press and sets the page itself`, async ({
+      page,
+    }) => {
+      await openNavigation(page);
+      await set(page, { "page-count": "12", page: "6" });
+      await page.locator(`#${id}`).evaluate((host) => {
+        host.addEventListener("idgPageChange", (event) => {
+          event.preventDefault();
+        });
+      });
+      await expect(control(page, "7")).toHaveCount(1);
+      await control(page, "7").focus();
+      await page.keyboard.press("Enter");
+      await expect(page.locator(`#${id}`)).toHaveAttribute("page", "6");
+      await set(page, { page: "7" });
+      await settled(page, "7");
+      // And the same through the truncation boundary at the start of a long list.
+      await set(page, { "page-count": "20", page: "1" });
+      await expect(control(page, "5")).toHaveCount(1);
+      await control(page, "5").focus();
+      await page.keyboard.press("Enter");
+      await set(page, { page: "5" });
+      await settled(page, "5");
+    });
+  }
+});
