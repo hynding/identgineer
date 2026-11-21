@@ -1,0 +1,14 @@
+{
+  "ir": "./camis.json",
+  "roles": "./roles.json",
+  "protected": "./protected",
+  "targets": [
+    { "target": "strapi", "out": "./generated/strapi", "projectName": "identgineer-cms" },
+    {
+      "target": "filament",
+      "out": "./generated/strapi-php",
+      "projectName": "identgineer-cms",
+      "apiStyle": "strapi"
+    }
+  ]
+}

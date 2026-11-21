@@ -1,0 +1,164 @@
+{
+  "defaultRole": "authenticated",
+  "roles": [
+    {
+      "name": "public",
+      "description": "Callers without a session. Reads site content only; tracking reaches the CMS through the public ingestion endpoints, never through a grant.",
+      "grants": [
+        {
+          "contentType": "Page",
+          "actions": ["read"]
+        },
+        {
+          "contentType": "NavigationItem",
+          "actions": ["read"]
+        }
+      ]
+    },
+    {
+      "name": "authenticated",
+      "description": "Every signed-in user (the default role on registration). Manages only what it owns.",
+      "grants": [
+        {
+          "contentType": "Page",
+          "actions": ["read"]
+        },
+        {
+          "contentType": "NavigationItem",
+          "actions": ["read"]
+        },
+        {
+          "contentType": "Profile",
+          "actions": ["create", "read", "update"],
+          "condition": {
+            "kind": "eq",
+            "left": {
+              "kind": "var",
+              "name": "record.ownerId"
+            },
+            "right": {
+              "kind": "var",
+              "name": "user.id"
+            }
+          },
+          "assign": {
+            "owner": "user.id"
+          }
+        },
+        {
+          "contentType": "BrandKit",
+          "actions": ["create", "read", "update", "delete"],
+          "condition": {
+            "kind": "eq",
+            "left": {
+              "kind": "var",
+              "name": "record.ownerId"
+            },
+            "right": {
+              "kind": "var",
+              "name": "user.id"
+            }
+          },
+          "assign": {
+            "owner": "user.id"
+          }
+        },
+        {
+          "contentType": "Property",
+          "actions": ["create", "read", "update", "delete"],
+          "condition": {
+            "kind": "eq",
+            "left": {
+              "kind": "var",
+              "name": "record.ownerId"
+            },
+            "right": {
+              "kind": "var",
+              "name": "user.id"
+            }
+          },
+          "assign": {
+            "owner": "user.id"
+          }
+        },
+        {
+          "contentType": "Event",
+          "actions": ["read"],
+          "condition": {
+            "kind": "eq",
+            "left": {
+              "kind": "var",
+              "name": "record.ownerId"
+            },
+            "right": {
+              "kind": "var",
+              "name": "user.id"
+            }
+          }
+        },
+        {
+          "contentType": "ConsentRecord",
+          "actions": ["read"],
+          "condition": {
+            "kind": "eq",
+            "left": {
+              "kind": "var",
+              "name": "record.ownerId"
+            },
+            "right": {
+              "kind": "var",
+              "name": "user.id"
+            }
+          }
+        },
+        {
+          "contentType": "File",
+          "actions": ["create"]
+        }
+      ]
+    },
+    {
+      "name": "super-admin",
+      "description": "Signs in to the admin and may do everything, as Strapi's Super Admin.",
+      "admin": true,
+      "grants": [
+        {
+          "contentType": "User",
+          "actions": ["create", "read", "update", "delete"]
+        },
+        {
+          "contentType": "File",
+          "actions": ["create", "read", "update", "delete"]
+        },
+        {
+          "contentType": "Page",
+          "actions": ["create", "read", "update", "delete", "publish"]
+        },
+        {
+          "contentType": "NavigationItem",
+          "actions": ["create", "read", "update", "delete"]
+        },
+        {
+          "contentType": "Profile",
+          "actions": ["create", "read", "update", "delete"]
+        },
+        {
+          "contentType": "BrandKit",
+          "actions": ["create", "read", "update", "delete"]
+        },
+        {
+          "contentType": "Property",
+          "actions": ["create", "read", "update", "delete"]
+        },
+        {
+          "contentType": "Event",
+          "actions": ["create", "read", "update", "delete"]
+        },
+        {
+          "contentType": "ConsentRecord",
+          "actions": ["create", "read", "update", "delete"]
+        }
+      ]
+    }
+  ]
+}

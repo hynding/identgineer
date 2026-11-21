@@ -1,0 +1,400 @@
+{
+  "version": 1,
+  "contentTypes": [
+    {
+      "name": "User",
+      "kind": "collection",
+      "builtin": "user",
+      "description": "The accounts the CMS authenticates. Each target maps it to its own user model.",
+      "fields": [
+        { "type": "string", "name": "username", "required": true, "unique": true },
+        { "type": "email", "name": "email", "required": true }
+      ]
+    },
+    {
+      "name": "File",
+      "kind": "collection",
+      "builtin": "file",
+      "description": "The media library: avatars, logos, marks and share images.",
+      "fields": []
+    },
+    {
+      "name": "Page",
+      "kind": "collection",
+      "names": { "display": "Page", "plural": "Pages", "collection": "pages" },
+      "description": "A page of site content.",
+      "fields": [
+        { "type": "string", "name": "title", "required": true, "maxLength": 120 },
+        {
+          "type": "uid",
+          "name": "slug",
+          "targetField": "title",
+          "required": true,
+          "unique": true,
+          "maxLength": 120,
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        { "type": "text", "name": "summary", "maxLength": 300 },
+        { "type": "blocks", "name": "body" },
+        { "type": "component", "name": "seo", "component": "Seo", "repeatable": false }
+      ],
+      "options": { "draftPublish": true, "timestamps": true, "apiActions": ["list", "read"] }
+    },
+    {
+      "name": "NavigationItem",
+      "kind": "collection",
+      "names": {
+        "display": "Navigation item",
+        "plural": "NavigationItems",
+        "collection": "navigation_items"
+      },
+      "description": "A link in one of the site's navigation areas.",
+      "fields": [
+        { "type": "string", "name": "label", "required": true, "maxLength": 60 },
+        {
+          "type": "string",
+          "name": "href",
+          "required": true,
+          "maxLength": 2048,
+          "pattern": "^(/[^\\s]*|https://[^\\s]+)$"
+        },
+        { "type": "integer", "name": "order", "required": true, "min": 0, "default": 0 },
+        {
+          "type": "enumeration",
+          "name": "placement",
+          "required": true,
+          "values": ["header", "footer", "utility"],
+          "default": "header"
+        }
+      ],
+      "options": { "timestamps": true, "apiActions": ["list", "read"] }
+    },
+    {
+      "name": "Profile",
+      "kind": "collection",
+      "names": { "display": "Profile", "plural": "Profiles", "collection": "profiles" },
+      "description": "A user's own profile; one per account.",
+      "fields": [
+        {
+          "type": "relation",
+          "name": "owner",
+          "relationKind": "oneToOne",
+          "target": "User",
+          "required": true
+        },
+        { "type": "string", "name": "displayName", "required": true, "maxLength": 80 },
+        { "type": "media", "name": "avatar", "multiple": false, "allowedTypes": ["image"] },
+        { "type": "text", "name": "bio", "maxLength": 500 },
+        {
+          "type": "string",
+          "name": "locale",
+          "maxLength": 35,
+          "pattern": "^[a-z]{2,3}(-[A-Z][a-z]{3})?(-([A-Z]{2}|[0-9]{3}))?$",
+          "default": "en"
+        },
+        {
+          "type": "string",
+          "name": "timezone",
+          "maxLength": 64,
+          "pattern": "^[A-Za-z_]+(/[A-Za-z0-9_+-]+)*$",
+          "default": "UTC"
+        },
+        { "type": "boolean", "name": "marketingOptIn", "default": false }
+      ],
+      "options": {
+        "timestamps": true,
+        "apiActions": ["list", "read", "create", "update"]
+      }
+    },
+    {
+      "name": "BrandKit",
+      "kind": "collection",
+      "names": { "display": "Brand kit", "plural": "BrandKits", "collection": "brand_kits" },
+      "description": "A user's brand identity, from which a theme is generated.",
+      "fields": [
+        {
+          "type": "relation",
+          "name": "owner",
+          "relationKind": "manyToOne",
+          "target": "User",
+          "required": true
+        },
+        { "type": "string", "name": "name", "required": true, "maxLength": 80 },
+        { "type": "string", "name": "tagline", "maxLength": 140 },
+        { "type": "media", "name": "logo", "multiple": false, "allowedTypes": ["image"] },
+        { "type": "media", "name": "mark", "multiple": false, "allowedTypes": ["image"] },
+        {
+          "type": "color",
+          "name": "primaryColor",
+          "required": true,
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        { "type": "color", "name": "secondaryColor", "pattern": "^#[0-9a-fA-F]{6}$" },
+        { "type": "color", "name": "neutralColor", "pattern": "^#[0-9a-fA-F]{6}$" },
+        {
+          "type": "component",
+          "name": "typePairing",
+          "component": "TypePairing",
+          "repeatable": false
+        },
+        {
+          "type": "enumeration",
+          "name": "corners",
+          "values": ["sharp", "subtle", "rounded", "pill"],
+          "default": "subtle"
+        },
+        {
+          "type": "enumeration",
+          "name": "tone",
+          "values": ["calm", "friendly", "bold", "formal", "playful"],
+          "default": "friendly"
+        },
+        { "type": "json", "name": "themeTokens" },
+        { "type": "boolean", "name": "isPublic", "default": false }
+      ],
+      "options": { "timestamps": true }
+    },
+    {
+      "name": "Property",
+      "kind": "collection",
+      "names": { "display": "Property", "plural": "Properties", "collection": "properties" },
+      "description": "A site or app whose events are tracked.",
+      "fields": [
+        {
+          "type": "relation",
+          "name": "owner",
+          "relationKind": "manyToOne",
+          "target": "User",
+          "required": true
+        },
+        { "type": "string", "name": "name", "required": true, "maxLength": 80 },
+        {
+          "type": "string",
+          "name": "domain",
+          "required": true,
+          "maxLength": 253,
+          "pattern": "^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+        },
+        {
+          "type": "component",
+          "name": "allowedOrigins",
+          "component": "AllowedOrigin",
+          "repeatable": true
+        },
+        {
+          "type": "string",
+          "name": "ingestKey",
+          "required": true,
+          "unique": true,
+          "minLength": 22,
+          "maxLength": 64,
+          "pattern": "^pk_[A-Za-z0-9]{19,61}$"
+        },
+        {
+          "type": "integer",
+          "name": "retentionDays",
+          "required": true,
+          "min": 1,
+          "max": 400,
+          "default": 180
+        },
+        { "type": "boolean", "name": "active", "required": true, "default": true }
+      ],
+      "options": { "timestamps": true }
+    },
+    {
+      "name": "Event",
+      "kind": "collection",
+      "names": { "display": "Event", "plural": "Events", "collection": "events" },
+      "description": "One privacy-first tracking event. Never holds an IP address, a full user agent or any contact detail.",
+      "fields": [
+        {
+          "type": "relation",
+          "name": "property",
+          "relationKind": "manyToOne",
+          "target": "Property",
+          "required": true
+        },
+        {
+          "type": "relation",
+          "name": "owner",
+          "relationKind": "manyToOne",
+          "target": "User",
+          "required": true
+        },
+        {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9_.:-]{0,63}$"
+        },
+        { "type": "dateTime", "name": "occurredAt", "required": true },
+        {
+          "type": "string",
+          "name": "sessionId",
+          "required": true,
+          "minLength": 16,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9_-]{16,64}$"
+        },
+        {
+          "type": "string",
+          "name": "path",
+          "required": true,
+          "maxLength": 2048,
+          "pattern": "^/[^?#\\s]*$"
+        },
+        {
+          "type": "string",
+          "name": "referrerHost",
+          "maxLength": 253,
+          "pattern": "^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+        },
+        { "type": "json", "name": "properties" },
+        {
+          "type": "enumeration",
+          "name": "viewportClass",
+          "values": ["xs", "sm", "md", "lg", "xl"]
+        },
+        {
+          "type": "string",
+          "name": "country",
+          "minLength": 2,
+          "maxLength": 2,
+          "pattern": "^[A-Z]{2}$"
+        }
+      ],
+      "options": { "timestamps": true, "apiActions": ["list", "read"] }
+    },
+    {
+      "name": "ConsentRecord",
+      "kind": "collection",
+      "names": {
+        "display": "Consent record",
+        "plural": "ConsentRecords",
+        "collection": "consent_records"
+      },
+      "description": "An append-only record of a visitor granting or withdrawing consent on a property.",
+      "fields": [
+        {
+          "type": "relation",
+          "name": "property",
+          "relationKind": "manyToOne",
+          "target": "Property",
+          "required": true
+        },
+        {
+          "type": "relation",
+          "name": "owner",
+          "relationKind": "manyToOne",
+          "target": "User",
+          "required": true
+        },
+        {
+          "type": "string",
+          "name": "subjectId",
+          "required": true,
+          "minLength": 16,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9_-]{16,64}$"
+        },
+        {
+          "type": "component",
+          "name": "categories",
+          "component": "ConsentCategories",
+          "repeatable": false
+        },
+        {
+          "type": "string",
+          "name": "policyVersion",
+          "required": true,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9._-]+$"
+        },
+        { "type": "dateTime", "name": "recordedAt", "required": true },
+        { "type": "dateTime", "name": "withdrawnAt" }
+      ],
+      "options": { "timestamps": true, "apiActions": ["list", "read"] }
+    }
+  ],
+  "components": [
+    {
+      "name": "Seo",
+      "names": { "display": "SEO", "group": "shared" },
+      "fields": [
+        { "type": "string", "name": "metaTitle", "maxLength": 60 },
+        { "type": "text", "name": "metaDescription", "maxLength": 160 },
+        { "type": "media", "name": "shareImage", "multiple": false, "allowedTypes": ["image"] },
+        { "type": "boolean", "name": "noIndex", "default": false }
+      ]
+    },
+    {
+      "name": "TypePairing",
+      "names": { "display": "Type pairing", "group": "brand" },
+      "fields": [
+        {
+          "type": "string",
+          "name": "headingFamily",
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9 -]{0,63}$"
+        },
+        {
+          "type": "string",
+          "name": "bodyFamily",
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9 -]{0,63}$"
+        }
+      ]
+    },
+    {
+      "name": "AllowedOrigin",
+      "names": { "display": "Allowed origin", "group": "tracking" },
+      "fields": [
+        {
+          "type": "string",
+          "name": "origin",
+          "required": true,
+          "maxLength": 261,
+          "pattern": "^https://([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(:[0-9]{1,5})?$"
+        }
+      ]
+    },
+    {
+      "name": "ConsentCategories",
+      "names": { "display": "Consent categories", "group": "tracking" },
+      "fields": [
+        { "type": "boolean", "name": "necessary", "default": true },
+        { "type": "boolean", "name": "analytics", "default": false },
+        { "type": "boolean", "name": "marketing", "default": false },
+        { "type": "boolean", "name": "personalisation", "default": false }
+      ]
+    }
+  ],
+  "hooks": [
+    {
+      "name": "IssueIngestKey",
+      "trigger": "beforeCreate",
+      "contentType": "Property",
+      "input": [{ "name": "ingestKey", "type": "string" }],
+      "output": [{ "name": "ingestKey", "type": "string" }]
+    }
+  ],
+  "endpoints": [
+    {
+      "name": "IngestEvent",
+      "contentType": "Event",
+      "method": "POST",
+      "path": "/ingest/events",
+      "public": true
+    },
+    {
+      "name": "RecordConsent",
+      "contentType": "ConsentRecord",
+      "method": "POST",
+      "path": "/ingest/consent",
+      "public": true
+    }
+  ],
+  "schedules": [{ "name": "PurgeExpiredEvents", "cron": "17 3 * * *" }]
+}
