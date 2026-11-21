@@ -75,7 +75,7 @@ Every custom property is `--idg-` plus the token path with dots turned into dash
 | `font.weight.*`, `font.line-height.*`, `font.letter-spacing.*`                  | shared scales                                                                                  |
 | `shape.*`, `border.*`, `elevation.*`, `surface.*`, `focus.ring-*`, `ornament.*` | design-language-owned                                                                          |
 | `layout.*`                                                                      | layout-owned                                                                                   |
-| `size.xs .. 2xl`, `size.screen`                                                 | fixed size scale for track minimums, side regions, thresholds and cover heights                |
+| `size.xs .. 3xl`, `size.screen`                                                 | fixed size scale for track minimums, side regions, thresholds and cover heights                |
 | `density.*`, `ux.*`, `motion.*`, `feedback.*`, `focus.emphasis`                 | UX-mode-owned                                                                                  |
 
 Themes own colour and typography only. The build rejects a theme that defines anything else,

@@ -310,6 +310,9 @@
     "2xl": {
       "$value": "56rem"
     },
+    "3xl": {
+      "$value": "72rem"
+    },
     "screen": {
       "$value": "100svh",
       "$description": "The height of the small viewport, for a block that fills the screen."
