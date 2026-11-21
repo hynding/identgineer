@@ -615,9 +615,11 @@ which the toast removes itself. Parts `toast`, `icon`, `heading`, `description`,
 
 - **Announcements.** The region has one polite live region, and an assertive one used only for
   `danger`. Each toast is announced as it comes into view (a queued one when its turn comes), as
-  text, 100ms after the change so the live region is in place, and cleared after 5s so browsing the
-  page does not meet it twice. Toasts that come into view within those 100ms are announced together,
-  so a second one does not cut the first short. Focus never moves on its own.
+  text, 100ms after the change so the live region is in place. Toasts that come into view within
+  those 100ms are announced together, and a toast that comes while an announcement is still showing
+  is added to it rather than replacing it, so no line cuts another short. The announcement is
+  cleared 5s after its last line, so browsing the page does not meet it twice. A region moved in
+  the page announces what was waiting and clears what had expired. Focus never moves on its own.
 - **Reaching it.** The region is a landmark (`<section>` with a name) and `hotkey` focuses it while
   it holds a toast (`aria-keyshortcuts`). Tab then reaches the action and close buttons. Escape in a
   toast dismisses it; focus moves to the next toast, or back where it was before focus entered the
@@ -628,9 +630,10 @@ which the toast removes itself. Parts `toast`, `icon`, `heading`, `description`,
   it, the window is in the background, or the user prefers reduced motion (then toasts stay until
   dismissed), and runs on with the time it had left.
 - **Queue.** At most `max` show at once, oldest first; the rest wait hidden and do not count down.
-- **Swipe.** A sideways drag of 64px, or 35% of the width if more, dismisses a toast; a shorter one
-  springs back. The distance is measured at the release, which is heard on the document, so a fast
-  flick that ends off the toast counts. Vertical drags still scroll (`touch-action: pan-y`).
+- **Swipe.** A sideways drag of 64px, or 35% of the width if more, with the primary button or
+  pointer, dismisses a toast; a shorter one springs back. The distance is measured at the release,
+  which is heard on the document, so a fast flick that ends off the toast counts. A swipe whose
+  release never arrives ends at the next press, a context menu or the window losing focus. Vertical drags still scroll (`touch-action: pan-y`).
 - **Top layer.** The region is a `popover="manual"`, shown while it holds a toast, so it is above
   other overlays, and lets clicks through around the toasts.
 
