@@ -39,6 +39,12 @@ idg-progress:not(.hydrated),
 idg-skeleton:not(.hydrated),
 idg-stat:not(.hydrated),
 idg-divider:not(.hydrated),
+idg-stack:not(.hydrated),
+idg-cluster:not(.hydrated),
+idg-grid:not(.hydrated),
+idg-sidebar:not(.hydrated),
+idg-switcher:not(.hydrated),
+idg-cover:not(.hydrated),
 idg-popover:not(.hydrated),
 idg-tooltip:not(.hydrated),
 idg-menu:not(.hydrated),
@@ -298,4 +304,35 @@ section.dashboard::after {
 .table-summary {
   margin: 0;
   color: var(--idg-color-text-muted);
+}
+
+/* The layout primitives fixture. The page takes the layout's measure, gutter and section gap, the
+   way the page shell will. */
+.layout-page {
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: var(--idg-layout-content-max);
+  margin-inline: auto;
+  padding-inline: var(--idg-layout-page-gutter);
+  gap: var(--idg-layout-section-gap);
+}
+
+.layout-page > * {
+  min-inline-size: 0;
+}
+
+section.plain {
+  display: block;
+}
+
+section.plain > h2 {
+  margin-block: 0 var(--idg-space-s);
+}
+
+.box {
+  max-inline-size: 100%;
+}
+
+.flush {
+  margin: 0;
 }

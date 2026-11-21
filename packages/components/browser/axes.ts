@@ -10,15 +10,17 @@ function idsIn(directory: string): string[] {
     .sort();
 }
 
-// Read from the built tokens, so a new design or UX mode joins the matrix without an edit here.
+// Read from the built tokens, so a new design, layout or UX mode joins the matrix without an edit here.
 export const THEMES = idsIn("themes");
 export const DESIGNS = idsIn("designs");
+export const LAYOUTS = idsIn("layouts");
 export const UX_MODES = idsIn("ux");
 export const SCHEMES = ["light", "dark"] as const;
 
 export interface Axes {
   theme?: string;
   design?: string;
+  layout?: string;
   ux?: string;
   scheme?: (typeof SCHEMES)[number];
 }
@@ -29,6 +31,7 @@ export async function applyAxes(page: Page, axes: Axes): Promise<void> {
     const root = document.documentElement;
     if (next.theme) root.dataset.theme = next.theme;
     if (next.design) root.dataset.design = next.design;
+    if (next.layout) root.dataset.layout = next.layout;
     if (next.ux) root.dataset.ux = next.ux;
     if (next.scheme) root.dataset.scheme = next.scheme;
   }, axes);

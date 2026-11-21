@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-layout="top-bar" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>layout primitives fixture</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+  </head>
+  <body>
+    <main class="layout-page">
+      <h1>Layout primitives</h1>
+
+      <section class="plain" aria-labelledby="stack-title">
+        <h2 id="stack-title">Stack</h2>
+        <idg-stack id="stack">
+          <p class="flush">Every item is under the one before it.</p>
+          <p class="flush">The gap comes from the layout until a step is set.</p>
+          <p class="flush">Source order is reading order.</p>
+        </idg-stack>
+        <idg-stack id="stack-dividers" dividers gap="m">
+          <p class="flush">A rule separates the items.</p>
+          <p class="flush">It is drawn in the theme's border colour.</p>
+          <p class="flush">The gap sits on either side of it.</p>
+        </idg-stack>
+        <idg-stack id="stack-aligned" gap="xs">
+          <idg-badge class="tag">Short</idg-badge>
+          <idg-badge class="tag">Another tag</idg-badge>
+        </idg-stack>
+      </section>
+
+      <section class="plain" aria-labelledby="cluster-title">
+        <h2 id="cluster-title">Cluster</h2>
+        <div class="box" id="cluster-box">
+          <idg-cluster id="cluster">
+            <idg-badge>Design</idg-badge>
+            <idg-badge>Engineering</idg-badge>
+            <idg-badge>Research</idg-badge>
+            <idg-badge>Operations</idg-badge>
+            <idg-badge>Finance</idg-badge>
+            <idg-badge>Legal</idg-badge>
+            <idg-badge>Support</idg-badge>
+            <idg-badge>Marketing</idg-badge>
+          </idg-cluster>
+        </div>
+      </section>
+
+      <section class="plain" aria-labelledby="grid-title">
+        <h2 id="grid-title">Grid</h2>
+        <idg-grid id="grid">
+          <idg-card heading="Item 1">Revenue by region for the quarter.</idg-card>
+          <idg-card heading="Item 2">Active users across every plan.</idg-card>
+          <idg-card heading="Item 3">Support requests answered in time.</idg-card>
+          <idg-card heading="Item 4">Build duration on the main branch.</idg-card>
+          <idg-card heading="Item 5">Pages served from the edge cache.</idg-card>
+          <idg-card heading="Item 6">New sign-ups this week.</idg-card>
+          <idg-card heading="Item 7">Churn among annual accounts.</idg-card>
+          <idg-card heading="Item 8">Deploys that needed a rollback.</idg-card>
+          <idg-card heading="Item 9">Tickets waiting for a reply.</idg-card>
+          <idg-card heading="Item 10">Documents shared outside the team.</idg-card>
+          <idg-card heading="Item 11">Invoices paid late.</idg-card>
+          <idg-card heading="Item 12">Seats unused this month.</idg-card>
+        </idg-grid>
+      </section>
+
+      <section class="plain" aria-labelledby="sidebar-title">
+        <h2 id="sidebar-title">Sidebar</h2>
+        <div class="box" id="sidebar-box">
+          <idg-sidebar id="sidebar">
+            <nav slot="side" aria-label="Section menu">
+              <a id="sidebar-side-link" href="#overview">Overview</a>
+              <a id="sidebar-last-link" href="#billing">Billing</a>
+            </nav>
+            <p class="flush">
+              The content takes the rest of the row and wraps below the side region when it would
+              get less than half the width. <a id="sidebar-content-link" href="#more">More</a>
+            </p>
+          </idg-sidebar>
+        </div>
+        <div class="box" id="sidebar-end-box">
+          <idg-sidebar id="sidebar-end" side="end" side-width="m">
+            <nav slot="side" aria-label="Related pages">
+              <a id="sidebar-end-side-link" href="#related">Related</a>
+            </nav>
+            <p class="flush">
+              With the side region at the end it is drawn after the content, so it is also reached
+              after it. <a id="sidebar-end-content-link" href="#other">Other</a>
+            </p>
+          </idg-sidebar>
+        </div>
+      </section>
+
+      <section class="plain" aria-labelledby="switcher-title">
+        <h2 id="switcher-title">Switcher</h2>
+        <div class="box" id="switcher-box">
+          <idg-switcher id="switcher">
+            <idg-card heading="Free">One project and community support.</idg-card>
+            <idg-card heading="Team">Unlimited projects and shared workspaces.</idg-card>
+            <idg-card heading="Scale">Single sign-on and audit logs.</idg-card>
+          </idg-switcher>
+        </div>
+        <div class="box" id="switcher-small-box">
+          <idg-switcher id="switcher-small" threshold="s">
+            <idg-card heading="Small one">Short.</idg-card>
+            <idg-card heading="Small two">Short.</idg-card>
+            <idg-card heading="Small three">Short.</idg-card>
+          </idg-switcher>
+        </div>
+        <div class="box" id="switcher-limit-box">
+          <idg-switcher id="switcher-limit" limit="3">
+            <idg-card heading="One">First.</idg-card>
+            <idg-card heading="Two">Second.</idg-card>
+            <idg-card heading="Three">Third.</idg-card>
+            <idg-card heading="Four">Fourth.</idg-card>
+            <idg-card heading="Five">Fifth.</idg-card>
+          </idg-switcher>
+        </div>
+      </section>
+
+      <section class="plain" aria-labelledby="cover-title">
+        <h2 id="cover-title">Cover</h2>
+        <idg-cover id="cover" min-height="m">
+          <p class="flush" id="cover-top" slot="top">Top region</p>
+          <p class="flush" id="cover-content">Centred content</p>
+          <p class="flush" id="cover-bottom" slot="bottom">Bottom region</p>
+        </idg-cover>
+        <idg-cover id="cover-plain" min-height="m">
+          <p class="flush">Centred in the whole block</p>
+        </idg-cover>
+        <idg-cover id="cover-tall" min-height="xs">
+          <p class="flush">
+            A cover is a minimum height and not a fixed one, so content that needs more room than
+            the minimum makes it taller instead of overflowing. This paragraph is long enough to
+            need several lines in a narrow container, and the block grows with it. The whole point
+            of a minimum is that the content never has to fit inside it. A banner that is a screen
+            high on a tall monitor is still a banner on a phone held upright, where the text beneath
+            it simply keeps going. Nothing is clipped, nothing is scaled and nothing scrolls inside
+            the block, because the block is only ever as short as its content allows and no shorter
+            than the step it was given.
+          </p>
+        </idg-cover>
+      </section>
+    </main>
+  </body>
+</html>
