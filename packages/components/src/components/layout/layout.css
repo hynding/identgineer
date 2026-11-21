@@ -440,16 +440,13 @@
 
   @container idg-shell (min-inline-size: 40rem) {
     .header {
-      grid-template-columns: minmax(min-content, 1fr) auto auto;
+      /* The brand keeps room for a name of ordinary length, up to two fifths of the bar, before the
+         toggle and the actions take what is left: automatic columns would size first and, with the
+         brand free to break anywhere, leave it a letter a line. */
+      grid-template-columns: minmax(min(var(--idg-size-s), 40%), 1fr) auto auto;
       grid-template-areas:
         "brand toggle actions"
         "nav nav nav";
-    }
-
-    /* Beside the toggle and the actions, a word breaks only when it is wider than the whole column:
-       with `anywhere` the brand's minimum is a letter, and the actions would take the room first. */
-    .brand {
-      overflow-wrap: break-word;
     }
 
     .actions {
@@ -656,16 +653,10 @@
 
   @container idg-shell (min-inline-size: 40rem) {
     .header {
-      grid-template-columns: minmax(min-content, 1fr) auto auto;
+      grid-template-columns: minmax(min(var(--idg-size-s), 40%), 1fr) auto auto;
       grid-template-areas:
         "brand toggle actions"
         "nav nav nav";
-    }
-
-    /* Beside the toggle and the actions, a word breaks only when it is wider than the whole column:
-       with `anywhere` the brand's minimum is a letter, and the actions would take the room first. */
-    .brand {
-      overflow-wrap: break-word;
     }
 
     .actions {
@@ -729,7 +720,11 @@
       z-index: 3;
       inset-block-start: 0;
       inset-inline-start: var(--_gutter);
-      block-size: var(--_bar);
+      /* Half of the page less the gutters it shares with the menu button, so a long name wraps in
+         its half and never runs under the button and the actions. */
+      max-inline-size: calc(50% - 2 * var(--_gutter));
+      block-size: auto;
+      min-block-size: var(--_bar);
       color: var(--idg-color-on-accent-subtle);
     }
 
@@ -1167,16 +1162,10 @@
     }
 
     .header {
-      grid-template-columns: minmax(min-content, 1fr) auto auto;
+      grid-template-columns: minmax(min(var(--idg-size-s), 40%), 1fr) auto auto;
       grid-template-areas:
         "brand toggle actions"
         "nav nav nav";
-    }
-
-    /* Beside the toggle and the actions, a word breaks only when it is wider than the whole column:
-       with `anywhere` the brand's minimum is a letter, and the actions would take the room first. */
-    .brand {
-      overflow-wrap: break-word;
     }
 
     .actions {
@@ -1217,7 +1206,7 @@
     .header {
       grid-column: 1 / -1;
       grid-row: 1;
-      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-columns: fit-content(33%) minmax(min-content, 1fr) auto;
       grid-template-areas: "brand nav actions";
       gap: var(--_gap);
       padding: 0;

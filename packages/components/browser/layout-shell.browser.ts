@@ -737,19 +737,19 @@ test.describe("collapsed navigation", () => {
     await setShellWidth(page, "360px");
     await expect.poll(() => isToggleDrawn(page)).toBe(true);
     await openNavigation(page);
-    await page.evaluate(() => {
-      const drawer = document
-        .getElementById("shell")
-        ?.shadowRoot?.querySelector<HTMLDialogElement>('[part="drawer"]');
+    // Growing the container and sampling start in one round trip, so no sample sees the drawer that
+    // is still legitimately open before the container grew.
+    await page.locator("#shell").evaluate((host) => {
+      const drawer = host.shadowRoot?.querySelector<HTMLDialogElement>('[part="drawer"]');
       const seen: boolean[] = [];
       (window as unknown as { __seen: boolean[] }).__seen = seen;
+      host.style.inlineSize = "";
       const sample = () => {
         if (drawer) seen.push(drawer.checkVisibility());
         requestAnimationFrame(sample);
       };
       requestAnimationFrame(sample);
     });
-    await setShellWidth(page, "");
     await expect.poll(async () => (await drawerState(page)).open).toBe(false);
     await frames(page, 3);
     const seen = await page.evaluate(() => (window as unknown as { __seen: boolean[] }).__seen);

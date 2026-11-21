@@ -1146,6 +1146,17 @@ test.describe("nothing in the chrome covers or crowds anything else in it", () =
       const brandLink = document.getElementById("brand-link");
       const navLinks = [...host.querySelectorAll('[slot="navigation"]')];
       const actions = [...host.querySelectorAll('[slot="actions"]')];
+      const room = navigation?.getBoundingClientRect();
+      // A navigation that deliberately scrolls along the bar hides some of its items from the pointer.
+      const scrolls = navigation
+        ? navigation.scrollWidth > navigation.clientWidth + 1 &&
+          getComputedStyle(navigation).overflowInline !== "visible"
+        : false;
+      const reachable = (link: Element): boolean => {
+        if (!scrolls || !room) return true;
+        const box = link.getBoundingClientRect();
+        return box.left >= room.left - 1 && box.right <= room.right + 1;
+      };
       const targets: [string, Element | null | undefined][] = [
         ["menu button", toggle],
         ["brand", brandLink],
@@ -1153,23 +1164,18 @@ test.describe("nothing in the chrome covers or crowds anything else in it", () =
         ...actions.map((action): [string, Element] => [`action ${action.id}`, action]),
       ];
       for (const [name, element] of targets) {
+        if (element && !reachable(element)) continue;
         if (!element || !shown(element)) continue;
         const box = element.getBoundingClientRect();
         const hit = deepAt(box.left + box.width / 2, box.top + box.height / 2);
         if (!within(hit, element)) found.push(`${name} is covered by ${hit?.tagName ?? "nothing"}`);
       }
-      if (navigation) {
-        const room = navigation.getBoundingClientRect();
-        const scrolls =
-          navigation.scrollWidth > navigation.clientWidth + 1 &&
-          getComputedStyle(navigation).overflowInline !== "visible";
-        if (!scrolls) {
-          for (const link of navLinks) {
-            if (!shown(link)) continue;
-            const box = link.getBoundingClientRect();
-            if (box.left < room.left - 1 || box.right > room.right + 1) {
-              found.push(`navigation ${link.id} leaves the navigation`);
-            }
+      if (navigation && room && !scrolls) {
+        for (const link of navLinks) {
+          if (!shown(link)) continue;
+          const box = link.getBoundingClientRect();
+          if (box.left < room.left - 1 || box.right > room.right + 1) {
+            found.push(`navigation ${link.id} leaves the navigation`);
           }
         }
       }
