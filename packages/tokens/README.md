@@ -87,7 +87,9 @@ expressions over theme colours, so they tint correctly in every theme and scheme
 
 UX tokens: `density.target-size|control-height|control-padding-inline|control-padding-block|gap-scale|measure`;
 `ux.type-scale|hints|shortcuts`; `motion.duration.fast|base|slow`, `motion.easing.standard|emphasized`,
-`motion.enabled` (`1` allows movement, `0` means fades only); `feedback.hover-lift|press-scale`;
+`motion.enabled` (`1` allows movement, `0` means fades only); `feedback.hover-lift|press-scale|hover-delay`
+(how long a pointer rests before a hint such as a tooltip appears; not motion, so reduced motion
+leaves it alone);
 `focus.emphasis`. Multipliers are applied by the consumer, for example
 `calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale))` and
 `calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis))`. `target-size` and `control-height`
