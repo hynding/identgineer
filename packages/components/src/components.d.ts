@@ -11,6 +11,7 @@ import { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 import { CardPadding, CardVariant } from "./components/card/card-options";
 import { CheckedDetail, ValueDetail } from "./utils/event-details";
+import { DialogCancelDetail, DialogCloseDetail, DialogOpenDetail, DialogSize } from "./components/dialog/dialog-options";
 import { DividerOrientation } from "./components/divider/divider-options";
 import { IconName } from "./components/icon/icon-paths";
 import { IconSize } from "./components/icon/icon-options";
@@ -25,6 +26,7 @@ export { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 export { CardPadding, CardVariant } from "./components/card/card-options";
 export { CheckedDetail, ValueDetail } from "./utils/event-details";
+export { DialogCancelDetail, DialogCloseDetail, DialogOpenDetail, DialogSize } from "./components/dialog/dialog-options";
 export { DividerOrientation } from "./components/divider/divider-options";
 export { IconName } from "./components/icon/icon-paths";
 export { IconSize } from "./components/icon/icon-options";
@@ -289,6 +291,67 @@ export namespace Components {
           * @default "on"
          */
         "value": string;
+    }
+    /**
+     * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
+     * of the page inert and contains focus, and Escape is the browser's close request. The component
+     * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
+     * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
+     * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
+     * closed.
+     */
+    interface IdgDialog {
+        /**
+          * Makes it an `alertdialog`: an urgent message that needs a response, described by its body.
+          * @default false
+         */
+        "alert": boolean;
+        /**
+          * Closes the dialog. `idgClose` reports the return value and the reason `method`.
+         */
+        "close": (returnValue?: string) => Promise<void>;
+        /**
+          * The close button's accessible name.
+          * @default "Close"
+         */
+        "closeLabel": string;
+        /**
+          * Whether a click on the backdrop of a modal dialog dismisses it. Needs `dismissible`.
+          * @default false
+         */
+        "closeOnBackdrop": boolean;
+        /**
+          * Whether the user can dismiss the dialog with Escape and the close button.
+          * @default true
+         */
+        "dismissible": boolean;
+        /**
+          * The title, drawn as a heading. It is the dialog's accessible name.
+         */
+        "heading"?: string;
+        /**
+          * Whether setting `open` opens a modal dialog. The methods choose for themselves.
+          * @default true
+         */
+        "modal": boolean;
+        /**
+          * Whether the dialog is open. Setting it opens (as `modal` says) or closes the dialog.
+          * @default false
+         */
+        "open": boolean;
+        /**
+          * Opens the dialog without a modal: the page stays usable and focus is not contained.
+         */
+        "show": () => Promise<void>;
+        /**
+          * Opens the dialog as a modal: the rest of the page is inert until it closes.
+         */
+        "showModal": () => Promise<void>;
+        /**
+          * Width: `sm`, `md`, `lg`, or `full` for the whole viewport less a margin.
+          * @default "md"
+         */
+        "size": DialogSize;
     }
     /**
      * A rule between groups of content, drawn in the design language's own border.
@@ -828,6 +891,10 @@ export interface IdgCheckboxCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgCheckboxElement;
 }
+export interface IdgDialogCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgDialogElement;
+}
 export interface IdgInputCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgInputElement;
@@ -939,6 +1006,33 @@ declare global {
     var HTMLIdgCheckboxElement: {
         prototype: HTMLIdgCheckboxElement;
         new (): HTMLIdgCheckboxElement;
+    };
+    interface HTMLIdgDialogElementEventMap {
+        "idgOpen": DialogOpenDetail;
+        "idgClose": DialogCloseDetail;
+        "idgCancel": DialogCancelDetail;
+    }
+    /**
+     * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
+     * of the page inert and contains focus, and Escape is the browser's close request. The component
+     * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
+     * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
+     * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
+     * closed.
+     */
+    interface HTMLIdgDialogElement extends Components.IdgDialog, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgDialogElementEventMap>(type: K, listener: (this: HTMLIdgDialogElement, ev: IdgDialogCustomEvent<HTMLIdgDialogElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgDialogElementEventMap>(type: K, listener: (this: HTMLIdgDialogElement, ev: IdgDialogCustomEvent<HTMLIdgDialogElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgDialogElement: {
+        prototype: HTMLIdgDialogElement;
+        new (): HTMLIdgDialogElement;
     };
     /**
      * A rule between groups of content, drawn in the design language's own border.
@@ -1141,6 +1235,7 @@ declare global {
         "idg-button": HTMLIdgButtonElement;
         "idg-card": HTMLIdgCardElement;
         "idg-checkbox": HTMLIdgCheckboxElement;
+        "idg-dialog": HTMLIdgDialogElement;
         "idg-divider": HTMLIdgDividerElement;
         "idg-field": HTMLIdgFieldElement;
         "idg-icon": HTMLIdgIconElement;
@@ -1420,6 +1515,67 @@ declare namespace LocalJSX {
           * @default "on"
          */
         "value"?: string;
+    }
+    /**
+     * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
+     * of the page inert and contains focus, and Escape is the browser's close request. The component
+     * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
+     * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
+     * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
+     * closed.
+     */
+    interface IdgDialog {
+        /**
+          * Makes it an `alertdialog`: an urgent message that needs a response, described by its body.
+          * @default false
+         */
+        "alert"?: boolean;
+        /**
+          * The close button's accessible name.
+          * @default "Close"
+         */
+        "closeLabel"?: string;
+        /**
+          * Whether a click on the backdrop of a modal dialog dismisses it. Needs `dismissible`.
+          * @default false
+         */
+        "closeOnBackdrop"?: boolean;
+        /**
+          * Whether the user can dismiss the dialog with Escape and the close button.
+          * @default true
+         */
+        "dismissible"?: boolean;
+        /**
+          * The title, drawn as a heading. It is the dialog's accessible name.
+         */
+        "heading"?: string;
+        /**
+          * Whether setting `open` opens a modal dialog. The methods choose for themselves.
+          * @default true
+         */
+        "modal"?: boolean;
+        /**
+          * Fires when the user tries to dismiss the dialog (Escape, the backdrop or the close button). Call `preventDefault()` to keep it open. Browsers close the dialog anyway on a second Escape without other input in between, so that a page cannot trap the user.
+         */
+        "onIdgCancel"?: (event: IdgDialogCustomEvent<DialogCancelDetail>) => void;
+        /**
+          * Fires after the dialog has closed, with the return value and why it closed.
+         */
+        "onIdgClose"?: (event: IdgDialogCustomEvent<DialogCloseDetail>) => void;
+        /**
+          * Fires when the dialog opens.
+         */
+        "onIdgOpen"?: (event: IdgDialogCustomEvent<DialogOpenDetail>) => void;
+        /**
+          * Whether the dialog is open. Setting it opens (as `modal` says) or closes the dialog.
+          * @default false
+         */
+        "open"?: boolean;
+        /**
+          * Width: `sm`, `md`, `lg`, or `full` for the whole viewport less a margin.
+          * @default "md"
+         */
+        "size"?: DialogSize;
     }
     /**
      * A rule between groups of content, drawn in the design language's own border.
@@ -2003,6 +2159,16 @@ declare namespace LocalJSX {
         "accessibleDescription": string;
         "invalid": boolean;
     }
+    interface IdgDialogAttributes {
+        "open": boolean;
+        "modal": boolean;
+        "heading": string;
+        "size": DialogSize;
+        "dismissible": boolean;
+        "closeOnBackdrop": boolean;
+        "alert": boolean;
+        "closeLabel": string;
+    }
     interface IdgDividerAttributes {
         "orientation": DividerOrientation;
         "decorative": boolean;
@@ -2143,6 +2309,7 @@ declare namespace LocalJSX {
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
         "idg-card": Omit<IdgCard, keyof IdgCardAttributes> & { [K in keyof IdgCard & keyof IdgCardAttributes]?: IdgCard[K] } & { [K in keyof IdgCard & keyof IdgCardAttributes as `attr:${K}`]?: IdgCardAttributes[K] } & { [K in keyof IdgCard & keyof IdgCardAttributes as `prop:${K}`]?: IdgCard[K] };
         "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`]?: IdgCheckboxAttributes[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
+        "idg-dialog": Omit<IdgDialog, keyof IdgDialogAttributes> & { [K in keyof IdgDialog & keyof IdgDialogAttributes]?: IdgDialog[K] } & { [K in keyof IdgDialog & keyof IdgDialogAttributes as `attr:${K}`]?: IdgDialogAttributes[K] } & { [K in keyof IdgDialog & keyof IdgDialogAttributes as `prop:${K}`]?: IdgDialog[K] };
         "idg-divider": Omit<IdgDivider, keyof IdgDividerAttributes> & { [K in keyof IdgDivider & keyof IdgDividerAttributes]?: IdgDivider[K] } & { [K in keyof IdgDivider & keyof IdgDividerAttributes as `attr:${K}`]?: IdgDividerAttributes[K] } & { [K in keyof IdgDivider & keyof IdgDividerAttributes as `prop:${K}`]?: IdgDivider[K] };
         "idg-field": Omit<IdgField, keyof IdgFieldAttributes> & { [K in keyof IdgField & keyof IdgFieldAttributes]?: IdgField[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `attr:${K}`]?: IdgFieldAttributes[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `prop:${K}`]?: IdgField[K] };
         "idg-icon": Omit<IdgIcon, keyof IdgIconAttributes> & { [K in keyof IdgIcon & keyof IdgIconAttributes]?: IdgIcon[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `attr:${K}`]?: IdgIconAttributes[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `prop:${K}`]?: IdgIcon[K] };
@@ -2192,6 +2359,15 @@ declare module "@stencil/core" {
              */
             "idg-card": LocalJSX.IntrinsicElements["idg-card"] & JSXBase.HTMLAttributes<HTMLIdgCardElement>;
             "idg-checkbox": LocalJSX.IntrinsicElements["idg-checkbox"] & JSXBase.HTMLAttributes<HTMLIdgCheckboxElement>;
+            /**
+             * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
+             * of the page inert and contains focus, and Escape is the browser's close request. The component
+             * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
+             * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
+             * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
+             * closed.
+             */
+            "idg-dialog": LocalJSX.IntrinsicElements["idg-dialog"] & JSXBase.HTMLAttributes<HTMLIdgDialogElement>;
             /**
              * A rule between groups of content, drawn in the design language's own border.
              */

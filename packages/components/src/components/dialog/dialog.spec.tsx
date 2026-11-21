@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { h, render } from "@stencil/vitest";
 import { installDialogElement } from "../../testing/dialog-element";
+import type { DialogCloseDetail } from "./dialog-options";
 import "./dialog";
 
 interface DialogHost extends HTMLElement {
@@ -26,10 +27,10 @@ function closeButton(root: HTMLElement): HTMLButtonElement | null {
   return root.shadowRoot?.querySelector<HTMLButtonElement>('button[part="close"]') ?? null;
 }
 
-function nextClose(root: HTMLElement): Promise<CustomEvent> {
+function nextClose(root: HTMLElement): Promise<CustomEvent<DialogCloseDetail>> {
   return new Promise((resolve) => {
     root.addEventListener("idgClose", (event) => {
-      resolve(event as CustomEvent);
+      resolve(event as CustomEvent<DialogCloseDetail>);
     });
   });
 }
