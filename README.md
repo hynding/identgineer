@@ -50,7 +50,10 @@ pnpm lint          # ESLint with type-aware typescript-eslint
 pnpm typecheck     # tsc across every workspace package
 pnpm test          # Vitest
 pnpm build         # build every package that defines a build script
+pnpm cms:generate  # camis dry run for the CMS (also cms:validate, cms:build); needs CAMIS_DIR
 ```
+
+See [cms/README.md](cms/README.md) for the content model, roles and how camis is run.
 
 ## Roadmap
 
