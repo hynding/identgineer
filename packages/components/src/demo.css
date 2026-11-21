@@ -322,7 +322,9 @@ section.dashboard::after {
 }
 
 section.plain {
-  display: block;
+  display: grid;
+  gap: var(--idg-space-m);
+  align-items: start;
 }
 
 section.plain > h2 {
