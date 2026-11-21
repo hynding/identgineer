@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { h, render } from "@stencil/vitest";
 import { installPopoverElement } from "../../testing/popover-element";
 import "../toast/toast";
 import "./toast-region";
@@ -10,7 +11,6 @@ interface ToastHost extends HTMLElement {
   variant: string;
   duration?: number;
   actionLabel?: string;
-  componentOnReady: () => Promise<HTMLElement>;
 }
 
 beforeEach(() => {
@@ -69,9 +69,9 @@ describe("toast()", () => {
   });
 
   it("returns a handle that dismisses the toast", async () => {
+    await render(<idg-toast-region />);
     const handle = toast({ title: "Saved" });
     const element = shown();
-    await element.componentOnReady();
     const reasons: string[] = [];
     element.addEventListener("idgDismiss", (event) => {
       reasons.push((event as CustomEvent<{ reason: string }>).detail.reason);

@@ -22,6 +22,8 @@ import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
 import { SkeletonVariant } from "./components/skeleton/skeleton-options";
 import { StatDirection, StatSentiment } from "./components/stat/stat-options";
+import { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
+import { ToastPosition } from "./components/toast-region/toast-region-options";
 export { AlertVariant } from "./components/alert/alert-options";
 export { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 export { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
@@ -39,6 +41,8 @@ export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
 export { SkeletonVariant } from "./components/skeleton/skeleton-options";
 export { StatDirection, StatSentiment } from "./components/stat/stat-options";
+export { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
+export { ToastPosition } from "./components/toast-region/toast-region-options";
 export namespace Components {
     /**
      * A message that stays on the page until it is read or dismissed. For a message that appears in
@@ -1032,6 +1036,87 @@ export namespace Components {
         "value": string;
     }
     /**
+     * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
+     * time, announces each as it appears, pauses them while they are being read and lets the keyboard
+     * reach them; the `toast()` function does all of that from script.
+     * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
+     * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
+     * is given a duration, so nobody loses the chance to act on it.
+     */
+    interface IdgToast {
+        /**
+          * The label of an action button, such as "Undo". Choosing it fires `idgAction`.
+         */
+        "actionLabel"?: string;
+        /**
+          * The close button's accessible name.
+          * @default "Dismiss"
+         */
+        "closeLabel": string;
+        /**
+          * More detail under the heading. Set as text, never as markup.
+         */
+        "description"?: string;
+        /**
+          * Dismisses the toast, as if its close button had been chosen but with the reason `api`.
+         */
+        "dismiss": () => Promise<void>;
+        /**
+          * How long the toast stays, in milliseconds. `0` keeps it until it is dismissed. Without a duration it stays for six seconds, or until dismissed when it has an action.
+         */
+        "duration"?: number;
+        /**
+          * The heading, and the toast's accessible name. Set as text, never as markup.
+         */
+        "heading"?: string;
+        /**
+          * Set by the region while the toasts are being read: the countdown stands still.
+          * @default false
+         */
+        "paused": boolean;
+        /**
+          * Set by the region while the toast waits its turn: it is hidden and does not count down.
+          * @default false
+         */
+        "queued": boolean;
+        /**
+          * Meaning. A danger toast is announced at once; the others wait for a pause in speech.
+          * @default "neutral"
+         */
+        "variant": ToastVariant;
+    }
+    /**
+     * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
+     * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
+     * rest, and announces each toast as it comes into view through a live region of its own: politely,
+     * or at once for danger. Focus never moves on its own.
+     * While the pointer is over it, focus is inside it, the window is in the background or the user
+     * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
+     * and nothing slides under the pointer.
+     */
+    interface IdgToastRegion {
+        /**
+          * The key, as `KeyboardEvent.key` names it, that moves focus to the toasts.
+          * @default "F8"
+         */
+        "hotkey": string;
+        /**
+          * The landmark's accessible name.
+          * @default "Notifications"
+         */
+        "label": string;
+        /**
+          * How many toasts show at once. The rest wait their turn.
+          * @default 3
+         */
+        "max": number;
+        /**
+          * The corner or edge the toasts gather at.
+          * @default "bottom-end"
+         */
+        "position": ToastPosition;
+    }
+    /**
      * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
      * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
      * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
@@ -1104,6 +1189,10 @@ export interface IdgSwitchCustomEvent<T> extends CustomEvent<T> {
 export interface IdgTextareaCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgTextareaElement;
+}
+export interface IdgToastCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgToastElement;
 }
 declare global {
     interface HTMLIdgAlertElementEventMap {
@@ -1493,6 +1582,47 @@ declare global {
         prototype: HTMLIdgTextareaElement;
         new (): HTMLIdgTextareaElement;
     };
+    interface HTMLIdgToastElementEventMap {
+        "idgAction": void;
+        "idgDismiss": ToastDismissDetail;
+    }
+    /**
+     * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
+     * time, announces each as it appears, pauses them while they are being read and lets the keyboard
+     * reach them; the `toast()` function does all of that from script.
+     * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
+     * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
+     * is given a duration, so nobody loses the chance to act on it.
+     */
+    interface HTMLIdgToastElement extends Components.IdgToast, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgToastElementEventMap>(type: K, listener: (this: HTMLIdgToastElement, ev: IdgToastCustomEvent<HTMLIdgToastElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgToastElementEventMap>(type: K, listener: (this: HTMLIdgToastElement, ev: IdgToastCustomEvent<HTMLIdgToastElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgToastElement: {
+        prototype: HTMLIdgToastElement;
+        new (): HTMLIdgToastElement;
+    };
+    /**
+     * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
+     * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
+     * rest, and announces each toast as it comes into view through a live region of its own: politely,
+     * or at once for danger. Focus never moves on its own.
+     * While the pointer is over it, focus is inside it, the window is in the background or the user
+     * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
+     * and nothing slides under the pointer.
+     */
+    interface HTMLIdgToastRegionElement extends Components.IdgToastRegion, HTMLStencilElement {
+    }
+    var HTMLIdgToastRegionElement: {
+        prototype: HTMLIdgToastRegionElement;
+        new (): HTMLIdgToastRegionElement;
+    };
     /**
      * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
      * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
@@ -1535,6 +1665,8 @@ declare global {
         "idg-stat": HTMLIdgStatElement;
         "idg-switch": HTMLIdgSwitchElement;
         "idg-textarea": HTMLIdgTextareaElement;
+        "idg-toast": HTMLIdgToastElement;
+        "idg-toast-region": HTMLIdgToastRegionElement;
         "idg-tooltip": HTMLIdgTooltipElement;
     }
 }
@@ -2523,6 +2655,91 @@ declare namespace LocalJSX {
         "value"?: string;
     }
     /**
+     * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
+     * time, announces each as it appears, pauses them while they are being read and lets the keyboard
+     * reach them; the `toast()` function does all of that from script.
+     * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
+     * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
+     * is given a duration, so nobody loses the chance to act on it.
+     */
+    interface IdgToast {
+        /**
+          * The label of an action button, such as "Undo". Choosing it fires `idgAction`.
+         */
+        "actionLabel"?: string;
+        /**
+          * The close button's accessible name.
+          * @default "Dismiss"
+         */
+        "closeLabel"?: string;
+        /**
+          * More detail under the heading. Set as text, never as markup.
+         */
+        "description"?: string;
+        /**
+          * How long the toast stays, in milliseconds. `0` keeps it until it is dismissed. Without a duration it stays for six seconds, or until dismissed when it has an action.
+         */
+        "duration"?: number;
+        /**
+          * The heading, and the toast's accessible name. Set as text, never as markup.
+         */
+        "heading"?: string;
+        /**
+          * Fires when the action button is chosen, just before the toast is dismissed.
+         */
+        "onIdgAction"?: (event: IdgToastCustomEvent<void>) => void;
+        /**
+          * Fires when the toast is dismissed, with the reason. The toast then removes itself, unless a listener calls `preventDefault()`.
+         */
+        "onIdgDismiss"?: (event: IdgToastCustomEvent<ToastDismissDetail>) => void;
+        /**
+          * Set by the region while the toasts are being read: the countdown stands still.
+          * @default false
+         */
+        "paused"?: boolean;
+        /**
+          * Set by the region while the toast waits its turn: it is hidden and does not count down.
+          * @default false
+         */
+        "queued"?: boolean;
+        /**
+          * Meaning. A danger toast is announced at once; the others wait for a pause in speech.
+          * @default "neutral"
+         */
+        "variant"?: ToastVariant;
+    }
+    /**
+     * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
+     * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
+     * rest, and announces each toast as it comes into view through a live region of its own: politely,
+     * or at once for danger. Focus never moves on its own.
+     * While the pointer is over it, focus is inside it, the window is in the background or the user
+     * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
+     * and nothing slides under the pointer.
+     */
+    interface IdgToastRegion {
+        /**
+          * The key, as `KeyboardEvent.key` names it, that moves focus to the toasts.
+          * @default "F8"
+         */
+        "hotkey"?: string;
+        /**
+          * The landmark's accessible name.
+          * @default "Notifications"
+         */
+        "label"?: string;
+        /**
+          * How many toasts show at once. The rest wait their turn.
+          * @default 3
+         */
+        "max"?: number;
+        /**
+          * The corner or edge the toasts gather at.
+          * @default "bottom-end"
+         */
+        "position"?: ToastPosition;
+    }
+    /**
      * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
      * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
      * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
@@ -2779,6 +2996,22 @@ declare namespace LocalJSX {
         "accessibleDescription": string;
         "invalid": boolean;
     }
+    interface IdgToastAttributes {
+        "heading": string;
+        "description": string;
+        "variant": ToastVariant;
+        "duration": number;
+        "actionLabel": string;
+        "closeLabel": string;
+        "queued": boolean;
+        "paused": boolean;
+    }
+    interface IdgToastRegionAttributes {
+        "position": ToastPosition;
+        "max": number;
+        "label": string;
+        "hotkey": string;
+    }
     interface IdgTooltipAttributes {
         "text": string;
         "placement": Placement;
@@ -2813,6 +3046,8 @@ declare namespace LocalJSX {
         "idg-stat": Omit<IdgStat, keyof IdgStatAttributes> & { [K in keyof IdgStat & keyof IdgStatAttributes]?: IdgStat[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `attr:${K}`]?: IdgStatAttributes[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `prop:${K}`]?: IdgStat[K] };
         "idg-switch": Omit<IdgSwitch, keyof IdgSwitchAttributes> & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes]?: IdgSwitch[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `attr:${K}`]?: IdgSwitchAttributes[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `prop:${K}`]?: IdgSwitch[K] };
         "idg-textarea": Omit<IdgTextarea, keyof IdgTextareaAttributes> & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes]?: IdgTextarea[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `attr:${K}`]?: IdgTextareaAttributes[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `prop:${K}`]?: IdgTextarea[K] };
+        "idg-toast": Omit<IdgToast, keyof IdgToastAttributes> & { [K in keyof IdgToast & keyof IdgToastAttributes]?: IdgToast[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `attr:${K}`]?: IdgToastAttributes[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `prop:${K}`]?: IdgToast[K] };
+        "idg-toast-region": Omit<IdgToastRegion, keyof IdgToastRegionAttributes> & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes]?: IdgToastRegion[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `attr:${K}`]?: IdgToastRegionAttributes[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `prop:${K}`]?: IdgToastRegion[K] };
         "idg-tooltip": Omit<IdgTooltip, keyof IdgTooltipAttributes> & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes]?: IdgTooltip[K] } & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `attr:${K}`]?: IdgTooltipAttributes[K] } & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `prop:${K}`]?: IdgTooltip[K] };
     }
 }
@@ -2948,6 +3183,25 @@ declare module "@stencil/core" {
             "idg-stat": LocalJSX.IntrinsicElements["idg-stat"] & JSXBase.HTMLAttributes<HTMLIdgStatElement>;
             "idg-switch": LocalJSX.IntrinsicElements["idg-switch"] & JSXBase.HTMLAttributes<HTMLIdgSwitchElement>;
             "idg-textarea": LocalJSX.IntrinsicElements["idg-textarea"] & JSXBase.HTMLAttributes<HTMLIdgTextareaElement>;
+            /**
+             * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
+             * time, announces each as it appears, pauses them while they are being read and lets the keyboard
+             * reach them; the `toast()` function does all of that from script.
+             * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
+             * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
+             * is given a duration, so nobody loses the chance to act on it.
+             */
+            "idg-toast": LocalJSX.IntrinsicElements["idg-toast"] & JSXBase.HTMLAttributes<HTMLIdgToastElement>;
+            /**
+             * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
+             * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
+             * rest, and announces each toast as it comes into view through a live region of its own: politely,
+             * or at once for danger. Focus never moves on its own.
+             * While the pointer is over it, focus is inside it, the window is in the background or the user
+             * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
+             * and nothing slides under the pointer.
+             */
+            "idg-toast-region": LocalJSX.IntrinsicElements["idg-toast-region"] & JSXBase.HTMLAttributes<HTMLIdgToastRegionElement>;
             /**
              * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
              * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and

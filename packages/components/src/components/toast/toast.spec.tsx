@@ -12,11 +12,29 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-// Fake timers are installed only once the component has rendered, which needs real ones.
-async function renderTimed(vnode: ReturnType<typeof h>) {
-  const rendered = await render(vnode);
+interface ToastProps {
+  heading: string;
+  duration?: number;
+  actionLabel?: string;
+  queued?: boolean;
+}
+
+// Fake timers are installed once an empty page has rendered, which needs real ones; the toasts are
+// added afterwards, so their countdowns run on fake time.
+async function mountTimed(...props: ToastProps[]): Promise<ToastHost[]> {
+  const { root } = await render(<div />);
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
-  return rendered;
+  return props.map((values) => {
+    const toast = Object.assign(document.createElement("idg-toast"), values) as ToastHost;
+    root.append(toast);
+    return toast;
+  });
+}
+
+async function mountOneTimed(props: ToastProps): Promise<ToastHost> {
+  const [toast] = await mountTimed(props);
+  if (toast === undefined) throw new Error("no toast was mounted");
+  return toast;
 }
 
 function part(root: HTMLElement, name: string): HTMLElement {
@@ -81,10 +99,10 @@ describe("idg-toast rendering", () => {
 
   it("gives each status variant an icon and its tone", async () => {
     const { root, waitForChanges } = await render(saved);
-    expect(root.shadowRoot?.querySelector("idg-icon")).toBeNull();
+    expect(root.shadowRoot?.querySelector('[part="icon"]')).toBeNull();
     root.setAttribute("variant", "danger");
     await waitForChanges();
-    expect(root.shadowRoot?.querySelector("idg-icon")?.getAttribute("name")).toBe("error");
+    expect(part(root, "icon").getAttribute("name")).toBe("error");
     expect(part(root, "toast").classList.contains("variant-danger")).toBe(true);
   });
 
@@ -111,6 +129,7 @@ describe("idg-toast dismissal", () => {
     const seen = reasons(toast);
     part(toast, "close").click();
     expect(seen).toEqual(["close-button"]);
+    await Promise.resolve();
     expect(toast.isConnected).toBe(false);
   });
 
@@ -121,6 +140,7 @@ describe("idg-toast dismissal", () => {
       event.preventDefault();
     });
     part(toast, "close").click();
+    await Promise.resolve();
     expect(toast.isConnected).toBe(true);
   });
 
@@ -151,6 +171,7 @@ describe("idg-toast dismissal", () => {
     const seen = reasons(toast);
     await toast.dismiss();
     expect(seen).toEqual(["api"]);
+    await Promise.resolve();
     expect(toast.isConnected).toBe(false);
   });
 
@@ -173,8 +194,8 @@ describe("idg-toast dismissal", () => {
 
 describe("idg-toast timing", () => {
   it("dismisses itself after its duration", async () => {
-    const { root } = await renderTimed(<div>{<idg-toast heading="Saved" duration={3000} />}</div>);
-    const seen = reasons(toastIn(root));
+    const toast = await mountOneTimed({ heading: "Saved", duration: 3000 });
+    const seen = reasons(toast);
     vi.advanceTimersByTime(2999);
     expect(seen).toEqual([]);
     vi.advanceTimersByTime(1);
@@ -182,8 +203,8 @@ describe("idg-toast timing", () => {
   });
 
   it("dismisses itself after a default duration when none is given", async () => {
-    const { root } = await renderTimed(<div>{saved}</div>);
-    const seen = reasons(toastIn(root));
+    const toast = await mountOneTimed({ heading: "Saved" });
+    const seen = reasons(toast);
     vi.advanceTimersByTime(5999);
     expect(seen).toEqual([]);
     vi.advanceTimersByTime(1);
@@ -191,27 +212,29 @@ describe("idg-toast timing", () => {
   });
 
   it("never dismisses itself while it offers an action, unless given a duration", async () => {
-    const { root } = await renderTimed(
-      <div>
-        <idg-toast id="kept" heading="Deleted" actionLabel="Undo" />
-        <idg-toast id="timed" heading="Deleted" actionLabel="Undo" duration={8000} />
-      </div>,
+    const [kept, timed] = await mountTimed(
+      { heading: "Deleted", actionLabel: "Undo" },
+      { heading: "Deleted", actionLabel: "Undo", duration: 8000 },
     );
-    vi.advanceTimersByTime(8000);
-    expect(root.querySelector("#kept")).not.toBeNull();
-    expect(root.querySelector("#timed")).toBeNull();
+    vi.advanceTimersByTime(60_000);
+    await Promise.resolve();
+    expect(kept?.isConnected).toBe(true);
+    expect(timed?.isConnected).toBe(false);
+  });
+
+  it("stays until dismissed with a duration of 0", async () => {
+    const toast = await mountOneTimed({ heading: "Saved", duration: 0 });
+    vi.advanceTimersByTime(60_000);
+    await Promise.resolve();
+    expect(toast.isConnected).toBe(true);
   });
 
   it("does not count down while queued, and gets its whole duration once shown", async () => {
-    const { root, waitForChanges } = await renderTimed(
-      <div>{<idg-toast heading="Saved" duration={1000} queued />}</div>,
-    );
-    const toast = toastIn(root);
+    const toast = await mountOneTimed({ heading: "Saved", duration: 1000, queued: true });
     const seen = reasons(toast);
     vi.advanceTimersByTime(5000);
     expect(seen).toEqual([]);
     toast.queued = false;
-    await waitForChanges();
     vi.advanceTimersByTime(999);
     expect(seen).toEqual([]);
     vi.advanceTimersByTime(1);
@@ -219,27 +242,23 @@ describe("idg-toast timing", () => {
   });
 
   it("stands still while paused and runs on with the time left", async () => {
-    const { root, waitForChanges } = await renderTimed(
-      <div>{<idg-toast heading="Saved" duration={1000} />}</div>,
-    );
-    const toast = toastIn(root);
-    const seen = reasons(toast);
+    const toast = await mountOneTimed({ heading: "Saved", duration: 1000 });
+    const host = toast;
+    const seen = reasons(host);
     vi.advanceTimersByTime(600);
-    toast.paused = true;
-    await waitForChanges();
+    host.paused = true;
     vi.advanceTimersByTime(10_000);
     expect(seen).toEqual([]);
-    toast.paused = false;
-    await waitForChanges();
+    host.paused = false;
     vi.advanceTimersByTime(400);
     expect(seen).toEqual(["timeout"]);
   });
 
   it("stops counting once removed", async () => {
-    const { root } = await renderTimed(<div>{<idg-toast heading="Saved" duration={1000} />}</div>);
-    const toast = toastIn(root);
-    const seen = reasons(toast);
-    toast.remove();
+    const toast = await mountOneTimed({ heading: "Saved", duration: 1000 });
+    const host = toast;
+    const seen = reasons(host);
+    host.remove();
     vi.advanceTimersByTime(5000);
     expect(seen).toEqual([]);
   });

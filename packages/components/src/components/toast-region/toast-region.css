@@ -1,0 +1,73 @@
+:host {
+  display: block;
+}
+
+/* The popover's own box is only a frame: transparent, borderless and letting clicks through to
+   the page around the toasts, which take the pointer themselves. */
+.region {
+  --_gutter: var(--idg-space-m);
+
+  position: fixed;
+  inset: auto;
+  box-sizing: border-box;
+  inline-size: min(26rem, 100vw);
+  max-block-size: 100dvh;
+  margin: 0;
+  padding: var(--_gutter);
+  border: 0;
+  overflow: visible;
+  background: transparent;
+  color: inherit;
+  pointer-events: none;
+}
+
+.region:popover-open {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+}
+
+::slotted(*) {
+  pointer-events: auto;
+}
+
+.region:focus-visible {
+  outline-width: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
+  outline-style: var(--idg-focus-ring-style);
+  outline-color: var(--idg-color-focus-ring);
+  outline-offset: calc(-1 * var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
+}
+
+.position-top-start,
+.position-top-center,
+.position-top-end {
+  inset-block-start: 0;
+}
+
+.position-bottom-start,
+.position-bottom-center,
+.position-bottom-end {
+  inset-block-end: 0;
+}
+
+.position-top-start,
+.position-bottom-start {
+  inset-inline-start: 0;
+}
+
+.position-top-end,
+.position-bottom-end {
+  inset-inline-end: 0;
+}
+
+.position-top-center,
+.position-bottom-center {
+  inset-inline-start: 50%;
+  translate: -50% 0;
+}
+
+@media (forced-colors: active) {
+  .region:focus-visible {
+    outline-color: Highlight;
+  }
+}

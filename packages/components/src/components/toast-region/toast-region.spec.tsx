@@ -36,12 +36,29 @@ function toasts(root: HTMLElement): ToastHost[] {
   return Array.from(root.querySelectorAll<ToastHost>("idg-toast"));
 }
 
-function addToast(region: HTMLElement, heading: string, variant = "neutral"): ToastHost {
+// The mock document fires no slotchange, so the tests fire it as a browser would.
+function slotChanged(region: HTMLElement): void {
+  region.shadowRoot?.querySelector("slot")?.dispatchEvent(new Event("slotchange"));
+}
+
+function addToast(
+  region: HTMLElement,
+  heading: string,
+  variant = "neutral",
+  description?: string,
+): ToastHost {
   const toast = document.createElement("idg-toast") as ToastHost;
   toast.heading = heading;
   toast.variant = variant;
+  if (description !== undefined) toast.description = description;
   region.append(toast);
+  slotChanged(region);
   return toast;
+}
+
+function removeToast(region: HTMLElement, toast: ToastHost | undefined): void {
+  toast?.remove();
+  slotChanged(region);
 }
 
 const empty = <idg-toast-region />;
@@ -77,37 +94,31 @@ describe("idg-toast-region rendering", () => {
   });
 
   it("shows the popover only while it holds a toast", async () => {
-    const { root, waitForChanges } = await render(empty);
+    const { root } = await render(empty);
     const region = part(root, "region");
     expect(region.hasAttribute("data-popover-open")).toBe(false);
     const toast = addToast(root, "Saved");
-    await waitForChanges();
     expect(region.hasAttribute("data-popover-open")).toBe(true);
-    toast.remove();
-    await waitForChanges();
+    removeToast(root, toast);
     expect(region.hasAttribute("data-popover-open")).toBe(false);
   });
 });
 
 describe("idg-toast-region queue", () => {
   it("shows up to max toasts and queues the rest until one goes", async () => {
-    const { root, waitForChanges } = await render(<idg-toast-region max={2} />);
+    const { root } = await render(<idg-toast-region max={2} />);
     for (const heading of ["One", "Two", "Three"]) addToast(root, heading);
-    await waitForChanges();
     expect(toasts(root).map((toast) => toast.queued)).toEqual([false, false, true]);
-    toasts(root)[0]?.remove();
-    await waitForChanges();
+    removeToast(root, toasts(root)[0]);
     expect(toasts(root).map((toast) => toast.queued)).toEqual([false, false]);
   });
 });
 
 describe("idg-toast-region announcements", () => {
   it("announces a toast politely when it comes into view, as text", async () => {
-    const { root, waitForChanges } = await render(empty);
+    const { root } = await render(empty);
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    const toast = addToast(root, "<b>Saved</b>");
-    toast.description = "Your changes are live.";
-    await waitForChanges();
+    addToast(root, "<b>Saved</b>", "neutral", "Your changes are live.");
     vi.advanceTimersByTime(150);
     const polite = live(root, "polite");
     expect(polite.textContent).toContain("<b>Saved</b>");
@@ -117,25 +128,22 @@ describe("idg-toast-region announcements", () => {
   });
 
   it("announces only a danger toast assertively", async () => {
-    const { root, waitForChanges } = await render(empty);
+    const { root } = await render(empty);
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     addToast(root, "Upload failed", "danger");
-    await waitForChanges();
     vi.advanceTimersByTime(150);
     expect(live(root, "assertive").textContent).toContain("Upload failed");
     expect(live(root, "polite").textContent).toBe("");
   });
 
   it("does not announce a queued toast until it is shown", async () => {
-    const { root, waitForChanges } = await render(<idg-toast-region max={1} />);
+    const { root } = await render(<idg-toast-region max={1} />);
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const first = addToast(root, "First");
     addToast(root, "Second");
-    await waitForChanges();
     vi.advanceTimersByTime(150);
     expect(live(root, "polite").textContent).not.toContain("Second");
-    first.remove();
-    await waitForChanges();
+    removeToast(root, first);
     vi.advanceTimersByTime(150);
     expect(live(root, "polite").textContent).toContain("Second");
   });
@@ -143,47 +151,36 @@ describe("idg-toast-region announcements", () => {
 
 describe("idg-toast-region pausing", () => {
   it("pauses every toast while the pointer is over the region", async () => {
-    const { root, waitForChanges } = await render(empty);
+    const { root } = await render(empty);
     const toast = addToast(root, "Saved");
-    await waitForChanges();
     part(root, "region").dispatchEvent(new Event("pointerenter"));
-    await waitForChanges();
     expect(toast.paused).toBe(true);
     part(root, "region").dispatchEvent(new Event("pointerleave"));
-    await waitForChanges();
     expect(toast.paused).toBe(false);
   });
 
   it("pauses every toast while focus is inside the region", async () => {
-    const { root, waitForChanges } = await render(empty);
+    const { root } = await render(empty);
     const toast = addToast(root, "Saved");
-    await waitForChanges();
     toast.dispatchEvent(new Event("focusin", { bubbles: true, composed: true }));
-    await waitForChanges();
     expect(toast.paused).toBe(true);
     toast.dispatchEvent(new Event("focusout", { bubbles: true, composed: true }));
-    await waitForChanges();
     expect(toast.paused).toBe(false);
   });
 
   it("pauses every toast while the window is in the background", async () => {
-    const { root, waitForChanges } = await render(empty);
+    const { root } = await render(empty);
     const toast = addToast(root, "Saved");
-    await waitForChanges();
     window.dispatchEvent(new Event("blur"));
-    await waitForChanges();
     expect(toast.paused).toBe(true);
     window.dispatchEvent(new Event("focus"));
-    await waitForChanges();
     expect(toast.paused).toBe(false);
   });
 
   it("pauses a toast added while paused", async () => {
-    const { root, waitForChanges } = await render(empty);
+    const { root } = await render(empty);
     window.dispatchEvent(new Event("blur"));
-    await waitForChanges();
     const toast = addToast(root, "Saved");
-    await waitForChanges();
     expect(toast.paused).toBe(true);
     window.dispatchEvent(new Event("focus"));
   });
@@ -191,21 +188,19 @@ describe("idg-toast-region pausing", () => {
 
 describe("idg-toast-region hotkey", () => {
   it("moves focus to the region on F8 while it holds a toast", async () => {
-    const { root, waitForChanges } = await render(empty);
+    const { root } = await render(empty);
     const region = part(root, "region");
     const focus = vi.spyOn(region, "focus");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "F8", bubbles: true }));
     expect(focus).not.toHaveBeenCalled();
     addToast(root, "Saved");
-    await waitForChanges();
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "F8", bubbles: true }));
     expect(focus).toHaveBeenCalledTimes(1);
   });
 
   it("takes another hotkey", async () => {
-    const { root, waitForChanges } = await render(<idg-toast-region hotkey="F6" />);
+    const { root } = await render(<idg-toast-region hotkey="F6" />);
     addToast(root, "Saved");
-    await waitForChanges();
     const focus = vi.spyOn(part(root, "region"), "focus");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "F8", bubbles: true }));
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "F6", bubbles: true }));
