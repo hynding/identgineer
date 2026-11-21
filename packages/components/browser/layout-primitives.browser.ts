@@ -677,6 +677,66 @@ test.describe("a rule between stack items", () => {
     }
   });
 
+  for (const direction of ["ltr", "rtl"] as const) {
+    for (const align of ["stretch", "start", "center", "end"] as const) {
+      test(`a horizontal idg-divider spans the stack under align ${align} in ${direction}`, async ({
+        page,
+      }) => {
+        await open(page);
+        await setDirection(page, direction);
+        await page.locator("#stack-dividers").evaluate((element, value) => {
+          element.setAttribute("align", value);
+        }, align);
+        await expect
+          .poll(() =>
+            page
+              .locator("#stack-dividers")
+              .locator('[part="stack"]')
+              .evaluate((element) => element.className),
+          )
+          .toContain(`align-${align}`);
+        const widths = await page.locator("#stack-dividers").evaluate((element) => {
+          const stack = element.shadowRoot?.querySelector('[part="stack"]');
+          if (!stack) throw new Error("no stack part");
+          const style = getComputedStyle(stack);
+          const inner =
+            stack.getBoundingClientRect().width -
+            parseFloat(style.paddingInlineStart) -
+            parseFloat(style.paddingInlineEnd);
+          return {
+            inner,
+            dividers: Array.from(element.querySelectorAll("idg-divider")).map(
+              (divider) => divider.getBoundingClientRect().width,
+            ),
+          };
+        });
+        expect(widths.inner).toBeGreaterThan(100);
+        expect(widths.dividers).toHaveLength(2);
+        for (const width of widths.dividers) expect(width).toBeCloseTo(widths.inner, 0);
+      });
+    }
+  }
+
+  test("a vertical idg-divider in a cluster spans the height of the row", async ({ page }) => {
+    await open(page);
+    const heights = await page.locator("#cluster-divider").evaluate((element) => {
+      const cluster = element.shadowRoot?.querySelector('[part="cluster"]');
+      const divider = element.querySelector("idg-divider");
+      const card = element.querySelector("idg-card");
+      if (!cluster || !divider || !card) throw new Error("missing part");
+      return {
+        row: cluster.getBoundingClientRect().height,
+        divider: divider.getBoundingClientRect().height,
+        line: (divider.shadowRoot?.querySelector(".line") ?? divider).getBoundingClientRect()
+          .height,
+        card: card.getBoundingClientRect().height,
+      };
+    });
+    expect(heights.card).toBeGreaterThan(40);
+    expect(heights.divider).toBeCloseTo(heights.row, 0);
+    expect(heights.line).toBeCloseTo(heights.row, 0);
+  });
+
   test("a dividers attribute draws nothing and changes nothing", async ({ page }) => {
     await open(page);
     const seen = await page.locator("#stack-unknown").evaluate((element) => {

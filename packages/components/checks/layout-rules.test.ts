@@ -234,9 +234,50 @@ describe("findLayoutCssViolations", () => {
   });
 
   it.each([
+    [".a { clip-path: rect(0 var(--a) var(--b) 0); }"],
+    [".a { clip-path: rect(auto auto auto auto); }"],
+    [".a { clip-path: xywh(0 0 var(--w) var(--h)); }"],
+    [".a { shape-outside: inset(0 var(--a) var(--b)); }"],
+    [".a { shape-outside: xywh(0 0 50% 50%); }"],
+    [".a { clip: rect(0, var(--a), var(--b), 0); }"],
+    [".a { clip-path: inset(0 round var(--r) var(--s)); }"],
+    [".a { clip-path: inset(0 round var(--r) / var(--s)); }"],
+    [".a { shape-outside: inset(0 round var(--r) var(--s)); }"],
+  ])("refuses a physically ordered shape in %s", (css) => {
+    expect(findLayoutCssViolations(css).length).toBeGreaterThan(0);
+  });
+
+  it.each([
+    [".a { shape-outside: inset(0 var(--a)); }"],
+    [".a { shape-outside: inset(0 round var(--r)); }"],
+    [".a { shape-outside: circle(50%); }"],
+  ])("accepts the shape in %s", (css) => {
+    expect(findLayoutCssViolations(css)).toEqual([]);
+  });
+
+  it("refuses an orientation media query, which is the viewport's, and allows it in a container query", () => {
+    expect(
+      findLayoutCssViolations("@media (orientation: portrait) { .a { gap: 0; } }").map(
+        (violation) => violation.rule,
+      ),
+    ).toEqual(["viewport media query"]);
+    expect(
+      findLayoutCssViolations("@container (orientation: portrait) { .a { gap: 0; } }"),
+    ).toEqual([]);
+  });
+
+  it.each([
+    [`.a::before { content: '@media (min-width: 0) {'; }`],
+    [`.a::before { content: "@container (inline-size < 30em) {"; }`],
+    [`.a::before { content: "10px left"; }`],
+  ])("does not read a string as css in %s", (css) => {
+    expect(findLayoutCssViolations(css)).toEqual([]);
+  });
+
+  it.each([
     [".a { clip-path: inset(0); }"],
     [".a { clip-path: inset(var(--a) var(--b)); }"],
-    [".a { clip-path: inset(0 round var(--r) var(--s)); }"],
+    [".a { clip-path: inset(0 round var(--r)); }"],
     [".a { clip-path: none; }"],
   ])("accepts an inset() clip with one or two values in %s", (css) => {
     expect(findLayoutCssViolations(css)).toEqual([]);
