@@ -52,7 +52,8 @@
   --_measure: var(--idg-layout-content-max);
   --_edge: max(var(--_gutter), calc((100% - var(--_measure)) / 2));
   --_bar: var(--idg-layout-nav-size);
-  --_rail: var(--idg-layout-rail-width);
+  /* The rail grows with the type scale, so the brand keeps its room when the text is larger. */
+  --_rail: calc(var(--idg-layout-rail-width) * var(--idg-ux-type-scale));
   --_aside: var(--idg-layout-aside-width);
   --_section: var(--idg-layout-section-gap);
   --_rule: var(--idg-border-width) var(--idg-border-style) var(--idg-border-color);
@@ -439,10 +440,16 @@
 
   @container idg-shell (min-inline-size: 40rem) {
     .header {
-      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-columns: minmax(min-content, 1fr) auto auto;
       grid-template-areas:
         "brand toggle actions"
         "nav nav nav";
+    }
+
+    /* Beside the toggle and the actions, a word breaks only when it is wider than the whole column:
+       with `anywhere` the brand's minimum is a letter, and the actions would take the room first. */
+    .brand {
+      overflow-wrap: break-word;
     }
 
     .actions {
@@ -649,10 +656,16 @@
 
   @container idg-shell (min-inline-size: 40rem) {
     .header {
-      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-columns: minmax(min-content, 1fr) auto auto;
       grid-template-areas:
         "brand toggle actions"
         "nav nav nav";
+    }
+
+    /* Beside the toggle and the actions, a word breaks only when it is wider than the whole column:
+       with `anywhere` the brand's minimum is a letter, and the actions would take the room first. */
+    .brand {
+      overflow-wrap: break-word;
     }
 
     .actions {
@@ -1154,10 +1167,16 @@
     }
 
     .header {
-      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-columns: minmax(min-content, 1fr) auto auto;
       grid-template-areas:
         "brand toggle actions"
         "nav nav nav";
+    }
+
+    /* Beside the toggle and the actions, a word breaks only when it is wider than the whole column:
+       with `anywhere` the brand's minimum is a letter, and the actions would take the room first. */
+    .brand {
+      overflow-wrap: break-word;
     }
 
     .actions {
@@ -1213,7 +1232,9 @@
     .actions {
       box-sizing: border-box;
       align-self: stretch;
-      padding: var(--_pad);
+      /* Not the percentage-capped --_pad: a percentage counts as 0 when auto columns are sized, so
+         the tiles would be narrower than their own padding and break the brand. */
+      padding: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
       border-width: var(--idg-surface-border-width);
       border-style: var(--idg-surface-border-style);
       border-color: var(--idg-surface-border-color);

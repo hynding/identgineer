@@ -959,13 +959,15 @@ whenever one was focused, so the brand, navigation and actions the page slots in
 for themselves: each sets `--_idg-chrome-scroll-margin` to the negative inset, and their `idg-`
 controls (buttons, links, inputs, checkboxes and the rest) read it in their own shadow roots as
 `scroll-margin-block-start`. The padding stays on for everything else, so a script that scrolls a
-target into view while the bar has focus still lands it under the bar, not behind it. A control from
+target into view while the bar has focus still lands it under the bar, not behind it (but see the
+text field exception below). A control from
 outside this library that has its own shadow root and a focusable element in the bar must read the
 same property (`scroll-margin-block-start: var(--_idg-chrome-scroll-margin, 0px)`), or focusing it
 can scroll the page. The exception is a text field: the browser's reveal of an editable element
 ignores `scroll-margin` and uses the root padding, so while a text-entry element in the bar has focus
 (a native `input` other than a checkbox, radio or button, a `textarea`, a `contenteditable`, or an
-`idg-input` or `idg-textarea` with focus inside) the root padding is `0`, and the page stays put. A
+`idg-input` or `idg-textarea` with focus inside) the root padding is `0`, and the page stays put. While such a field has focus the page padding is off, so a script scroll at
+that moment can land its target under the bar. A
 text-entry component from outside this library is not recognised unless it is a native element or
 reports focus on its host. The drawer that holds a long navigation is padded by the same inset, so a
 focused item stays inside its top edge. A navigation that scrolls along the top bar scrolls only itself to bring a
@@ -979,9 +981,11 @@ its small arrangement: a bar of brand, menu button and actions above one column,
 as a panel under the menu button. It is plain and fully usable, and the eight layouts differ again
 once the browser supports them.
 
-**Text wider than its column.** The hero lets a word it cannot fit break (`overflow-wrap: anywhere`,
-inherited by what the page puts in the hero, and set on the hero alone). Nothing is clipped and the
-page does not scroll sideways; ordinary words never break, because a word only breaks where it is
+**Text wider than its column.** The hero lets a word it cannot fit break anywhere
+(`overflow-wrap: anywhere`, inherited by what the page puts in the hero, and set on the hero alone).
+The brand breaks a word only when the word is wider than its whole column (`overflow-wrap:
+break-word`), and the actions wrap before the brand is squeezed. Nothing is clipped and the page does
+not scroll sideways; ordinary words elsewhere never break, because a word only breaks where it is
 wider than the line.
 
 ## Strict CSP and Trusted Types

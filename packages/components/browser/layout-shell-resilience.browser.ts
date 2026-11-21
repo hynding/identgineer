@@ -729,7 +729,7 @@ test.describe("the menu button does not move, in any UX mode, at larger text or 
       const parts = [
         button,
         document.getElementById("brand-link"),
-        document.getElementById("action-last"),
+        tree?.querySelector('[part="actions"]'),
       ]
         .filter((element): element is HTMLElement => element !== null)
         .map((element) => element.getBoundingClientRect());
