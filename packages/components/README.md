@@ -232,6 +232,186 @@ only. A required group with no choice is invalid with "Please select one of thes
 anchored on the first radio. `idg-radio-group` emits `idgChange` `{ value }`; the radio's own
 `idgSelect` is stopped at the group.
 
+## Icons and links
+
+### `idg-icon`
+
+| Prop    | Attribute | Values                                     | Default |
+| ------- | --------- | ------------------------------------------ | ------- |
+| `name`  | `name`    | one of the names below                     |         |
+| `size`  | `size`    | `sm` (1em), `md` (1.25em), `lg`, `xl`      | `md`    |
+| `label` | `label`   | accessible name; without it the icon hides |         |
+
+Thirty-seven icons are drawn by the library for its own use: `chevron-up`, `chevron-down`,
+`chevron-left`, `chevron-right`, `arrow-up`, `arrow-down`, `arrow-left`, `arrow-right`, `check`,
+`close`, `plus`, `minus`, `search`, `eye`, `eye-off`, `info`, `warning`, `error`, `success`, `user`,
+`settings`, `menu`, `external-link`, `copy`, `trash`, `edit`, `calendar`, `clock`, `lock`, `mail`,
+`bell`, `home`, `chart`, `shield`, `sparkles`, `sun`, `moon`.
+
+- The paths are original data in `src/components/icon/icon-paths.ts`, on a 24px grid, stroked with
+  `currentcolor` and rendered as JSX `<svg>` and `<path>`. There is no `innerHTML` and no sprite to
+  fetch, so the icons work under the strict CSP.
+- With a `label` the svg is `role="img"` with that name. Without one it is `aria-hidden`, which is
+  right for an icon beside text that says the same thing.
+- An unknown or missing `name` renders nothing, and warns once per name in a development build.
+- Part: `icon`. The form controls use it for the password reveal, the invalid mark and the select
+  chevron.
+
+### `idg-link`
+
+| Prop            | Attribute        | Notes                                                                   | Default         |
+| --------------- | ---------------- | ----------------------------------------------------------------------- | --------------- |
+| `href`          | `href`           | http, https, mailto, tel or relative url                                |                 |
+| `target`        | `target`         | any browsing context name                                               |                 |
+| `rel`           | `rel`            | link relationships                                                      |                 |
+| `external`      | `external`       | shows the external indicator and opens a new tab unless `target` is set | `false`         |
+| `externalLabel` | `external-label` | accessible name of the indicator                                        | `External link` |
+
+An inline link: the default slot is its text. It takes the button's link hardening. The url goes
+through `safeUrl`, so a `javascript:` or `data:` url (or none) renders an inert link with no `href`,
+`role="link"` and `aria-disabled="true"`, and a `target` other than `_self` always adds `rel="noopener
+noreferrer"`. It is always underlined, so colour is not the only thing that sets it apart from text.
+Hover uses the accent-subtle pair, focus uses the design's focus ring, and a visited link is mixed
+toward the text colour. Part: `control`.
+
+## Surfaces
+
+Colour never carries meaning alone in these components: every status has a text label, an icon or a
+shape as well.
+
+### `idg-card`
+
+| Prop            | Attribute       | Values                                     | Default |
+| --------------- | --------------- | ------------------------------------------ | ------- |
+| `variant`       | `variant`       | `plain`, `raised`, `outlined`, `accent`    | `plain` |
+| `padding`       | `padding`       | `none`, `sm`, `md`, `lg`                   | `md`    |
+| `interactive`   | `interactive`   | boolean                                    | `false` |
+| `heading`       | `heading`       | the card's title                           |         |
+| `headingLevel`  | `heading-level` | 1 to 6                                     | `3`     |
+| `href`          | `href`          | makes the heading a link (needs `heading`) |         |
+| `target`, `rel` |                 | as for `idg-link`                          |         |
+
+- **Slots:** `media` (full-bleed, at the top), `header` (beside the heading, such as a badge),
+  default (the body) and `footer`. A region with nothing in it is not drawn, so it takes no padding.
+  **Parts:** `card`, `media`, `header`, `heading`, `body`, `footer`.
+- **The card is where a design language shows.** The surface fill and backdrop blur, the surface
+  border, the radius and the elevation are all taken as the design gives them: frosted glass over
+  whatever is behind it, a thick black border and hard offset shadow (brutalist), top and bottom
+  rules and an underlined heading (editorial), a double border and stepped shadow (pixel), paired
+  light and dark shadows (soft), layered shadows (elevated). The heading takes the design's heading
+  transform and decoration, and the rule above the footer is the design's own border.
+- **Variants.** `plain` uses the first elevation and `raised` the second. `outlined` drops the fill
+  and shadow and draws a strong 2px edge of its own, which a borderless design would otherwise lack.
+  `accent` is the theme's accent colour; the tokens its contents read are re-pointed inside it (text,
+  muted text, links, and surfaces such as a secondary button) so that content stays legible in
+  designs whose surfaces are transparent. Use the `secondary` button there, not the primary one,
+  which is the same colour as the card.
+- **Interactive.** The card lifts on hover by `--idg-feedback-hover-lift` and moves a hard-shadow
+  design by a share of its offset, both scaled by `--idg-motion-enabled`, and takes the next
+  elevation. A card with a link is always interactive.
+- **One link.** With `href` and a `heading`, the heading is the card's only link. Its anchor has a
+  pseudo-element stretched over the card, so a click anywhere follows it while assistive technology
+  finds one link, named by the heading. Keyboard focus rings the whole card. Without a `heading`
+  there is no link text, so `href` is ignored. The url and `rel` get the same hardening as
+  `idg-link`. Content in the footer slot sits above the stretched link and stays clickable, but its
+  empty space still follows the card's link. Put other links and buttons in the footer, not the
+  body.
+
+### `idg-badge`
+
+`variant` (`neutral`, `accent`, `success`, `warning`, `danger`, `info`; default `neutral`), `size`
+(`sm`, `md`) and `dot` (a leading dot in the text colour). The label is the default slot. Each
+variant is the theme's subtle background with its on-subtle text, which the token build keeps at
+4.5:1 in every theme and scheme (and the browser tests recompute it). Parts: `badge`, `dot`, `label`.
+
+### `idg-avatar` and `idg-avatar-group`
+
+| Prop          | Attribute      | Notes                                                                   | Default |
+| ------------- | -------------- | ----------------------------------------------------------------------- | ------- |
+| `src`         | `src`          | picture; http, https or relative only                                   |         |
+| `alt`         | `alt`          | what the picture shows; defaults to `name`; `""` marks it as decoration |         |
+| `name`        | `name`         | source of the initials, the colour and the default alt                  |         |
+| `size`        | `size`         | `xs`, `sm`, `md`, `lg`, `xl`                                            | `md`    |
+| `status`      | `status`       | `online`, `away`, `busy`, `offline`                                     |         |
+| `statusLabel` | `status-label` | accessible name of the status; defaults to the status in English        |         |
+
+- The picture is `loading="lazy"`, `decoding="async"` and `referrerpolicy="no-referrer"`. Its url
+  goes through `safeImageUrl`: `data:`, `blob:`, `javascript:`, `mailto:` and the rest are never
+  loaded. When the url is refused, missing or the image fails to load, the avatar shows the initials
+  (the first letter of the first and last word of `name`) or, with no name, a person icon. A new `src`
+  after a failure is tried again.
+- The colour is one of six theme pairs chosen by hashing the name, so a person is the same colour
+  everywhere, with no stored state and no inline style. Names are compared trimmed and
+  case-insensitively.
+- Accessible name: the image's `alt`, or for initials a `role="img"` with the same name. An
+  avatar with nothing to say (no alt and no name, or `alt=""`) is `aria-hidden`.
+- The status dot is a named image and each status has a shape of its own: a solid dot, a dot with a
+  bite out of it, a dot with a bar, an empty ring.
+- `idg-avatar-group` overlaps its `idg-avatar` children. `size` is applied to them, `label` makes the
+  row a named group, and `max` hides the avatars past it (it sets `hidden` on them) and draws a
+  `+N` count named "N more" (`more-label` changes the word). Parts: `group`, `more`.
+- Avatar parts: `avatar`, `image`, `status`.
+
+### `idg-alert`
+
+| Prop           | Attribute       | Values                                 | Default   |
+| -------------- | --------------- | -------------------------------------- | --------- |
+| `variant`      | `variant`       | `info`, `success`, `warning`, `danger` | `info`    |
+| `dismissible`  | `dismissible`   | boolean                                | `false`   |
+| `dismissLabel` | `dismiss-label` | the dismiss button's name              | `Dismiss` |
+
+- **Slots:** `title` and the default slot (the message). **Parts:** `alert`, `icon`, `title`, `body`,
+  `dismiss`. Each variant has its own icon.
+- **Announcement.** `warning` and `danger` are `role="alert"` (assertive); `info` and `success` are
+  `role="status"` (polite). The role carries the live behaviour, and no `aria-live` is added beside
+  it, which would announce a message twice. A live region announces what is inserted, not what was
+  on the page already, so render an alert at the moment it applies.
+- **Dismiss** is a real button. It emits `idgDismiss`, a cancelable event, and the alert then
+  hides itself (sets `hidden`) unless a listener calls `preventDefault()`.
+- The alert is a surface of the design language (surface border, radius and first elevation) filled
+  with the variant's opaque subtle colour, so the text pair keeps its contrast whatever is behind
+  it.
+
+### `idg-progress`
+
+`label`, `value`, `max` (default 100), `indeterminate`, `show-value` and `size` (`sm`, `md`, `lg`).
+The bar is a native `<progress>`, so the browser reports its role, value and maximum, and the label
+is its accessible name; always set one. Without a `value`, or with `indeterminate`, it is
+indeterminate and exposes no value. A value is kept inside `0..max` and a maximum that is not
+positive means 100. `show-value` draws the percentage, hidden from assistive technology since the
+element already reports it. An indeterminate bar runs a band across the track scaled by
+`--idg-motion-enabled`; where movement is off, or under `prefers-reduced-motion`, the band stands
+still and pulses instead. Parts: `label`, `value`, `control`.
+
+### `idg-skeleton`
+
+`variant` (`text`, `rect`, `circle`) and `lines` (1 to 10 lines of text, the last shorter). A skeleton
+is always `aria-hidden`, so it announces nothing. Pair it with a busy region: put `aria-busy="true"`
+on the container and a text status such as a visually hidden `<p role="status">Loading profile</p>`
+in it, then remove `aria-busy` and the skeletons when the content arrives. Size it with your own
+CSS on the element (`idg-skeleton { inline-size: 12rem }`); there is no inline style. The shimmer
+is a highlight mixed in by `--idg-motion-enabled`, so where movement is off the shape is one flat
+colour and the animation is turned off. Part: `shape`.
+
+### `idg-stat`
+
+`label`, `value`, `delta` (text such as `12.4%`), `direction` (`up`, `down`, `flat`; default `flat`)
+and `sentiment` (`positive`, `negative`, `neutral`). The label and value are plain text; the change
+is a pill with an arrow or minus icon. Direction is what the figure did and sentiment whether that is
+good, so a rising churn rate is `direction="up" sentiment="negative"`; sentiment defaults from the
+direction. The visible change is hidden from assistive technology and replaced by spoken text such as
+"Increased by 12.4%"; `up-label`, `down-label` and `flat-label` change the words. Slot `chart`
+holds something like a sparkline beside the figures. Parts: `label`, `value`, `delta`. Labels sit
+on the surface's normal text colour, so use `idg-stat` on `plain`, `raised` or `outlined` cards.
+
+### `idg-divider`
+
+`orientation` (`horizontal`, `vertical`) and `decorative`. It is a native `<hr>`; `decorative`
+gives it `role="presentation"`. The rule is the design's own border (thick in brutalist, double in
+pixel, a hairline in editorial) over a theme-coloured hairline that stands in where a design draws no
+border (soft, elevated), and it is never thinner than 1px. A vertical divider needs a parent with a
+height. Part: `line`.
+
 ## Strict CSP and Trusted Types
 
 Every component is verified in Chromium against
@@ -272,9 +452,10 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   `Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'; require-trusted-types-for 'script'`
   on every response, and fail any test on a console error, warning or page error, so each one is also
   a CSP and Trusted Types test. They cover hydration, real form submission and reset, constraint
-  validation, keyboard, label click, browser-computed accessible names and descriptions, boundary
-  contrast, and axe (wcag2a, wcag2aa, wcag21aa, wcag22aa) across the 8 designs in light and dark and
-  the 8 UX modes, on pages in `src/fixtures/` (copied to `www/fixtures/`; static HTML, no inline
+  validation, keyboard, label click, browser-computed accessible names and descriptions, the
+  accessibility tree beneath a card (one link), boundary contrast, text contrast of badges, alerts,
+  avatars and changes in all 8 themes in light and dark, and axe (wcag2a, wcag2aa, wcag21aa, wcag22aa) across the 8 designs in light and dark and
+  the 8 UX modes, on pages in `src/fixtures/` (`button.html`, `forms.html`, `surfaces.html`; copied to `www/fixtures/`; static HTML, no inline
   script or style). Build first. Playwright's own Chromium is installed with
   `pnpm --filter @identgineer/components exec playwright install --with-deps chromium`; where that is
   not possible, set `IDG_CHROMIUM_PATH` to a Chromium binary (`/opt/pw-browsers/chromium` is used if it
