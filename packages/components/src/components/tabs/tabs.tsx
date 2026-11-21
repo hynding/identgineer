@@ -48,7 +48,11 @@ function keyOf(item: { value: string }, index: number): string {
 export class IdgTabs {
   @Element() host!: HTMLElement;
 
-  /** The value of the selected tab. Without a match the first enabled tab is selected. */
+  /**
+   * The value of the selected tab. Without a match, the enabled tab nearest to where the selection
+   * was takes over, which is the first enabled tab until one has been selected. Values should be
+   * unique: a tab that repeats an earlier tab's value cannot be selected, and a warning is logged.
+   */
   @Prop({ mutable: true, reflect: true }) value = "";
 
   /** Which way the tab list runs. */
@@ -68,6 +72,7 @@ export class IdgTabs {
 
   private observer?: MutationObserver;
   private selectedIndex = 0;
+  private readonly warnedValues = new Set<string>();
   private loaded = false;
 
   connectedCallback(): void {
@@ -201,12 +206,24 @@ export class IdgTabs {
       value: keyOf(tab, index),
       disabled: tab.disabled,
     }));
+    this.warnOfDuplicates(items.map((item) => item.value));
     const next = resolveSelection(items, this.value, this.selectedIndex) ?? "";
     if (next !== this.value) this.value = next;
     this.selectedIndex = Math.max(
       0,
       items.findIndex((item) => item.value === next),
     );
+  }
+
+  // A repeated value pairs with the first tab that has it, so a later one is never selected.
+  private warnOfDuplicates(keys: readonly string[]): void {
+    keys.forEach((key, index) => {
+      if (keys.indexOf(key) === index || this.warnedValues.has(key)) return;
+      this.warnedValues.add(key);
+      console.warn(
+        `idg-tabs: more than one tab has the value "${key}". Only the first can be selected.`,
+      );
+    });
   }
 
   // The tabs and panels sit in their own shadow roots and cannot see each other, so the state they
