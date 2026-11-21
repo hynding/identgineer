@@ -30,11 +30,10 @@ export async function renderWithInternals(vnode: ReturnType<typeof h>, form: obj
   const prototype = Object.getPrototypeOf(Object.getPrototypeOf(document.createElement("div"))) as {
     attachInternals: () => unknown;
   };
-  installDefaultValidity(prototype);
   const spy = vi.spyOn(prototype, "attachInternals");
   spy.mockImplementation(() => internals);
   try {
-    const rendered = await render(vnode);
+    const rendered = await renderControl(vnode);
     return { ...rendered, internals };
   } finally {
     spy.mockRestore();
@@ -45,6 +44,14 @@ export async function renderWithInternals(vnode: ReturnType<typeof h>, form: obj
 function installDefaultValidity(prototype: object): void {
   if (Object.prototype.hasOwnProperty.call(prototype, "validity")) return;
   stubValidity(prototype as HTMLElement, {});
+}
+
+/** Renders a form control in the mock DOM, which has no constraint validation of its own. */
+export async function renderControl(vnode: ReturnType<typeof h>) {
+  installDefaultValidity(
+    Object.getPrototypeOf(Object.getPrototypeOf(document.createElement("div"))) as object,
+  );
+  return render(vnode);
 }
 
 /** The mock DOM has no constraint validation, so a native element's validity is supplied. */

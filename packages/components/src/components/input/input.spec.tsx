@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { h, render } from "@stencil/vitest";
-import { renderWithInternals, stubValidity } from "../../testing/form-internals";
+import { h } from "@stencil/vitest";
+import {
+  renderControl as render,
+  renderWithInternals,
+  stubValidity,
+} from "../../testing/form-internals";
 import "./input";
 
 function native(root: HTMLElement): HTMLInputElement {
@@ -213,20 +217,24 @@ describe("idg-input as a form control", () => {
 
   it("mirrors the native validity into the element internals, anchored on the input", async () => {
     const { internals, root, waitForChanges } = await renderWithInternals(<idg-input required />);
-    expect(internals.setValidity).toHaveBeenLastCalledWith({
-      badInput: false,
-      customError: false,
-      patternMismatch: false,
-      rangeOverflow: false,
-      rangeUnderflow: false,
-      stepMismatch: false,
-      tooLong: false,
-      tooShort: false,
-      typeMismatch: false,
-      valueMissing: false,
-    });
+    expect(internals.setValidity).toHaveBeenLastCalledWith(
+      {
+        badInput: false,
+        customError: false,
+        patternMismatch: false,
+        rangeOverflow: false,
+        rangeUnderflow: false,
+        stepMismatch: false,
+        tooLong: false,
+        tooShort: false,
+        typeMismatch: false,
+        valueMissing: false,
+      },
+      "",
+      native(root),
+    );
     stubValidity(native(root), { valueMissing: true }, "Please fill out this field.");
-    type(root, "");
+    type(root, "a");
     await waitForChanges();
     const [flags, message, anchor] = internals.setValidity.mock.lastCall as [
       ValidityStateFlags,

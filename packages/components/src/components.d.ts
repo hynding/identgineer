@@ -6,7 +6,11 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
+import { InputSize, InputType } from "./components/input/input-options";
+import { ValueDetail } from "./utils/event-details";
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
+export { InputSize, InputType } from "./components/input/input-options";
+export { ValueDetail } from "./utils/event-details";
 export namespace Components {
     interface IdgButton {
         /**
@@ -56,6 +60,90 @@ export namespace Components {
          */
         "variant": ButtonVariant;
     }
+    interface IdgInput {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        "autocapitalize"?: string;
+        "autocomplete"?: string;
+        /**
+          * Whether the value satisfies its constraints. Fires no UI.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        "enterkeyhint"?: string;
+        "inputmode"?: string;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "max"?: string;
+        "maxlength"?: number;
+        "min"?: string;
+        "minlength"?: number;
+        /**
+          * The name the value is submitted under.
+         */
+        "name"?: string;
+        "pattern"?: string;
+        "placeholder"?: string;
+        /**
+          * @default false
+         */
+        "readonly": boolean;
+        /**
+          * Whether the value is valid, showing the browser's message when it is not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Adds a button that shows a password as text. Only for `type="password"`.
+          * @default false
+         */
+        "reveal": boolean;
+        /**
+          * The name of the reveal button.
+          * @default "Show password"
+         */
+        "revealLabel": string;
+        /**
+          * Focuses the native input.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * Control size. Never smaller than the design's minimum target size.
+          * @default "md"
+         */
+        "size": InputSize;
+        "spellcheck"?: string;
+        "step"?: string;
+        /**
+          * What kind of text the control takes. Unknown values fall back to `text`.
+          * @default "text"
+         */
+        "type": InputType;
+        /**
+          * The current value. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value": string;
+    }
+}
+export interface IdgInputCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgInputElement;
 }
 declare global {
     interface HTMLIdgButtonElement extends Components.IdgButton, HTMLStencilElement {
@@ -64,8 +152,27 @@ declare global {
         prototype: HTMLIdgButtonElement;
         new (): HTMLIdgButtonElement;
     };
+    interface HTMLIdgInputElementEventMap {
+        "idgInput": ValueDetail;
+        "idgChange": ValueDetail;
+    }
+    interface HTMLIdgInputElement extends Components.IdgInput, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgInputElementEventMap>(type: K, listener: (this: HTMLIdgInputElement, ev: IdgInputCustomEvent<HTMLIdgInputElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgInputElementEventMap>(type: K, listener: (this: HTMLIdgInputElement, ev: IdgInputCustomEvent<HTMLIdgInputElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgInputElement: {
+        prototype: HTMLIdgInputElement;
+        new (): HTMLIdgInputElement;
+    };
     interface HTMLElementTagNameMap {
         "idg-button": HTMLIdgButtonElement;
+        "idg-input": HTMLIdgInputElement;
     }
 }
 declare namespace LocalJSX {
@@ -125,6 +232,86 @@ declare namespace LocalJSX {
          */
         "variant"?: ButtonVariant;
     }
+    interface IdgInput {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        "autocapitalize"?: string;
+        "autocomplete"?: string;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        "enterkeyhint"?: string;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        "inputmode"?: string;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "max"?: string;
+        "maxlength"?: number;
+        "min"?: string;
+        "minlength"?: number;
+        /**
+          * The name the value is submitted under.
+         */
+        "name"?: string;
+        /**
+          * Fires when the user commits a value, such as on blur or Enter.
+         */
+        "onIdgChange"?: (event: IdgInputCustomEvent<ValueDetail>) => void;
+        /**
+          * Fires on every edit.
+         */
+        "onIdgInput"?: (event: IdgInputCustomEvent<ValueDetail>) => void;
+        "pattern"?: string;
+        "placeholder"?: string;
+        /**
+          * @default false
+         */
+        "readonly"?: boolean;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * Adds a button that shows a password as text. Only for `type="password"`.
+          * @default false
+         */
+        "reveal"?: boolean;
+        /**
+          * The name of the reveal button.
+          * @default "Show password"
+         */
+        "revealLabel"?: string;
+        /**
+          * Control size. Never smaller than the design's minimum target size.
+          * @default "md"
+         */
+        "size"?: InputSize;
+        "spellcheck"?: string;
+        "step"?: string;
+        /**
+          * What kind of text the control takes. Unknown values fall back to `text`.
+          * @default "text"
+         */
+        "type"?: InputType;
+        /**
+          * The current value. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value"?: string;
+    }
 
     interface IdgButtonAttributes {
         "variant": ButtonVariant;
@@ -138,9 +325,36 @@ declare namespace LocalJSX {
         "fullWidth": boolean;
         "shortcut": string;
     }
+    interface IdgInputAttributes {
+        "type": InputType;
+        "name": string;
+        "value": string;
+        "placeholder": string;
+        "required": boolean;
+        "disabled": boolean;
+        "readonly": boolean;
+        "minlength": number;
+        "maxlength": number;
+        "min": string;
+        "max": string;
+        "step": string;
+        "pattern": string;
+        "autocomplete": string;
+        "inputmode": string;
+        "enterkeyhint": string;
+        "spellcheck": string;
+        "autocapitalize": string;
+        "size": InputSize;
+        "reveal": boolean;
+        "revealLabel": string;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
 
     interface IntrinsicElements {
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
+        "idg-input": Omit<IdgInput, keyof IdgInputAttributes> & { [K in keyof IdgInput & keyof IdgInputAttributes]?: IdgInput[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `attr:${K}`]?: IdgInputAttributes[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `prop:${K}`]?: IdgInput[K] };
     }
 }
 export { LocalJSX as JSX };
@@ -148,6 +362,7 @@ declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
             "idg-button": LocalJSX.IntrinsicElements["idg-button"] & JSXBase.HTMLAttributes<HTMLIdgButtonElement>;
+            "idg-input": LocalJSX.IntrinsicElements["idg-input"] & JSXBase.HTMLAttributes<HTMLIdgInputElement>;
         }
     }
 }
