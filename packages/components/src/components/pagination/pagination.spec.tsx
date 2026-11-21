@@ -326,4 +326,23 @@ describe("idg-pagination focus", () => {
     expect(focus).not.toHaveBeenCalled();
     focus.mockRestore();
   });
+
+  it("leaves focus alone when the page moved it to another element after the change", async () => {
+    const focus = watchFocus();
+    const { root, waitForChanges } = await render(<idg-pagination pageCount={20} page={1} />);
+    const pressed = pageControl(root, 3);
+    let active: Element | null = pressed;
+    focusIn(root, () => active);
+    const elsewhere = document.createElement("button");
+    Object.defineProperty(document, "activeElement", {
+      configurable: true,
+      get: () => (active === null ? elsewhere : root),
+    });
+    pressed.click();
+    active = null;
+    await waitForChanges();
+    expect(focus).not.toHaveBeenCalled();
+    Reflect.deleteProperty(document, "activeElement");
+    focus.mockRestore();
+  });
 });

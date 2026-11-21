@@ -369,3 +369,76 @@ describe("idg-accordion single mode with items added open", () => {
     expect(log).toEqual(["a:false"]);
   });
 });
+
+describe("idg-accordion settling the open items at load", () => {
+  const logOf = (root: HTMLElement) => {
+    const log: string[] = [];
+    root.addEventListener("idgToggle", (event) => {
+      const detail = (event as CustomEvent<{ value: string; open: boolean }>).detail;
+      log.push(`${detail.value}:${String(detail.open)}`);
+    });
+    return log;
+  };
+
+  it("announces nothing for the item it closes while the page loads", async () => {
+    const log: string[] = [];
+    const { root } = await render(
+      <div
+        ref={(element) => {
+          element?.addEventListener("idgToggle", (event) => {
+            const detail = (event as CustomEvent<{ value: string; open: boolean }>).detail;
+            log.push(`${detail.value}:${String(detail.open)}`);
+          });
+        }}
+      >
+        <idg-accordion>
+          <idg-accordion-item heading="A" value="a" open>
+            A
+          </idg-accordion-item>
+          <idg-accordion-item heading="B" value="b" open>
+            B
+          </idg-accordion-item>
+        </idg-accordion>
+      </div>,
+    );
+    expect(opens(root)).toEqual([true, false]);
+    expect(log).toEqual([]);
+  });
+
+  it("announces nothing either when the items were ready before the accordion", async () => {
+    const { root, waitForChanges } = await render(
+      <div>
+        <idg-accordion-item heading="A" value="a" open>
+          A
+        </idg-accordion-item>
+        <idg-accordion-item heading="B" value="b" open>
+          B
+        </idg-accordion-item>
+      </div>,
+    );
+    const accordion = document.createElement("idg-accordion");
+    const log = logOf(accordion);
+    for (const item of Array.from(root.children)) accordion.append(item);
+    root.append(accordion);
+    await waitForChanges();
+    expect(opens(root)).toEqual([true, false]);
+    expect(log).toEqual([]);
+  });
+
+  it("still announces a user's choice afterwards", async () => {
+    const { root, waitForChanges } = await render(
+      <idg-accordion>
+        <idg-accordion-item heading="A" value="a" open>
+          A
+        </idg-accordion-item>
+        <idg-accordion-item heading="B" value="b">
+          B
+        </idg-accordion-item>
+      </idg-accordion>,
+    );
+    const log = logOf(root);
+    trigger(itemAt(root, 1)).click();
+    await waitForChanges();
+    expect(log.sort()).toEqual(["a:false", "b:true"]);
+  });
+});
