@@ -1,4 +1,9 @@
+export { DEFAULT_DESIGN_ID, DESIGN_IDS } from "./design-ids.ts";
+export type { DesignId } from "./design-ids.ts";
+export { DESIGNS } from "./design-registry.ts";
+export type { DesignDefinition } from "./design-registry.ts";
 export { toCssVariableName } from "./emit-css.ts";
+export type { ModeDefinition } from "./mode-registry.ts";
 export type { Scheme } from "./scheme.ts";
 export { SCHEMES } from "./scheme.ts";
 export { DEFAULT_THEME_ID, THEME_IDS } from "./theme-ids.ts";
@@ -6,3 +11,7 @@ export type { ThemeId } from "./theme-ids.ts";
 export { THEMES } from "./theme-registry.ts";
 export type { ThemeDefinition, ThemeSwatches } from "./theme-registry.ts";
 export { TOKEN_NAMES } from "./token-names.ts";
+export { DEFAULT_UX_MODE_ID, UX_MODE_IDS } from "./ux-ids.ts";
+export type { UxModeId } from "./ux-ids.ts";
+export { UX_MODES } from "./ux-registry.ts";
+export type { UxModeDefinition } from "./ux-registry.ts";

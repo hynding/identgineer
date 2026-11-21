@@ -9,7 +9,8 @@ import { flattenTokens } from "./flatten-tokens.ts";
 import { mergeTokens } from "./merge-tokens.ts";
 import { parseMode } from "./parse-mode.ts";
 import { resolveMode } from "./resolve-mode.ts";
-import { ROLE_SOURCES, TOKEN_SOURCES } from "./token-sources.ts";
+import { ROLE_SOURCES } from "./theme-sources.ts";
+import { TOKEN_SOURCES } from "./token-sources.ts";
 import { MIN_TARGET_PX, findTargetSizeProblems, toPixels } from "./target-size.ts";
 import type { FlatToken, ResolvedToken } from "./token-types.ts";
 import { UX_MODE_IDS } from "./ux-ids.ts";
@@ -44,8 +45,20 @@ function token(path: string, source: string, value = "1px"): FlatToken {
 }
 
 describe.each([
-  { name: "design", registry: DESIGNS, ids: DESIGN_IDS, directory: "./tokens/designs/", first: "flat" },
-  { name: "UX mode", registry: UX_MODES, ids: UX_MODE_IDS, directory: "./tokens/ux/", first: "comfortable" },
+  {
+    name: "design",
+    registry: DESIGNS,
+    ids: DESIGN_IDS,
+    directory: "./tokens/designs/",
+    first: "flat",
+  },
+  {
+    name: "UX mode",
+    registry: UX_MODES,
+    ids: UX_MODE_IDS,
+    directory: "./tokens/ux/",
+    first: "comfortable",
+  },
 ])("$name registry", ({ registry, ids, directory, first }) => {
   it(`has exactly eight entries with unique ids, ${first} first`, () => {
     expect(registry).toHaveLength(8);
@@ -140,9 +153,12 @@ describe("target size floor", () => {
     expect(toPixels(value, "where")).toBe(pixels);
   });
 
-  it.each(["2em", "calc(1rem + 2px)", "auto"])("refuses %s, which has no fixed pixel size", (value) => {
-    expect(() => toPixels(value, "tokens/ux/x.json: token")).toThrow("tokens/ux/x.json: token");
-  });
+  it.each(["2em", "calc(1rem + 2px)", "auto"])(
+    "refuses %s, which has no fixed pixel size",
+    (value) => {
+      expect(() => toPixels(value, "tokens/ux/x.json: token")).toThrow("tokens/ux/x.json: token");
+    },
+  );
 
   it.each(uxModes.map((mode) => [mode.id, mode] as const))(
     "%s keeps its minimum target and control height at 24px or more",

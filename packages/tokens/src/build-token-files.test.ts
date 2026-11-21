@@ -48,16 +48,15 @@ describe("buildTokenFiles", () => {
     "ux/steady.css",
     "ux/swift.css",
     "preferences.css",
-  ])(
-    "emits %s byte-for-byte as the golden file",
-    (name) => {
-      expect(files[name]).toBe(readText(name, "__golden__"));
-    },
-  );
+  ])("emits %s byte-for-byte as the golden file", (name) => {
+    expect(files[name]).toBe(readText(name, "__golden__"));
+  });
 
   it("emits index.css as one layer statement followed by every stylesheet body", () => {
     const index = files["index.css"];
-    expect(index?.match(/@layer idg\.tokens, idg\.theme, idg\.design, idg\.ux, idg\.preferences;/g)).toHaveLength(1);
+    expect(
+      index?.match(/@layer idg\.tokens, idg\.theme, idg\.design, idg\.ux, idg\.preferences;/g),
+    ).toHaveLength(1);
     expect(index).toContain("--idg-motion-duration-base: 200ms;");
     expect(index).toContain('[data-theme="alpha"]');
     expect(index).toContain('[data-theme="beta"]');
