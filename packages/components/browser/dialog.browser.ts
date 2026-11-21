@@ -236,8 +236,21 @@ test.describe("idg-dialog keeps the page behind it out of reach", () => {
         document.getElementById("basic") as unknown as { showModal: () => Promise<void> }
       ).showModal(),
     );
+    await page.evaluate(() => {
+      const scope = window as unknown as { wheeled?: boolean };
+      document.addEventListener("wheel", () => (scope.wheeled = true), { passive: true });
+    });
     await page.mouse.wheel(0, 600);
-    await page.waitForTimeout(100);
+    // Once the wheel has been delivered and two frames have passed, an unlocked page has scrolled.
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { wheeled?: boolean }).wheeled))
+      .toBe(true);
+    await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        }),
+    );
     expect(await page.evaluate(() => window.scrollY)).toBe(200);
     const during = await page
       .locator("h1")
