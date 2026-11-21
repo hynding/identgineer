@@ -1,0 +1,8 @@
+node_modules
+dist
+www
+.stencil
+coverage
+cms/generated
+.env*
+!.env.example
