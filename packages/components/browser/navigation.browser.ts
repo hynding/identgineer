@@ -1123,8 +1123,11 @@ test.describe("idg-pagination redrawn by script with a control focused", () => {
       await expect(control(page, "7")).toHaveCount(0);
       await set(page, { page: "6" });
       await control(page, "7").focus();
-      await set(page, { page: "10" });
+      await set(page, { page: "8" });
       await settled(page, "7");
+      // A control that is gone hands focus to the current page.
+      await set(page, { page: "12" });
+      await settled(page, "12");
     });
 
     test(`${mode}: focus stays on the pressed number when the page cancels the press and sets the page itself`, async ({

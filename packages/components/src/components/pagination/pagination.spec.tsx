@@ -333,7 +333,7 @@ describe("idg-pagination focus", () => {
       event.preventDefault();
     });
     const pressed = pageControl(root, 7);
-    focusIn(root, pressed, pressed, null);
+    focusIn(root, pressed, null);
     pressed.click();
     await waitForChanges();
     expect(focus).not.toHaveBeenCalled();

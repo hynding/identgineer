@@ -3,6 +3,12 @@ import { pageHref } from "../../utils/page-href";
 import { paginationRange } from "../../utils/pagination-range";
 import type { PageChangeDetail } from "./pagination-options";
 
+// Typed explicitly because Stencil's DOM typings allow null here and the editor's do not.
+function labelOf(element: Node): string {
+  const text: string | null = element.textContent;
+  return (text ?? "").trim();
+}
+
 type Direction = "previous" | "next";
 
 /**
@@ -62,23 +68,38 @@ export class IdgPagination {
    */
   @Event({ cancelable: true }) idgPageChange!: EventEmitter<PageChangeDetail>;
 
-  // Set when a control was used with focus in the component. The control may be left unavailable
-  // (previous and next at the ends) or be redrawn elsewhere in the list (a page number), and
-  // either way focus would fall to the page.
-  private keepFocus = false;
+  // The control that had focus before the list was drawn. Drawing moves the list items around,
+  // which drops focus from a control that is still there, whatever caused the draw.
+  private heldControl?: { part: string; label: string };
+
+  componentWillRender(): void {
+    const active = this.host.shadowRoot?.activeElement;
+    this.heldControl = active
+      ? { part: active.getAttribute("part") ?? "", label: labelOf(active) }
+      : undefined;
+  }
 
   componentDidRender(): void {
-    if (!this.keepFocus) return;
-    this.keepFocus = false;
-    const active = this.host.shadowRoot?.activeElement;
+    const held = this.heldControl;
+    this.heldControl = undefined;
+    if (!held) return;
+    const shadow = this.host.shadowRoot;
+    const active = shadow?.activeElement;
     const unavailable =
       active?.hasAttribute("disabled") === true || active?.getAttribute("aria-disabled") === "true";
     // Focus that is somewhere else was put there on purpose, by a listener of idgPageChange for
     // instance, so only focus that fell to the page itself is brought back.
     const focused = document.activeElement;
     const fellToPage = !focused || focused === document.body;
-    const lost = unavailable || (!active && fellToPage);
-    if (lost) this.host.shadowRoot?.querySelector<HTMLElement>("[aria-current='page']")?.focus();
+    if (!unavailable && !(!active && fellToPage)) return;
+    const same = Array.from(shadow?.querySelectorAll<HTMLElement>(".control") ?? []).find(
+      (control) =>
+        control.getAttribute("part") === held.part &&
+        labelOf(control) === held.label &&
+        !control.hasAttribute("disabled") &&
+        control.getAttribute("aria-disabled") !== "true",
+    );
+    (same ?? shadow?.querySelector<HTMLElement>("[aria-current='page']"))?.focus();
   }
 
   private pageCountValue(): number {
@@ -110,7 +131,6 @@ export class IdgPagination {
       event.preventDefault();
       return;
     }
-    this.keepFocus = (this.host.shadowRoot?.activeElement ?? null) !== null;
     this.page = target;
   }
 
