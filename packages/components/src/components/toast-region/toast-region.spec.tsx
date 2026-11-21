@@ -84,12 +84,13 @@ describe("idg-toast-region rendering", () => {
     expect(part(root, "region").classList.contains("position-top-center")).toBe(true);
   });
 
-  it("has one polite and one assertive live region, outside the popover", async () => {
+  // Not atomic, so a screen reader reads only the line added, not every line still held.
+  it("has one polite and one assertive live region, not atomic, outside the popover", async () => {
     const { root } = await render(empty);
     const region = part(root, "region");
     for (const politeness of ["polite", "assertive"] as const) {
       const announcer = live(root, politeness);
-      expect(announcer.getAttribute("aria-atomic")).toBe("true");
+      expect(announcer.getAttribute("aria-atomic") ?? "false").toBe("false");
       expect(region.contains(announcer)).toBe(false);
     }
   });
@@ -140,7 +141,7 @@ describe("idg-toast-region announcements", () => {
     expect(polite.textContent).toContain("Second");
   });
 
-  it("adds to an announcement still showing, rather than replacing it, and clears it later", async () => {
+  it("adds only a new toast's line to an announcement still showing", async () => {
     const { root } = await render(empty);
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
     addToast(root, "First");
@@ -153,7 +154,24 @@ describe("idg-toast-region announcements", () => {
     vi.advanceTimersByTime(100);
     expect(Array.from(polite.children, (line) => line.textContent)).toEqual(["First", "Second"]);
     expect(polite.firstElementChild).toBe(first);
-    vi.advanceTimersByTime(5000);
+    expect(polite.getAttribute("aria-atomic") ?? "false").toBe("false");
+  });
+
+  it("removes each line 5s after it was added, so a steady stream stays bounded", async () => {
+    const { root } = await render(<idg-toast-region max={20} />);
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const polite = live(root, "polite");
+    for (let index = 1; index <= 8; index += 1) {
+      addToast(root, `Toast ${String(index)}`);
+      vi.advanceTimersByTime(100);
+      expect(polite.lastElementChild?.textContent).toBe(`Toast ${String(index)}`);
+      expect(polite.children.length).toBeLessThanOrEqual(2);
+      vi.advanceTimersByTime(2900);
+    }
+    // The last line was added 2.9s ago: it stays until 5s have passed, then goes.
+    vi.advanceTimersByTime(2099);
+    expect(polite.textContent).toBe("Toast 8");
+    vi.advanceTimersByTime(1);
     expect(polite.textContent).toBe("");
   });
 
@@ -275,6 +293,21 @@ describe("idg-toast-region moved", () => {
     vi.advanceTimersByTime(6000);
     root.append(region);
     vi.advanceTimersByTime(0);
+    expect(live(region, "polite").textContent).toBe("");
+  });
+
+  it("keeps a line whose time has not run out after a move, and removes it on time", async () => {
+    const { root } = await render(<div>{empty}</div>);
+    const region = root.querySelector("idg-toast-region") as HTMLElement;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    addToast(region, "Saved");
+    vi.advanceTimersByTime(100);
+    removeHost(region);
+    vi.advanceTimersByTime(3000);
+    root.append(region);
+    vi.advanceTimersByTime(1999);
+    expect(live(region, "polite").textContent).toBe("Saved");
+    vi.advanceTimersByTime(1);
     expect(live(region, "polite").textContent).toBe("");
   });
 
