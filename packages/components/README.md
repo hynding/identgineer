@@ -2,8 +2,8 @@
 
 Stencil web components, namespace `identgineer`, tag prefix `idg-`. Every colour, size, radius,
 border, shadow and duration comes from an `--idg-*` token of
-[`@identgineer/tokens`](../tokens/README.md), so the components follow the theme, design language
-and UX mode set on the page and never carry a style of their own.
+[`@identgineer/tokens`](../tokens/README.md), so the components follow the theme, design language,
+layout and UX mode set on the page and never carry a style of their own.
 
 ## Install and load
 
@@ -11,7 +11,7 @@ Load the tokens CSS globally and set the axis attributes on `<html>`. Custom pro
 through shadow DOM, so nothing else is needed.
 
 ```html
-<html lang="en" data-theme="aurora" data-design="flat" data-ux="comfortable">
+<html lang="en" data-theme="aurora" data-design="flat" data-layout="top-bar" data-ux="comfortable">
   <link rel="stylesheet" href="/tokens/index.css" />
   <link rel="stylesheet" href="/app.css" />
   <script type="module" src="/build/identgineer.esm.js"></script>
@@ -747,6 +747,107 @@ A `nav` landmark holding a list. `idg-breadcrumb`: `label` (default "Breadcrumb"
 item is the current page (`aria-current="page"`) and is not a link. Separators are hidden from
 assistive technology.
 
+## Layout
+
+Six primitives that arrange content in a container of unknown width. They draw nothing of their
+own: no colour, no border, no role. Source order is reading order, and they mirror in right-to-left
+with logical properties only. They size against their **container**, never the viewport, so the
+same markup works in a narrow column of a wide page, and they use no breakpoint and no script
+except where noted.
+
+Their defaults come from the layout axis (`data-layout`, see the
+[tokens](../tokens/README.md#design-languages-layouts-and-ux-modes)), so the same markup has a
+different measure, gap and column count under each of the eight layouts. A prop overrides the
+layout with a **step** of a token scale; it never takes a length.
+
+| Step set                                               | Values                                                                           | Used by                                        |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Gap steps, from the space scale (`--idg-space-<step>`) | `none`, `3xs`, `2xs`, `xs`, `s`, `m`, `l`, `xl`, `2xl`, `3xl`                    | `gap` on every primitive                       |
+| Size steps, from the size scale (`--idg-size-<step>`)  | `xs` (10rem), `s` (14rem), `m` (20rem), `l` (28rem), `xl` (40rem), `2xl` (56rem) | `min`, `side-width`, `threshold`, `min-height` |
+
+A gap is multiplied by `--idg-density-gap-scale`, so a compact UX mode tightens every layout. A
+value that is not a step (`"12px"`, `"var(--x)"`, a typo) is ignored and the layout's own value
+applies, so a prop can never put a length or a declaration in a stylesheet. None of the primitives
+sets an inline style.
+
+### `idg-stack`
+
+| Prop       | Attribute  | Values                              | Default            |
+| ---------- | ---------- | ----------------------------------- | ------------------ |
+| `gap`      | `gap`      | a gap step                          | `--idg-layout-gap` |
+| `align`    | `align`    | `start`, `center`, `end`, `stretch` | `stretch`          |
+| `dividers` | `dividers` | boolean                             | `false`            |
+
+Children one under another. **Slot:** default. **Part:** `stack`. With `dividers`, a hairline in the
+theme's border colour (`--idg-color-border`, which every design language shows, even those with no
+border) is drawn above every child but the first, with half the gap on each side of it. The gap
+moves into the children's block padding to do this, so give those children no block padding of their
+own: a style of your own on a child wins over the stack's.
+
+### `idg-cluster`
+
+| Prop      | Attribute | Values                                          | Default            |
+| --------- | --------- | ----------------------------------------------- | ------------------ |
+| `gap`     | `gap`     | a gap step                                      | `--idg-layout-gap` |
+| `justify` | `justify` | `start`, `center`, `end`, `between`             | `start`            |
+| `align`   | `align`   | `start`, `center`, `end`, `baseline`, `stretch` | `center`           |
+
+Items in a row that wraps onto more rows, for tags, buttons or a toolbar. **Slot:** default.
+**Part:** `cluster`.
+
+### `idg-grid`
+
+| Prop  | Attribute | Values      | Default                 |
+| ----- | --------- | ----------- | ----------------------- |
+| `min` | `min`     | a size step | `--idg-layout-grid-min` |
+| `gap` | `gap`     | a gap step  | `--idg-layout-gap`      |
+
+As many equal columns as fit, each at least `min` wide, and never more than `--idg-layout-columns`
+(4 under `top-bar`, 8 under `dashboard`, 2 under `split-hero`, and so on), so a wide container does not
+spread items thin. A container narrower than `min` has one column. **Slot:** default. **Part:**
+`grid`. Because the cap comes from the layout, a `min` smaller than the layout's does not add
+columns past it.
+
+### `idg-sidebar`
+
+| Prop        | Attribute    | Values         | Default                    |
+| ----------- | ------------ | -------------- | -------------------------- |
+| `side`      | `side`       | `start`, `end` | `start`                    |
+| `sideWidth` | `side-width` | a size step    | `--idg-layout-aside-width` |
+| `gap`       | `gap`        | a gap step     | `--idg-layout-gap`         |
+
+A side region of a set width beside the content, which takes the rest. When the content would get
+less than half of the container, the regions stack: the classic wrapping row, with no breakpoint.
+**Slots:** `side` and default. **Parts:** `sidebar`, `side`, `content`. The side region is drawn
+first at the `start` and last at the `end`, so the reading and Tab order always match what is shown;
+stacked, a side region at the `start` is above the content and one at the `end` is below it.
+`start` and `end` follow the text direction.
+
+### `idg-switcher`
+
+| Prop        | Attribute   | Values      | Default            |
+| ----------- | ----------- | ----------- | ------------------ |
+| `threshold` | `threshold` | a size step | `l`                |
+| `limit`     | `limit`     | 2 to 6      | none               |
+| `gap`       | `gap`       | a gap step  | `--idg-layout-gap` |
+
+Items of equal width in one row, which become one column when the container is narrower than
+`threshold`. With `limit`, more items than that stack at any width. This is the one primitive that
+reads script state: it counts its default-slot items on load and on `slotchange`, because CSS cannot
+count a host's children from inside its shadow tree. It reads no size. **Slot:** default. **Part:**
+`switcher`.
+
+### `idg-cover`
+
+| Prop        | Attribute    | Values                   | Default            |
+| ----------- | ------------ | ------------------------ | ------------------ |
+| `minHeight` | `min-height` | a size step, or `screen` | `l`                |
+| `gap`       | `gap`        | a gap step               | `--idg-layout-gap` |
+
+A block at least as tall as `min-height` (`screen` is the height of the viewport) that centres its
+content. It grows when the content needs more room. **Slots:** `top` (pinned to the top), default
+(centred in the space the others leave) and `bottom`. **Parts:** `cover`, `center`.
+
 ## Strict CSP and Trusted Types
 
 Every component is verified in Chromium against
@@ -768,7 +869,9 @@ with no console violation.
 
 Component sources are scanned by `checks/` for `innerHTML`, `outerHTML`, `insertAdjacentHTML`,
 `document.write`, `eval`, `new Function`, string event handlers and inline style strings, and the
-stylesheets for hex, `rgb()`, `hsl()` and similar colour literals and raw `ms` or `s` durations.
+stylesheets for hex, `rgb()`, `hsl()` and similar colour literals and raw `ms` or `s` durations. The
+layout primitives' stylesheets are held to more: no length with a unit (every size is a token),
+no physical property such as `margin-left` or `width`, and no viewport media query.
 
 ## Development
 
@@ -793,7 +896,8 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   movement and return, inertness, close reasons, keyboard paths, timers, 24px targets, a 320px
   viewport and forced colours for every overlay (axe runs with each one open), boundary contrast, text contrast of badges, alerts,
   avatars and changes in all 8 themes in light and dark, and axe (wcag2a, wcag2aa, wcag21aa, wcag22aa) across the 8 designs in light and dark and
-  the 8 UX modes, on pages in `src/fixtures/` (`button.html`, `forms.html`, `surfaces.html`, `overlays.html`; copied to `www/fixtures/`; static HTML, no inline
+  the 8 UX modes, no sideways page scroll at 320, 768, 1280 and 2560px under all 8 layouts, and the
+  layout primitives' wrapping, column counts and right-to-left placement, on pages in `src/fixtures/` (`button.html`, `forms.html`, `surfaces.html`, `overlays.html`, `navigation.html`, `layout-primitives.html`; copied to `www/fixtures/`; static HTML, no inline
   script or style). Build first. Playwright's own Chromium is installed with
   `pnpm --filter @identgineer/components exec playwright install --with-deps chromium`; where that is
   not possible, set `IDG_CHROMIUM_PATH` to a Chromium binary (`/opt/pw-browsers/chromium` is used if it

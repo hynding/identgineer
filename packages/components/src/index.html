@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="aurora" data-design="flat" data-ux="comfortable">
+<html lang="en" data-theme="aurora" data-design="flat" data-layout="top-bar" data-ux="comfortable">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -367,6 +367,53 @@
           <idg-button type="reset" variant="secondary">Clear</idg-button>
         </div>
       </form>
+      <h1>Layout</h1>
+      <section class="plain" id="layout-demo" aria-labelledby="layout-title">
+        <h2 id="layout-title">Layout primitives</h2>
+        <idg-stack gap="l">
+          <idg-cluster>
+            <idg-badge>Stack</idg-badge>
+            <idg-badge>Cluster</idg-badge>
+            <idg-badge>Grid</idg-badge>
+            <idg-badge>Sidebar</idg-badge>
+            <idg-badge>Switcher</idg-badge>
+            <idg-badge>Cover</idg-badge>
+          </idg-cluster>
+          <idg-grid>
+            <idg-card heading="Grid">As many columns as the layout allows.</idg-card>
+            <idg-card heading="Layout"
+              >Change data-layout on the root to see the count change.</idg-card
+            >
+            <idg-card heading="Container">Sizes follow the container, not the viewport.</idg-card>
+            <idg-card heading="Tokens">Gaps and tracks are steps of the token scales.</idg-card>
+          </idg-grid>
+          <idg-sidebar>
+            <nav slot="side" aria-label="Layout demo menu">
+              <idg-stack gap="2xs">
+                <idg-link href="#layout-demo">Overview</idg-link>
+                <idg-link href="#layout-demo">Settings</idg-link>
+              </idg-stack>
+            </nav>
+            <idg-stack dividers gap="s">
+              <p class="flush">
+                The side region wraps above the content when the content would get less than half
+                the width.
+              </p>
+              <p class="flush">Dividers are drawn in the theme's border colour.</p>
+            </idg-stack>
+          </idg-sidebar>
+          <idg-switcher threshold="m">
+            <idg-card heading="One">Side by side when there is room.</idg-card>
+            <idg-card heading="Two">One column when there is not.</idg-card>
+            <idg-card heading="Three">Every item the same width.</idg-card>
+          </idg-switcher>
+          <idg-cover min-height="m">
+            <p class="flush" slot="top">Cover</p>
+            <p class="flush">Centred in the block</p>
+            <p class="flush" slot="bottom">At least as tall as its step</p>
+          </idg-cover>
+        </idg-stack>
+      </section>
     </main>
     <idg-toast-region></idg-toast-region>
   </body>
