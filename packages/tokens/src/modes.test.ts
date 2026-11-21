@@ -6,6 +6,9 @@ import { DESIGNS } from "./design-registry.ts";
 import { DESIGN_SOURCES } from "./design-sources.ts";
 import { formatValue } from "./emit-css.ts";
 import { flattenTokens } from "./flatten-tokens.ts";
+import { LAYOUT_IDS } from "./layout-ids.ts";
+import { LAYOUTS } from "./layout-registry.ts";
+import { LAYOUT_SOURCES } from "./layout-sources.ts";
 import { mergeTokens } from "./merge-tokens.ts";
 import { parseMode } from "./parse-mode.ts";
 import { resolveMode } from "./resolve-mode.ts";
@@ -25,8 +28,10 @@ const shared = mergeTokens(
 );
 const designDefaults = flattenTokens(ROLE_SOURCES.design.file, ROLE_SOURCES.design.json);
 const uxDefaults = flattenTokens(ROLE_SOURCES.ux.file, ROLE_SOURCES.ux.json);
+const layoutDefaults = flattenTokens(ROLE_SOURCES.layout.file, ROLE_SOURCES.layout.json);
 const designs = DESIGN_SOURCES.map((source) => parseMode(source, "design"));
 const uxModes = UX_MODE_SOURCES.map((source) => parseMode(source, "ux"));
+const layouts = LAYOUT_SOURCES.map((source) => parseMode(source, "layout"));
 
 function filesIn(relativeDirectory: string): string[] {
   return readdirSync(fileURLToPath(new URL(relativeDirectory, import.meta.url)))
@@ -51,6 +56,13 @@ describe.each([
     ids: DESIGN_IDS,
     directory: "./tokens/designs/",
     first: "flat",
+  },
+  {
+    name: "layout",
+    registry: LAYOUTS,
+    ids: LAYOUT_IDS,
+    directory: "./tokens/layouts/",
+    first: "top-bar",
   },
   {
     name: "UX mode",
@@ -81,6 +93,7 @@ describe.each([
 
 describe.each([
   { axis: "design" as const, modes: designs, defaults: designDefaults },
+  { axis: "layout" as const, modes: layouts, defaults: layoutDefaults },
   { axis: "ux" as const, modes: uxModes, defaults: uxDefaults },
 ])("every $axis mode", ({ axis, modes, defaults }) => {
   it.each(modes.map((mode) => [mode.id, mode] as const))(
@@ -99,6 +112,15 @@ describe("findModeProblems", () => {
     const partial = { ...flat, tokens: flat.tokens.filter((t) => t.path !== "shape.radius.md") };
     expect(findModeProblems("design", partial, designDefaults)).toEqual([
       `${flat.file}: design "flat" does not define "shape.radius.md"`,
+    ]);
+  });
+
+  it("reports a layout that leaves a token out, naming the layout", () => {
+    const [first] = layouts;
+    if (!first) throw new Error("no layouts");
+    const partial = { ...first, tokens: first.tokens.filter((t) => t.path !== "layout.gap") };
+    expect(findModeProblems("layout", partial, layoutDefaults)).toEqual([
+      `${first.file}: layout "top-bar" does not define "layout.gap"`,
     ]);
   });
 
@@ -185,6 +207,21 @@ describe("target size floor", () => {
   });
 });
 
+describe("layout ids", () => {
+  it("are the eight page layouts, top-bar first as the default", () => {
+    expect([...LAYOUT_IDS]).toEqual([
+      "top-bar",
+      "side-rail",
+      "split-hero",
+      "magazine",
+      "dashboard",
+      "centered",
+      "bento",
+      "immersive",
+    ]);
+  });
+});
+
 describe("distinctness", () => {
   function signatures(modes: typeof designs, paths: readonly string[]): string[] {
     return modes.map((mode) => {
@@ -198,6 +235,27 @@ describe("distinctness", () => {
     expect(new Set(all).size).toBe(all.length);
   });
 
+  it("no two layouts share content measure, grid track and column count", () => {
+    const all = signatures(layouts, ["layout.content-max", "layout.grid-min", "layout.columns"]);
+    expect(new Set(all).size).toBe(all.length);
+  });
+
+  it.each(["layout.content-max", "layout.grid-min", "layout.aside-width", "layout.nav-size"])(
+    "the eight layouts give %s at least five different values, so they differ noticeably",
+    (path) => {
+      const values = layouts.map((layout) => valueOf(resolveMode(shared, layout.tokens), path));
+      expect(new Set(values).size).toBeGreaterThanOrEqual(5);
+    },
+  );
+
+  it("no layout sets a column count below one or above twelve", () => {
+    for (const layout of layouts) {
+      const columns = Number(valueOf(resolveMode(shared, layout.tokens), "layout.columns"));
+      expect(columns, layout.id).toBeGreaterThanOrEqual(1);
+      expect(columns, layout.id).toBeLessThanOrEqual(12);
+    }
+  });
+
   it("no two UX modes share control height, base duration and gap multiplier", () => {
     const all = signatures(uxModes, [
       "density.control-height",
@@ -209,7 +267,7 @@ describe("distinctness", () => {
 });
 
 describe("source verification", () => {
-  it("finds no problem in the shipped themes, designs, UX modes and preferences", () => {
+  it("finds no problem in the shipped themes, designs, layouts, UX modes and preferences", () => {
     expect(findSourceProblems(TOKEN_SOURCES, ROLE_SOURCES)).toEqual([]);
   });
 

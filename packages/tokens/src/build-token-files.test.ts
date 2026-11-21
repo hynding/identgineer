@@ -25,6 +25,10 @@ function miniSources(): TokenSources {
       { id: "plain", file: "mini/designs/plain.json", json: readFixture("designs/plain.json") },
       { id: "bold", file: "mini/designs/bold.json", json: readFixture("designs/bold.json") },
     ],
+    layouts: [
+      { id: "roomy", file: "mini/layouts/roomy.json", json: readFixture("layouts/roomy.json") },
+      { id: "snug", file: "mini/layouts/snug.json", json: readFixture("layouts/snug.json") },
+    ],
     uxModes: [
       { id: "steady", file: "mini/ux/steady.json", json: readFixture("ux/steady.json") },
       { id: "swift", file: "mini/ux/swift.json", json: readFixture("ux/swift.json") },
@@ -32,6 +36,7 @@ function miniSources(): TokenSources {
     preferences: { file: "mini/preferences.json", json: readFixture("preferences.json") },
     defaultThemeId: "alpha",
     defaultDesignId: "plain",
+    defaultLayoutId: "roomy",
     defaultUxModeId: "steady",
   };
 }
@@ -45,6 +50,8 @@ describe("buildTokenFiles", () => {
     "themes/beta.css",
     "designs/plain.css",
     "designs/bold.css",
+    "layouts/roomy.css",
+    "layouts/snug.css",
     "ux/steady.css",
     "ux/swift.css",
     "preferences.css",
@@ -55,15 +62,19 @@ describe("buildTokenFiles", () => {
   it("emits index.css as one layer statement followed by every stylesheet body", () => {
     const index = files["index.css"];
     expect(
-      index?.match(/@layer idg\.tokens, idg\.theme, idg\.design, idg\.ux, idg\.preferences;/g),
+      index?.match(
+        /@layer idg\.tokens, idg\.theme, idg\.design, idg\.layout, idg\.ux, idg\.preferences;/g,
+      ),
     ).toHaveLength(1);
     expect(index).toContain("--idg-motion-duration-base: 200ms;");
     expect(index).toContain('[data-theme="alpha"]');
     expect(index).toContain('[data-theme="beta"]');
+    expect(index).toContain('[data-layout="snug"]');
     const positions = [
       "@layer idg.tokens {",
       "@layer idg.theme {",
       "@layer idg.design {",
+      "@layer idg.layout {",
       "@layer idg.ux {",
       "@layer idg.preferences {",
     ].map((marker) => index?.indexOf(marker) ?? -1);
@@ -71,9 +82,11 @@ describe("buildTokenFiles", () => {
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
   });
 
-  it("makes only the default design and UX mode answer to a bare :root", () => {
+  it("makes only the default design, layout and UX mode answer to a bare :root", () => {
     expect(files["designs/plain.css"]).toContain(":where(:root)");
     expect(files["designs/bold.css"]).not.toContain(":root");
+    expect(files["layouts/roomy.css"]).toContain(":where(:root)");
+    expect(files["layouts/snug.css"]).not.toContain(":root");
     expect(files["ux/steady.css"]).toContain(":where(:root)");
     expect(files["ux/swift.css"]).not.toContain(":root");
   });
@@ -120,6 +133,7 @@ describe("buildTokenFiles", () => {
 
   it.each([
     ["defaultDesignId", 'default design "gamma"'],
+    ["defaultLayoutId", 'default layout "gamma"'],
     ["defaultUxModeId", 'default UX mode "gamma"'],
   ] as const)("rejects %s that is not in the list", (key, message) => {
     expect(() => buildTokenFiles({ ...miniSources(), [key]: "gamma" })).toThrow(message);
@@ -133,6 +147,16 @@ describe("buildTokenFiles", () => {
         designs: [{ id: "plain", file: "mini/designs/nameless.json", json: { tokens: {} } }],
       }),
     ).toThrow('mini/designs/nameless.json: design "plain" needs $extensions.identgineer.label');
+  });
+
+  it("rejects a layout that omits its label, naming the file", () => {
+    const sources = miniSources();
+    expect(() =>
+      buildTokenFiles({
+        ...sources,
+        layouts: [{ id: "roomy", file: "mini/layouts/nameless.json", json: { tokens: {} } }],
+      }),
+    ).toThrow('mini/layouts/nameless.json: layout "roomy" needs $extensions.identgineer.label');
   });
 
   it("rejects a preference group it has no media query for", () => {
