@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/tokens/index.css" />
     <link rel="stylesheet" href="/demo.css" />
     <script type="module" src="/build/identgineer.esm.js"></script>
+    <script type="module" src="/demo.js"></script>
   </head>
   <body>
     <main>
@@ -48,7 +49,43 @@
             <idg-avatar name="Edsger Dijkstra"></idg-avatar>
             <idg-avatar name="Barbara Liskov"></idg-avatar>
           </idg-avatar-group>
+          <div class="dashboard-actions">
+            <idg-tooltip text="Invite people to this studio">
+              <idg-button variant="secondary" id="invite-trigger">Invite</idg-button>
+            </idg-tooltip>
+            <idg-popover placement="bottom-end">
+              <idg-button slot="trigger" variant="secondary">Filters</idg-button>
+              <div class="filters">
+                <idg-checkbox checked>Only my projects</idg-checkbox>
+                <idg-switch>Include archived</idg-switch>
+              </div>
+            </idg-popover>
+            <idg-menu id="studio-menu" placement="bottom-end">
+              <idg-button slot="trigger" variant="secondary">More</idg-button>
+              <idg-menu-item value="Report exported" icon="chart" shortcut="E">
+                Export report
+              </idg-menu-item>
+              <idg-menu-item value="Link copied" icon="copy" shortcut="L">Copy link</idg-menu-item>
+              <idg-menu-separator></idg-menu-separator>
+              <idg-menu-group label="Density">
+                <idg-menu-item type="radio" value="Comfortable density" checked>
+                  Comfortable
+                </idg-menu-item>
+                <idg-menu-item type="radio" value="Compact density">Compact</idg-menu-item>
+              </idg-menu-group>
+              <idg-menu-separator></idg-menu-separator>
+              <idg-menu-item value="archive" icon="trash">Archive studio</idg-menu-item>
+            </idg-menu>
+          </div>
         </header>
+
+        <idg-dialog id="archive-dialog" heading="Archive the studio?" alert size="sm">
+          <p>Every project becomes read-only for the whole team until the studio is restored.</p>
+          <idg-button slot="footer" variant="secondary" data-close="keep" autofocus
+            >Keep</idg-button
+          >
+          <idg-button slot="footer" variant="danger" data-close="archive">Archive</idg-button>
+        </idg-dialog>
 
         <div class="dashboard-alerts">
           <idg-alert variant="warning" dismissible>
@@ -166,5 +203,6 @@
         </div>
       </form>
     </main>
+    <idg-toast-region></idg-toast-region>
   </body>
 </html>

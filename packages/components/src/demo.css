@@ -49,6 +49,12 @@ idg-toast:not(.hydrated) {
   visibility: hidden;
 }
 
+/* Their content is not on the page until they open, so it never flashes in unstyled. */
+idg-dialog:not(.hydrated),
+idg-toast-region:not(.hydrated) {
+  display: none;
+}
+
 .stack {
   display: grid;
   gap: var(--idg-space-s);
@@ -176,6 +182,19 @@ section.dashboard::after {
   align-items: center;
   justify-content: space-between;
   gap: var(--idg-space-s);
+}
+
+.dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--idg-space-xs);
+}
+
+.filters {
+  display: grid;
+  gap: var(--idg-space-xs);
+  padding: var(--idg-space-s);
 }
 
 .dashboard h2 {

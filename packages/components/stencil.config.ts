@@ -17,6 +17,7 @@ export const config: Config = {
       // which a strict CSP forbids, and that page is what checks the library itself under one.
       copy: [
         { src: "demo.css" },
+        { src: "demo.js" },
         { src: "csp-demo.html" },
         { src: "fixtures" },
         { src: "../../tokens/dist", dest: "tokens" },
