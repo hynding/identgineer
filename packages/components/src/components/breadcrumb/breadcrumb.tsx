@@ -1,4 +1,5 @@
 import { Component, Element, h, Prop } from "@stencil/core";
+import { oneOf } from "../../utils/choice";
 import { BREADCRUMB_SEPARATORS, type BreadcrumbSeparator } from "./breadcrumb-options";
 
 /**
@@ -11,6 +12,7 @@ import { BREADCRUMB_SEPARATORS, type BreadcrumbSeparator } from "./breadcrumb-op
  */
 @Component({
   tag: "idg-breadcrumb",
+  styleUrl: "breadcrumb.css",
   shadow: true,
 })
 export class IdgBreadcrumb {
@@ -22,7 +24,43 @@ export class IdgBreadcrumb {
   /** The mark between items. It is decoration and hidden from assistive technology. */
   @Prop({ reflect: true }) separator: BreadcrumbSeparator = BREADCRUMB_SEPARATORS[0];
 
+  componentDidRender(): void {
+    this.syncItems();
+  }
+
+  private items(): HTMLIdgBreadcrumbItemElement[] {
+    return Array.from(this.host.children).filter(
+      (child): child is HTMLIdgBreadcrumbItemElement =>
+        child.localName === "idg-breadcrumb-item" && !child.hasAttribute("hidden"),
+    );
+  }
+
+  // Each item is drawn in its own shadow root and cannot see its neighbours, so what depends on
+  // them, which one is last and which is current, is handed down.
+  private syncItems(): void {
+    const items = this.items();
+    const marked = items.find((item) => item.current);
+    const last = items[items.length - 1];
+    const separator = oneOf(BREADCRUMB_SEPARATORS, this.separator, "chevron");
+    for (const item of items) {
+      item.isLast = item === last;
+      item.isCurrent = marked === undefined ? item === last : item === marked;
+      item.separator = separator;
+    }
+  }
+
   render() {
-    return <div />;
+    return (
+      <nav class="nav" part="nav" aria-label={this.label}>
+        {/* Restated because a list without markers loses its role in some screen readers. */}
+        <ol class="list" part="list" role="list">
+          <slot
+            onSlotchange={() => {
+              this.syncItems();
+            }}
+          />
+        </ol>
+      </nav>
+    );
   }
 }
