@@ -4,6 +4,8 @@ export interface AccessibleNode {
   role: string;
   name: string;
   description: string;
+  /** The value of a control such as a progress bar, when the browser reports one. */
+  value: string | number | boolean | undefined;
   properties: Record<string, unknown>;
 }
 
@@ -12,9 +14,14 @@ interface AxValue {
 }
 
 interface AxNode {
+  nodeId?: string;
+  childIds?: string[];
+  backendDOMNodeId?: number;
+  ignored?: boolean;
   role?: AxValue;
   name?: AxValue;
   description?: AxValue;
+  value?: AxValue;
   properties?: { name: string; value: AxValue }[];
 }
 
@@ -45,8 +52,55 @@ export async function accessibleNode(
       role: String(ax.role?.value ?? ""),
       name: String(ax.name?.value ?? ""),
       description: String(ax.description?.value ?? ""),
+      value: ax.value?.value,
       properties: Object.fromEntries((ax.properties ?? []).map((p) => [p.name, p.value.value])),
     };
+  } finally {
+    await client.detach();
+  }
+}
+
+export interface AccessibleDescendant {
+  role: string;
+  name: string;
+}
+
+/**
+ * Every node the browser exposes to assistive technology beneath a host, in tree order, taken from
+ * the full accessibility tree. Nodes the browser leaves out of the tree (hidden, presentational) are
+ * not listed, so it shows what a screen reader user would meet, shadow roots included.
+ */
+export async function accessibleDescendants(
+  page: Page,
+  hostId: string,
+): Promise<AccessibleDescendant[]> {
+  const client = await page.context().newCDPSession(page);
+  try {
+    const { result } = await client.send("Runtime.evaluate", {
+      expression: `document.getElementById(${JSON.stringify(hostId)})`,
+    });
+    if (!result.objectId) throw new Error(`no element #${hostId}`);
+    const { node } = await client.send("DOM.describeNode", { objectId: result.objectId });
+    const { nodes } = (await client.send("Accessibility.getFullAXTree")) as { nodes: AxNode[] };
+    const byId = new Map(nodes.map((candidate) => [candidate.nodeId, candidate]));
+    const start = nodes.find((candidate) => candidate.backendDOMNodeId === node.backendNodeId);
+    if (!start) throw new Error(`#${hostId} is not in the accessibility tree`);
+    const found: AccessibleDescendant[] = [];
+    const visit = (ax: AxNode): void => {
+      for (const childId of ax.childIds ?? []) {
+        const child = byId.get(childId);
+        if (!child) continue;
+        if (child.ignored !== true) {
+          found.push({
+            role: String(child.role?.value ?? ""),
+            name: String(child.name?.value ?? ""),
+          });
+        }
+        visit(child);
+      }
+    };
+    visit(start);
+    return found;
   } finally {
     await client.detach();
   }

@@ -1,0 +1,85 @@
+:host {
+  display: block;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+/* A surface of the design language, tinted with the variant. The background stays an opaque
+   theme colour so the text pair keeps its guaranteed contrast whatever lies behind it. */
+.alert {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  padding: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  border-width: var(--idg-surface-border-width);
+  border-style: var(--idg-surface-border-style);
+  border-color: var(--idg-surface-border-color);
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--_tone-background);
+  box-shadow: var(--idg-elevation-sm);
+  color: var(--_tone-text);
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+  letter-spacing: var(--idg-font-body-letter-spacing);
+}
+
+.icon {
+  flex: none;
+  /* Lines the icon up with the first line of text. */
+  margin-block-start: calc((1lh - 1.5em) / 2);
+}
+
+.content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--idg-space-3xs);
+  min-inline-size: 0;
+}
+
+.title {
+  font-family: var(--idg-font-family-display);
+  font-weight: var(--idg-font-weight-bold);
+  text-transform: var(--idg-ornament-heading-transform);
+  text-decoration: var(--idg-ornament-heading-decoration);
+}
+
+.dismiss {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-inline-size: var(--idg-density-target-size);
+  min-block-size: var(--idg-density-target-size);
+  margin: calc(-1 * var(--idg-space-2xs));
+  margin-inline-start: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--idg-shape-radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  transition-property: background-color;
+  transition-duration: var(--idg-motion-duration-fast);
+  transition-timing-function: var(--idg-motion-easing-standard);
+}
+
+.dismiss:hover {
+  background: color-mix(in srgb, currentcolor 14%, transparent);
+}
+
+@media (forced-colors: active) {
+  .alert {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}

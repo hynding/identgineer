@@ -1,0 +1,50 @@
+:host {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.group {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Each avatar overlaps the one before it by a third, and a ring in the surface colour keeps the
+   edges apart. The ring is drawn on the avatar's host, which has the same shape as the avatar. */
+.group ::slotted(idg-avatar) {
+  box-shadow: 0 0 0 2px var(--idg-color-surface);
+}
+
+.group ::slotted(idg-avatar:not(:first-child)),
+.more {
+  margin-inline-start: -0.4rem;
+}
+
+.more {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--_size);
+  block-size: var(--_size);
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--idg-color-bg-subtle);
+  box-shadow: 0 0 0 2px var(--idg-color-surface);
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+  font-size: calc(var(--_size) * 0.36);
+  font-weight: var(--idg-font-weight-semibold);
+  line-height: 1;
+}
+
+@media (forced-colors: active) {
+  .more {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}

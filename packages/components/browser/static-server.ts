@@ -9,6 +9,7 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".map": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
 };
 
 function resolveInside(root: string, urlPath: string): string | undefined {

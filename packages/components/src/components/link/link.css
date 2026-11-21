@@ -1,0 +1,58 @@
+:host {
+  display: inline;
+  color: var(--idg-color-link);
+  font-family: inherit;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+/* Underlined always, so a link is told from the text around it by more than its colour. */
+.control {
+  color: var(--idg-color-link);
+  cursor: pointer;
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  transition-property: color, text-decoration-thickness, background-color;
+  transition-duration: var(--idg-motion-duration-fast);
+  transition-timing-function: var(--idg-motion-easing-standard);
+}
+
+.control:visited {
+  color: color-mix(in srgb, var(--idg-color-link) 65%, var(--idg-color-text));
+}
+
+.control:hover {
+  background: var(--idg-color-accent-subtle);
+  color: var(--idg-color-on-accent-subtle);
+  text-decoration-thickness: 2px;
+}
+
+.control:not([href]) {
+  color: var(--idg-color-text-muted);
+  cursor: not-allowed;
+  text-decoration-style: dotted;
+}
+
+.control:not([href]):hover {
+  background: transparent;
+  color: var(--idg-color-text-muted);
+  text-decoration-thickness: 1px;
+}
+
+.external {
+  margin-inline-start: 0.2em;
+}
+
+@media (forced-colors: active) {
+  .control,
+  .control:visited {
+    color: LinkText;
+  }
+
+  .control:not([href]) {
+    color: GrayText;
+  }
+}

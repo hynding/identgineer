@@ -1,0 +1,245 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+/* The card is the place a design language shows most, so it takes every surface token as given:
+   the surface fill and its backdrop blur (glass), the surface border (thick and black in brutalist,
+   double in pixel, top and bottom rules in editorial, a luminous hairline in glass), the radius,
+   and the elevation (paired light and dark shadows in soft, hard offsets in brutalist, stepped ones
+   in pixel, layered ones in elevated). */
+.card {
+  /* Hover lifts the card by the UX mode's lift, and moves a hard-shadow design by a share of its
+     offset so the shadow seems to grow. Both are scaled by --idg-motion-enabled. */
+  --_lift: calc(var(--idg-feedback-hover-lift) * var(--idg-motion-enabled));
+  --_shift-x: calc(var(--idg-ornament-hard-shadow-x) * -0.35 * var(--idg-motion-enabled));
+  --_shift-y: calc(var(--idg-ornament-hard-shadow-y) * -0.35 * var(--idg-motion-enabled));
+  --_pad: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+  --_gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  --_shadow: var(--idg-elevation-sm);
+  --_shadow-hover: var(--idg-elevation-md);
+  --_ring: none;
+
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--_gap);
+  block-size: 100%;
+  padding-block: var(--_pad);
+  overflow: hidden;
+  border-width: var(--idg-surface-border-width);
+  border-style: var(--idg-surface-border-style);
+  border-color: var(--idg-surface-border-color);
+  border-radius: var(--idg-shape-radius-lg);
+  background: var(--idg-surface-background);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: var(--_shadow);
+  color: var(--idg-color-text);
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+  letter-spacing: var(--idg-font-body-letter-spacing);
+  transition-property: transform, box-shadow, background-color, border-color;
+  transition-duration: var(--idg-motion-duration-base);
+  transition-timing-function: var(--idg-motion-easing-standard);
+}
+
+/* The strong edge of the outlined variant is drawn on a layer of its own, because "none" (the
+   elevation of a flat design) cannot share a box-shadow list with it. */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: var(--_ring);
+  pointer-events: none;
+}
+
+/* Padding */
+
+.padding-none {
+  --_pad: 0px;
+}
+
+.padding-sm {
+  --_pad: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  --_gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+}
+
+.padding-lg {
+  --_pad: calc(var(--idg-space-l) * var(--idg-density-gap-scale));
+  --_gap: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+}
+
+/* Variants */
+
+.variant-raised {
+  --_shadow: var(--idg-elevation-md);
+  --_shadow-hover: var(--idg-elevation-lg);
+
+  background: var(--idg-surface-background);
+}
+
+/* Outlined drops the fill and the shadow and draws a strong edge of its own, which a design with
+   no border (soft, elevated) would otherwise leave out. */
+.variant-outlined {
+  --_shadow: none;
+  --_shadow-hover: none;
+  --_ring: inset 0 0 0 2px var(--idg-color-border-strong);
+
+  background: transparent;
+  backdrop-filter: none;
+}
+
+/* Everything inside an accent card sits on the accent colour, so the tokens its content reads are
+   re-pointed for it: text, muted text and links take the on-accent colour, and a surface (a
+   secondary button, a field) becomes a tint of it. A design whose surfaces are transparent
+   (editorial, outline) would otherwise leave dark text on the accent. */
+.variant-accent {
+  --_shadow: var(--idg-elevation-md);
+  --_shadow-hover: var(--idg-elevation-lg);
+  --idg-color-text: var(--idg-color-on-accent);
+  --idg-color-text-muted: var(--idg-color-on-accent);
+  --idg-color-link: var(--idg-color-on-accent);
+  --idg-surface-background: color-mix(in srgb, var(--idg-color-on-accent) 16%, transparent);
+  --idg-surface-backdrop-filter: none;
+
+  background: var(--idg-color-accent);
+  backdrop-filter: none;
+  color: var(--idg-color-on-accent);
+}
+
+/* Interactive */
+
+.interactive {
+  cursor: pointer;
+}
+
+.interactive:hover {
+  --_shadow: var(--_shadow-hover);
+
+  transform: translate(var(--_shift-x), calc(var(--_shift-y) - var(--_lift)));
+}
+
+.variant-outlined.interactive:hover {
+  --_ring: inset 0 0 0 2px var(--idg-color-accent);
+}
+
+/* The link covers the card, so its own focus ring would only outline the heading text. Where
+   :has() exists the card takes the ring, with the link's outline removed. */
+@supports selector(:has(*)) {
+  .card:has(.stretch:focus-visible) {
+    outline-width: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
+    outline-style: var(--idg-focus-ring-style);
+    outline-color: var(--idg-color-focus-ring);
+    outline-offset: var(--idg-focus-ring-offset);
+  }
+
+  .stretch:focus-visible {
+    outline: none;
+  }
+}
+
+/* Regions */
+
+.media {
+  margin-block-start: calc(-1 * var(--_pad));
+}
+
+.media ::slotted(*) {
+  display: block;
+  inline-size: 100%;
+  max-inline-size: 100%;
+}
+
+.media ::slotted(img) {
+  block-size: auto;
+  object-fit: cover;
+}
+
+.header,
+.body,
+.footer {
+  min-inline-size: 0;
+  padding-inline: var(--_pad);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--idg-space-3xs);
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--idg-font-family-display);
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+  text-decoration: var(--idg-ornament-heading-decoration);
+  text-decoration-thickness: 2px;
+  text-transform: var(--idg-ornament-heading-transform);
+  text-underline-offset: 0.2em;
+}
+
+.stretch {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+/* The standard way to make a whole card one link: the heading's anchor is the only link, and a
+   pseudo-element stretched over the nearest positioned ancestor, the card, receives the click. */
+.stretch::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.interactive:hover .stretch {
+  text-decoration: underline;
+}
+
+.body {
+  flex: 1 1 auto;
+}
+
+/* The design's own rule above the footer. It is empty in the designs that draw no border. */
+.footer {
+  position: relative;
+  z-index: 1;
+  padding-block-start: calc(var(--_gap) * 0.6);
+  border-block-start-width: var(--idg-border-width);
+  border-block-start-style: var(--idg-border-style);
+  border-block-start-color: var(--idg-border-color);
+  /* The footer sits above the stretched link so its controls stay clickable, but its empty space
+     still follows the card's link. */
+  pointer-events: none;
+}
+
+.footer ::slotted(*) {
+  pointer-events: auto;
+}
+
+.variant-accent .footer {
+  border-block-start-color: color-mix(in srgb, currentcolor 45%, transparent);
+}
+
+@media (forced-colors: active) {
+  .card {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .stretch:focus-visible {
+    outline: 2px solid Highlight;
+  }
+}

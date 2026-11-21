@@ -123,19 +123,7 @@
 }
 
 .invalid-mark {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  inline-size: 1.25em;
-  block-size: 1.25em;
-  border-radius: var(--idg-shape-radius-pill);
-  background: var(--idg-color-danger);
-  color: var(--idg-color-on-danger);
-  font-size: 0.8em;
-  font-weight: var(--idg-font-weight-bold);
-  line-height: 1;
+  color: var(--idg-color-danger);
 }
 
 /* Readonly is a plain subtle fill and dashed edge; disabled adds fading and a blocked cursor, so

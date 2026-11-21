@@ -182,9 +182,7 @@ export class IdgTextarea {
             />
           </div>
           {this.invalid ? (
-            <span class="invalid-mark" aria-hidden="true">
-              !
-            </span>
+            <idg-icon class="invalid-mark" name="warning" aria-hidden="true" />
           ) : null}
         </div>
         {this.counter ? (

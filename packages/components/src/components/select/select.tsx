@@ -183,12 +183,8 @@ export class IdgSelect {
           onInput={this.handleInput}
           onChange={this.handleChange}
         />
-        {this.invalid ? (
-          <span class="invalid-mark" aria-hidden="true">
-            !
-          </span>
-        ) : null}
-        <span class="chevron" aria-hidden="true" />
+        {this.invalid ? <idg-icon class="invalid-mark" name="warning" aria-hidden="true" /> : null}
+        <idg-icon class="chevron" name="chevron-down" aria-hidden="true" />
         <div hidden>
           <slot
             onSlotchange={() => {

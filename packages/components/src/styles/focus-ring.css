@@ -1,0 +1,14 @@
+/* The focus ring of the design language, for any native element in a shadow root marked
+   `.focusable`. The width follows the UX mode's emphasis; the style and offset follow the design. */
+.focusable:focus-visible {
+  outline-width: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
+  outline-style: var(--idg-focus-ring-style);
+  outline-color: var(--idg-color-focus-ring);
+  outline-offset: var(--idg-focus-ring-offset);
+}
+
+@media (forced-colors: active) {
+  .focusable:focus-visible {
+    outline-color: Highlight;
+  }
+}

@@ -74,19 +74,7 @@
 }
 
 .error-mark {
-  display: inline-flex;
   flex: none;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  inline-size: 1.25em;
-  block-size: 1.25em;
-  border-radius: var(--idg-shape-radius-pill);
-  background: var(--idg-color-danger);
-  color: var(--idg-color-on-danger);
-  font-size: 0.85em;
-  font-weight: var(--idg-font-weight-bold);
-  line-height: 1;
 }
 
 @media (forced-colors: active) {

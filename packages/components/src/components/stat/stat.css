@@ -1,0 +1,82 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.stat {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--idg-space-s);
+}
+
+.figures {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--idg-space-3xs);
+  min-inline-size: 0;
+}
+
+.label {
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-semibold);
+  line-height: var(--idg-font-body-line-height);
+  text-transform: var(--idg-ornament-control-transform);
+}
+
+.value {
+  font-family: var(--idg-font-family-display);
+  font-size: calc(var(--idg-font-size-step-3) * var(--idg-ux-type-scale));
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+}
+
+.delta {
+  --_background: var(--idg-color-bg-subtle);
+  --_text: var(--idg-color-text);
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--idg-space-3xs);
+  padding-block: 0;
+  padding-inline: var(--idg-space-2xs);
+  border-width: var(--idg-border-control-width);
+  border-style: var(--idg-border-control-style);
+  border-color: var(--idg-border-control-color);
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--_background);
+  color: var(--_text);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--idg-font-weight-semibold);
+  line-height: var(--idg-font-body-line-height);
+}
+
+.sentiment-positive {
+  --_background: var(--idg-color-success-subtle);
+  --_text: var(--idg-color-on-success-subtle);
+}
+
+.sentiment-negative {
+  --_background: var(--idg-color-danger-subtle);
+  --_text: var(--idg-color-on-danger-subtle);
+}
+
+@media (forced-colors: active) {
+  .delta {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}

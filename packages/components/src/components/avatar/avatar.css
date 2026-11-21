@@ -1,0 +1,144 @@
+:host {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  border-radius: var(--idg-shape-radius-pill);
+  vertical-align: middle;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.avatar {
+  position: relative;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--_size);
+  block-size: var(--_size);
+  overflow: hidden;
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--_background);
+  color: var(--_text);
+  font-family: var(--idg-font-family-body);
+  font-size: calc(var(--_size) * 0.4);
+  font-weight: var(--idg-font-weight-semibold);
+  line-height: 1;
+  letter-spacing: 0;
+  user-select: none;
+}
+
+/* The colour pairs are chosen from the name, so the same person is the same colour everywhere.
+   All are theme pairs whose contrast the token build guarantees. */
+.tone-0 {
+  --_background: var(--idg-color-accent);
+  --_text: var(--idg-color-on-accent);
+}
+
+.tone-1 {
+  --_background: var(--idg-color-info);
+  --_text: var(--idg-color-on-info);
+}
+
+.tone-2 {
+  --_background: var(--idg-color-success);
+  --_text: var(--idg-color-on-success);
+}
+
+.tone-3 {
+  --_background: var(--idg-color-warning);
+  --_text: var(--idg-color-on-warning);
+}
+
+.tone-4 {
+  --_background: var(--idg-color-text);
+  --_text: var(--idg-color-bg);
+}
+
+.tone-5 {
+  --_background: var(--idg-color-accent-subtle);
+  --_text: var(--idg-color-on-accent-subtle);
+}
+
+.initials {
+  text-transform: uppercase;
+}
+
+.image {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+/* The status dot sits on the avatar's corner and is ringed in the surface colour so it reads on
+   a picture. Each status has its own shape as well as its colour. */
+.status {
+  --_dot: calc(var(--_size) * 0.3);
+
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-end: 0;
+  box-sizing: border-box;
+  display: block;
+  inline-size: max(var(--_dot), 0.5rem);
+  block-size: max(var(--_dot), 0.5rem);
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--idg-color-success);
+  box-shadow: 0 0 0 2px var(--idg-color-surface);
+}
+
+/* Away is a dot with a bite out of it, busy a dot with a bar across it, offline an empty ring. */
+.status-away {
+  background: var(--idg-color-warning);
+}
+
+.status-away::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: 55%;
+  block-size: 55%;
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--idg-color-surface);
+}
+
+.status-busy {
+  background: var(--idg-color-danger);
+}
+
+.status-busy::after {
+  content: "";
+  position: absolute;
+  inset-block: 40%;
+  inset-inline: 22%;
+  background: var(--idg-color-on-danger);
+}
+
+.status-offline {
+  background: var(--idg-color-surface);
+  box-shadow:
+    0 0 0 2px var(--idg-color-surface),
+    inset 0 0 0 2px var(--idg-color-text-muted);
+}
+
+@media (forced-colors: active) {
+  .avatar,
+  .status {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .status-away::after {
+    background: CanvasText;
+  }
+
+  .status-busy::after {
+    background: CanvasText;
+  }
+}

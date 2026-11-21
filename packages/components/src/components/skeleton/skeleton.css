@@ -1,0 +1,100 @@
+:host {
+  display: block;
+  inline-size: 100%;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+:host([variant="rect"]) {
+  block-size: 6rem;
+}
+
+:host([variant="circle"]) {
+  inline-size: 3rem;
+  block-size: 3rem;
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.shape {
+  --_base: color-mix(in srgb, var(--idg-color-text) 10%, var(--idg-color-surface));
+  /* The highlight is mixed in by the motion switch itself, so with movement off the shape is one
+     flat colour and there is nothing left to shimmer. */
+  --_highlight: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--idg-color-text) 3%, var(--idg-color-surface))
+      calc(var(--idg-motion-enabled) * 100%),
+    var(--_base)
+  );
+
+  display: block;
+  background-color: var(--_base);
+  background-image: linear-gradient(
+    90deg,
+    var(--_base) 0%,
+    var(--_highlight) 50%,
+    var(--_base) 100%
+  );
+  background-size: 200% 100%;
+  animation: idg-shimmer calc(var(--idg-motion-duration-slow) * 5) linear infinite;
+}
+
+.variant-text {
+  block-size: 1em;
+  border-radius: var(--idg-shape-radius-sm);
+}
+
+.variant-text.last {
+  inline-size: 60%;
+}
+
+.variant-rect {
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: var(--idg-shape-radius-md);
+}
+
+.variant-circle {
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shape {
+    animation: none;
+  }
+}
+
+/* With movement off the shape is already one flat colour, so there is nothing to animate. */
+@container style(--idg-motion-enabled: 0) {
+  .shape {
+    animation: none;
+  }
+}
+
+@keyframes idg-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .shape {
+    forced-color-adjust: none;
+    background: GrayText;
+    opacity: 0.4;
+  }
+}

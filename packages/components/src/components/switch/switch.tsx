@@ -130,11 +130,7 @@ export class IdgSwitch {
         <span class="text" part="label">
           <slot />
         </span>
-        {this.invalid ? (
-          <span class="invalid-mark" aria-hidden="true">
-            !
-          </span>
-        ) : null}
+        {this.invalid ? <idg-icon class="invalid-mark" name="warning" aria-hidden="true" /> : null}
         {description ? (
           <span id="description" class="visually-hidden">
             {description}

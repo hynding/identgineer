@@ -1,0 +1,22 @@
+/* The edge length of every avatar size, shared by idg-avatar and the count idg-avatar-group draws
+   in the same size. */
+
+.size-xs {
+  --_size: 1.5rem;
+}
+
+.size-md {
+  --_size: 2.5rem;
+}
+
+.size-sm {
+  --_size: 2rem;
+}
+
+.size-lg {
+  --_size: 3.5rem;
+}
+
+.size-xl {
+  --_size: 5rem;
+}

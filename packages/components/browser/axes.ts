@@ -11,6 +11,7 @@ function idsIn(directory: string): string[] {
 }
 
 // Read from the built tokens, so a new design or UX mode joins the matrix without an edit here.
+export const THEMES = idsIn("themes");
 export const DESIGNS = idsIn("designs");
 export const UX_MODES = idsIn("ux");
 export const SCHEMES = ["light", "dark"] as const;
