@@ -5,6 +5,7 @@
  * It contains typing information for all components that exist in this project.
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
+import { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 import { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 import { CheckedDetail, ValueDetail } from "./utils/event-details";
@@ -12,6 +13,7 @@ import { IconName } from "./components/icon/icon-paths";
 import { IconSize } from "./components/icon/icon-options";
 import { InputSize, InputType } from "./components/input/input-options";
 import { RadioSelectDetail } from "./components/radio/radio";
+export { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 export { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 export { CheckedDetail, ValueDetail } from "./utils/event-details";
@@ -20,6 +22,61 @@ export { IconSize } from "./components/icon/icon-options";
 export { InputSize, InputType } from "./components/input/input-options";
 export { RadioSelectDetail } from "./components/radio/radio";
 export namespace Components {
+    /**
+     * A person or account, as a picture or, when there is none or it fails to load, their initials on a
+     * colour chosen from their name.
+     */
+    interface IdgAvatar {
+        /**
+          * What the picture shows. Defaults to `name`. An empty string marks the avatar as decoration, for one that sits beside the same name written out as text.
+         */
+        "alt"?: string;
+        /**
+          * The person's name: the source of the initials and the colour, and the default alt.
+         */
+        "name"?: string;
+        /**
+          * Avatar size.
+          * @default "md"
+         */
+        "size": AvatarSize;
+        /**
+          * The picture. Only http, https and relative urls are loaded.
+         */
+        "src"?: string;
+        /**
+          * Shows a status dot. Each status has its own shape, so colour is not the only cue.
+         */
+        "status"?: AvatarStatus;
+        /**
+          * The status dot's accessible name. Defaults to the status in English.
+         */
+        "statusLabel"?: string;
+    }
+    /**
+     * Overlaps a row of idg-avatar. It sets their size, and with `max` hides the ones past the limit
+     * and shows how many there are.
+     */
+    interface IdgAvatarGroup {
+        /**
+          * Names the group for assistive technology, such as "Reviewers".
+         */
+        "label"?: string;
+        /**
+          * The most avatars to show. The rest are hidden and counted.
+         */
+        "max"?: number;
+        /**
+          * The word after the count in its accessible name, such as "2 more".
+          * @default "more"
+         */
+        "moreLabel": string;
+        /**
+          * The size of every avatar in the group.
+          * @default "md"
+         */
+        "size": AvatarSize;
+    }
     /**
      * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
      */
@@ -589,6 +646,26 @@ export interface IdgTextareaCustomEvent<T> extends CustomEvent<T> {
 }
 declare global {
     /**
+     * A person or account, as a picture or, when there is none or it fails to load, their initials on a
+     * colour chosen from their name.
+     */
+    interface HTMLIdgAvatarElement extends Components.IdgAvatar, HTMLStencilElement {
+    }
+    var HTMLIdgAvatarElement: {
+        prototype: HTMLIdgAvatarElement;
+        new (): HTMLIdgAvatarElement;
+    };
+    /**
+     * Overlaps a row of idg-avatar. It sets their size, and with `max` hides the ones past the limit
+     * and shows how many there are.
+     */
+    interface HTMLIdgAvatarGroupElement extends Components.IdgAvatarGroup, HTMLStencilElement {
+    }
+    var HTMLIdgAvatarGroupElement: {
+        prototype: HTMLIdgAvatarGroupElement;
+        new (): HTMLIdgAvatarGroupElement;
+    };
+    /**
      * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
      */
     interface HTMLIdgBadgeElement extends Components.IdgBadge, HTMLStencilElement {
@@ -773,6 +850,8 @@ declare global {
         new (): HTMLIdgTextareaElement;
     };
     interface HTMLElementTagNameMap {
+        "idg-avatar": HTMLIdgAvatarElement;
+        "idg-avatar-group": HTMLIdgAvatarGroupElement;
         "idg-badge": HTMLIdgBadgeElement;
         "idg-button": HTMLIdgButtonElement;
         "idg-checkbox": HTMLIdgCheckboxElement;
@@ -788,6 +867,61 @@ declare global {
     }
 }
 declare namespace LocalJSX {
+    /**
+     * A person or account, as a picture or, when there is none or it fails to load, their initials on a
+     * colour chosen from their name.
+     */
+    interface IdgAvatar {
+        /**
+          * What the picture shows. Defaults to `name`. An empty string marks the avatar as decoration, for one that sits beside the same name written out as text.
+         */
+        "alt"?: string;
+        /**
+          * The person's name: the source of the initials and the colour, and the default alt.
+         */
+        "name"?: string;
+        /**
+          * Avatar size.
+          * @default "md"
+         */
+        "size"?: AvatarSize;
+        /**
+          * The picture. Only http, https and relative urls are loaded.
+         */
+        "src"?: string;
+        /**
+          * Shows a status dot. Each status has its own shape, so colour is not the only cue.
+         */
+        "status"?: AvatarStatus;
+        /**
+          * The status dot's accessible name. Defaults to the status in English.
+         */
+        "statusLabel"?: string;
+    }
+    /**
+     * Overlaps a row of idg-avatar. It sets their size, and with `max` hides the ones past the limit
+     * and shows how many there are.
+     */
+    interface IdgAvatarGroup {
+        /**
+          * Names the group for assistive technology, such as "Reviewers".
+         */
+        "label"?: string;
+        /**
+          * The most avatars to show. The rest are hidden and counted.
+         */
+        "max"?: number;
+        /**
+          * The word after the count in its accessible name, such as "2 more".
+          * @default "more"
+         */
+        "moreLabel"?: string;
+        /**
+          * The size of every avatar in the group.
+          * @default "md"
+         */
+        "size"?: AvatarSize;
+    }
     /**
      * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
      */
@@ -1323,6 +1457,20 @@ declare namespace LocalJSX {
         "value"?: string;
     }
 
+    interface IdgAvatarAttributes {
+        "src": string;
+        "alt": string;
+        "name": string;
+        "size": AvatarSize;
+        "status": AvatarStatus;
+        "statusLabel": string;
+    }
+    interface IdgAvatarGroupAttributes {
+        "label": string;
+        "size": AvatarSize;
+        "max": number;
+        "moreLabel": string;
+    }
     interface IdgBadgeAttributes {
         "variant": BadgeVariant;
         "size": BadgeSize;
@@ -1458,6 +1606,8 @@ declare namespace LocalJSX {
     }
 
     interface IntrinsicElements {
+        "idg-avatar": Omit<IdgAvatar, keyof IdgAvatarAttributes> & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes]?: IdgAvatar[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `attr:${K}`]?: IdgAvatarAttributes[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `prop:${K}`]?: IdgAvatar[K] };
+        "idg-avatar-group": Omit<IdgAvatarGroup, keyof IdgAvatarGroupAttributes> & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes]?: IdgAvatarGroup[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `attr:${K}`]?: IdgAvatarGroupAttributes[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `prop:${K}`]?: IdgAvatarGroup[K] };
         "idg-badge": Omit<IdgBadge, keyof IdgBadgeAttributes> & { [K in keyof IdgBadge & keyof IdgBadgeAttributes]?: IdgBadge[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `attr:${K}`]?: IdgBadgeAttributes[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `prop:${K}`]?: IdgBadge[K] };
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
         "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`]?: IdgCheckboxAttributes[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
@@ -1476,6 +1626,16 @@ export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
+            /**
+             * A person or account, as a picture or, when there is none or it fails to load, their initials on a
+             * colour chosen from their name.
+             */
+            "idg-avatar": LocalJSX.IntrinsicElements["idg-avatar"] & JSXBase.HTMLAttributes<HTMLIdgAvatarElement>;
+            /**
+             * Overlaps a row of idg-avatar. It sets their size, and with `max` hides the ones past the limit
+             * and shows how many there are.
+             */
+            "idg-avatar-group": LocalJSX.IntrinsicElements["idg-avatar-group"] & JSXBase.HTMLAttributes<HTMLIdgAvatarGroupElement>;
             /**
              * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
              */
