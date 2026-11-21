@@ -774,21 +774,22 @@ table, a button or an image keeps the behaviour it has outside them.
 
 ### `idg-stack`
 
-| Prop       | Attribute  | Values                              | Default            |
-| ---------- | ---------- | ----------------------------------- | ------------------ |
-| `gap`      | `gap`      | a gap step                          | `--idg-layout-gap` |
-| `align`    | `align`    | `start`, `center`, `end`, `stretch` | `stretch`          |
-| `dividers` | `dividers` | boolean                             | `false`            |
+| Prop    | Attribute | Values                              | Default            |
+| ------- | --------- | ----------------------------------- | ------------------ |
+| `gap`   | `gap`     | a gap step                          | `--idg-layout-gap` |
+| `align` | `align`   | `start`, `center`, `end`, `stretch` | `stretch`          |
 
-Children one under another. **Slot:** default. **Part:** `stack`. With `dividers`, a hairline in the
-theme's border colour (`--idg-color-border`, which every design language shows, even those with no
-border) is drawn above every child that is drawn except the first, with half the gap on each side of
-it. Hidden children, templates, scripts and children for another slot are not drawn, so they never
-get a rule, and the first child that is drawn has none above it, whichever child that is. This is
-done in CSS alone and writes nothing to your markup. The gap moves into the children's block padding
-to draw the rule, so give those children no block padding of their own: a style of your own on a
-child wins over the stack's. Items another component forwards through a slot are ruled like direct
-children.
+Children one under another. **Slot:** default. **Part:** `stack`. It is a plain flex column with a
+gap and draws nothing of its own. For a rule between items, put an `idg-divider` between them: the
+stack's gap sits on either side of it.
+
+```html
+<idg-stack>
+  <p>First</p>
+  <idg-divider></idg-divider>
+  <p>Second</p>
+</idg-stack>
+```
 
 ### `idg-cluster`
 
@@ -884,14 +885,25 @@ with no console violation.
 Component sources are scanned by `checks/` for `innerHTML`, `outerHTML`, `insertAdjacentHTML`,
 `document.write`, `eval`, `new Function`, string event handlers and inline style strings, and the
 stylesheets for hex, `rgb()`, `hsl()` and similar colour literals and raw `ms` or `s` durations. The
-layout primitives' stylesheets are held to more: no length with a unit, signed or not, in any unit including the container,
-viewport (`sv*`, `lv*`, `dv*`, `vi`, `vb`), font-relative (`rex`, `rch`, `ric`, `rlh`, `ic`, `lh`,
-`cap`) ones (every size is a token; a plain zero is allowed, a number written with an exponent is
-not), no `!important` taken as a value, no physical property such as `margin-left` or `width`, no
-`left` or `right` keyword in `text-align`, `justify-content`, `justify-items`, `place-items`,
-`place-content`, `place-self` and the like, a two-value `overflow`, no three- or four-value `margin`,
-`padding`, `inset`, `border-width`, `border-style` or `border-color` and no multi-value
-`border-radius` (those are ordered by physical side or corner), and no viewport media query.
+layout primitives' stylesheets are held to more. Each of these is refused:
+
+- a length with a unit, signed or not, in any unit (`px`, `rem`, `em`, `ex`, `ch`, `ic`, `lh`,
+  `cap`, `rex`, `rch`, `ric`, `rlh`, the viewport units including `vi`, `vb` and the `sv*`, `lv*`
+  and `dv*` families, and the container units `cq*`), in a declaration or in the prelude of an
+  `@container` or `@media` rule; every size is a token. A plain zero is allowed, and a number
+  written with an exponent is refused whatever it works out to;
+- a physical property such as `margin-left` or `width`;
+- `left` or `right`, in any case, as the value of `text-align`, `justify-content`,
+  `justify-items`, `justify-self`, `align-content`, `place-items`, `place-content`, `place-self`,
+  `float` or `clear` (`inline-start` and `inline-end` are allowed);
+- three or four values in `margin`, `padding`, `inset`, `border-width`, `border-style`,
+  `border-color`, `scroll-margin` or `scroll-padding`, more than two values in the `inset()` of
+  `clip-path`, and more than one value in `border-radius`, because those are ordered by physical
+  side or corner;
+- two values in `overflow`, which are ordered x then y;
+- a viewport media query.
+
+`!important` is not counted as a value of the declaration it ends.
 
 ## Development
 

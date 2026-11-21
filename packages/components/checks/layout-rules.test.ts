@@ -10,7 +10,7 @@ describe("findLayoutCssViolations", () => {
       .b { grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--_size)), 1fr)); }
       .c { flex-basis: calc((var(--_size) - 100%) * 999); margin-block: 0; padding-inline: 0; }
       .d { border-block-start: thin solid var(--idg-color-border); }
-      @container (inline-size < 30em) { .e { display: block; } }
+      @container (orientation: landscape) { .e { display: block; } }
     `;
     expect(findLayoutCssViolations(css)).toEqual([]);
   });
@@ -30,12 +30,12 @@ describe("findLayoutCssViolations", () => {
     ["text-align: left", ".a { text-align: left; }", "physical value"],
     [
       "a viewport width query",
-      "@media (min-width: 40em) { .a { display: block; } }",
+      "@media (min-width: 0) { .a { display: block; } }",
       "viewport media query",
     ],
     [
       "a viewport height query",
-      "@media (max-height: 30em) { .a { display: block; } }",
+      "@media (max-height: 0) { .a { display: block; } }",
       "viewport media query",
     ],
   ])("refuses %s", (_name, css, rule) => {
@@ -197,7 +197,7 @@ describe("findLayoutCssViolations", () => {
   );
 
   it.each([
-    ["a container query", "@container (inline-size < 30em) { .a { display: block; } }"],
+    ["a container query", "@container (orientation: landscape) { .a { display: block; } }"],
     [
       "a media query",
       "@media (prefers-reduced-motion: reduce) and (min-resolution: 2dppx) { .a { gap: 0; } }",

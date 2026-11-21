@@ -1157,11 +1157,6 @@ export namespace Components {
          */
         "align": StackAlignment;
         /**
-          * Draws a rule between children, in the theme's border colour.
-          * @default false
-         */
-        "dividers": boolean;
-        /**
           * Space between children, a step of the space scale. Without it the layout's gap is used.
          */
         "gap"?: GapStep;
@@ -3468,11 +3463,6 @@ declare namespace LocalJSX {
          */
         "align"?: StackAlignment;
         /**
-          * Draws a rule between children, in the theme's border colour.
-          * @default false
-         */
-        "dividers"?: boolean;
-        /**
           * Space between children, a step of the space scale. Without it the layout's gap is used.
          */
         "gap"?: GapStep;
@@ -4161,7 +4151,6 @@ declare namespace LocalJSX {
     interface IdgStackAttributes {
         "gap": GapStep;
         "align": StackAlignment;
-        "dividers": boolean;
     }
     interface IdgStatAttributes {
         "label": string;

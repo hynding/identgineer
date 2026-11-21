@@ -314,12 +314,5 @@
       "$value": "100svh",
       "$description": "The height of the small viewport, for a block that fills the screen."
     }
-  },
-  "rule": {
-    "$type": "dimension",
-    "$description": "Thickness of a rule drawn by a component that has no border of its own to take it from, such as the dividers of idg-stack.",
-    "width": {
-      "$value": "1px"
-    }
   }
 }

@@ -31,30 +31,3 @@
 .align-stretch {
   align-items: stretch;
 }
-
-/* A rule is drawn above every child, with half the gap below it and half above it, and the first
-   one is cut off. Hidden children, templates and scripts draw nothing and take no gap, so whichever
-   child is the first to be drawn has its rule at the top of the stack, where it is cut off however
-   the children change. The stack is pulled up by the rule and the half gap above the first child's
-   content, so that content is where it would be without dividers, and the top edge of the stack is
-   clipped just below the rule. Only that edge is clipped: the other three extend by the height of
-   the viewport, so the focus rings and shadows of the children are not cut. The half gap kept
-   above the first child's content is the room for its focus ring. The rule is a hairline in the
-   theme's border colour, which every design language shows, even those with no border. */
-:host([dividers]) {
-  display: flow-root;
-}
-
-.dividers {
-  --_pad: calc(var(--_gap) / 2);
-  --_reach: calc(var(--idg-size-screen) * -1);
-
-  gap: var(--_pad);
-  margin-block-start: calc((var(--idg-rule-width) + var(--_pad)) * -1);
-  clip-path: inset(var(--idg-rule-width) var(--_reach) var(--_reach) var(--_reach));
-}
-
-.dividers ::slotted(*) {
-  padding-block-start: var(--_pad);
-  border-block-start: var(--idg-rule-width) solid var(--idg-color-border);
-}

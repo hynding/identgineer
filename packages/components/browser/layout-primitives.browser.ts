@@ -38,39 +38,6 @@ async function boxOf(locator: Locator): Promise<Box> {
   return box;
 }
 
-/** The pixels of a region of the page that are within a few steps of a colour, given as `rgb(r, g, b)`. */
-async function pixelsNear(page: Page, clip: Box, color: string): Promise<number> {
-  const region = {
-    x: Math.floor(clip.x),
-    y: Math.floor(clip.y),
-    width: Math.max(1, Math.ceil(clip.width)),
-    height: Math.max(1, Math.ceil(clip.height)),
-  };
-  const png = (await page.screenshot({ clip: region })).toString("base64");
-  return page.evaluate(
-    async ([encoded, target]) => {
-      const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
-      const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/png" }));
-      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-      const context = canvas.getContext("2d");
-      if (!context) throw new Error("no canvas");
-      context.drawImage(bitmap, 0, 0);
-      const wanted = target.match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
-      const { data } = context.getImageData(0, 0, bitmap.width, bitmap.height);
-      let count = 0;
-      for (let index = 0; index < data.length; index += 4) {
-        const distance =
-          Math.abs((data[index] ?? 0) - (wanted[0] ?? 0)) +
-          Math.abs((data[index + 1] ?? 0) - (wanted[1] ?? 0)) +
-          Math.abs((data[index + 2] ?? 0) - (wanted[2] ?? 0));
-        if (distance <= 24) count += 1;
-      }
-      return count;
-    },
-    [png, color] as const,
-  );
-}
-
 /** Sets how wide the container of a primitive is, through the style object the strict policy allows. */
 async function setInlineSize(page: Page, selector: string, size: string): Promise<void> {
   await page.locator(selector).evaluate((element, value) => {
@@ -783,7 +750,8 @@ test.describe("the primitives leave their content alone", () => {
       test("a table wider than its container scrolls inside its own frame, and breaks no word", async ({
         page,
       }) => {
-        await open(page);
+        // At the width of a phone, where the table is wider than the viewport as well as its container.
+        await open(page, 320);
         await setInlineSize(page, `#${host}-box`, "16rem");
         const table = page.locator(`#${host} idg-table`);
         const frame = table.locator('[part="scroller"]');

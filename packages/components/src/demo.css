@@ -349,12 +349,6 @@ section.plain > h2 {
   display: inline-flex;
 }
 
-/* Contains what the primitives' content may overflow by, so that only the primitives are measured
-   by the page-level overflow checks. */
-.regress {
-  overflow-x: clip;
-}
-
 /* The usual responsive image: its width and height attributes give the aspect ratio, and it
    shrinks with its container without being squashed. */
 .fluid {

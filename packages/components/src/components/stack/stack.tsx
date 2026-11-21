@@ -22,9 +22,6 @@ export class IdgStack {
   /** Where children sit on the inline axis. */
   @Prop({ reflect: true }) align: StackAlignment = "stretch";
 
-  /** Draws a rule between children, in the theme's border colour. */
-  @Prop({ reflect: true }) dividers = false;
-
   render() {
     const gap = stepOf(GAP_STEPS, this.gap);
     const align = oneOf(STACK_ALIGNMENTS, this.align, "stretch");
@@ -34,7 +31,6 @@ export class IdgStack {
           stack: true,
           [`align-${align}`]: true,
           [`gap-${String(gap)}`]: gap !== undefined,
-          dividers: this.dividers,
         }}
         part="stack"
       >

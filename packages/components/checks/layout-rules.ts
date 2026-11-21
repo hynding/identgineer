@@ -16,12 +16,12 @@ const LENGTH =
   /(?<![\w.#-])[+-]?(?:\d*\.?\d+)(?:e[+-]?\d+)?(?:px|rem|em|ex|ch|ic|cap|lh|rex|rch|ric|rcap|rlh|vw|vh|vi|vb|vmin|vmax|[sld]v(?:w|h|i|b|min|max)|cq(?:w|h|i|b|min|max)|cm|mm|q|in|pt|pc)\b/gi;
 
 const PHYSICAL_PROPERTY =
-  /^(?:(?:margin|padding|border|scroll-margin|scroll-padding)-(?:left|right|top|bottom)(?:-[a-z]+)*|left|right|top|bottom|(?:min-|max-)?(?:width|height)|overflow-[xy]|float|clear)$/;
+  /^(?:(?:margin|padding|border|scroll-margin|scroll-padding)-(?:left|right|top|bottom)(?:-[a-z]+)*|left|right|top|bottom|(?:min-|max-)?(?:width|height)|overflow-[xy])$/;
 
 // Properties whose keywords can name a side. Their values may not.
 const DIRECTIONAL_KEYWORDS =
   /^(?:text-align|text-align-last|float|clear|justify-content|justify-items|justify-self|align-content|place-items|place-content|place-self)$/;
-const DIRECTIONAL = /\b(?:left|right)\b/;
+const DIRECTIONAL = /\b(?:left|right)\b/i;
 
 // Shorthands that take one value per side. One value and two (block, inline) say the same in
 // either text direction, but three and four are ordered top, right, bottom, left.
@@ -29,6 +29,8 @@ const SIDED_SHORTHANDS =
   /^(?:margin|padding|inset|border-width|border-style|border-color|scroll-margin|scroll-padding)$/;
 // `overflow` takes x then y, so two values are physical.
 const AXIS_SHORTHANDS = /^overflow$/;
+// The inset of a clip takes a value per side, so more than two are ordered top, right, ...
+const CLIP_SHORTHANDS = /^clip-path$/;
 // A radius is ordered by corner, so even two values name physical corners.
 const CORNER_SHORTHANDS = /^border-radius$/;
 
@@ -53,7 +55,28 @@ function countValues(value: string): number {
   return count;
 }
 
+/** The arguments of the first call of a function in a value, with nested calls kept whole. */
+function argumentsOf(value: string, name: string): string | undefined {
+  const start = value.search(new RegExp(`\\b${name}\\(`, "i"));
+  if (start < 0) return undefined;
+  const open = start + name.length + 1;
+  let depth = 1;
+  for (let index = open; index < value.length; index += 1) {
+    if (value[index] === "(") depth += 1;
+    if (value[index] === ")") depth -= 1;
+    if (depth === 0) return value.slice(open, index);
+  }
+  return value.slice(open);
+}
+
+/** The values of an inset() before its `round` radius, which is not part of the sides. */
+function insetSides(value: string): string {
+  const inset = argumentsOf(value, "inset") ?? "";
+  return inset.split(/\s+round\s+/i)[0] ?? "";
+}
+
 const VIEWPORT_QUERY = /@media[^{]*\b(?:(?:min|max)-)?(?:width|height|aspect-ratio)\b/gi;
+const PRELUDE = /@(?:media|container)\b([^{}]*)\{/gi;
 const DECLARATION = /([\w-]+)\s*:\s*([^;{}]+)(?=[;}])/g;
 
 function blankComments(css: string): string {
@@ -70,11 +93,14 @@ function lineAt(css: string, index: number): number {
  * and react to their container, never to the viewport.
  *
  * Refused: lengths with a unit; physical properties; `left` and `right` as the value of a
- * property that takes them (`text-align`, `justify-*`, `place-*`, `float` and the like); margin,
+ * property that takes them (`text-align`, `justify-*`, `place-*`, `float`, `clear` and the like); margin,
  * padding, inset, border-width, border-style, border-color and scroll-margin or scroll-padding
- * with three or four values, and any border-radius with more than one value, because those are ordered by physical side or corner; a two-value `overflow`, which is
- * ordered x then y. One and two values are allowed, `!important` is not a value, and an exponent
- * in a length is refused whatever it works out to.
+ * with three or four values, an `inset()` clip with more than two, and any border-radius with more
+ * than one value, because those are ordered by physical side or corner; a two-value `overflow`,
+ * which is ordered x then y. Keywords are matched in any case, a length is refused in the prelude
+ * of `@container` and `@media` as in a declaration, and `float` and `clear` may use
+ * `inline-start` and `inline-end`. One and two values are allowed, `!important` is not counted as
+ * a value, and an exponent in a length is refused whatever it works out to.
  * Not checked: keywords in other properties such as `background-position`.
  */
 export function findLayoutCssViolations(source: string): LayoutCssViolation[] {
@@ -87,6 +113,15 @@ export function findLayoutCssViolations(source: string): LayoutCssViolation[] {
       text: query[0].trim(),
       rule: "viewport media query",
     });
+  }
+  for (const prelude of css.matchAll(PRELUDE)) {
+    for (const length of (prelude[1] ?? "").matchAll(LENGTH)) {
+      violations.push({
+        line: lineAt(css, prelude.index),
+        text: length[0],
+        rule: "hard-coded length",
+      });
+    }
   }
   for (const declaration of css.matchAll(DECLARATION)) {
     const property = (declaration[1] ?? "").toLowerCase();
@@ -102,7 +137,8 @@ export function findLayoutCssViolations(source: string): LayoutCssViolation[] {
     if (
       (SIDED_SHORTHANDS.test(property) && count > 2) ||
       (AXIS_SHORTHANDS.test(property) && count > 1) ||
-      (CORNER_SHORTHANDS.test(property) && (count > 1 || value.includes("/")))
+      (CORNER_SHORTHANDS.test(property) && (count > 1 || value.includes("/"))) ||
+      (CLIP_SHORTHANDS.test(property) && countValues(insetSides(value)) > 2)
     ) {
       violations.push({ line, text: `${property}: ${value.trim()}`, rule: "physical shorthand" });
     }
