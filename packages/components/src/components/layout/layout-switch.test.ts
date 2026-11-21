@@ -12,12 +12,16 @@ afterEach(() => {
   observer.restore();
 });
 
+// The unit environment has no DOM, so elements are plain objects that know their parent.
+function element(parentNode: object | null): Element {
+  return { nodeType: 1, parentNode } as unknown as Element;
+}
+
 function chain() {
-  const root = document.createElement("div");
-  const middle = document.createElement("section");
-  const host = document.createElement("div");
-  root.append(middle);
-  middle.append(host);
+  const document = { nodeType: 9, parentNode: null };
+  const root = element(document);
+  const middle = element(root);
+  const host = element(middle);
   return { root, middle, host };
 }
 
@@ -25,11 +29,10 @@ describe("watchLayoutAttribute", () => {
   it("watches data-layout on the host and on every ancestor, and nothing else", () => {
     const { root, middle, host } = chain();
     watchLayoutAttribute(host, () => undefined);
-    const watched = observer.observers.filter((item) => item.observing);
-    expect(watched.map((item) => item.target)).toEqual([host, middle, root]);
-    for (const item of watched) {
-      expect(item.options).toEqual({ attributes: true, attributeFilter: ["data-layout"] });
-    }
+    const [watching, ...others] = observer.observers.filter((item) => item.observing);
+    expect(others).toEqual([]);
+    expect(watching?.targets).toEqual([host, middle, root]);
+    expect(watching?.options).toEqual({ attributes: true, attributeFilter: ["data-layout"] });
   });
 
   it("calls back when the layout changes", () => {
@@ -50,7 +53,7 @@ describe("watchLayoutAttribute", () => {
 
 describe("takeViewport and restoreViewport", () => {
   it("remembers where the page is scrolled and what has focus", () => {
-    const button = document.createElement("button");
+    const button = element(null);
     const view = { scrollX: 3, scrollY: 420, scrollTo: vi.fn() } as unknown as Window;
     const taken = takeViewport(view, () => button);
     expect(taken).toEqual({ x: 3, y: 420, focused: button });
