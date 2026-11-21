@@ -15,7 +15,7 @@ export default defineConfig({
           include: ["packages/tokens/src/**/*.test.ts"],
         },
       },
-      "packages/components",
+      "packages/components/vitest.*.config.ts",
     ],
   },
 });
