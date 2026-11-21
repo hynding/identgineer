@@ -710,6 +710,7 @@ test.describe("the menu button does not move, in any UX mode, at larger text or 
     ["bento", 768],
     ["split-hero", 768],
     ["split-hero", 1024],
+    ["split-hero", 1280],
   ];
 
   /** Asserts the closed bar is tidy, opens the panel, and asserts the button has not moved. */
@@ -742,22 +743,25 @@ test.describe("the menu button does not move, in any UX mode, at larger text or 
         toggle: centre(button),
         brand: centre(document.getElementById("brand-link")),
         actions: centre(tree?.querySelector('[part="actions"]')),
+        actionsHeight: tree?.querySelector('[part="actions"]')?.getBoundingClientRect().height ?? 0,
+        toggleHeight: button.getBoundingClientRect().height,
         height: header.getBoundingClientRect().height,
         content:
           Math.max(...parts.map((box) => box.bottom)) - Math.min(...parts.map((box) => box.top)),
         around,
       };
     });
-    expect(
-      Math.abs(closed.toggle - closed.actions),
-      "toggle centred on the actions",
-    ).toBeLessThanOrEqual(1);
-    if (layout !== "split-hero" || width < 1000) {
+    // Where the actions wrap onto two rows, the button is aligned with the brand instead.
+    if (closed.actionsHeight <= closed.toggleHeight + 8) {
       expect(
-        Math.abs(closed.toggle - closed.brand),
-        "toggle centred on the brand",
+        Math.abs(closed.toggle - closed.actions),
+        "toggle centred on the actions",
       ).toBeLessThanOrEqual(1);
     }
+    expect(
+      Math.abs(closed.toggle - closed.brand),
+      "toggle centred on the brand",
+    ).toBeLessThanOrEqual(1);
     if (layout !== "split-hero" || width < 1000) {
       expect(closed.height, "the bar is no taller than what is in it").toBeLessThanOrEqual(
         closed.content + closed.around + 1,
@@ -904,6 +908,154 @@ test.describe("scroll padding and the bar's own controls", () => {
         () => document.getElementById("main-link")?.getBoundingClientRect().top ?? Number.NaN,
       );
       expect(top).toBeGreaterThanOrEqual((await padding(page)) - 1);
+    });
+  }
+});
+
+test.describe("a text field in the pinned bar", () => {
+  const FIELDS = {
+    "idg-input": "idg-input",
+    "idg-textarea": "idg-textarea",
+    "native input": "input",
+  };
+  for (const layout of ["top-bar", "dashboard"]) {
+    for (const [kind, tag] of Object.entries(FIELDS)) {
+      test(`${layout}, ${kind}: focus, Tab, click and typing leave a scrolled page where it is`, async ({
+        page,
+      }) => {
+        await openShell(page, { width: 1280, height: 700, layout });
+        await page.evaluate((name) => {
+          const field = document.createElement(name);
+          field.id = "bar-field";
+          field.slot = "actions";
+          field.setAttribute(name === "input" ? "aria-label" : "label", "Search");
+          document.getElementById("shell")?.append(field);
+        }, tag);
+        await expect(page.locator("#bar-field:not(.hydrated)")).toHaveCount(
+          kind === "native input" ? 1 : 0,
+        );
+        await frames(page, 3);
+        await page.evaluate(() => {
+          window.scrollTo(0, 900);
+        });
+        await frames(page, 2);
+        const scrollY = await page.evaluate(() => window.scrollY);
+        expect(scrollY).toBeGreaterThan(500);
+        const field = page.locator("#bar-field");
+        await field.focus();
+        await frames(page, 2);
+        expect(await page.evaluate(() => window.scrollY), "focus()").toBe(scrollY);
+        await page.locator("#action-last").focus();
+        await page.keyboard.press("Tab");
+        await frames(page, 2);
+        expect(await page.evaluate(() => window.scrollY), "Tab").toBe(scrollY);
+        await page.locator("#main-link").focus();
+        await page.evaluate((y) => {
+          window.scrollTo(0, y);
+        }, scrollY);
+        await field.click();
+        await frames(page, 2);
+        expect(await page.evaluate(() => window.scrollY), "click").toBe(scrollY);
+        await page.keyboard.type("hello");
+        await frames(page, 2);
+        expect(await page.evaluate(() => window.scrollY), "typing").toBe(scrollY);
+      });
+    }
+  }
+});
+
+test.describe("a long navigation in a modal drawer", () => {
+  for (const layout of ["dashboard", "side-rail", "immersive"]) {
+    test(`${layout}: Tab forward and Shift+Tab back keep every focused item inside the drawer`, async ({
+      page,
+    }) => {
+      await openShell(page, { width: 600, height: 400, layout });
+      await page.evaluate(() => {
+        const host = document.getElementById("shell");
+        for (let index = 0; index < 30; index += 1) {
+          const link = document.createElement("a");
+          link.slot = "navigation";
+          link.href = `#drawer-${String(index)}`;
+          link.textContent = `Drawer item ${String(index)}`;
+          host?.append(link);
+        }
+      });
+      await frames(page, 3);
+      await page.locator("#shell").locator('[part="toggle"]').click();
+      await expect
+        .poll(() => page.locator("#shell").evaluate((host) => host.hasAttribute("navigation-open")))
+        .toBe(true);
+      await frames(page, 3);
+      const outside = () =>
+        page.locator("#shell").evaluate((host) => {
+          const box = host.shadowRoot?.querySelector('[part="drawer"]')?.getBoundingClientRect();
+          const active = document.activeElement?.getBoundingClientRect();
+          if (!box || !active || document.activeElement?.slot !== "navigation") return 0;
+          return Math.max(box.top - active.top, active.bottom - box.bottom, 0);
+        });
+      for (let index = 0; index < 34; index += 1) {
+        await page.keyboard.press("Tab");
+        await frames(page, 1);
+        expect(await outside(), `forward ${String(index)}`).toBeLessThanOrEqual(1);
+      }
+      for (let index = 0; index < 34; index += 1) {
+        await page.keyboard.press("Shift+Tab");
+        await frames(page, 1);
+        expect(await outside(), `back ${String(index)}`).toBeLessThanOrEqual(1);
+      }
+    });
+  }
+});
+
+test.describe("the held bar row yields to a larger bar", () => {
+  const toggleState = (page: Page) =>
+    page.locator("#shell").evaluate((host) => {
+      const tree = host.shadowRoot;
+      const button = tree?.querySelector<HTMLElement>('[part="toggle"]')?.getBoundingClientRect();
+      const header = tree?.querySelector<HTMLElement>('[part="header"]');
+      const drawer = tree?.querySelector<HTMLElement>('[part="drawer"]')?.getBoundingClientRect();
+      if (!button || !header || !drawer) throw new Error("missing");
+      const rows = getComputedStyle(header).gridTemplateRows.split(" ");
+      const top = header.getBoundingClientRect().top;
+      return {
+        button,
+        firstRow: Number.parseFloat(rows[0] ?? "0"),
+        top,
+        drawerTop: drawer.top,
+        overlap: Math.min(button.bottom, drawer.bottom) - Math.max(button.top, drawer.top),
+      };
+    });
+
+  for (const change of ["ux", "font"] as const) {
+    test(`top-bar at 768px: after ${change === "ux" ? "a switch to the focus UX mode" : "a 150% root font"} the open toggle stays in the first row, clear of the panel, and clicks`, async ({
+      page,
+    }) => {
+      await openShell(page, { width: 768, layout: "top-bar" });
+      const toggle = page.locator("#shell").locator('[part="toggle"]');
+      const before = await toggle.boundingBox();
+      await toggle.click();
+      await expect
+        .poll(() => page.locator("#shell").evaluate((host) => host.hasAttribute("navigation-open")))
+        .toBe(true);
+      await frames(page, 3);
+      const opened = await toggle.boundingBox();
+      expect(opened?.y).toBeCloseTo(before?.y ?? Number.NaN, 0);
+      await page.evaluate((what) => {
+        if (what === "ux") document.documentElement.setAttribute("data-ux", "focus");
+        else document.documentElement.style.fontSize = "150%";
+      }, change);
+      await frames(page, 4);
+      const state = await toggleState(page);
+      expect(state.button.bottom, "inside the first row").toBeLessThanOrEqual(
+        state.top + state.firstRow + 1,
+      );
+      expect(state.overlap, "clear of the panel").toBeLessThanOrEqual(1);
+      const box = await toggle.boundingBox();
+      if (!box) throw new Error("no box");
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height - 1);
+      await expect
+        .poll(() => page.locator("#shell").evaluate((host) => host.hasAttribute("navigation-open")))
+        .toBe(false);
     });
   }
 });

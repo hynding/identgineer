@@ -31,7 +31,7 @@ describe("reserveScrollPadding", () => {
     expect(SCROLL_PADDING_RULES).toContain(
       ":root { scroll-padding-block-start: var(--idg-layout-sticky-inset); }",
     );
-    expect(SCROLL_PADDING_RULES).not.toContain(":has(");
+    expect(SCROLL_PADDING_RULES.split("\n")[0]).not.toContain(":has(");
     // The bar's own controls opt out through a property that components carry into their shadow roots.
     expect(SCROLL_PADDING_RULES).toContain(
       "--_idg-chrome-scroll-margin: calc(-1 * var(--idg-layout-sticky-inset))",
@@ -41,6 +41,21 @@ describe("reserveScrollPadding", () => {
     );
     releaseScrollPadding(asDocument(document));
     expect(document.adoptedStyleSheets).toHaveLength(0);
+  });
+
+  it("drops the root padding only while text entry in the bar has focus", () => {
+    // Chrome's reveal of an editable element ignores scroll-margin and uses the root padding.
+    const rule = SCROLL_PADDING_RULES.split("\n").find((line) => line.includes(":focus"));
+    expect(rule).toBeDefined();
+    expect(rule).toMatch(/^:root:has\(/);
+    expect(rule).toContain("idg-layout > :is([slot=");
+    expect(rule).toContain("input:not([type=checkbox]");
+    expect(rule).toContain("textarea");
+    expect(rule).toContain("[contenteditable]:not([contenteditable=false])");
+    expect(rule).toContain("idg-input");
+    expect(rule).toContain("idg-textarea");
+    expect(rule).toContain(":focus-within");
+    expect(rule).toContain("{ scroll-padding-block-start: 0; }");
   });
 
   it("adopts one sheet however many shells hold it, and drops it with the last", () => {
