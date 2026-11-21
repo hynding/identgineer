@@ -97,13 +97,31 @@ export class IdgField {
 
   private passStateToControl(): void {
     const control = this.control();
-    if (!control) return;
+    if (!control) {
+      this.awaitControlDefinition();
+      return;
+    }
     const { label, hint, error } = this.text();
     applyFieldState(control, {
       label,
       description: [hint, error].filter((part) => part !== "").join(" "),
       invalid: error !== "",
       required: this.required,
+    });
+  }
+
+  // A page using the custom-elements build may define the field before its control, which is then
+  // a plain element without the field protocol. Its state is handed over once it is defined.
+  private awaitControlDefinition(): void {
+    const pending = Array.from(this.host.children).find(
+      (child) =>
+        !child.hasAttribute("slot") &&
+        child.localName.includes("-") &&
+        customElements.get(child.localName) === undefined,
+    );
+    if (!pending) return;
+    void customElements.whenDefined(pending.localName).then(() => {
+      this.passStateToControl();
     });
   }
 
