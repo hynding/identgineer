@@ -146,7 +146,7 @@ test.describe("constraint validation", () => {
     const invalid = (id: string) =>
       page.locator(`#${id}`).evaluate((element) => element.matches(":invalid"));
     const required = ["v-name", "v-note", "v-pick", "v-choice", "v-agree"];
-    for (const id of required) expect(await invalid(id), id).toBe(true);
+    for (const id of required) await expect.poll(() => invalid(id), id).toBe(true);
     await page.locator("#v-name input").fill("Ada");
     await page.locator("#v-note textarea").fill("Note");
     await page.locator("#v-pick select").selectOption("a");
@@ -192,10 +192,14 @@ test.describe("keyboard", () => {
     await expect(page.locator("#empty-contact")).toHaveJSProperty("value", "email");
     await page.keyboard.press("ArrowLeft");
     await expect(page.locator("#empty-contact")).toHaveJSProperty("value", "phone");
-    const tabStops = await page
-      .locator("#empty-contact idg-radio input")
-      .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).tabIndex));
-    expect(tabStops).toEqual([-1, 0]);
+    // The group hands the tab stops to its radios when it next renders, a frame after the value.
+    await expect
+      .poll(() =>
+        page
+          .locator("#empty-contact idg-radio input")
+          .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).tabIndex)),
+      )
+      .toEqual([-1, 0]);
   });
 
   test("a disabled radio is skipped", async ({ page }) => {
@@ -337,10 +341,15 @@ test.describe("boundaries", () => {
     await page.emulateMedia({ forcedColors: "active" });
     await open(page);
     await applyAxes(page, { design: "soft" });
-    const width = await page
-      .locator("#empty-name .box")
-      .evaluate((box) => getComputedStyle(box).borderTopWidth);
-    expect(Number.parseFloat(width)).toBeGreaterThanOrEqual(1);
+    await expect
+      .poll(async () =>
+        Number.parseFloat(
+          await page
+            .locator("#empty-name .box")
+            .evaluate((box) => getComputedStyle(box).borderTopWidth),
+        ),
+      )
+      .toBeGreaterThanOrEqual(1);
   });
 });
 
