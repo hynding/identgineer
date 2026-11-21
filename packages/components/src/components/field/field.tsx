@@ -137,11 +137,7 @@ export class IdgField {
         )}
         {/* The region exists before an error does, so inserting the message is what is announced. */}
         <div class="error" part="error" role="alert">
-          {error === "" ? null : (
-            <span class="error-mark" aria-hidden="true">
-              !
-            </span>
-          )}
+          {error === "" ? null : <idg-icon class="error-mark" name="error" aria-hidden="true" />}
           {error === "" ? null : (
             <span class="error-text">
               <slot name="error">{this.error}</slot>

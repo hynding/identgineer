@@ -24,7 +24,7 @@ test.describe("form controls hydrate under the strict policy", () => {
     await open(page);
     const total = await page
       .locator(
-        "idg-field, idg-input, idg-textarea, idg-select, idg-checkbox, idg-switch, idg-radio-group, idg-radio, idg-button",
+        "idg-field, idg-input, idg-textarea, idg-select, idg-checkbox, idg-switch, idg-radio-group, idg-radio, idg-button, idg-icon",
       )
       .count();
     await expect(page.locator(".hydrated")).toHaveCount(total);
