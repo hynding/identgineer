@@ -75,6 +75,8 @@ export class IdgToastRegion {
   private visible: RegionToast[] = [];
   private shown = false;
   private returnFocus: Element | undefined;
+  /** The last element outside the region to have focus, for when focus came from nowhere. */
+  private lastOutside: Element | undefined;
   private motion?: MediaQueryList;
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
 
@@ -111,15 +113,33 @@ export class IdgToastRegion {
     this.sync();
   }
 
+  // Focus can reach a toast by Tab or a click as well as by the hotkey. Escape then sends it back
+  // where it came from, or, when it came from nowhere, to the last element that had it.
   @Listen("focusin")
-  handleFocusIn(): void {
+  handleFocusIn(event: FocusEvent): void {
+    if (!this.pauses.has("focus")) {
+      const from = event.relatedTarget as Element | null;
+      const outside = from && !isWithin(from, this.host) ? from : this.lastOutside;
+      this.returnFocus ??= outside;
+    }
     this.setPause("focus", true);
+  }
+
+  @Listen("focusin", { target: "document" })
+  handleDocumentFocusIn(event: FocusEvent): void {
+    const target = event.composedPath()[0] as Element | undefined;
+    if (target?.nodeType === Node.ELEMENT_NODE && !isWithin(target, this.host)) {
+      this.lastOutside = target;
+    }
   }
 
   @Listen("focusout")
   handleFocusOut(event: FocusEvent): void {
     const next = event.relatedTarget as Node | null;
-    this.setPause("focus", next !== null && isWithin(next, this.host));
+    const staying = next !== null && isWithin(next, this.host);
+    // Focus moved on by itself, so there is nowhere to send it back to any more.
+    if (!staying) this.returnFocus = undefined;
+    this.setPause("focus", staying);
   }
 
   @Listen("blur", { target: "window" })
