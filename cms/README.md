@@ -194,7 +194,8 @@ details in camis' `packages/cli/README.md` and `docs/PLAN.md`, Phases 94 and 95)
   session and drops an owner sent on an update.
 - A populate or filter that reaches Profile, BrandKit, Property, Event or ConsentRecord carries
   the same scope; a write that links a row the caller cannot read is 403.
-- A write body with an unknown key, a malformed relation or media item, or a non-object `data` is 400. Populating a file's `related` entries (a polymorphic relation) is refused with 400.
+- A write body with an unknown key, a malformed relation or media item, or a non-object `data` is
+  400. Populating a file's `related` entries (a polymorphic relation) is refused with 400.
 - The upload API attaches only to an entry the caller may update, and records the uploader.
 
 Limits that remain on Strapi, for this model:
