@@ -285,7 +285,7 @@ describe("idg-menu moved or loaded open", () => {
         <idg-menu-item value="edit">Edit</idg-menu-item>
       </idg-menu>,
     );
-    expect(root.open).toBe(true);
+    expect((root as HTMLIdgMenuElement).open).toBe(true);
     expect(focus).not.toHaveBeenCalled();
     focus.mockRestore();
   });
