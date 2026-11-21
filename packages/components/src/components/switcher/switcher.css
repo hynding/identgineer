@@ -1,0 +1,29 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.switcher {
+  --_gap: calc(var(--idg-layout-gap) * var(--idg-density-gap-scale));
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--_gap);
+  min-inline-size: 0;
+}
+
+/* Wide enough, the basis is negative and clamps to nothing, so the items share one row equally.
+   Narrower than --_size it is far larger than the row, so every item takes a row to itself. The
+   container's own width is what the percentage measures. */
+.switcher ::slotted(*) {
+  flex: 1 1 calc((var(--_size) - 100%) * 999);
+}
+
+/* More items than the limit: every item takes a row to itself, at any width. */
+.over-limit ::slotted(*) {
+  flex-basis: 100%;
+}

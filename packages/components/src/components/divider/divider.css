@@ -3,6 +3,18 @@
   color: var(--idg-color-border);
 }
 
+/* A horizontal rule is as wide as its container. Its width is a percentage, which a shrink-to-fit
+   flex item (a stack that aligns to the start, centre or end) would resolve to nothing, so it
+   stretches across the cross axis instead. Outside a flex or grid container this does nothing.
+   A host stretched to the height of a row that centres its items would leave the line at the top
+   of it, so the line is centred in the host. */
+:host(:not([orientation="vertical"])) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-self: stretch;
+}
+
 :host([orientation="vertical"]) {
   display: inline-block;
   align-self: stretch;

@@ -13,6 +13,9 @@ import { BreadcrumbSeparator } from "./components/breadcrumb/breadcrumb-options"
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 import { CardPadding, CardVariant } from "./components/card/card-options";
 import { CheckedDetail, ValueDetail } from "./utils/event-details";
+import { GapStep, SizeStep } from "./utils/layout-steps";
+import { ClusterAlignment, ClusterJustification } from "./components/cluster/cluster-options";
+import { CoverHeight } from "./components/cover/cover-options";
 import { DialogCancelDetail, DialogCloseDetail, DialogOpenDetail, DialogSize } from "./components/dialog/dialog-options";
 import { DividerOrientation } from "./components/divider/divider-options";
 import { IconName } from "./components/icon/icon-paths";
@@ -23,7 +26,9 @@ import { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item
 import { PageChangeDetail } from "./components/pagination/pagination-options";
 import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
+import { SidebarSide } from "./components/sidebar/sidebar-options";
 import { SkeletonVariant } from "./components/skeleton/skeleton-options";
+import { StackAlignment } from "./components/stack/stack-options";
 import { StatDirection, StatSentiment } from "./components/stat/stat-options";
 import { TabsActivation, TabsOrientation } from "./components/tabs/tabs-options";
 import { SortDirection } from "./utils/sort-rows";
@@ -38,6 +43,9 @@ export { BreadcrumbSeparator } from "./components/breadcrumb/breadcrumb-options"
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 export { CardPadding, CardVariant } from "./components/card/card-options";
 export { CheckedDetail, ValueDetail } from "./utils/event-details";
+export { GapStep, SizeStep } from "./utils/layout-steps";
+export { ClusterAlignment, ClusterJustification } from "./components/cluster/cluster-options";
+export { CoverHeight } from "./components/cover/cover-options";
 export { DialogCancelDetail, DialogCloseDetail, DialogOpenDetail, DialogSize } from "./components/dialog/dialog-options";
 export { DividerOrientation } from "./components/divider/divider-options";
 export { IconName } from "./components/icon/icon-paths";
@@ -48,7 +56,9 @@ export { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item
 export { PageChangeDetail } from "./components/pagination/pagination-options";
 export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
+export { SidebarSide } from "./components/sidebar/sidebar-options";
 export { SkeletonVariant } from "./components/skeleton/skeleton-options";
+export { StackAlignment } from "./components/stack/stack-options";
 export { StatDirection, StatSentiment } from "./components/stat/stat-options";
 export { TabsActivation, TabsOrientation } from "./components/tabs/tabs-options";
 export { SortDirection } from "./utils/sort-rows";
@@ -430,6 +440,43 @@ export namespace Components {
         "value": string;
     }
     /**
+     * A group of items in a row that wraps onto further rows when it runs out of room, such as tags,
+     * buttons or a toolbar. It only arranges, so it adds no role and the source order stays the
+     * reading order.
+     */
+    interface IdgCluster {
+        /**
+          * How items in a row line up on the block axis.
+          * @default "center"
+         */
+        "align": ClusterAlignment;
+        /**
+          * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * How each row is spread along the inline axis. `between` pushes the first and last items apart.
+          * @default "start"
+         */
+        "justify": ClusterJustification;
+    }
+    /**
+     * A block at least as tall as `min-height` that centres its content, with optional regions pinned
+     * to its top and bottom, such as a hero, a splash or a sign-in screen. It only arranges, so it
+     * adds no role and the source order stays the reading order.
+     */
+    interface IdgCover {
+        /**
+          * Space between the regions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Least height of the block, a step of the size scale, or `screen` for the height of the viewport.
+          * @default "l"
+         */
+        "minHeight": CoverHeight;
+    }
+    /**
      * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
      * of the page inert and contains focus, and Escape is the browser's close request. The component
      * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
@@ -533,6 +580,21 @@ export namespace Components {
           * @default false
          */
         "required": boolean;
+    }
+    /**
+     * Items in as many equal columns as fit. Each column is at least `min` wide, and there are never
+     * more columns than the layout allows, so the same markup has more or fewer columns under each
+     * `data-layout`. It only arranges, so it adds no role and the source order stays the reading order.
+     */
+    interface IdgGrid {
+        /**
+          * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Narrowest a column may be, a step of the size scale. Without it the layout's track size is used.
+         */
+        "min"?: SizeStep;
     }
     /**
      * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
@@ -1042,6 +1104,30 @@ export namespace Components {
         "value": string;
     }
     /**
+     * Two regions side by side: a side region of a set width and the content, which takes the rest.
+     * When the content would get less than half of the width, the regions stack instead, with no
+     * breakpoint and no script, so it follows the width of its container rather than the viewport.
+     * The side region is drawn first when it is at the start and last when it is at the end, so what a
+     * reader and the Tab key meet first is also what is shown first, in either text direction. When
+     * the regions stack, the side region is above the content when it is at the start and below it
+     * when it is at the end.
+     */
+    interface IdgSidebar {
+        /**
+          * Space between the regions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Which side of the content the side region is on, in the reading direction.
+          * @default "start"
+         */
+        "side": SidebarSide;
+        /**
+          * Width of the side region, a step of the size scale. Without it the layout's aside width is used.
+         */
+        "sideWidth"?: SizeStep;
+    }
+    /**
      * A placeholder shaped like content that is still loading. It is always hidden from assistive
      * technology, so it announces nothing by itself. Mark the region being loaded with
      * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
@@ -1059,6 +1145,21 @@ export namespace Components {
           * @default "text"
          */
         "variant": SkeletonVariant;
+    }
+    /**
+     * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
+     * and the source order stays the reading order.
+     */
+    interface IdgStack {
+        /**
+          * Where children sit on the inline axis.
+          * @default "stretch"
+         */
+        "align": StackAlignment;
+        /**
+          * Space between children, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
     }
     /**
      * A figure with its label and, optionally, how it changed.
@@ -1145,6 +1246,27 @@ export namespace Components {
           * @default "on"
          */
         "value": string;
+    }
+    /**
+     * Items in one row that switch to one column when their container is narrower than `threshold`.
+     * Every item is as wide as the others in either arrangement. There is no breakpoint and no script,
+     * so it follows the width of its container rather than the viewport. It only arranges, so it adds
+     * no role and the source order stays the reading order.
+     */
+    interface IdgSwitcher {
+        /**
+          * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Most items allowed in a row, 2 to 6. With more items than that, they stack at any width. Hidden items, templates and scripts do not count; the count is taken again when items are added, removed, hidden or shown.
+         */
+        "limit"?: number;
+        /**
+          * Container width below which the items stack, a step of the size scale.
+          * @default "l"
+         */
+        "threshold": SizeStep;
     }
     /**
      * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
@@ -1678,6 +1800,28 @@ declare global {
         prototype: HTMLIdgCheckboxElement;
         new (): HTMLIdgCheckboxElement;
     };
+    /**
+     * A group of items in a row that wraps onto further rows when it runs out of room, such as tags,
+     * buttons or a toolbar. It only arranges, so it adds no role and the source order stays the
+     * reading order.
+     */
+    interface HTMLIdgClusterElement extends Components.IdgCluster, HTMLStencilElement {
+    }
+    var HTMLIdgClusterElement: {
+        prototype: HTMLIdgClusterElement;
+        new (): HTMLIdgClusterElement;
+    };
+    /**
+     * A block at least as tall as `min-height` that centres its content, with optional regions pinned
+     * to its top and bottom, such as a hero, a splash or a sign-in screen. It only arranges, so it
+     * adds no role and the source order stays the reading order.
+     */
+    interface HTMLIdgCoverElement extends Components.IdgCover, HTMLStencilElement {
+    }
+    var HTMLIdgCoverElement: {
+        prototype: HTMLIdgCoverElement;
+        new (): HTMLIdgCoverElement;
+    };
     interface HTMLIdgDialogElementEventMap {
         "idgOpen": DialogOpenDetail;
         "idgClose": DialogCloseDetail;
@@ -1725,6 +1869,17 @@ declare global {
     var HTMLIdgFieldElement: {
         prototype: HTMLIdgFieldElement;
         new (): HTMLIdgFieldElement;
+    };
+    /**
+     * Items in as many equal columns as fit. Each column is at least `min` wide, and there are never
+     * more columns than the layout allows, so the same markup has more or fewer columns under each
+     * `data-layout`. It only arranges, so it adds no role and the source order stays the reading order.
+     */
+    interface HTMLIdgGridElement extends Components.IdgGrid, HTMLStencilElement {
+    }
+    var HTMLIdgGridElement: {
+        prototype: HTMLIdgGridElement;
+        new (): HTMLIdgGridElement;
     };
     /**
      * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
@@ -1945,6 +2100,21 @@ declare global {
         new (): HTMLIdgSelectElement;
     };
     /**
+     * Two regions side by side: a side region of a set width and the content, which takes the rest.
+     * When the content would get less than half of the width, the regions stack instead, with no
+     * breakpoint and no script, so it follows the width of its container rather than the viewport.
+     * The side region is drawn first when it is at the start and last when it is at the end, so what a
+     * reader and the Tab key meet first is also what is shown first, in either text direction. When
+     * the regions stack, the side region is above the content when it is at the start and below it
+     * when it is at the end.
+     */
+    interface HTMLIdgSidebarElement extends Components.IdgSidebar, HTMLStencilElement {
+    }
+    var HTMLIdgSidebarElement: {
+        prototype: HTMLIdgSidebarElement;
+        new (): HTMLIdgSidebarElement;
+    };
+    /**
      * A placeholder shaped like content that is still loading. It is always hidden from assistive
      * technology, so it announces nothing by itself. Mark the region being loaded with
      * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
@@ -1956,6 +2126,16 @@ declare global {
     var HTMLIdgSkeletonElement: {
         prototype: HTMLIdgSkeletonElement;
         new (): HTMLIdgSkeletonElement;
+    };
+    /**
+     * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
+     * and the source order stays the reading order.
+     */
+    interface HTMLIdgStackElement extends Components.IdgStack, HTMLStencilElement {
+    }
+    var HTMLIdgStackElement: {
+        prototype: HTMLIdgStackElement;
+        new (): HTMLIdgStackElement;
     };
     /**
      * A figure with its label and, optionally, how it changed.
@@ -1982,6 +2162,18 @@ declare global {
     var HTMLIdgSwitchElement: {
         prototype: HTMLIdgSwitchElement;
         new (): HTMLIdgSwitchElement;
+    };
+    /**
+     * Items in one row that switch to one column when their container is narrower than `threshold`.
+     * Every item is as wide as the others in either arrangement. There is no breakpoint and no script,
+     * so it follows the width of its container rather than the viewport. It only arranges, so it adds
+     * no role and the source order stays the reading order.
+     */
+    interface HTMLIdgSwitcherElement extends Components.IdgSwitcher, HTMLStencilElement {
+    }
+    var HTMLIdgSwitcherElement: {
+        prototype: HTMLIdgSwitcherElement;
+        new (): HTMLIdgSwitcherElement;
     };
     /**
      * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
@@ -2144,9 +2336,12 @@ declare global {
         "idg-button": HTMLIdgButtonElement;
         "idg-card": HTMLIdgCardElement;
         "idg-checkbox": HTMLIdgCheckboxElement;
+        "idg-cluster": HTMLIdgClusterElement;
+        "idg-cover": HTMLIdgCoverElement;
         "idg-dialog": HTMLIdgDialogElement;
         "idg-divider": HTMLIdgDividerElement;
         "idg-field": HTMLIdgFieldElement;
+        "idg-grid": HTMLIdgGridElement;
         "idg-icon": HTMLIdgIconElement;
         "idg-input": HTMLIdgInputElement;
         "idg-link": HTMLIdgLinkElement;
@@ -2160,9 +2355,12 @@ declare global {
         "idg-radio": HTMLIdgRadioElement;
         "idg-radio-group": HTMLIdgRadioGroupElement;
         "idg-select": HTMLIdgSelectElement;
+        "idg-sidebar": HTMLIdgSidebarElement;
         "idg-skeleton": HTMLIdgSkeletonElement;
+        "idg-stack": HTMLIdgStackElement;
         "idg-stat": HTMLIdgStatElement;
         "idg-switch": HTMLIdgSwitchElement;
+        "idg-switcher": HTMLIdgSwitcherElement;
         "idg-tab": HTMLIdgTabElement;
         "idg-tab-panel": HTMLIdgTabPanelElement;
         "idg-table": HTMLIdgTableElement;
@@ -2556,6 +2754,43 @@ declare namespace LocalJSX {
         "value"?: string;
     }
     /**
+     * A group of items in a row that wraps onto further rows when it runs out of room, such as tags,
+     * buttons or a toolbar. It only arranges, so it adds no role and the source order stays the
+     * reading order.
+     */
+    interface IdgCluster {
+        /**
+          * How items in a row line up on the block axis.
+          * @default "center"
+         */
+        "align"?: ClusterAlignment;
+        /**
+          * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * How each row is spread along the inline axis. `between` pushes the first and last items apart.
+          * @default "start"
+         */
+        "justify"?: ClusterJustification;
+    }
+    /**
+     * A block at least as tall as `min-height` that centres its content, with optional regions pinned
+     * to its top and bottom, such as a hero, a splash or a sign-in screen. It only arranges, so it
+     * adds no role and the source order stays the reading order.
+     */
+    interface IdgCover {
+        /**
+          * Space between the regions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Least height of the block, a step of the size scale, or `screen` for the height of the viewport.
+          * @default "l"
+         */
+        "minHeight"?: CoverHeight;
+    }
+    /**
      * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
      * of the page inert and contains focus, and Escape is the browser's close request. The component
      * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
@@ -2659,6 +2894,21 @@ declare namespace LocalJSX {
           * @default false
          */
         "required"?: boolean;
+    }
+    /**
+     * Items in as many equal columns as fit. Each column is at least `min` wide, and there are never
+     * more columns than the layout allows, so the same markup has more or fewer columns under each
+     * `data-layout`. It only arranges, so it adds no role and the source order stays the reading order.
+     */
+    interface IdgGrid {
+        /**
+          * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Narrowest a column may be, a step of the size scale. Without it the layout's track size is used.
+         */
+        "min"?: SizeStep;
     }
     /**
      * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
@@ -3160,6 +3410,30 @@ declare namespace LocalJSX {
         "value"?: string;
     }
     /**
+     * Two regions side by side: a side region of a set width and the content, which takes the rest.
+     * When the content would get less than half of the width, the regions stack instead, with no
+     * breakpoint and no script, so it follows the width of its container rather than the viewport.
+     * The side region is drawn first when it is at the start and last when it is at the end, so what a
+     * reader and the Tab key meet first is also what is shown first, in either text direction. When
+     * the regions stack, the side region is above the content when it is at the start and below it
+     * when it is at the end.
+     */
+    interface IdgSidebar {
+        /**
+          * Space between the regions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Which side of the content the side region is on, in the reading direction.
+          * @default "start"
+         */
+        "side"?: SidebarSide;
+        /**
+          * Width of the side region, a step of the size scale. Without it the layout's aside width is used.
+         */
+        "sideWidth"?: SizeStep;
+    }
+    /**
      * A placeholder shaped like content that is still loading. It is always hidden from assistive
      * technology, so it announces nothing by itself. Mark the region being loaded with
      * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
@@ -3177,6 +3451,21 @@ declare namespace LocalJSX {
           * @default "text"
          */
         "variant"?: SkeletonVariant;
+    }
+    /**
+     * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
+     * and the source order stays the reading order.
+     */
+    interface IdgStack {
+        /**
+          * Where children sit on the inline axis.
+          * @default "stretch"
+         */
+        "align"?: StackAlignment;
+        /**
+          * Space between children, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
     }
     /**
      * A figure with its label and, optionally, how it changed.
@@ -3259,6 +3548,27 @@ declare namespace LocalJSX {
           * @default "on"
          */
         "value"?: string;
+    }
+    /**
+     * Items in one row that switch to one column when their container is narrower than `threshold`.
+     * Every item is as wide as the others in either arrangement. There is no breakpoint and no script,
+     * so it follows the width of its container rather than the viewport. It only arranges, so it adds
+     * no role and the source order stays the reading order.
+     */
+    interface IdgSwitcher {
+        /**
+          * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Most items allowed in a row, 2 to 6. With more items than that, they stack at any width. Hidden items, templates and scripts do not count; the count is taken again when items are added, removed, hidden or shown.
+         */
+        "limit"?: number;
+        /**
+          * Container width below which the items stack, a step of the size scale.
+          * @default "l"
+         */
+        "threshold"?: SizeStep;
     }
     /**
      * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
@@ -3682,6 +3992,15 @@ declare namespace LocalJSX {
         "accessibleDescription": string;
         "invalid": boolean;
     }
+    interface IdgClusterAttributes {
+        "gap": GapStep;
+        "justify": ClusterJustification;
+        "align": ClusterAlignment;
+    }
+    interface IdgCoverAttributes {
+        "minHeight": CoverHeight;
+        "gap": GapStep;
+    }
     interface IdgDialogAttributes {
         "open": boolean;
         "modal": boolean;
@@ -3702,6 +4021,10 @@ declare namespace LocalJSX {
         "error": string;
         "required": boolean;
         "optionalText": string;
+    }
+    interface IdgGridAttributes {
+        "min": SizeStep;
+        "gap": GapStep;
     }
     interface IdgIconAttributes {
         "name": IconName;
@@ -3816,9 +4139,18 @@ declare namespace LocalJSX {
         "accessibleDescription": string;
         "invalid": boolean;
     }
+    interface IdgSidebarAttributes {
+        "side": SidebarSide;
+        "sideWidth": SizeStep;
+        "gap": GapStep;
+    }
     interface IdgSkeletonAttributes {
         "variant": SkeletonVariant;
         "lines": number;
+    }
+    interface IdgStackAttributes {
+        "gap": GapStep;
+        "align": StackAlignment;
     }
     interface IdgStatAttributes {
         "label": string;
@@ -3839,6 +4171,11 @@ declare namespace LocalJSX {
         "accessibleLabel": string;
         "accessibleDescription": string;
         "invalid": boolean;
+    }
+    interface IdgSwitcherAttributes {
+        "threshold": SizeStep;
+        "limit": number;
+        "gap": GapStep;
     }
     interface IdgTabAttributes {
         "value": string;
@@ -3925,9 +4262,12 @@ declare namespace LocalJSX {
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
         "idg-card": Omit<IdgCard, keyof IdgCardAttributes> & { [K in keyof IdgCard & keyof IdgCardAttributes]?: IdgCard[K] } & { [K in keyof IdgCard & keyof IdgCardAttributes as `attr:${K}`]?: IdgCardAttributes[K] } & { [K in keyof IdgCard & keyof IdgCardAttributes as `prop:${K}`]?: IdgCard[K] };
         "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`]?: IdgCheckboxAttributes[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
+        "idg-cluster": Omit<IdgCluster, keyof IdgClusterAttributes> & { [K in keyof IdgCluster & keyof IdgClusterAttributes]?: IdgCluster[K] } & { [K in keyof IdgCluster & keyof IdgClusterAttributes as `attr:${K}`]?: IdgClusterAttributes[K] } & { [K in keyof IdgCluster & keyof IdgClusterAttributes as `prop:${K}`]?: IdgCluster[K] };
+        "idg-cover": Omit<IdgCover, keyof IdgCoverAttributes> & { [K in keyof IdgCover & keyof IdgCoverAttributes]?: IdgCover[K] } & { [K in keyof IdgCover & keyof IdgCoverAttributes as `attr:${K}`]?: IdgCoverAttributes[K] } & { [K in keyof IdgCover & keyof IdgCoverAttributes as `prop:${K}`]?: IdgCover[K] };
         "idg-dialog": Omit<IdgDialog, keyof IdgDialogAttributes> & { [K in keyof IdgDialog & keyof IdgDialogAttributes]?: IdgDialog[K] } & { [K in keyof IdgDialog & keyof IdgDialogAttributes as `attr:${K}`]?: IdgDialogAttributes[K] } & { [K in keyof IdgDialog & keyof IdgDialogAttributes as `prop:${K}`]?: IdgDialog[K] };
         "idg-divider": Omit<IdgDivider, keyof IdgDividerAttributes> & { [K in keyof IdgDivider & keyof IdgDividerAttributes]?: IdgDivider[K] } & { [K in keyof IdgDivider & keyof IdgDividerAttributes as `attr:${K}`]?: IdgDividerAttributes[K] } & { [K in keyof IdgDivider & keyof IdgDividerAttributes as `prop:${K}`]?: IdgDivider[K] };
         "idg-field": Omit<IdgField, keyof IdgFieldAttributes> & { [K in keyof IdgField & keyof IdgFieldAttributes]?: IdgField[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `attr:${K}`]?: IdgFieldAttributes[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `prop:${K}`]?: IdgField[K] };
+        "idg-grid": Omit<IdgGrid, keyof IdgGridAttributes> & { [K in keyof IdgGrid & keyof IdgGridAttributes]?: IdgGrid[K] } & { [K in keyof IdgGrid & keyof IdgGridAttributes as `attr:${K}`]?: IdgGridAttributes[K] } & { [K in keyof IdgGrid & keyof IdgGridAttributes as `prop:${K}`]?: IdgGrid[K] };
         "idg-icon": Omit<IdgIcon, keyof IdgIconAttributes> & { [K in keyof IdgIcon & keyof IdgIconAttributes]?: IdgIcon[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `attr:${K}`]?: IdgIconAttributes[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `prop:${K}`]?: IdgIcon[K] };
         "idg-input": Omit<IdgInput, keyof IdgInputAttributes> & { [K in keyof IdgInput & keyof IdgInputAttributes]?: IdgInput[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `attr:${K}`]?: IdgInputAttributes[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `prop:${K}`]?: IdgInput[K] };
         "idg-link": Omit<IdgLink, keyof IdgLinkAttributes> & { [K in keyof IdgLink & keyof IdgLinkAttributes]?: IdgLink[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `attr:${K}`]?: IdgLinkAttributes[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `prop:${K}`]?: IdgLink[K] };
@@ -3941,9 +4281,12 @@ declare namespace LocalJSX {
         "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
         "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
         "idg-select": Omit<IdgSelect, keyof IdgSelectAttributes> & { [K in keyof IdgSelect & keyof IdgSelectAttributes]?: IdgSelect[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `attr:${K}`]?: IdgSelectAttributes[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `prop:${K}`]?: IdgSelect[K] };
+        "idg-sidebar": Omit<IdgSidebar, keyof IdgSidebarAttributes> & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes]?: IdgSidebar[K] } & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `attr:${K}`]?: IdgSidebarAttributes[K] } & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `prop:${K}`]?: IdgSidebar[K] };
         "idg-skeleton": Omit<IdgSkeleton, keyof IdgSkeletonAttributes> & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes]?: IdgSkeleton[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `attr:${K}`]?: IdgSkeletonAttributes[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `prop:${K}`]?: IdgSkeleton[K] };
+        "idg-stack": Omit<IdgStack, keyof IdgStackAttributes> & { [K in keyof IdgStack & keyof IdgStackAttributes]?: IdgStack[K] } & { [K in keyof IdgStack & keyof IdgStackAttributes as `attr:${K}`]?: IdgStackAttributes[K] } & { [K in keyof IdgStack & keyof IdgStackAttributes as `prop:${K}`]?: IdgStack[K] };
         "idg-stat": Omit<IdgStat, keyof IdgStatAttributes> & { [K in keyof IdgStat & keyof IdgStatAttributes]?: IdgStat[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `attr:${K}`]?: IdgStatAttributes[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `prop:${K}`]?: IdgStat[K] };
         "idg-switch": Omit<IdgSwitch, keyof IdgSwitchAttributes> & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes]?: IdgSwitch[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `attr:${K}`]?: IdgSwitchAttributes[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `prop:${K}`]?: IdgSwitch[K] };
+        "idg-switcher": Omit<IdgSwitcher, keyof IdgSwitcherAttributes> & { [K in keyof IdgSwitcher & keyof IdgSwitcherAttributes]?: IdgSwitcher[K] } & { [K in keyof IdgSwitcher & keyof IdgSwitcherAttributes as `attr:${K}`]?: IdgSwitcherAttributes[K] } & { [K in keyof IdgSwitcher & keyof IdgSwitcherAttributes as `prop:${K}`]?: IdgSwitcher[K] };
         "idg-tab": Omit<IdgTab, keyof IdgTabAttributes> & { [K in keyof IdgTab & keyof IdgTabAttributes]?: IdgTab[K] } & { [K in keyof IdgTab & keyof IdgTabAttributes as `attr:${K}`]?: IdgTabAttributes[K] } & { [K in keyof IdgTab & keyof IdgTabAttributes as `prop:${K}`]?: IdgTab[K] };
         "idg-tab-panel": Omit<IdgTabPanel, keyof IdgTabPanelAttributes> & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes]?: IdgTabPanel[K] } & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes as `attr:${K}`]?: IdgTabPanelAttributes[K] } & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes as `prop:${K}`]?: IdgTabPanel[K] };
         "idg-table": Omit<IdgTable, keyof IdgTableAttributes> & { [K in keyof IdgTable & keyof IdgTableAttributes]?: IdgTable[K] } & { [K in keyof IdgTable & keyof IdgTableAttributes as `attr:${K}`]?: IdgTableAttributes[K] } & { [K in keyof IdgTable & keyof IdgTableAttributes as `prop:${K}`]?: IdgTable[K] };
@@ -4010,6 +4353,18 @@ declare module "@stencil/core" {
             "idg-card": LocalJSX.IntrinsicElements["idg-card"] & JSXBase.HTMLAttributes<HTMLIdgCardElement>;
             "idg-checkbox": LocalJSX.IntrinsicElements["idg-checkbox"] & JSXBase.HTMLAttributes<HTMLIdgCheckboxElement>;
             /**
+             * A group of items in a row that wraps onto further rows when it runs out of room, such as tags,
+             * buttons or a toolbar. It only arranges, so it adds no role and the source order stays the
+             * reading order.
+             */
+            "idg-cluster": LocalJSX.IntrinsicElements["idg-cluster"] & JSXBase.HTMLAttributes<HTMLIdgClusterElement>;
+            /**
+             * A block at least as tall as `min-height` that centres its content, with optional regions pinned
+             * to its top and bottom, such as a hero, a splash or a sign-in screen. It only arranges, so it
+             * adds no role and the source order stays the reading order.
+             */
+            "idg-cover": LocalJSX.IntrinsicElements["idg-cover"] & JSXBase.HTMLAttributes<HTMLIdgCoverElement>;
+            /**
              * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
              * of the page inert and contains focus, and Escape is the browser's close request. The component
              * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
@@ -4029,6 +4384,12 @@ declare module "@stencil/core" {
              * and the control applies it to its own native element.
              */
             "idg-field": LocalJSX.IntrinsicElements["idg-field"] & JSXBase.HTMLAttributes<HTMLIdgFieldElement>;
+            /**
+             * Items in as many equal columns as fit. Each column is at least `min` wide, and there are never
+             * more columns than the layout allows, so the same markup has more or fewer columns under each
+             * `data-layout`. It only arranges, so it adds no role and the source order stays the reading order.
+             */
+            "idg-grid": LocalJSX.IntrinsicElements["idg-grid"] & JSXBase.HTMLAttributes<HTMLIdgGridElement>;
             /**
              * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
              */
@@ -4101,6 +4462,16 @@ declare module "@stencil/core" {
              */
             "idg-select": LocalJSX.IntrinsicElements["idg-select"] & JSXBase.HTMLAttributes<HTMLIdgSelectElement>;
             /**
+             * Two regions side by side: a side region of a set width and the content, which takes the rest.
+             * When the content would get less than half of the width, the regions stack instead, with no
+             * breakpoint and no script, so it follows the width of its container rather than the viewport.
+             * The side region is drawn first when it is at the start and last when it is at the end, so what a
+             * reader and the Tab key meet first is also what is shown first, in either text direction. When
+             * the regions stack, the side region is above the content when it is at the start and below it
+             * when it is at the end.
+             */
+            "idg-sidebar": LocalJSX.IntrinsicElements["idg-sidebar"] & JSXBase.HTMLAttributes<HTMLIdgSidebarElement>;
+            /**
              * A placeholder shaped like content that is still loading. It is always hidden from assistive
              * technology, so it announces nothing by itself. Mark the region being loaded with
              * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
@@ -4109,10 +4480,22 @@ declare module "@stencil/core" {
              */
             "idg-skeleton": LocalJSX.IntrinsicElements["idg-skeleton"] & JSXBase.HTMLAttributes<HTMLIdgSkeletonElement>;
             /**
+             * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
+             * and the source order stays the reading order.
+             */
+            "idg-stack": LocalJSX.IntrinsicElements["idg-stack"] & JSXBase.HTMLAttributes<HTMLIdgStackElement>;
+            /**
              * A figure with its label and, optionally, how it changed.
              */
             "idg-stat": LocalJSX.IntrinsicElements["idg-stat"] & JSXBase.HTMLAttributes<HTMLIdgStatElement>;
             "idg-switch": LocalJSX.IntrinsicElements["idg-switch"] & JSXBase.HTMLAttributes<HTMLIdgSwitchElement>;
+            /**
+             * Items in one row that switch to one column when their container is narrower than `threshold`.
+             * Every item is as wide as the others in either arrangement. There is no breakpoint and no script,
+             * so it follows the width of its container rather than the viewport. It only arranges, so it adds
+             * no role and the source order stays the reading order.
+             */
+            "idg-switcher": LocalJSX.IntrinsicElements["idg-switcher"] & JSXBase.HTMLAttributes<HTMLIdgSwitcherElement>;
             /**
              * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
              * host carries the tab role and state itself, so the relations to the panel, which sits beside it

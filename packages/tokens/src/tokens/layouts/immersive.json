@@ -1,0 +1,38 @@
+{
+  "$description": "Content runs edge to edge in very wide tracks, with large section gaps and minimal chrome.",
+  "$extensions": {
+    "identgineer": {
+      "label": "Immersive"
+    }
+  },
+  "tokens": {
+    "layout": {
+      "$type": "dimension",
+      "content-max": {
+        "$value": "100%"
+      },
+      "page-gutter": {
+        "$value": "{space.s}"
+      },
+      "section-gap": {
+        "$value": "{space.3xl}"
+      },
+      "gap": {
+        "$value": "{space.s}"
+      },
+      "columns": {
+        "$type": "number",
+        "$value": 3
+      },
+      "grid-min": {
+        "$value": "22rem"
+      },
+      "aside-width": {
+        "$value": "28rem"
+      },
+      "nav-size": {
+        "$value": "3rem"
+      }
+    }
+  }
+}

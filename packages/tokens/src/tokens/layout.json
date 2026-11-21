@@ -1,0 +1,39 @@
+{
+  "$description": "Neutral layout defaults for content measure, gutters, gaps, grid and navigation size. Layouts must redefine every one of these. The shell and the layout primitives (idg-stack, idg-cluster, idg-grid, idg-sidebar, idg-switcher, idg-cover) read them.",
+  "layout": {
+    "$type": "dimension",
+    "content-max": {
+      "$value": "72rem",
+      "$description": "Maximum inline size of the page content; 100% lets it run edge to edge."
+    },
+    "page-gutter": {
+      "$value": "{space.m}",
+      "$description": "Inline padding between the page content and the viewport edge."
+    },
+    "section-gap": {
+      "$value": "{space.xl}",
+      "$description": "Block gap between the sections of a page."
+    },
+    "gap": {
+      "$value": "{space.m}",
+      "$description": "Default gap inside the layout primitives; multiply by --idg-density-gap-scale to follow the UX mode."
+    },
+    "columns": {
+      "$type": "number",
+      "$value": 4,
+      "$description": "Most columns idg-grid draws, however wide it is."
+    },
+    "grid-min": {
+      "$value": "14rem",
+      "$description": "Default minimum track size of idg-grid."
+    },
+    "aside-width": {
+      "$value": "18rem",
+      "$description": "Default width of the side region of idg-sidebar."
+    },
+    "nav-size": {
+      "$value": "4rem",
+      "$description": "Thickness of the navigation: the height of a bar or the width of a rail."
+    }
+  }
+}

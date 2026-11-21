@@ -1,0 +1,38 @@
+{
+  "$description": "A dense, near full-width canvas of small tiles with tight gutters and a slim bar.",
+  "$extensions": {
+    "identgineer": {
+      "label": "Dashboard"
+    }
+  },
+  "tokens": {
+    "layout": {
+      "$type": "dimension",
+      "content-max": {
+        "$value": "96rem"
+      },
+      "page-gutter": {
+        "$value": "{space.s}"
+      },
+      "section-gap": {
+        "$value": "{space.l}"
+      },
+      "gap": {
+        "$value": "{space.s}"
+      },
+      "columns": {
+        "$type": "number",
+        "$value": 8
+      },
+      "grid-min": {
+        "$value": "8rem"
+      },
+      "aside-width": {
+        "$value": "16rem"
+      },
+      "nav-size": {
+        "$value": "3.5rem"
+      }
+    }
+  }
+}

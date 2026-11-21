@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildTokenFiles } from "./build-token-files.ts";
 import { DESIGN_IDS } from "./design-ids.ts";
 import { LAYER_ORDER } from "./emit-css.ts";
+import { LAYOUT_IDS } from "./layout-ids.ts";
 import { THEME_IDS } from "./theme-ids.ts";
 import { TOKEN_NAMES } from "./token-names.ts";
 import { TOKEN_SOURCES } from "./token-sources.ts";
@@ -10,7 +11,7 @@ import { UX_MODE_IDS } from "./ux-ids.ts";
 const files = buildTokenFiles(TOKEN_SOURCES);
 
 describe("built tokens", () => {
-  it("emits the base, one file per theme, design and UX mode, the preferences and the bundle", () => {
+  it("emits the base, one file per theme, design, layout and UX mode, the preferences and the bundle", () => {
     expect(Object.keys(files).sort()).toEqual(
       [
         "index.css",
@@ -18,13 +19,16 @@ describe("built tokens", () => {
         "preferences.css",
         ...THEME_IDS.map((id) => `themes/${id}.css`),
         ...DESIGN_IDS.map((id) => `designs/${id}.css`),
+        ...LAYOUT_IDS.map((id) => `layouts/${id}.css`),
         ...UX_MODE_IDS.map((id) => `ux/${id}.css`),
       ].sort(),
     );
   });
 
   it("declares the layer order once per file, with preferences last so they win over every mode", () => {
-    expect(LAYER_ORDER).toBe("@layer idg.tokens, idg.theme, idg.design, idg.ux, idg.preferences;");
+    expect(LAYER_ORDER).toBe(
+      "@layer idg.tokens, idg.theme, idg.design, idg.layout, idg.ux, idg.preferences;",
+    );
     for (const [name, css] of Object.entries(files)) {
       expect(css.split(LAYER_ORDER).length - 1, name).toBe(1);
     }
@@ -53,7 +57,7 @@ describe("built tokens", () => {
 
   it("keeps theme files to colour and typography; design and UX tokens never appear there", () => {
     const owned =
-      /--idg-(shape|border|elevation|surface|focus|ornament|density|motion|feedback|ux|space)-/;
+      /--idg-(shape|border|elevation|surface|focus|ornament|density|layout|motion|feedback|ux|space|size)-/;
     for (const id of THEME_IDS) {
       const css = files[`themes/${id}.css`] ?? "";
       expect(css, id).not.toMatch(owned);
@@ -81,6 +85,16 @@ describe("built tokens", () => {
       "--idg-ornament-hard-shadow-x",
       "--idg-density-target-size",
       "--idg-density-gap-scale",
+      "--idg-size-m",
+      "--idg-size-screen",
+      "--idg-layout-content-max",
+      "--idg-layout-page-gutter",
+      "--idg-layout-section-gap",
+      "--idg-layout-gap",
+      "--idg-layout-columns",
+      "--idg-layout-grid-min",
+      "--idg-layout-aside-width",
+      "--idg-layout-nav-size",
       "--idg-ux-hints",
       "--idg-ux-shortcuts",
       "--idg-ux-type-scale",
@@ -102,8 +116,12 @@ describe("built tokens", () => {
     }
   });
 
-  it("makes the default design and UX mode, and only those, answer to a bare :root", () => {
+  it("makes the default design, layout and UX mode, and only those, answer to a bare :root", () => {
     expect(files["designs/flat.css"]).toContain(":where(:root)");
+    expect(files["layouts/top-bar.css"]).toContain(":where(:root)");
+    for (const id of LAYOUT_IDS.filter((candidate) => candidate !== "top-bar")) {
+      expect(files[`layouts/${id}.css`], id).not.toContain(":root");
+    }
     expect(files["ux/comfortable.css"]).toContain(":where(:root)");
     for (const id of DESIGN_IDS.filter((candidate) => candidate !== "flat")) {
       expect(files[`designs/${id}.css`], id).not.toContain(":root");
@@ -113,7 +131,9 @@ describe("built tokens", () => {
     }
   });
 
-  it("selects designs and UX modes by attribute", () => {
+  it("selects designs, layouts and UX modes by attribute", () => {
+    for (const id of LAYOUT_IDS)
+      expect(files[`layouts/${id}.css`]).toContain(`[data-layout="${id}"]`);
     for (const id of DESIGN_IDS)
       expect(files[`designs/${id}.css`]).toContain(`[data-design="${id}"]`);
     for (const id of UX_MODE_IDS) expect(files[`ux/${id}.css`]).toContain(`[data-ux="${id}"]`);
@@ -141,6 +161,7 @@ describe("built tokens", () => {
   it("includes every stylesheet in the bundle", () => {
     const index = files["index.css"] ?? "";
     for (const id of DESIGN_IDS) expect(index).toContain(`[data-design="${id}"]`);
+    for (const id of LAYOUT_IDS) expect(index).toContain(`[data-layout="${id}"]`);
     for (const id of UX_MODE_IDS) expect(index).toContain(`[data-ux="${id}"]`);
     expect(index).toContain("@layer idg.preferences {");
   });

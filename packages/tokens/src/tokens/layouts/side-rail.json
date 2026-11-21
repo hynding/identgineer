@@ -1,0 +1,38 @@
+{
+  "$description": "A fixed rail of navigation beside the content, with a narrower measure and wider gutters.",
+  "$extensions": {
+    "identgineer": {
+      "label": "Side rail"
+    }
+  },
+  "tokens": {
+    "layout": {
+      "$type": "dimension",
+      "content-max": {
+        "$value": "64rem"
+      },
+      "page-gutter": {
+        "$value": "{space.l}"
+      },
+      "section-gap": {
+        "$value": "{space.xl}"
+      },
+      "gap": {
+        "$value": "{space.m}"
+      },
+      "columns": {
+        "$type": "number",
+        "$value": 3
+      },
+      "grid-min": {
+        "$value": "18rem"
+      },
+      "aside-width": {
+        "$value": "16rem"
+      },
+      "nav-size": {
+        "$value": "15rem"
+      }
+    }
+  }
+}

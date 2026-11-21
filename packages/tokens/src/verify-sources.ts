@@ -18,6 +18,7 @@ import { findThemeProblems } from "./verify-theme.ts";
 export interface RoleSources {
   readonly theme: SharedSource;
   readonly design: SharedSource;
+  readonly layout: SharedSource;
   readonly ux: SharedSource;
 }
 
@@ -29,14 +30,16 @@ function isOwnable(token: FlatToken): boolean {
   return !INTERNAL_ROOTS.includes(token.path.split(".")[0] ?? token.path);
 }
 
-/** Every token each axis sets, so ownership can be checked across themes, designs and UX modes. */
+/** Every token each axis sets, so ownership can be checked across themes, designs, layouts and UX modes. */
 export function collectAxisTokens(sources: TokenSources, roles: RoleSources): AxisTokens[] {
-  const roleFiles = new Set([roles.theme, roles.design, roles.ux].map(({ file }) => file));
+  const roleFiles = new Set(
+    [roles.theme, roles.design, roles.layout, roles.ux].map(({ file }) => file),
+  );
   const themeTokens = sources.themes.flatMap((source) => {
     const theme = parseTheme(source);
     return [...theme.common, ...theme.light, ...theme.dark];
   });
-  const modeTokens = (modes: typeof sources.designs, axis: "design" | "ux") =>
+  const modeTokens = (modes: typeof sources.designs, axis: "design" | "layout" | "ux") =>
     modes.flatMap((source) => {
       const mode = parseMode(source, axis);
       return [...mode.tokens, ...mode.opaque];
@@ -50,6 +53,10 @@ export function collectAxisTokens(sources: TokenSources, roles: RoleSources): Ax
     {
       axis: "design",
       tokens: [...flatten(roles.design), ...modeTokens(sources.designs, "design")],
+    },
+    {
+      axis: "layout",
+      tokens: [...flatten(roles.layout), ...modeTokens(sources.layouts, "layout")],
     },
     { axis: "ux", tokens: [...flatten(roles.ux), ...modeTokens(sources.uxModes, "ux")] },
   ].map(({ axis, tokens }) => ({ axis, tokens: tokens.filter(isOwnable) }));
@@ -80,6 +87,9 @@ function findModeSourceProblems(sources: TokenSources, roles: RoleSources): stri
   const designs = sources.designs.flatMap((source) =>
     findModeProblems("design", parseMode(source, "design"), flatten(roles.design)),
   );
+  const layouts = sources.layouts.flatMap((source) =>
+    findModeProblems("layout", parseMode(source, "layout"), flatten(roles.layout)),
+  );
   const uxModes = sources.uxModes.flatMap((source) => {
     const mode = parseMode(source, "ux");
     return [
@@ -87,7 +97,7 @@ function findModeSourceProblems(sources: TokenSources, roles: RoleSources): stri
       ...findTargetSizeProblems(mode, resolveMode(shared, mode.tokens)),
     ];
   });
-  return [...designs, ...uxModes];
+  return [...designs, ...layouts, ...uxModes];
 }
 
 function findPreferenceProblems(sources: TokenSources, roles: RoleSources): string[] {

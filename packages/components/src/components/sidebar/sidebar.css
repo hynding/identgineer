@@ -1,0 +1,37 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.sidebar {
+  --_gap: calc(var(--idg-layout-gap) * var(--idg-density-gap-scale));
+  --_size: var(--idg-layout-aside-width);
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--_gap);
+  min-inline-size: 0;
+}
+
+/* The side region asks for --_size and grows only to fill a row of its own. The content asks for
+   nothing but grows far faster, so it takes the rest of the row, and it will not be narrower than
+   half the container: a row that cannot give it that wraps, and the regions stack. */
+.side {
+  flex: 1 1 var(--_size);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.content {
+  flex: 999 1 0;
+  min-inline-size: 50%;
+}
+
+/* Nothing is drawn at the side, so it keeps neither its width nor the gap that would follow it. */
+.empty {
+  display: none;
+}

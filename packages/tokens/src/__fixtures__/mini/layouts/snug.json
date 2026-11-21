@@ -1,0 +1,10 @@
+{
+  "$description": "A fixture layout with a narrow measure.",
+  "$extensions": { "identgineer": { "label": "Snug" } },
+  "tokens": {
+    "layout": {
+      "content-max": { "$type": "dimension", "$value": "40rem" },
+      "columns": { "$type": "number", "$value": 2 }
+    }
+  }
+}

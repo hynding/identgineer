@@ -1,0 +1,10 @@
+{
+  "$description": "The default fixture layout, with a generous measure.",
+  "$extensions": { "identgineer": { "label": "Roomy" } },
+  "tokens": {
+    "layout": {
+      "content-max": { "$type": "dimension", "$value": "72rem" },
+      "columns": { "$type": "number", "$value": 4 }
+    }
+  }
+}

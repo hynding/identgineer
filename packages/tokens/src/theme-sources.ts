@@ -2,6 +2,7 @@ import type { SharedSource } from "./build-token-files.ts";
 import type { ThemeSource } from "./parse-theme.ts";
 import { THEME_IDS } from "./theme-ids.ts";
 import design from "./tokens/design.json" with { type: "json" };
+import layout from "./tokens/layout.json" with { type: "json" };
 import primitive from "./tokens/primitive.json" with { type: "json" };
 import semantic from "./tokens/semantic.json" with { type: "json" };
 import aurora from "./tokens/themes/aurora.json" with { type: "json" };
@@ -14,10 +15,11 @@ import terminal from "./tokens/themes/terminal.json" with { type: "json" };
 import tidal from "./tokens/themes/tidal.json" with { type: "json" };
 import ux from "./tokens/ux.json" with { type: "json" };
 
-/** The default roles each axis owns; every theme, design and UX mode must redefine all of them. */
+/** The default roles each axis owns; every theme, design, layout and UX mode must redefine all of them. */
 export const ROLE_SOURCES = {
   theme: { file: "tokens/semantic.json", json: semantic },
   design: { file: "tokens/design.json", json: design },
+  layout: { file: "tokens/layout.json", json: layout },
   ux: { file: "tokens/ux.json", json: ux },
 } as const satisfies Record<string, SharedSource>;
 
@@ -26,6 +28,7 @@ export const SHARED_SOURCES: readonly SharedSource[] = [
   { file: "tokens/primitive.json", json: primitive },
   ROLE_SOURCES.theme,
   ROLE_SOURCES.design,
+  ROLE_SOURCES.layout,
   ROLE_SOURCES.ux,
 ];
 

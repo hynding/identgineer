@@ -1,6 +1,6 @@
 # @identgineer/tokens
 
-Design tokens, eight colour themes, eight design languages and eight UX modes. Authored as [W3C Design Tokens](https://www.designtokens.org/)
+Design tokens, eight colour themes, eight design languages, eight page layouts and eight UX modes. Authored as [W3C Design Tokens](https://www.designtokens.org/)
 JSON (`$value`, `$type`, `{group.token}` aliases) and built into CSS custom properties with a
 deterministic TypeScript script. No fonts are shipped or fetched; typography uses system and
 web-safe stacks only.
@@ -9,24 +9,31 @@ web-safe stacks only.
 
 ```html
 <link rel="stylesheet" href="@identgineer/tokens/css" />
-<html data-theme="ember" data-scheme="dark" data-design="glass" data-ux="compact"></html>
+<html
+  data-theme="ember"
+  data-scheme="dark"
+  data-design="glass"
+  data-layout="magazine"
+  data-ux="compact"
+></html>
 ```
 
 - `dist/index.css` has everything. `dist/tokens.css` is the base alone; add
-  `dist/themes/<id>.css`, `dist/designs/<id>.css` and `dist/ux/<id>.css` for each value you ship,
+  `dist/themes/<id>.css`, `dist/designs/<id>.css`, `dist/layouts/<id>.css` and `dist/ux/<id>.css` for each value you ship,
   and `dist/preferences.css` last.
-- Three independent axes, each set by an attribute and combinable with the others freely. Every
+- Four independent axes, each set by an attribute and combinable with the others freely. Every
   one defaults when its attribute is absent.
 
 | Attribute     | Axis            | Owns                                                    | Default       |
 | ------------- | --------------- | ------------------------------------------------------- | ------------- |
 | `data-theme`  | Colour theme    | colour, gradient, typography families                   | `aurora`      |
 | `data-design` | Design language | shape, border, elevation, surface, focus ring, ornament | `flat`        |
+| `data-layout` | Page layout     | content measure, gutters, gaps, grid, aside, navigation | `top-bar`     |
 | `data-ux`     | UX mode         | density, type scale, motion, feedback, focus emphasis   | `comfortable` |
 
 - `data-scheme="light" | "dark"` forces a colour scheme. Without it the theme follows
   `prefers-color-scheme`.
-- Layers are declared as `@layer idg.tokens, idg.theme, idg.design, idg.ux, idg.preferences;`.
+- Layers are declared as `@layer idg.tokens, idg.theme, idg.design, idg.layout, idg.ux, idg.preferences;`.
   Unlayered CSS always wins over all of them.
 - Put `data-design` and `data-ux` on the same element as `data-theme`, or on a descendant of it.
   Shadows and borders are built from theme colours with `var()`, which resolves where the rule
@@ -37,17 +44,19 @@ From TypeScript:
 ```ts
 import {
   DESIGNS,
+  LAYOUTS,
   THEMES,
   TOKEN_NAMES,
   UX_MODES,
   type DesignId,
+  type LayoutId,
   type ThemeId,
   type UxModeId,
 } from "@identgineer/tokens";
 ```
 
 `THEMES` lists `id`, `label`, `description`, resolved `fonts` and preview `swatches` for both
-schemes. `DESIGNS` and `UX_MODES` list `id`, `label` and `description`. All three are built from
+schemes. `DESIGNS`, `LAYOUTS` and `UX_MODES` list `id`, `label` and `description`. All four are built from
 the same JSON as the CSS, so they cannot drift.
 
 ## Token names
@@ -65,13 +74,15 @@ Every custom property is `--idg-` plus the token path with dots turned into dash
 | `space.3xs .. 3xl`                                                              | fluid space scale                                                                              |
 | `font.weight.*`, `font.line-height.*`, `font.letter-spacing.*`                  | shared scales                                                                                  |
 | `shape.*`, `border.*`, `elevation.*`, `surface.*`, `focus.ring-*`, `ornament.*` | design-language-owned                                                                          |
+| `layout.*`                                                                      | layout-owned                                                                                   |
+| `size.xs .. 2xl`, `size.screen`                                                 | fixed size scale for track minimums, side regions, thresholds and cover heights                |
 | `density.*`, `ux.*`, `motion.*`, `feedback.*`, `focus.emphasis`                 | UX-mode-owned                                                                                  |
 
 Themes own colour and typography only. The build rejects a theme that defines anything else,
 omits a role in either scheme, or fails WCAG 2.2 AA contrast (4.5:1 for text pairs, 3:1 for
 `focus-ring` and `border-strong` against `bg`).
 
-## Design languages and UX modes
+## Design languages, layouts and UX modes
 
 Each axis owns a disjoint set of tokens, which is what keeps the axes independent. The build
 rejects a mode that omits a token its axis owns, sets one another axis owns, or sets one that
@@ -105,6 +116,24 @@ are never below 24px (WCAG 2.2 AA, 2.5.8); the build fails otherwise.
 | `elevated`    | Layered soft shadows, no borders, modest radius                                 |
 | `pixel`       | Square, stepped hard shadows, double and dashed borders, uppercase headings     |
 | `editorial`   | Print-like: rules above and below surfaces only, underlined headings            |
+
+Layout tokens: `layout.content-max` (maximum inline size of the page content, `100%` for edge to
+edge), `layout.page-gutter`, `layout.section-gap`, `layout.gap` (the default gap inside the layout
+primitives), `layout.columns` (most columns `idg-grid` draws), `layout.grid-min` (default minimum
+track size), `layout.aside-width` (default side region of `idg-sidebar`) and `layout.nav-size`
+(the height of a bar or the width of a rail). Gaps and gutters alias the space scale, so they stay
+fluid; multiply `layout.gap` by `--idg-density-gap-scale` to follow the UX mode.
+
+| `data-layout` | Character                                                                    | Measure | Columns | Track | Gap  |
+| ------------- | ---------------------------------------------------------------------------- | ------- | ------- | ----- | ---- |
+| `top-bar`     | Navigation across the top of a centred, moderately wide page (default)       | 72rem   | 4       | 14rem | `m`  |
+| `side-rail`   | A fixed rail beside the content, narrower measure, wider gutters             | 64rem   | 3       | 18rem | `m`  |
+| `split-hero`  | Large two-up sections, very generous gaps, wide tracks                       | 60rem   | 2       | 26rem | `l`  |
+| `magazine`    | A wide editorial page of many narrow columns and deep gaps between stories   | 80rem   | 6       | 11rem | `m`  |
+| `dashboard`   | A dense, near full-width canvas of small tiles, tight gutters, slim bar      | 96rem   | 8       | 8rem  | `s`  |
+| `centered`    | One narrow column in the page centre, for reading or a single task           | 40rem   | 2       | 16rem | `m`  |
+| `bento`       | A tight mosaic of tiles close together                                       | 76rem   | 5       | 12rem | `xs` |
+| `immersive`   | Content edge to edge in very wide tracks, large section gaps, minimal chrome | 100%    | 3       | 22rem | `s`  |
 
 | `data-ux`     | Character                                                                |
 | ------------- | ------------------------------------------------------------------------ |
@@ -150,10 +179,12 @@ carrying an axis attribute.
 src/tokens/primitive.json   palettes, font stacks, scales (palette and stack are never emitted)
 src/tokens/semantic.json    default roles for everything a theme owns
 src/tokens/design.json      neutral defaults for everything a design language owns
+src/tokens/layout.json      neutral defaults for everything a layout owns
 src/tokens/ux.json          neutral defaults for everything a UX mode owns
 src/tokens/preferences.json reduced-motion, more-contrast and forced-colors overrides
 src/tokens/themes/<id>.json common (typography), light and dark (colour, gradient)
 src/tokens/designs/<id>.json tokens, and an optional opaque fallback group
+src/tokens/layouts/<id>.json tokens
 src/tokens/ux/<id>.json     tokens
 ```
 
@@ -171,6 +202,7 @@ pnpm --filter @identgineer/tokens typecheck
 Adding a theme: add `src/tokens/themes/<id>.json`, then register the id in `src/theme-ids.ts` and
 the import in `src/theme-sources.ts`. A test fails if the files on disk and the registry disagree.
 
-Adding a design language or UX mode works the same way: add `src/tokens/designs/<id>.json` or
-`src/tokens/ux/<id>.json`, register the id in `src/design-ids.ts` or `src/ux-ids.ts`, and add the
-import in `src/design-sources.ts` or `src/ux-sources.ts`.
+Adding a design language, layout or UX mode works the same way: add `src/tokens/designs/<id>.json`,
+`src/tokens/layouts/<id>.json` or `src/tokens/ux/<id>.json`, register the id in `src/design-ids.ts`,
+`src/layout-ids.ts` or `src/ux-ids.ts`, and add the import in `src/design-sources.ts`,
+`src/layout-sources.ts` or `src/ux-sources.ts`.

@@ -1,0 +1,38 @@
+{
+  "$description": "Large two-up sections with a very generous gap between them and wide tracks.",
+  "$extensions": {
+    "identgineer": {
+      "label": "Split hero"
+    }
+  },
+  "tokens": {
+    "layout": {
+      "$type": "dimension",
+      "content-max": {
+        "$value": "60rem"
+      },
+      "page-gutter": {
+        "$value": "{space.l}"
+      },
+      "section-gap": {
+        "$value": "{space.2xl}"
+      },
+      "gap": {
+        "$value": "{space.l}"
+      },
+      "columns": {
+        "$type": "number",
+        "$value": 2
+      },
+      "grid-min": {
+        "$value": "26rem"
+      },
+      "aside-width": {
+        "$value": "24rem"
+      },
+      "nav-size": {
+        "$value": "4.5rem"
+      }
+    }
+  }
+}

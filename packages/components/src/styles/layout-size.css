@@ -1,0 +1,31 @@
+/* The size steps of the layout primitives: a track minimum, a side width, a switch threshold or a
+   cover height, whichever the primitive uses `--_size` for. Without a step the primitive keeps the
+   size its own stylesheet takes from the layout. */
+
+.size-xs {
+  --_size: var(--idg-size-xs);
+}
+
+.size-s {
+  --_size: var(--idg-size-s);
+}
+
+.size-m {
+  --_size: var(--idg-size-m);
+}
+
+.size-l {
+  --_size: var(--idg-size-l);
+}
+
+.size-xl {
+  --_size: var(--idg-size-xl);
+}
+
+.size-2xl {
+  --_size: var(--idg-size-2xl);
+}
+
+.size-screen {
+  --_size: var(--idg-size-screen);
+}
