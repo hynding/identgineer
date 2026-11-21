@@ -1,0 +1,31 @@
+{
+  "palette": {
+    "$type": "color",
+    "white": { "$value": "#ffffff" },
+    "ink": { "$value": "#111111" }
+  },
+  "stack": {
+    "sans": { "$type": "fontFamily", "$value": ["Helvetica Neue", "Arial", "sans-serif"] }
+  },
+  "color": {
+    "$type": "color",
+    "bg": { "$value": "{palette.white}", "$description": "Page background." },
+    "text": { "$value": "{palette.ink}" }
+  },
+  "font": {
+    "family": { "body": { "$value": "{stack.sans}" } }
+  },
+  "gradient": {
+    "brand": {
+      "$type": "gradient",
+      "$value": [
+        { "color": "{palette.ink}", "position": 0 },
+        { "color": "{palette.white}", "position": 1 }
+      ]
+    }
+  },
+  "motion": {
+    "easing": { "standard": { "$type": "cubicBezier", "$value": [0.2, 0, 0, 1] } },
+    "duration": { "base": { "$type": "duration", "$value": "200ms" } }
+  }
+}

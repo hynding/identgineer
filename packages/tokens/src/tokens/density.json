@@ -1,0 +1,19 @@
+{
+  "$description": "Neutral density defaults. Feature 3 layers UX modes over these.",
+  "density": {
+    "$type": "dimension",
+    "target-size": {
+      "$value": "2.75rem",
+      "$description": "Minimum interactive target; WCAG 2.2 requires 24px, this is the comfortable 44px."
+    },
+    "control-height": {
+      "$value": "2.5rem"
+    },
+    "control-padding-inline": {
+      "$value": "1rem"
+    },
+    "gap": {
+      "$value": "0.75rem"
+    }
+  }
+}

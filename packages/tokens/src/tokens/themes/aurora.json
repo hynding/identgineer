@@ -1,0 +1,282 @@
+{
+  "$description": "Deep indigo with teal-to-violet gradient accents and a clean geometric sans. The default theme.",
+  "$extensions": {
+    "identgineer": {
+      "label": "Aurora"
+    }
+  },
+  "common": {
+    "font": {
+      "family": {
+        "$type": "fontFamily",
+        "display": {
+          "$value": "{stack.geometric}"
+        },
+        "body": {
+          "$value": "{stack.geometric}"
+        },
+        "mono": {
+          "$value": "{stack.mono}"
+        }
+      },
+      "display": {
+        "weight": {
+          "$type": "fontWeight",
+          "$value": "{font.weight.semibold}"
+        },
+        "letter-spacing": {
+          "$type": "dimension",
+          "$value": "-0.02em"
+        },
+        "line-height": {
+          "$type": "number",
+          "$value": 1.15
+        }
+      },
+      "body": {
+        "letter-spacing": {
+          "$type": "dimension",
+          "$value": "0em"
+        },
+        "line-height": {
+          "$type": "number",
+          "$value": 1.6
+        }
+      }
+    }
+  },
+  "light": {
+    "color": {
+      "$type": "color",
+      "bg": {
+        "$value": "#f7f7fd"
+      },
+      "bg-subtle": {
+        "$value": "#eeeefa"
+      },
+      "surface": {
+        "$value": "#ffffff"
+      },
+      "surface-raised": {
+        "$value": "#ffffff"
+      },
+      "text": {
+        "$value": "#14123a"
+      },
+      "text-muted": {
+        "$value": "#4a4878"
+      },
+      "border": {
+        "$value": "#d8d8ee"
+      },
+      "border-strong": {
+        "$value": "#8583b8"
+      },
+      "accent": {
+        "$value": "#4f46e5"
+      },
+      "accent-hover": {
+        "$value": "#4338ca"
+      },
+      "on-accent": {
+        "$value": "#ffffff"
+      },
+      "accent-subtle": {
+        "$value": "#e4e2ff"
+      },
+      "on-accent-subtle": {
+        "$value": "#2e2a9c"
+      },
+      "link": {
+        "$value": "#4338ca"
+      },
+      "focus-ring": {
+        "$value": "#4f46e5"
+      },
+      "success": {
+        "$value": "{palette.green.700}"
+      },
+      "on-success": {
+        "$value": "{palette.neutral.0}"
+      },
+      "success-subtle": {
+        "$value": "{palette.green.100}"
+      },
+      "on-success-subtle": {
+        "$value": "{palette.green.900}"
+      },
+      "warning": {
+        "$value": "{palette.amber.400}"
+      },
+      "on-warning": {
+        "$value": "{palette.amber.950}"
+      },
+      "warning-subtle": {
+        "$value": "{palette.amber.100}"
+      },
+      "on-warning-subtle": {
+        "$value": "{palette.amber.900}"
+      },
+      "danger": {
+        "$value": "{palette.red.600}"
+      },
+      "on-danger": {
+        "$value": "{palette.neutral.0}"
+      },
+      "danger-subtle": {
+        "$value": "{palette.red.100}"
+      },
+      "on-danger-subtle": {
+        "$value": "{palette.red.900}"
+      },
+      "info": {
+        "$value": "{palette.blue.600}"
+      },
+      "on-info": {
+        "$value": "{palette.neutral.0}"
+      },
+      "info-subtle": {
+        "$value": "{palette.blue.100}"
+      },
+      "on-info-subtle": {
+        "$value": "{palette.blue.900}"
+      }
+    },
+    "gradient": {
+      "brand": {
+        "$type": "gradient",
+        "$value": [
+          {
+            "color": "#14b8a6",
+            "position": 0
+          },
+          {
+            "color": "#4f46e5",
+            "position": 0.5
+          },
+          {
+            "color": "#7c3aed",
+            "position": 1
+          }
+        ]
+      }
+    }
+  },
+  "dark": {
+    "color": {
+      "$type": "color",
+      "bg": {
+        "$value": "#0d0b26"
+      },
+      "bg-subtle": {
+        "$value": "#15123a"
+      },
+      "surface": {
+        "$value": "#1a1646"
+      },
+      "surface-raised": {
+        "$value": "#231e5a"
+      },
+      "text": {
+        "$value": "#ecebff"
+      },
+      "text-muted": {
+        "$value": "#b3b0e6"
+      },
+      "border": {
+        "$value": "#2f2a75"
+      },
+      "border-strong": {
+        "$value": "#6f6ad0"
+      },
+      "accent": {
+        "$value": "#8b8bff"
+      },
+      "accent-hover": {
+        "$value": "#a5a5ff"
+      },
+      "on-accent": {
+        "$value": "#0d0b26"
+      },
+      "accent-subtle": {
+        "$value": "#2a2570"
+      },
+      "on-accent-subtle": {
+        "$value": "#d6d4ff"
+      },
+      "link": {
+        "$value": "#a5b4ff"
+      },
+      "focus-ring": {
+        "$value": "#5eead4"
+      },
+      "success": {
+        "$value": "{palette.green.400}"
+      },
+      "on-success": {
+        "$value": "{palette.green.950}"
+      },
+      "success-subtle": {
+        "$value": "{palette.green.900}"
+      },
+      "on-success-subtle": {
+        "$value": "{palette.green.200}"
+      },
+      "warning": {
+        "$value": "{palette.amber.400}"
+      },
+      "on-warning": {
+        "$value": "{palette.amber.950}"
+      },
+      "warning-subtle": {
+        "$value": "{palette.amber.900}"
+      },
+      "on-warning-subtle": {
+        "$value": "{palette.amber.200}"
+      },
+      "danger": {
+        "$value": "{palette.red.400}"
+      },
+      "on-danger": {
+        "$value": "{palette.red.950}"
+      },
+      "danger-subtle": {
+        "$value": "{palette.red.900}"
+      },
+      "on-danger-subtle": {
+        "$value": "{palette.red.200}"
+      },
+      "info": {
+        "$value": "{palette.blue.400}"
+      },
+      "on-info": {
+        "$value": "{palette.blue.950}"
+      },
+      "info-subtle": {
+        "$value": "{palette.blue.900}"
+      },
+      "on-info-subtle": {
+        "$value": "{palette.blue.200}"
+      }
+    },
+    "gradient": {
+      "brand": {
+        "$type": "gradient",
+        "$value": [
+          {
+            "color": "#2dd4bf",
+            "position": 0
+          },
+          {
+            "color": "#8b8bff",
+            "position": 0.5
+          },
+          {
+            "color": "#a78bfa",
+            "position": 1
+          }
+        ]
+      }
+    }
+  }
+}

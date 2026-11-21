@@ -1,0 +1,25 @@
+{
+  "$description": "A second fixture theme.",
+  "$extensions": { "identgineer": { "label": "Beta" } },
+  "common": {
+    "palette": {
+      "$type": "color",
+      "rose": { "$value": "#ffccdd" },
+      "plum": { "$value": "#330022" }
+    }
+  },
+  "light": {
+    "color": {
+      "$type": "color",
+      "bg": { "$value": "{palette.rose}" },
+      "text": { "$value": "{palette.plum}" }
+    }
+  },
+  "dark": {
+    "color": {
+      "$type": "color",
+      "bg": { "$value": "{palette.plum}" },
+      "text": { "$value": "{palette.rose}" }
+    }
+  }
+}

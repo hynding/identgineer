@@ -1,0 +1,165 @@
+{
+  "$description": "Default roles for everything a theme owns (colour and typography). Themes must redefine every colour role in both schemes.",
+  "color": {
+    "$type": "color",
+    "bg": {
+      "$value": "{palette.neutral.0}",
+      "$description": "Page background."
+    },
+    "bg-subtle": {
+      "$value": "{palette.neutral.50}",
+      "$description": "Recessed areas such as table stripes and wells."
+    },
+    "surface": {
+      "$value": "{palette.neutral.0}",
+      "$description": "Cards and panels on the page background."
+    },
+    "surface-raised": {
+      "$value": "{palette.neutral.0}",
+      "$description": "Popovers, menus and dialogs above a surface."
+    },
+    "text": {
+      "$value": "{palette.neutral.900}",
+      "$description": "Body text."
+    },
+    "text-muted": {
+      "$value": "{palette.neutral.600}",
+      "$description": "Secondary text."
+    },
+    "border": {
+      "$value": "{palette.neutral.200}",
+      "$description": "Decorative dividers."
+    },
+    "border-strong": {
+      "$value": "{palette.neutral.500}",
+      "$description": "Borders of controls; 3:1 against the page background."
+    },
+    "accent": {
+      "$value": "{palette.blue.600}",
+      "$description": "Brand fill for primary actions."
+    },
+    "accent-hover": {
+      "$value": "{palette.blue.700}"
+    },
+    "on-accent": {
+      "$value": "{palette.neutral.0}",
+      "$description": "Text and icons on accent."
+    },
+    "accent-subtle": {
+      "$value": "{palette.blue.100}",
+      "$description": "Tinted accent background."
+    },
+    "on-accent-subtle": {
+      "$value": "{palette.blue.900}"
+    },
+    "link": {
+      "$value": "{palette.blue.700}"
+    },
+    "focus-ring": {
+      "$value": "{palette.blue.600}",
+      "$description": "Keyboard focus outline; 3:1 against the page background."
+    },
+    "success": {
+      "$value": "{palette.green.700}"
+    },
+    "on-success": {
+      "$value": "{palette.neutral.0}"
+    },
+    "success-subtle": {
+      "$value": "{palette.green.100}"
+    },
+    "on-success-subtle": {
+      "$value": "{palette.green.900}"
+    },
+    "warning": {
+      "$value": "{palette.amber.400}"
+    },
+    "on-warning": {
+      "$value": "{palette.amber.950}"
+    },
+    "warning-subtle": {
+      "$value": "{palette.amber.100}"
+    },
+    "on-warning-subtle": {
+      "$value": "{palette.amber.900}"
+    },
+    "danger": {
+      "$value": "{palette.red.600}"
+    },
+    "on-danger": {
+      "$value": "{palette.neutral.0}"
+    },
+    "danger-subtle": {
+      "$value": "{palette.red.100}"
+    },
+    "on-danger-subtle": {
+      "$value": "{palette.red.900}"
+    },
+    "info": {
+      "$value": "{palette.blue.600}"
+    },
+    "on-info": {
+      "$value": "{palette.neutral.0}"
+    },
+    "info-subtle": {
+      "$value": "{palette.blue.100}"
+    },
+    "on-info-subtle": {
+      "$value": "{palette.blue.900}"
+    }
+  },
+  "gradient": {
+    "brand": {
+      "$type": "gradient",
+      "$description": "Signature gradient for hero surfaces.",
+      "$value": [
+        {
+          "color": "{palette.blue.600}",
+          "position": 0
+        },
+        {
+          "color": "{palette.blue.900}",
+          "position": 1
+        }
+      ]
+    }
+  },
+  "font": {
+    "family": {
+      "$type": "fontFamily",
+      "display": {
+        "$value": "{stack.system-sans}"
+      },
+      "body": {
+        "$value": "{stack.system-sans}"
+      },
+      "mono": {
+        "$value": "{stack.mono}"
+      }
+    },
+    "display": {
+      "weight": {
+        "$type": "fontWeight",
+        "$value": "{font.weight.bold}"
+      },
+      "letter-spacing": {
+        "$type": "dimension",
+        "$value": "{font.letter-spacing.snug}"
+      },
+      "line-height": {
+        "$type": "number",
+        "$value": "{font.line-height.tight}"
+      }
+    },
+    "body": {
+      "letter-spacing": {
+        "$type": "dimension",
+        "$value": "{font.letter-spacing.normal}"
+      },
+      "line-height": {
+        "$type": "number",
+        "$value": "{font.line-height.normal}"
+      }
+    }
+  }
+}
