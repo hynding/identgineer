@@ -14,5 +14,9 @@ export type { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu
 export { toast } from "./components/toast-region/toast-api";
 export type { ToastAction, ToastHandle, ToastOptions } from "./components/toast-region/toast-api";
 export type { ToastPosition } from "./components/toast-region/toast-region-options";
-export type { ToastDismissReason, ToastVariant } from "./components/toast/toast-options";
+export type {
+  ToastDismissDetail,
+  ToastDismissReason,
+  ToastVariant,
+} from "./components/toast/toast-options";
 export type { Placement } from "./utils/position";
