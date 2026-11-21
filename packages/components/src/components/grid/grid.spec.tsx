@@ -23,11 +23,11 @@ function expectPresentational(root: HTMLElement): void {
 }
 
 function gapClasses(element: HTMLElement): string[] {
-  return Array.from(element.classList).filter((name) => name.startsWith("gap-"));
+  return element.className.split(" ").filter((name) => name.startsWith("gap-"));
 }
 
 function sizeClasses(element: HTMLElement): string[] {
-  return Array.from(element.classList).filter((name) => name.startsWith("size-"));
+  return element.className.split(" ").filter((name) => name.startsWith("size-"));
 }
 
 describe("idg-grid", () => {

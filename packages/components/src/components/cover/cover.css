@@ -1,0 +1,31 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.cover {
+  --_gap: calc(var(--idg-layout-gap) * var(--idg-density-gap-scale));
+  --_size: var(--idg-size-l);
+
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--_gap);
+  min-block-size: var(--_size);
+  min-inline-size: 0;
+}
+
+.cover ::slotted(*) {
+  flex: 0 0 auto;
+}
+
+/* Auto margins on the content take all the space the top and bottom regions leave, half above and
+   half below, so it stays centred between them, or in the whole block when there are none. */
+.center {
+  margin-block: auto;
+  min-inline-size: 0;
+}

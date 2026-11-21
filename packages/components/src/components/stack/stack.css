@@ -1,0 +1,56 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.stack {
+  --_gap: calc(var(--idg-layout-gap) * var(--idg-density-gap-scale));
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--_gap);
+  min-inline-size: 0;
+}
+
+.align-start {
+  align-items: flex-start;
+}
+
+.align-center {
+  align-items: center;
+}
+
+.align-end {
+  align-items: flex-end;
+}
+
+.align-stretch {
+  align-items: stretch;
+}
+
+/* A rule is drawn on every child after the first, with half the gap on either side of it. The gap
+   moves into the children's padding because a flex gap cannot hold a line. The rule is a hairline
+   in the theme's border colour, which every design language shows, even those with no border. */
+.dividers {
+  gap: 0;
+}
+
+.dividers ::slotted(*) {
+  padding-block: calc(var(--_gap) / 2);
+}
+
+.dividers ::slotted(:first-child) {
+  padding-block-start: 0;
+}
+
+.dividers ::slotted(:last-child) {
+  padding-block-end: 0;
+}
+
+.dividers ::slotted(:not(:first-child)) {
+  border-block-start: thin solid var(--idg-color-border);
+}

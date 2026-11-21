@@ -1,0 +1,53 @@
+import { Component, h, Prop } from "@stencil/core";
+import {
+  GAP_STEPS,
+  SIZE_STEPS,
+  stepOf,
+  type GapStep,
+  type SizeStep,
+} from "../../utils/layout-steps";
+import { limitOf } from "./switcher-options";
+
+/**
+ * Items in one row that switch to one column when their container is narrower than `threshold`.
+ * Every item is as wide as the others in either arrangement. There is no breakpoint and no script,
+ * so it follows the width of its container rather than the viewport. It only arranges, so it adds
+ * no role and the source order stays the reading order.
+ *
+ * @slot - The items, in reading order.
+ * @part switcher - The element that lays the items out.
+ */
+@Component({
+  tag: "idg-switcher",
+  styleUrls: ["switcher.css", "../../styles/layout-gap.css", "../../styles/layout-size.css"],
+  shadow: true,
+})
+export class IdgSwitcher {
+  /** Container width below which the items stack, a step of the size scale. */
+  @Prop({ reflect: true }) threshold: SizeStep = "l";
+
+  /** Most items allowed in a row, 2 to 6. With more items than that, they stack at any width. */
+  @Prop({ reflect: true }) limit?: number;
+
+  /** Space between items, in both directions, a step of the space scale. Without it the layout's gap is used. */
+  @Prop({ reflect: true }) gap?: GapStep;
+
+  render() {
+    const threshold = stepOf(SIZE_STEPS, this.threshold) ?? "l";
+    const limit = limitOf(this.limit);
+    const gap = stepOf(GAP_STEPS, this.gap);
+    return (
+      <div
+        class={{
+          switcher: true,
+          [`size-${threshold}`]: true,
+          [`limit-${String(limit)}`]: limit !== undefined,
+          [`gap-${String(gap)}`]: gap !== undefined,
+        }}
+        part="switcher"
+      >
+        <slot />
+      </div>
+    );
+  }
+}

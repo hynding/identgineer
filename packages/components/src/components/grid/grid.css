@@ -1,0 +1,24 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+/* Columns of at least --_size, but never narrower than a share that would give more columns than
+   the layout allows. That share is what is left of the width once the gaps between the most
+   columns are taken out, divided by those columns. A grid narrower than --_size has one column. */
+.grid {
+  --_gap: calc(var(--idg-layout-gap) * var(--idg-density-gap-scale));
+  --_size: var(--idg-layout-grid-min);
+  --_share: calc(
+    (100% - (var(--idg-layout-columns) - 1) * var(--_gap)) / var(--idg-layout-columns)
+  );
+
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, max(var(--_size), var(--_share))), 1fr));
+  gap: var(--_gap);
+  min-inline-size: 0;
+}

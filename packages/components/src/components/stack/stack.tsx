@@ -1,6 +1,6 @@
 import { Component, h, Prop } from "@stencil/core";
 import { oneOf } from "../../utils/choice";
-import { GAP_STEPS, type GapStep } from "../../utils/layout-steps";
+import { GAP_STEPS, stepOf, type GapStep } from "../../utils/layout-steps";
 import { STACK_ALIGNMENTS, type StackAlignment } from "./stack-options";
 
 /**
@@ -26,7 +26,7 @@ export class IdgStack {
   @Prop({ reflect: true }) dividers = false;
 
   render() {
-    const gap = oneOf(GAP_STEPS, this.gap, undefined);
+    const gap = stepOf(GAP_STEPS, this.gap);
     const align = oneOf(STACK_ALIGNMENTS, this.align, "stretch");
     return (
       <div

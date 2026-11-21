@@ -1,24 +1,43 @@
-import { TOKEN_NAMES } from "@identgineer/tokens";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { GAP_STEPS, SIZE_STEPS, stepOf } from "./layout-steps";
 
-describe("layout steps", () => {
-  it.each(GAP_STEPS.filter((step) => step !== "none"))(
-    "gap step %s is a step of the space scale",
-    (step) => {
-      expect(TOKEN_NAMES).toContain(`--idg-space-${step}`);
-    },
-  );
+const PRIMITIVES: unknown = JSON.parse(
+  readFileSync(
+    fileURLToPath(new URL("../../../tokens/src/tokens/primitive.json", import.meta.url)),
+    "utf8",
+  ),
+);
 
-  it("offers no gap that is not none or a space step", () => {
-    const spaceSteps = TOKEN_NAMES.filter((name) => name.startsWith("--idg-space-")).map((name) =>
-      name.replace("--idg-space-", ""),
+/** The steps of a scale in the tokens package, read from the source the CSS is built from. */
+function stepsOf(scale: string): string[] {
+  const group = isRecord(PRIMITIVES) ? PRIMITIVES[scale] : undefined;
+  if (!isRecord(group)) throw new Error(`the tokens have no ${scale} scale`);
+  return Object.keys(group).filter((key) => !key.startsWith("$"));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+describe("layout steps", () => {
+  it("offers none and exactly the steps of the space scale as gaps", () => {
+    expect([...GAP_STEPS].filter((step) => step !== "none").sort()).toEqual(
+      stepsOf("space").sort(),
     );
-    expect([...GAP_STEPS].filter((step) => step !== "none").sort()).toEqual([...spaceSteps].sort());
   });
 
-  it.each(SIZE_STEPS)("size step %s is a step of the size scale", (step) => {
-    expect(TOKEN_NAMES).toContain(`--idg-size-${step}`);
+  it("offers every step of the size scale but screen as a size", () => {
+    expect([...SIZE_STEPS].sort()).toEqual(
+      stepsOf("size")
+        .filter((step) => step !== "screen")
+        .sort(),
+    );
+  });
+
+  it("keeps screen in the size scale, for the cover", () => {
+    expect(stepsOf("size")).toContain("screen");
   });
 
   it("orders gaps and sizes from smallest to largest", () => {
