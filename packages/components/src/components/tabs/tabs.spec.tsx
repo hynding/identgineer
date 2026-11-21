@@ -555,3 +555,68 @@ describe("idg-tabs moved in the page", () => {
     expect(valueOf(tabsElement)).toBe("activity");
   });
 });
+
+describe("idg-tabs duplicates, unmatched values and nesting", () => {
+  it("warns of a value two tabs share, naming it, and only once", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const { root, waitForChanges } = await render(
+      <idg-tabs>
+        <idg-tab value="a">A</idg-tab>
+        <idg-tab value="a">Again</idg-tab>
+        <idg-tab-panel value="a">A body</idg-tab-panel>
+      </idg-tabs>,
+    );
+    (root as TabsElement).value = "a";
+    await waitForChanges();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0]?.[0])).toContain('"a"');
+  });
+
+  it("does not warn for tabs without a value, which are known by position", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    await render(
+      <idg-tabs>
+        <idg-tab>A</idg-tab>
+        <idg-tab>B</idg-tab>
+      </idg-tabs>,
+    );
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("moves to the enabled tab nearest the selection when the value names no tab", async () => {
+    const { root, waitForChanges } = await render(basic);
+    tabAt(root, 3).click();
+    await waitForChanges();
+    (root as TabsElement).value = "missing";
+    await waitForChanges();
+    expect(valueOf(root)).toBe("billing");
+  });
+
+  it("does not select a tab of tabs nested in one of its panels", async () => {
+    const { root, waitForChanges } = await render(
+      <idg-tabs>
+        <idg-tab value="outer">Outer</idg-tab>
+        <idg-tab value="other">Other</idg-tab>
+        <idg-tab-panel value="outer">
+          <idg-tabs id="inner">
+            <idg-tab value="x">X</idg-tab>
+            <idg-tab value="y">Y</idg-tab>
+            <idg-tab-panel value="x">X body</idg-tab-panel>
+            <idg-tab-panel value="y">Y body</idg-tab-panel>
+          </idg-tabs>
+        </idg-tab-panel>
+        <idg-tab-panel value="other">Other body</idg-tab-panel>
+      </idg-tabs>,
+    );
+    const inner = within(root, "#inner");
+    const second = inner.querySelectorAll<HTMLElement>("idg-tab")[1];
+    if (!second) throw new Error("no second tab");
+    second.click();
+    await waitForChanges();
+    expect((inner as TabsElement).value).toBe("y");
+    expect(valueOf(root)).toBe("outer");
+    press(second, "ArrowLeft");
+    await waitForChanges();
+    expect(valueOf(root)).toBe("outer");
+  });
+});
