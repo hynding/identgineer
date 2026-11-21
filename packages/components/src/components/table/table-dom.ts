@@ -72,3 +72,30 @@ export function addSortButton(header: Element): void {
   button.append(mark);
   header.append(button);
 }
+
+/**
+ * Whether a body cell spans rows or columns. Rows of such a table are not independent, so moving
+ * them would break it, and a column no longer means one cell per row.
+ */
+export function hasSpanningCells(table: Element): boolean {
+  return bodyGroups(table).some((group) =>
+    rowsOf(group).some((row) =>
+      Array.from(row.children).some(
+        (cell) =>
+          Number(cell.getAttribute("rowspan") ?? "1") > 1 ||
+          Number(cell.getAttribute("colspan") ?? "1") > 1,
+      ),
+    ),
+  );
+}
+
+/** Puts a header's content back where it was before `addSortButton` wrapped it. */
+export function removeSortButton(header: Element): void {
+  const button = Array.from(header.children).find((child) =>
+    child.classList.contains("idg-table-sort"),
+  );
+  if (!button) return;
+  button.querySelector(".idg-table-sort-mark")?.remove();
+  while (button.firstChild) header.insertBefore(button.firstChild, button);
+  button.remove();
+}

@@ -21,6 +21,8 @@ import {
   captionOf,
   columnIndex,
   hasSortButton,
+  hasSpanningCells,
+  removeSortButton,
   rowsOf,
   slottedTable,
   sortKeyOf,
@@ -147,7 +149,8 @@ export class IdgTable {
     const button = (event.target as Element).closest("button.idg-table-sort");
     const header = button?.parentElement;
     const table = slottedTable(this.host);
-    if (!button || !header || !table?.contains(button)) return;
+    // A table nested in a cell has sort buttons of its own, which this table does not answer to.
+    if (!button || !header || !table?.contains(button) || button.closest("table") !== table) return;
     const key = sortKeyOf(header);
     const direction: SortDirection =
       this.sortKey === key && this.sortDirection === "ascending" ? "descending" : "ascending";
@@ -157,7 +160,7 @@ export class IdgTable {
       .split("{column}")
       .join(textOf(header).trim())
       .split("{direction}")
-      .join(direction);
+      .join(direction === "ascending" ? this.sortAscendingLabel : this.sortDescendingLabel);
     this.idgSort.emit({ key, direction });
   }
 
@@ -179,7 +182,12 @@ export class IdgTable {
     this.mutationObserver = new MutationObserver(() => {
       this.refresh();
     });
-    this.mutationObserver.observe(this.host, { childList: true, subtree: true });
+    this.mutationObserver.observe(this.host, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["rowspan", "colspan"],
+    });
   }
 
   private watchSize(): void {
@@ -226,8 +234,10 @@ export class IdgTable {
   private refresh(): void {
     const table = slottedTable(this.host);
     if (table) {
+      const sortable = !hasSpanningCells(table);
       for (const header of sortableHeaders(table)) {
-        if (!hasSortButton(header)) addSortButton(header);
+        if (sortable && !hasSortButton(header)) addSortButton(header);
+        if (!sortable) removeSortButton(header);
       }
     }
     this.applySort();
@@ -241,7 +251,7 @@ export class IdgTable {
     const direction = oneOf(SORT_DIRECTIONS, this.sortDirection, "ascending");
     const headers = sortableHeaders(table);
     const active =
-      this.sortKey === ""
+      this.sortKey === "" || hasSpanningCells(table)
         ? undefined
         : headers.find((header) => sortKeyOf(header) === this.sortKey);
     for (const header of headers) {
