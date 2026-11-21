@@ -1,6 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { h, render } from "@stencil/vitest";
+import { installSlotAssignment } from "../../testing/slot-assignment";
+import { stubMutationObserver } from "../../testing/mutation-observer";
 import "./switcher";
+
+beforeEach(() => {
+  installSlotAssignment();
+});
 
 function part(root: HTMLElement, name: string): HTMLElement {
   const element = root.shadowRoot?.querySelector<HTMLElement>(`[part="${name}"]`);
@@ -91,6 +97,52 @@ describe("idg-switcher", () => {
       </idg-switcher>,
     );
     expect(overLimit(root)).toBe(false);
+  });
+
+  it("does not count items that draw nothing", async () => {
+    const { root } = await render(
+      <idg-switcher limit={2}>
+        <p>One</p>
+        <p hidden>Hidden</p>
+        <template></template>
+        <script type="application/json"></script>
+        <p>Two</p>
+      </idg-switcher>,
+    );
+    expect(overLimit(root)).toBe(false);
+  });
+
+  it("counts an item that stops being hidden", async () => {
+    const watcher = stubMutationObserver();
+    const { root, waitForChanges } = await render(
+      <idg-switcher limit={2}>
+        <p>One</p>
+        <p>Two</p>
+        <p hidden id="late">
+          Three
+        </p>
+      </idg-switcher>,
+    );
+    expect(overLimit(root)).toBe(false);
+    const late = root.querySelector("#late");
+    late?.removeAttribute("hidden");
+    watcher.notify([{ type: "attributes", target: late as Node }]);
+    await waitForChanges();
+    expect(overLimit(root)).toBe(true);
+    late?.setAttribute("hidden", "");
+    watcher.notify([{ type: "attributes", target: late as Node }]);
+    await waitForChanges();
+    expect(overLimit(root)).toBe(false);
+    watcher.restore();
+  });
+
+  it("counts what the slot is given, so items forwarded through another slot count", async () => {
+    const { root } = await render(<idg-switcher limit={2}>{items(1)}</idg-switcher>);
+    const slot = root.shadowRoot?.querySelector("slot:not([name])") as HTMLSlotElement;
+    slot.assignedElements = () => [1, 2, 3].map(() => document.createElement("p"));
+    slot.dispatchEvent(new Event("slotchange"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(overLimit(root)).toBe(true);
   });
 
   it.each([0, 1, 7, 2.5, -3, Number.NaN, Number.POSITIVE_INFINITY, undefined])(

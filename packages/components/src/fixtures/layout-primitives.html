@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/tokens/index.css" />
     <link rel="stylesheet" href="/demo.css" />
     <script type="module" src="/build/identgineer.esm.js"></script>
+    <script type="module" src="/fixtures/forward-items.js"></script>
   </head>
   <body>
     <main class="layout-page">
@@ -23,6 +24,13 @@
           <p class="flush">A rule separates the items.</p>
           <p class="flush">It is drawn in the theme's border colour.</p>
           <p class="flush">The gap sits on either side of it.</p>
+        </idg-stack>
+        <idg-stack id="stack-leading" dividers gap="m">
+          <p class="flush" hidden>Hidden, first in the source</p>
+          <template></template>
+          <p class="flush" slot="elsewhere">Assigned to a slot the stack does not have</p>
+          <p class="flush" id="leading-first">First that draws</p>
+          <p class="flush" id="leading-second">Second that draws</p>
         </idg-stack>
         <idg-stack id="stack-aligned" gap="xs">
           <idg-badge class="tag">Short</idg-badge>
@@ -91,6 +99,13 @@
         </div>
       </section>
 
+      <section class="plain" aria-labelledby="sidebar-empty-title">
+        <h2 id="sidebar-empty-title">Sidebar with nothing at the side</h2>
+        <idg-sidebar id="sidebar-empty">
+          <p class="flush">Only content, which has the whole row.</p>
+        </idg-sidebar>
+      </section>
+
       <section class="plain" aria-labelledby="switcher-title">
         <h2 id="switcher-title">Switcher</h2>
         <div class="box" id="switcher-box">
@@ -116,6 +131,16 @@
             <idg-card heading="Five">Fifth.</idg-card>
           </idg-switcher>
         </div>
+      </section>
+
+      <section class="plain" aria-labelledby="forward-title">
+        <h2 id="forward-title">Items forwarded through another slot</h2>
+        <forward-items id="forwarded">
+          <p class="flush">One</p>
+          <p class="flush">Two</p>
+          <p class="flush">Three</p>
+          <p class="flush">Four</p>
+        </forward-items>
       </section>
 
       <section class="plain" aria-labelledby="cover-title">

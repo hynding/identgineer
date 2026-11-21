@@ -340,6 +340,101 @@ test.describe("idg-sidebar", () => {
   });
 });
 
+test.describe("items that draw nothing", () => {
+  const ruled = (page: Page, selector: string) =>
+    page
+      .locator(selector)
+      .evaluateAll((elements) =>
+        elements.map((element) => getComputedStyle(element).borderBlockStartWidth !== "0px"),
+      );
+
+  test("stack dividers sit only between items that draw", async ({ page }) => {
+    await open(page);
+    expect(await ruled(page, "#leading-first, #leading-second")).toEqual([false, true]);
+  });
+
+  test("stack dividers follow an item that is hidden and shown", async ({ page }) => {
+    await open(page);
+    await page.locator("#leading-first").evaluate((element) => {
+      element.setAttribute("hidden", "");
+    });
+    await expect.poll(() => ruled(page, "#leading-second")).toEqual([false]);
+    await page.locator("#leading-first").evaluate((element) => {
+      element.removeAttribute("hidden");
+    });
+    await expect.poll(() => ruled(page, "#leading-first, #leading-second")).toEqual([false, true]);
+  });
+
+  test("a switcher limit does not count hidden items, templates or items for another slot", async ({
+    page,
+  }) => {
+    await open(page, 2560);
+    await page.locator("#switcher-limit").evaluate((element) => {
+      element.setAttribute("limit", "5");
+      for (const extra of [document.createElement("p"), document.createElement("template")]) {
+        extra.hidden = true;
+        element.append(extra);
+      }
+      const other = document.createElement("p");
+      other.slot = "elsewhere";
+      element.append(other);
+    });
+    await expect.poll(() => distinct(page.locator("#switcher-limit > idg-card"), "y")).toBe(1);
+  });
+
+  test("a switcher limit counts a hidden item once it is shown", async ({ page }) => {
+    await open(page, 2560);
+    await page.locator("#switcher-limit").evaluate((element) => {
+      element.setAttribute("limit", "5");
+      const extra = document.createElement("p");
+      extra.id = "extra";
+      extra.hidden = true;
+      extra.textContent = "Extra";
+      element.append(extra);
+    });
+    await expect.poll(() => distinct(page.locator("#switcher-limit > idg-card"), "y")).toBe(1);
+    await page.locator("#extra").evaluate((element) => {
+      element.hidden = false;
+    });
+    await expect.poll(() => distinct(page.locator("#switcher-limit > idg-card"), "x")).toBe(1);
+  });
+
+  test("a switcher limit counts items forwarded to it through another slot", async ({ page }) => {
+    await open(page, 2560);
+    const stacked = () =>
+      page
+        .locator("#forwarded")
+        .evaluate((host) =>
+          host.shadowRoot
+            ?.querySelector("idg-switcher")
+            ?.shadowRoot?.querySelector(".switcher")
+            ?.classList.contains("over-limit"),
+        );
+    await expect.poll(stacked).toBe(true);
+    await page
+      .locator("#forwarded > p")
+      .last()
+      .evaluate((element) => {
+        element.remove();
+      });
+    await expect.poll(stacked).toBe(true);
+    await page
+      .locator("#forwarded > p")
+      .last()
+      .evaluate((element) => {
+        element.remove();
+      });
+    await expect.poll(stacked).toBe(false);
+  });
+
+  test("a sidebar with nothing at its side gives the content the whole row", async ({ page }) => {
+    await open(page);
+    const host = await boxOf(page.locator("#sidebar-empty"));
+    const content = await boxOf(page.locator("#sidebar-empty").locator('[part="content"]'));
+    expect(Math.abs(content.width - host.width)).toBeLessThan(1);
+  });
+});
+
 test.describe("idg-switcher", () => {
   const items = (page: Page, id: string) => page.locator(`#${id} > idg-card`);
 
@@ -593,6 +688,51 @@ test.describe("the layout primitives in a right-to-left page", () => {
       ),
     ).toBe(0);
   });
+});
+
+test.describe("long words", () => {
+  const LONG = "a".repeat(40);
+  const TARGETS = [
+    ["idg-stack", "#stack"],
+    ["idg-cluster", "#cluster"],
+    ["idg-grid", "#grid"],
+    ["idg-sidebar", "#sidebar"],
+    ["idg-switcher", "#switcher"],
+    ["idg-cover", "#cover-plain"],
+  ] as const;
+
+  for (const [tag, selector] of TARGETS) {
+    test(`${tag} breaks a 40-character word at 320px instead of overflowing`, async ({ page }) => {
+      await open(page, 320);
+      await page.locator(selector).evaluate((host, word) => {
+        const item = document.createElement(host.localName === "idg-grid" ? "idg-card" : "p");
+        item.textContent = word;
+        host.append(item);
+      }, LONG);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow).toBeLessThanOrEqual(0);
+      const added = await boxOf(page.locator(`${selector} > :last-child`));
+      expect(added.x + added.width).toBeLessThanOrEqual(320);
+    });
+  }
+
+  for (const layout of LAYOUTS) {
+    test(`the page does not scroll sideways at 320px with the text doubled, under ${layout}`, async ({
+      page,
+    }) => {
+      await open(page, 320, layout);
+      await page.locator("html").evaluate((element) => {
+        element.style.fontSize = "200%";
+      });
+      await page.evaluate(() => document.fonts.ready);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow).toBeLessThanOrEqual(0);
+    });
+  }
 });
 
 test.describe("accessibility", () => {

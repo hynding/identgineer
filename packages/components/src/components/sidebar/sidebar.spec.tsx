@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { h, render } from "@stencil/vitest";
+import { installSlotAssignment } from "../../testing/slot-assignment";
 import "./sidebar";
+
+beforeEach(() => {
+  installSlotAssignment();
+});
 
 function part(root: HTMLElement, name: string): HTMLElement {
   const element = root.shadowRoot?.querySelector<HTMLElement>(`[part="${name}"]`);
@@ -99,5 +104,44 @@ describe("idg-sidebar", () => {
       </idg-sidebar>,
     );
     expectPresentational(root);
+  });
+
+  describe("an empty side region", () => {
+    it("takes no room when nothing is given to the side slot", async () => {
+      const { root } = await render(<idg-sidebar>Content</idg-sidebar>);
+      expect(part(root, "side").classList.contains("empty")).toBe(true);
+    });
+
+    it("takes no room when what it is given draws nothing", async () => {
+      const { root } = await render(
+        <idg-sidebar>
+          <nav slot="side" hidden>
+            Side
+          </nav>
+          Content
+        </idg-sidebar>,
+      );
+      expect(part(root, "side").classList.contains("empty")).toBe(true);
+    });
+
+    it("takes room when it has an item that draws", async () => {
+      const { root } = await render(
+        <idg-sidebar>
+          <nav slot="side">Side</nav>
+          Content
+        </idg-sidebar>,
+      );
+      expect(part(root, "side").classList.contains("empty")).toBe(false);
+    });
+
+    it("follows an item added to the side slot later", async () => {
+      const { root, waitForChanges } = await render(<idg-sidebar>Content</idg-sidebar>);
+      const nav = document.createElement("nav");
+      nav.setAttribute("slot", "side");
+      root.append(nav);
+      root.shadowRoot?.querySelector('slot[name="side"]')?.dispatchEvent(new Event("slotchange"));
+      await waitForChanges();
+      expect(part(root, "side").classList.contains("empty")).toBe(false);
+    });
   });
 });

@@ -1,6 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { h, render } from "@stencil/vitest";
+import { installSlotAssignment } from "../../testing/slot-assignment";
+import { stubMutationObserver } from "../../testing/mutation-observer";
 import "./stack";
+
+beforeEach(() => {
+  installSlotAssignment();
+});
 
 function part(root: HTMLElement, name: string): HTMLElement {
   const element = root.shadowRoot?.querySelector<HTMLElement>(`[part="${name}"]`);
@@ -76,5 +82,92 @@ describe("idg-stack", () => {
       </idg-stack>,
     );
     expectPresentational(root);
+  });
+
+  describe("dividers between rendered items", () => {
+    const FIRST = "data-idg-stack-first";
+    const marked = (root: HTMLElement) =>
+      Array.from(root.children)
+        .filter((child) => child.hasAttribute(FIRST))
+        .map((child) => child.textContent);
+
+    it("marks the first item, so no rule is drawn above it", async () => {
+      const { root } = await render(
+        <idg-stack dividers>
+          <p>One</p>
+          <p>Two</p>
+        </idg-stack>,
+      );
+      expect(marked(root)).toEqual(["One"]);
+    });
+
+    it("skips leading items that draw nothing", async () => {
+      const { root } = await render(
+        <idg-stack dividers>
+          <p hidden>Hidden</p>
+          <template></template>
+          <script type="application/json"></script>
+          <p slot="elsewhere">Other slot</p>
+          <p>One</p>
+          <p>Two</p>
+        </idg-stack>,
+      );
+      expect(marked(root)).toEqual(["One"]);
+    });
+
+    it("marks nothing without dividers", async () => {
+      const { root } = await render(
+        <idg-stack>
+          <p>One</p>
+        </idg-stack>,
+      );
+      expect(marked(root)).toEqual([]);
+    });
+
+    it("moves the mark when the first item is hidden or shown", async () => {
+      const watcher = stubMutationObserver();
+      const { root, waitForChanges } = await render(
+        <idg-stack dividers>
+          <p id="lead">One</p>
+          <p>Two</p>
+        </idg-stack>,
+      );
+      const lead = root.querySelector("#lead");
+      lead?.setAttribute("hidden", "");
+      watcher.notify([{ type: "attributes", target: lead as Node }]);
+      await waitForChanges();
+      expect(marked(root)).toEqual(["Two"]);
+      lead?.removeAttribute("hidden");
+      watcher.notify([{ type: "attributes", target: lead as Node }]);
+      await waitForChanges();
+      expect(marked(root)).toEqual(["One"]);
+      watcher.restore();
+    });
+
+    it("moves the mark when items are added in front", async () => {
+      const { root, waitForChanges } = await render(
+        <idg-stack dividers>
+          <p>One</p>
+        </idg-stack>,
+      );
+      const added = document.createElement("p");
+      added.textContent = "Zero";
+      root.prepend(added);
+      root.shadowRoot?.querySelector("slot")?.dispatchEvent(new Event("slotchange"));
+      await waitForChanges();
+      expect(marked(root)).toEqual(["Zero"]);
+    });
+
+    it("removes the mark when dividers are turned off", async () => {
+      const { root, waitForChanges } = await render(
+        <idg-stack dividers>
+          <p>One</p>
+        </idg-stack>,
+      );
+      root.removeAttribute("dividers");
+      (root as unknown as { dividers: boolean }).dividers = false;
+      await waitForChanges();
+      expect(marked(root)).toEqual([]);
+    });
   });
 });
