@@ -2,8 +2,9 @@ import type { Config } from "@stencil/core";
 
 export const config: Config = {
   namespace: "identgineer",
-  // The lazy loader would otherwise inject a <style> through innerHTML to hide
-  // components before hydration, which a strict CSP and Trusted Types both refuse.
+  tsconfig: "tsconfig.build.json",
+  // The lazy loader would otherwise inject a <style> through innerHTML to hide components
+  // before hydration, which a strict CSP and Trusted Types both refuse.
   invisiblePrehydration: false,
   outputTargets: [
     { type: "dist", esmLoaderPath: "../loader" },
@@ -12,7 +13,7 @@ export const config: Config = {
     {
       type: "www",
       serviceWorker: null,
-      copy: [{ src: "../../tokens/dist", dest: "tokens" }],
+      copy: [{ src: "demo.css" }, { src: "../../tokens/dist", dest: "tokens" }],
     },
   ],
 };

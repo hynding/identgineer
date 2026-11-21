@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.js",
+  "types": "dist/types/index.d.ts",
+  "collection": "dist/collection/collection-manifest.json",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
@@ -19,7 +23,7 @@
     "./docs.json": "./dist/docs.json"
   },
   "scripts": {
-    "build": "stencil build --prod --docs",
+    "build": "stencil build --prod",
     "dev": "stencil build --dev --watch --serve",
     "typecheck": "tsc -p tsconfig.json"
   },
