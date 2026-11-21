@@ -372,6 +372,7 @@ export class IdgMenu {
           [`placement-${placement}`]: true,
         }}
         part="surface"
+        role="none"
         popover="auto"
         onToggle={this.handleToggle}
       >

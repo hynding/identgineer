@@ -9,5 +9,4 @@
   font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
   font-weight: var(--idg-font-weight-semibold);
   letter-spacing: var(--idg-font-letter-spacing-wide);
-  text-transform: uppercase;
 }

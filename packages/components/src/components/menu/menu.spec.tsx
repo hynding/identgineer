@@ -92,6 +92,8 @@ describe("idg-menu rendering", () => {
     const { root } = await render(actions);
     const surface = root.shadowRoot?.querySelector('[part="surface"]');
     expect(surface?.getAttribute("popover")).toBe("auto");
+    // Browsers expose a popover as an unnamed group, which would wrap the menu in noise.
+    expect(surface?.getAttribute("role")).toBe("none");
     const menu = surface?.querySelector('[role="menu"]');
     expect(menu?.querySelector("slot:not([name])")).not.toBeNull();
     expect(root.shadowRoot?.querySelector('slot[name="trigger"]')).not.toBeNull();
