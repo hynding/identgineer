@@ -2,6 +2,25 @@ import { describe, expect, it } from "vitest";
 import { findCssViolations } from "../../../checks/css-rules";
 import { TABLE_LIGHT_CSS } from "./table-light-styles";
 
+// Splits a selector list at its top-level commas, leaving those inside :is() and the like.
+function splitSelectors(prelude: string): string[] {
+  const selectors: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const character of prelude) {
+    if (character === "(") depth += 1;
+    if (character === ")") depth -= 1;
+    if (character === "," && depth === 0) {
+      selectors.push(current.trim());
+      current = "";
+    } else {
+      current += character;
+    }
+  }
+  selectors.push(current.trim());
+  return selectors;
+}
+
 describe("TABLE_LIGHT_CSS", () => {
   it("uses only --idg-* tokens for colour and motion, as every shipped stylesheet does", () => {
     expect(TABLE_LIGHT_CSS).not.toBe("");
@@ -13,12 +32,11 @@ describe("TABLE_LIGHT_CSS", () => {
   });
 
   it("styles nothing outside idg-table", () => {
-    const selectors = TABLE_LIGHT_CSS.replace(/\/\*[\s\S]*?\*\//g, "")
-      .split(/[{}]/)
-      .filter((_part, index, parts) => index % 2 === 0 && parts[index + 1] !== undefined)
-      .flatMap((part) => part.split(","))
-      .map((selector) => selector.trim())
-      .filter((selector) => selector !== "" && !selector.startsWith("@"));
+    const css = TABLE_LIGHT_CSS.replace(/\/\*[\s\S]*?\*\//g, "");
+    const selectors = Array.from(css.matchAll(/([^{};]+)\{/g))
+      .map((match) => (match[1] ?? "").trim())
+      .filter((prelude) => !prelude.startsWith("@"))
+      .flatMap(splitSelectors);
     expect(selectors.length).toBeGreaterThan(5);
     expect(selectors.filter((selector) => !selector.startsWith("idg-table"))).toEqual([]);
   });

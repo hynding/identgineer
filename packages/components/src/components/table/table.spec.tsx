@@ -88,7 +88,7 @@ describe("idg-table rendering", () => {
   it("wraps the slotted table in a scroll area and leaves the table alone", async () => {
     const { root } = await render(people);
     expect(scroller(root).querySelector("slot")).not.toBeNull();
-    expect(root.querySelector(":scope > table > caption")?.textContent).toBe("People");
+    expect(root.querySelector("table > caption")?.textContent).toBe("People");
     expect(root.querySelector("table")?.getAttribute("role")).toBeNull();
   });
 
