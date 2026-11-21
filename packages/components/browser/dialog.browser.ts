@@ -194,6 +194,50 @@ test.describe("idg-dialog closed over a nested dialog or moved while open", () =
     await expect(dialog(page, "basic")).toBeVisible();
     expect(await dialog(page, "basic").evaluate((element) => element.matches(":modal"))).toBe(true);
   });
+
+  for (const [label, sequence] of [
+    ["moved and opened again", "move"],
+    ["closed and opened again", "toggle"],
+  ] as const) {
+    test(`a modal dialog ${label} in the same task stays open, with one close reported`, async ({
+      page,
+    }) => {
+      await openOverlays(page);
+      await openWithClick(page, "open-basic", "basic");
+      await recordEvents(page, "basic", ["idgClose"]);
+      await page.evaluate((kind) => {
+        const host = document.getElementById("basic") as unknown as HTMLElement & {
+          open: boolean;
+          showModal: () => Promise<void>;
+        };
+        const native = host.shadowRoot?.querySelector("dialog");
+        const scope = window as unknown as { nativeClosed?: Promise<unknown> };
+        scope.nativeClosed = new Promise((resolve) => {
+          native?.addEventListener("close", resolve, { once: true });
+        });
+        if (kind === "move") {
+          host.remove();
+          document.body.append(host);
+          void host.showModal();
+        } else {
+          host.open = false;
+          host.open = true;
+        }
+      }, sequence);
+      await expect(dialog(page, "basic")).toBeVisible();
+      // The browser's close event for the first close comes a task later.
+      await page.evaluate(
+        () => (window as unknown as { nativeClosed: Promise<unknown> }).nativeClosed,
+      );
+      await expect(dialog(page, "basic")).toBeVisible();
+      expect(await dialog(page, "basic").evaluate((element) => element.matches(":modal"))).toBe(
+        true,
+      );
+      expect(await events(page, "basic")).toEqual([
+        { type: "idgClose", detail: { returnValue: "", reason: "method" } },
+      ]);
+    });
+  }
 });
 
 test.describe("idg-dialog keeps the page behind it out of reach", () => {

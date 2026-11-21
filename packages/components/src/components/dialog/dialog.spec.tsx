@@ -326,4 +326,40 @@ describe("idg-dialog nested and moved", () => {
     expect(native(dialog).open).toBe(true);
     expect(methods.showModal).toHaveBeenCalledTimes(2);
   });
+
+  it("stays open when it is moved and opened again in the same task", async () => {
+    const { root } = await render(
+      <div>
+        <idg-dialog open>Body</idg-dialog>
+      </div>,
+    );
+    const dialog = root.querySelector("idg-dialog") as DialogHost;
+    const closes: DialogCloseDetail[] = [];
+    dialog.addEventListener("idgClose", (event) => {
+      closes.push((event as CustomEvent<DialogCloseDetail>).detail);
+    });
+    removeHost(dialog);
+    root.append(dialog);
+    await dialog.showModal();
+    await nextTask();
+    expect(closes).toEqual([{ returnValue: "", reason: "method" }]);
+    expect(dialog.open).toBe(true);
+    expect(native(dialog).open).toBe(true);
+  });
+
+  it("stays open when it is closed and opened again in the same task", async () => {
+    const { root } = await render(<idg-dialog open>Body</idg-dialog>);
+    const dialog = root as DialogHost;
+    const closes: DialogCloseDetail[] = [];
+    dialog.addEventListener("idgClose", (event) => {
+      closes.push((event as CustomEvent<DialogCloseDetail>).detail);
+    });
+    dialog.open = false;
+    dialog.open = true;
+    await nextTask();
+    expect(closes).toEqual([{ returnValue: "", reason: "method" }]);
+    expect(dialog.open).toBe(true);
+    expect(native(dialog).open).toBe(true);
+    expect(methods.showModal).toHaveBeenCalledTimes(2);
+  });
 });
