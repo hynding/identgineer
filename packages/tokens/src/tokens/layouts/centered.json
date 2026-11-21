@@ -1,0 +1,38 @@
+{
+  "$description": "One narrow column on the page centre, for reading or a single task.",
+  "$extensions": {
+    "identgineer": {
+      "label": "Centered"
+    }
+  },
+  "tokens": {
+    "layout": {
+      "$type": "dimension",
+      "content-max": {
+        "$value": "40rem"
+      },
+      "page-gutter": {
+        "$value": "{space.m}"
+      },
+      "section-gap": {
+        "$value": "{space.xl}"
+      },
+      "gap": {
+        "$value": "{space.m}"
+      },
+      "columns": {
+        "$type": "number",
+        "$value": 2
+      },
+      "grid-min": {
+        "$value": "16rem"
+      },
+      "aside-width": {
+        "$value": "14rem"
+      },
+      "nav-size": {
+        "$value": "4rem"
+      }
+    }
+  }
+}

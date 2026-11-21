@@ -1,0 +1,38 @@
+{
+  "$description": "A tight mosaic of tiles close together, with a narrow gap and many small tracks.",
+  "$extensions": {
+    "identgineer": {
+      "label": "Bento"
+    }
+  },
+  "tokens": {
+    "layout": {
+      "$type": "dimension",
+      "content-max": {
+        "$value": "76rem"
+      },
+      "page-gutter": {
+        "$value": "{space.m}"
+      },
+      "section-gap": {
+        "$value": "{space.l}"
+      },
+      "gap": {
+        "$value": "{space.xs}"
+      },
+      "columns": {
+        "$type": "number",
+        "$value": 5
+      },
+      "grid-min": {
+        "$value": "12rem"
+      },
+      "aside-width": {
+        "$value": "18rem"
+      },
+      "nav-size": {
+        "$value": "4rem"
+      }
+    }
+  }
+}

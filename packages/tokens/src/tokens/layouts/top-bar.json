@@ -1,0 +1,38 @@
+{
+  "$description": "Navigation across the top of a centred, moderately wide page; the neutral default.",
+  "$extensions": {
+    "identgineer": {
+      "label": "Top bar"
+    }
+  },
+  "tokens": {
+    "layout": {
+      "$type": "dimension",
+      "content-max": {
+        "$value": "72rem"
+      },
+      "page-gutter": {
+        "$value": "{space.m}"
+      },
+      "section-gap": {
+        "$value": "{space.xl}"
+      },
+      "gap": {
+        "$value": "{space.m}"
+      },
+      "columns": {
+        "$type": "number",
+        "$value": 4
+      },
+      "grid-min": {
+        "$value": "14rem"
+      },
+      "aside-width": {
+        "$value": "18rem"
+      },
+      "nav-size": {
+        "$value": "4rem"
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "$description": "A wide editorial page of many narrow columns and a deep gap between stories.",
+  "$extensions": {
+    "identgineer": {
+      "label": "Magazine"
+    }
+  },
+  "tokens": {
+    "layout": {
+      "$type": "dimension",
+      "content-max": {
+        "$value": "80rem"
+      },
+      "page-gutter": {
+        "$value": "{space.m}"
+      },
+      "section-gap": {
+        "$value": "{space.2xl}"
+      },
+      "gap": {
+        "$value": "{space.m}"
+      },
+      "columns": {
+        "$type": "number",
+        "$value": 6
+      },
+      "grid-min": {
+        "$value": "11rem"
+      },
+      "aside-width": {
+        "$value": "14rem"
+      },
+      "nav-size": {
+        "$value": "5rem"
+      }
+    }
+  }
+}

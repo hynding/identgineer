@@ -8,9 +8,9 @@ export interface ModeSource {
   readonly json: unknown;
 }
 
-export type ModeAxis = "design" | "ux";
+export type ModeAxis = "design" | "layout" | "ux";
 
-const NOUNS: Record<ModeAxis, string> = { design: "design", ux: "UX mode" };
+const NOUNS: Record<ModeAxis, string> = { design: "design", layout: "layout", ux: "UX mode" };
 const METADATA_KEYS = ["$description", "$extensions"];
 
 export interface ParsedMode {
@@ -20,7 +20,7 @@ export interface ParsedMode {
   readonly label: string;
   readonly description: string;
   readonly tokens: readonly FlatToken[];
-  /** Tokens that replace `tokens` when a design cannot be translucent; always empty for UX modes. */
+  /** Tokens that replace `tokens` when a design cannot be translucent; always empty for layouts and UX modes. */
   readonly opaque: readonly FlatToken[];
 }
 

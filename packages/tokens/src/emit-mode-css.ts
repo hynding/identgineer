@@ -46,6 +46,12 @@ export function emitDesignCss(input: DesignCssInput): string {
   return layered("idg.design", blocks);
 }
 
+export function emitLayoutCss(input: ModeCssInput): string {
+  return layered("idg.layout", [
+    emitDeclarationRule(selectorsFor("layout", input), input.tokens, 1),
+  ]);
+}
+
 export function emitUxCss(input: ModeCssInput): string {
   return layered("idg.ux", [emitDeclarationRule(selectorsFor("ux", input), input.tokens, 1)]);
 }

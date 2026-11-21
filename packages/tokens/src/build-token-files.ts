@@ -1,5 +1,5 @@
 import { emitBaseCss, emitStylesheet, emitThemeCss } from "./emit-css.ts";
-import { emitDesignCss, emitPreferencesCss, emitUxCss } from "./emit-mode-css.ts";
+import { emitDesignCss, emitLayoutCss, emitPreferencesCss, emitUxCss } from "./emit-mode-css.ts";
 import { flattenTokens } from "./flatten-tokens.ts";
 import { mergeTokens } from "./merge-tokens.ts";
 import { parseMode, type ModeSource } from "./parse-mode.ts";
@@ -19,10 +19,12 @@ export interface TokenSources {
   readonly shared: readonly SharedSource[];
   readonly themes: readonly ThemeSource[];
   readonly designs: readonly ModeSource[];
+  readonly layouts: readonly ModeSource[];
   readonly uxModes: readonly ModeSource[];
   readonly preferences: PreferencesSource;
   readonly defaultThemeId: string;
   readonly defaultDesignId: string;
+  readonly defaultLayoutId: string;
   readonly defaultUxModeId: string;
 }
 
@@ -72,6 +74,20 @@ function designBodies(sources: TokenSources, shared: readonly FlatToken[]): Body
   });
 }
 
+function layoutBodies(sources: TokenSources, shared: readonly FlatToken[]): Body[] {
+  return sources.layouts.map((source) => {
+    const layout = parseMode(source, "layout");
+    return {
+      id: layout.id,
+      body: emitLayoutCss({
+        id: layout.id,
+        isDefault: layout.id === sources.defaultLayoutId,
+        tokens: resolveMode(shared, layout.tokens),
+      }),
+    };
+  });
+}
+
 function uxBodies(sources: TokenSources, shared: readonly FlatToken[]): Body[] {
   return sources.uxModes.map((source) => {
     const mode = parseMode(source, "ux");
@@ -112,6 +128,12 @@ export function buildTokenFiles(sources: TokenSources): Record<string, string> {
     "designs",
   );
   assertDefaultExists(
+    sources.layouts.map(({ id }) => id),
+    sources.defaultLayoutId,
+    "layout",
+    "layouts",
+  );
+  assertDefaultExists(
     sources.uxModes.map(({ id }) => id),
     sources.defaultUxModeId,
     "UX mode",
@@ -121,6 +143,7 @@ export function buildTokenFiles(sources: TokenSources): Record<string, string> {
   const baseBody = emitBaseCss(resolveShared(shared));
   const themes = themeBodies(sources, shared);
   const designs = designBodies(sources, shared);
+  const layouts = layoutBodies(sources, shared);
   const uxModes = uxBodies(sources, shared);
   const preferences = preferencesBody(sources, shared);
 
@@ -128,11 +151,12 @@ export function buildTokenFiles(sources: TokenSources): Record<string, string> {
     "tokens.css": emitStylesheet(baseBody),
     ...Object.fromEntries(filesFor("themes", themes)),
     ...Object.fromEntries(filesFor("designs", designs)),
+    ...Object.fromEntries(filesFor("layouts", layouts)),
     ...Object.fromEntries(filesFor("ux", uxModes)),
     "preferences.css": emitStylesheet(preferences),
     "index.css": emitStylesheet(
       baseBody,
-      ...[...themes, ...designs, ...uxModes].map(({ body }) => body),
+      ...[...themes, ...designs, ...layouts, ...uxModes].map(({ body }) => body),
       preferences,
     ),
   };
