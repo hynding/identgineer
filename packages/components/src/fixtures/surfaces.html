@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>surface components fixture</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Surfaces</h1>
+
+      <section class="dashboard" id="dashboard" aria-labelledby="dashboard-title">
+        <header class="dashboard-header">
+          <div>
+            <p class="eyebrow">Third quarter</p>
+            <h2 id="dashboard-title">Studio overview</h2>
+          </div>
+          <idg-avatar-group label="Team" max="4">
+            <idg-avatar name="Ada Lovelace"></idg-avatar>
+            <idg-avatar name="Grace Hopper"></idg-avatar>
+            <idg-avatar name="Alan Turing"></idg-avatar>
+            <idg-avatar name="Margaret Hamilton"></idg-avatar>
+            <idg-avatar name="Edsger Dijkstra"></idg-avatar>
+            <idg-avatar name="Barbara Liskov"></idg-avatar>
+          </idg-avatar-group>
+        </header>
+
+        <div class="dashboard-alerts">
+          <idg-alert variant="warning" dismissible>
+            <span slot="title">Card expires soon</span>
+            Update the payment method before 30 September to keep the studio plan.
+          </idg-alert>
+          <idg-alert variant="success">
+            <span slot="title">Release 2.4 shipped</span>
+            Every region is on the new build and error rates are flat.
+          </idg-alert>
+        </div>
+
+        <div class="dashboard-stats">
+          <idg-card variant="raised">
+            <idg-stat label="Revenue" value="$48.2k" delta="12.4%" direction="up">
+              <idg-icon slot="chart" name="chart" size="xl"></idg-icon>
+            </idg-stat>
+          </idg-card>
+          <idg-card>
+            <idg-stat label="Active users" value="3,204" delta="5.1%" direction="up">
+              <idg-icon slot="chart" name="user" size="xl"></idg-icon>
+            </idg-stat>
+          </idg-card>
+          <idg-card variant="outlined">
+            <idg-stat label="Churn" value="2.1%" delta="0.4%" direction="up" sentiment="negative">
+              <idg-icon slot="chart" name="bell" size="xl"></idg-icon>
+            </idg-stat>
+          </idg-card>
+          <idg-card variant="raised">
+            <idg-stat label="Uptime" value="99.98%" delta="0%" direction="flat">
+              <idg-icon slot="chart" name="shield" size="xl"></idg-icon>
+            </idg-stat>
+          </idg-card>
+        </div>
+
+        <div class="dashboard-panels">
+          <idg-card heading="Team activity" variant="raised">
+            <idg-badge slot="header" variant="accent" dot>Live</idg-badge>
+            <ul class="activity">
+              <li>
+                <idg-avatar name="Ada Lovelace" size="sm" alt="" status="online"></idg-avatar>
+                <span class="who">Ada Lovelace</span>
+                <idg-badge variant="success" size="sm">Done</idg-badge>
+              </li>
+              <li>
+                <idg-avatar name="Alan Turing" size="sm" alt="" status="busy"></idg-avatar>
+                <span class="who">Alan Turing</span>
+                <idg-badge variant="warning" size="sm">In review</idg-badge>
+              </li>
+              <li>
+                <idg-avatar name="Grace Hopper" size="sm" alt=""></idg-avatar>
+                <span class="who">Grace Hopper</span>
+                <idg-badge variant="danger" size="sm">Blocked</idg-badge>
+              </li>
+            </ul>
+            <idg-progress label="Sprint 14" value="64" show-value></idg-progress>
+          </idg-card>
+
+          <idg-card heading="Release 2.4 notes" href="#release-notes" variant="plain" padding="md">
+            <div slot="media" class="banner" role="presentation"></div>
+            <idg-badge slot="header" variant="info">New</idg-badge>
+            Faster builds, a calmer settings page and a keyboard shortcut for everything.
+            <div slot="footer" class="row">
+              <idg-badge variant="neutral" size="sm">12 changes</idg-badge>
+              <idg-button size="sm" variant="secondary">Share</idg-button>
+            </div>
+          </idg-card>
+
+          <idg-card heading="Go further" variant="accent">
+            Unlock audit logs, single sign-on and priority support for the whole studio.
+            <idg-button slot="footer" variant="secondary">Compare plans</idg-button>
+          </idg-card>
+        </div>
+      </section>
+
+      <section class="gallery" id="icons" aria-labelledby="icons-title">
+        <h2 id="icons-title">Icons</h2>
+        <ul class="swatches">
+          <li class="swatch">
+            <idg-icon name="chevron-up" size="lg"></idg-icon><code>chevron-up</code>
+          </li>
+          <li class="swatch">
+            <idg-icon name="chevron-down" size="lg"></idg-icon><code>chevron-down</code>
+          </li>
+          <li class="swatch">
+            <idg-icon name="chevron-left" size="lg"></idg-icon><code>chevron-left</code>
+          </li>
+          <li class="swatch">
+            <idg-icon name="chevron-right" size="lg"></idg-icon><code>chevron-right</code>
+          </li>
+          <li class="swatch">
+            <idg-icon name="arrow-up" size="lg"></idg-icon><code>arrow-up</code>
+          </li>
+          <li class="swatch">
+            <idg-icon name="arrow-down" size="lg"></idg-icon><code>arrow-down</code>
+          </li>
+          <li class="swatch">
+            <idg-icon name="arrow-left" size="lg"></idg-icon><code>arrow-left</code>
+          </li>
+          <li class="swatch">
+            <idg-icon name="arrow-right" size="lg"></idg-icon><code>arrow-right</code>
+          </li>
+          <li class="swatch"><idg-icon name="check" size="lg"></idg-icon><code>check</code></li>
+          <li class="swatch"><idg-icon name="close" size="lg"></idg-icon><code>close</code></li>
+          <li class="swatch"><idg-icon name="plus" size="lg"></idg-icon><code>plus</code></li>
+          <li class="swatch"><idg-icon name="minus" size="lg"></idg-icon><code>minus</code></li>
+          <li class="swatch"><idg-icon name="search" size="lg"></idg-icon><code>search</code></li>
+          <li class="swatch"><idg-icon name="eye" size="lg"></idg-icon><code>eye</code></li>
+          <li class="swatch"><idg-icon name="eye-off" size="lg"></idg-icon><code>eye-off</code></li>
+          <li class="swatch"><idg-icon name="info" size="lg"></idg-icon><code>info</code></li>
+          <li class="swatch"><idg-icon name="warning" size="lg"></idg-icon><code>warning</code></li>
+          <li class="swatch"><idg-icon name="error" size="lg"></idg-icon><code>error</code></li>
+          <li class="swatch"><idg-icon name="success" size="lg"></idg-icon><code>success</code></li>
+          <li class="swatch"><idg-icon name="user" size="lg"></idg-icon><code>user</code></li>
+          <li class="swatch">
+            <idg-icon name="settings" size="lg"></idg-icon><code>settings</code>
+          </li>
+          <li class="swatch"><idg-icon name="menu" size="lg"></idg-icon><code>menu</code></li>
+          <li class="swatch">
+            <idg-icon name="external-link" size="lg"></idg-icon><code>external-link</code>
+          </li>
+          <li class="swatch"><idg-icon name="copy" size="lg"></idg-icon><code>copy</code></li>
+          <li class="swatch"><idg-icon name="trash" size="lg"></idg-icon><code>trash</code></li>
+          <li class="swatch"><idg-icon name="edit" size="lg"></idg-icon><code>edit</code></li>
+          <li class="swatch">
+            <idg-icon name="calendar" size="lg"></idg-icon><code>calendar</code>
+          </li>
+          <li class="swatch"><idg-icon name="clock" size="lg"></idg-icon><code>clock</code></li>
+          <li class="swatch"><idg-icon name="lock" size="lg"></idg-icon><code>lock</code></li>
+          <li class="swatch"><idg-icon name="mail" size="lg"></idg-icon><code>mail</code></li>
+          <li class="swatch"><idg-icon name="bell" size="lg"></idg-icon><code>bell</code></li>
+          <li class="swatch"><idg-icon name="home" size="lg"></idg-icon><code>home</code></li>
+          <li class="swatch"><idg-icon name="chart" size="lg"></idg-icon><code>chart</code></li>
+          <li class="swatch"><idg-icon name="shield" size="lg"></idg-icon><code>shield</code></li>
+          <li class="swatch">
+            <idg-icon name="sparkles" size="lg"></idg-icon><code>sparkles</code>
+          </li>
+          <li class="swatch"><idg-icon name="sun" size="lg"></idg-icon><code>sun</code></li>
+          <li class="swatch"><idg-icon name="moon" size="lg"></idg-icon><code>moon</code></li>
+        </ul>
+        <p class="row">
+          <idg-icon name="info" label="Information"></idg-icon>
+          <idg-icon name="search" size="sm"></idg-icon>
+          <idg-icon name="search" size="md"></idg-icon>
+          <idg-icon name="search" size="lg"></idg-icon>
+          <idg-icon name="search" size="xl"></idg-icon>
+        </p>
+      </section>
+
+      <section class="gallery" id="links" aria-labelledby="links-title">
+        <h2 id="links-title">Links</h2>
+        <p>
+          Read the
+          <idg-link id="inline-link" href="/fixtures/surfaces.html">documentation</idg-link>, visit
+          <idg-link id="external-link" href="https://example.com" external
+            >an external site</idg-link
+          >, or ignore
+          <idg-link id="unsafe-link" href="javascript:alert(1)">an unsafe link</idg-link>.
+        </p>
+      </section>
+
+      <section class="gallery" id="badges" aria-labelledby="badges-title">
+        <h2 id="badges-title">Badges</h2>
+        <p class="row">
+          <idg-badge>Neutral</idg-badge>
+          <idg-badge variant="accent">Accent</idg-badge>
+          <idg-badge variant="success">Success</idg-badge>
+          <idg-badge variant="warning">Warning</idg-badge>
+          <idg-badge variant="danger">Danger</idg-badge>
+          <idg-badge variant="info">Info</idg-badge>
+        </p>
+        <p class="row">
+          <idg-badge size="sm">Neutral</idg-badge>
+          <idg-badge size="sm" variant="accent">Accent</idg-badge>
+          <idg-badge size="sm" variant="success" dot>Success</idg-badge>
+          <idg-badge size="sm" variant="warning" dot>Warning</idg-badge>
+          <idg-badge size="sm" variant="danger" dot>Danger</idg-badge>
+          <idg-badge size="sm" variant="info" dot>Info</idg-badge>
+        </p>
+      </section>
+
+      <section class="gallery" id="avatars" aria-labelledby="avatars-title">
+        <h2 id="avatars-title">Avatars</h2>
+        <p class="row">
+          <idg-avatar name="Ada Lovelace" size="xs"></idg-avatar>
+          <idg-avatar name="Grace Hopper" size="sm"></idg-avatar>
+          <idg-avatar name="Alan Turing" size="md"></idg-avatar>
+          <idg-avatar name="Margaret Hamilton" size="lg"></idg-avatar>
+          <idg-avatar name="Edsger Dijkstra" size="xl"></idg-avatar>
+          <idg-avatar></idg-avatar>
+        </p>
+        <p class="row">
+          <idg-avatar
+            id="avatar-picture"
+            src="/fixtures/avatar.svg"
+            name="Ada Lovelace"
+            size="lg"
+            status="online"
+          ></idg-avatar>
+          <idg-avatar
+            id="avatar-broken"
+            src="/fixtures/not-an-image.png"
+            name="Grace Hopper"
+            size="lg"
+            status="away"
+          ></idg-avatar>
+          <idg-avatar
+            id="avatar-unsafe"
+            src="javascript:alert(1)"
+            name="Alan Turing"
+            size="lg"
+            status="busy"
+          ></idg-avatar>
+          <idg-avatar name="Margaret Hamilton" size="lg" status="offline"></idg-avatar>
+        </p>
+        <p class="row">
+          <idg-avatar-group id="avatar-group" label="Reviewers" max="3">
+            <idg-avatar name="Ada Lovelace"></idg-avatar>
+            <idg-avatar name="Grace Hopper"></idg-avatar>
+            <idg-avatar name="Alan Turing"></idg-avatar>
+            <idg-avatar name="Margaret Hamilton"></idg-avatar>
+            <idg-avatar name="Edsger Dijkstra"></idg-avatar>
+          </idg-avatar-group>
+          <idg-avatar-group size="sm">
+            <idg-avatar name="Ada Lovelace" alt=""></idg-avatar>
+            <idg-avatar name="Grace Hopper" alt=""></idg-avatar>
+          </idg-avatar-group>
+        </p>
+      </section>
+
+      <section class="gallery column" id="alerts" aria-labelledby="alerts-title">
+        <h2 id="alerts-title">Alerts</h2>
+        <idg-alert id="info-alert">
+          <span slot="title">Information</span>
+          A new version of the schema is available.
+        </idg-alert>
+        <idg-alert variant="success">
+          <span slot="title">Saved</span>
+          Your changes were published.
+        </idg-alert>
+        <idg-alert variant="warning">
+          <span slot="title">Almost full</span>
+          The workspace is using 92 percent of its storage.
+        </idg-alert>
+        <idg-alert variant="danger" id="dismissible-alert" dismissible>
+          <span slot="title">Upload failed</span>
+          The file was larger than the 10 MB limit.
+        </idg-alert>
+        <idg-alert variant="info">A message with no title.</idg-alert>
+      </section>
+
+      <section class="gallery column" id="progress" aria-labelledby="progress-title">
+        <h2 id="progress-title">Progress</h2>
+        <idg-progress label="Starting" value="0"></idg-progress>
+        <idg-progress id="progress-upload" label="Uploading" value="40" show-value></idg-progress>
+        <idg-progress label="Finished" value="100" show-value size="lg"></idg-progress>
+        <idg-progress id="progress-syncing" label="Syncing" indeterminate></idg-progress>
+        <idg-progress label="Thin" value="55" size="sm"></idg-progress>
+      </section>
+
+      <section class="gallery column" id="skeletons" aria-labelledby="skeletons-title">
+        <h2 id="skeletons-title">Skeletons</h2>
+        <div id="loading-region" class="loading" aria-busy="true">
+          <p class="visually-hidden" role="status">Loading profile</p>
+          <idg-skeleton variant="circle"></idg-skeleton>
+          <idg-skeleton id="skeleton-text" lines="3"></idg-skeleton>
+          <idg-skeleton variant="rect"></idg-skeleton>
+        </div>
+      </section>
+
+      <section class="gallery" id="stats" aria-labelledby="stats-title">
+        <h2 id="stats-title">Stats</h2>
+        <idg-stat
+          id="stat-up"
+          label="Revenue"
+          value="$48.2k"
+          delta="12.4%"
+          direction="up"
+        ></idg-stat>
+        <idg-stat
+          id="stat-down"
+          label="Refunds"
+          value="$1.1k"
+          delta="3.0%"
+          direction="down"
+        ></idg-stat>
+        <idg-stat label="Uptime" value="99.98%" delta="0%"></idg-stat>
+        <idg-stat
+          label="Churn"
+          value="2.1%"
+          delta="0.4%"
+          direction="up"
+          sentiment="negative"
+        ></idg-stat>
+        <idg-stat label="Orders" value="812"></idg-stat>
+      </section>
+
+      <section class="gallery column" id="dividers" aria-labelledby="dividers-title">
+        <h2 id="dividers-title">Dividers</h2>
+        <p>Above</p>
+        <idg-divider></idg-divider>
+        <p>Below</p>
+        <p class="row">
+          One <idg-divider orientation="vertical"></idg-divider> Two
+          <idg-divider orientation="vertical" decorative></idg-divider> Three
+        </p>
+      </section>
+
+      <section class="gallery cards" id="cards" aria-labelledby="cards-title">
+        <h2 id="cards-title">Cards</h2>
+        <idg-card heading="Plain" id="card-plain"
+          >A plain card with the design's own surface.</idg-card
+        >
+        <idg-card heading="Raised" variant="raised"
+          >A raised card with the second elevation.</idg-card
+        >
+        <idg-card heading="Outlined" variant="outlined"
+          >An outlined card with a strong edge of its own.</idg-card
+        >
+        <idg-card heading="Accent" variant="accent"
+          >An accent card in the theme's accent colour.</idg-card
+        >
+        <idg-card heading="Compact" padding="sm">Small padding.</idg-card>
+        <idg-card heading="Roomy" padding="lg">Large padding.</idg-card>
+        <idg-card id="card-bare" padding="none">
+          <div class="banner" role="presentation"></div>
+        </idg-card>
+        <idg-card heading="Interactive" interactive id="card-interactive">Lifts on hover.</idg-card>
+        <idg-card id="card-linked" heading="One link" href="#linked" variant="raised">
+          <idg-badge slot="header" variant="accent">Linked</idg-badge>
+          The whole card follows the heading's link.
+          <idg-button slot="footer" id="card-footer-button" size="sm" variant="secondary"
+            >Share</idg-button
+          >
+        </idg-card>
+        <idg-card heading="Unsafe link" href="javascript:alert(1)" id="card-unsafe"
+          >The link is dropped.</idg-card
+        >
+      </section>
+    </main>
+  </body>
+</html>

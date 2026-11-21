@@ -33,6 +33,96 @@
         <idg-button type="submit">Submit</idg-button>
         <idg-button type="reset" variant="secondary">Reset</idg-button>
       </form>
+      <h1>Dashboard</h1>
+      <section class="dashboard" id="dashboard" aria-labelledby="dashboard-title">
+        <header class="dashboard-header">
+          <div>
+            <p class="eyebrow">Third quarter</p>
+            <h2 id="dashboard-title">Studio overview</h2>
+          </div>
+          <idg-avatar-group label="Team" max="4">
+            <idg-avatar name="Ada Lovelace"></idg-avatar>
+            <idg-avatar name="Grace Hopper"></idg-avatar>
+            <idg-avatar name="Alan Turing"></idg-avatar>
+            <idg-avatar name="Margaret Hamilton"></idg-avatar>
+            <idg-avatar name="Edsger Dijkstra"></idg-avatar>
+            <idg-avatar name="Barbara Liskov"></idg-avatar>
+          </idg-avatar-group>
+        </header>
+
+        <div class="dashboard-alerts">
+          <idg-alert variant="warning" dismissible>
+            <span slot="title">Card expires soon</span>
+            Update the payment method before 30 September to keep the studio plan.
+          </idg-alert>
+          <idg-alert variant="success">
+            <span slot="title">Release 2.4 shipped</span>
+            Every region is on the new build and error rates are flat.
+          </idg-alert>
+        </div>
+
+        <div class="dashboard-stats">
+          <idg-card variant="raised">
+            <idg-stat label="Revenue" value="$48.2k" delta="12.4%" direction="up">
+              <idg-icon slot="chart" name="chart" size="xl"></idg-icon>
+            </idg-stat>
+          </idg-card>
+          <idg-card>
+            <idg-stat label="Active users" value="3,204" delta="5.1%" direction="up">
+              <idg-icon slot="chart" name="user" size="xl"></idg-icon>
+            </idg-stat>
+          </idg-card>
+          <idg-card variant="outlined">
+            <idg-stat label="Churn" value="2.1%" delta="0.4%" direction="up" sentiment="negative">
+              <idg-icon slot="chart" name="bell" size="xl"></idg-icon>
+            </idg-stat>
+          </idg-card>
+          <idg-card variant="raised">
+            <idg-stat label="Uptime" value="99.98%" delta="0%" direction="flat">
+              <idg-icon slot="chart" name="shield" size="xl"></idg-icon>
+            </idg-stat>
+          </idg-card>
+        </div>
+
+        <div class="dashboard-panels">
+          <idg-card heading="Team activity" variant="raised">
+            <idg-badge slot="header" variant="accent" dot>Live</idg-badge>
+            <ul class="activity">
+              <li>
+                <idg-avatar name="Ada Lovelace" size="sm" alt="" status="online"></idg-avatar>
+                <span class="who">Ada Lovelace</span>
+                <idg-badge variant="success" size="sm">Done</idg-badge>
+              </li>
+              <li>
+                <idg-avatar name="Alan Turing" size="sm" alt="" status="busy"></idg-avatar>
+                <span class="who">Alan Turing</span>
+                <idg-badge variant="warning" size="sm">In review</idg-badge>
+              </li>
+              <li>
+                <idg-avatar name="Grace Hopper" size="sm" alt=""></idg-avatar>
+                <span class="who">Grace Hopper</span>
+                <idg-badge variant="danger" size="sm">Blocked</idg-badge>
+              </li>
+            </ul>
+            <idg-progress label="Sprint 14" value="64" show-value></idg-progress>
+          </idg-card>
+
+          <idg-card heading="Release 2.4 notes" href="#release-notes" variant="plain" padding="md">
+            <div slot="media" class="banner" role="presentation"></div>
+            <idg-badge slot="header" variant="info">New</idg-badge>
+            Faster builds, a calmer settings page and a keyboard shortcut for everything.
+            <div slot="footer" class="row">
+              <idg-badge variant="neutral" size="sm">12 changes</idg-badge>
+              <idg-button size="sm" variant="secondary">Share</idg-button>
+            </div>
+          </idg-card>
+
+          <idg-card heading="Go further" variant="accent">
+            Unlock audit logs, single sign-on and priority support for the whole studio.
+            <idg-button slot="footer" variant="secondary">Compare plans</idg-button>
+          </idg-card>
+        </div>
+      </section>
       <h1>Sign in</h1>
       <form id="signin" class="stack" method="get" action="/csp-demo.html">
         <idg-field label="Email" hint="The address you registered with" required>

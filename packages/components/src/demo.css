@@ -27,7 +27,18 @@ idg-select:not(.hydrated),
 idg-checkbox:not(.hydrated),
 idg-radio-group:not(.hydrated),
 idg-radio:not(.hydrated),
-idg-switch:not(.hydrated) {
+idg-switch:not(.hydrated),
+idg-icon:not(.hydrated),
+idg-link:not(.hydrated),
+idg-card:not(.hydrated),
+idg-badge:not(.hydrated),
+idg-avatar:not(.hydrated),
+idg-avatar-group:not(.hydrated),
+idg-alert:not(.hydrated),
+idg-progress:not(.hydrated),
+idg-skeleton:not(.hydrated),
+idg-stat:not(.hydrated),
+idg-divider:not(.hydrated) {
   visibility: hidden;
 }
 
@@ -48,4 +59,174 @@ idg-switch:not(.hydrated) {
 .stack > idg-checkbox,
 .stack > idg-switch {
   justify-self: start;
+}
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A gallery lays one component's variants out in a grid. Headings and rows span it. */
+section.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: var(--idg-space-s);
+  align-items: start;
+}
+
+section.gallery > h2,
+section.gallery > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+section.gallery.column {
+  grid-template-columns: minmax(0, 36rem);
+}
+
+section.gallery.cards {
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  align-items: stretch;
+}
+
+.swatches {
+  display: contents;
+  list-style: none;
+}
+
+.swatch {
+  display: flex;
+  align-items: center;
+  gap: var(--idg-space-xs);
+}
+
+.loading {
+  display: grid;
+  gap: var(--idg-space-s);
+}
+
+/* A coloured backdrop for the dashboard, so a translucent design has something to blur. */
+section.dashboard {
+  position: relative;
+  display: grid;
+  isolation: isolate;
+  overflow: hidden;
+  gap: var(--idg-space-m);
+  padding: var(--idg-space-l);
+  border-radius: var(--idg-shape-radius-lg);
+  background:
+    radial-gradient(
+      45% 60% at 28% 48%,
+      color-mix(in srgb, var(--idg-color-accent) 38%, transparent),
+      transparent 100%
+    ),
+    radial-gradient(
+      40% 55% at 88% 92%,
+      color-mix(in srgb, var(--idg-color-info) 36%, transparent),
+      transparent 100%
+    ),
+    radial-gradient(
+      35% 45% at 92% 8%,
+      color-mix(in srgb, var(--idg-color-warning) 30%, transparent),
+      transparent 100%
+    ),
+    var(--idg-color-bg-subtle);
+}
+
+/* Two hard-edged discs behind the cards give a translucent design an edge to blur. */
+section.dashboard::before,
+section.dashboard::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  background: var(--idg-gradient-brand);
+  opacity: 0.32;
+}
+
+section.dashboard::before {
+  inline-size: 17rem;
+  block-size: 17rem;
+  inset-block-start: 11rem;
+  inset-inline-start: 38%;
+}
+
+section.dashboard::after {
+  inline-size: 12rem;
+  block-size: 12rem;
+  inset-block-end: -3rem;
+  inset-inline-start: 6%;
+}
+
+.dashboard-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--idg-space-s);
+}
+
+.dashboard h2 {
+  margin: 0;
+  font-family: var(--idg-font-family-display);
+  font-size: calc(var(--idg-font-size-step-3) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+  text-transform: var(--idg-ornament-heading-transform);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-semibold);
+  text-transform: uppercase;
+}
+
+.dashboard-alerts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: var(--idg-space-s);
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--idg-space-m);
+}
+
+.dashboard-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: var(--idg-space-m);
+}
+
+.activity {
+  display: grid;
+  gap: var(--idg-space-xs);
+  margin: 0 0 var(--idg-space-s);
+  padding: 0;
+  list-style: none;
+}
+
+.activity li {
+  display: flex;
+  align-items: center;
+  gap: var(--idg-space-xs);
+}
+
+.who {
+  flex: 1 1 auto;
+  font-weight: var(--idg-font-weight-semibold);
+}
+
+.banner {
+  block-size: 7rem;
+  background: var(--idg-gradient-brand);
 }
