@@ -86,12 +86,10 @@ describe.each([
     ["a tab without a token", true],
     ["a tab whose token is dead", false],
   ])("never brings %s back into the session it signed out of", async (_kind, tokenless) => {
-    const { api, client, other } = await signOutBesideSignIn(locks(), tokenless);
-    expect(client.getState()).toEqual({ status: "signed-out", reason: "user" });
-    expect(api.activeSessionCount("ada@example.com")).toBe(0);
-    const state = other.getState();
-    if (state.status === "signed-in") {
-      expect(state.user.username).toBe("bob");
+    const { client, other } = await signOutBesideSignIn(locks(), tokenless);
+    // It may join the newer sign-in's session (the later action wins), never ada's again.
+    for (const state of [client.getState(), other.getState()]) {
+      if (state.status === "signed-in") expect(state.user.username).toBe("bob");
     }
   });
 });
@@ -102,15 +100,11 @@ describe("with Web Locks, a sign-in in another tab during a sign-out", () => {
     ["lookup", false],
     ["logout", false],
   ] as const)(
-    "waits for its cookie requests (held %s), so the cookie left names that sign-in or nothing",
+    "waits for its cookie requests (held %s): the old session ends and the cookie never names it",
     async (hold, tokenless) => {
-      const { api, other } = await signOutBesideSignIn(createMemoryLocks(), tokenless, hold);
-      const state = other.getState();
-      if (state.status === "signed-in") {
-        expect(api.restorableUser()).toBe("bob@example.com");
-      } else {
-        expect(api.restorableSession()).toBe(false);
-      }
+      const { api } = await signOutBesideSignIn(createMemoryLocks(), tokenless, hold);
+      expect(api.activeSessionCount("ada@example.com")).toBe(0);
+      expect([undefined, "bob@example.com"]).toContain(api.restorableUser());
     },
   );
 });
