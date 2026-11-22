@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { CORNERS, TONES } from "./brand-kit.ts";
 import { TYPOGRAPHY_IDS } from "./font-pairings.ts";
 import { generateBrandTheme } from "./generate-brand-theme.ts";
-import { toOklch } from "./oklch.ts";
+import { fromOklch, toOklch } from "./oklch.ts";
 import { formatHexColor, parseHexColor, type Rgb } from "./srgb.ts";
 import { seeded } from "./seeded-random.ts";
 import { BUILT_IN_PAIRS, failingUsedPairs } from "./used-pairs.ts";
@@ -118,6 +118,39 @@ function weakestOnPage(colors: ReadonlyMap<string, string>, role: string): numbe
   );
 }
 
+/** White, or the darkest text the generator would pair with the colour, reaches 4.5:1 on it. */
+function carriesText(primary: string): boolean {
+  const { hue, chroma } = toOklch(rgbOf(primary));
+  const dark = formatHexColor(fromOklch({ lightness: 0.2, chroma: Math.min(0.03, chroma), hue }));
+  return contrastRatio(primary, "#ffffff") >= 4.5 || contrastRatio(primary, dark) >= 4.5;
+}
+
+/**
+ * The indicator and the fill's edge reach 3:1 on every page background (the suite checks that
+ * too) and are the accent's own colours wherever the accent already does; the hover differs.
+ */
+function accentRoleProblems(colors: ReadonlyMap<string, string>): string[] {
+  const problems: string[] = [];
+  for (const role of ["accent-indicator", "accent-border"]) {
+    const ratio = weakestOnPage(colors, role);
+    if (ratio < 3) problems.push(`${role} is ${ratio.toFixed(2)}:1 on the page`);
+  }
+  if (weakestOnPage(colors, "accent") >= 3) {
+    for (const [role, own] of [
+      ["accent-indicator", "accent"],
+      ["accent-border", "accent"],
+      ["on-accent-indicator", "on-accent"],
+    ] as const) {
+      if (colors.get(role) !== colors.get(own)) {
+        problems.push(`${role} differs from ${own} although the accent passes on the page`);
+      }
+    }
+  }
+  if (colors.get("accent-hover") === colors.get("accent"))
+    problems.push("accent-hover is the accent");
+  return problems;
+}
+
 /** Problems with one case, each naming it; empty when the case holds. */
 function checkCase(entry: Case): string[] {
   const where = `seed ${String(SEED)}, ${entry.label} ${JSON.stringify(entry)}`;
@@ -138,18 +171,7 @@ function checkCase(entry: Case): string[] {
   for (const scheme of ["light", "dark"] as const) {
     const colors = resolvedColors(theme, scheme);
     problems.push(...failingUsedPairs(colors).map((failure) => `${scheme} ${failure}`));
-    for (const background of ["bg", "bg-subtle", "surface", "surface-raised"]) {
-      const ratio = contrastRatio(colors.get("accent") ?? "", colors.get(background) ?? "");
-      if (ratio < 3) problems.push(`${scheme} accent on ${background} is ${ratio.toFixed(2)}:1`);
-    }
-    // The hover state is never weaker against the page than the accent it replaces.
-    const accentOnPage = weakestOnPage(colors, "accent");
-    const hoverOnPage = weakestOnPage(colors, "accent-hover");
-    if (hoverOnPage < accentOnPage) {
-      problems.push(
-        `${scheme} accent-hover is ${hoverOnPage.toFixed(2)}:1 on the page, the accent ${accentOnPage.toFixed(2)}:1`,
-      );
-    }
+    problems.push(...accentRoleProblems(colors).map((problem) => `${scheme} ${problem}`));
   }
   for (const scheme of ["light", "dark"] as const) {
     // A moved accent goes only as far as it must: some requirement ends up nearly tight.
@@ -160,12 +182,7 @@ function checkCase(entry: Case): string[] {
     }
     const colors = resolvedColors(theme, scheme);
     const accent = colors.get("accent") ?? "";
-    const slack = Math.min(
-      contrastRatio(accent, colors.get("on-accent") ?? "") / 4.5,
-      ...["bg", "bg-subtle", "surface", "surface-raised"].map(
-        (background) => contrastRatio(accent, colors.get(background) ?? "") / 3,
-      ),
-    );
+    const slack = contrastRatio(accent, colors.get("on-accent") ?? "") / 4.5;
     if (slack > MAX_SLACK)
       problems.push(`${scheme} accent moved further than needed (${slack.toFixed(2)})`);
   }
@@ -176,6 +193,11 @@ function checkCase(entry: Case): string[] {
     const accent = resolvedColors(theme, scheme).get("accent");
     if (!accentMoved && accent !== entry.colors.primary) {
       problems.push(`${scheme} accent ${String(accent)} differs from the primary without a reason`);
+    }
+    // The fill is the brand's own colour whenever white text, or the near-black text the
+    // generator pairs with it, reaches 4.5:1 on it; the page is the indicator's business.
+    if (accentMoved && carriesText(entry.colors.primary ?? "")) {
+      problems.push(`${scheme} accent moved although the primary carries text`);
     }
   }
   return problems.map((problem) => `${where}: ${problem}`);

@@ -79,36 +79,46 @@ describe("generateBrandTheme", () => {
     expect(JSON.stringify(generateBrandTheme(kit))).toBe(JSON.stringify(generateBrandTheme(kit)));
   });
 
-  it("uses a primary that carries text and stands out from the page unchanged in both schemes", () => {
+  it("uses a primary that carries text unchanged in both schemes", () => {
     const theme = generateBrandTheme(kitFrom({ colors: { primary: "#2f9e44" } }));
     expect(resolvedColors(theme, "light").get("accent")).toBe("#2f9e44");
     expect(resolvedColors(theme, "dark").get("accent")).toBe("#2f9e44");
     expect(theme.adjustments.filter((entry) => entry.token === "color.accent")).toEqual([]);
   });
 
-  it("keeps the primary in the scheme where it stands out and moves it in the other", () => {
-    const theme = generateBrandTheme(kitFrom({ colors: { primary: "#1d4ed8" } }));
-    expect(resolvedColors(theme, "light").get("accent")).toBe("#1d4ed8");
-    const dark = theme.adjustments.find(
-      (entry) => entry.token === "color.accent" && entry.scheme === "dark",
-    );
-    expect(dark).toMatchObject({ origin: "primary", requested: "#1d4ed8", minimum: 3 });
-  });
-
   it.each([
-    ["#111827", "dark"],
+    ["#facc15", "light"],
+    ["#f59e0b", "light"],
     ["#ffffff", "light"],
+    ["#111827", "dark"],
     ["#000000", "dark"],
-    ["#fefce8", "light"],
-  ] as const)("moves %s off the %s page: at least 3:1 on every background", (primary, scheme) => {
-    const colors = resolvedColors(generateBrandTheme(kitFrom({ colors: { primary } })), scheme);
-    for (const background of ["bg", "bg-subtle", "surface", "surface-raised"]) {
+    ["#1d4ed8", "dark"],
+  ] as const)(
+    "keeps %s as the %s accent fill and marks state with an indicator that reaches 3:1",
+    (primary, scheme) => {
+      const theme = generateBrandTheme(kitFrom({ colors: { primary } }));
+      const colors = resolvedColors(theme, scheme);
+      expect(colors.get("accent")).toBe(primary);
+      for (const background of ["bg", "bg-subtle", "surface", "surface-raised"]) {
+        for (const role of ["accent-indicator", "accent-border"]) {
+          expect(
+            contrastRatio(colors.get(role) ?? "", colors.get(background) ?? ""),
+            `${role} on ${background}`,
+          ).toBeGreaterThanOrEqual(3);
+        }
+      }
       expect(
-        contrastRatio(colors.get("accent") ?? "", colors.get(background) ?? ""),
-        background,
-      ).toBeGreaterThanOrEqual(3);
-    }
-  });
+        contrastRatio(
+          colors.get("on-accent-indicator") ?? "",
+          colors.get("accent-indicator") ?? "",
+        ),
+      ).toBeGreaterThanOrEqual(4.5);
+      const indicator = theme.adjustments.find(
+        (entry) => entry.token === "color.accent-indicator" && entry.scheme === scheme,
+      );
+      expect(indicator).toMatchObject({ origin: "primary", requested: primary, minimum: 3 });
+    },
+  );
 
   it("notes a status colour that sits close to the accent, for the brand guide", () => {
     const red = generateBrandTheme(kitFrom({ colors: { primary: "#dc2626" } }));
