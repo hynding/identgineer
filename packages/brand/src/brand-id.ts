@@ -7,7 +7,10 @@ export const BRAND_ID_MAX_LENGTH = 32;
 // value, a file name and a URL parameter without any escaping.
 const BRAND_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
-/** Words a brand id may not take besides the built-in theme ids: CSS keywords and scheme words. */
+/**
+ * Words a brand id may not take besides the built-in theme ids: CSS keywords, scheme words, and the
+ * two prototype names that fit the id rule.
+ */
 export const RESERVED_BRAND_IDS: readonly string[] = Object.freeze([
   "inherit",
   "initial",
@@ -23,6 +26,8 @@ export const RESERVED_BRAND_IDS: readonly string[] = Object.freeze([
   "brand",
   "theme",
   "custom",
+  "constructor",
+  "prototype",
 ]);
 
 export type BrandIdProblem =
