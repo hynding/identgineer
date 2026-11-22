@@ -173,6 +173,9 @@ inferred from attributes. For example the email input is a `textbox` named "Emai
 | `size`                                                                      | `sm`, `md` (default), `lg`                                                                |
 | `reveal`, `revealLabel`                                                     | Password reveal button; label default "Show password"                                     |
 
+`selectText()` (a method of `idg-input` only) selects the text of the native input, for a read-only
+value that is meant to be copied, such as a link; it does not focus it, so call `setFocus()` too.
+
 Slots `start` and `end` sit inside the box. The reveal control is a real `<button type="button">`
 with `aria-pressed`; it changes only the native input's `type`, never the value.
 
@@ -236,6 +239,9 @@ native radio group, so the group does what the native group would:
   WAI-ARIA radio group pattern;
 - each radio is told its `position` and `setSize` (`aria-posinset` and `aria-setsize`), which separate
   roots cannot work out for themselves.
+
+Part `group` is the box that arranges the radios (a flex column or row). A page can lay them out
+itself with `idg-radio-group::part(group)`, for example as a grid; the switcher does.
 
 `idg-radio` has `value` and `disabled` and the label as its slot. `checked`, `groupDisabled`,
 `tabbable`, `position`, `setSize` and `invalid` are set by the group; use `idg-radio` inside a group

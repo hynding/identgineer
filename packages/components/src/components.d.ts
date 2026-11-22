@@ -679,6 +679,10 @@ export namespace Components {
          */
         "revealLabel": string;
         /**
+          * Selects the text of the native input, for a value that is meant to be copied.
+         */
+        "selectText": () => Promise<void>;
+        /**
           * Focuses the native input.
          */
         "setFocus": () => Promise<void>;

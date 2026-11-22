@@ -99,6 +99,13 @@ export class IdgInput {
     return Promise.resolve();
   }
 
+  /** Selects the text of the native input, for a value that is meant to be copied. */
+  @Method()
+  selectText(): Promise<void> {
+    this.native?.select();
+    return Promise.resolve();
+  }
+
   /** Whether the value satisfies its constraints. Fires no UI. */
   @Method()
   checkValidity(): Promise<boolean> {

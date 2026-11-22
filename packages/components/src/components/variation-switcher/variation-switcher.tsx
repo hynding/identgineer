@@ -36,6 +36,7 @@ interface Result {
 // Optional because the element may not be defined yet when the panel is drawn.
 interface Focusable {
   setFocus?: () => Promise<void>;
+  selectText?: () => Promise<void>;
 }
 
 /**
@@ -81,6 +82,9 @@ export class IdgVariationSwitcher {
 
   @State() private state?: VariationState;
   @State() private message = "";
+  // The message is written into one of two nodes, alternately. A live region announces what is
+  // added, so the same words said twice would be silent the second time if they stayed in one node.
+  @State() private slot: 0 | 1 = 0;
   @State() private messageShown = false;
   @State() private fallbackUrl?: string;
 
@@ -94,6 +98,11 @@ export class IdgVariationSwitcher {
     // back through the same listener, which is harmless because it only stores the state.
     this.stopListening = onVariationsChange(({ state }) => {
       this.state = state;
+      // A link made before this change no longer says what the page is.
+      if (this.fallbackUrl !== undefined) {
+        this.fallbackUrl = undefined;
+        this.say("", false);
+      }
     });
   }
 
@@ -106,6 +115,7 @@ export class IdgVariationSwitcher {
     if (!this.focusFallback) return;
     this.focusFallback = false;
     void this.fallbackInput?.setFocus?.();
+    void this.fallbackInput?.selectText?.();
   }
 
   private finish(result: Result, message: string): void {
@@ -119,6 +129,7 @@ export class IdgVariationSwitcher {
   private say(message: string, shown: boolean): void {
     this.message = message;
     this.messageShown = shown;
+    this.slot = this.slot === 0 ? 1 : 0;
   }
 
   private choose(control: ControlName, value: string): void {
@@ -276,7 +287,8 @@ export class IdgVariationSwitcher {
           aria-live="polite"
           aria-atomic="true"
         >
-          {this.message}
+          <span data-slot="0">{this.slot === 0 ? this.message : ""}</span>
+          <span data-slot="1">{this.slot === 1 ? this.message : ""}</span>
         </p>
       </div>
     );

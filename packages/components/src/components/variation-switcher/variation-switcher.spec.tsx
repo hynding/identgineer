@@ -540,7 +540,10 @@ describe("idg-variation-switcher copy link", () => {
   });
 
   it("focuses the manual link and selects its text, since the message says to copy it", async () => {
-    const proto = HTMLElement.prototype as unknown as Record<string, unknown>;
+    // The mock DOM's elements share a prototype two levels up from a plain element.
+    const proto = Object.getPrototypeOf(
+      Object.getPrototypeOf(document.createElement("div")),
+    ) as Record<string, unknown>;
     const setFocus = vi.fn(() => Promise.resolve());
     const selectText = vi.fn(() => Promise.resolve());
     proto.setFocus = setFocus;
