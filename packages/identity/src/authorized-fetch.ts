@@ -3,16 +3,16 @@ import type { ClientContext } from "./client-context.ts";
 import { IdentityError } from "./identity-error.ts";
 
 /**
- * The request URL for a path under the base URL, or an absolute URL under it. Anything else is
- * refused, so the bearer token never reaches another origin.
+ * The request URL for a path under the base URL, or an absolute URL under it, checked after it is
+ * resolved (so `..`, encoded dots and backslashes cannot climb out of the base path). Anything
+ * else is refused, so the bearer token never reaches another origin or path.
  */
 const resolveTarget = (base: URL, input: string): string => {
-  if (input.startsWith("/") && !input.startsWith("//") && !input.startsWith("/\\")) {
-    return endpointUrl(base, input);
-  }
+  // Browsers read a backslash as a slash; refusing them keeps the input meaning what it says.
+  if (input.startsWith("//") || input.includes("\\")) throw new IdentityError("validation");
   let url: URL;
   try {
-    url = new URL(input);
+    url = new URL(input.startsWith("/") ? endpointUrl(base, input) : input);
   } catch {
     throw new IdentityError("validation");
   }
@@ -63,6 +63,7 @@ export const authorizedFetch =
           ...init,
           headers,
           credentials: "omit",
+          redirect: "error",
           signal: timeout.signal,
         });
       } catch {

@@ -10,14 +10,13 @@ const underBasePath = async () => {
   const api = createFakeIdentityApi({ clock });
   api.addUser({ username: "ada", email: "ada@example.com", password: PASSWORD });
   const sent: { url: string; init: RequestInit }[] = [];
-  const fetch = (input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> => {
-    const url = String(input);
+  const fetch = (url: string, init: RequestInit = {}): Promise<Response> => {
     sent.push({ url, init });
     return api.fetch(url.replace(`${api.baseUrl}/cms/`, `${api.baseUrl}/`), init);
   };
   const client = createIdentityClient({
     baseUrl: `${api.baseUrl}/cms`,
-    fetch: fetch as typeof globalThis.fetch,
+    fetch: fetch as unknown as typeof globalThis.fetch,
     clock,
     channelName: "identgineer-base-path",
   });

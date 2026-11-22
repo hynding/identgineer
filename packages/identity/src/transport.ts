@@ -52,6 +52,13 @@ const headersFor = (request: ApiRequest): Headers => {
   return headers;
 };
 
+/**
+ * Redirects are refused unless a request asks to see one unfollowed; a request with the bearer
+ * token never follows one, so the token cannot be carried to wherever it points.
+ */
+const redirectFor = (request: ApiRequest): RequestRedirect =>
+  request.accessToken === undefined && request.redirect === "manual" ? "manual" : "error";
+
 const isUnfollowedRedirect = (response: Response): boolean =>
   response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400);
 
@@ -85,7 +92,7 @@ export const createTransport = (options: TransportOptions): Transport => {
           headers: headersFor(request),
           credentials: request.cookie === true ? "include" : "omit",
           cache: "no-store",
-          redirect: request.redirect ?? "follow",
+          redirect: redirectFor(request),
           signal: controller.signal,
           ...(request.body === undefined ? {} : { body: JSON.stringify(request.body) }),
         });
