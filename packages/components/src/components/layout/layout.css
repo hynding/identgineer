@@ -61,6 +61,10 @@
   --_panel-border-width: var(--idg-surface-border-width);
   --_ring-width: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
 
+  /* The navigation mode is read through a name of its own: an unnamed style query on a property set
+     inside the shadow tree is not re-evaluated by Chromium once a script or a tool has read the
+     computed style while it was collapsed, and the navigation then keeps the wrong arrangement. */
+  container-name: idg-nav;
   position: relative;
   box-sizing: border-box;
   display: grid;
@@ -313,7 +317,7 @@
 
 /* Navigation modes */
 
-@container style(--_nav: inline) {
+@container idg-nav style(--_nav: inline) {
   .toggle {
     display: none;
   }
@@ -332,7 +336,7 @@
   }
 }
 
-@container style(--_nav: disclosure) {
+@container idg-nav style(--_nav: disclosure) {
   .drawer[open] {
     display: block;
     padding-block-start: var(--idg-space-xs);
@@ -344,7 +348,7 @@
   }
 }
 
-@container style(--_nav: drawer) {
+@container idg-nav style(--_nav: drawer) {
   .drawer {
     /* The slotted items carry a negative scroll margin for the page's sake, so the drawer that
        scrolls them is padded to match and keeps a focused item inside its own top edge. */

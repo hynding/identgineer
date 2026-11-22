@@ -1366,6 +1366,33 @@ test.describe("the arrangement follows the width however the page has read the s
       };
     });
 
+  const SOURCES = ["top-bar", "magazine"] as const;
+  for (const layout of LAYOUTS) {
+    for (const source of SOURCES) {
+      test(`${layout}: after styles were read in ${source} at 600px, switching and widening arranges it as a fresh page does`, async ({
+        page,
+        context,
+      }) => {
+        await openShell(page, { width: 600, layout: source });
+        await readStyles(page);
+        await setLayout(page, layout);
+        await page.setViewportSize({ width: 1400, height: 900 });
+        await frames(page, 3);
+        const fresh = await context.newPage();
+        await openShell(fresh, { width: 1400, height: 900, layout });
+        const round = (found: Regions) =>
+          Object.fromEntries(
+            Object.entries(found).map(([name, box]) => [
+              name,
+              [box.x, box.y, box.width, box.height].map((value) => Math.round(value)),
+            ]),
+          );
+        expect(round(await regions(page))).toEqual(round(await regions(fresh)));
+        await fresh.close();
+      });
+    }
+  }
+
   for (const layout of ["top-bar", "bento", "magazine", "centered"]) {
     test(`${layout}: styles read at 600px do not keep the inline navigation a column at 1400px`, async ({
       page,
