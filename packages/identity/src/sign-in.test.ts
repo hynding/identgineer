@@ -223,10 +223,19 @@ describe("signOut", () => {
     expect(api.activeSessionCount("ada@example.com")).toBe(0);
   });
 
-  it("makes no request when not signed in", async () => {
+  it("makes no request when already signed out", async () => {
+    const { api, client } = setup();
+    await client.restore();
+    const sent = api.requests.length;
+    await client.signOut();
+    expect(api.requests).toHaveLength(sent);
+    expect(client.getState()).toEqual({ status: "signed-out", reason: "user" });
+  });
+
+  it("only looks for a cookie session when the state is unknown and there is none", async () => {
     const { api, client } = setup();
     await client.signOut();
-    expect(api.requests).toHaveLength(0);
+    expect(api.requests.map((request) => request.path)).toEqual(["/api/auth/refresh"]);
     expect(client.getState()).toEqual({ status: "signed-out", reason: "user" });
   });
 });
