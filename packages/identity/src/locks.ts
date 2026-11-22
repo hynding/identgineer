@@ -92,8 +92,8 @@ export const withLock = <T>(
         () => undefined,
       );
     };
+    // Cleared once the task runs, so it fires only while still waiting.
     const gaveUp = bounds.clock.setTimeout(() => {
-      if (!waiting) return;
       waiting = false;
       reject(new IdentityError("network"));
     }, bounds.waitMs);
