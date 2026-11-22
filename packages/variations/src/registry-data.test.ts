@@ -19,4 +19,10 @@ describe("the checked-in registry data", () => {
     expect(checkedIn.split("\n").slice(0, 3).join("\n")).toMatch(/generated.*do not edit/is);
     expect(checkedIn).toContain("pnpm --filter @identgineer/variations generate");
   });
+
+  it("carries the added theme id rule of @identgineer/tokens, so the browser entry applies the same rule", async () => {
+    const { ADDED_THEME_ID_RULE } = await import("@identgineer/tokens");
+    const { REGISTRY_DATA } = await import("./generated/registry-data.ts");
+    expect(REGISTRY_DATA.theme.addedIdRule).toEqual(ADDED_THEME_ID_RULE);
+  });
 });

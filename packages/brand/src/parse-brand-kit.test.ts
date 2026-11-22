@@ -1,4 +1,4 @@
-import { THEME_IDS } from "@identgineer/tokens";
+import { RESERVED_THEME_IDS, THEME_IDS } from "@identgineer/tokens";
 import { describe, expect, it } from "vitest";
 import { BRAND_ID_MAX_LENGTH, RESERVED_BRAND_IDS } from "./brand-id.ts";
 import { parseBrandKit, type BrandKitError } from "./parse-brand-kit.ts";
@@ -111,6 +111,19 @@ describe("parseBrandKit, the id", () => {
     expect(errorsOf({ ...VALID, id })).toEqual([
       expect.objectContaining({ path: "id", code: "reserved-id" }),
     ]);
+  });
+
+  it.each(["flat", "pixel", "top-bar", "bento", "comfortable", "power"])(
+    "refuses %s, the id of another axis",
+    (id) => {
+      expect(errorsOf({ ...VALID, id })).toEqual([
+        expect.objectContaining({ path: "id", code: "reserved-id" }),
+      ]);
+    },
+  );
+
+  it("uses the tokens package's added theme id rule", () => {
+    expect([...RESERVED_BRAND_IDS]).toEqual([...RESERVED_THEME_IDS]);
   });
 
   it("reserves the prototype names that fit the id rule", () => {

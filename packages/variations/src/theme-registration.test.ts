@@ -37,6 +37,15 @@ describe("registerThemeIds", () => {
 
   it.each([
     ["a built-in theme id", "ember"],
+    ["a design id", "flat"],
+    ["a layout id", "top-bar"],
+    ["a UX mode id", "comfortable"],
+    ["a CSS-wide keyword", "inherit"],
+    ["another CSS-wide keyword", "initial"],
+    ["none", "none"],
+    ["default", "default"],
+    ["a scheme word", "system"],
+    ["another scheme word", "light"],
     ["upper case", "Acme"],
     ["an underscore", "acme_co"],
     ["a leading digit", "1acme"],
