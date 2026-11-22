@@ -1049,7 +1049,9 @@ choice is applied before first paint.
 - **Layout.** The host is a size container: `stacked` is one column, and two from 40rem
   (`--idg-size-xl`) with the theme across both; `inline` puts controls side by side as far as they
   fit. Below 20rem (`--idg-size-m`, which is wider in pixels at large text sizes) the padding is
-  reduced. The host needs a width of its own (it is a block, so it fills its parent; in a flex or
+  reduced. Each control is a size container of its own: the theme options are one column, two from
+  24rem and four from 44rem, and the scheme is one column or, from 32rem, one row of three, always
+  on aligned tracks (laid out through `idg-radio-group::part(group)`). The host needs a width of its own (it is a block, so it fills its parent; in a flex or
   grid parent give it `min-inline-size: 0` and a width). Verified at 320px to 1920px, at 200% text
   with a wider face, in right-to-left text, and in every layout.
 - **Accessibility.** The panel is a `role="group"` named by `heading`, or "Appearance". Everything is

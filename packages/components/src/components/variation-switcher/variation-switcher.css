@@ -63,7 +63,8 @@
 /* The options of a radio group are laid out here, on the group's own box (its group part), as
    aligned tracks. The theme is two columns, one where the control is narrow and four where wide. The
    scheme is three options in one row where they fit and one column where they do not, never two and
-   one over. 14rem, 20rem and 36rem are --idg-size-s, --idg-size-m and the width of four themes. */
+   one over. The widths leave room for the larger type of some UX modes, which a rem does not
+   follow: 24rem and 32rem lie between --idg-size-m and --idg-size-xl, and 44rem is four themes. */
 .control[data-control="theme"] idg-radio-group::part(group),
 .control[data-control="scheme"] idg-radio-group::part(group) {
   display: grid;
@@ -73,19 +74,19 @@
   column-gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
 }
 
-@container idg-control (min-inline-size: 14rem) {
+@container idg-control (min-inline-size: 24rem) {
   .control[data-control="theme"] idg-radio-group::part(group) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@container idg-control (min-inline-size: 36rem) {
+@container idg-control (min-inline-size: 44rem) {
   .control[data-control="theme"] idg-radio-group::part(group) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
-@container idg-control (min-inline-size: 20rem) {
+@container idg-control (min-inline-size: 32rem) {
   .control[data-control="scheme"] idg-radio-group::part(group) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
