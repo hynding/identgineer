@@ -77,6 +77,8 @@ export class IdgSessionGuard {
 
   @State() private status: IdentityStatus = "unknown";
   @State() private unreachable = false;
+  /** "Try again" is waiting for the server: its notice stays, with the button busy and focused. */
+  @State() private retrying = false;
   @State() private signOutNotice?: "this-device" | "everywhere";
   /** What the anchor says while it has focus; nothing otherwise. */
   @State() private anchorText = "";
@@ -91,8 +93,11 @@ export class IdgSessionGuard {
     () => this.binding.current(),
     (unreachable) => {
       this.unreachable = unreachable;
-      // Back after a Try again that failed too, while focus waits on the anchor.
-      if (unreachable && this.anchorHasFocus()) this.moveToNotice();
+      if (unreachable && this.retrying) {
+        this.retrying = false;
+        // A Try again that failed too: the notice takes focus from its button, and is read then.
+        if (focusWithin(this.host)) this.moveToNotice();
+      }
       this.report({ status: unreachable ? "unreachable" : "unknown" });
     },
   );
@@ -121,6 +126,7 @@ export class IdgSessionGuard {
     // The first state the new client reports is announced even when it is the same status.
     this.reported = undefined;
     this.unreachable = false;
+    this.retrying = false;
     this.clearNotice();
     this.restoring.stop();
     this.bind();
@@ -143,10 +149,11 @@ export class IdgSessionGuard {
     this.clearNotice();
   };
 
+  // The notice stays while the guard tries again, its button busy and keeping focus, so focus moves
+  // once, when the outcome is known, to what says it.
   private retry = (): void => {
-    // The button goes while the guard tries again, and comes back if that fails too.
-    const labels = mergeLabels(SESSION_GUARD_LABELS, this.labels);
-    if (focusWithin(this.host)) this.focusAnchor(labels.checking);
+    if (this.retrying) return;
+    this.retrying = true;
     this.restoring.retry();
   };
 
@@ -169,11 +176,12 @@ export class IdgSessionGuard {
     const known = state.status !== "unknown" && this.status !== "unknown";
     const labels = mergeLabels(SESSION_GUARD_LABELS, this.labels);
     const text = state.status === "signed-in" ? labels.signedIn : labels.signedOut;
-    if (known && state.status !== this.status && focusWithin(this.host)) {
+    const retried = this.retrying && state.status !== "unknown";
+    if (retried) this.retrying = false;
+    // A transition that takes away what had focus, or a Try again that has its answer: the anchor
+    // takes focus with the outcome already its text.
+    if ((retried || (known && state.status !== this.status)) && focusWithin(this.host)) {
       this.focusAnchor(text);
-    } else if (state.status !== "unknown" && this.anchorHasFocus()) {
-      // Known at last after a Try again: the anchor says what is now shown.
-      this.anchorText = text;
     }
     this.status = state.status;
     this.report(
@@ -262,7 +270,14 @@ export class IdgSessionGuard {
         quiet={this.noticeTakesFocus}
       >
         <span class="message">{labels.unreachable}</span>
-        <idg-button class="retry" part="retry" variant="secondary" size="sm" onClick={this.retry}>
+        <idg-button
+          class="retry"
+          part="retry"
+          variant="secondary"
+          size="sm"
+          loading={this.retrying}
+          onClick={this.retry}
+        >
           {labels.retry}
         </idg-button>
       </idg-alert>,
@@ -274,7 +289,7 @@ export class IdgSessionGuard {
     if (this.status === "signed-out") {
       return [this.renderSignOutNotice(labels), <slot name="fallback" />];
     }
-    if (this.unreachable) return this.renderUnreachable(labels);
+    if (this.unreachable || this.retrying) return this.renderUnreachable(labels);
     return <slot name="pending" />;
   }
 

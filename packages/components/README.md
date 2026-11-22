@@ -1230,9 +1230,11 @@ shown, is one extra block before the content (part `notice`, holding part `unrea
 from the content or by the page's own `signOut()`, "Try again", dismissing the warning), focus goes
 at once to a hidden anchor of the guard's own: absolutely positioned and clipped, so it is no item
 of the parent's layout, placed before the content, so Tab goes on into the content and Shift+Tab
-back before the guard. Its text is the change ("You are signed in.", "You are signed out." or,
-while trying again, "Checking whether you are signed in.", in `labels`), read once as focus lands;
-no live region says it again. A warning that appears while focus is still on the anchor takes
+back before the guard. Its text is the change ("You are signed in." or "You are signed out.", in
+`labels`), in place before it takes focus and read once as focus lands; no live region says it
+again. While "Try again" waits for the server its notice stays, the button busy (`loading`) and
+keeping focus; the answer then moves focus once, to the anchor with the outcome as its text, or,
+when the server still cannot be reached, to the notice. A warning that appears while focus is still on the anchor takes
 focus and is read then (its live role left out); one that appears after the user has moved on is
 announced by its `role="alert"` and leaves focus where it is. The guard writes no `tabindex` on
 anything it does not own: on a custom element host it would take the host's whole shadow tree
