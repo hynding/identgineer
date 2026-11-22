@@ -137,3 +137,26 @@ test.describe("idg-button accessibility", () => {
     });
   }
 });
+
+test.describe("idg-button corners under a brand preference", () => {
+  /** The medium button's corner radius with the brand layer's radius preference set on the root. */
+  async function cornerWithBrandPreference(page: Page, design: string): Promise<string> {
+    await open(page);
+    await applyAxes(page, { design });
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty("--idg-brand-radius-md", "13px");
+    });
+    return page
+      .locator("#live-submit")
+      .locator("button")
+      .evaluate((element) => getComputedStyle(element).borderTopLeftRadius);
+  }
+
+  test("follows the brand's corners in a design that allows them", async ({ page }) => {
+    expect(await cornerWithBrandPreference(page, "flat")).toBe("13px");
+  });
+
+  test("keeps its own corners in a design that declines them", async ({ page }) => {
+    expect(await cornerWithBrandPreference(page, "pixel")).toBe("0px");
+  });
+});
