@@ -1,0 +1,8 @@
+{
+  "id": "harbour-lights",
+  "name": "Harbour Lights",
+  "colors": { "primary": "#f4c430", "neutralTint": "#1b2a4a" },
+  "typography": "classic-serif",
+  "corners": "round",
+  "tone": "vivid"
+}

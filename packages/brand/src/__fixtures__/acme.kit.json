@@ -1,0 +1,9 @@
+{
+  "id": "acme",
+  "name": "Acme Rockets",
+  "tagline": "Up, up & away!",
+  "colors": { "primary": "#4F46E5", "secondary": "#0f766e" },
+  "typography": "geometric",
+  "corners": "soft",
+  "tone": "balanced"
+}
