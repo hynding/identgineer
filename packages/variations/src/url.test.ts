@@ -214,7 +214,7 @@ describe("decodeVariations given a whole URL or a string with a hash", () => {
       for (const state of STATES) {
         const expected = { ...DEFAULTS, ...state };
         const url = variationsUrl(expected, base);
-        expect(decodeVariations(url), `${url}`).toEqual(expected);
+        expect(decodeVariations(url), url).toEqual(expected);
         expect(decodeVariations(new URL(url, "https://example.com").search)).toEqual(expected);
       }
     }

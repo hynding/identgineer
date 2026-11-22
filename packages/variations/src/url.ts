@@ -31,8 +31,19 @@ export function encodeVariations(
   }).join("&");
 }
 
-export function decodeVariations(search: string | URLSearchParams): Partial<VariationState> {
-  const params = typeof search === "string" ? new URLSearchParams(search) : search;
+/**
+ * The query of whatever string was given: after the first `?` if there is one, up to the first
+ * `#`. So `location.search`, `location.href`, a relative URL and a bare query all read the same,
+ * and a hash is never mistaken for part of the last value.
+ */
+function queryOf(input: string): string {
+  const hashAt = input.indexOf("#");
+  const withoutHash = hashAt === -1 ? input : input.slice(0, hashAt);
+  return withoutHash.slice(withoutHash.indexOf("?") + 1);
+}
+
+export function decodeVariations(input: string | URLSearchParams): Partial<VariationState> {
+  const params = typeof input === "string" ? new URLSearchParams(queryOf(input)) : input;
   const candidate: Record<string, string | null> = {};
   for (const key of STATE_KEYS) candidate[key] = params.get(`${URL_PARAM_PREFIX}${key}`);
   return parseVariations(candidate);

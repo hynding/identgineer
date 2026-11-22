@@ -65,5 +65,8 @@ export const SEARCHES: readonly SearchVector[] = [
   { name: "a value with a plus", search: "?idg-theme=+ember" },
   { name: "a semicolon separator", search: "?idg-theme=ember;idg-ux=focus" },
   { name: "no value", search: "?idg-theme" },
+  { name: "an empty search", search: "" },
+  { name: "a lone question mark", search: "?" },
+  { name: "a question mark inside a value", search: "?a=?&idg-theme=ember" },
   { name: "several valid", search: "?idg-theme=ember&idg-design=glass&idg-scheme=system" },
 ];

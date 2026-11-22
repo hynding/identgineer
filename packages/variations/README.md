@@ -81,8 +81,9 @@ shuffleVariations(() => 0.5); // inject the random source for deterministic test
   unsubscribed during a dispatch is not called afterwards. What listeners receive is frozen. One
   dispatch delivers at most 100 announcements: if listeners keep undoing each other, the rest are
   dropped with a `console.error` and the next change is measured against the DOM. The same change
-  is dispatched on the root as a bubbling `idg-variations-change` `CustomEvent` with `detail: { state, changed }`. Listeners are given what this package computed,
-  not the event's `detail`, because any script can dispatch a forged event; treat the event's
+  is dispatched on the root as a bubbling `idg-variations-change` `CustomEvent` with
+  `detail: { state, changed }`. Listeners are given what this package computed, not the event's
+  `detail`, because any script can dispatch a forged event; treat the event's
   `detail` as a hint if you listen to it directly.
 
 ## Persistence
@@ -128,7 +129,9 @@ would not see what the sender saw. It replaces only the five exact parameter nam
 percent-encoded) and keeps everything else in the base URL, including look-alikes such as
 `idg-campaign`, byte for byte.
 
-Nothing reads or writes `location` for you. Pass `location.search` or `location.href` yourself.
+`decodeVariations` accepts `location.search`, a `URLSearchParams` or a whole URL (a string is read
+from its first `?` up to its first `#`), and `variationsUrl` takes the URL to share. Nothing reads or
+writes `location` for you: pass `location.search` or `location.href` yourself.
 
 ## Bootstrap script: no flash of the wrong variation
 
