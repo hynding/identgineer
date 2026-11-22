@@ -200,3 +200,113 @@ describe("onVariationsChange", () => {
     expect(() => applyVariations({ theme: "ember" })).not.toThrow();
   });
 });
+
+describe("changes made from outside in the same tick as a call", () => {
+  it("are announced together with the call's own change, not lost", async () => {
+    const received = collect();
+    const events: VariationsChange[] = [];
+    root.addEventListener(CHANGE_EVENT, (event) =>
+      events.push((event as CustomEvent<VariationsChange>).detail),
+    );
+    root.setAttribute("data-design", "glass");
+    const result = applyVariations({ theme: "ember" }, { root });
+    await flushMutations();
+    expect(received).toHaveLength(1);
+    expect(received[0]?.changed).toEqual(["theme", "design"]);
+    expect(received[0]?.state).toMatchObject({ theme: "ember", design: "glass" });
+    expect(events.map((change) => change.changed)).toEqual([["theme", "design"]]);
+    // What the call returns stays relative to the state before the call.
+    expect(result.changed).toEqual(["design", "theme"].filter((key) => key === "theme"));
+  });
+});
+
+describe("a listener that applies a change", () => {
+  it("makes every listener and the event see the states in order, ending on the final one", () => {
+    const seen = { first: [] as string[], second: [] as string[], event: [] as string[] };
+    onVariationsChange(
+      ({ state }) => {
+        seen.first.push(state.theme);
+        if (state.theme === "ember") applyVariations({ theme: "tidal" }, { root });
+      },
+      { root },
+    );
+    onVariationsChange(({ state }) => seen.second.push(state.theme), { root });
+    root.addEventListener(CHANGE_EVENT, (event) =>
+      seen.event.push((event as CustomEvent<VariationsChange>).detail.state.theme),
+    );
+    applyVariations({ theme: "ember" }, { root });
+    expect(seen.first).toEqual(["ember", "tidal"]);
+    expect(seen.second).toEqual(["ember", "tidal"]);
+    expect(seen.event).toEqual(["ember", "tidal"]);
+    expect(getVariations(root).theme).toBe("tidal");
+  });
+
+  it("does not announce the nested change twice when the observer catches up", async () => {
+    const received = collect();
+    onVariationsChange(
+      ({ state }) => {
+        if (state.theme === "ember") applyVariations({ theme: "tidal" }, { root });
+      },
+      { root },
+    );
+    applyVariations({ theme: "ember" }, { root });
+    await flushMutations();
+    expect(received.map((change) => change.state.theme)).toEqual(["ember", "tidal"]);
+  });
+});
+
+describe("unsubscribing during a dispatch", () => {
+  it("means the listener is not called afterwards, even in that same dispatch", () => {
+    const second = vi.fn();
+    let stopSecond = (): void => undefined;
+    onVariationsChange(
+      () => {
+        stopSecond();
+      },
+      { root },
+    );
+    stopSecond = onVariationsChange(second, { root });
+    applyVariations({ theme: "ember" }, { root });
+    expect(second).not.toHaveBeenCalled();
+  });
+});
+
+describe("what listeners and the event are given", () => {
+  it("is frozen, so a handler cannot corrupt the state, the dedup or the return value", () => {
+    const events: VariationsChange[] = [];
+    root.addEventListener(CHANGE_EVENT, (event) => {
+      const { detail } = event as CustomEvent<VariationsChange>;
+      events.push(detail);
+      expect(() => {
+        (detail.state as { theme: string }).theme = "forged";
+      }).toThrow(TypeError);
+      expect(() => {
+        (detail.changed as string[]).push("forged");
+      }).toThrow(TypeError);
+      expect(() => {
+        (detail as { state: unknown }).state = {};
+      }).toThrow(TypeError);
+    });
+    const listened: VariationsChange[] = [];
+    onVariationsChange((change) => listened.push(change), { root });
+    const result = applyVariations({ theme: "ember" }, { root });
+    expect(Object.isFrozen(events[0]) && Object.isFrozen(events[0]?.state)).toBe(true);
+    expect(Object.isFrozen(events[0]?.changed)).toBe(true);
+    expect(Object.isFrozen(listened[0]?.state)).toBe(true);
+    expect(Object.isFrozen(result.state) && Object.isFrozen(result.changed)).toBe(true);
+    expect(result.state.theme).toBe("ember");
+    // The next call is still compared with the true last state.
+    const next = applyVariations({ theme: "tidal" }, { root });
+    expect(next.changed).toEqual(["theme"]);
+    expect(listened.map((change) => change.changed)).toEqual([["theme"], ["theme"]]);
+  });
+
+  it("does not share one object between the listeners' view and the internal baseline", async () => {
+    const received = collect();
+    applyVariations({ theme: "ember" }, { root });
+    expect(Object.isFrozen(received[0])).toBe(true);
+    root.setAttribute("data-theme", "ember");
+    await flushMutations();
+    expect(received).toHaveLength(1);
+  });
+});
