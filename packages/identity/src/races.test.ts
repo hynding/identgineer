@@ -198,3 +198,81 @@ describe("a listener that signs out when told of a sign-in", () => {
     expect(client.getState()).toEqual({ status: "signed-out", reason: "user" });
   });
 });
+
+describe("a password change under way at sign-out", () => {
+  it("is waited for, cancelled, and its new session ended before the sign-out resolves", async () => {
+    const { api, client, signIn } = setup();
+    await signIn();
+    const release = api.holdNext("POST", "/api/auth/change-password");
+    const changing = rejection(
+      client.changePassword({
+        currentPassword: PASSWORD,
+        password: "another long password 123",
+        passwordConfirmation: "another long password 123",
+      }),
+    );
+    await settle();
+    let resolved = false;
+    const signingOut = client.signOut().then((result) => {
+      resolved = true;
+      return { result, sessions: api.activeSessionCount("ada@example.com") };
+    });
+    await settle();
+    expect(resolved).toBe(false);
+    release();
+    await expect(signingOut).resolves.toEqual({ result: { outcome: "signed-out" }, sessions: 0 });
+    expect(await changing).toMatchObject({ code: "unauthorized" });
+  });
+});
+
+describe("a sign-in cancelled by a sign-out whose session cannot be ended", () => {
+  it("makes the sign-out report the server unreachable", async () => {
+    const { api, client } = setup();
+    const release = api.holdNext("POST", "/api/auth/local");
+    const signingIn = rejection(client.signIn({ identifier: "ada", password: PASSWORD }));
+    await settle();
+    const signingOut = client.signOut();
+    await settle();
+    api.respondNext("POST", "/api/auth/logout", "network-error");
+    release();
+    await expect(signingOut).resolves.toEqual({ outcome: "server-unreachable" });
+    expect(await signingIn).toMatchObject({ code: "unauthorized" });
+    expect(api.restorableSession()).toBe(true);
+  });
+});
+
+describe("dispose during a sign-out", () => {
+  it("still tells the other tabs before it closes the channel", async () => {
+    const { api, client, makeClient, signIn } = setup();
+    await signIn();
+    const other = makeClient({ sharedChannel: true });
+    await other.restore();
+    const release = api.holdNext("POST", "/api/auth/logout");
+    const signingOut = client.signOut().catch(() => undefined);
+    await settle();
+    client.dispose();
+    await settle();
+    expect(other.getState()).toEqual({ status: "signed-out", reason: "other-tab" });
+    release();
+    await signingOut;
+  });
+});
+
+describe("a restore while an older session's refresh is under way", () => {
+  it("does not take that refresh's answer, and finds the cookie's session itself", async () => {
+    const { api, client, clock, makeClient } = setup();
+    addBob(api);
+    // A session whose refresh token came in the body, refreshed on its schedule.
+    await client.register({ username: "eve", email: "eve@example.com", password: PASSWORD });
+    const release = api.holdNext("POST", "/api/auth/refresh");
+    clock.advance(570_000);
+    await settle();
+    api.respondNext("POST", "/api/auth/logout", "network-error");
+    await client.signOut();
+    await makeClient().signIn({ identifier: "bob", password: PASSWORD });
+    const restoring = client.restore();
+    await settle();
+    release();
+    expect(await restoring).toMatchObject({ status: "signed-in", user: { username: "bob" } });
+  });
+});

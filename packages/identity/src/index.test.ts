@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { OnlineSubscription } from "./index.ts";
 import * as identity from "./index.ts";
 import * as testing from "./testing/index.ts";
 
@@ -55,5 +56,12 @@ describe("the public API", () => {
       "createManualClock",
       "createMemoryLocks",
     ]);
+  });
+});
+
+describe("the online subscription type", () => {
+  it("is exported for callers that supply their own", () => {
+    const noOnline: OnlineSubscription = () => () => undefined;
+    expect(typeof noOnline(() => undefined)).toBe("function");
   });
 });
