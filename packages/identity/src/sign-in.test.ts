@@ -196,10 +196,14 @@ describe("signOut", () => {
     expect(api.activeSessionCount("ada@example.com")).toBe(0);
   });
 
-  it("resolves to say whether the server session was ended", async () => {
+  it("resolves to say whether the server session was ended, and nothing more", async () => {
     const { client, signIn } = setup();
     await signIn();
-    await expect(client.signOut()).resolves.toEqual({ outcome: "signed-out" });
+    const result = await client.signOut();
+    expect(result).toEqual({ outcome: "signed-out" });
+    expect(JSON.stringify(result)).toBe('{"outcome":"signed-out"}');
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(JSON.stringify(client)).not.toMatch(/token/i);
   });
 
   it("signs out locally even when the server cannot be reached, and says so", async () => {

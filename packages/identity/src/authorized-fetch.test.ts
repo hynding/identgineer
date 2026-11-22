@@ -104,4 +104,23 @@ describe("authorizedFetch under a base path", () => {
       client.dispose();
     }
   });
+
+  it.each([
+    ["/api/articles?slug=a%2Eb%2Fc", "/cms/api/articles"],
+    ["/api/articles#x%2e", "/cms/api/articles"],
+    ["/api/a/./b", "/cms/api/a/b"],
+    ["/api/a/../b", "/cms/api/b"],
+    ["/api/x%252e", "/cms/api/x%252e"],
+  ])(
+    "sends %j, whose encodings stay out of the path or whose dots resolve inside the base",
+    async (input, path) => {
+      const { api, client, sent } = await underBasePath();
+      try {
+        await client.authorizedFetch(input);
+        expect(new URL(sent.at(-1)?.url ?? api.baseUrl).pathname).toBe(path);
+      } finally {
+        client.dispose();
+      }
+    },
+  );
 });
