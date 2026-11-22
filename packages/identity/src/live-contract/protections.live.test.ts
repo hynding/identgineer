@@ -5,6 +5,7 @@ import {
   disposeTabs,
   FOREIGN_SITE,
   freshAccount,
+  linkParameter,
   liveBackend,
   openTab,
   post,
@@ -241,6 +242,34 @@ describe.skipIf(liveBackend === undefined)(
           expect(again.status).toBe(first.status);
           expect(Object.keys(again.body as object).sort()).toEqual(
             Object.keys(first.body as object).sort(),
+          );
+        },
+      );
+
+      // camis gap: POST /api/auth/send-email-confirmation answers an unknown address with 200
+      // { email, sent: true } but a confirmed one with 400 ApplicationError "Already confirmed"
+      // (and a blocked one with "User blocked"), so a caller learns that the account exists.
+      // Strapi does the same; the SDK hides it. Responsible: users-permissions/auth.ts in camis'
+      // adapter-filament strapi-api (AuthController::sendEmailConfirmation).
+      it.fails(
+        "answers a resend for a confirmed address as for an unknown one (camis gap: resend discloses accounts)",
+        async () => {
+          const server = backend.servers.confirmation;
+          const account = freshAccount("resend");
+          await post(server, "/api/auth/local/register", account);
+          const confirmation = linkParameter(backend, account.email, "confirmation");
+          await fetch(`${server.url}/api/auth/email-confirmation?confirmation=${confirmation}`, {
+            redirect: "manual",
+          });
+          const confirmed = await post(server, "/api/auth/send-email-confirmation", {
+            email: account.email,
+          });
+          const unknown = await post(server, "/api/auth/send-email-confirmation", {
+            email: freshAccount("nobody").email,
+          });
+          expect(confirmed.status).toBe(unknown.status);
+          expect(Object.keys(confirmed.body as object).sort()).toEqual(
+            Object.keys(unknown.body as object).sort(),
           );
         },
       );
