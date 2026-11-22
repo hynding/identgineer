@@ -409,6 +409,24 @@ sign in from the token answer); see `src/passkeys.ts`.
   token), to find any session the cookie still names; refreshes count against the CMS's refresh
   throttle (`CAMIS_REFRESH_THROTTLE_PER_MINUTE`, 60 a minute by default).
 
+Gaps in strapi-php as camis generates it today, besides the ones the live contract pins (below).
+They are not tested, as no test of them would be deterministic or they change nothing the SDK
+does:
+
+- Mail is sent inside the request. With a real mailer, forgot-password, the confirmation resend and
+  a registration of a taken address with confirmation on take longer for an existing account than
+  for an unknown one, so the response time tells whether an account exists, though the SDK makes
+  the answers alike. (The live backend logs mail, which hides this.)
+- `SANCTUM_TOKEN_EXPIRATION` is not read: the generated `config/sanctum.php` has
+  `'expiration' => null`. Access tokens end by `CAMIS_ACCESS_TOKEN_LIFESPAN` alone.
+- The guest routes (sign-in, registration, recovery, reset, resend, refresh) read a JSON body sent
+  as `text/plain`, which a page of any site can send without a CORS preflight. The answer stays
+  unreadable to that page, and the refresh cookie is `SameSite=Strict` and refused from an
+  unlisted `Origin`, but such a request still takes throttle turns and sends mail.
+- Token answers carry no `expiresIn`, so this client learns an access token's lifetime from the
+  JWT's `exp`, or from `accessTokenLifetimeSeconds`, which must match
+  `CAMIS_ACCESS_TOKEN_LIFESPAN`.
+
 ## Testing
 
 `@identgineer/identity/testing` exports `createFakeIdentityApi(options)`, an in-memory stand-in for
@@ -463,32 +481,43 @@ strapi-php emitter and route golden when `CAMIS_DIR` names a camis checkout (as 
 
 ### Live contract
 
-`pnpm contract:live` (from the repository root, with `CAMIS_DIR` set, PHP 8.3 and Composer)
+`pnpm contract:live` (from the repository root, with `CAMIS_DIR` set and PHP 8.3; Composer only
+for the first run, which scaffolds the app)
 generates strapi-php from `cms/`, boots it on 127.0.0.1 with the settings of
 `cms/.env.example` (see [cms/README.md](../../cms/README.md#live-contract-test)) and runs the
 `identity-live` Vitest project against it. The live tests (`src/live-contract/*.live.test.ts`) are
 skipped unless `IDENTITY_LIVE_BACKEND` names the description the boot script writes, so
 `pnpm test` and CI skip them. They run the real `createIdentityClient` through a browser-like
 `fetch` (`src/live-contract/browser-fetch.ts`, test code only): a cookie jar honouring `Path`,
-`Secure` (http on a loopback host counts as secure, as in browsers), `HttpOnly`, `SameSite` and
-`Max-Age`, cookies sent and kept only for `credentials: "include"`, CORS preflights, answers CORS
-refuses failing as network errors, and only exposed response headers visible. They cover:
+`Secure` (http on a loopback host counts as secure, as in Chromium and Firefox, though not in
+WebKit), `HttpOnly`, `SameSite` (no Strict or Lax cookie sent to, or kept from, another site) and
+`Max-Age`, cookies sent and kept only for `credentials: "include"`, the headers only a browser
+sets dropped from the caller's, CORS preflights, answers CORS refuses failing as network errors,
+only exposed response headers visible, and an unfollowed redirect answered as an opaque redirect
+(status 0). They cover:
 
 - `sdk.live.test.ts`: registration with and without email confirmation, sign-in and the cookie's
   attributes, the current user, restoring from the cookie in a fresh client, a scheduled refresh
-  rotating the cookie, the profile, password change, forgot and reset password with the mailed
+  rotating the cookie, an expired access token (the short-lived server's, 2 seconds) answered
+  401 and refreshed, the profile, password change, forgot and reset password with the mailed
   code, confirmation with the mailed token, listing and revoking sessions, sign-out and sign-out
   everywhere, and that a wrong password, an unknown account, a taken registration and every
   resend answer alike;
 - `protections.live.test.ts`: throttling (a 429 with `Retry-After` read through CORS becomes
-  `throttled`, per name given), the refresh cookie not sent from another site, refused (403) from
-  an unlisted page or without the client's headers, logout needing the access token, and CORS
-  refusing a foreign page;
+  `throttled`, per name given; failed refreshes fill the refresh bucket while a good cookie still
+  rotates), the refresh cookie not sent from another site (a check of the simulated browser, as
+  `SameSite` is the browser's to enforce), refused (403) from an unlisted page or without the
+  client's headers, logout needing the access token, CORS refusing a foreign page and allowing
+  every header the SDK sends;
 - `fake-agreement.live.test.ts`: the same raw requests and failures sent to the real server and
   to `createFakeIdentityApi` set up alike, comparing status, error name, error fields and the body
   as the SDK's readers see it, step by step.
 
-Where the backend is wrong the test is an expected failure (`it.fails`) naming the camis gap, so
-it turns red, as a reminder to drop the marker, once camis is fixed: creating a profile is refused
-(the assigned `owner` is validated as a required body field), and below the SDK registration,
-the confirmation resend and the sign-in time tell whether an account exists.
+Where the backend is wrong, one test pins what it answers today and an expected failure
+(`it.fails`) asserts only the behaviour wanted, both naming the camis gap; their setup runs in a
+`beforeAll`, so a failure there fails both rather than passing the expected failure. Once camis is
+fixed the pin turns red, as a reminder to drop it and the marker. The gaps: creating a profile is
+refused (400 `ValidationError` on `owner`, which the grant's `assign` should fill from the
+session); and below the SDK a taken registration answers 400 `ApplicationError`, a resend for a
+confirmed address 400 "Already confirmed", and an unknown account's sign-in is refused in under
+half the time of a wrong password, each telling whether an account exists.
