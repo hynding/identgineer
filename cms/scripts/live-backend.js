@@ -82,6 +82,8 @@ const sharedEnvironment = () => ({
   APP_KEY: `base64:${randomBytes(32).toString("base64")}`,
   DB_CONNECTION: "sqlite",
   CACHE_STORE: "database",
+  CAMIS_AUTH_HIDE_ACCOUNT_EXISTENCE: "true",
+  CAMIS_ACCOUNT_MAIL_PER_HOUR: "3",
   SESSION_DRIVER: "database",
   QUEUE_CONNECTION: "sync",
   LOG_CHANNEL: "single",
@@ -107,6 +109,13 @@ const sharedEnvironment = () => ({
 const SERVERS = [
   { name: "main", emailConfirmation: false, rate: RELAXED_RATE },
   { name: "confirmation", emailConfirmation: true, rate: RELAXED_RATE },
+  // Strapi's answers, which tell accounts apart: the SDK must stay safe against them too.
+  {
+    name: "disclosing",
+    emailConfirmation: true,
+    rate: RELAXED_RATE,
+    hideAccountExistence: false,
+  },
   { name: "throttled", emailConfirmation: false, rate: THROTTLED_RATE },
   {
     name: "shortLived",
@@ -280,6 +289,7 @@ const serverEnvironment = (server, port) => {
     DB_DATABASE: join(LIVE_DIR, `${server.name}.sqlite`),
     APP_URL: `http://${HOST}:${String(port)}`,
     CAMIS_EMAIL_CONFIRMATION: String(server.emailConfirmation),
+    CAMIS_AUTH_HIDE_ACCOUNT_EXISTENCE: String(server.hideAccountExistence ?? true),
     CAMIS_AUTH_THROTTLE_PER_MINUTE: String(rates.throttlePerMinute),
     CAMIS_AUTH_ADDRESS_THROTTLE_PER_MINUTE: String(rates.addressThrottlePerMinute),
     CAMIS_REFRESH_THROTTLE_PER_MINUTE: String(rates.refreshThrottlePerMinute),
@@ -379,6 +389,7 @@ const startServer = async (server, shared) => {
     name: server.name,
     url: env.APP_URL,
     emailConfirmation: server.emailConfirmation,
+    hideAccountExistence: server.hideAccountExistence ?? true,
     accessTokenLifetimeSeconds: server.accessTokenLifespan ?? ACCESS_TOKEN_LIFESPAN,
     ...ratesOf(server),
   };
