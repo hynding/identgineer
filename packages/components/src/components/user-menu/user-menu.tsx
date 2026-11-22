@@ -1,5 +1,7 @@
 import { Component, Element, Event, h, Prop, State, Watch, type EventEmitter } from "@stencil/core";
 import type { SignedOutDetail } from "../../identity/event-details";
+import { AnnouncementView } from "../../identity/feedback-view";
+import type { Announcement } from "../../identity/form-feedback";
 import type { IdentityStateView, UserMenuClient } from "../../identity/identity-types";
 import { fillTemplate, mergeLabels } from "../../identity/labels";
 import { restoreOnce } from "../../identity/restore-once";
@@ -11,11 +13,6 @@ import { USER_MENU_LABELS, type UserMenuLabels } from "./user-menu-labels";
 const SIGN_OUT = "idg-sign-out";
 
 type Notice = "signed-out" | "superseded" | "server-unreachable" | "error";
-
-interface Announcement {
-  readonly text: string;
-  readonly slot: 0 | 1;
-}
 
 /**
  * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
@@ -176,10 +173,7 @@ export class IdgUserMenu {
       <div class="user-menu">
         {content}
         {this.renderNotice(labels)}
-        <p class="visually-hidden" role="status">
-          <span>{this.announcement.slot === 0 ? this.announcement.text : ""}</span>
-          <span>{this.announcement.slot === 1 ? this.announcement.text : ""}</span>
-        </p>
+        <AnnouncementView announcement={this.announcement} />
       </div>
     );
   }
