@@ -46,10 +46,16 @@ throws a `TypeError` at creation, as an invalid `baseUrl` does.
 
 ## API
 
-Every method rejects with an `IdentityError` only (`providerSignInUrl` throws one). Inputs are
-checked by type as well as by value, so a JavaScript caller passing `null`, a number or an object
-where a string or options object belongs gets `validation`, with nothing sent and no failed
-attempt counted. After `dispose()` every method rejects with code `unknown` without sending
+Every method rejects with an `IdentityError` only (`providerSignInUrl` and `subscribe` throw
+one). Inputs are checked by type as well as by value, so a JavaScript caller passing `null`, a
+number or an object where a string, options object or listener belongs gets `validation`, with
+nothing sent and no failed attempt counted. So does a string with a lone surrogate (which JSON
+would send as `\ud800` and `encodeURIComponent` cannot encode), an identifier, username or email
+over 255 characters (camis' limit), a password over 72 bytes on registration, reset or change, a
+reset code or confirmation token over 512 characters (camis issues 128 and 40), a provider
+callback query over 16 KiB or a `returnTo` over 2048 characters, and `authorizedFetch` headers
+that `Headers` cannot read or a `signal` that is not an `AbortSignal`. A sign-in's password is not
+capped: bcrypt reads only its first 72 bytes, so a longer one set elsewhere still signs in. After `dispose()` every method rejects with code `unknown` without sending
 anything, and `providerSignInUrl` throws it.
 
 | Method                                                                | Request                                                    | Resolves to                                           |
@@ -185,10 +191,20 @@ cookie. So every request that presents or sets it (sign-in, the provider callbac
 refresh, a logout) runs under the Web Lock `identgineer-identity-cookie` (where `locks` is
 available), and the page's tabs send them one at a time. A sign-out holds the lock once across
 its logout, cookie lookup and the logout of what that lookup found; the lock is never held while
-waiting for the operation queue. A cookie refresh refused with 401 is retried once, in case
-another tab rotated the cookie in between without the lock. When the lock manager fails (a
-sandboxed frame's `SecurityError`) or does not grant the lock within `requestTimeoutMs`, the
-request runs without it; the lock manager's own error never reaches the caller. After every cookie refresh the client reads
+waiting for the operation queue. Both sides of the lock are bounded:
+
+- A holder keeps it at most three request timeouts (45 seconds by default): enough for a
+  sign-out's own logout, lookup and the logout of what it found even when each takes nearly its
+  whole timeout. Then its requests are aborted, the lock is let go, and the operation says what
+  it could not finish: a sign-out resolves `server-unreachable`, anything else rejects `network`.
+- A request waits for the lock at most four request timeouts (one more than any holder of this
+  client keeps it). Not granted by then, it fails closed: it is never sent, and rejects `network`
+  (a scheduled refresh tries again with its backoff; a sign-in can be retried).
+
+A cookie request runs without the lock only when there is no lock manager (`locks: null`, or no
+`navigator.locks`) or the manager itself fails (a sandboxed frame's `SecurityError`, whose error
+never reaches the caller). A cookie refresh refused with 401 is retried once, in case another tab
+rotated the cookie in between without the lock. After every cookie refresh the client reads
 `GET /api/users/me` with the new token: if the cookie now belongs to another user (another tab
 signed in as them), this tab drops the tokens and signs out with `reason: "user-changed"`.
 
@@ -251,10 +267,12 @@ tabs.
 
 What remains, by whether the cookie lock is held:
 
-- **With Web Locks** (granted within `requestTimeoutMs`), no tab's cookie request is in flight
-  during another's, so no answer overwrites a newer cookie, and a logout never clears the cookie of
-  a sign-in that landed while it was in flight. Two windows remain, both around another tab's
-  notice, which travels only after the sign-in's answer:
+- **With Web Locks**, no tab's cookie request is in flight during another's, so no answer
+  overwrites a newer cookie, and a logout never clears the cookie of a sign-in that landed while it
+  was in flight. A tab that cannot get the lock in time does not send its request at all (it
+  rejects `network`), and a section cut off at its bound aborts its requests before letting go;
+  an aborted request may still have reached the server, as any timed-out request may. Two windows
+  remain, both around another tab's notice, which travels only after the sign-in's answer:
   - a sign-in in another tab that finished just before this sign-out's cookie requests began, its
     notice not yet here, is logged out by them; that tab is then signed out by this tab's notice;
   - a sign-in in another tab that waited for this sign-out's cookie requests lands just after them.
@@ -262,8 +280,8 @@ What remains, by whether the cookie lock is held:
     session is ended; if it was already signed in, it is signed out locally while its session lives
     on (a reload resumes it); if its notice reaches this tab first, this sign-out resolves
     `superseded` and joins that session.
-- **Without Web Locks** (older browsers, sandboxed frames, a lock not granted in time), besides
-  those:
+- **Without Web Locks** (older browsers, `locks: null`, a lock manager that fails, as in
+  sandboxed frames), besides those:
   - a cookie request's answer can overwrite a newer cookie: another tab's refresh in flight when
     this tab signs in can put the older session back, and this tab is later signed out with
     `user-changed`; a sign-out's lookup in flight can do the same, and then, as above, the sign-out
@@ -368,6 +386,10 @@ sign in from the token answer); see `src/passkeys.ts`.
 - Without Web Locks (older browsers, sandboxed frames) cookie requests from several tabs can be in
   flight at once: the one refresh retry covers the usual case, and the sign-out windows above
   widen.
+- With Web Locks, on a network slow enough that a sign-out's cookie requests together take longer
+  than three request timeouts, the sign-out reports `server-unreachable`; and a tab waits up to
+  four request timeouts (a minute by default) for the lock before its sign-in or refresh rejects
+  `network`.
 - `signOut` costs one refresh request after the logout (or instead of it, in a tab without a
   token), to find any session the cookie still names; refreshes count against the CMS's refresh
   throttle (`CAMIS_REFRESH_THROTTLE_PER_MINUTE`, 60 a minute by default).
@@ -387,8 +409,11 @@ per address and account named under a per-address ceiling (`throttlePerMinute`,
 `addressThrottlePerMinute`, default 50), password reset in its own address bucket, and only failed
 refreshes counted (`refreshThrottlePerMinute`, default 60), so a valid refresh is never refused;
 and the refresh cookie refused with a 403 from a foreign `Origin` unless listed in
-`allowedOrigins`), `createManualClock(start)` and `createMemoryLocks()` (an in-memory lock manager
-for the `locks` option). Pass `api.fetch`, `api.baseUrl` and the clock to the client. The fake
+`allowedOrigins`), `createManualClock(start)` and `createMemoryLocks(options)` (an in-memory lock
+manager for the `locks` option; a request for a lock from within that lock's own holder, which a
+browser would leave waiting forever, throws and fails the test run, tracked with Node's
+`AsyncLocalStorage`; `detectNested: false` turns that off for long randomised runs, and
+`onNestedRequest` receives the error instead). Pass `api.fetch`, `api.baseUrl` and the clock to the client. The fake
 issues opaque tokens by default, living 600 seconds in refresh mode and 30 days in legacy mode
 (`accessTokens: "jwt"`, `accessTokenLifetimeSeconds` and `reportExpiresIn` change that), and
 `api.holdNext(method, path)` holds the next such request until the returned function is called, to
