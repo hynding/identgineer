@@ -121,8 +121,10 @@ export class IdgVariationSwitcher {
   private finish(result: Result, message: string): void {
     this.state = result.state;
     // The manual link stays when nothing changed: it is still accurate, and its message still shown.
-    // A real change clears it through the variations listener.
     if (result.changed.length === 0) return;
+    // A real change usually clears it through the variations listener, but not when the change
+    // undoes an outside one the listener has not heard of yet, so it is cleared here as well.
+    this.fallbackUrl = undefined;
     this.say(message, false);
     this.idgVariationsChange.emit({ state: result.state, changed: result.changed });
   }
