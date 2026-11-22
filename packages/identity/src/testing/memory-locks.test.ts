@@ -61,4 +61,14 @@ describe("createMemoryLocks", () => {
     await expect(locks.request("a", () => later)).resolves.toBe("outside");
     expect(reported).toHaveLength(0);
   });
+
+  it("leaves a nested request waiting, as a browser does, when detection is off", async () => {
+    const locks = createMemoryLocks({ detectNested: false });
+    let inner: Promise<string> | undefined;
+    await locks.request("a", () => {
+      inner = locks.request("a", () => Promise.resolve("inner"));
+      return Promise.resolve();
+    });
+    await expect(inner).resolves.toBe("inner");
+  });
 });

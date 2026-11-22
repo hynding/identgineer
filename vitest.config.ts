@@ -25,6 +25,10 @@ export default defineConfig({
         test: {
           name: "identity",
           include: ["packages/identity/src/**/*.test.ts"],
+          // Every identity test runs on a manual clock in well under a second: a regression that
+          // waits forever (a lock requested by its own holder) fails fast instead of hanging CI.
+          testTimeout: 3_000,
+          hookTimeout: 3_000,
         },
       },
       {
