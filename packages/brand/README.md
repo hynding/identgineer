@@ -121,9 +121,13 @@ of tints, neutrals and status colours, and how far text and strong borders sit f
 never changes the accent.
 
 The gradient starts at the primary exactly as given. It ends at the secondary or, without one, at
-the analogous hue (the primary turned 30° or 40°, either way) that keeps the most chroma at the
-primary's lightness once mapped into sRGB, so it never lands on a hue the gamut can only show
-muddy there. A grey primary's gradient turns in lightness instead, 0.12 towards the middle.
+an analogous hue: the primary turned 30° or 40°, either way, at its lightness and mapped into
+sRGB. Only turns at least 0.08 from the primary in OKLab count, so the two ends can be told apart.
+Of those, a hue outside the olive band (OKLCH hue 95° to 135° below lightness 0.85, where green and
+amber would otherwise turn muddy) is preferred, and among the rest the one that keeps the most
+chroma wins: green ends at teal, amber at coral, indigo at violet. A grey primary, or one with no
+turn far enough from it (a near-black such as `#111827`), turns in lightness instead, towards the
+middle by at least 0.12 and until the ends differ by 1.5:1, so even black gets a visible gradient.
 
 Every move is reported in `theme.adjustments`: scheme, token, origin (`primary`, `secondary` or
 `generated`), requested and used colour, the background that bound the move, the threshold, and
@@ -178,7 +182,9 @@ outline, soft) resolves each `--idg-shape-radius-*` as `var(--idg-brand-radius-*
 so it takes the brand's corners; a design whose identity is its corners declares `false`
 (brutalist, editorial, pixel) and keeps its own whatever the brand says. See
 [Brand corners](../tokens/README.md#brand-corners). As with any theme, put `data-design` on the
-same element as `data-theme` or on a descendant of it.
+same element as `data-theme` or on a descendant of it. The preference inherits like any custom property: a built-in theme
+nested inside a brand-themed ancestor does not set it, so designs that follow brand corners still
+take the brand's corners there.
 
 `emitBrandThemeTokens(theme)` writes `theme.document` as formatted JSON, with `<`, `>`, `&`, U+2028
 and U+2029 escaped so it is safe inside an HTML `<script>` element. In the JSON the corners and the

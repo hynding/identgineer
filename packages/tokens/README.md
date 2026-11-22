@@ -136,7 +136,9 @@ properties. Whether a design takes them is its own decision, declared in its JSO
   and is emitted with plain radii, so a brand never rounds it.
 
 The preference is read where the design's rule matches, so it reaches a design set on the same
-element as the brand theme or on a descendant of it, as the axes require anyway.
+element as the brand theme or on a descendant of it, as the axes require anyway. It inherits like any
+custom property, and no built-in theme sets it, so a built-in theme nested inside a brand-themed
+ancestor still takes the brand's corners in designs that follow them.
 
 Layout tokens: `layout.content-max` (maximum inline size of the page content, `100%` for edge to
 edge), `layout.page-gutter`, `layout.section-gap`, `layout.gap` (the default gap inside the layout
