@@ -17,8 +17,12 @@ import { createFakeStore, type FakeUser, type IssuedTokens } from "./fake-store.
 export interface FakeIdentityApiOptions extends Partial<FakeSettings> {
   readonly baseUrl?: string;
   readonly clock?: Clock;
+  /** `opaque` (default) as strapi-php's Sanctum tokens; `jwt` as Strapi's. */
   readonly accessTokens?: "jwt" | "opaque";
+  /** Defaults to camis': 600 s in refresh mode, 30 days for legacy tokens. */
   readonly accessTokenLifetimeSeconds?: number;
+  /** Adds `expiresIn` (seconds) to every token answer, as a backend that reports it would. */
+  readonly reportExpiresIn?: boolean;
 }
 
 export interface FakeUserInput {
@@ -32,6 +36,10 @@ export interface FakeUserInput {
 /** A one-off answer in place of the route's, or a fault. */
 export type FakeOverride =
   FakeResponse | "network-error" | "hang" | ((request: FakeRequest) => Promise<FakeResponse>);
+
+// camis' defaults: CAMIS_ACCESS_TOKEN_LIFESPAN and CAMIS_JWT_LIFESPAN.
+const ACCESS_LIFETIME_SECONDS = 600;
+const LEGACY_LIFETIME_SECONDS = 2_592_000;
 
 const ROUTES: readonly FakeRoute[] = [...AUTH_ROUTES, ...SESSION_ROUTES, ...PROFILE_ROUTES];
 
@@ -85,10 +93,13 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
   const base = new URL(options.baseUrl ?? "https://cms.example.test");
   const clock = options.clock ?? systemClock;
   const settings: FakeSettings = { ...DEFAULT_SETTINGS, ...options };
+  const lifetimeSeconds =
+    options.accessTokenLifetimeSeconds ??
+    (settings.sessions === "legacy" ? LEGACY_LIFETIME_SECONDS : ACCESS_LIFETIME_SECONDS);
   const store = createFakeStore({
     clock,
-    accessTokens: options.accessTokens ?? "jwt",
-    accessTokenLifetimeSeconds: options.accessTokenLifetimeSeconds ?? 600,
+    accessTokens: options.accessTokens ?? "opaque",
+    accessTokenLifetimeSeconds: lifetimeSeconds,
   });
   const cookieJar = new Map<string, string>();
   const requests: FakeRequest[] = [];
@@ -172,6 +183,12 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
     return notFound();
   };
 
+  const withExpiresIn = (result: FakeResponse): FakeResponse => {
+    const body = result.body as { jwt?: unknown } | undefined;
+    if (options.reportExpiresIn !== true || typeof body?.jwt !== "string") return result;
+    return { ...result, body: { ...body, expiresIn: lifetimeSeconds } };
+  };
+
   const applyCookies = (request: FakeRequest, answer: FakeResponse): void => {
     if (request.credentials !== "include") return;
     for (const cookie of answer.cookies ?? []) {
@@ -211,7 +228,7 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
     requests.push(request);
     await Promise.resolve();
     if (init.signal?.aborted === true) throw abortError();
-    const result = await answer(request, init.signal ?? null);
+    const result = withExpiresIn(await answer(request, init.signal ?? null));
     applyCookies(request, result);
     return toResponse(result);
   };

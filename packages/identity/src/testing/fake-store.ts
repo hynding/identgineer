@@ -69,7 +69,12 @@ export const createFakeStore = (options: FakeStoreOptions) => {
     const token =
       options.accessTokens === "jwt"
         ? `${base64Url('{"alg":"HS256","typ":"JWT"}')}.${base64Url(
-            JSON.stringify({ id: userId, n, exp: Math.floor(expiresAt / 1000) }),
+            JSON.stringify({
+              id: userId,
+              n,
+              iat: Math.floor(clock.now() / 1000),
+              exp: Math.floor(expiresAt / 1000),
+            }),
           )}.fake-signature-${String(n)}`
         : `${String(n)}|fakeOpaqueToken${String(n).padStart(32, "0")}`;
     accessTokens.set(token, { userId, sessionId, expiresAt });

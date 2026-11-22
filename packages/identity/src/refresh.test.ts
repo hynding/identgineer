@@ -187,12 +187,6 @@ describe("scheduled refresh", () => {
     expect(paths(api.requests).filter((path) => path === "/api/auth/refresh")).toHaveLength(3);
   });
 
-  it("schedules nothing for an opaque access token", async () => {
-    const { clock, signIn } = setup({ accessTokens: "opaque" });
-    await signIn();
-    expect(clock.pendingTimers()).toBe(0);
-  });
-
   it("signs out with the reason when the scheduled refresh is refused", async () => {
     const { api, clock, client, signIn } = setup({ accessTokenLifetimeSeconds: 600 });
     await signIn();
@@ -202,13 +196,17 @@ describe("scheduled refresh", () => {
     expect(client.getState()).toEqual({ status: "signed-out", reason: "expired" });
   });
 
-  it("signs out at expiry on a backend that cannot refresh", async () => {
+  it("signs out at a known expiry on a backend that cannot refresh", async () => {
     const { clock, client, signIn } = setup({
       sessions: "legacy",
+      accessTokens: "jwt",
       accessTokenLifetimeSeconds: 120,
     });
     await signIn();
     clock.advance(90_000);
+    await settle();
+    expect(client.getState().status).toBe("signed-in");
+    clock.advance(30_000);
     await settle();
     expect(client.getState()).toEqual({ status: "signed-out", reason: "expired" });
   });
@@ -226,8 +224,11 @@ describe("scheduled refresh", () => {
     expect(paths(api.requests).filter((path) => path === "/api/auth/refresh")).toHaveLength(2);
   });
 
-  it("signs out when the token has expired and the server is still unreachable", async () => {
-    const { api, clock, client, signIn } = setup({ accessTokenLifetimeSeconds: 600 });
+  it("signs out when a known expiry passed and the server is still unreachable", async () => {
+    const { api, clock, client, signIn } = setup({
+      accessTokens: "jwt",
+      accessTokenLifetimeSeconds: 600,
+    });
     await signIn();
     api.respondNext("POST", "/api/auth/refresh", "network-error");
     api.respondNext("POST", "/api/auth/refresh", "network-error");

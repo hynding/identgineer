@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readTokenExpiry } from "./token-expiry.ts";
+import { readTokenTimes } from "./token-expiry.ts";
 
 const base64Url = (value: string): string =>
   Buffer.from(value)
@@ -11,15 +11,30 @@ const base64Url = (value: string): string =>
 const jwt = (payload: string): string =>
   `${base64Url('{"alg":"HS256"}')}.${base64Url(payload)}.sig`;
 
-describe("readTokenExpiry", () => {
+describe("readTokenTimes", () => {
   it("reads exp from a JWT payload as milliseconds", () => {
-    expect(readTokenExpiry(jwt('{"id":1,"exp":1700000000}'))).toBe(1_700_000_000_000);
+    expect(readTokenTimes(jwt('{"id":1,"exp":1700000000}'))).toEqual({
+      expiresAt: 1_700_000_000_000,
+    });
+  });
+
+  it("reads iat beside exp", () => {
+    expect(readTokenTimes(jwt('{"iat":1699999400,"exp":1700000000}'))).toEqual({
+      issuedAt: 1_699_999_400_000,
+      expiresAt: 1_700_000_000_000,
+    });
+  });
+
+  it("drops an unreadable iat but keeps exp", () => {
+    expect(readTokenTimes(jwt('{"iat":"x","exp":1700000000}'))).toEqual({
+      expiresAt: 1_700_000_000_000,
+    });
   });
 
   it("reads a payload that needs base64url characters", () => {
-    expect(readTokenExpiry(jwt('{"exp":1700000000,"n":"\\u00ff\\u00fe>>>???"}'))).toBe(
-      1_700_000_000_000,
-    );
+    expect(readTokenTimes(jwt('{"exp":1700000000,"n":"\\u00ff\\u00fe>>>???"}'))).toEqual({
+      expiresAt: 1_700_000_000_000,
+    });
   });
 
   it.each([
@@ -34,7 +49,7 @@ describe("readTokenExpiry", () => {
     ["an infinite exp", jwt('{"exp":1e400}')],
     ["a polluting payload", jwt('{"__proto__":{"exp":1}}')],
     ["an array payload", jwt("[1700000000]")],
-  ])("returns undefined for %s", (_label, token) => {
-    expect(readTokenExpiry(token)).toBeUndefined();
+  ])("reads no expiry from %s", (_label, token) => {
+    expect(readTokenTimes(token).expiresAt).toBeUndefined();
   });
 });
