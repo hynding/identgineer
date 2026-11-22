@@ -68,17 +68,54 @@ test.describe("identity forms in parents that size them by their content", () =>
     ).toBeLessThanOrEqual(0);
   });
 
-  test("take a measure the page sets", async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await open(page);
-    await page.evaluate(() => {
-      document.documentElement.style.setProperty("--idg-identity-measure", "25rem");
+  /** Each form's width beside what `value` measures in the form's own font. */
+  const widthsFor = (page: Page, value: string) =>
+    page.evaluate(
+      ([forms, measure]) =>
+        Array.from(document.querySelectorAll(forms), (form) => {
+          const probe = document.createElement("div");
+          probe.style.font = getComputedStyle(form).font;
+          probe.style.inlineSize = measure;
+          probe.style.position = "absolute";
+          document.body.append(probe);
+          const expected = probe.getBoundingClientRect().width;
+          probe.remove();
+          const box = form.getBoundingClientRect();
+          return {
+            name: `${form.closest("[data-case]")?.getAttribute("data-case") ?? "?"} ${form.localName}`,
+            width: box.width,
+            right: box.right,
+            expected,
+          };
+        }),
+      [FORMS, value] as const,
+    );
+
+  // In any unit a length takes, the font-relative ones in the form's own font.
+  for (const value of ["25rem", "25em", "40ch"]) {
+    test(`take a measure the page sets, ${value}, on a wide screen and at 320px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await open(page);
+      await page.evaluate((measure) => {
+        document.documentElement.style.setProperty("--idg-identity-measure", measure);
+      }, value);
+      await settle(page);
+      for (const form of await widthsFor(page, value)) {
+        expect(form.expected, form.name).toBeGreaterThan(300);
+        expect(Math.abs(form.width - form.expected), form.name).toBeLessThanOrEqual(
+          form.expected * 0.02,
+        );
+      }
+      await page.setViewportSize({ width: 320, height: 900 });
+      await settle(page);
+      for (const form of await widthsFor(page, value)) {
+        expect(form.width, form.name).toBeGreaterThan(160);
+        expect(form.right, form.name).toBeLessThanOrEqual(320);
+      }
     });
-    await settle(page);
-    const { measure, forms } = await widths(page);
-    expect(measure).toBe(400);
-    for (const form of forms) expect(Math.round(form.width), form.name).toBe(400);
-  });
+  }
 });
 
 test.describe("idg-session-guard in a flex row or a grid", () => {
