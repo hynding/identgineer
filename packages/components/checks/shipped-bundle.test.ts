@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -24,15 +24,6 @@ const SDK_MARKERS = [
   "createFakeIdentityApi",
 ];
 
-// Stencil copies every script under src into the collection, the browser fixtures' included. The
-// identity fixture imports the SDK and its fake by URL from the test server (/identity-sdk), so it
-// names the fake's factory, but none of their code is in it.
-const FIXTURES = join(PACKAGE, "dist", "collection", "fixtures");
-const markersFor = (file: string) =>
-  file.startsWith(FIXTURES)
-    ? SDK_MARKERS.filter((marker) => marker !== "createFakeIdentityApi")
-    : SDK_MARKERS;
-
 // Reads the build output, so it needs the components built first (CI builds before it tests).
 describe.skipIf(!SHIPPED.every((directory) => existsSync(directory)))(
   "the shipped component bundles, once built",
@@ -44,12 +35,26 @@ describe.skipIf(!SHIPPED.every((directory) => existsSync(directory)))(
       expect(files.some((file) => readFileSync(file, "utf8").includes("idg-sign-in"))).toBe(true);
     });
 
+    it("hold no browser fixture: the fixtures are test pages, served from www only", () => {
+      const folders = (directory: string): string[] =>
+        readdirSync(directory, { withFileTypes: true })
+          .filter((entry) => entry.isDirectory())
+          .flatMap((entry) => [
+            join(directory, entry.name),
+            ...folders(join(directory, entry.name)),
+          ]);
+      const fixtures = folders(join(PACKAGE, "dist"))
+        .filter((folder) => basename(folder) === "fixtures")
+        .map((folder) => folder.slice(PACKAGE.length));
+      expect(fixtures).toEqual([]);
+    });
+
     it("contain no code of the identity SDK or its fake", () => {
       const leaking = files.flatMap((file) => {
         const code = readFileSync(file, "utf8");
-        return markersFor(file)
-          .filter((marker) => code.includes(marker))
-          .map((marker) => `${file.slice(PACKAGE.length)}: ${marker}`);
+        return SDK_MARKERS.filter((marker) => code.includes(marker)).map(
+          (marker) => `${file.slice(PACKAGE.length)}: ${marker}`,
+        );
       });
       expect(leaking).toEqual([]);
     });
