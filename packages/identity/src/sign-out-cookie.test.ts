@@ -124,6 +124,12 @@ describe("a session whose refresh token came in a body, its access token dead", 
     expect(api.activeSessionCount("eve@example.com")).toBe(0);
   });
 
+  it("counts as ended when that refresh is refused: the session is already over", async () => {
+    const { api, client } = await signedUpThenExpired();
+    api.respondNext("POST", "/api/auth/refresh", REFUSED);
+    await expect(client.signOut()).resolves.toEqual({ outcome: "signed-out" });
+  });
+
   it("is reported as possibly alive when that refresh cannot reach the server", async () => {
     const { api, client } = await signedUpThenExpired();
     api.respondNext("POST", "/api/auth/refresh", "network-error");
@@ -162,5 +168,19 @@ describe("the logout's answer", () => {
       "/api/auth/logout",
     ]);
     expect(api.restorableSession()).toBe(false);
+  });
+});
+
+describe("signing out everywhere from a tab without a token", () => {
+  it("ends every session of the account the cookie names", async () => {
+    const { api, makeClient } = setup();
+    await makeClient().signIn({ identifier: "ada@example.com", password: PASSWORD });
+    api.clearCookies();
+    await makeClient().signIn({ identifier: "ada@example.com", password: PASSWORD });
+    expect(api.activeSessionCount("ada@example.com")).toBe(2);
+    await expect(makeClient().signOut({ everywhere: true })).resolves.toEqual({
+      outcome: "signed-out",
+    });
+    expect(api.activeSessionCount("ada@example.com")).toBe(0);
   });
 });

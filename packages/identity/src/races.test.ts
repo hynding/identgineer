@@ -380,3 +380,40 @@ describe("a password change asked for before a sign-in in the same tab", () => {
     expect(paths(api)).not.toContain("/api/auth/change-password");
   });
 });
+
+describe("a sign-out whose own logout fails while a sign-in it cancelled is ended", () => {
+  it("reports the server unreachable", async () => {
+    const { api, client, signIn } = setup();
+    await signIn();
+    const release = api.holdNext("POST", "/api/auth/local");
+    const signingIn = rejection(client.signIn({ identifier: "ada", password: PASSWORD }));
+    await settle();
+    api.respondNext("POST", "/api/auth/logout", "network-error");
+    const signingOut = client.signOut();
+    await settle();
+    release();
+    await expect(signingOut).resolves.toEqual({ outcome: "server-unreachable" });
+    expect(await signingIn).toMatchObject({ code: "unauthorized" });
+  });
+});
+
+describe("a restore while an older cookie session's refresh is under way", () => {
+  it("does not share that refresh, though both present the cookie", async () => {
+    const { api, client, clock, makeClient, signIn } = setup();
+    addBob(api);
+    await signIn();
+    const release = api.holdNext("POST", "/api/auth/refresh");
+    clock.advance(570_000);
+    await settle();
+    api.respondNext("POST", "/api/auth/logout", "network-error");
+    await client.signOut();
+    await makeClient().signIn({ identifier: "bob", password: PASSWORD });
+    const restoring = client.restore();
+    await settle();
+    release();
+    await expect(restoring).resolves.toMatchObject({
+      status: "signed-in",
+      user: { username: "bob" },
+    });
+  });
+});

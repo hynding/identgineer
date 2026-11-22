@@ -204,3 +204,24 @@ describe("a re-check that finds no session after this tab signed out", () => {
     expect(client.getState()).toEqual({ status: "signed-out", reason: "user" });
   });
 });
+
+describe("a sign-in in another tab heard of before the cookie lookup", () => {
+  it("spares the lookup: the only refresh afterwards is this tab's re-check", async () => {
+    const { api, client, other } = await twoTabs();
+    const releaseLogout = api.holdNext("POST", "/api/auth/logout");
+    const signingOut = client.signOut();
+    await settle();
+    await other.signIn({ identifier: "bob", password: PASSWORD });
+    await settle();
+    const sent = api.requests.length;
+    releaseLogout();
+    await expect(signingOut).resolves.toEqual({ outcome: "superseded" });
+    await settle();
+    await settle();
+    const refreshes = api.requests
+      .slice(sent)
+      .filter((request) => request.path === "/api/auth/refresh");
+    // The re-check's; the logout cleared the newer cookie (the backend window), so it finds none.
+    expect(refreshes).toHaveLength(1);
+  });
+});
