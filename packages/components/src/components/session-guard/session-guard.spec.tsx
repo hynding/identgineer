@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { h, render } from "@stencil/vitest";
-import type { IdentityClient } from "@identgineer/identity";
+import type { IdentityClient, IdentityState as IdentityStateView } from "@identgineer/identity";
 import { recordEvents, shadowOf } from "../../testing/identity-form";
 import { identitySetup, settle } from "../../testing/identity-harness";
 import { removeHost } from "../../testing/remove-host";
@@ -49,9 +49,11 @@ describe("idg-session-guard", () => {
 
   it("restores once while the state is unknown, then shows the fallback when nobody is signed in", async () => {
     const { client, api } = identitySetup();
-    const restore = vi.spyOn(client, "restore");
-    const { root, waitForChanges } = await mount(client);
+    const restore = vi.fn(() => client.restore());
+    const release = api.holdNext("POST", "/api/auth/refresh");
+    const { root, waitForChanges } = await mount({ ...client, restore });
     expect(drawn(root)).toEqual(["pending"]);
+    release();
     await settle(waitForChanges);
     expect(restore).toHaveBeenCalledTimes(1);
     expect(api.requests.filter((request) => request.path === "/api/auth/refresh")).toHaveLength(1);
@@ -65,8 +67,8 @@ describe("idg-session-guard", () => {
   it("shows the content only once signed in, and does not restore a client that knows", async () => {
     const { client, signIn } = identitySetup();
     await signIn();
-    const restore = vi.spyOn(client, "restore");
-    const { root } = await mount(client);
+    const restore = vi.fn(() => client.restore());
+    const { root } = await mount({ ...client, restore });
     expect(drawn(root)).toEqual(["content"]);
     expect(restore).not.toHaveBeenCalled();
     expect(events.seen).toEqual([{ type: "idgSessionChange", detail: { status: "signed-in" } }]);
@@ -90,14 +92,25 @@ describe("idg-session-guard", () => {
     ]);
   });
 
-  it("hides the content when another tab signs out", async () => {
-    const { client, signIn, makeClient } = identitySetup();
+  // The mock DOM's events cannot carry a BroadcastChannel message, so the client hears of the
+  // other tab here through a stand-in; the browser tests sign out in a real second client.
+  it("hides the content when the client hears another tab sign out", async () => {
+    const { client, signIn } = identitySetup();
     await signIn();
-    const otherTab = makeClient();
-    await otherTab.restore();
-    const { root, waitForChanges } = await mount(client);
-    await otherTab.signOut();
-    await settle(waitForChanges);
+    const listeners = new Set<(state: IdentityStateView) => void>();
+    let state = client.getState();
+    const tab = {
+      ...client,
+      getState: () => state,
+      subscribe: (listener: (next: IdentityStateView) => void) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+    };
+    const { root, waitForChanges } = await mount(tab);
+    state = { status: "signed-out", reason: "other-tab" };
+    for (const listener of listeners) listener(state);
+    await waitForChanges();
     expect(drawn(root)).toEqual(["fallback"]);
     expect(events.seen.at(-1)?.detail).toEqual({ status: "signed-out", reason: "other-tab" });
   });

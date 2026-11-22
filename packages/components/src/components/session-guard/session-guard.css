@@ -1,0 +1,8 @@
+/* The guard adds no box of its own: what it shows lays out as if it were the guard's parent's. */
+:host {
+  display: contents;
+}
+
+:host([hidden]) {
+  display: none;
+}

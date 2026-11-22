@@ -25,7 +25,7 @@ import { NavigationToggleDetail } from "./components/layout/layout-options";
 import { Placement } from "./utils/position";
 import { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 import { PageChangeDetail } from "./components/pagination/pagination-options";
-import { PasswordResetClient, RegisterClient, SignInClient } from "./identity/identity-types";
+import { PasswordResetClient, RegisterClient, SessionGuardClient, SignInClient } from "./identity/identity-types";
 import { PasswordResetMode } from "./components/password-reset/password-reset-options";
 import { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
 import { CountdownClock } from "./identity/throttle-countdown";
@@ -34,6 +34,7 @@ import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
 import { RegisterLabels } from "./components/register/register-labels";
 import { RegisteredDetail } from "./components/register/register-types";
+import { SessionChangeDetail } from "./components/session-guard/session-guard-types";
 import { SidebarSide } from "./components/sidebar/sidebar-options";
 import { SignInLabels } from "./components/sign-in/sign-in-labels";
 import { ProviderSignInDetail, SignInProvider } from "./components/sign-in/sign-in-types";
@@ -67,7 +68,7 @@ export { NavigationToggleDetail } from "./components/layout/layout-options";
 export { Placement } from "./utils/position";
 export { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 export { PageChangeDetail } from "./components/pagination/pagination-options";
-export { PasswordResetClient, RegisterClient, SignInClient } from "./identity/identity-types";
+export { PasswordResetClient, RegisterClient, SessionGuardClient, SignInClient } from "./identity/identity-types";
 export { PasswordResetMode } from "./components/password-reset/password-reset-options";
 export { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
 export { CountdownClock } from "./identity/throttle-countdown";
@@ -76,6 +77,7 @@ export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
 export { RegisterLabels } from "./components/register/register-labels";
 export { RegisteredDetail } from "./components/register/register-types";
+export { SessionChangeDetail } from "./components/session-guard/session-guard-types";
 export { SidebarSide } from "./components/sidebar/sidebar-options";
 export { SignInLabels } from "./components/sign-in/sign-in-labels";
 export { ProviderSignInDetail, SignInProvider } from "./components/sign-in/sign-in-types";
@@ -1233,6 +1235,21 @@ export namespace Components {
         "value": string;
     }
     /**
+     * Shows its content only while someone is signed in, through the identity client it is given in
+     * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
+     * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
+     * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
+     * at once.
+     * This is a convenience for the interface, not access control: the content is still in the page
+     * for anyone who reads its markup, and only the API decides what a request may read or change.
+     */
+    interface IdgSessionGuard {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: SessionGuardClient;
+    }
+    /**
      * Two regions side by side: a side region of a set width and the content, which takes the rest.
      * When the content would get less than half of the width, the regions stack instead, with no
      * breakpoint and no script, so it follows the width of its container rather than the viewport.
@@ -1834,6 +1851,10 @@ export interface IdgSelectCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgSelectElement;
 }
+export interface IdgSessionGuardCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgSessionGuardElement;
+}
 export interface IdgSignInCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgSignInElement;
@@ -2375,6 +2396,32 @@ declare global {
         prototype: HTMLIdgSelectElement;
         new (): HTMLIdgSelectElement;
     };
+    interface HTMLIdgSessionGuardElementEventMap {
+        "idgSessionChange": SessionChangeDetail;
+    }
+    /**
+     * Shows its content only while someone is signed in, through the identity client it is given in
+     * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
+     * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
+     * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
+     * at once.
+     * This is a convenience for the interface, not access control: the content is still in the page
+     * for anyone who reads its markup, and only the API decides what a request may read or change.
+     */
+    interface HTMLIdgSessionGuardElement extends Components.IdgSessionGuard, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgSessionGuardElementEventMap>(type: K, listener: (this: HTMLIdgSessionGuardElement, ev: IdgSessionGuardCustomEvent<HTMLIdgSessionGuardElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgSessionGuardElementEventMap>(type: K, listener: (this: HTMLIdgSessionGuardElement, ev: IdgSessionGuardCustomEvent<HTMLIdgSessionGuardElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgSessionGuardElement: {
+        prototype: HTMLIdgSessionGuardElement;
+        new (): HTMLIdgSessionGuardElement;
+    };
     /**
      * Two regions side by side: a side region of a set width and the content, which takes the rest.
      * When the content would get less than half of the width, the regions stack instead, with no
@@ -2680,6 +2727,7 @@ declare global {
         "idg-radio-group": HTMLIdgRadioGroupElement;
         "idg-register": HTMLIdgRegisterElement;
         "idg-select": HTMLIdgSelectElement;
+        "idg-session-guard": HTMLIdgSessionGuardElement;
         "idg-sidebar": HTMLIdgSidebarElement;
         "idg-sign-in": HTMLIdgSignInElement;
         "idg-skeleton": HTMLIdgSkeletonElement;
@@ -3854,6 +3902,25 @@ declare namespace LocalJSX {
         "value"?: string;
     }
     /**
+     * Shows its content only while someone is signed in, through the identity client it is given in
+     * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
+     * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
+     * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
+     * at once.
+     * This is a convenience for the interface, not access control: the content is still in the page
+     * for anyone who reads its markup, and only the API decides what a request may read or change.
+     */
+    interface IdgSessionGuard {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: SessionGuardClient;
+        /**
+          * Fires when what the guard shows changes, and with the first state each client reports.
+         */
+        "onIdgSessionChange"?: (event: IdgSessionGuardCustomEvent<SessionChangeDetail>) => void;
+    }
+    /**
      * Two regions side by side: a side region of a set width and the content, which takes the rest.
      * When the content would get less than half of the width, the regions stack instead, with no
      * breakpoint and no script, so it follows the width of its container rather than the viewport.
@@ -4816,6 +4883,7 @@ declare namespace LocalJSX {
         "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
         "idg-register": IdgRegister;
         "idg-select": Omit<IdgSelect, keyof IdgSelectAttributes> & { [K in keyof IdgSelect & keyof IdgSelectAttributes]?: IdgSelect[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `attr:${K}`]?: IdgSelectAttributes[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `prop:${K}`]?: IdgSelect[K] };
+        "idg-session-guard": IdgSessionGuard;
         "idg-sidebar": Omit<IdgSidebar, keyof IdgSidebarAttributes> & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes]?: IdgSidebar[K] } & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `attr:${K}`]?: IdgSidebarAttributes[K] } & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `prop:${K}`]?: IdgSidebar[K] };
         "idg-sign-in": Omit<IdgSignIn, keyof IdgSignInAttributes> & { [K in keyof IdgSignIn & keyof IdgSignInAttributes]?: IdgSignIn[K] } & { [K in keyof IdgSignIn & keyof IdgSignInAttributes as `attr:${K}`]?: IdgSignInAttributes[K] } & { [K in keyof IdgSignIn & keyof IdgSignInAttributes as `prop:${K}`]?: IdgSignIn[K] };
         "idg-skeleton": Omit<IdgSkeleton, keyof IdgSkeletonAttributes> & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes]?: IdgSkeleton[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `attr:${K}`]?: IdgSkeletonAttributes[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `prop:${K}`]?: IdgSkeleton[K] };
@@ -5023,6 +5091,16 @@ declare module "@stencil/core" {
              * data has to be serialised into an attribute.
              */
             "idg-select": LocalJSX.IntrinsicElements["idg-select"] & JSXBase.HTMLAttributes<HTMLIdgSelectElement>;
+            /**
+             * Shows its content only while someone is signed in, through the identity client it is given in
+             * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
+             * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
+             * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
+             * at once.
+             * This is a convenience for the interface, not access control: the content is still in the page
+             * for anyone who reads its markup, and only the API decides what a request may read or change.
+             */
+            "idg-session-guard": LocalJSX.IntrinsicElements["idg-session-guard"] & JSXBase.HTMLAttributes<HTMLIdgSessionGuardElement>;
             /**
              * Two regions side by side: a side region of a set width and the content, which takes the rest.
              * When the content would get less than half of the width, the regions stack instead, with no
