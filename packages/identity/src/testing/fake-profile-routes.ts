@@ -9,7 +9,9 @@ const string =
   (value) => {
     if (value === null) return undefined;
     if (typeof value !== "string") return "must be a string";
-    if (value.length > maxLength) return `must be at most ${String(maxLength)} characters`;
+    // Laravel's `max` counts characters (mb_strlen), not UTF-16 code units.
+    if (Array.from(value).length > maxLength)
+      return `must be at most ${String(maxLength)} characters`;
     if (pattern !== undefined && !pattern.test(value)) return "must match the pattern";
     return undefined;
   };

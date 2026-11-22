@@ -49,6 +49,18 @@ describe("saveProfile", () => {
     expect(await client.getProfile()).toEqual(updated);
   });
 
+  it("counts the limits in characters, as the CMS does, not in code units", async () => {
+    const { client, signIn } = setup();
+    await signIn();
+    await expect(client.saveProfile({ displayName: "😀".repeat(80) })).resolves.toMatchObject({
+      displayName: "😀".repeat(80),
+    });
+    await expect(client.saveProfile({ displayName: "😀".repeat(81) })).rejects.toMatchObject({
+      code: "validation",
+      fields: ["displayName"],
+    });
+  });
+
   it("sends only the profile's own fields", async () => {
     const { api, client, signIn } = setup();
     await signIn();
