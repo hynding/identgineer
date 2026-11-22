@@ -3,6 +3,10 @@
    broken only when it is wider than the line on its own: `anywhere` would also let a squeezed
    column shrink to the width of one letter. */
 :host {
+  /* The UX mode's own values, for the narrow form below to scale down from. */
+  --_idg-mode-control-padding-inline: var(--idg-density-control-padding-inline);
+  --_idg-mode-gap-scale: var(--idg-density-gap-scale);
+
   display: block;
   min-inline-size: 0;
   color: var(--idg-color-text);
@@ -18,10 +22,21 @@
 }
 
 .identity {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: calc(var(--idg-space-l) * var(--idg-density-gap-scale));
   min-inline-size: 0;
+}
+
+/* A form narrower than nine of its own ems, which takes large text on a narrow screen (320px at
+   200%): the controls' inline padding and the gaps shrink so the text keeps its line. At normal
+   text size no phone is that narrow, so every UX mode keeps its own padding. */
+@container (inline-size < 9em) {
+  .identity > * {
+    --idg-density-control-padding-inline: min(var(--_idg-mode-control-padding-inline), 4cqi);
+    --idg-density-gap-scale: min(var(--_idg-mode-gap-scale), 1);
+  }
 }
 
 .form {

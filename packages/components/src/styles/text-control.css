@@ -28,12 +28,6 @@
   --_ring-width: 1px;
   --_height-scale: 1;
   --_padding-scale: 1;
-  /* No wider than a few percent of the screen, so a spacious UX mode at 320px with large text
-     still leaves room for the text and the controls beside it. */
-  --_padding-inline: min(
-    calc(var(--idg-density-control-padding-inline) * var(--_padding-scale)),
-    4vw
-  );
 
   position: relative;
   box-sizing: border-box;
@@ -45,7 +39,7 @@
     var(--idg-density-target-size),
     calc(var(--idg-density-control-height) * var(--_height-scale))
   );
-  padding-inline: var(--_padding-inline);
+  padding-inline: calc(var(--idg-density-control-padding-inline) * var(--_padding-scale));
   border-width: var(--idg-border-control-width);
   border-style: var(--idg-border-control-style);
   border-color: var(--idg-border-control-color);

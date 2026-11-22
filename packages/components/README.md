@@ -1327,9 +1327,11 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   The identity browser tests (`identity*.browser.ts`) cover autofill hints on the real inputs,
   keyboard and focus, enumeration parity, the throttle countdown, cross-tab sign-out, no browser
   storage writes, axe across every axis, right to left, and 200% text at 320px in every UX mode
-  (no sideways scroll, no reveal button past its field, no word broken in a squeezed line). Text
-  controls, buttons and alerts cap their inline padding at `4vw`, so a roomy UX mode still leaves
-  the line its text needs on a narrow screen.
+  (no sideways scroll, no reveal button past its field, no word broken in a squeezed line), and
+  each UX mode's own inline padding at 320 to 1280px with normal text. Each identity element is an
+  inline-size container; only when it is narrower than nine of its own ems (large text on a narrow
+  screen) do its controls' inline padding (at most `4cqi`) and its gaps shrink. The primitives'
+  own padding is never capped.
 - `src/testing/` holds spec helpers (a recording `ElementInternals`, since the mock DOM has none) and
   is excluded from the Stencil build.
 - `tsconfig.json` is the strict config for tooling and editors. `tsconfig.build.json` is the one

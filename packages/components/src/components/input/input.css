@@ -7,7 +7,7 @@
   min-inline-size: var(--idg-density-target-size);
   min-block-size: var(--idg-density-target-size);
   margin: 0;
-  margin-inline-end: calc(-0.5 * var(--_padding-inline));
+  margin-inline-end: calc(-0.5 * var(--idg-density-control-padding-inline));
   padding: 0 var(--idg-space-2xs);
   border: 0;
   border-radius: var(--idg-shape-radius-sm);

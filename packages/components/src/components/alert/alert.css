@@ -17,8 +17,6 @@
   align-items: flex-start;
   gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
   padding: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
-  /* No wider than a few percent of the screen, so large text at 320px keeps the line for itself. */
-  padding-inline: min(calc(var(--idg-space-s) * var(--idg-density-gap-scale)), 4vw);
   border-width: var(--idg-surface-border-width);
   border-style: var(--idg-surface-border-style);
   border-color: var(--idg-surface-border-color);
