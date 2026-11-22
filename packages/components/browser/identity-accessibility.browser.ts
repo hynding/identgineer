@@ -129,23 +129,82 @@ test.describe("identity components with large text on a narrow screen", () => {
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
 
-  test("nothing scrolls sideways at 320px with the text doubled, signed out or in", async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 320, height: 640 });
-    await openIdentity(page);
-    await page.locator("html").evaluate((element) => {
-      element.style.fontSize = "200%";
+  /**
+   * What no longer fits, across every identity element's shadow tree: a password's reveal button
+   * past its field's edge, and a word broken across lines, as when a column is squeezed to the
+   * width of a letter.
+   */
+  const misfits = (page: Page) =>
+    page.evaluate(() => {
+      const found: string[] = [];
+      const hosts = document.querySelectorAll(
+        "idg-sign-in, idg-register, idg-password-reset, idg-profile, idg-session-guard, idg-user-menu",
+      );
+      const roots: ShadowRoot[] = [];
+      for (const host of hosts) if (host.shadowRoot) roots.push(host.shadowRoot);
+      for (const root of roots) {
+        for (const element of root.querySelectorAll("*")) {
+          if (element.shadowRoot) roots.push(element.shadowRoot);
+        }
+      }
+      const range = document.createRange();
+      for (const root of roots) {
+        const reveal = root.querySelector(".reveal");
+        const box = root.querySelector(".box");
+        if (reveal && box) {
+          const inner = box.getBoundingClientRect();
+          const button = reveal.getBoundingClientRect();
+          if (button.left < inner.left - 0.5 || button.right > inner.right + 0.5) {
+            found.push(
+              `a reveal button sticks out of its field by ${String(Math.round(Math.max(inner.left - button.left, button.right - inner.right)))}px`,
+            );
+          }
+        }
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const text = node.textContent ?? "";
+          for (const match of text.matchAll(/\S+/g)) {
+            range.setStart(node, match.index);
+            range.setEnd(node, match.index + match[0].length);
+            const lines = new Set(
+              Array.from(range.getClientRects())
+                .filter((rect) => rect.width > 0)
+                .map((rect) => Math.round(rect.top)),
+            );
+            if (lines.size > 1)
+              found.push(`"${match[0]}" is broken over ${String(lines.size)} lines`);
+          }
+        }
+      }
+      return found;
     });
-    await page.evaluate(() => document.fonts.ready);
-    await showFormErrors(page);
-    expect(await overflow(page)).toBeLessThanOrEqual(0);
-    await showAccount(page);
-    await settle(page);
-    expect(await overflow(page)).toBeLessThanOrEqual(0);
-    const surface = await menuSurface(page).boundingBox();
-    if (!surface) throw new Error("the account menu is not laid out");
-    expect(surface.x).toBeGreaterThanOrEqual(0);
-    expect(surface.x + surface.width).toBeLessThanOrEqual(320);
+
+  UX_MODES.forEach((ux, index) => {
+    // Every UX mode, each with a different design and layout, so all eight of those are sampled too.
+    const design = DESIGNS[(index + 3) % DESIGNS.length] ?? "flat";
+    const layout = LAYOUTS[(index + 5) % LAYOUTS.length] ?? "top-bar";
+    test(`nothing scrolls sideways or is squeezed at 320px with the text doubled, in the ${ux} UX mode (${design}, ${layout})`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 640 });
+      await openIdentity(page);
+      await applyAxes(page, { ux, design, layout });
+      await page.locator("html").evaluate((element) => {
+        element.style.fontSize = "200%";
+      });
+      await page.evaluate(() => document.fonts.ready);
+      await showFormErrors(page);
+      await settle(page);
+      expect(await overflow(page)).toBeLessThanOrEqual(0);
+      expect(await misfits(page)).toEqual([]);
+      await showAccount(page);
+      await settle(page);
+      expect(await overflow(page)).toBeLessThanOrEqual(0);
+      expect(await misfits(page)).toEqual([]);
+      const surface = await menuSurface(page).boundingBox();
+      if (!surface) throw new Error("the account menu is not laid out");
+      expect(surface.x).toBeGreaterThanOrEqual(0);
+      expect(surface.x + surface.width).toBeLessThanOrEqual(320);
+    });
   });
 });
