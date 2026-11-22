@@ -338,6 +338,67 @@ test.describe("identity forms and secrets", () => {
     ).toEqual(["password", "password"]);
   });
 
+  for (const { form, field, path, fill } of [
+    {
+      form: "#sign-in",
+      field: "password",
+      path: "/api/auth/local",
+      fill: async (page: Page) => {
+        await inputOf(page, "#sign-in", "identifier").fill("ada@example.com");
+        await inputOf(page, "#sign-in", "password").fill(PASSWORD);
+      },
+    },
+    {
+      form: "#register",
+      field: "password",
+      path: "/api/auth/local/register",
+      fill: async (page: Page) => {
+        await inputOf(page, "#register", "username").fill("grace");
+        await inputOf(page, "#register", "email").fill("grace@example.com");
+        await inputOf(page, "#register", "password").fill(NEW_PASSWORD);
+      },
+    },
+    {
+      form: "#profile",
+      field: "currentPassword",
+      path: "/api/auth/change-password",
+      fill: async (page: Page) => {
+        await signInThroughForm(page);
+        await inputOf(page, "#profile", "currentPassword").fill(PASSWORD);
+        await inputOf(page, "#profile", "newPassword").fill(NEW_PASSWORD);
+        await inputOf(page, "#profile", "passwordConfirmation").fill(NEW_PASSWORD);
+      },
+    },
+  ]) {
+    test(`Try again in ${form} sends the form as a submit does, so a shown password is hidden`, async ({
+      page,
+    }) => {
+      await openIdentity(page);
+      await fill(page);
+      const password = inputOf(page, form, field);
+      // The type the first password has each time a form of the element is sent.
+      await page.locator(form).evaluate((host, name) => {
+        const record = window as unknown as { typesAtSubmit: string[] };
+        record.typesAtSubmit = [];
+        const control = host.shadowRoot?.querySelector(`idg-input[name="${name}"]`);
+        const input = control?.shadowRoot?.querySelector("input");
+        control
+          ?.closest("form")
+          ?.addEventListener("submit", () => record.typesAtSubmit.push(input?.type ?? ""));
+      }, field);
+      await failNext(page, path);
+      await password.press("Enter");
+      await expect(page.locator(form).locator("idg-button.retry button")).toBeVisible();
+      await page.locator(form).locator(`idg-input[name="${field}"] button.reveal`).click();
+      await expect(password).toHaveAttribute("type", "text");
+      await page.locator(form).locator("idg-button.retry button").click();
+      await expect(page.locator(form).locator("idg-button.retry")).toHaveCount(0);
+      expect(
+        await page.evaluate(() => (window as unknown as { typesAtSubmit: string[] }).typesAtSubmit),
+      ).toEqual(["password", "password"]);
+    });
+  }
+
   test("no password reaches an attribute, a text node or an event", async ({ page }) => {
     await openIdentity(page);
     await inputOf(page, "#sign-in", "identifier").fill("ada@example.com");
