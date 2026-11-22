@@ -15,7 +15,7 @@
 @container (inline-size < 9em) {
   .narrow-container > * {
     --idg-density-control-padding-inline: min(var(--_idg-mode-control-padding-inline), 4cqi);
-    --idg-density-gap-scale: min(var(--_idg-mode-gap-scale), 1);
+    --idg-density-gap-scale: min(var(--_idg-mode-gap-scale), 0.5);
   }
 }
 

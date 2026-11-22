@@ -58,6 +58,7 @@ const UNKNOWN: IdentityStateView = { status: "unknown" };
   styleUrls: [
     "../../styles/focus-ring.css",
     "../../styles/visually-hidden.css",
+    "../../styles/narrow-container.css",
     "session-guard.css",
   ],
   shadow: true,
@@ -225,8 +226,8 @@ export class IdgSessionGuard {
 
   private renderNotice(content: unknown) {
     return (
-      <div class="notice focusable" part="notice" tabindex="-1">
-        {content}
+      <div class="notice measured focusable" part="notice" tabindex="-1">
+        <div class="notice-body narrow-container">{content}</div>
       </div>
     );
   }

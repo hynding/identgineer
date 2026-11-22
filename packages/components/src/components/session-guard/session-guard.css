@@ -8,9 +8,17 @@
   display: none;
 }
 
-/* The notice is one block before the content. */
+/* The shared measure line would be a box in the parent's layout here; the notice has its own. */
+:host::before {
+  content: none;
+}
+
+/* The notice is one block before the content. It sizes as the identity forms do: the identity
+   measure as its preferred width, nothing as its smallest, and with large text on a narrow screen
+   less padding inside, so its words keep their line. */
 .notice {
   display: block;
+  overflow-wrap: break-word;
   margin-block-end: var(--idg-space-s);
 }
 
