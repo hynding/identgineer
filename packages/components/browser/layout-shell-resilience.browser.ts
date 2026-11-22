@@ -772,14 +772,21 @@ test.describe("the menu button does not move, in any UX mode, at larger text or 
         actions: centre(tree?.querySelector('[part="actions"]')),
         actionsHeight: tree?.querySelector('[part="actions"]')?.getBoundingClientRect().height ?? 0,
         toggleHeight: button.getBoundingClientRect().height,
+        // Whether the actions share the button's row, in which case they are centred on it.
+        sameRow: (() => {
+          const holder = tree?.querySelector('[part="actions"]')?.getBoundingClientRect();
+          const own = button.getBoundingClientRect();
+          return holder !== undefined && holder.top < own.bottom && holder.bottom > own.top;
+        })(),
         height: header.getBoundingClientRect().height,
         content:
           Math.max(...parts.map((box) => box.bottom)) - Math.min(...parts.map((box) => box.top)),
         around,
       };
     });
-    // Where the actions wrap onto two rows, the button is aligned with the brand instead.
-    if (closed.actionsHeight <= closed.toggleHeight + 8) {
+    // Where the actions wrap onto two rows, or sit on a row of their own, the button is aligned with
+    // the brand instead.
+    if (closed.sameRow && closed.actionsHeight <= closed.toggleHeight + 8) {
       expect(
         Math.abs(closed.toggle - closed.actions),
         "toggle centred on the actions",
@@ -1174,7 +1181,7 @@ test.describe("nothing in the chrome covers or crowds anything else in it", () =
       const room = navigation?.getBoundingClientRect();
       // A navigation that deliberately scrolls along the bar hides some of its items from the pointer.
       const scrolls = navigation
-        ? navigation.scrollWidth > navigation.clientWidth + 1 &&
+        ? navigation.scrollWidth > navigation.clientWidth &&
           getComputedStyle(navigation).overflowInline !== "visible"
         : false;
       const reachable = (link: Element): boolean => {

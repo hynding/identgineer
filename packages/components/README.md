@@ -898,7 +898,9 @@ drawn and is not announced.
 
 The host is a size container: each layout picks its small (below 40rem), medium (from 40rem) and
 large (from 72rem) arrangement from the width of the shell, not of the viewport. The thresholds are
-the `xl` and `3xl` steps of the size scale (`--idg-size-3xl` is 72rem, added for this).
+the `xl` and `3xl` steps of the size scale (`--idg-size-3xl` is 72rem, added for this). The bar of
+`top-bar`, `split-hero` and `bento` joins the actions to the brand and the menu button on one row from
+the `2xl` step (56rem), not from 40rem.
 
 | Layout       | Arrangement                                                                       | Navigation small / medium / large |
 | ------------ | --------------------------------------------------------------------------------- | --------------------------------- |
@@ -981,12 +983,16 @@ its small arrangement: a bar of brand, menu button and actions above one column,
 as a panel under the menu button. It is plain and fully usable, and the eight layouts differ again
 once the browser supports them.
 
-**Text wider than its column.** The hero lets a word it cannot fit break anywhere
-(`overflow-wrap: anywhere`, inherited by what the page puts in the hero, and set on the hero alone).
-The brand breaks a word only when the word is wider than its whole column (`overflow-wrap:
-break-word`), and the actions wrap before the brand is squeezed. Nothing is clipped and the page does
-not scroll sideways; ordinary words elsewhere never break, because a word only breaks where it is
-wider than the line.
+**Text wider than its column.** The hero and the brand let a word they cannot fit break anywhere
+(`overflow-wrap: anywhere`; in the hero it is inherited by what the page puts there). Where the brand
+shares a bar with the menu button and the actions (top-bar, split-hero and bento, from 56rem), the
+button and the actions take their width first, never less than the widest action, and the brand keeps
+at least `--idg-size-s` or two fifths of the bar. A longer name wraps between words, and breaks inside
+a word only when that word is wider than the brand's share. Below 56rem those three layouts keep the
+stacked header, with the actions on a row of their own, because brand, button and actions do not all
+fit on one row in the larger type scales or a wider font. Nothing is clipped and the page does not
+scroll sideways; ordinary words elsewhere never break, because a word only breaks where it is wider
+than the line.
 
 ## Strict CSP and Trusted Types
 

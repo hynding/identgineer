@@ -147,7 +147,9 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--idg-space-xs);
-  min-inline-size: 0;
+  /* The widest action, so a column of automatic size never takes less than it needs and a bar that
+     is short of room wraps the actions instead of letting them spill. */
+  min-inline-size: min-content;
   padding-block-start: var(--idg-space-2xs);
 }
 
@@ -159,7 +161,7 @@
   padding-inline: var(--_pad);
   margin-block-start: var(--_pad);
   /* A word the hero cannot fit breaks, so the page never scrolls sideways and nothing is clipped. It
-     is inherited by what the page puts in the hero, and only the hero does this. */
+     is inherited by what the page puts in the hero. The brand does the same, and no other region. */
   overflow-wrap: anywhere;
   border-radius: var(--idg-shape-radius-lg);
   background:
@@ -438,7 +440,10 @@
     --_nav: disclosure;
   }
 
-  @container idg-shell (min-inline-size: 40rem) {
+  /* The bar is one row from 56rem. Below it the header keeps the stacked arrangement, with the
+     actions on a row of their own: brand, menu button and actions do not all fit on one row in the
+     larger type scales or a wider font, and a row that must shrink has nothing left to give. */
+  @container idg-shell (min-inline-size: 56rem) {
     .header {
       /* The brand keeps room for a name of ordinary length, up to two fifths of the bar, before the
          toggle and the actions take what is left: automatic columns would size first and, with the
@@ -543,7 +548,7 @@
       --_nav: inline;
 
       grid-template-columns: var(--_rail) minmax(0, 1fr);
-      grid-template-rows: var(--_bar) auto minmax(0, 1fr) auto auto;
+      grid-template-rows: minmax(var(--_bar), auto) auto minmax(0, 1fr) auto auto;
     }
 
     .header {
@@ -652,6 +657,14 @@
   }
 
   @container idg-shell (min-inline-size: 40rem) {
+    .hero {
+      min-block-size: var(--idg-size-xl);
+      padding-inline: var(--_section);
+    }
+  }
+
+  /* One row of bar from 56rem; see the top-bar. */
+  @container idg-shell (min-inline-size: 56rem) {
     .header {
       grid-template-columns: minmax(min(var(--idg-size-s), 40%), 1fr) auto auto;
       grid-template-areas:
@@ -673,11 +686,6 @@
     .header:has(.drawer[open]) .actions {
       padding-block-start: var(--idg-space-xs);
     }
-
-    .hero {
-      min-block-size: var(--idg-size-xl);
-      padding-inline: var(--_section);
-    }
   }
 
   /* With a hero, from 56rem it takes the start half. Without one there is nothing to put there,
@@ -692,6 +700,8 @@
       grid-column: 2;
       grid-row: 1;
       grid-template-columns: minmax(0, 1fr) auto auto;
+      /* Half a page is narrow: the empty first column takes no gap of the bar's size. */
+      column-gap: var(--idg-space-xs);
       /* The actions may wrap onto a second row, so they span two, and the button stays in the first,
          level with the brand, whatever else the header holds. */
       grid-template-areas:
@@ -935,7 +945,7 @@
       --_nav: inline;
 
       grid-template-columns: var(--_rail) minmax(0, 1fr);
-      grid-template-rows: var(--_bar) auto minmax(0, 1fr) auto auto;
+      grid-template-rows: minmax(var(--_bar), auto) auto minmax(0, 1fr) auto auto;
     }
 
     .header {
@@ -1161,6 +1171,19 @@
       grid-column: 1 / -1;
     }
 
+    .aside {
+      grid-column: 1;
+      grid-row: 4;
+    }
+
+    .footer {
+      grid-column: 2;
+      grid-row: 4;
+    }
+  }
+
+  /* One row of bar from 56rem; see the top-bar. */
+  @container idg-shell (min-inline-size: 56rem) {
     .header {
       grid-template-columns: minmax(min(var(--idg-size-s), 40%), 1fr) auto auto;
       grid-template-areas:
@@ -1181,16 +1204,6 @@
 
     .header:has(.drawer[open]) .actions {
       padding-block-start: var(--idg-space-xs);
-    }
-
-    .aside {
-      grid-column: 1;
-      grid-row: 4;
-    }
-
-    .footer {
-      grid-column: 2;
-      grid-row: 4;
     }
   }
 
