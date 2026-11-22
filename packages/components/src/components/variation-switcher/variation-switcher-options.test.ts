@@ -68,6 +68,8 @@ describe("describeChange", () => {
 
   it("names the whole state for a shuffle", () => {
     const names: readonly ControlName[] = ["theme", "design", "layout", "ux"];
-    expect(describeChange(names, state)).toBe("Theme: Ember. Design: Glass. Layout: Bento. UX: Focus.");
+    expect(describeChange(names, state)).toBe(
+      "Theme: Ember. Design: Glass. Layout: Bento. UX: Focus.",
+    );
   });
 });

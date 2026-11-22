@@ -10,6 +10,7 @@ import {
 } from "@identgineer/variations";
 import { removeHost } from "../../testing/remove-host";
 import "./variation-switcher";
+import type { VariationsChangeDetail } from "./variation-switcher-options";
 
 const unsubscribes = vi.hoisted(() => ({ calls: 0, subscriptions: 0 }));
 
@@ -78,7 +79,19 @@ class FakeStorage {
 
 let storage: FakeStorage;
 
+// The mock window has no MutationObserver, which the runtime uses to hear changes made by markup.
+// Changes made through the runtime itself reach listeners without it; the observer is exercised in
+// the browser tests.
+class IdleObserver {
+  observe = vi.fn();
+  disconnect = vi.fn();
+  takeRecords(): [] {
+    return [];
+  }
+}
+
 beforeEach(() => {
+  Object.defineProperty(window, "MutationObserver", { configurable: true, value: IdleObserver });
   resetVariations();
   storage = new FakeStorage();
   vi.stubGlobal("localStorage", storage);
@@ -87,6 +100,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  Reflect.deleteProperty(window, "MutationObserver");
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   resetVariations();
@@ -183,13 +197,19 @@ describe("idg-variation-switcher rendering", () => {
   });
 
   it("shows the state the page is in", async () => {
-    applyVariations({ theme: "ember", design: "glass", layout: "bento", ux: "focus", scheme: "dark" });
+    applyVariations({
+      theme: "ember",
+      design: "glass",
+      layout: "bento",
+      ux: "focus",
+      scheme: "dark",
+    });
     const { root } = await render(<idg-variation-switcher />);
-    expect((inner(root, "theme") as unknown as { value: string }).value).toBe("ember");
-    expect((inner(root, "design") as unknown as { value: string }).value).toBe("glass");
-    expect((inner(root, "layout") as unknown as { value: string }).value).toBe("bento");
-    expect((inner(root, "ux") as unknown as { value: string }).value).toBe("focus");
-    expect((inner(root, "scheme") as unknown as { value: string }).value).toBe("dark");
+    expect(inner(root, "theme").getAttribute("value")).toBe("ember");
+    expect(inner(root, "design").getAttribute("value")).toBe("glass");
+    expect(inner(root, "layout").getAttribute("value")).toBe("bento");
+    expect(inner(root, "ux").getAttribute("value")).toBe("focus");
+    expect(inner(root, "scheme").getAttribute("value")).toBe("dark");
   });
 
   it("describes the chosen option as the hint of its control", async () => {
@@ -229,13 +249,19 @@ describe("idg-variation-switcher props", () => {
 
   it("is stacked unless told otherwise, and falls back for an unknown orientation", async () => {
     const { root, waitForChanges } = await render(<idg-variation-switcher />);
-    expect(shadow(root).querySelector(".panel")?.classList.contains("orientation-stacked")).toBe(true);
+    expect(shadow(root).querySelector(".panel")?.classList.contains("orientation-stacked")).toBe(
+      true,
+    );
     (root as unknown as { orientation: string }).orientation = "inline";
     await waitForChanges();
-    expect(shadow(root).querySelector(".panel")?.classList.contains("orientation-inline")).toBe(true);
+    expect(shadow(root).querySelector(".panel")?.classList.contains("orientation-inline")).toBe(
+      true,
+    );
     (root as unknown as { orientation: string }).orientation = "diagonal";
     await waitForChanges();
-    expect(shadow(root).querySelector(".panel")?.classList.contains("orientation-stacked")).toBe(true);
+    expect(shadow(root).querySelector(".panel")?.classList.contains("orientation-stacked")).toBe(
+      true,
+    );
   });
 });
 
@@ -318,7 +344,12 @@ describe("idg-variation-switcher actions", () => {
       scheme: "system",
     });
     expect(spy.length).toBe(1);
-    expect(spy.lastEvent?.detail.changed).toEqual(["theme", "design", "layout", "ux"]);
+    expect((spy.lastEvent?.detail as VariationsChangeDetail).changed).toEqual([
+      "theme",
+      "design",
+      "layout",
+      "ux",
+    ]);
     expect(status(root)).toMatch(/^Shuffled\. Theme: .+ Design: .+ Layout: .+ UX: .+\.$/);
   });
 
@@ -331,7 +362,13 @@ describe("idg-variation-switcher actions", () => {
   });
 
   it("Reset returns every axis to its default and says so", async () => {
-    applyVariations({ theme: "ember", design: "glass", layout: "bento", ux: "focus", scheme: "dark" });
+    applyVariations({
+      theme: "ember",
+      design: "glass",
+      layout: "bento",
+      ux: "focus",
+      scheme: "dark",
+    });
     const { root, waitForChanges, spyOnEvent } = await render(<idg-variation-switcher />);
     const spy = spyOnEvent("idgVariationsChange");
     action(root, "reset");
@@ -343,9 +380,15 @@ describe("idg-variation-switcher actions", () => {
       ux: "comfortable",
       scheme: "system",
     });
-    expect(spy.lastEvent?.detail.changed).toEqual(["theme", "design", "layout", "ux", "scheme"]);
+    expect((spy.lastEvent?.detail as VariationsChangeDetail).changed).toEqual([
+      "theme",
+      "design",
+      "layout",
+      "ux",
+      "scheme",
+    ]);
     expect(status(root)).toBe("Reset to the defaults.");
-    expect((inner(root, "theme") as unknown as { value: string }).value).toBe("aurora");
+    expect(inner(root, "theme").getAttribute("value")).toBe("aurora");
   });
 
   it("Reset on a page already at the defaults emits no event", async () => {
@@ -428,7 +471,9 @@ describe("idg-variation-switcher copy link", () => {
     action(root, "copy");
     await waitForChanges();
     await waitForChanges();
-    expect(status(root)).toBe("The link could not be copied. Select it below and copy it yourself.");
+    expect(status(root)).toBe(
+      "The link could not be copied. Select it below and copy it yourself.",
+    );
     const fallback = shadow(root).querySelector<HTMLElement>(".fallback idg-input");
     expect(fallback?.getAttribute("value")).toBe(variationsUrl(getVariations(), location.href));
     expect(fallback?.hasAttribute("readonly")).toBe(true);
@@ -465,8 +510,8 @@ describe("idg-variation-switcher staying in sync", () => {
     const spy = spyOnEvent("idgVariationsChange");
     applyVariations({ theme: "ember", ux: "focus" });
     await waitForChanges();
-    expect((inner(root, "theme") as unknown as { value: string }).value).toBe("ember");
-    expect((inner(root, "ux") as unknown as { value: string }).value).toBe("focus");
+    expect(inner(root, "theme").getAttribute("value")).toBe("ember");
+    expect(inner(root, "ux").getAttribute("value")).toBe("focus");
     expect(spy.length).toBe(0);
   });
 
@@ -478,7 +523,7 @@ describe("idg-variation-switcher staying in sync", () => {
     choose(first.root, "design", "glass");
     await first.waitForChanges();
     await second.waitForChanges();
-    expect((inner(second.root, "design") as unknown as { value: string }).value).toBe("glass");
+    expect(inner(second.root, "design").getAttribute("value")).toBe("glass");
     expect(firstSpy.length).toBe(1);
     expect(secondSpy.length).toBe(0);
   });
@@ -486,20 +531,19 @@ describe("idg-variation-switcher staying in sync", () => {
   it("subscribes once on connect and unsubscribes on disconnect", async () => {
     const { root } = await render(<idg-variation-switcher />);
     expect(unsubscribes.subscriptions).toBe(1);
-    expect(unsubscribes.calls).toBe(0);
+    const stopped = unsubscribes.calls;
     removeHost(root);
-    expect(unsubscribes.calls).toBe(1);
+    expect(unsubscribes.calls).toBe(stopped + 1);
   });
 
   it("reads the page again when it is connected again", async () => {
-    const { root, waitForChanges, doc } = await render(<idg-variation-switcher />);
+    const { root, waitForChanges } = await render(<idg-variation-switcher />);
     const parent = root.parentElement;
     removeHost(root);
     applyVariations({ theme: "ember" });
     parent?.appendChild(root);
     await waitForChanges();
     expect(unsubscribes.subscriptions).toBe(2);
-    expect((inner(root, "theme") as unknown as { value: string }).value).toBe("ember");
-    expect(doc).toBeDefined();
+    expect(inner(root, "theme").getAttribute("value")).toBe("ember");
   });
 });

@@ -7,6 +7,7 @@
     "jsxFactory": "h",
     "jsxFragmentFactory": "Fragment",
     "types": ["node"],
+    "allowImportingTsExtensions": true,
     "exactOptionalPropertyTypes": false
   },
   "include": ["src", "checks", "browser", "*.config.ts"],

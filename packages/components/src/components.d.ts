@@ -36,6 +36,7 @@ import { SortDirection } from "./utils/sort-rows";
 import { TableSortDetail } from "./components/table/table-options";
 import { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 import { ToastPosition } from "./components/toast-region/toast-region-options";
+import { SwitcherOrientation, VariationsChangeDetail } from "./components/variation-switcher/variation-switcher-options";
 export { AccordionToggleDetail } from "./components/accordion/accordion-options";
 export { AlertVariant } from "./components/alert/alert-options";
 export { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
@@ -67,6 +68,7 @@ export { SortDirection } from "./utils/sort-rows";
 export { TableSortDetail } from "./components/table/table-options";
 export { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 export { ToastPosition } from "./components/toast-region/toast-region-options";
+export { SwitcherOrientation, VariationsChangeDetail } from "./components/variation-switcher/variation-switcher-options";
 export namespace Components {
     /**
      * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
@@ -1643,6 +1645,32 @@ export namespace Components {
          */
         "text"?: string;
     }
+    /**
+     * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
+     * always acts on the document's root element, through `@identgineer/variations`, so the page's own
+     * attributes stay the single truth: a change made anywhere else (markup, a script, another
+     * switcher) is shown here, and nothing here is announced for a change the visitor did not make.
+     */
+    interface IdgVariationSwitcher {
+        /**
+          * The controls to show, as a comma separated list of `theme`, `design`, `layout`, `ux` and `scheme`. Unknown names are ignored, and without a known name every control is shown.
+         */
+        "axes"?: string;
+        /**
+          * A visible heading, which also names the panel. Without one the name is "Appearance".
+         */
+        "heading"?: string;
+        /**
+          * `stacked` puts the controls in a column, `inline` side by side where there is room.
+          * @default "stacked"
+         */
+        "orientation": SwitcherOrientation;
+        /**
+          * Saves each change with the runtime's persistence, so the choice is still there on the next visit. The bootstrap script of `@identgineer/variations` applies it before the page is painted.
+          * @default false
+         */
+        "persist": boolean;
+    }
 }
 export interface IdgAccordionItemCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -1711,6 +1739,10 @@ export interface IdgTextareaCustomEvent<T> extends CustomEvent<T> {
 export interface IdgToastCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgToastElement;
+}
+export interface IdgVariationSwitcherCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgVariationSwitcherElement;
 }
 declare global {
     /**
@@ -2402,6 +2434,29 @@ declare global {
         prototype: HTMLIdgTooltipElement;
         new (): HTMLIdgTooltipElement;
     };
+    interface HTMLIdgVariationSwitcherElementEventMap {
+        "idgVariationsChange": VariationsChangeDetail;
+    }
+    /**
+     * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
+     * always acts on the document's root element, through `@identgineer/variations`, so the page's own
+     * attributes stay the single truth: a change made anywhere else (markup, a script, another
+     * switcher) is shown here, and nothing here is announced for a change the visitor did not make.
+     */
+    interface HTMLIdgVariationSwitcherElement extends Components.IdgVariationSwitcher, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgVariationSwitcherElementEventMap>(type: K, listener: (this: HTMLIdgVariationSwitcherElement, ev: IdgVariationSwitcherCustomEvent<HTMLIdgVariationSwitcherElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgVariationSwitcherElementEventMap>(type: K, listener: (this: HTMLIdgVariationSwitcherElement, ev: IdgVariationSwitcherCustomEvent<HTMLIdgVariationSwitcherElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgVariationSwitcherElement: {
+        prototype: HTMLIdgVariationSwitcherElement;
+        new (): HTMLIdgVariationSwitcherElement;
+    };
     interface HTMLElementTagNameMap {
         "idg-accordion": HTMLIdgAccordionElement;
         "idg-accordion-item": HTMLIdgAccordionItemElement;
@@ -2448,6 +2503,7 @@ declare global {
         "idg-toast": HTMLIdgToastElement;
         "idg-toast-region": HTMLIdgToastRegionElement;
         "idg-tooltip": HTMLIdgTooltipElement;
+        "idg-variation-switcher": HTMLIdgVariationSwitcherElement;
     }
 }
 declare namespace LocalJSX {
@@ -4034,6 +4090,36 @@ declare namespace LocalJSX {
          */
         "text"?: string;
     }
+    /**
+     * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
+     * always acts on the document's root element, through `@identgineer/variations`, so the page's own
+     * attributes stay the single truth: a change made anywhere else (markup, a script, another
+     * switcher) is shown here, and nothing here is announced for a change the visitor did not make.
+     */
+    interface IdgVariationSwitcher {
+        /**
+          * The controls to show, as a comma separated list of `theme`, `design`, `layout`, `ux` and `scheme`. Unknown names are ignored, and without a known name every control is shown.
+         */
+        "axes"?: string;
+        /**
+          * A visible heading, which also names the panel. Without one the name is "Appearance".
+         */
+        "heading"?: string;
+        /**
+          * Fires when the visitor changes something through the panel, with the new state.
+         */
+        "onIdgVariationsChange"?: (event: IdgVariationSwitcherCustomEvent<VariationsChangeDetail>) => void;
+        /**
+          * `stacked` puts the controls in a column, `inline` side by side where there is room.
+          * @default "stacked"
+         */
+        "orientation"?: SwitcherOrientation;
+        /**
+          * Saves each change with the runtime's persistence, so the choice is still there on the next visit. The bootstrap script of `@identgineer/variations` applies it before the page is painted.
+          * @default false
+         */
+        "persist"?: boolean;
+    }
 
     interface IdgAccordionAttributes {
         "multiple": boolean;
@@ -4387,6 +4473,12 @@ declare namespace LocalJSX {
         "offset": number;
         "for": string;
     }
+    interface IdgVariationSwitcherAttributes {
+        "persist": boolean;
+        "axes": string;
+        "orientation": SwitcherOrientation;
+        "heading": string;
+    }
 
     interface IntrinsicElements {
         "idg-accordion": Omit<IdgAccordion, keyof IdgAccordionAttributes> & { [K in keyof IdgAccordion & keyof IdgAccordionAttributes]?: IdgAccordion[K] } & { [K in keyof IdgAccordion & keyof IdgAccordionAttributes as `attr:${K}`]?: IdgAccordionAttributes[K] } & { [K in keyof IdgAccordion & keyof IdgAccordionAttributes as `prop:${K}`]?: IdgAccordion[K] };
@@ -4434,6 +4526,7 @@ declare namespace LocalJSX {
         "idg-toast": Omit<IdgToast, keyof IdgToastAttributes> & { [K in keyof IdgToast & keyof IdgToastAttributes]?: IdgToast[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `attr:${K}`]?: IdgToastAttributes[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `prop:${K}`]?: IdgToast[K] };
         "idg-toast-region": Omit<IdgToastRegion, keyof IdgToastRegionAttributes> & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes]?: IdgToastRegion[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `attr:${K}`]?: IdgToastRegionAttributes[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `prop:${K}`]?: IdgToastRegion[K] };
         "idg-tooltip": Omit<IdgTooltip, keyof IdgTooltipAttributes> & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes]?: IdgTooltip[K] } & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `attr:${K}`]?: IdgTooltipAttributes[K] } & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `prop:${K}`]?: IdgTooltip[K] };
+        "idg-variation-switcher": Omit<IdgVariationSwitcher, keyof IdgVariationSwitcherAttributes> & { [K in keyof IdgVariationSwitcher & keyof IdgVariationSwitcherAttributes]?: IdgVariationSwitcher[K] } & { [K in keyof IdgVariationSwitcher & keyof IdgVariationSwitcherAttributes as `attr:${K}`]?: IdgVariationSwitcherAttributes[K] } & { [K in keyof IdgVariationSwitcher & keyof IdgVariationSwitcherAttributes as `prop:${K}`]?: IdgVariationSwitcher[K] };
     }
 }
 export { LocalJSX as JSX };
@@ -4708,6 +4801,13 @@ declare module "@stencil/core" {
              * technology so it is not read twice.
              */
             "idg-tooltip": LocalJSX.IntrinsicElements["idg-tooltip"] & JSXBase.HTMLAttributes<HTMLIdgTooltipElement>;
+            /**
+             * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
+             * always acts on the document's root element, through `@identgineer/variations`, so the page's own
+             * attributes stay the single truth: a change made anywhere else (markup, a script, another
+             * switcher) is shown here, and nothing here is announced for a change the visitor did not make.
+             */
+            "idg-variation-switcher": LocalJSX.IntrinsicElements["idg-variation-switcher"] & JSXBase.HTMLAttributes<HTMLIdgVariationSwitcherElement>;
         }
     }
 }

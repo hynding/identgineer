@@ -24,6 +24,10 @@ export type {
   ToastDismissReason,
   ToastVariant,
 } from "./components/toast/toast-options";
+export type {
+  SwitcherOrientation,
+  VariationsChangeDetail,
+} from "./components/variation-switcher/variation-switcher-options";
 export type { ValueDetail } from "./utils/event-details";
 export type { Placement } from "./utils/position";
 export type { SortDirection } from "./utils/sort-rows";

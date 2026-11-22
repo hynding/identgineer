@@ -1,4 +1,28 @@
 import type { Config } from "@stencil/core";
+import ts from "typescript";
+
+const VARIATIONS_SOURCE = "/packages/variations/src/";
+
+// @identgineer/variations is consumed as TypeScript source, like every workspace package. Stencil
+// only compiles what its own tsconfig includes, and including a sibling package's source would
+// make it emit that package's files next to this one. So the files of that package alone are
+// transpiled here, one by one, which erases types and leaves every import as written.
+const transpileVariations = {
+  name: "transpile-variations",
+  transform(code: string, id: string): { code: string; map: null } | null {
+    if (!id.includes(VARIATIONS_SOURCE) || !id.endsWith(".ts")) return null;
+    const { outputText } = ts.transpileModule(code, {
+      fileName: id,
+      compilerOptions: {
+        target: ts.ScriptTarget.ES2022,
+        module: ts.ModuleKind.ESNext,
+        verbatimModuleSyntax: true,
+        isolatedModules: true,
+      },
+    });
+    return { code: outputText, map: null };
+  },
+};
 
 export const config: Config = {
   namespace: "identgineer",
@@ -6,6 +30,7 @@ export const config: Config = {
   // The lazy loader would otherwise inject a <style> through innerHTML to hide components
   // before hydration, which a strict CSP and Trusted Types both refuse.
   invisiblePrehydration: false,
+  rollupPlugins: { before: [transpileVariations] },
   outputTargets: [
     { type: "dist", esmLoaderPath: "../loader" },
     { type: "dist-custom-elements" },

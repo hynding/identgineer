@@ -1,0 +1,117 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  container-type: inline-size;
+  container-name: idg-variation-switcher;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.panel {
+  --_gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  --_pad: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--_gap);
+  padding: var(--_pad);
+  border-width: var(--idg-surface-border-width);
+  border-style: var(--idg-surface-border-style);
+  border-color: var(--idg-surface-border-color);
+  border-radius: var(--idg-shape-radius-lg);
+  background: var(--idg-surface-background);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: var(--idg-elevation-sm);
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+  letter-spacing: var(--idg-font-body-letter-spacing);
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--idg-font-family-display);
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+  text-transform: var(--idg-ornament-heading-transform);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--_gap);
+  min-inline-size: 0;
+}
+
+.control {
+  min-inline-size: 0;
+}
+
+/* Inline: the controls sit side by side and wrap by what fits. A control cannot be narrower than
+   its basis, so each takes a row of its own where the container is narrow. */
+.orientation-inline .controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.orientation-inline .control {
+  flex: 1 1 var(--idg-size-s);
+}
+
+.orientation-inline .control[data-control="theme"] {
+  flex-basis: var(--idg-size-l);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
+}
+
+/* The container's own width decides, never the viewport's. 40rem is --idg-size-xl. A stacked
+   panel gets a second column once there is room, and the theme, which needs the width, spans it. */
+@container idg-variation-switcher (min-inline-size: 40rem) {
+  .orientation-stacked .controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .orientation-stacked .control[data-control="theme"] {
+    grid-column: 1 / -1;
+  }
+}
+
+.status {
+  margin: 0;
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+}
+
+.theme-option {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
+}
+
+/* A drawn colour sample must keep its own colours, also where forced colours would repaint it, so
+   it gets an edge in a system colour there. */
+.swatch {
+  flex: none;
+  inline-size: 2.5em;
+  block-size: 1.25em;
+  border-radius: var(--idg-shape-radius-sm);
+  box-shadow: 0 0 0 1px var(--idg-color-border-strong);
+  forced-color-adjust: none;
+}
+
+@media (forced-colors: active) {
+  .swatch {
+    box-shadow: 0 0 0 1px CanvasText;
+  }
+}
