@@ -56,21 +56,21 @@ export const ACCENT_ROLE_USES: readonly AccentRoleEntry[] = [
   {
     file: "components/button/button.css",
     property: "box-shadow",
-    token: "accent-border",
+    token: "accent-edge",
     use: "fill",
     what: "primary button edge in designs without control borders",
   },
   {
     file: "components/button/button.css",
     property: "box-shadow",
-    token: "accent-border",
+    token: "accent-edge",
     use: "fill",
     what: "primary button edge, hovered",
   },
   {
     file: "components/button/button.css",
     property: "box-shadow",
-    token: "accent-border",
+    token: "accent-edge",
     use: "fill",
     what: "primary button edge, pressed",
   },
@@ -202,7 +202,7 @@ export const ACCENT_ROLE_USES: readonly AccentRoleEntry[] = [
   },
 ];
 
-const ACCENT_TOKEN = /var\(--idg-color-((?:on-)?accent(?:-hover|-indicator|-border)?)\)/g;
+const ACCENT_TOKEN = /var\(--idg-color-((?:on-)?accent(?:-hover|-indicator|-border|-edge)?)\)/g;
 const DECLARATION = /([\w-]+)\s*:\s*([^;{}]+)(?=[;}])/g;
 
 /** Every accent role a stylesheet reads, as `property token` pairs in source order. */
