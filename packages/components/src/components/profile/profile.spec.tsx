@@ -197,6 +197,19 @@ describe("idg-profile password", () => {
     ).toMatchObject({ username: "ada" });
   });
 
+  it("says whose password the change is for, in text everyone sees", async () => {
+    const { client } = await signedIn();
+    const { root, waitForChanges } = await mount(client);
+    const note = () => shadowOf(root).querySelector(`${PASSWORD_FORM} [part="password-account"]`);
+    expect(note()?.textContent).toBe("Changing the password for ada");
+    expect(note()?.querySelector("bdi")?.textContent).toBe("ada");
+    (root as HTMLElement & { labels?: object }).labels = {
+      passwordAccount: "Passwort für {name} ändern",
+    };
+    await waitForChanges();
+    expect(note()?.textContent).toBe("Passwort für ada ändern");
+  });
+
   it("has the fields a password manager pairs with the account", async () => {
     const { client } = await signedIn();
     const { root } = await mount(client);
