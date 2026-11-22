@@ -49,7 +49,7 @@ test("identity forms keep the measure as their width and gain no height under a 
   }, FORMS);
   expect(forms).toHaveLength(6);
   for (const form of forms) {
-    expect(Math.abs(form.width - form.measure), form.name).toBeLessThanOrEqual(form.measure * 0.02);
+    expect(Math.abs(form.width - form.measure), form.name).toBeLessThanOrEqual(1);
     expect(form.extraHeight, form.name).toBe(0);
   }
 });

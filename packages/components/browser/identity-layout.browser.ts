@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { REGISTRY } from "@identgineer/variations";
 import { settle } from "./axes";
 import { expect, test } from "./fixtures";
 
@@ -48,8 +49,7 @@ test.describe("identity forms in parents that size them by their content", () =>
     expect(forms).toHaveLength(6);
     expect(measure).toBeGreaterThan(0);
     for (const form of forms) {
-      expect(form.width, form.name).toBeGreaterThanOrEqual(measure * 0.95);
-      expect(form.width, form.name).toBeLessThanOrEqual(measure * 1.05);
+      expect(Math.abs(form.width - measure), form.name).toBeLessThanOrEqual(1);
     }
   });
 
@@ -104,9 +104,7 @@ test.describe("identity forms in parents that size them by their content", () =>
       await settle(page);
       for (const form of await widthsFor(page, value)) {
         expect(form.expected, form.name).toBeGreaterThan(300);
-        expect(Math.abs(form.width - form.expected), form.name).toBeLessThanOrEqual(
-          form.expected * 0.02,
-        );
+        expect(Math.abs(form.width - form.expected), form.name).toBeLessThanOrEqual(1);
       }
       await page.setViewportSize({ width: 320, height: 900 });
       await settle(page);
@@ -116,6 +114,39 @@ test.describe("identity forms in parents that size them by their content", () =>
       }
     });
   }
+  // The measure line is of no font's glyphs and takes none of the page's text spacing.
+  test("keep the measure as their width, and none as their smallest, in every theme, whatever the page's text-indent and letter-spacing", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await open(page);
+    await page.evaluate(() => {
+      document.body.style.textIndent = "3em";
+      document.body.style.letterSpacing = "0.2em";
+    });
+    for (const { id } of REGISTRY.theme.variations) {
+      await page.evaluate((theme) => {
+        document.documentElement.dataset.theme = theme;
+      }, id);
+      await settle(page);
+      const forms = await widthsFor(page, "var(--idg-identity-measure, var(--idg-size-m))");
+      expect(forms).toHaveLength(6);
+      for (const form of forms) {
+        expect(Math.abs(form.width - form.expected), `${id} ${form.name}`).toBeLessThanOrEqual(1);
+      }
+      const smallest = await page.evaluate(
+        (selector) =>
+          Array.from(document.querySelectorAll<HTMLElement>(selector), (form) => {
+            form.style.inlineSize = "min-content";
+            const width = form.getBoundingClientRect().width;
+            form.style.removeProperty("inline-size");
+            return width;
+          }),
+        FORMS,
+      );
+      for (const width of smallest) expect(width, id).toBeLessThanOrEqual(0.5);
+    }
+  });
 });
 
 test.describe("idg-session-guard in a flex row or a grid", () => {
