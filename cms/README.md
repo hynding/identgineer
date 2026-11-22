@@ -171,7 +171,9 @@ The strapi-php section of [`.env.example`](.env.example) lists every setting the
 (`packages/identity`) needs to work safely, each with a one-line reason: refresh sessions
 (`CAMIS_JWT_MANAGEMENT=refresh`) and their lifespans, the refresh cookie (`Secure`,
 `SameSite=Strict`, `Path=/api/auth`), CORS (the site's origin, never `*`; the SDK's headers;
-`Retry-After` exposed), the throttles and account email. `tests/deployment-env.test.ts` fails if
+`Retry-After` exposed), the throttles, account email with account existence hidden (registration
+and the confirmation resend answer every address alike), the per-recipient mail bound and a cache
+store that counts them atomically. `tests/deployment-env.test.ts` fails if
 one goes missing or changes away from what the SDK needs (confirmation on, positive throttles,
 ordered session lifespans, https links to the site, placeholders for every secret), if a setting
 lacks its reason, or if the live contract's server runs with other values for the SDK's settings.
@@ -190,10 +192,12 @@ packages from Packagist. `scripts/live-backend.js` then, on every run:
    `.env.example`, with sqlite, mail to the `log` driver and `APP_ENV=production`; PHP gets only
    the shell's path, home, temp, locale, Composer, proxy and CA variables plus these settings, so
    nothing exported in the shell changes the backend under test;
-3. migrates and seeds a fresh sqlite database for each of four servers that differ only in email
-   confirmation, throttle rate and access token lifespan (`main`: off, relaxed; `confirmation`:
-   on, relaxed; `throttled`: off, 3 a minute for every group, refresh included; `shortLived`: off,
-   relaxed, access tokens living 2 seconds), and serves each with PHP's built-in server on a free
+3. migrates and seeds a fresh sqlite database for each of five servers that differ only in email
+   confirmation, hidden account existence, throttle rate and access token lifespan (`main`: off,
+   relaxed; `confirmation`: on, relaxed; `disclosing`: on, relaxed, accounts shown as Strapi
+   answers, so the SDK is checked against both; `throttled`: off, 3 a minute for every group,
+   refresh included; `shortLived`: off, relaxed, access tokens living 2 seconds; all but
+   `disclosing` hide accounts), and serves each with PHP's built-in server on a free
    port of 127.0.0.1 only, logging to `generated/live/<server>.server.log`;
 4. writes `generated/live/backend.json` describing them, runs the command after `--` with
    `IDENTITY_LIVE_BACKEND` set to its path, and stops the servers.
@@ -206,8 +210,13 @@ tests use it).
 Without a command (`CAMIS_DIR=../camis node cms/scripts/live-backend.js`) it serves until
 interrupted, so the suite can be run repeatedly with
 `IDENTITY_LIVE_BACKEND=cms/generated/live/backend.json pnpm vitest run --project identity-live`.
-Each boot starts with fresh databases and throttle buckets; servers kept up keep both between
-runs, so a rerun within a minute may wait out the throttled server's register window.
+Each boot starts with fresh databases, throttle buckets and mail bounds; servers kept up keep them
+between runs, so a rerun within a minute may wait out the throttled server's register window.
+
+The app scaffolded before camis added the middleware-priority line to `bootstrap/app.php`
+(`prependToPriorityList(ThrottleRequests, StrapiJsonBody)`, generated DEPLOY.md) does not have it,
+and the live run does not add it: the users-permissions routes count with camis' own throttle, not
+Laravel's `ThrottleRequests`, so the line changes nothing they do. A fresh scaffold has it.
 Everything it writes is under the git-ignored `generated/live`, one scaffold only; delete that
 directory to scaffold again. A scaffold counts as done only once `generated/live/strapi-php.scaffolded`
 is written, after it has finished, so one interrupted is started again from nothing. After
