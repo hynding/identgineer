@@ -6,7 +6,8 @@ type Restorable = Pick<StateSource, "getState"> & RestoreSource;
 /**
  * A component's side of the shared restore: it restores the current client while its state is
  * unknown, says when that could not reach the server, and tries again when the browser comes back
- * online or `retry` is called.
+ * online or `retry` is called. A retry while one is under way shares it, so the server is asked
+ * once.
  */
 export class RestoreWatch<C extends Restorable> {
   constructor(

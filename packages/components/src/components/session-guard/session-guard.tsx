@@ -77,7 +77,7 @@ export class IdgSessionGuard {
 
   @State() private status: IdentityStatus = "unknown";
   @State() private unreachable = false;
-  /** "Try again" is waiting for the server: its notice stays, with the button busy and focused. */
+  /** A retry is waiting for the server: its notice stays, with the button busy and focused. */
   @State() private retrying = false;
   @State() private signOutNotice?: "this-device" | "everywhere";
   /** What the anchor says while it has focus; nothing otherwise. */
@@ -92,6 +92,10 @@ export class IdgSessionGuard {
   private readonly restoring = new RestoreWatch<SessionGuardClient>(
     () => this.binding.current(),
     (unreachable) => {
+      // A retry under way, from Try again or from the browser coming back online: the notice
+      // stays, its button busy and keeping focus, so focus moves once, when the outcome is known,
+      // to what says it.
+      if (!unreachable && this.unreachable) this.retrying = true;
       this.unreachable = unreachable;
       if (unreachable && this.retrying) {
         this.retrying = false;
@@ -147,14 +151,6 @@ export class IdgSessionGuard {
     const labels = mergeLabels(SESSION_GUARD_LABELS, this.labels);
     if (focusWithin(this.host)) this.focusAnchor(labels.signedOut);
     this.clearNotice();
-  };
-
-  // The notice stays while the guard tries again, its button busy and keeping focus, so focus moves
-  // once, when the outcome is known, to what says it.
-  private retry = (): void => {
-    if (this.retrying) return;
-    this.retrying = true;
-    this.restoring.retry();
   };
 
   private clearNotice(): void {
@@ -276,7 +272,7 @@ export class IdgSessionGuard {
           variant="secondary"
           size="sm"
           loading={this.retrying}
-          onClick={this.retry}
+          onClick={this.restoring.retry}
         >
           {labels.retry}
         </idg-button>

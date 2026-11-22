@@ -1232,11 +1232,13 @@ at once to a hidden anchor of the guard's own: absolutely positioned and clipped
 of the parent's layout, placed before the content, so Tab goes on into the content and Shift+Tab
 back before the guard. Its text is the change ("You are signed in." or "You are signed out.", in
 `labels`), in place before it takes focus and read once as focus lands; no live region says it
-again. While "Try again" waits for the server its notice stays, the button busy (`loading`) and
-keeping focus; the answer then moves focus once, to the anchor with the outcome as its text, or,
-when the server still cannot be reached, to the notice. A warning that appears while focus is still on the anchor takes
-focus and is read then (its live role left out); one that appears after the user has moved on is
-announced by its `role="alert"` and leaves focus where it is. The guard writes no `tabindex` on
+again. While a retry waits for the server, whether from "Try again" or from the browser coming
+back online, its notice stays, the button busy (`loading`) and focus where it was; the answer then
+moves focus once, if focus is in the guard: to the anchor with the outcome as its text, or, when
+the server still cannot be reached, to the notice. Pressing "Try again" during a retry asks the
+server nothing more. A warning that appears while focus is still on the anchor takes focus and is
+read then (its live role left out); one that appears after the user has moved on is announced by
+its `role="alert"` and leaves focus where it is. The guard writes no `tabindex` on
 anything it does not own: on a custom element host it would take the host's whole shadow tree
 out of the Tab order. **Not access control**: its children are in the DOM all along; see the
 security notes, and hide it until hydrated with `idg-session-guard:not(.hydrated)`.
