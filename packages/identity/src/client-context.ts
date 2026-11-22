@@ -128,6 +128,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     clock,
     tokenLifetimeMs,
     locks: resolveLocks(options.locks),
+    lockWaitMs: timeoutMs,
     isActive,
     verifyUser,
     onExpired: () => {

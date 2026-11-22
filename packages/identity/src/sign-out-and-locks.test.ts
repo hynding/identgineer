@@ -133,15 +133,17 @@ describe("a lock manager that fails", () => {
     await settle();
     await settle();
     expect(restored).toMatchObject({ status: "signed-in" });
+    await tab.signOut();
+    const unknownTab = makeClient();
     let signedOut = false;
-    void tab.signOut().then(() => {
+    void unknownTab.signOut().then(() => {
       signedOut = true;
     });
-    for (let round = 0; round < 3; round += 1) {
-      clock.advance(5_000);
-      await settle();
-    }
+    await settle();
+    expect(signedOut).toBe(false);
+    clock.advance(5_000);
+    for (let round = 0; round < 3; round += 1) await settle();
     expect(signedOut).toBe(true);
-    expect(api.activeSessionCount("ada@example.com")).toBe(0);
+    expect(api.requests.at(-1)?.path).toBe("/api/auth/refresh");
   });
 });

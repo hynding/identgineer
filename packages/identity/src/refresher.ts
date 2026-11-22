@@ -1,7 +1,7 @@
 import { createAlarm } from "./alarm.ts";
 import type { Clock } from "./clock.ts";
 import { IdentityError } from "./identity-error.ts";
-import { REFRESH_LOCK, type LockManagerLike } from "./locks.ts";
+import { REFRESH_LOCK, withLock, type LockManagerLike } from "./locks.ts";
 import type { Session, Tokens } from "./session.ts";
 import { readAuthResponse } from "./shapes.ts";
 import { tokensFrom } from "./tokens.ts";
@@ -43,6 +43,8 @@ export interface RefresherOptions {
   readonly clock: Clock;
   readonly tokenLifetimeMs: number;
   readonly locks: LockManagerLike | null;
+  /** How long to wait for the cross-tab lock before refreshing without it. */
+  readonly lockWaitMs: number;
   readonly isActive: () => boolean;
   /**
    * After a cookie refresh: whether the new token is still the signed-in user's (true), another
@@ -95,9 +97,12 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
       const response = await send();
       return response.status === 401 ? send() : response;
     };
-    return options.locks === null
-      ? sendAndRetry()
-      : options.locks.request(REFRESH_LOCK, sendAndRetry);
+    return withLock(
+      options.locks,
+      REFRESH_LOCK,
+      { clock, waitMs: options.lockWaitMs },
+      sendAndRetry,
+    );
   };
 
   const run = async (record: { tokens?: Tokens }): Promise<RefreshOutcome> => {
