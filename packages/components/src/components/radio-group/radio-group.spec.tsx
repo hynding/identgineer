@@ -107,6 +107,15 @@ describe("idg-radio-group roving tabindex", () => {
   });
 });
 
+describe("idg-radio-group parts", () => {
+  it("exposes the box that arranges the radios as the group part, so a page can lay them out", async () => {
+    const { root } = await render(plans);
+    expect(root.shadowRoot?.querySelector('[role="radiogroup"]')?.getAttribute("part")).toBe(
+      "group",
+    );
+  });
+});
+
 describe("idg-radio-group selection and keys", () => {
   it("selects the radio that is chosen and emits idgChange once", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(plans);

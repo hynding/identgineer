@@ -64,6 +64,15 @@ function status(root: HTMLElement): string {
   return shadow(root).querySelector('[role="status"]')?.textContent.trim() ?? "";
 }
 
+/** The one of the live region's two nodes that holds the text. */
+function statusSlot(root: HTMLElement): string | undefined {
+  return (
+    Array.from(shadow(root).querySelectorAll('[role="status"] [data-slot]'))
+      .find((node) => node.textContent.trim() !== "")
+      ?.getAttribute("data-slot") ?? undefined
+  );
+}
+
 class FakeStorage {
   readonly entries = new Map<string, string>();
   getItem(key: string): string | null {
@@ -288,6 +297,34 @@ describe("idg-variation-switcher controls", () => {
     expect(status(root)).toBe("Theme: Ember.");
   });
 
+  it("announces an identical message afresh: the text moves to the other node of the live region", async () => {
+    const { root, waitForChanges } = await render(<idg-variation-switcher />);
+    choose(root, "theme", "ember");
+    await waitForChanges();
+    const first = statusSlot(root);
+    expect(first).toBeDefined();
+    applyVariations({ theme: "aurora" });
+    await waitForChanges();
+    choose(root, "theme", "ember");
+    await waitForChanges();
+    expect(status(root)).toBe("Theme: Ember.");
+    expect(statusSlot(root)).not.toBe(first);
+  });
+
+  it("announces a second successful copy afresh as well", async () => {
+    vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn(() => Promise.resolve()) } });
+    const { root, waitForChanges } = await render(<idg-variation-switcher />);
+    action(root, "copy");
+    await waitForChanges();
+    await waitForChanges();
+    const first = statusSlot(root);
+    action(root, "copy");
+    await waitForChanges();
+    await waitForChanges();
+    expect(status(root)).toBe("Link copied.");
+    expect(statusSlot(root)).not.toBe(first);
+  });
+
   it("refuses a value outside the registry", async () => {
     const { root, waitForChanges, spyOnEvent } = await render(<idg-variation-switcher />);
     const spy = spyOnEvent("idgVariationsChange");
@@ -488,6 +525,38 @@ describe("idg-variation-switcher copy link", () => {
     await waitForChanges();
     expect(execCommand).not.toHaveBeenCalled();
     Reflect.deleteProperty(document, "execCommand");
+  });
+
+  it("drops the manual link once the page changes, since it no longer says what the page is", async () => {
+    stubClipboard(undefined);
+    const { root, waitForChanges } = await render(<idg-variation-switcher />);
+    action(root, "copy");
+    await waitForChanges();
+    expect(shadow(root).querySelector(".fallback")).not.toBeNull();
+    applyVariations({ theme: "ember" });
+    await waitForChanges();
+    expect(shadow(root).querySelector(".fallback")).toBeNull();
+    expect(status(root)).toBe("");
+  });
+
+  it("focuses the manual link and selects its text, since the message says to copy it", async () => {
+    const proto = HTMLElement.prototype as unknown as Record<string, unknown>;
+    const setFocus = vi.fn(() => Promise.resolve());
+    const selectText = vi.fn(() => Promise.resolve());
+    proto.setFocus = setFocus;
+    proto.selectText = selectText;
+    try {
+      stubClipboard(undefined);
+      const { root, waitForChanges } = await render(<idg-variation-switcher />);
+      action(root, "copy");
+      await waitForChanges();
+      await waitForChanges();
+      expect(setFocus).toHaveBeenCalledTimes(1);
+      expect(selectText).toHaveBeenCalledTimes(1);
+    } finally {
+      Reflect.deleteProperty(proto, "setFocus");
+      Reflect.deleteProperty(proto, "selectText");
+    }
   });
 
   it("hides the manual link again after the next successful copy", async () => {
