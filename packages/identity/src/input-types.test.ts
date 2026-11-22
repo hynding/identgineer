@@ -176,6 +176,26 @@ const malformed: [string, (client: IdentityClient) => Promise<unknown>][] = [
     (client) => client.authorizedFetch("/api/x", { signal: loose(new EventTarget()) }),
   ],
   [
+    "authorizedFetch with a signal-like object that cannot be let go of",
+    (client) =>
+      client.authorizedFetch("/api/x", {
+        signal: loose({ aborted: false, addEventListener: () => undefined }),
+      }),
+  ],
+  [
+    "signIn with a password over 4096 bytes",
+    (client) => client.signIn({ identifier: "ada", password: "é".repeat(2049) }),
+  ],
+  [
+    "changePassword with a current password over 4096 bytes",
+    (client) =>
+      client.changePassword({
+        currentPassword: "a".repeat(4097),
+        password: `${PASSWORD}!`,
+        passwordConfirmation: `${PASSWORD}!`,
+      }),
+  ],
+  [
     "completeProviderSignIn with a null returnTo",
     (client) => client.completeProviderSignIn("github", loose({ search: "", returnTo: null })),
   ],
@@ -326,6 +346,21 @@ describe("values at the limits", () => {
       client.resetPassword({ code: "wrong", password: exact, passwordConfirmation: exact }),
     );
     expect(api.requests.length).toBe(sent + 1);
+  });
+
+  it("sends a sign-in password of exactly 4096 bytes, longer than any it could set", async () => {
+    const { api, client } = setup();
+    const error = await rejection(client.signIn({ identifier: "ada", password: "é".repeat(2048) }));
+    expect(error).toMatchObject({ code: "invalid-credentials" });
+    expect(api.requests.at(-1)?.path).toBe("/api/auth/local");
+  });
+
+  it("sends a provider callback query of exactly 16384 characters", async () => {
+    const { api, client } = setup();
+    const search = `?id_token=${"t".repeat(16_384 - 10)}`;
+    expect(search).toHaveLength(16_384);
+    await rejection(client.completeProviderSignIn("github", { search }));
+    expect(api.requests.at(-1)?.path).toMatch(/^\/api\/auth\/github\/callback/);
   });
 
   it("sends an identifier of exactly 255 characters", async () => {

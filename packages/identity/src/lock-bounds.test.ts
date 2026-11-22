@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { IdentityError } from "./identity-error.ts";
-import { withLock, type LockManagerLike } from "./locks.ts";
+import { COOKIE_LOCK, withLock, type LockManagerLike } from "./locks.ts";
 import { PASSWORD, rejection, settle, setup } from "./test-harness.ts";
 import { createManualClock } from "./testing/manual-clock.ts";
 import { createMemoryLocks } from "./testing/memory-locks.ts";
@@ -235,5 +235,51 @@ describe("withLock", () => {
     clock.advance(10 * TIMEOUT);
     await settle();
     expect(runs).toBe(1);
+  });
+});
+
+/** Holds the cookie lock as another tab would, until the returned function is called. */
+const holdLock = async (locks: LockManagerLike): Promise<() => void> => {
+  let release = (): void => undefined;
+  void locks.request(
+    COOKIE_LOCK,
+    () =>
+      new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+  );
+  await settle();
+  return () => {
+    release();
+  };
+};
+
+describe("a sign-in waiting for the cookie lock", () => {
+  it("is never sent once a sign-out in this tab cancelled it: it rejects unauthorized", async () => {
+    const locks = createMemoryLocks();
+    const { api, client } = setup({}, { locks, requestTimeoutMs: TIMEOUT });
+    const release = await holdLock(locks);
+    const signingIn = rejection(client.signIn({ identifier: "ada", password: PASSWORD }));
+    await settle();
+    const signingOut = client.signOut();
+    await settle();
+    release();
+    await signingOut;
+    expect(await signingIn).toMatchObject({ code: "unauthorized" });
+    expect(api.requests.some((request) => request.path === "/api/auth/local")).toBe(false);
+  });
+
+  it("is never sent after dispose, which also clears its wait: it rejects unknown", async () => {
+    const locks = createMemoryLocks();
+    const { api, clock, client } = setup({}, { locks, requestTimeoutMs: TIMEOUT });
+    const release = await holdLock(locks);
+    const signingIn = rejection(client.signIn({ identifier: "ada", password: PASSWORD }));
+    await settle();
+    client.dispose();
+    expect(await signingIn).toMatchObject({ code: "unknown" });
+    expect(clock.pendingTimers()).toBe(0);
+    release();
+    await settle();
+    expect(api.requests).toHaveLength(0);
   });
 });

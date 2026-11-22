@@ -252,3 +252,28 @@ describe("signOut", () => {
     expect(client.getState()).toEqual({ status: "signed-out", reason: "user" });
   });
 });
+
+describe("a token answer the client could not send back", () => {
+  it("is refused: a token with a line break signs nobody in", async () => {
+    const { api, client } = setup();
+    api.respondNext("POST", "/api/auth/local", {
+      status: 200,
+      body: {
+        jwt: "abc\ndef",
+        user: {
+          id: 1,
+          documentId: "d1",
+          username: "ada",
+          email: "ada@example.com",
+          confirmed: true,
+          blocked: false,
+          provider: "local",
+        },
+      },
+    });
+    await expect(client.signIn({ identifier: "ada", password: PASSWORD })).rejects.toMatchObject({
+      code: "unknown",
+    });
+    expect(client.getState().status).not.toBe("signed-in");
+  });
+});

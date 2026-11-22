@@ -84,12 +84,19 @@ describe("readAuthResponse", () => {
     expect(readAuthResponse({ user: USER }).accessToken).toBeUndefined();
   });
 
-  it.each([{ jwt: "" }, { jwt: 1 }, { jwt: "x", refreshToken: 2 }, { jwt: "x", user: "u" }, {}])(
-    "refuses %j",
-    (value) => {
-      expectMalformed(() => readAuthResponse(value));
-    },
-  );
+  it.each([
+    { jwt: "" },
+    { jwt: 1 },
+    { jwt: "x", refreshToken: 2 },
+    { jwt: "x", user: "u" },
+    {},
+    { jwt: "abc\ndef" },
+    { jwt: "a b" },
+    { jwt: "a.b\u00e9" },
+    { jwt: "x", refreshToken: "s\tt" },
+  ])("refuses %j", (value) => {
+    expectMalformed(() => readAuthResponse(value));
+  });
 });
 
 describe("readErrorEnvelope", () => {
