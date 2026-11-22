@@ -99,15 +99,16 @@ describe("the variations adoption guides", () => {
     expect(isExported("@identgineer/variations", "useVariations", false)).toBe(false);
     expect(isExported("@identgineer/variations", "VariationState", false)).toBe(false);
     expect(isExported("@identgineer/variations", "VariationState", true)).toBe(true);
-    expect(isExported("@identgineer/variations/bootstrap-tag", "bootstrapScriptAttributes", false)).toBe(
-      true,
-    );
+    expect(
+      isExported("@identgineer/variations/bootstrap-tag", "bootstrapScriptAttributes", false),
+    ).toBe(true);
   });
 
   it("are linked from the root README and from the variations README", () => {
     for (const readme of ["README.md", join("packages", "variations", "README.md")]) {
       const text = read(join(ROOT, readme));
-      for (const guide of GUIDES) expect(text, `${readme} links ${guide}`).toContain(`docs/variations/${guide}`);
+      for (const guide of GUIDES)
+        expect(text, `${readme} links ${guide}`).toContain(`docs/variations/${guide}`);
     }
   });
 });
