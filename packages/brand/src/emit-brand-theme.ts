@@ -34,9 +34,11 @@ function regenerate(theme: BrandTheme): BrandTheme {
   return fresh;
 }
 
-function radiusTokens(theme: BrandTheme, source: string): ResolvedToken[] {
+// Named so the tokens package's emitter writes brandRadiusVariableName(name), the preference a
+// design that follows brand corners reads.
+function radiusPreferences(theme: BrandTheme, source: string): ResolvedToken[] {
   return RADIUS_NAMES.map((name) => ({
-    path: `shape.radius.${name}`,
+    path: `brand.radius.${name}`,
     type: "dimension",
     value: theme.radius[name],
     description: undefined,
@@ -47,7 +49,8 @@ function radiusTokens(theme: BrandTheme, source: string): ResolvedToken[] {
 /**
  * The theme as a stylesheet scoped exactly like a built-in theme file (`[data-theme="<id>"]`, with
  * the same `data-scheme` and `prefers-color-scheme` handling, written by the tokens package's own
- * emitter), followed by the corner radii in the `idg.brand` layer.
+ * emitter), followed by the corner radii in the `idg.brand` layer as a preference: designs that
+ * follow brand corners resolve their radii through it, and designs that decline never read it.
  */
 export function emitBrandThemeCss(theme: BrandTheme): string {
   const trusted = regenerate(theme);
@@ -63,7 +66,7 @@ export function emitBrandThemeCss(theme: BrandTheme): string {
     "@layer idg.brand {",
     emitDeclarationRule(
       [attributeSelector("data-theme", trusted.id)],
-      radiusTokens(trusted, file),
+      radiusPreferences(trusted, file),
       1,
     ),
     "}",
