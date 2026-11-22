@@ -448,3 +448,40 @@ describe("a sign-out in a tab disposed before its cookie lookup", () => {
     expect(api.restorableUser()).toBe("bob@example.com");
   });
 });
+
+describe("dispose of a superseded sign-out", () => {
+  it("tells no tab of a sign-out", async () => {
+    const { api, client, makeClient, signIn } = setup();
+    addBob(api);
+    const other = makeClient({ sharedChannel: true });
+    await signIn();
+    await settle();
+    const release = api.holdNext("POST", "/api/auth/logout");
+    const signingOut = client.signOut();
+    await settle();
+    await other.signIn({ identifier: "bob", password: PASSWORD });
+    await settle();
+    client.dispose();
+    await settle();
+    release();
+    await signingOut;
+    await settle();
+    expect(other.getState()).toMatchObject({ status: "signed-in", user: { username: "bob" } });
+  });
+});
+
+describe("a sign-in queued when the client is disposed", () => {
+  it("rejects unknown without a request", async () => {
+    const { api, client } = setup();
+    addBob(api);
+    const release = api.holdNext("POST", "/api/auth/local");
+    const first = rejection(client.signIn({ identifier: "ada", password: PASSWORD }));
+    const queued = rejection(client.signIn({ identifier: "bob", password: PASSWORD }));
+    await settle();
+    client.dispose();
+    release();
+    expect(await queued).toMatchObject({ code: "unknown" });
+    expect(await first).toMatchObject({ code: "unknown" });
+    expect(paths(api).filter((path) => path === "/api/auth/local")).toHaveLength(1);
+  });
+});
