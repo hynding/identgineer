@@ -177,7 +177,9 @@ inferred from attributes. For example the email input is a `textbox` named "Emai
 value that is meant to be copied, such as a link; it does not focus it, so call `setFocus()` too.
 
 Slots `start` and `end` sit inside the box. The reveal control is a real `<button type="button">`
-with `aria-pressed`; it changes only the native input's `type`, never the value.
+with `aria-pressed`; it changes only the native input's `type`, never the value. A shown password is
+hidden again when its form is submitted (before the submit event's listeners run), when the form
+is reset and when the value is set from outside, such as a form clearing it.
 
 **Enter submits the form** as Enter in a native input does, following the HTML implicit
 submission algorithm, since the native input has no form owner across the shadow boundary and the

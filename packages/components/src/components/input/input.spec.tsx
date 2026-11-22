@@ -317,6 +317,9 @@ describe("idg-input as a form control", () => {
     return event;
   }
 
+  /** What a form needs for the input to watch its submit, here without listeners. */
+  const listenerless = () => ({ addEventListener: vi.fn(), removeEventListener: vi.fn() });
+
   /** Lets the keydown finish its dispatch: implicit submission is decided after it. */
   const afterDispatch = () =>
     new Promise((resolve) => {
@@ -327,7 +330,7 @@ describe("idg-input as a form control", () => {
   // submission never reaches the form: Enter would do nothing in a form of idg-input elements.
   // The cases of the algorithm itself run in the browser tests, against native inputs.
   it("submits its form on Enter once the keydown is dispatched, as a native input does", async () => {
-    const form = { requestSubmit: vi.fn(), elements: [] as Element[] };
+    const form = { ...listenerless(), requestSubmit: vi.fn(), elements: [] as Element[] };
     const { root } = await renderWithInternals(<idg-input />, form);
     form.elements.push(root);
     pressEnter(root);
@@ -337,7 +340,7 @@ describe("idg-input as a form control", () => {
   });
 
   it("leaves Enter alone while composing, once handled, or when a listener further out takes it", async () => {
-    const form = { requestSubmit: vi.fn(), elements: [] as Element[] };
+    const form = { ...listenerless(), requestSubmit: vi.fn(), elements: [] as Element[] };
     const { root } = await renderWithInternals(<idg-input />, form);
     form.elements.push(root);
     pressEnter(root, { isComposing: true });
