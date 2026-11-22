@@ -1,24 +1,22 @@
-import {
-  DEFAULT_DESIGN_ID,
-  DEFAULT_LAYOUT_ID,
-  DEFAULT_THEME_ID,
-  DEFAULT_UX_MODE_ID,
-  DESIGNS,
-  LAYOUTS,
-  SCHEMES,
-  THEMES,
-  UX_MODES,
-} from "@identgineer/tokens";
+import { REGISTRY_DATA } from "./generated/registry-data.ts";
 import type {
   DesignId,
   LayoutId,
-  ModeDefinition,
   Scheme,
+  SchemeChoice,
+  StateKey,
   ThemeId,
-  ThemeSwatches,
   UxModeId,
-} from "@identgineer/tokens";
-import type { SchemeChoice, StateKey, VariationAxis } from "./variation-state.ts";
+  VariationAxis,
+} from "./variation-state.ts";
+
+export interface ThemeSwatches {
+  readonly bg: string;
+  readonly surface: string;
+  readonly text: string;
+  readonly accent: string;
+  readonly accentSubtle: string;
+}
 
 export interface ThemePreview {
   readonly kind: "theme";
@@ -66,10 +64,9 @@ export const AXES: readonly VariationAxis[] = Object.freeze(["theme", "design", 
 
 export const STATE_KEYS: readonly StateKey[] = Object.freeze([...AXES, "scheme"]);
 
-// The token registries are shared, so the preview is copied before it is frozen.
 function themeVariations(): readonly Variation<ThemeId, ThemePreview>[] {
   return Object.freeze(
-    THEMES.map((theme) =>
+    REGISTRY_DATA.theme.variations.map((theme) =>
       Object.freeze({
         id: theme.id,
         label: theme.label,
@@ -87,11 +84,17 @@ function themeVariations(): readonly Variation<ThemeId, ThemePreview>[] {
   );
 }
 
+interface TextEntry<Id extends string> {
+  readonly id: Id;
+  readonly label: string;
+  readonly description: string;
+}
+
 function textVariations<Id extends string>(
-  modes: readonly ModeDefinition<Id>[],
+  entries: readonly TextEntry<Id>[],
 ): readonly Variation<Id, TextPreview>[] {
   return Object.freeze(
-    modes.map(({ id, label, description }) =>
+    entries.map(({ id, label, description }) =>
       Object.freeze({
         id,
         label,
@@ -104,28 +107,28 @@ function textVariations<Id extends string>(
 
 export const REGISTRY: VariationsRegistry = Object.freeze({
   theme: Object.freeze({
-    attribute: "data-theme",
-    defaultId: DEFAULT_THEME_ID,
+    attribute: REGISTRY_DATA.theme.attribute,
+    defaultId: REGISTRY_DATA.theme.defaultId,
     variations: themeVariations(),
   }),
   design: Object.freeze({
-    attribute: "data-design",
-    defaultId: DEFAULT_DESIGN_ID,
-    variations: textVariations(DESIGNS),
+    attribute: REGISTRY_DATA.design.attribute,
+    defaultId: REGISTRY_DATA.design.defaultId,
+    variations: textVariations(REGISTRY_DATA.design.variations),
   }),
   layout: Object.freeze({
-    attribute: "data-layout",
-    defaultId: DEFAULT_LAYOUT_ID,
-    variations: textVariations(LAYOUTS),
+    attribute: REGISTRY_DATA.layout.attribute,
+    defaultId: REGISTRY_DATA.layout.defaultId,
+    variations: textVariations(REGISTRY_DATA.layout.variations),
   }),
   ux: Object.freeze({
-    attribute: "data-ux",
-    defaultId: DEFAULT_UX_MODE_ID,
-    variations: textVariations(UX_MODES),
+    attribute: REGISTRY_DATA.ux.attribute,
+    defaultId: REGISTRY_DATA.ux.defaultId,
+    variations: textVariations(REGISTRY_DATA.ux.variations),
   }),
   scheme: Object.freeze({
-    attribute: "data-scheme",
-    defaultId: "system",
-    ids: Object.freeze<SchemeChoice[]>([...SCHEMES, "system"]),
+    attribute: REGISTRY_DATA.scheme.attribute,
+    defaultId: REGISTRY_DATA.scheme.defaultId,
+    ids: Object.freeze<SchemeChoice[]>([...REGISTRY_DATA.scheme.ids]),
   }),
 });

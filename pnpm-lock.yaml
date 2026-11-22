@@ -64,14 +64,16 @@ importers:
   packages/tracking: {}
 
   packages/variations:
-    dependencies:
+    devDependencies:
       '@identgineer/tokens':
         specifier: workspace:*
         version: link:../tokens
-    devDependencies:
       happy-dom:
         specifier: 21.0.4
         version: 21.0.4
+      prettier:
+        specifier: 3.10.1
+        version: 3.10.1
 
 packages:
 

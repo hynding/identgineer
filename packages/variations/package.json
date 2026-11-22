@@ -10,13 +10,13 @@
     "./bootstrap.sri.json": "./dist/bootstrap.sri.json"
   },
   "scripts": {
+    "generate": "node scripts/generate.ts",
     "build": "node scripts/build.ts",
     "typecheck": "tsc -p tsconfig.json"
   },
-  "dependencies": {
-    "@identgineer/tokens": "workspace:*"
-  },
   "devDependencies": {
-    "happy-dom": "21.0.4"
+    "@identgineer/tokens": "workspace:*",
+    "happy-dom": "21.0.4",
+    "prettier": "3.10.1"
   }
 }

@@ -44,47 +44,33 @@ describe("the browser entry point", () => {
   });
 });
 
-async function bundleSize(): Promise<number> {
+async function bundle(minify: boolean): Promise<string> {
   const here = createRequire(import.meta.url);
-  const viteRequire = createRequire(
-    createRequire(here.resolve("vitest/package.json")).resolve("vite/package.json"),
+  // rolldown is vite's bundler: reach it through vitest -> vite rather than depending on it.
+  const vite = createRequire(
+    here.resolve(createRequire(here.resolve("vitest/package.json")).resolve("vite/package.json")),
   );
-  const { build } = (await import(viteRequire.resolve("rolldown"))) as {
+  const { build } = (await import(vite.resolve("rolldown"))) as {
     build: (options: unknown) => Promise<{ output: { code: string }[] }>;
   };
   const result = await build({
     input: ENTRY,
     platform: "browser",
     write: false,
-    output: { format: "esm", minify: true },
+    output: { format: "esm", minify },
   });
-  return Buffer.byteLength(result.output[0]?.code ?? "");
+  return result.output[0]?.code ?? "";
 }
 
 describe("the bundled browser entry", () => {
-  // Measured after the tokens pipeline was removed, plus about 25% headroom.
-  const BUDGET_BYTES = 0;
+  // The measured minified size, plus about 25% headroom.
+  const BUDGET_BYTES = 18_000;
 
   it("stays inside its size budget", async () => {
-    const size = await bundleSize();
-    expect(BUDGET_BYTES).toBeGreaterThan(0);
-    expect(size).toBeLessThan(BUDGET_BYTES);
+    expect(Buffer.byteLength(await bundle(true))).toBeLessThan(BUDGET_BYTES);
   });
 
   it("contains no token pipeline", async () => {
-    const here = createRequire(import.meta.url);
-    const viteRequire = createRequire(
-      createRequire(here.resolve("vitest/package.json")).resolve("vite/package.json"),
-    );
-    const { build } = (await import(viteRequire.resolve("rolldown"))) as {
-      build: (options: unknown) => Promise<{ output: { code: string }[] }>;
-    };
-    const result = await build({
-      input: ENTRY,
-      platform: "browser",
-      write: false,
-      output: { format: "esm" },
-    });
-    expect(result.output[0]?.code).not.toMatch(/\$value|resolveAliases|node:fs/);
+    expect(await bundle(false)).not.toMatch(/\$value|resolveAliases|node:fs/);
   });
 });
