@@ -187,7 +187,9 @@ Tested on every run:
 `emitBrandThemeCss(theme)` writes the theme through the tokens package's own theme emitter, so it
 is scoped exactly like a built-in theme file: `[data-theme="<id>"]` for light, `[data-scheme="dark"]`
 for forced dark, and the `prefers-color-scheme: dark` rule for a page without `data-scheme`. It
-never answers to a bare `:root`; only the default theme does.
+never answers to a bare `:root`; only the default theme does. Like the built-in theme files, each scheme also
+carries the derived `accent-edge` (see the [tokens README](../tokens/README.md#accent-fills-and-indicators)):
+the accent border where the accent does not stand out on the page, `transparent` where it does.
 
 The corners are a preference, not an override. A separate rule in the `idg.brand` cascade layer
 sets `--idg-brand-radius-sm|md|lg|pill` on the element carrying `data-theme`. Radii belong to the

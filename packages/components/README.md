@@ -12,9 +12,10 @@ The accent appears in three ways, and each reads its own colour role:
 - A **fill** carries a text label (a primary button, an accent card, the skip link) and only needs
   its text to read: `accent` with `on-accent`. A light brand keeps its own colour here, even below
   3:1 against the page. Where that leaves a primary button without an edge the page can tell
-  apart (designs without control borders, such as soft and elevated), it gets a 1px inset ring of
-  `accent-border`, which is the accent itself, and so invisible, wherever the accent already
-  stands out. Designs with control borders draw their own edge.
+  apart, in designs without control borders such as soft and elevated, it gets a 1px inset ring of
+  `accent-edge`: the theme's `accent-border` where the accent does not stand out, and
+  `transparent`, so nothing is drawn, where it does. Designs with control borders draw their own
+  edge.
 - An **indicator** identifies state or selection on the page, so it needs 3:1 against what it sits
   on (WCAG 1.4.11): `accent-indicator`, with `on-accent-indicator` for a glyph or number on it.
 - **Decoration** identifies nothing and stays on `accent`.
@@ -32,7 +33,7 @@ to be classified:
 | `idg-tab`                | selected tab marker                             | `accent-indicator`                        | indicator  |
 | `idg-card`               | outlined interactive card, hovered ring         | `accent-indicator`                        | indicator  |
 | `idg-button`             | primary fill, label and hover                   | `accent`, `on-accent`, `accent-hover`     | fill       |
-| `idg-button`             | primary edge in designs without control borders | `accent-border`                           | fill       |
+| `idg-button`             | primary edge in designs without control borders | `accent-edge`                             | fill       |
 | `idg-card`               | accent variant and everything on it             | `accent`, `on-accent`                     | fill       |
 | `idg-avatar`             | first colour pair of the initials               | `accent`, `on-accent`                     | fill       |
 | `idg-layout`             | skip link                                       | `accent`, `on-accent`                     | fill       |
