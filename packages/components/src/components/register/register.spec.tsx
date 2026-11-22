@@ -143,12 +143,18 @@ describe("idg-register outcomes", () => {
   it("moves focus to the confirmation, since the form it replaces had it", async () => {
     const { client } = identitySetup({ emailConfirmation: true });
     const { root, waitForChanges } = await mount(client);
+    // The mock DOM keeps no focus, so the call is watched; the browser tests check where it lands.
+    const focus = vi.spyOn(
+      Object.getPrototypeOf(document.createElement("div")) as HTMLElement,
+      "focus",
+    );
     fill(root, { username: "grace", email: "grace@example.com", password: NEW_PASSWORD });
     submit(root);
     await settle(waitForChanges);
     const confirmation = shadowOf(root).querySelector<HTMLElement>('[part="confirmation"]');
     expect(confirmation?.getAttribute("tabindex")).toBe("-1");
-    expect(shadowOf(root).activeElement).toBe(confirmation);
+    expect(focus.mock.contexts).toContain(confirmation);
+    focus.mockRestore();
   });
 });
 

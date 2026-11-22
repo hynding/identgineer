@@ -55,6 +55,14 @@ export class FormFeedback {
     this.changed();
   }
 
+  /** Sets or clears one field's error while typing, leaving the summary as it is. */
+  setFieldError(field: string, message: string | undefined): void {
+    const { [field]: current, ...others } = this.fieldErrors;
+    if (current === message) return;
+    this.fieldErrors = message === undefined ? others : { ...others, [field]: message };
+    this.changed();
+  }
+
   /**
    * A failed attempt. `throttled` starts the countdown from the client's own wait, announced once
    * now and once when it is over, never every second.

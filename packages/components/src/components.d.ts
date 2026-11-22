@@ -27,11 +27,13 @@ import { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item
 import { PageChangeDetail } from "./components/pagination/pagination-options";
 import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
+import { RegisterClient, SignInClient } from "./identity/identity-types";
+import { RegisterLabels } from "./components/register/register-labels";
+import { CountdownClock } from "./identity/throttle-countdown";
+import { RegisteredDetail } from "./components/register/register-types";
 import { SidebarSide } from "./components/sidebar/sidebar-options";
-import { SignInClient } from "./identity/identity-types";
 import { SignInLabels } from "./components/sign-in/sign-in-labels";
 import { ProviderSignInDetail, SignInProvider } from "./components/sign-in/sign-in-types";
-import { CountdownClock } from "./identity/throttle-countdown";
 import { SignedInDetail } from "./identity/event-details";
 import { SkeletonVariant } from "./components/skeleton/skeleton-options";
 import { StackAlignment } from "./components/stack/stack-options";
@@ -65,11 +67,13 @@ export { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item
 export { PageChangeDetail } from "./components/pagination/pagination-options";
 export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
+export { RegisterClient, SignInClient } from "./identity/identity-types";
+export { RegisterLabels } from "./components/register/register-labels";
+export { CountdownClock } from "./identity/throttle-countdown";
+export { RegisteredDetail } from "./components/register/register-types";
 export { SidebarSide } from "./components/sidebar/sidebar-options";
-export { SignInClient } from "./identity/identity-types";
 export { SignInLabels } from "./components/sign-in/sign-in-labels";
 export { ProviderSignInDetail, SignInProvider } from "./components/sign-in/sign-in-types";
-export { CountdownClock } from "./identity/throttle-countdown";
 export { SignedInDetail } from "./identity/event-details";
 export { SkeletonVariant } from "./components/skeleton/skeleton-options";
 export { StackAlignment } from "./components/stack/stack-options";
@@ -1125,6 +1129,26 @@ export namespace Components {
         "value": string;
     }
     /**
+     * A registration form for the identity client it is given in `client`. With email confirmation on,
+     * a new address and one already registered get the same answer, so the form never tells whether
+     * an account exists. The password is read from its input when the form is sent and the input is
+     * emptied after every attempt.
+     */
+    interface IdgRegister {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: RegisterClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<RegisterLabels>;
+    }
+    /**
      * Options are written as children, exactly as for a native select, and copied into the native
      * select inside the component: the same markup works with or without a framework, and no option
      * data has to be serialised into an attribute.
@@ -1764,6 +1788,10 @@ export interface IdgRadioGroupCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgRadioGroupElement;
 }
+export interface IdgRegisterCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgRegisterElement;
+}
 export interface IdgSelectCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgSelectElement;
@@ -2238,6 +2266,29 @@ declare global {
         prototype: HTMLIdgRadioGroupElement;
         new (): HTMLIdgRadioGroupElement;
     };
+    interface HTMLIdgRegisterElementEventMap {
+        "idgRegistered": RegisteredDetail;
+    }
+    /**
+     * A registration form for the identity client it is given in `client`. With email confirmation on,
+     * a new address and one already registered get the same answer, so the form never tells whether
+     * an account exists. The password is read from its input when the form is sent and the input is
+     * emptied after every attempt.
+     */
+    interface HTMLIdgRegisterElement extends Components.IdgRegister, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgRegisterElementEventMap>(type: K, listener: (this: HTMLIdgRegisterElement, ev: IdgRegisterCustomEvent<HTMLIdgRegisterElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgRegisterElementEventMap>(type: K, listener: (this: HTMLIdgRegisterElement, ev: IdgRegisterCustomEvent<HTMLIdgRegisterElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgRegisterElement: {
+        prototype: HTMLIdgRegisterElement;
+        new (): HTMLIdgRegisterElement;
+    };
     interface HTMLIdgSelectElementEventMap {
         "idgInput": ValueDetail;
         "idgChange": ValueDetail;
@@ -2563,6 +2614,7 @@ declare global {
         "idg-progress": HTMLIdgProgressElement;
         "idg-radio": HTMLIdgRadioElement;
         "idg-radio-group": HTMLIdgRadioGroupElement;
+        "idg-register": HTMLIdgRegisterElement;
         "idg-select": HTMLIdgSelectElement;
         "idg-sidebar": HTMLIdgSidebarElement;
         "idg-sign-in": HTMLIdgSignInElement;
@@ -3626,6 +3678,30 @@ declare namespace LocalJSX {
         "value"?: string;
     }
     /**
+     * A registration form for the identity client it is given in `client`. With email confirmation on,
+     * a new address and one already registered get the same answer, so the form never tells whether
+     * an account exists. The password is read from its input when the form is sent and the input is
+     * emptied after every attempt.
+     */
+    interface IdgRegister {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: RegisterClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<RegisterLabels>;
+        /**
+          * Fires once the account is asked for. Navigating on is the page's job.
+         */
+        "onIdgRegistered"?: (event: IdgRegisterCustomEvent<RegisteredDetail>) => void;
+    }
+    /**
      * Options are written as children, exactly as for a native select, and copied into the native
      * select inside the component: the same markup works with or without a framework, and no option
      * data has to be serialised into an attribute.
@@ -4631,6 +4707,7 @@ declare namespace LocalJSX {
         "idg-progress": Omit<IdgProgress, keyof IdgProgressAttributes> & { [K in keyof IdgProgress & keyof IdgProgressAttributes]?: IdgProgress[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `attr:${K}`]?: IdgProgressAttributes[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `prop:${K}`]?: IdgProgress[K] };
         "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
         "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
+        "idg-register": IdgRegister;
         "idg-select": Omit<IdgSelect, keyof IdgSelectAttributes> & { [K in keyof IdgSelect & keyof IdgSelectAttributes]?: IdgSelect[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `attr:${K}`]?: IdgSelectAttributes[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `prop:${K}`]?: IdgSelect[K] };
         "idg-sidebar": Omit<IdgSidebar, keyof IdgSidebarAttributes> & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes]?: IdgSidebar[K] } & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `attr:${K}`]?: IdgSidebarAttributes[K] } & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `prop:${K}`]?: IdgSidebar[K] };
         "idg-sign-in": Omit<IdgSignIn, keyof IdgSignInAttributes> & { [K in keyof IdgSignIn & keyof IdgSignInAttributes]?: IdgSignIn[K] } & { [K in keyof IdgSignIn & keyof IdgSignInAttributes as `attr:${K}`]?: IdgSignInAttributes[K] } & { [K in keyof IdgSignIn & keyof IdgSignInAttributes as `prop:${K}`]?: IdgSignIn[K] };
@@ -4818,6 +4895,13 @@ declare module "@stencil/core" {
              * its radios, is the form control.
              */
             "idg-radio-group": LocalJSX.IntrinsicElements["idg-radio-group"] & JSXBase.HTMLAttributes<HTMLIdgRadioGroupElement>;
+            /**
+             * A registration form for the identity client it is given in `client`. With email confirmation on,
+             * a new address and one already registered get the same answer, so the form never tells whether
+             * an account exists. The password is read from its input when the form is sent and the input is
+             * emptied after every attempt.
+             */
+            "idg-register": LocalJSX.IntrinsicElements["idg-register"] & JSXBase.HTMLAttributes<HTMLIdgRegisterElement>;
             /**
              * Options are written as children, exactly as for a native select, and copied into the native
              * select inside the component: the same markup works with or without a framework, and no option
