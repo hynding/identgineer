@@ -85,7 +85,11 @@ const sessions: FakeRoute = {
         loginAt: session.loginAt,
         lastActiveAt: session.createdAt,
       }))
-      .sort((a, b) => Number(b.current) - Number(a.current));
+      // camis' order: the current session, then the latest used (a stable sort keeps ties in order).
+      .sort(
+        (a, b) =>
+          Number(b.current) - Number(a.current) || b.lastActiveAt.localeCompare(a.lastActiveAt),
+      );
     return ok({ data });
   },
 };
