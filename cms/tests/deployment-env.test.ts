@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
+import { fake, NODE, removeFakes, runFake } from "./fake-php";
 import { readCmsText } from "./model";
+
+afterAll(removeFakes);
 
 interface Setting {
   readonly value: string;
@@ -28,9 +31,25 @@ const strapiPhpSection = (): Map<string, Setting> => {
 const list = (value: string | undefined): string[] =>
   (value ?? "").split(",").map((item) => item.trim().toLowerCase());
 
-/** The settings cms/scripts/live-backend.js boots the test backend with. */
-const liveSetting = (key: string): string | undefined =>
-  new RegExp(`\\b${key}:\\s*\\n?\\s*"([^"]*)"`).exec(readCmsText("scripts/live-backend.js"))?.[1];
+/** The environment the live contract's main server runs with, booted on a stand-in php. */
+const liveMainServer = (): Record<string, string> => {
+  const setup = fake();
+  const result = runFake(setup, [NODE, "-e", ""]);
+  if (result.status !== 0) throw new Error(result.stderr);
+  const main = setup
+    .records("server.jsonl")
+    .find((server) => server.env.DB_DATABASE?.endsWith("main.sqlite"));
+  if (main === undefined) throw new Error("no main server");
+  return main.env;
+};
+
+const positive = (value: string | undefined): number => {
+  const number = Number(value);
+  expect(Number.isInteger(number) && number > 0, `${String(value)} is a positive integer`).toBe(
+    true,
+  );
+  return number;
+};
 
 // What packages/identity needs from a strapi-php deployment (its README, "Backend configuration").
 const SDK_SETTINGS = {
@@ -67,17 +86,40 @@ describe(".env.example, strapi-php's deployment settings for the identity SDK", 
     for (const origin of origins) expect(origin).toMatch(/^https:\/\/[^/]+$/);
   });
 
-  it.each([
-    "CAMIS_AUTH_THROTTLE_PER_MINUTE",
-    "CAMIS_AUTH_ADDRESS_THROTTLE_PER_MINUTE",
-    "CAMIS_REFRESH_THROTTLE_PER_MINUTE",
-    "CAMIS_MAX_REFRESH_TOKEN_LIFESPAN",
-    "CAMIS_IDLE_REFRESH_TOKEN_LIFESPAN",
-    "CAMIS_EMAIL_CONFIRMATION",
-    "CAMIS_EMAIL_RESET_PASSWORD_URL",
-    "CAMIS_EMAIL_CONFIRMATION_REDIRECTION",
-  ])("names %s", (key) => {
-    expect(settings.has(key)).toBe(true);
+  it("turns email confirmation on, so the SDK can answer registrations alike", () => {
+    expect(settings.get("CAMIS_EMAIL_CONFIRMATION")?.value).toBe("true");
+  });
+
+  it("keeps refresh tokens out of every body only when asked: the SDK asks on each sign-in", () => {
+    expect(settings.get("CAMIS_SESSIONS_HTTP_ONLY")?.value).toBe("false");
+  });
+
+  it("sets each throttle to a positive rate, the address ceiling no lower than the credential rate", () => {
+    const rate = positive(settings.get("CAMIS_AUTH_THROTTLE_PER_MINUTE")?.value);
+    expect(
+      positive(settings.get("CAMIS_AUTH_ADDRESS_THROTTLE_PER_MINUTE")?.value),
+    ).toBeGreaterThanOrEqual(rate);
+    positive(settings.get("CAMIS_REFRESH_THROTTLE_PER_MINUTE")?.value);
+  });
+
+  it("bounds sessions: access token shorter than the idle limit, idle no longer than the absolute one", () => {
+    const access = positive(settings.get("CAMIS_ACCESS_TOKEN_LIFESPAN")?.value);
+    const idle = positive(settings.get("CAMIS_IDLE_REFRESH_TOKEN_LIFESPAN")?.value);
+    const absolute = positive(settings.get("CAMIS_MAX_REFRESH_TOKEN_LIFESPAN")?.value);
+    expect(access).toBeLessThan(idle);
+    expect(idle).toBeLessThanOrEqual(absolute);
+  });
+
+  it.each(["CAMIS_EMAIL_RESET_PASSWORD_URL", "CAMIS_EMAIL_CONFIRMATION_REDIRECTION"])(
+    "points %s at the site over https",
+    (key) => {
+      expect(settings.get(key)?.value).toMatch(/^https:\/\/identgineer\.example\.com\//);
+    },
+  );
+
+  // config/sanctum.php in the generated app has 'expiration' => null and reads no variable.
+  it("does not set SANCTUM_TOKEN_EXPIRATION, which strapi-php does not read", () => {
+    expect(settings.has("SANCTUM_TOKEN_EXPIRATION")).toBe(false);
   });
 
   it("explains every setting in a comment above it or above its group", () => {
@@ -91,10 +133,15 @@ describe(".env.example, strapi-php's deployment settings for the identity SDK", 
     }
   });
 
-  it.each(Object.entries(SDK_SETTINGS))(
-    "is what the live contract backend runs with: %s",
-    (key, value) => {
-      expect(liveSetting(key)).toBe(value);
+  it(
+    "is what the live contract's main server runs with, for every setting the SDK needs",
+    { timeout: 30_000 },
+    () => {
+      const live = liveMainServer();
+      for (const [key, value] of Object.entries(SDK_SETTINGS)) expect(live[key], key).toBe(value);
+      expect(list(live.CAMIS_CORS_HEADERS)).toEqual(
+        list(settings.get("CAMIS_CORS_HEADERS")?.value),
+      );
     },
   );
 });
