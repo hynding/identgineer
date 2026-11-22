@@ -198,14 +198,17 @@ waiting for the operation queue. Both sides of the lock are bounded:
 - A holder keeps it at most three request timeouts (45 seconds by default): enough for a
   sign-out's own logout, lookup and the logout of what it found even when each takes nearly its
   whole timeout. Then its requests are aborted, the lock is let go, and the operation says what
-  it could not finish: a sign-out resolves `server-unreachable`, a sign-in it cancelled rejects
-  `unauthorized` (`unknown` once disposed) as before, and anything else rejects `network`.
+  it could not finish: a sign-out resolves `server-unreachable`, and a sign-in or refresh
+  rejects `network`, even a sign-in cancelled while its request was in flight. Cutting off the
+  logout of a session a cancelled sign-in opened changes nothing for that sign-in: it still
+  rejects `unauthorized` (`unknown` once disposed).
 - A request waits for the lock at most four request timeouts (one more than any holder of this
   client keeps it). Not granted by then, it fails closed: it is never sent, and rejects `network`
   (a scheduled refresh tries again with its backoff; a sign-in can be retried), and a sign-out
-  resolves `server-unreachable`. A sign-in cancelled while it waits (by a sign-out in this tab, or
-  `dispose()`, which also ends every wait at once) is not sent when the lock comes: it rejects
-  `unauthorized`, or `unknown` once disposed.
+  resolves `server-unreachable`. A sign-in cancelled while it waits by a sign-out in this tab is
+  not sent when the lock comes, and rejects `unauthorized`; `dispose()` ends a sign-in's wait at
+  once, rejecting `unknown`. Every other wait outlives `dispose()`, so a sign-out under way, or
+  the logout of a session a cancelled sign-in opened, still ends its session once the lock comes.
 
 A cookie request runs without the lock only when there is no lock manager (`locks: null`, or no
 `navigator.locks`) or the manager itself fails (a sandboxed frame's `SecurityError`, whose error
