@@ -55,7 +55,13 @@ function readOwn(input: object, key: StateKey): OwnRead {
 }
 
 function isObject(input: unknown): input is object {
-  return typeof input === "object" && input !== null && !Array.isArray(input);
+  if (typeof input !== "object" || input === null) return false;
+  try {
+    return !Array.isArray(input);
+  } catch {
+    // Array.isArray throws on a revoked Proxy.
+    return false;
+  }
 }
 
 export function validateVariations(input: unknown): ValidatedVariations {
