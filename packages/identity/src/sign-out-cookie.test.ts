@@ -50,3 +50,36 @@ describe("signing out when the cookie names another session than this tab's", ()
     expect(api.restorableSession()).toBe(true);
   });
 });
+
+describe("the logout's answer", () => {
+  const answer = (status: number) => ({
+    status,
+    body: { data: null, error: { status, name: "x", message: "x", details: {} } },
+    headers: status === 429 ? { "Retry-After": "30" } : {},
+  });
+
+  it.each([400, 403, 409, 429, 500, 503])(
+    "reports the server unreachable when it is %i, as the session may live on",
+    async (status) => {
+      const { api, client, signIn } = setup();
+      await signIn();
+      api.respondNext("POST", "/api/auth/logout", answer(status));
+      await expect(client.signOut()).resolves.toEqual({ outcome: "server-unreachable" });
+      expect(api.restorableSession()).toBe(true);
+    },
+  );
+
+  it("lets the cookie lookup decide when the access token was already dead (401)", async () => {
+    const { api, client, signIn } = setup();
+    await signIn();
+    api.expireAccessTokens();
+    const sent = api.requests.length;
+    await expect(client.signOut()).resolves.toEqual({ outcome: "signed-out" });
+    expect(pathsSince(api, sent)).toEqual([
+      "/api/auth/logout",
+      "/api/auth/refresh",
+      "/api/auth/logout",
+    ]);
+    expect(api.restorableSession()).toBe(false);
+  });
+});
