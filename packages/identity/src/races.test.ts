@@ -431,4 +431,20 @@ describe("a sign-out in a tab disposed before its cookie lookup", () => {
     await expect(signingOut).resolves.toEqual({ outcome: "server-unreachable" });
     expect(paths(api, sent)).toEqual([]);
   });
+
+  it("logs out nothing the lookup found once disposed during it", async () => {
+    const { api, client, makeClient, signIn } = setup();
+    addBob(api);
+    await signIn();
+    await makeClient().signIn({ identifier: "bob", password: PASSWORD });
+    const releaseLookup = api.holdNext("POST", "/api/auth/refresh");
+    const signingOut = client.signOut();
+    await settle();
+    client.dispose();
+    const sent = api.requests.length;
+    releaseLookup();
+    await expect(signingOut).resolves.toEqual({ outcome: "server-unreachable" });
+    expect(paths(api, sent)).toEqual([]);
+    expect(api.restorableUser()).toBe("bob@example.com");
+  });
 });
