@@ -1,4 +1,5 @@
-import { REGISTRY, type StateKey, type VariationState } from "@identgineer/variations";
+import { REGISTRY } from "@identgineer/variations";
+import type { VariationState } from "./variation-switcher-types";
 
 /** The controls of the panel, in the order it draws them. */
 export const CONTROLS = ["theme", "design", "layout", "ux", "scheme"] as const;
@@ -65,12 +66,4 @@ export function describeChange(
   return named
     .map((control) => `${CONTROL_LABELS[control]}: ${optionLabel(control, state)}.`)
     .join(" ");
-}
-
-/** Detail of `idgVariationsChange`. */
-export interface VariationsChangeDetail {
-  /** The whole state after the change. */
-  readonly state: VariationState;
-  /** The keys whose value is different now. */
-  readonly changed: readonly StateKey[];
 }

@@ -36,7 +36,8 @@ import { SortDirection } from "./utils/sort-rows";
 import { TableSortDetail } from "./components/table/table-options";
 import { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 import { ToastPosition } from "./components/toast-region/toast-region-options";
-import { SwitcherOrientation, VariationsChangeDetail } from "./components/variation-switcher/variation-switcher-options";
+import { SwitcherOrientation } from "./components/variation-switcher/variation-switcher-options";
+import { VariationsChangeDetail } from "./components/variation-switcher/variation-switcher-types";
 export { AccordionToggleDetail } from "./components/accordion/accordion-options";
 export { AlertVariant } from "./components/alert/alert-options";
 export { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
@@ -68,7 +69,8 @@ export { SortDirection } from "./utils/sort-rows";
 export { TableSortDetail } from "./components/table/table-options";
 export { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 export { ToastPosition } from "./components/toast-region/toast-region-options";
-export { SwitcherOrientation, VariationsChangeDetail } from "./components/variation-switcher/variation-switcher-options";
+export { SwitcherOrientation } from "./components/variation-switcher/variation-switcher-options";
+export { VariationsChangeDetail } from "./components/variation-switcher/variation-switcher-types";
 export namespace Components {
     /**
      * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default

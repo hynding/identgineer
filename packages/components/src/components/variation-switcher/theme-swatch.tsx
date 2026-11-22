@@ -1,12 +1,11 @@
 import { h, type FunctionalComponent } from "@stencil/core";
-import type { ThemePreview } from "@identgineer/variations";
 import { swatchColour } from "./variation-switcher-options";
+import type { SwatchColours, ThemeSwatches } from "./variation-switcher-types";
 
-type Swatches = ThemePreview["swatches"];
-type Scheme = keyof Swatches;
+type Scheme = keyof ThemeSwatches;
 
 interface Block {
-  readonly colour: keyof Swatches[Scheme];
+  readonly colour: keyof SwatchColours;
   readonly x: number;
   readonly y: number;
   readonly width: number;
@@ -37,7 +36,7 @@ const HALVES: readonly { scheme: Scheme; offset: number }[] = [
  * styles: `fill` is an attribute, which the policy does not govern, and it is set here from the
  * registry. Each colour is checked to be a hex colour first, so only a colour can reach it.
  */
-export const ThemeSwatch: FunctionalComponent<{ preview: ThemePreview }> = ({ preview }) => (
+export const ThemeSwatch: FunctionalComponent<{ swatches: ThemeSwatches }> = ({ swatches }) => (
   <svg
     class="swatch"
     viewBox="0 0 40 20"
@@ -47,7 +46,7 @@ export const ThemeSwatch: FunctionalComponent<{ preview: ThemePreview }> = ({ pr
   >
     {HALVES.flatMap(({ scheme, offset }) =>
       BLOCKS.map((block) => {
-        const fill = swatchColour(preview.swatches[scheme][block.colour]);
+        const fill = swatchColour(swatches[scheme][block.colour]);
         return fill === undefined ? null : (
           <rect
             x={block.x + offset}

@@ -7,9 +7,7 @@ import {
   REGISTRY,
   shuffleVariations,
   variationsUrl,
-  type StateKey,
   type VariationAxis,
-  type VariationState,
 } from "@identgineer/variations";
 import { oneOf } from "../../utils/choice";
 import type { ValueDetail } from "../../utils/event-details";
@@ -22,8 +20,8 @@ import {
   SCHEME_OPTIONS,
   type ControlName,
   type SwitcherOrientation,
-  type VariationsChangeDetail,
 } from "./variation-switcher-options";
+import type { StateKey, VariationState, VariationsChangeDetail } from "./variation-switcher-types";
 
 const DEFAULT_NAME = "Appearance";
 const SHUFFLED_AXES: readonly VariationAxis[] = ["theme", "design", "layout", "ux"];
@@ -186,7 +184,7 @@ export class IdgVariationSwitcher {
             {REGISTRY.theme.variations.map((theme) => (
               <idg-radio value={theme.id}>
                 <span class="theme-option">
-                  <ThemeSwatch preview={theme.preview} />
+                  <ThemeSwatch swatches={theme.preview.swatches} />
                   {theme.label}
                 </span>
               </idg-radio>

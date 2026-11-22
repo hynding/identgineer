@@ -1061,7 +1061,18 @@ none`) and get an edge in `CanvasText`. The panel has no motion of its own.
 - **Server rendering.** Nothing touches the DOM when the module is loaded. The state is read when the
   element connects.
 - **Bundle.** The Stencil build compiles the variations source into the components' own chunks
-  (about 5 KB gzipped); `@identgineer/tokens` is not part of it.
+  (about 5 KB gzipped); `@identgineer/tokens` is not part of it. This holds for the lazy loader
+  (`dist/identgineer`), the custom-elements build (`dist/components`) and `www`. The `dist/collection`
+  output is different: it is not bundled, so its switcher files keep a bare
+  `import … from "@identgineer/variations"`, and that package is TypeScript source until it is
+  published with built output (planned with the publishing feature). Until then the collection
+  output is not a supported entry for this component. Consume the loader or the custom-elements
+  build.
+- **Types.** The switcher's public types (`VariationsChangeDetail`, `VariationState`, `StateKey`,
+  `ThemeId`, `DesignId`, `LayoutId`, `UxModeId`, `SchemeChoice`, `SwitcherOrientation`) are declared in
+  this package, so `dist/types` never refers to the variations source. A compile-time test holds them
+  identical to the variations package's own, and a check over the built declarations fails if any of
+  them imports from `@identgineer/variations`.
 
 ## Strict CSP and Trusted Types
 

@@ -10,7 +10,7 @@ import {
 } from "@identgineer/variations";
 import { removeHost } from "../../testing/remove-host";
 import "./variation-switcher";
-import type { VariationsChangeDetail } from "./variation-switcher-options";
+import type { VariationsChangeDetail } from "./variation-switcher-types";
 
 const unsubscribes = vi.hoisted(() => ({ calls: 0, subscriptions: 0 }));
 
