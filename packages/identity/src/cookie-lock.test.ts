@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LockManagerLike } from "./locks.ts";
-import { PASSWORD, settle, setup } from "./test-harness.ts";
+import { PASSWORD, rejection, settle, setup } from "./test-harness.ts";
 import { createMemoryLocks } from "./testing/memory-locks.ts";
 
 /** A lock manager that records the names asked for. */
@@ -151,5 +151,28 @@ describe("a newer sign-in heard of while the found session's logout is in flight
     release();
     await expect(signingOut).resolves.toEqual({ outcome: "signed-out" });
     expect(api.activeSessionCount("bob@example.com")).toBe(0);
+  });
+});
+
+describe("with Web Locks, the logout of a session a cancelled sign-in opened", () => {
+  it("waits for another tab's sign-in, so it never clears that sign-in's cookie", async () => {
+    const { api, client, makeClient } = setup({}, { locks: createMemoryLocks() });
+    api.addUser({ username: "bob", email: "bob@example.com", password: PASSWORD });
+    const other = makeClient();
+    const releaseSignIn = api.holdNext("POST", "/api/auth/local");
+    const signingIn = rejection(client.signIn({ identifier: "ada", password: PASSWORD }));
+    await settle();
+    client.dispose();
+    const releaseLogout = api.holdNext("POST", "/api/auth/logout");
+    const otherSigningIn = other.signIn({ identifier: "bob", password: PASSWORD });
+    await settle();
+    releaseSignIn();
+    await otherSigningIn;
+    await settle();
+    releaseLogout();
+    await expect(signingIn).resolves.toMatchObject({ code: "unknown" });
+    await settle();
+    expect(api.activeSessionCount("ada@example.com")).toBe(0);
+    expect(api.restorableUser()).toBe("bob@example.com");
   });
 });

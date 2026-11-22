@@ -470,6 +470,23 @@ describe("dispose of a superseded sign-out", () => {
   });
 });
 
+describe("dispose after a sign-out finished", () => {
+  it("tells no tab of a sign-out, even before hearing of a newer sign-in", async () => {
+    const { api, client, makeClient, signIn } = setup();
+    addBob(api);
+    const other = makeClient({ sharedChannel: true });
+    await signIn();
+    await settle();
+    await expect(client.signOut()).resolves.toEqual({ outcome: "signed-out" });
+    await settle();
+    // Disposed before the sign-in's notice arrives, so nothing marks the sign-out superseded.
+    await other.signIn({ identifier: "bob", password: PASSWORD });
+    client.dispose();
+    await settle();
+    expect(other.getState()).toMatchObject({ status: "signed-in", user: { username: "bob" } });
+  });
+});
+
 describe("a sign-in queued when the client is disposed", () => {
   it("rejects unknown without a request", async () => {
     const { api, client } = setup();
