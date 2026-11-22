@@ -179,9 +179,10 @@ test.describe("idg-session-guard and idg-user-menu keep every control reachable 
     await signInThroughFallback(page);
     await page.locator("#menu-text").locator('[part="trigger"] button').focus();
     await page.keyboard.press("Enter");
+    // The menu moves focus to its first item, here Sign out, a task after it opens.
     await expect(
       page.locator("#menu-text").getByRole("menuitem", { name: "Sign out" }),
-    ).toBeVisible();
+    ).toBeFocused();
     await page.keyboard.press("End");
     await page.keyboard.press("Enter");
     await expect.poll(() => focusedAnchorText(page, "#menu-text")).toBe("You are signed out.");
