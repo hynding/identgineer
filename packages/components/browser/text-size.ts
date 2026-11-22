@@ -25,7 +25,13 @@ function hasWideFont(page: Page): Promise<boolean> {
   });
 }
 
-export async function setTextSize(page: Page, size: (typeof TEXT_SIZES)[number]): Promise<void> {
+export interface TextSize {
+  readonly label: string;
+  readonly fontSize: string;
+  readonly wide: boolean;
+}
+
+export async function setTextSize(page: Page, size: TextSize): Promise<void> {
   // Without the wide face the variant would be a silent copy of the 100% run, so the text is
   // widened by about 15% with letter spacing instead, which does not depend on any font.
   const face = size.wide ? await hasWideFont(page) : true;

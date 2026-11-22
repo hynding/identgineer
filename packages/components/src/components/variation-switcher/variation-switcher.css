@@ -75,6 +75,21 @@
   gap: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
 }
 
+/* A button may be narrower than its text on one line, so a long label wraps rather than push the
+   panel wider than its container. */
+.actions idg-button {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+/* A narrow container (or large text, which makes the same container narrow in rem) gives the
+   panel's padding back to its controls. 20rem is --idg-size-m. */
+@container idg-variation-switcher (max-inline-size: 20rem) {
+  .panel {
+    --_pad: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+  }
+}
+
 /* The container's own width decides, never the viewport's. 40rem is --idg-size-xl. A stacked
    panel gets a second column once there is room, and the theme, which needs the width, spans it. */
 @container idg-variation-switcher (min-inline-size: 40rem) {
@@ -93,9 +108,18 @@
   font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
 }
 
+/* Last resort for large wide text in a narrow container: break inside a name, not the page. The
+   property is inherited, so it reaches the label inside each radio's own shadow root. */
+idg-radio {
+  overflow-wrap: anywhere;
+}
+
+/* The name drops under the swatch when the text is large or the container narrow. */
 .theme-option {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
+  min-inline-size: 0;
   gap: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
 }
 
@@ -103,8 +127,8 @@
    it gets an edge in a system colour there. */
 .swatch {
   flex: none;
-  inline-size: 2.5em;
-  block-size: 1.25em;
+  inline-size: 2em;
+  block-size: 1em;
   border-radius: var(--idg-shape-radius-sm);
   box-shadow: 0 0 0 1px var(--idg-color-border-strong);
   forced-color-adjust: none;
