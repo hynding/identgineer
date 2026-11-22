@@ -59,6 +59,7 @@ const SDK_SETTINGS = {
   CAMIS_SESSIONS_COOKIE_PATH: "/api/auth",
   CAMIS_ACCESS_TOKEN_LIFESPAN: "600",
   CAMIS_CORS_EXPOSE: "Retry-After",
+  CAMIS_AUTH_HIDE_ACCOUNT_EXISTENCE: "true",
 };
 
 describe(".env.example, strapi-php's deployment settings for the identity SDK", () => {
@@ -102,6 +103,14 @@ describe(".env.example, strapi-php's deployment settings for the identity SDK", 
     positive(settings.get("CAMIS_REFRESH_THROTTLE_PER_MINUTE")?.value);
   });
 
+  it("bounds account mail per recipient to a positive number an hour", () => {
+    positive(settings.get("CAMIS_ACCOUNT_MAIL_PER_HOUR")?.value);
+  });
+
+  it("counts throttles and the mail bound in a cache store that counts atomically", () => {
+    expect(["database", "redis", "memcached"]).toContain(settings.get("CACHE_STORE")?.value);
+  });
+
   it("bounds sessions: access token shorter than the idle limit, idle no longer than the absolute one", () => {
     const access = positive(settings.get("CAMIS_ACCESS_TOKEN_LIFESPAN")?.value);
     const idle = positive(settings.get("CAMIS_IDLE_REFRESH_TOKEN_LIFESPAN")?.value);
@@ -139,6 +148,9 @@ describe(".env.example, strapi-php's deployment settings for the identity SDK", 
     () => {
       const live = liveMainServer();
       for (const [key, value] of Object.entries(SDK_SETTINGS)) expect(live[key], key).toBe(value);
+      for (const key of ["CAMIS_ACCOUNT_MAIL_PER_HOUR", "CACHE_STORE"]) {
+        expect(live[key], key).toBe(settings.get(key)?.value);
+      }
       expect(list(live.CAMIS_CORS_HEADERS)).toEqual(
         list(settings.get("CAMIS_CORS_HEADERS")?.value),
       );
