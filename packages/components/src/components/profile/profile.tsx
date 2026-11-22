@@ -91,7 +91,7 @@ export class IdgProfile {
     signedOut: (detail) => this.idgSignedOut.emit(detail),
   });
   private readonly binding = new StateBinding<ProfileClient>((state, client) => {
-    if (state.status === "unknown") restoreOnce(client);
+    if (state.status === "unknown") void restoreOnce(client);
     this.follow(state);
   });
   private userId?: number;

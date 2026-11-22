@@ -36,6 +36,7 @@ import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
 import { RegisterLabels } from "./components/register/register-labels";
 import { RegisteredDetail } from "./components/register/register-types";
+import { SessionGuardLabels } from "./components/session-guard/session-guard-labels";
 import { SessionChangeDetail } from "./components/session-guard/session-guard-types";
 import { SidebarSide } from "./components/sidebar/sidebar-options";
 import { SignInLabels } from "./components/sign-in/sign-in-labels";
@@ -82,6 +83,7 @@ export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
 export { RegisterLabels } from "./components/register/register-labels";
 export { RegisteredDetail } from "./components/register/register-types";
+export { SessionGuardLabels } from "./components/session-guard/session-guard-labels";
 export { SessionChangeDetail } from "./components/session-guard/session-guard-types";
 export { SidebarSide } from "./components/sidebar/sidebar-options";
 export { SignInLabels } from "./components/sign-in/sign-in-labels";
@@ -1278,6 +1280,10 @@ export namespace Components {
           * The identity client (a JavaScript property). The element never creates one.
          */
         "client"?: SessionGuardClient;
+        /**
+          * The text of the guard's own notices, merged over the English defaults.
+         */
+        "labels"?: Partial<SessionGuardLabels>;
     }
     /**
      * Two regions side by side: a side region of a set width and the content, which takes the rest.
@@ -4070,6 +4076,10 @@ declare namespace LocalJSX {
           * The identity client (a JavaScript property). The element never creates one.
          */
         "client"?: SessionGuardClient;
+        /**
+          * The text of the guard's own notices, merged over the English defaults.
+         */
+        "labels"?: Partial<SessionGuardLabels>;
         /**
           * Fires when what the guard shows changes, and with the first state each client reports.
          */

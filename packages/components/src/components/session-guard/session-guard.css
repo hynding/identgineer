@@ -6,3 +6,11 @@
 :host([hidden]) {
   display: none;
 }
+
+.message {
+  display: block;
+}
+
+.retry {
+  margin-block-start: var(--idg-space-2xs);
+}

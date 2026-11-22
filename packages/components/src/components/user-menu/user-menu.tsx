@@ -56,7 +56,7 @@ export class IdgUserMenu {
   @State() private announcement: Announcement = { text: "", slot: 0 };
 
   private readonly binding = new StateBinding<UserMenuClient>((state, client) => {
-    if (state.status === "unknown") restoreOnce(client);
+    if (state.status === "unknown") void restoreOnce(client);
     this.state = state;
   });
 

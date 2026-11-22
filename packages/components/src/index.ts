@@ -39,6 +39,7 @@ export type {
 } from "./components/profile/profile-types";
 export type { RegisterLabels } from "./components/register/register-labels";
 export type { RegisteredDetail } from "./components/register/register-types";
+export type { SessionGuardLabels } from "./components/session-guard/session-guard-labels";
 export type { SessionChangeDetail } from "./components/session-guard/session-guard-types";
 export type { SignInLabels } from "./components/sign-in/sign-in-labels";
 export type { ProviderSignInDetail, SignInProvider } from "./components/sign-in/sign-in-types";
