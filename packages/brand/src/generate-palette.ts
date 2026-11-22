@@ -104,6 +104,37 @@ const GREY_CHROMA = 0.02;
 /** Below this chroma a colour is treated as grey: its tints stay grey too. */
 const FULL_CHROMA = 0.05;
 
+/** Hover colours to try, best first: the full step away from the text, then the other way and smaller. */
+function hoverCandidates(fill: Oklch, away: number, step: number): Rgb[] {
+  const lightness = (factor: number) =>
+    fromOklch({ ...fill, lightness: Math.min(1, Math.max(0, fill.lightness + factor * step)) });
+  const chroma = (factor: number) =>
+    fromOklch(mapToSrgbGamut({ ...fill, chroma: fill.chroma * factor }));
+  return [
+    lightness(away),
+    lightness(-away),
+    lightness(away * 1.5),
+    lightness(away / 2),
+    lightness(-away / 2),
+    lightness(away / 4),
+    lightness(-away / 4),
+    chroma(0.6),
+    chroma(1.4),
+  ];
+}
+
+/** A last, fine sweep in lightness both ways, nearest first, before giving up on a change. */
+function fineCandidates(fill: Oklch, step: number): Rgb[] {
+  const candidates: Rgb[] = [];
+  for (let offset = 0.005; offset <= step * 2; offset += 0.005) {
+    for (const sign of [-1, 1]) {
+      const lightness = fill.lightness + sign * offset;
+      if (lightness >= 0 && lightness <= 1) candidates.push(fromOklch({ ...fill, lightness }));
+    }
+  }
+  return candidates;
+}
+
 class Builder {
   readonly colors = new Map<string, Rgb>();
   readonly adjustments: BrandAdjustment[] = [];
@@ -221,21 +252,57 @@ class Builder {
     return { fill: this.set(role, chosen.fill), on: chosen.on };
   }
 
-  /** The hover state of a fill, further from its text so it keeps passing. */
+  /**
+   * The hover state of a fill: a step away from its text, keeping the text passing and never
+   * weaker against the page than the fill itself. When that step would move towards the page, a
+   * step the other way, a smaller step or a change of chroma is taken instead; only when no
+   * different colour qualifies (a white or black fill already at the end of its range) does the
+   * hover keep the fill's own colour.
+   */
   hover(role: string, fillRole: string, onRole: string): void {
-    const fill = toOklch(this.color(fillRole));
+    const fillRgb = this.color(fillRole);
+    const fill = toOklch(fillRgb);
     const on = this.color(onRole);
     const minimum = this.minimumBetween(onRole, role);
-    const direction = toOklch(on).lightness > fill.lightness ? "darker" : "lighter";
-    const step = direction === "darker" ? -this.tone.hoverStep : this.tone.hoverStep;
-    const start = { ...fill, lightness: fill.lightness + step };
-    const requested = fromOklch(start);
+    const onPage = FILLS_ON_PAGE.includes(fillRole);
+    const floor = onPage ? this.weakestOnPage(fillRgb) : 0;
+    const qualifies = (rgb: Rgb) =>
+      !sameColor(rgb, fillRgb) &&
+      contrastBetween(rgb, on) >= minimum &&
+      (!onPage || this.weakestOnPage(rgb) >= floor);
+    const away = toOklch(on).lightness > fill.lightness ? -1 : 1;
+    const step = this.tone.hoverStep;
+    const requested = fromOklch({ ...fill, lightness: fill.lightness + away * step });
     const used =
-      adjustLightness(start, direction, (rgb) => contrastBetween(rgb, on) >= minimum) ??
-      fromOklch({ ...start, lightness: direction === "darker" ? 0 : 1 });
+      hoverCandidates(fill, away, step).find(qualifies) ??
+      fineCandidates(fill, step).find(qualifies) ??
+      fillRgb;
     if (!sameColor(used, requested))
-      this.report(role, "generated", requested, used, onRole, minimum);
+      this.reportHover(role, requested, used, onRole, minimum, floor);
     this.set(role, used);
+  }
+
+  // Names what the full step failed: the text, or the page background it came too close to.
+  reportHover(
+    role: string,
+    requested: Rgb,
+    used: Rgb,
+    onRole: string,
+    minimum: number,
+    floor: number,
+  ) {
+    if (contrastBetween(requested, this.color(onRole)) < minimum) {
+      this.report(role, "generated", requested, used, onRole, minimum);
+      return;
+    }
+    const weakest = PAGE.find(
+      (background) => contrastBetween(requested, this.color(background)) < floor,
+    );
+    if (weakest !== undefined) this.report(role, "generated", requested, used, weakest, floor);
+  }
+
+  weakestOnPage(rgb: Rgb): number {
+    return Math.min(...PAGE.map((background) => contrastBetween(rgb, this.color(background))));
   }
 
   minimumBetween(foreground: string, background: string): number {

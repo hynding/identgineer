@@ -110,7 +110,11 @@ of the scheme and near-white or near-black text passes on it. Otherwise the acce
 shorter way in lightness, towards whichever end passes sooner, with either text colour, just far
 enough; the move is reported. Over 20,000 seeded random kits the accent moves in about 55% of
 light schemes (10,986) and 35% of dark ones (7,017): mid-light colours fail on a near-white page
-and dark ones on a dark page. The hover state moves further from the text. Links and the focus
+and dark ones on a dark page. The hover state steps away from the text, unless that step would bring it closer to the page
+than the accent: then it steps the other way, by a smaller step or through chroma, whichever first
+keeps its text passing and its page contrast at least the accent's. Where no other colour can (a
+white or black accent, or one whose text and page windows meet; about 3% of schemes over 20,000
+random kits), the hover keeps the accent's own colour rather than fall below it. Links and the focus
 ring start from the primary (the focus ring from the secondary when there is one) and move only if
 they must. Status colours start from fixed hues (green, amber, red, blue). Tone scales the chroma
 of tints, neutrals and status colours, and how far text and strong borders sit from the page; it
@@ -147,7 +151,8 @@ Tested on every run:
   (`findContrastFailures`) and meets every pairing in the table above, checked with the tokens
   package's own functions over 2,700 seeded random colour sets and twenty edge sets, for every
   tone and corner style. That includes the accent at 3:1 on `bg`, `bg-subtle`, `surface` and
-  `surface-raised` in each scheme.
+  `surface-raised` in each scheme, and the accent's hover state never weaker against those four
+  than the accent itself.
 - **Recognisable.** The primary is used unchanged unless a move is reported; a moved brand colour
   keeps its hue within 3° while it still has colour (OKLCH chroma of at least 0.04; about 2.4° at
   most over 20,000 random sets, up to 5° for near-greys whose hue barely shows); a moved colour stops
