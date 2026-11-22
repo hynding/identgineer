@@ -170,21 +170,25 @@ export const changePassword =
       { nameFields: false },
     );
     context.throttle.check();
+    // It opens a new session, so it takes its turn like a sign-in: a sign-out waits for it.
     const ticket = context.session.ticket("session");
-    const response = await context.authorizedRequest({
-      method: "POST",
-      path: "/api/auth/change-password",
-      body: {
-        currentPassword: input.currentPassword,
-        password: input.password,
-        passwordConfirmation: input.passwordConfirmation,
-      },
+    return context.exclusive(async () => {
+      if (!context.session.valid(ticket)) throw new IdentityError("unauthorized");
+      const response = await context.authorizedRequest({
+        method: "POST",
+        path: "/api/auth/change-password",
+        body: {
+          currentPassword: input.currentPassword,
+          password: input.password,
+          passwordConfirmation: input.passwordConfirmation,
+        },
+      });
+      if (isRefusedSecret(response)) {
+        context.throttle.signInFailed();
+        throw new IdentityError("invalid-credentials");
+      }
+      if (!response.ok) throw failureOf(response, context.clock.now());
+      // Every session of the account ended on the server; this answer carries the new one.
+      await signInFrom(context, response, ticket);
     });
-    if (isRefusedSecret(response)) {
-      context.throttle.signInFailed();
-      throw new IdentityError("invalid-credentials");
-    }
-    if (!response.ok) throw failureOf(response, context.clock.now());
-    // Every session of the account ended on the server; this answer carries the new one.
-    await signInFrom(context, response, ticket);
   };

@@ -32,18 +32,18 @@ export type RefreshResult =
 
 export interface Refresher {
   /**
-   * One refresh at a time: concurrent callers share the request in flight. It changes nothing in
-   * the session; it rejects with an IdentityError when the server cannot answer.
+   * Refreshes the session `ticket` names. Callers for the same session and refresh token share
+   * the request in flight; one for another session never takes an older session's answer. It
+   * changes nothing in the session; it rejects with an IdentityError when the server cannot
+   * answer.
    */
-  readonly refresh: () => Promise<RefreshResult>;
+  readonly refresh: (ticket: Ticket) => Promise<RefreshResult>;
   /** Plans the next refresh of the session `ticket` names, from its tokens' lifetime. */
   readonly schedule: (ticket: Ticket) => void;
   /** Signs that session out at `at` (a known expiry on a backend that cannot refresh). */
   readonly expireAt: (ticket: Ticket, at: number) => void;
   /** Clears every timer and listener: nothing armed before can run afterwards. */
   readonly cancel: () => void;
-  /** Settles once the refresh in flight, if any, has (so a refresh cookie it rotates is set). */
-  readonly settled: () => Promise<void>;
   /**
    * A refresh outside the session (for signing out): its tokens, `refused` when there is no
    * session to refresh, or `unreachable` when the server could not say.
@@ -91,7 +91,7 @@ const refreshRequest = (refreshToken: string | undefined): ApiRequest =>
 export const createRefresher = (options: RefresherOptions): Refresher => {
   const { clock, session } = options;
   const alarm = createAlarm(clock);
-  let inFlight: Promise<RefreshResult> | undefined;
+  let inFlight: { readonly key: string; readonly promise: Promise<RefreshResult> } | undefined;
   let shortStreak = 0;
   let unreachableStreak = 0;
   let stopListening = (): void => undefined;
@@ -159,18 +159,14 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
     return NO_SESSION_STATUSES.has(response.status) ? "refused" : "unreachable";
   };
 
-  const refresh = (): Promise<RefreshResult> => {
-    if (inFlight === undefined) {
-      const promise = run().finally(() => {
-        if (inFlight === promise) inFlight = undefined;
-      });
-      inFlight = promise;
-    }
-    return inFlight;
-  };
-
-  const settled = async (): Promise<void> => {
-    await inFlight?.catch(() => undefined);
+  const refresh = (ticket: Ticket): Promise<RefreshResult> => {
+    const key = `${String(ticket.epoch)}:${session.refreshToken() ?? ""}`;
+    if (inFlight?.key === key) return inFlight.promise;
+    const promise = run().finally(() => {
+      if (inFlight?.promise === promise) inFlight = undefined;
+    });
+    inFlight = { key, promise };
+    return promise;
   };
 
   const cancel = (): void => {
@@ -181,9 +177,8 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
 
   /** Every completion, success or failure, first checks that its session is still current. */
   const runScheduled = (ticket: Ticket): void => {
-    if (!session.valid(ticket)) return;
     lastAttemptAt = clock.now();
-    refresh().then(
+    refresh(ticket).then(
       (result) => {
         if (session.valid(ticket)) options.applyScheduled(ticket, result);
       },
@@ -254,5 +249,5 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
     });
   };
 
-  return { refresh, schedule, expireAt, cancel, settled, detached };
+  return { refresh, schedule, expireAt, cancel, detached };
 };

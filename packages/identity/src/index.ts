@@ -13,6 +13,7 @@ export type {
 } from "./account-operations.ts";
 export type { Clock } from "./clock.ts";
 export type { LockManagerLike } from "./locks.ts";
+export type { OnlineSubscription } from "./online.ts";
 export type { SignInInput } from "./credential-operations.ts";
 export { passkeysSupported } from "./passkeys.ts";
 export type {

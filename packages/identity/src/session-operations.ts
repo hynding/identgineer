@@ -76,9 +76,10 @@ export const signOut =
     const newer = (): boolean => context.signInsSeen() !== seen;
     context.session.cancelSignIns();
     context.signedOut("user");
-    const server = await context.signOutBarrier(() =>
-      endSessions(context, own, options.everywhere === true, newer),
-    );
+    const settle = context.signOutPending(newer);
+    const server = await context
+      .signOutBarrier(() => endSessions(context, own, options.everywhere === true, newer))
+      .finally(settle);
     if (newer()) return SUPERSEDED;
     context.crossTab.announce("signed-out");
     return Object.freeze({
@@ -107,7 +108,7 @@ const restoreNow = async (
   if (!session.valid(ticket) || session.getState().status === "signed-in") {
     return session.getState();
   }
-  const result = await context.refresher.refresh();
+  const result = await context.refresher.refresh(ticket);
   if (!session.valid(ticket)) return session.getState();
   const signedOutAlready = session.getState().status === "signed-out";
   if (result.outcome !== "refreshed") {

@@ -113,16 +113,32 @@ export interface ClientContext {
    */
   readonly signInsSeen: () => number;
   readonly noteSignIn: () => void;
+  /**
+   * Registers a sign-out under way (`superseded` says whether a later sign-in won), so that a
+   * dispose before it finishes still tells the other tabs. Returns its removal.
+   */
+  readonly signOutPending: (superseded: () => boolean) => () => void;
   /** What to do when another tab signs in (set by the client). */
   readonly onOtherTabSignedIn: (handler: () => void) => void;
   readonly dispose: () => void;
 }
 
-/** A numeric option, refused at creation unless it is a positive finite number. */
-const positiveOption = (name: string, value: number | undefined, fallback: number): number => {
-  const chosen = value ?? fallback;
-  if (!Number.isFinite(chosen) || chosen <= 0) {
-    throw new TypeError(`${name} must be a positive finite number`);
+/** The longest delay a timer keeps: setTimeout fires at once beyond it. */
+const MAX_TIMER_MS = 2 ** 31 - 1;
+
+/**
+ * A duration option, refused at creation unless it is positive and short enough for a timer
+ * (`unitMs` converts it to milliseconds).
+ */
+const durationOption = (
+  name: string,
+  value: number | undefined,
+  fallback: number,
+  unitMs = 1,
+): number => {
+  const chosen = (value ?? fallback) * unitMs;
+  if (!Number.isFinite(chosen) || chosen <= 0 || chosen > MAX_TIMER_MS) {
+    throw new TypeError(`${name} must be positive and at most ${String(MAX_TIMER_MS)} ms`);
   }
   return chosen;
 };
@@ -134,17 +150,17 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   const base = parseBaseUrl(options.baseUrl);
   const clock = options.clock ?? systemClock;
   const fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
-  const timeoutMs = positiveOption(
+  const timeoutMs = durationOption(
     "requestTimeoutMs",
     options.requestTimeoutMs,
     DEFAULT_TIMEOUT_MS,
   );
-  const tokenLifetimeMs =
-    positiveOption(
-      "accessTokenLifetimeSeconds",
-      options.accessTokenLifetimeSeconds,
-      DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS,
-    ) * 1000;
+  const tokenLifetimeMs = durationOption(
+    "accessTokenLifetimeSeconds",
+    options.accessTokenLifetimeSeconds,
+    DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS,
+    1000,
+  );
   const transport = createTransport({ base, fetch, clock, timeoutMs });
   const session = createSession();
   const throttle = createThrottle(clock);
@@ -152,8 +168,10 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   let otherTabSignedIn = (): void => undefined;
   let signInsSeen = 0;
   let queue: Promise<unknown> = Promise.resolve();
-  // The endings of server sessions whose sign-ins the gate refused, in order (they are rare).
-  const abandoned: Promise<ServerSignOut>[] = [];
+  // Each sign-out under way collects the endings of the sessions its cancelled work opened.
+  const collectors = new Set<Promise<ServerSignOut>[]>();
+  // The sign-outs under way, each with whether a later sign-in has superseded it.
+  const pendingSignOuts = new Set<() => boolean>();
   const isActive = (): boolean => !disposed;
 
   const signedOut = (reason: SignOutReason): void => {
@@ -236,7 +254,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
 
   const refreshSession = async (ticket: Ticket): Promise<boolean> => {
     if (!session.valid(ticket)) return false;
-    const result = await refresher.refresh();
+    const result = await refresher.refresh(ticket);
     return session.valid(ticket) && applyRefresh(ticket, result, false);
   };
 
@@ -307,7 +325,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
 
   const abandon = async (tokens: Tokens): Promise<void> => {
     const ending = endServerSession(tokens, false);
-    abandoned.push(ending);
+    for (const collector of collectors) collector.push(ending);
     await ending;
   };
 
@@ -334,12 +352,17 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
 
   const signOutBarrier = (work: () => Promise<ServerSignOut>): Promise<ServerSignOut> => {
     const earlier = queue;
-    const from = abandoned.length;
+    const collected: Promise<ServerSignOut>[] = [];
+    collectors.add(collected);
     const done = (async () => {
-      let outcome = await work();
-      await earlier;
-      for (const ending of abandoned.slice(from)) outcome = worse(outcome, await ending);
-      return outcome;
+      try {
+        let outcome = await work();
+        await earlier;
+        for (const ending of collected) outcome = worse(outcome, await ending);
+        return outcome;
+      } finally {
+        collectors.delete(collected);
+      }
     })();
     queue = Promise.all([earlier, done]).catch(() => undefined);
     return done;
@@ -370,6 +393,10 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     noteSignIn: () => {
       signInsSeen += 1;
     },
+    signOutPending: (superseded) => {
+      pendingSignOuts.add(superseded);
+      return () => pendingSignOuts.delete(superseded);
+    },
     onOtherTabSignedIn: (handler) => {
       otherTabSignedIn = handler;
     },
@@ -377,6 +404,10 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
       disposed = true;
       session.dispose();
       refresher.cancel();
+      // The page is going: a sign-out still under way tells the other tabs now or never.
+      if ([...pendingSignOuts].some((superseded) => !superseded())) {
+        crossTab.announce("signed-out");
+      }
       crossTab.close();
     },
   };
