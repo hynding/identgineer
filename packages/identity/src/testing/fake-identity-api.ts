@@ -122,8 +122,7 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
   };
 
   const contextFor = (request: FakeRequest, params: readonly string[]): RouteContext => {
-    const cookies =
-      request.credentials === "include" ? new Map(cookieJar) : new Map<string, string>();
+    const cookies = sentCookies.get(request) ?? new Map<string, string>();
     const bearer = /^Bearer (.+)$/.exec(request.headers.get("Authorization") ?? "")?.[1];
     const token = bearer === undefined ? undefined : store.verifyAccessToken(bearer);
     const cookieMode = (): boolean =>

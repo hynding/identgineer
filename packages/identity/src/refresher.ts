@@ -1,6 +1,7 @@
 import { createAlarm } from "./alarm.ts";
 import type { Clock } from "./clock.ts";
 import { IdentityError } from "./identity-error.ts";
+import { REFRESH_LOCK, type LockManagerLike } from "./locks.ts";
 import type { Session, Tokens } from "./session.ts";
 import { readAuthResponse } from "./shapes.ts";
 import { tokensFrom } from "./tokens.ts";
@@ -27,6 +28,8 @@ export interface Refresher {
   /** Plans the next refresh from the current tokens' lifetime, measured from now. */
   readonly schedule: () => void;
   readonly cancel: () => void;
+  /** The tokens the refresh in flight obtains, kept or not; undefined when none is in flight. */
+  readonly pending: () => Promise<Tokens | undefined> | undefined;
   /** A refresh outside the session (for signing out): its tokens, or undefined if refused. */
   readonly detached: (refreshToken: string | undefined) => Promise<Tokens | undefined>;
 }
@@ -36,6 +39,7 @@ export interface RefresherOptions {
   readonly session: Session;
   readonly clock: Clock;
   readonly tokenLifetimeMs: number;
+  readonly locks: LockManagerLike | null;
   readonly isActive: () => boolean;
   /**
    * After a cookie refresh: whether the new token is still the signed-in user's (true), another
@@ -63,7 +67,7 @@ const refreshRequest = (refreshToken: string | undefined): ApiRequest =>
 export const createRefresher = (options: RefresherOptions): Refresher => {
   const { clock, session } = options;
   const alarm = createAlarm(clock);
-  let inFlight: Promise<RefreshOutcome> | undefined;
+  let inFlight: { promise: Promise<RefreshOutcome>; tokens?: Tokens } | undefined;
   let expiresAt = 0;
   let expiryKnown = false;
   let shortStreak = 0;
@@ -77,16 +81,33 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
     return tokens;
   };
 
-  const run = async (): Promise<RefreshOutcome> => {
+  /**
+   * A cookie refresh runs under the cross-tab lock, and is retried once when refused: another
+   * tab may have rotated the cookie between this request reading it and the server seeing it.
+   */
+  const sendRefresh = (refreshToken: string | undefined) => {
+    const send = () => options.transport.send(refreshRequest(refreshToken));
+    if (refreshToken !== undefined) return send();
+    const sendAndRetry = async () => {
+      const response = await send();
+      return response.status === 401 ? send() : response;
+    };
+    return options.locks === null
+      ? sendAndRetry()
+      : options.locks.request(REFRESH_LOCK, sendAndRetry);
+  };
+
+  const run = async (record: { tokens?: Tokens }): Promise<RefreshOutcome> => {
     const generation = session.generation();
     if (!options.isActive()) return "superseded";
     const heldToken = session.refreshToken();
-    const response = await options.transport.send(refreshRequest(heldToken));
+    const response = await sendRefresh(heldToken);
     if (session.generation() !== generation) return "superseded";
     if (response.status === UNAVAILABLE_STATUS) return "unavailable";
     if (REJECTED_STATUSES.has(response.status)) return "rejected";
     if (!response.ok) throw new IdentityError("unknown");
     const tokens = tokensOf(response.body);
+    record.tokens = tokens;
     // A cookie is shared by every tab: another tab may have signed in as someone else since.
     const sameUser = heldToken === undefined ? await options.verifyUser(tokens.accessToken) : true;
     if (session.generation() !== generation) return "superseded";
@@ -98,7 +119,7 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
 
   const detached = async (refreshToken: string | undefined): Promise<Tokens | undefined> => {
     try {
-      const response = await options.transport.send(refreshRequest(refreshToken));
+      const response = await sendRefresh(refreshToken);
       return response.ok ? tokensOf(response.body) : undefined;
     } catch {
       return undefined;
@@ -106,10 +127,24 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
   };
 
   const refresh = (): Promise<RefreshOutcome> => {
-    inFlight ??= run().finally(() => {
-      inFlight = undefined;
-    });
-    return inFlight;
+    if (inFlight === undefined) {
+      const record: { promise: Promise<RefreshOutcome>; tokens?: Tokens } = {
+        promise: Promise.resolve<RefreshOutcome>("superseded"),
+      };
+      record.promise = run(record).finally(() => {
+        if (inFlight === record) inFlight = undefined;
+      });
+      inFlight = record;
+    }
+    return inFlight.promise;
+  };
+
+  const pending = (): Promise<Tokens | undefined> | undefined => {
+    const record = inFlight;
+    return record?.promise.then(
+      () => record.tokens,
+      () => record.tokens,
+    );
   };
 
   const runScheduled = (): void => {
@@ -146,5 +181,5 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
     alarm.set(now + delay, runScheduled);
   }
 
-  return { refresh, schedule, cancel: alarm.clear, detached };
+  return { refresh, schedule, cancel: alarm.clear, pending, detached };
 };

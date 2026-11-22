@@ -3,6 +3,7 @@ import { systemClock, type Clock } from "./clock.ts";
 import { createCrossTab, type CrossTab } from "./cross-tab.ts";
 import { IdentityError } from "./identity-error.ts";
 import { THROTTLED_STATUS, throttledError } from "./map-error.ts";
+import { resolveLocks, type LockManagerLike } from "./locks.ts";
 import { createRefresher, type Refresher } from "./refresher.ts";
 import { createSession, type Session, type SignOutReason, type Tokens } from "./session.ts";
 import { createThrottle, type Throttle } from "./throttle.ts";
@@ -29,6 +30,11 @@ export interface IdentityClientOptions {
    * token (a JWT's `exp`) says: camis' `CAMIS_ACCESS_TOKEN_LIFESPAN`, 600 seconds by default.
    */
   readonly accessTokenLifetimeSeconds?: number;
+  /**
+   * Serialises cookie refreshes across the page's tabs, since the refresh token rotates once.
+   * Defaults to `navigator.locks` where available; `null` turns it off.
+   */
+  readonly locks?: LockManagerLike | null;
 }
 
 /** What every operation of the client shares. Internal: never handed to callers. */
@@ -104,6 +110,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     session,
     clock,
     tokenLifetimeMs,
+    locks: resolveLocks(options.locks),
     isActive,
     verifyUser,
     onExpired: () => {

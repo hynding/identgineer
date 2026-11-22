@@ -17,9 +17,17 @@ export interface SignOutOptions {
 export const signOut =
   (context: ClientContext) =>
   async (options: SignOutOptions = {}): Promise<void> => {
-    const tokens = context.session.tokens();
+    const { session, refresher } = context;
+    const before = session.getState().status;
+    const pending = refresher.pending();
+    let tokens = session.tokens();
     context.signedOut("user");
     context.crossTab.announce("signed-out");
+    // A restore under way may be about to bring back the cookie session: take its tokens.
+    tokens ??= await pending;
+    // Not known to be signed out, so a cookie session may exist that this tab has no token for.
+    if (tokens === undefined && before !== "signed-out")
+      tokens = await refresher.detached(undefined);
     if (tokens !== undefined) await context.endServerSession(tokens, options.everywhere === true);
     await context.settleSignIns();
   };

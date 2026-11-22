@@ -50,6 +50,10 @@ describe("the public API", () => {
   });
 
   it("exports the fake API and manual clock from the testing entry", () => {
-    expect(Object.keys(testing).sort()).toEqual(["createFakeIdentityApi", "createManualClock"]);
+    expect(Object.keys(testing).sort()).toEqual([
+      "createFakeIdentityApi",
+      "createManualClock",
+      "createMemoryLocks",
+    ]);
   });
 });

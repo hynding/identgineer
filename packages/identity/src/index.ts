@@ -12,6 +12,7 @@ export type {
   ResetPasswordInput,
 } from "./account-operations.ts";
 export type { Clock } from "./clock.ts";
+export type { LockManagerLike } from "./locks.ts";
 export type { SignInInput } from "./credential-operations.ts";
 export { passkeysSupported } from "./passkeys.ts";
 export type {
