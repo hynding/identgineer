@@ -11,7 +11,7 @@ import {
   type ValueControl,
 } from "../../identity/form-controls";
 import { FormFeedback } from "../../identity/form-feedback";
-import { readIdentityError } from "../../identity/identity-error";
+import { keepsPasswordForRetry, readIdentityError } from "../../identity/identity-error";
 import type { SignInClient } from "../../identity/identity-types";
 import { fillTemplate, mergeLabels } from "../../identity/labels";
 import { assignLocation } from "../../identity/navigation";
@@ -158,8 +158,7 @@ export class IdgSignIn {
     } catch (error) {
       if (!this.attempts.isCurrent(attempt)) return;
       const failure = readIdentityError(error);
-      // A refused password is gone; one that never reached the server is kept for the retry.
-      if (failure.code === "invalid-credentials") clearControls([this.controls.password]);
+      if (!keepsPasswordForRetry(failure)) clearControls([this.controls.password]);
       this.feedback.fail(failure, client, this.timers(), labels);
     } finally {
       if (this.attempts.isCurrent(attempt)) this.pending = false;

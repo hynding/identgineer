@@ -12,7 +12,7 @@ import {
   type ValueControl,
 } from "../../identity/form-controls";
 import { FormFeedback } from "../../identity/form-feedback";
-import { readIdentityError } from "../../identity/identity-error";
+import { keepsPasswordForRetry, readIdentityError } from "../../identity/identity-error";
 import type { RegisterClient } from "../../identity/identity-types";
 import { mergeLabels } from "../../identity/labels";
 import { markPasswordLength } from "../../identity/new-password";
@@ -175,8 +175,9 @@ export class IdgRegister {
       );
     } catch (error) {
       if (!this.attempts.isCurrent(attempt)) return;
-      this.clearPassword();
-      this.fail(readIdentityError(error), client, labels);
+      const failure = readIdentityError(error);
+      if (!keepsPasswordForRetry(failure)) this.clearPassword();
+      this.fail(failure, client, labels);
     } finally {
       if (this.attempts.isCurrent(attempt)) this.pending = false;
     }

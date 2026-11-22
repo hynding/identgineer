@@ -12,7 +12,11 @@ import {
   type ValueControl,
 } from "../../identity/form-controls";
 import { FormFeedback } from "../../identity/form-feedback";
-import { readIdentityError, type IdentityFailure } from "../../identity/identity-error";
+import {
+  keepsPasswordForRetry,
+  readIdentityError,
+  type IdentityFailure,
+} from "../../identity/identity-error";
 import type { PasswordResetClient } from "../../identity/identity-types";
 import { mergeLabels } from "../../identity/labels";
 import { markPasswordLength, newPasswordErrors } from "../../identity/new-password";
@@ -192,8 +196,9 @@ export class IdgPasswordReset {
       }
     } catch (error) {
       if (!this.attempts.isCurrent(attempt)) return;
-      this.clearPasswords();
-      this.fail(readIdentityError(error), client, labels, request);
+      const failure = readIdentityError(error);
+      if (!keepsPasswordForRetry(failure)) this.clearPasswords();
+      this.fail(failure, client, labels, request);
     } finally {
       if (this.attempts.isCurrent(attempt)) this.pending = false;
     }

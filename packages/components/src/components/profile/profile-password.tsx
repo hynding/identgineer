@@ -10,7 +10,7 @@ import {
   type ValueControl,
 } from "../../identity/form-controls";
 import { FormFeedback } from "../../identity/form-feedback";
-import { readIdentityError } from "../../identity/identity-error";
+import { keepsPasswordForRetry, readIdentityError } from "../../identity/identity-error";
 import type { IdentityUserView } from "../../identity/identity-types";
 import { markPasswordLength, newPasswordErrors } from "../../identity/new-password";
 import { utf8ByteLength } from "../../identity/password-bytes";
@@ -134,7 +134,7 @@ export class PasswordSection {
     } catch (error) {
       if (!this.attempts.isCurrent(attempt)) return;
       const failure = readIdentityError(error);
-      if (failure.code === "invalid-credentials") this.clear();
+      if (!keepsPasswordForRetry(failure)) this.clear();
       this.feedback.fail(failure, client, this.host.timers(), labels);
     } finally {
       if (this.attempts.isCurrent(attempt)) this.pending = false;

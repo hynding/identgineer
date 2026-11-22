@@ -32,3 +32,12 @@ export function readIdentityError(error: unknown): IdentityFailure {
     ? { code, fields: [] }
     : { code, fields, ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }) };
 }
+
+/**
+ * Whether a form keeps the password the user typed after `failure`, for "Try again": only when
+ * the server never judged it, because it could not be reached or refused to try. Any other
+ * failure is an answer about it, and the password is cleared.
+ */
+export function keepsPasswordForRetry(failure: IdentityFailure): boolean {
+  return failure.code === "network" || failure.code === "throttled";
+}
