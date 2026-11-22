@@ -208,7 +208,7 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
     };
   };
 
-  /** users-permissions' gates in its order: credentials, mode, throttle. */
+  /** users-permissions' gates in its order: credentials, mode, body checks, throttle. */
   const gate = (route: FakeRoute, context: RouteContext): FakeResponse | undefined => {
     const bearer = context.request.headers.get("Authorization");
     const verified = (): boolean => {
@@ -226,6 +226,8 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
       if (context.user().blocked) return unauthorized();
     }
     if (route.refreshOnly === true && settings.sessions !== "refresh") return notFound();
+    const invalid = route.validates?.(context);
+    if (invalid !== undefined) return invalid;
     return route.throttled === undefined ? undefined : throttle(route.throttled, context.request);
   };
 

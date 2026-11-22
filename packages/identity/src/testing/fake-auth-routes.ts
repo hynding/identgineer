@@ -9,22 +9,41 @@ import {
 import type { FakeRoute, RouteContext } from "./fake-route.ts";
 import type { FakeUser, IssuedTokens } from "./fake-store.ts";
 
-type Rule = "required" | "email" | "maxPassword" | `same:${string}`;
+type Rule = "string" | "required" | "email" | "maxPassword" | `max:${number}` | `same:${string}`;
 
-const MESSAGES: Readonly<Record<string, (field: string) => string>> = {
-  required: (field) => `${field} is a required field`,
-  email: (field) => `${field} must be a valid email`,
-  maxPassword: () => "Password must be less than 73 bytes",
-  same: () => "Passwords do not match",
+/** yup's printed value, as camis quotes it in a type error. */
+const printed = (value: unknown): string =>
+  typeof value === "string" ? `"${value}"` : JSON.stringify(value);
+
+const messageOf = (rule: Rule, field: string, value: unknown): string => {
+  if (rule === "string") {
+    return `${field} must be a \`string\` type, but the final value was: \`${printed(value)}\`.`;
+  }
+  if (rule === "required") return `${field} is a required field`;
+  if (rule === "email") return `${field} must be a valid email`;
+  if (rule === "maxPassword") return "Password must be less than 73 bytes";
+  if (rule.startsWith("max:")) return `${field} must be at most ${rule.slice(4)} characters`;
+  return "Passwords do not match";
 };
 
 const present = (value: unknown): boolean => value !== undefined && value !== null && value !== "";
 
+// mb_strlen: code points, not UTF-16 units.
+const characters = (value: string): number => Array.from(value).length;
+
 const fails = (body: Readonly<Record<string, unknown>>, field: string, rule: Rule): boolean => {
   const value = body[field];
+  // Strapi validates strictly: a number, boolean or null is no string either.
+  if (rule === "string") return Object.hasOwn(body, field) && typeof value !== "string";
   if (rule === "required") return !present(value);
   if (rule === "email") return present(value) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value));
-  if (rule === "maxPassword") return typeof value === "string" && value.length > 72;
+  // bcrypt reads at most 72 bytes, so the limit counts bytes, not characters.
+  if (rule === "maxPassword") {
+    return typeof value === "string" && new TextEncoder().encode(value).length > 72;
+  }
+  if (rule.startsWith("max:")) {
+    return typeof value === "string" && characters(value) > Number(rule.slice(4));
+  }
   return present(value) && value !== body[rule.slice("same:".length)];
 };
 
@@ -37,11 +56,13 @@ export const validate = (
   for (const [field, checks] of Object.entries(rules)) {
     const failed = checks.find((rule) => fails(body, field, rule));
     if (failed === undefined) continue;
-    const message = MESSAGES[failed.startsWith("same:") ? "same" : failed]?.(field) ?? "";
-    errors.push({ field, message });
+    errors.push({ field, message: messageOf(failed, field, body[field]) });
   }
   return errors.length === 0 ? undefined : validationError(errors);
 };
+
+// camis' AuthController::MAX_IDENTIFIER_LENGTH.
+const MAX_IDENTIFIER_LENGTH = 255;
 
 const text = (value: unknown): string => (typeof value === "string" ? value : "");
 
@@ -85,9 +106,9 @@ const register: FakeRoute = {
       return strapiError(400, "ValidationError", `Invalid parameters: ${invalid.join(", ")}`);
     }
     const failure = validate(body, {
-      email: ["required", "email"],
-      username: ["required"],
-      password: ["required", "maxPassword"],
+      email: ["string", "required", "email", "max:255"],
+      username: ["string", "required", "max:255"],
+      password: ["string", "required", "maxPassword"],
     });
     if (failure !== undefined) return failure;
     const email = text(body.email).toLowerCase();
@@ -121,10 +142,20 @@ const login: FakeRoute = {
   path: /^\/api\/auth\/local$/,
   guest: true,
   throttled: "sign-in",
+  validates: (context) => {
+    const body = context.jsonBody();
+    const failure = validate(body, {
+      identifier: ["string", "required"],
+      password: ["string", "required"],
+    });
+    if (failure !== undefined) return failure;
+    // Longer than any account's name: refused before a turn is taken or a lookup made.
+    return characters(text(body.identifier)) > MAX_IDENTIFIER_LENGTH
+      ? strapiError(400, "ValidationError", "Invalid identifier or password")
+      : undefined;
+  },
   handle: (context) => {
     const body = context.jsonBody();
-    const failure = validate(body, { identifier: ["required"], password: ["required"] });
-    if (failure !== undefined) return failure;
     const identifier = text(body.identifier);
     const user = context.store.findUser(
       (candidate) =>
@@ -147,10 +178,9 @@ const forgotPassword: FakeRoute = {
   path: /^\/api\/auth\/forgot-password$/,
   guest: true,
   throttled: "recovery",
+  validates: (context) => validate(context.jsonBody(), { email: ["string", "required", "email"] }),
   handle: (context) => {
     const body = context.jsonBody();
-    const failure = validate(body, { email: ["required", "email"] });
-    if (failure !== undefined) return failure;
     const user = byEmail(context, body.email);
     if (user !== undefined && !user.blocked)
       user.resetCode = `reset${String(context.store.next())}`;
@@ -166,9 +196,9 @@ const resetPassword: FakeRoute = {
   handle: (context) => {
     const body = context.jsonBody();
     const failure = validate(body, {
-      password: ["required", "maxPassword"],
-      passwordConfirmation: ["required", "same:password"],
-      code: ["required"],
+      password: ["string", "required", "maxPassword"],
+      passwordConfirmation: ["string", "required", "same:password"],
+      code: ["string", "required"],
     });
     if (failure !== undefined) return failure;
     const user = context.store.findUser((candidate) => candidate.resetCode === body.code);
@@ -185,7 +215,7 @@ const emailConfirmation: FakeRoute = {
   guest: true,
   handle: (context) => {
     const code = context.request.query.get("confirmation") ?? "";
-    const failure = validate({ confirmation: code }, { confirmation: ["required"] });
+    const failure = validate({ confirmation: code }, { confirmation: ["string", "required"] });
     if (failure !== undefined) return failure;
     const user = context.store.findUser((candidate) => candidate.confirmationCode === code);
     if (user === undefined) return strapiError(400, "ValidationError", "Invalid token");
@@ -200,10 +230,9 @@ const sendEmailConfirmation: FakeRoute = {
   path: /^\/api\/auth\/send-email-confirmation$/,
   guest: true,
   throttled: "confirmation",
+  validates: (context) => validate(context.jsonBody(), { email: ["string", "required", "email"] }),
   handle: (context) => {
     const body = context.jsonBody();
-    const failure = validate(body, { email: ["required", "email"] });
-    if (failure !== undefined) return failure;
     const user = byEmail(context, body.email);
     if (user === undefined) return ok({ email: body.email, sent: true });
     if (user.confirmed) return applicationError("Already confirmed");
@@ -222,9 +251,9 @@ const changePassword: FakeRoute = {
     const user = context.user();
     const body = context.jsonBody();
     const failure = validate(body, {
-      password: ["required", "maxPassword"],
-      passwordConfirmation: ["required", "same:password"],
-      currentPassword: ["required"],
+      password: ["string", "required", "maxPassword"],
+      passwordConfirmation: ["string", "required", "same:password"],
+      currentPassword: ["string", "required"],
     });
     if (failure !== undefined) return failure;
     if (body.currentPassword !== user.password) {

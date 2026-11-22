@@ -66,6 +66,11 @@ export interface FakeRoute {
   readonly authenticated?: boolean;
   /** The throttle bucket the route counts against, as camis groups its routes. */
   readonly throttled?: ThrottleGroup;
+  /**
+   * The body checks camis makes before the throttle turn (for the groups its controller counts
+   * per name given): a refused body takes no turn.
+   */
+  readonly validates?: (context: RouteContext) => FakeResponse | undefined;
   /** Served in refresh mode only, as users-permissions' session routes are. */
   readonly refreshOnly?: boolean;
   readonly handle: (context: RouteContext) => FakeResponse;
