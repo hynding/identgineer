@@ -368,8 +368,9 @@ notice:
 - a call that opens a session, asked for before a sign-out in the same tab, must not succeed;
 - a sign-out resolves only after the calls it cancelled have settled;
 - `signed-out` with a session left to resume is excused only when that session is another tab's
-  cookie sign-in that succeeded during the sign-out (the first window above), and `signed-out` is
-  wrong after another tab's standing `signed-in` notice reached the sign-out;
+  cookie sign-in of the sign-out's time (the first window above) that succeeded, or that its tab
+  dropped on hearing of the sign-out and whose session was then ended; and `signed-out` is wrong
+  after another tab's standing `signed-in` notice reached the sign-out;
 - `superseded` needs another tab's cookie sign-in that succeeded during the sign-out, and may leave
   only that sign-in's account to resume.
 
