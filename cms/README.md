@@ -209,7 +209,9 @@ interrupted, so the suite can be run repeatedly with
 Each boot starts with fresh databases and throttle buckets; servers kept up keep both between
 runs, so a rerun within a minute may wait out the throttled server's register window.
 Everything it writes is under the git-ignored `generated/live`, one scaffold only; delete that
-directory to scaffold again. After scaffolding it removes the VCS checkouts Composer leaves in
+directory to scaffold again. A scaffold counts as done only once `generated/live/strapi-php.scaffolded`
+is written, after it has finished, so one interrupted is started again from nothing. After
+scaffolding it removes the VCS checkouts Composer leaves in
 `vendor` when it clones packages rather than downloading their archives, which can take
 gigabytes. It is not part of `pnpm test` or CI, which have no camis checkout.
 

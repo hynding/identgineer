@@ -227,7 +227,11 @@ const checkPrerequisites = () => {
   }
 };
 
-const scaffolded = () => existsSync(join(APP_DIR, "vendor", "autoload.php"));
+// Written once camis' scaffold has finished and vendor is stripped: camis creates
+// vendor/autoload.php in its first step, so that file alone does not mean a finished app.
+const SCAFFOLDED = join(LIVE_DIR, "strapi-php.scaffolded");
+
+const scaffolded = () => existsSync(SCAFFOLDED);
 
 /** Scaffolds the Laravel host app once (Composer, network) and regenerates camis' files on it. */
 const generate = async () => {
@@ -237,9 +241,11 @@ const generate = async () => {
       fail("composer is not on PATH; the first run scaffolds the Laravel app with Composer.");
     }
     step("scaffolding the Laravel app (once; needs Composer and Packagist)");
+    // A partial app from an interrupted scaffold goes; rmSync removes a symlink, not its target.
     rmSync(APP_DIR, { recursive: true, force: true });
     await camis("scaffold", "filament", APP_DIR);
     stripVendorVcs();
+    writeFileSync(SCAFFOLDED, "");
   }
   const fromLive = (file) => relative(LIVE_DIR, join(CMS_DIR, file));
   const config = {
