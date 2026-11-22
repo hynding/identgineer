@@ -153,8 +153,9 @@ describe("scheduled refresh of opaque tokens", () => {
     expect(api.refreshCookie()).toBeDefined();
   });
 
-  it("refreshes from the configured lifetime (camis' 600 s by default)", async () => {
-    const { api, clock, signIn } = setup();
+  // The fake reports expiresIn as camis does; without it the configured lifetime is all there is.
+  it("refreshes from the configured lifetime (camis' 600 s by default) when the answer says none", async () => {
+    const { api, clock, signIn } = setup({ reportExpiresIn: false });
     await signIn();
     clock.advance(569_000);
     await settle();
@@ -164,24 +165,30 @@ describe("scheduled refresh of opaque tokens", () => {
     expect(refreshes(api)).toBe(1);
   });
 
-  it("takes a configured lifetime", async () => {
+  it("takes a configured lifetime when the answer says none", async () => {
     const { api, clock, signIn } = setup(
-      { accessTokenLifetimeSeconds: 120 },
+      { reportExpiresIn: false },
       { accessTokenLifetimeSeconds: 120 },
     );
     await signIn();
-    clock.advance(90_000);
+    clock.advance(89_000);
+    await settle();
+    expect(refreshes(api)).toBe(0);
+    clock.advance(1_000);
     await settle();
     expect(refreshes(api)).toBe(1);
   });
 
   it("follows the backend's expiresIn over the configured lifetime", async () => {
-    const { api, clock, signIn } = setup({
-      accessTokenLifetimeSeconds: 300,
-      reportExpiresIn: true,
-    });
+    const { api, clock, signIn } = setup(
+      { accessTokenLifetimeSeconds: 300 },
+      { accessTokenLifetimeSeconds: 120 },
+    );
     await signIn();
-    clock.advance(270_000);
+    clock.advance(90_000);
+    await settle();
+    expect(refreshes(api)).toBe(0);
+    clock.advance(180_000);
     await settle();
     expect(refreshes(api)).toBe(1);
   });
