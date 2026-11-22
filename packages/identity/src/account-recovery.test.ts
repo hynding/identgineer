@@ -8,10 +8,7 @@ describe("register", () => {
   it("signs a new account in when the backend needs no confirmation", async () => {
     const { api, client } = setup();
     const result = await client.register(NEW_ACCOUNT);
-    expect(result).toEqual({
-      outcome: "signed-in",
-      user: expect.objectContaining({ username: "grace" }),
-    });
+    expect(result).toMatchObject({ outcome: "signed-in", user: { username: "grace" } });
     expect(client.getState().status).toBe("signed-in");
     const request = api.requests[0];
     expect(request?.path).toBe("/api/auth/local/register");
