@@ -33,8 +33,10 @@ web-safe stacks only.
 
 - `data-scheme="light" | "dark"` forces a colour scheme. Without it the theme follows
   `prefers-color-scheme`.
-- Layers are declared as `@layer idg.tokens, idg.theme, idg.design, idg.layout, idg.ux, idg.preferences;`.
-  Unlayered CSS always wins over all of them.
+- Layers are declared as `@layer idg.tokens, idg.theme, idg.design, idg.layout, idg.ux, idg.brand, idg.preferences;`.
+  Unlayered CSS always wins over all of them. `idg.brand` is empty here: it holds the corner radii
+  of a theme generated from a brand kit by [`@identgineer/brand`](../brand/README.md), which
+  override the design language's.
 - Put `data-design` and `data-ux` on the same element as `data-theme`, or on a descendant of it.
   Shadows and borders are built from theme colours with `var()`, which resolves where the rule
   matches, so a design set on an ancestor of the theme would read the wrong colours.

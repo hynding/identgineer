@@ -1,4 +1,4 @@
-import { emitDeclarationRule } from "./emit-css.ts";
+import { attributeSelector, emitDeclarationRule } from "./emit-css.ts";
 import { PREFERENCE_MEDIA, type PreferenceGroupName } from "./preferences-media.ts";
 import type { ResolvedToken } from "./token-types.ts";
 
@@ -22,7 +22,7 @@ export interface DesignCssInput extends ModeCssInput {
 }
 
 function selectorsFor(attribute: string, { id, isDefault }: ModeCssInput): string[] {
-  const own = `[data-${attribute}="${id}"]`;
+  const own = attributeSelector(`data-${attribute}`, id);
   return isDefault ? [":where(:root)", own] : [own];
 }
 
