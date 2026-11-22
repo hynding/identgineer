@@ -74,7 +74,7 @@ describe("the identity components guides", () => {
 
     it("creates the client with the identity package and hands it to the components", () => {
       expect(imports.map(({ name }) => name)).toContain("createIdentityClient");
-      expect(code(markdown)).toMatch(/\.client\s*=|\[client\]=/);
+      expect(code(markdown)).toMatch(/\.client\s*=|\[client\]=|:client\.prop=/);
     });
 
     it("imports only names the packages really export, from entry points they have", () => {
