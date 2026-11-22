@@ -49,8 +49,20 @@ export const isEmail = (value: unknown): value is string => {
     .includes(".");
 };
 
+/**
+ * A password to check against one already set: not capped at 72 bytes, since bcrypt reads only
+ * the first 72 and a longer one set elsewhere still matches, but never more than 4096.
+ */
+const MAX_CHECKED_PASSWORD_BYTES = 4096;
+
+const bytesOf = (value: string): number => new TextEncoder().encode(value).length;
+
+export const isCheckedPassword = (value: unknown): value is string =>
+  isText(value) &&
+  (value.length * 3 <= MAX_CHECKED_PASSWORD_BYTES || bytesOf(value) <= MAX_CHECKED_PASSWORD_BYTES);
+
 export const isPassword = (value: unknown): value is string =>
-  isText(value) && value !== "" && new TextEncoder().encode(value).length <= MAX_PASSWORD_BYTES;
+  isText(value) && value !== "" && bytesOf(value) <= MAX_PASSWORD_BYTES;
 
 /** Left out, or a boolean (`null` is not left out). */
 export const isOptionalBoolean = (value: unknown): boolean =>

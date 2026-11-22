@@ -97,8 +97,13 @@ export interface ClientContext {
    * `unauthorized` without a session or once that session is over).
    */
   readonly accessToken: (ticket: Ticket) => Promise<string>;
-  /** A credential request: held back while throttled, and a 429 starts the hold. */
-  readonly credentialRequest: (request: ApiRequest) => Promise<ApiResponse>;
+  /**
+   * A credential request: held back while throttled, and a 429 starts the hold. A cookie request
+   * waits for the cookie lock and is sent only if `wanted` still says so once it is granted
+   * (otherwise it rejects `unauthorized`, or `unknown` once disposed): a sign-in cancelled while
+   * it waited never sends the credentials.
+   */
+  readonly credentialRequest: (request: ApiRequest, wanted?: () => boolean) => Promise<ApiResponse>;
   /**
    * A request with the bearer token, refreshed and retried once on a 401, unless the session
    * changed while it was under way (it is then never replayed as the new session).
@@ -198,8 +203,10 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   );
   const transport = createTransport({ base, fetch, clock, timeoutMs });
   const locks = resolveLocks(options.locks);
+  const lifetime = new AbortController();
   const sectionBounds = {
     clock,
+    disposed: lifetime.signal,
     holdMs: COOKIE_SECTION_TIMEOUTS * timeoutMs,
     waitMs: (COOKIE_SECTION_TIMEOUTS + 1) * timeoutMs,
   };
@@ -288,10 +295,16 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     },
   });
 
-  const credentialRequest = async (request: ApiRequest): Promise<ApiResponse> => {
+  const credentialRequest = async (
+    request: ApiRequest,
+    wanted: () => boolean = () => true,
+  ): Promise<ApiResponse> => {
     throttle.check();
     const response = await (request.cookie === true
-      ? cookieLock((section) => transport.send(request, section.signal))
+      ? cookieLock((section) => {
+          if (!wanted()) throw new IdentityError(disposed ? "unknown" : "unauthorized");
+          return transport.send(request, section.signal);
+        })
       : transport.send(request));
     if (response.status === THROTTLED_STATUS) {
       const error = throttledError(response, clock.now());
@@ -461,6 +474,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     },
     dispose: () => {
       disposed = true;
+      lifetime.abort();
       session.dispose();
       refresher.cancel();
       // The page is going: a sign-out still under way tells the other tabs now or never.

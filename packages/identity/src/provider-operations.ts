@@ -89,11 +89,10 @@ export const completeProviderSignIn =
     }
     const query = callbackQuery(options.search ?? "");
     return queuedSignIn(context, async (ticket) => {
-      const response = await context.credentialRequest({
-        method: "GET",
-        path: `/api/auth/${segment}/callback${query}`,
-        cookie: true,
-      });
+      const response = await context.credentialRequest(
+        { method: "GET", path: `/api/auth/${segment}/callback${query}`, cookie: true },
+        () => context.session.valid(ticket),
+      );
       if (response.status >= 400 && response.status < 500 && response.status !== 429) {
         throw new IdentityError("invalid-credentials");
       }

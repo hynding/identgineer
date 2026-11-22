@@ -15,6 +15,15 @@ const text = (value: unknown): string => {
   return value;
 };
 
+// A token goes back in an Authorization header or a JSON body: only visible ASCII survives both.
+const TOKEN = /^[\x21-\x7E]+$/;
+
+/** A token the client can send back as it came; anything else is a malformed answer. */
+const tokenText = (value: unknown): string => {
+  if (typeof value !== "string" || !TOKEN.test(value)) throw malformed();
+  return value;
+};
+
 const nonEmptyText = (value: unknown): string => {
   const result = text(value);
   if (result === "") throw malformed();
@@ -79,8 +88,8 @@ export const readAuthResponse = (value: unknown): AuthResponse => {
     expiresIn?: number;
     expiresAt?: string | number;
   } = {};
-  if (fields.jwt !== undefined) result.accessToken = nonEmptyText(fields.jwt);
-  if (fields.refreshToken !== undefined) result.refreshToken = nonEmptyText(fields.refreshToken);
+  if (fields.jwt !== undefined) result.accessToken = tokenText(fields.jwt);
+  if (fields.refreshToken !== undefined) result.refreshToken = tokenText(fields.refreshToken);
   if (fields.user !== undefined) result.user = readUser(fields.user);
   // Hints only: an unreadable one is ignored rather than failing the sign-in.
   if (typeof fields.expiresIn === "number") result.expiresIn = fields.expiresIn;

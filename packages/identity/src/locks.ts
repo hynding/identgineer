@@ -42,6 +42,8 @@ export interface LockBounds {
   readonly holdMs: number;
   /** The longest a task waits for the lock before failing closed. */
   readonly waitMs: number;
+  /** Aborted when the client is disposed: a task still waiting then rejects `unknown`. */
+  readonly disposed: AbortSignal;
 }
 
 /**
@@ -82,9 +84,13 @@ export const withLock = <T>(
   if (locks === null) return runSection(bounds, task);
   return new Promise<T>((resolve, reject) => {
     let waiting = true;
-    const run = (): Promise<void> => {
+    const stopWaiting = (): void => {
       waiting = false;
       bounds.clock.clearTimeout(gaveUp);
+      bounds.disposed.removeEventListener("abort", disposed);
+    };
+    const run = (): Promise<void> => {
+      stopWaiting();
       const running = runSection(bounds, task);
       running.then(resolve, reject);
       return running.then(
@@ -92,11 +98,16 @@ export const withLock = <T>(
         () => undefined,
       );
     };
-    // Cleared once the task runs, so it fires only while still waiting.
+    // Both are dropped once the task runs, so each fires only while still waiting.
     const gaveUp = bounds.clock.setTimeout(() => {
-      waiting = false;
+      stopWaiting();
       reject(new IdentityError("network"));
     }, bounds.waitMs);
+    const disposed = (): void => {
+      stopWaiting();
+      reject(new IdentityError("unknown"));
+    };
+    bounds.disposed.addEventListener("abort", disposed);
     // A lock granted once the task ran without it, or gave up waiting, is let go at once.
     const granted = (): Promise<void> => (waiting ? run() : Promise.resolve());
     const managerFailed = (): void => {

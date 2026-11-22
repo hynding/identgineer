@@ -2,7 +2,7 @@ import type { ClientContext } from "./client-context.ts";
 import { IdentityError } from "./identity-error.ts";
 import {
   MAX_NAME_CHARACTERS,
-  isText,
+  isCheckedPassword,
   isTextWithin,
   requireObject,
   requireValid,
@@ -80,17 +80,20 @@ export const signIn =
     requireValid(
       {
         identifier: isTextWithin(input.identifier, MAX_NAME_CHARACTERS),
-        password: isText(input.password),
+        password: isCheckedPassword(input.password),
       },
       { nameFields: false },
     );
     return queuedSignIn(context, async (ticket) => {
-      const response = await context.credentialRequest({
-        method: "POST",
-        path: "/api/auth/local",
-        body: { identifier: input.identifier, password: input.password },
-        cookie: true,
-      });
+      const response = await context.credentialRequest(
+        {
+          method: "POST",
+          path: "/api/auth/local",
+          body: { identifier: input.identifier, password: input.password },
+          cookie: true,
+        },
+        () => context.session.valid(ticket),
+      );
       if (!response.ok) throw signInFailure(context, response);
       const user = await signInFrom(context, response, ticket);
       context.throttle.signInSucceeded();

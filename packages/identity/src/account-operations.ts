@@ -5,6 +5,7 @@ import { errorName, failureOf, fieldsOf } from "./map-error.ts";
 import {
   MAX_CODE_CHARACTERS,
   MAX_NAME_CHARACTERS,
+  isCheckedPassword,
   isEmail,
   isFilled,
   isPassword,
@@ -183,7 +184,8 @@ export const changePassword =
     requireObject(input);
     requireValid(
       {
-        currentPassword: isFilled(input.currentPassword),
+        currentPassword:
+          isFilled(input.currentPassword) && isCheckedPassword(input.currentPassword),
         password: isPassword(input.password) && input.password !== input.currentPassword,
         passwordConfirmation: input.password === input.passwordConfirmation,
       },
