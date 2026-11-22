@@ -162,6 +162,24 @@ describe("parseBrandKit, text", () => {
     },
   );
 
+  const marks = (count: number) => String.fromCodePoint(0x301).repeat(count);
+
+  it.each([
+    ["Devanagari", String.fromCodePoint(0x928, 0x92e, 0x938, 0x94d, 0x924, 0x947)],
+    ["decomposed Vietnamese", `Vie${String.fromCodePoint(0x323, 0x302)}t`],
+    ["four marks on one letter", `a${marks(4)}`],
+  ])("accepts combining marks that a script needs: %s", (_label, name) => {
+    expect(errorsOf({ ...VALID, name })).toEqual([]);
+  });
+
+  it.each([
+    ["five marks on one letter", `a${marks(5)}`],
+    ["a stack of 59 accents", `a${marks(59)}`],
+  ])("refuses more than four combining marks in a row: %s", (_label, name) => {
+    expect(pathsOf({ ...VALID, name })).toEqual(["name"]);
+    expect(pathsOf({ ...VALID, tagline: name })).toEqual(["tagline"]);
+  });
+
   it("counts length in code points, so letters outside the BMP count once", () => {
     const letter = String.fromCodePoint(0x1d49c);
     expect(errorsOf({ ...VALID, name: letter.repeat(NAME_MAX_LENGTH) })).toEqual([]);
