@@ -106,10 +106,14 @@ if (isVariationId("theme", theme)) applyVariations({ theme });
 unregister(); // later, if the theme goes away: an id another registration holds stays
 ```
 
-- Only the theme axis changes, and only for ids that pass the brand id rule (two to 32 lower-case
-  letters and digits in words joined by single hyphens, starting with a letter, not a built-in id,
-  `constructor` or `prototype`). Anything else is returned in `rejected`, unchanged; it never throws
-  and never loosens the check for other values.
+- Only the theme axis changes, and only for ids that pass the added theme id rule of
+  `@identgineer/tokens` (`ADDED_THEME_ID_RULE`, the same rule brand ids follow): two to 32
+  lower-case letters and digits in words joined by single hyphens, starting with a letter, and not
+  in `RESERVED_THEME_IDS` (every built-in id of every axis, CSS-wide keywords, `default`, `none`,
+  `auto`, `system`, `light`, `dark`, `brand`, `theme`, `custom`, `constructor`, `prototype`). The
+  rule is embedded in the generated registry data, so the browser entry still imports no package.
+  Anything else is returned in `rejected`, unchanged; it never throws and never loosens the check
+  for other values.
 - A registered id is accepted everywhere the check is used: `applyVariations`, `getVariations`
   reading the attribute back, `decodeVariations` and `loadVariations`. Unregistered again, an id
   left on the page reads as the default.

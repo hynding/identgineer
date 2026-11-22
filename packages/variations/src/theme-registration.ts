@@ -1,27 +1,18 @@
-import { REGISTRY } from "./registry.ts";
+import { REGISTRY_DATA } from "./generated/registry-data.ts";
 import type { RegisteredThemeId } from "./variation-state.ts";
 
-const MIN_LENGTH = 2;
-const MAX_LENGTH = 32;
-// The id rule of @identgineer/brand: lower-case ASCII words joined by single hyphens, starting with
-// a letter. Every brand id passes it; nothing that could need escaping in an attribute, a URL or
-// a selector does.
-const THEME_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
-
-// Built-in ids are already accepted; the two prototype names that fit the rule are refused so no
-// added id can ever shadow an object member, whatever a later lookup is keyed by.
-const REFUSED: ReadonlySet<string> = new Set([
-  ...REGISTRY.theme.variations.map(({ id }) => id),
-  "constructor",
-  "prototype",
-]);
+// The added theme id rule of @identgineer/tokens (the brand id rule), embedded at build time in
+// the registry data so the browser entry imports no package. It reserves every built-in id.
+const RULE = REGISTRY_DATA.theme.addedIdRule;
+const THEME_ID = new RegExp(RULE.pattern);
+const RESERVED: ReadonlySet<string> = new Set(RULE.reserved);
 
 /** How many live registrations hold each added id. */
 const holders = new Map<string, number>();
 
 export interface ThemeRegistration {
   readonly registered: readonly RegisteredThemeId[];
-  /** Entries refused, unchanged: not a string, not a short slug, or a built-in id. */
+  /** Entries refused, unchanged: not a string, not a short slug, or a reserved id. */
   readonly rejected: readonly unknown[];
   /** Undoes this registration; an id another registration holds stays. Safe to call twice. */
   readonly unregister: () => void;
@@ -30,10 +21,10 @@ export interface ThemeRegistration {
 function isAddableThemeId(value: unknown): value is RegisteredThemeId {
   return (
     typeof value === "string" &&
-    value.length >= MIN_LENGTH &&
-    value.length <= MAX_LENGTH &&
+    value.length >= RULE.minLength &&
+    value.length <= RULE.maxLength &&
     THEME_ID.test(value) &&
-    !REFUSED.has(value)
+    !RESERVED.has(value)
   );
 }
 

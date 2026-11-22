@@ -1,64 +1,32 @@
-import { THEME_IDS } from "@identgineer/tokens";
+import {
+  ADDED_THEME_ID_RULE,
+  findAddedThemeIdProblem,
+  RESERVED_THEME_IDS,
+} from "@identgineer/tokens";
 
-export const BRAND_ID_MIN_LENGTH = 2;
-export const BRAND_ID_MAX_LENGTH = 32;
-
-// Lower-case ASCII words joined by single hyphens, starting with a letter: safe as an attribute
-// value, a file name and a URL parameter without any escaping.
-const BRAND_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+export const BRAND_ID_MIN_LENGTH = ADDED_THEME_ID_RULE.minLength;
+export const BRAND_ID_MAX_LENGTH = ADDED_THEME_ID_RULE.maxLength;
 
 /**
- * Words a brand id may not take besides the built-in theme ids: CSS keywords, scheme words, and the
- * two prototype names that fit the id rule.
+ * Words a brand id may not take: the tokens package's reserved ids for added themes (every built-in
+ * id of every axis, CSS-wide keywords, scheme words and the prototype names that fit the rule).
  */
-export const RESERVED_BRAND_IDS: readonly string[] = Object.freeze([
-  "inherit",
-  "initial",
-  "unset",
-  "revert",
-  "revert-layer",
-  "default",
-  "none",
-  "auto",
-  "system",
-  "light",
-  "dark",
-  "brand",
-  "theme",
-  "custom",
-  "constructor",
-  "prototype",
-]);
+export const RESERVED_BRAND_IDS: readonly string[] = RESERVED_THEME_IDS;
 
-export type BrandIdProblem =
-  | { readonly code: "too-short" | "too-long" | "invalid-id"; readonly message: string }
-  | { readonly code: "reserved-id"; readonly message: string };
+export interface BrandIdProblem {
+  readonly code: "too-short" | "too-long" | "invalid-id" | "reserved-id";
+  readonly message: string;
+}
+
+const MESSAGES: Readonly<Record<BrandIdProblem["code"], string>> = {
+  "too-short": `a brand id needs at least ${String(BRAND_ID_MIN_LENGTH)} characters`,
+  "too-long": `a brand id takes at most ${String(BRAND_ID_MAX_LENGTH)} characters`,
+  "invalid-id":
+    "a brand id must be lower-case letters and digits in words joined by single hyphens, starting with a letter",
+  "reserved-id": "a brand id may not be a built-in id of any axis or a reserved word",
+};
 
 export function findBrandIdProblem(id: string): BrandIdProblem | undefined {
-  if (id.length < BRAND_ID_MIN_LENGTH) {
-    return {
-      code: "too-short",
-      message: `a brand id needs at least ${String(BRAND_ID_MIN_LENGTH)} characters`,
-    };
-  }
-  if (id.length > BRAND_ID_MAX_LENGTH) {
-    return {
-      code: "too-long",
-      message: `a brand id takes at most ${String(BRAND_ID_MAX_LENGTH)} characters`,
-    };
-  }
-  if (!BRAND_ID.test(id)) {
-    return {
-      code: "invalid-id",
-      message:
-        "a brand id must be lower-case letters and digits in words joined by single hyphens, starting with a letter",
-    };
-  }
-  if (THEME_IDS.some((builtIn) => builtIn === id)) {
-    return { code: "reserved-id", message: "a brand id may not name a built-in theme" };
-  }
-  if (RESERVED_BRAND_IDS.includes(id)) {
-    return { code: "reserved-id", message: "a brand id may not be a reserved word" };
-  }
-  return undefined;
+  const problem = findAddedThemeIdProblem(id);
+  return problem && { code: problem.code, message: MESSAGES[problem.code] };
 }

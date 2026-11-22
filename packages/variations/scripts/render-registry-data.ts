@@ -1,4 +1,5 @@
 import {
+  ADDED_THEME_ID_RULE,
   DEFAULT_DESIGN_ID,
   DEFAULT_LAYOUT_ID,
   DEFAULT_THEME_ID,
@@ -43,6 +44,7 @@ function registryData(): object {
         swatches,
         fonts,
       })),
+      addedIdRule: ADDED_THEME_ID_RULE,
     },
     design: textAxis("data-design", DEFAULT_DESIGN_ID, DESIGNS),
     layout: textAxis("data-layout", DEFAULT_LAYOUT_ID, LAYOUTS),
