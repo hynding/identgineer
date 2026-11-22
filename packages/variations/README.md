@@ -4,7 +4,12 @@ An optional runtime for the four variation axes (`theme`, `design`, `layout`, `u
 scheme. The attributes are the real interface: everything here is sugar on top of them, and a page
 that never loads this package still works.
 
-Framework guides (React, Vue, Angular) are not part of this package yet.
+Adoption guides, each self-contained and using only what exists today (framework wrappers are a
+later feature): [plain HTML](../../docs/variations/plain-html.md),
+[React](../../docs/variations/react.md), [Vue](../../docs/variations/vue.md) and
+[Angular](../../docs/variations/angular.md). A test holds every import in them to the package's real
+exports. The ready-made control panel is `<idg-variation-switcher>` of
+[`@identgineer/components`](../components/README.md#idg-variation-switcher).
 
 ## Use the attributes alone (no JavaScript)
 
