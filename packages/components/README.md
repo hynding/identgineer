@@ -179,10 +179,15 @@ value that is meant to be copied, such as a link; it does not focus it, so call 
 Slots `start` and `end` sit inside the box. The reveal control is a real `<button type="button">`
 with `aria-pressed`; it changes only the native input's `type`, never the value.
 
-**Enter submits the form** the element belongs to (`requestSubmit()`, so the form's validation and
-`submit` event run), as Enter in a native input does: the native input has no form owner across the
-shadow boundary, so the browser would not do it. Not while an input method is composing, and not
-when a listener has already called `preventDefault()` on the keydown. `spellcheck` is given to the
+**Enter submits the form** as Enter in a native input does, following the HTML implicit
+submission algorithm, since the native input has no form owner across the shadow boundary and the
+browser would not do it. The decision is made once the keydown has reached every listener, so any
+listener on its path (a combobox around the field) can cancel it with `preventDefault()`, and never
+while an input method is composing. The default button (the first submit button among the form's
+elements: a native submit button or an `idg-button type="submit"`) is clicked, so its click
+listeners run and a native one is the submitter; a disabled or `loading` default button stops the
+submission. Without a submit button, the form is submitted only when it has no other text field.
+`spellcheck` is given to the
 native input as an attribute, so `spellcheck="false"` turns spell checking off.
 
 **Autofill and password managers.** Everything a password manager reads is on the native input:

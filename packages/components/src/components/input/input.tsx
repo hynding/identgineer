@@ -11,6 +11,7 @@ import {
   type EventEmitter,
 } from "@stencil/core";
 import { oneOf } from "../../utils/choice";
+import { submitImplicitly } from "../../utils/implicit-submission";
 import type { ValueDetail } from "../../utils/event-details";
 import { validityFlags } from "../../utils/validity";
 import { INPUT_SIZES, INPUT_TYPES, type InputSize, type InputType } from "./input-options";
@@ -156,15 +157,18 @@ export class IdgInput {
   };
 
   // The native input has no form owner across the shadow boundary, so the browser's implicit
-  // submission never happens: Enter submits the host's form here instead, as it would natively.
+  // submission never happens: it is done here instead. It is decided once the keydown has reached
+  // every listener on its path, as the browser decides, so a listener further out (a combobox
+  // that takes Enter for itself) can still cancel it.
   @Listen("keydown")
   handleKeydown(event: KeyboardEvent): void {
     if (event.key !== "Enter" || event.isComposing || event.defaultPrevented) return;
     if (event.composedPath()[0] !== this.native) return;
     const form = this.internals.form;
     if (!form) return;
-    event.preventDefault();
-    form.requestSubmit();
+    setTimeout(() => {
+      if (!event.defaultPrevented && this.internals.form === form) submitImplicitly(form);
+    });
   }
 
   private toggleReveal = (): void => {

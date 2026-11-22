@@ -34,9 +34,12 @@ async function open(page: Page): Promise<void> {
   });
 }
 
-/** Presses Enter, as a user does, in the first text field of the form `id`. */
+/** Presses Enter, as a user does, in the form's first idg-input, or its first native field. */
 async function pressEnter(page: Page, id: string): Promise<Outcome> {
-  const field = page.locator(`#${id}`).locator("input:not([type=checkbox])").first();
+  const form = page.locator(`#${id}`);
+  const field = id.startsWith("idg-")
+    ? form.locator("idg-input input").first()
+    : form.locator("input:not([type=checkbox])").first();
   await field.focus();
   await page.keyboard.press("Enter");
   // Implicit submission is decided once the keydown has been dispatched to every listener.
