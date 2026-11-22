@@ -108,6 +108,16 @@ function rgbOf(hex: string): Rgb {
   return rgb;
 }
 
+const PAGE_BACKGROUNDS = ["bg", "bg-subtle", "surface", "surface-raised"];
+
+function weakestOnPage(colors: ReadonlyMap<string, string>, role: string): number {
+  return Math.min(
+    ...PAGE_BACKGROUNDS.map((background) =>
+      contrastRatio(colors.get(role) ?? "", colors.get(background) ?? ""),
+    ),
+  );
+}
+
 /** Problems with one case, each naming it; empty when the case holds. */
 function checkCase(entry: Case): string[] {
   const where = `seed ${String(SEED)}, ${entry.label} ${JSON.stringify(entry)}`;
@@ -131,6 +141,14 @@ function checkCase(entry: Case): string[] {
     for (const background of ["bg", "bg-subtle", "surface", "surface-raised"]) {
       const ratio = contrastRatio(colors.get("accent") ?? "", colors.get(background) ?? "");
       if (ratio < 3) problems.push(`${scheme} accent on ${background} is ${ratio.toFixed(2)}:1`);
+    }
+    // The hover state is never weaker against the page than the accent it replaces.
+    const accentOnPage = weakestOnPage(colors, "accent");
+    const hoverOnPage = weakestOnPage(colors, "accent-hover");
+    if (hoverOnPage < accentOnPage) {
+      problems.push(
+        `${scheme} accent-hover is ${hoverOnPage.toFixed(2)}:1 on the page, the accent ${accentOnPage.toFixed(2)}:1`,
+      );
     }
   }
   for (const scheme of ["light", "dark"] as const) {
