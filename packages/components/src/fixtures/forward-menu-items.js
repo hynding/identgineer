@@ -14,7 +14,11 @@ class ForwardMenu extends HTMLElement {
     const own = document.createElement("idg-menu-item");
     own.setAttribute("value", "own");
     own.textContent = "Own item";
-    menu.append(trigger, own, document.createElement("slot"));
+    // The forwarded items sit in a group of this component's own, as an account menu's do.
+    const group = document.createElement("idg-menu-group");
+    group.setAttribute("label", "Yours");
+    group.append(document.createElement("slot"));
+    menu.append(trigger, own, group);
     root.append(menu);
   }
 }
