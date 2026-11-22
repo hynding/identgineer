@@ -353,3 +353,118 @@ test.describe("idg-session-guard and idg-user-menu keep every control reachable 
     await expectReachableByTab(page, SIGN_IN_STOPS);
   });
 });
+
+/** Records the text the guard's anchor has each time it takes focus, in `window.anchorTexts`. */
+async function recordAnchorTexts(page: Page): Promise<void> {
+  await guard(page).evaluate((host) => {
+    const record = window as unknown as { anchorTexts: string[] };
+    record.anchorTexts = [];
+    host.shadowRoot?.addEventListener("focusin", (event) => {
+      const target = event.target as Element;
+      if (target.classList.contains("focus-anchor")) record.anchorTexts.push(target.textContent);
+    });
+  });
+}
+
+function recordedAnchorTexts(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as unknown as { anchorTexts: string[] }).anchorTexts);
+}
+
+/** Holds the next refresh until `window.releaseRefresh()`, failing it then when `fail` is set. */
+function holdRefresh(page: Page, fail: boolean): Promise<unknown> {
+  return page.evaluate((failing) => {
+    const handle = window as unknown as {
+      identityFixture: FixtureHandle;
+      releaseRefresh: () => void;
+    };
+    if (failing)
+      handle.identityFixture.api.respondNext("POST", "/api/auth/refresh", "network-error");
+    handle.releaseRefresh = handle.identityFixture.api.holdNext("POST", "/api/auth/refresh");
+  }, fail);
+}
+
+function refreshRequests(page: Page): Promise<number> {
+  return page.evaluate(
+    () =>
+      (
+        window as unknown as { identityFixture: { api: { requests: { path: string }[] } } }
+      ).identityFixture.api.requests.filter((request) => request.path === "/api/auth/refresh")
+        .length,
+  );
+}
+
+/** From the restore that could not reach the server, a Try again that fails too: focus on the notice. */
+async function failTryAgain(page: Page): Promise<void> {
+  await withFixture(page, (fixture) => {
+    fixture.api.respondNext("POST", "/api/auth/refresh", "network-error");
+  });
+  await guard(page).getByRole("button", { name: "Try again" }).focus();
+  await page.keyboard.press("Enter");
+  await expect.poll(() => focusHoldsGuardNotice(page, "unreachable")).toBe(true);
+}
+
+test.describe("idg-session-guard tries again when the browser is back online as Try again does", () => {
+  for (const from of ["button", "notice"] as const) {
+    for (const outcome of ["answers", "still cannot be reached"] as const) {
+      test(`with focus on the ${from}, the notice stays while it waits and focus moves once when the server ${outcome}`, async ({
+        page,
+      }) => {
+        await openGuardPage(page, "?restore-fail");
+        const retry = guard(page).getByRole("button", { name: "Try again" });
+        await expect(retry).toBeVisible();
+        if (from === "notice") await failTryAgain(page);
+        else await retry.focus();
+        await recordAnchorTexts(page);
+        await holdRefresh(page, outcome === "still cannot be reached");
+        await page.evaluate(() => window.dispatchEvent(new Event("online")));
+        await expect(guard(page).locator('[part="retry"]')).toHaveAttribute("loading", "");
+        if (from === "button") await expect(retry).toBeFocused();
+        else expect(await focusHoldsGuardNotice(page, "unreachable")).toBe(true);
+        await page.evaluate("window.releaseRefresh()");
+        if (outcome === "answers") {
+          await expect(inputOf(page, "#sign-in", "identifier")).toBeVisible();
+          await expect.poll(() => focusedAnchorText(page)).toBe("You are signed out.");
+          expect(await recordedAnchorTexts(page)).toEqual(["You are signed out."]);
+        } else {
+          await expect(guard(page).locator('[part="retry"]')).not.toHaveAttribute("loading", "");
+          await expect.poll(() => focusHoldsGuardNotice(page, "unreachable")).toBe(true);
+          expect(await recordedAnchorTexts(page)).toEqual([]);
+        }
+      });
+    }
+  }
+
+  test("with focus outside the guard, the answer leaves focus where it is", async ({ page }) => {
+    await openGuardPage(page, "?restore-fail");
+    await expect(guard(page).getByRole("button", { name: "Try again" })).toBeVisible();
+    await page.locator("a#before").focus();
+    await holdRefresh(page, false);
+    await page.evaluate(() => window.dispatchEvent(new Event("online")));
+    await expect(guard(page).locator('[part="retry"]')).toHaveAttribute("loading", "");
+    await page.evaluate("window.releaseRefresh()");
+    await expect(inputOf(page, "#sign-in", "identifier")).toBeVisible();
+    await expect(page.locator("a#before")).toBeFocused();
+  });
+
+  test("a Try again pressed while the guard is already trying again asks the server once", async ({
+    page,
+  }) => {
+    await openGuardPage(page, "?restore-fail");
+    const retry = guard(page).locator('[part="retry"]');
+    await expect(retry).toBeVisible();
+    const before = await refreshRequests(page);
+    await holdRefresh(page, true);
+    await retry.evaluate((button: HTMLElement) => {
+      button.click();
+      button.click();
+    });
+    await page.evaluate(() => window.dispatchEvent(new Event("online")));
+    await retry.evaluate((button: HTMLElement) => {
+      button.click();
+    });
+    await expect.poll(() => refreshRequests(page)).toBe(before + 1);
+    await page.evaluate("window.releaseRefresh()");
+    await expect(retry).not.toHaveAttribute("loading", "");
+    expect(await refreshRequests(page)).toBe(before + 1);
+  });
+});
