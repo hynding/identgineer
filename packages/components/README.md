@@ -1195,7 +1195,10 @@ and tries again when the browser is back online. A `server-unreachable` sign-out
 the fallback (part `sign-out-outcome`, dismissible; slot `sign-out-outcome` replaces the text),
 since the content that would have said so is gone. Prop `labels`. Event `idgSessionChange` on each
 transition: `{ status: "signed-in" }`, `{ status: "unknown" }`, `{ status: "unreachable" }` or
-`{ status: "signed-out", reason }`. `display: contents`. **Not access control**: its children are in the DOM all along; see the
+`{ status: "signed-out", reason }`. When a transition takes away what had focus (a sign-in from the fallback, "Sign out
+everywhere"), focus moves to the first element now shown (given `tabindex="-1"` if it cannot take
+focus otherwise), or to the sign-out warning, and the change is said politely ("You are signed
+in." or "You are signed out.", in `labels`). `display: contents`. **Not access control**: its children are in the DOM all along; see the
 security notes, and hide it until hydrated with `idg-session-guard:not(.hydrated)`.
 
 ### `idg-user-menu`
@@ -1207,7 +1210,8 @@ for {name}") that opens an `idg-menu` with a group "Signed in as {name}", the pa
 outcome: `signed-out` and `superseded` (another tab's newer sign-in stands; not an error) are
 announced politely, and `server-unreachable` is shown as a warning (part `outcome`) that says the
 session may stay active on the server. Slot `signed-out` while nobody is signed in. It goes when
-another tab signs out.
+another tab signs out. After its own sign-out, focus moves to the warning, or else to the first element
+of the `signed-out` slot (given `tabindex="-1"` when it cannot take focus otherwise).
 
 ## Strict CSP and Trusted Types
 

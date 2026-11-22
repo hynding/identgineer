@@ -228,6 +228,10 @@ test.describe("focus across sign-in and sign-out", () => {
     await signInThroughForm(page);
     await trigger(page).focus();
     await page.keyboard.press("Enter");
+    // The menu moves focus to its first item a task after it opens.
+    await expect(
+      page.locator("#menu").getByRole("menuitem", { name: "Your profile" }),
+    ).toBeFocused();
     await page.keyboard.press("End");
     await page.keyboard.press("Enter");
     const link = page.locator("#menu").getByRole("link", { name: "Sign in", exact: true });

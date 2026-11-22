@@ -10,6 +10,9 @@ import {
   type EventEmitter,
 } from "@stencil/core";
 import type { SignedOutDetail } from "../../identity/event-details";
+import { AnnouncementView } from "../../identity/feedback-view";
+import { firstAssigned, focusRegion, focusWithin } from "../../identity/focus-region";
+import type { Announcement } from "../../identity/form-feedback";
 import type {
   IdentityStateView,
   IdentityStatus,
@@ -46,7 +49,7 @@ const UNKNOWN: IdentityStateView = { status: "unknown" };
  */
 @Component({
   tag: "idg-session-guard",
-  styleUrl: "session-guard.css",
+  styleUrls: ["../../styles/visually-hidden.css", "session-guard.css"],
   shadow: true,
 })
 export class IdgSessionGuard {
@@ -64,6 +67,10 @@ export class IdgSessionGuard {
   @State() private status: IdentityStatus = "unknown";
   @State() private unreachable = false;
   @State() private signOutNotice?: "this-device" | "everywhere";
+  @State() private announcement: Announcement = { text: "", slot: 0 };
+
+  /** Set when what had focus is taken away by a transition: focus goes to what is shown next. */
+  private moveFocus = false;
 
   private reported?: SessionChangeDetail["status"];
   private readonly restoring = new RestoreWatch<SessionGuardClient>(
@@ -108,6 +115,8 @@ export class IdgSessionGuard {
   handleSignedOut(event: CustomEvent<SignedOutDetail>): void {
     if (event.detail.outcome !== "server-unreachable") return;
     this.signOutNotice = event.detail.everywhere === true ? "everywhere" : "this-device";
+    // The sign-out may already have shown the fallback: the warning matters more.
+    if (focusWithin(this.host)) this.moveFocus = true;
   }
 
   private dismissNotice = (event: CustomEvent<void>): void => {
@@ -141,12 +150,34 @@ export class IdgSessionGuard {
   }
 
   private show(state: IdentityStateView): void {
+    const known = state.status !== "unknown" && this.status !== "unknown";
+    if (known && state.status !== this.status && focusWithin(this.host)) {
+      this.moveFocus = true;
+      const labels = mergeLabels(SESSION_GUARD_LABELS, this.labels);
+      this.announce(state.status === "signed-in" ? labels.signedIn : labels.signedOut);
+    }
     this.status = state.status;
     this.report(
       state.status === "signed-out"
         ? { status: "signed-out", reason: state.reason }
         : { status: state.status },
     );
+  }
+
+  private announce(text: string): void {
+    this.announcement = { text, slot: this.announcement.slot === 0 ? 1 : 0 };
+  }
+
+  componentDidRender(): void {
+    if (!this.moveFocus) return;
+    this.moveFocus = false;
+    const root = this.host.shadowRoot;
+    const notice = root?.querySelector(".sign-out-outcome");
+    if (notice) {
+      focusRegion(notice);
+      return;
+    }
+    focusRegion(firstAssigned(root?.querySelector("slot:not([name='sign-out-outcome'])")));
   }
 
   private report(detail: SessionChangeDetail): void {
@@ -157,9 +188,10 @@ export class IdgSessionGuard {
 
   render() {
     const labels = mergeLabels(SESSION_GUARD_LABELS, this.labels);
-    if (this.status === "signed-in") return <slot />;
+    const announcement = <AnnouncementView announcement={this.announcement} />;
+    if (this.status === "signed-in") return [<slot />, announcement];
     if (this.status === "signed-out") {
-      return [this.renderSignOutNotice(labels), <slot name="fallback" />];
+      return [this.renderSignOutNotice(labels), <slot name="fallback" />, announcement];
     }
     if (this.unreachable) {
       return (

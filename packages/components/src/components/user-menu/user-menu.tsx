@@ -1,6 +1,7 @@
 import { Component, Element, Event, h, Prop, State, Watch, type EventEmitter } from "@stencil/core";
 import type { SignedOutDetail } from "../../identity/event-details";
 import { AnnouncementView } from "../../identity/feedback-view";
+import { firstAssigned, focusRegion, focusWithinOrLost } from "../../identity/focus-region";
 import type { Announcement } from "../../identity/form-feedback";
 import type { IdentityStateView, UserMenuClient } from "../../identity/identity-types";
 import { fillTemplate, mergeLabels } from "../../identity/labels";
@@ -54,6 +55,9 @@ export class IdgUserMenu {
   @State() private signingOut = false;
   @State() private notice?: Notice;
   @State() private announcement: Announcement = { text: "", slot: 0 };
+
+  /** Set after a sign-out that took the focused trigger away. */
+  private moveFocus = false;
 
   // A restore that could not reach the server is tried again once the browser is back online;
   // until then the menu draws nothing, since it does not know who is signed in.
@@ -109,6 +113,7 @@ export class IdgUserMenu {
     try {
       const { outcome } = await client.signOut();
       if (client !== this.binding.current()) return;
+      this.moveFocus = focusWithinOrLost(this.host);
       this.notice = outcome;
       if (outcome !== "server-unreachable") {
         this.announce(outcome === "superseded" ? labels.superseded : labels.signedOut);
@@ -119,6 +124,17 @@ export class IdgUserMenu {
     } finally {
       if (client === this.binding.current()) this.signingOut = false;
     }
+  }
+
+  // To the warning when there is one, otherwise to what the page shows while signed out.
+  componentDidRender(): void {
+    if (!this.moveFocus || this.state.status === "signed-in") return;
+    this.moveFocus = false;
+    const root = this.host.shadowRoot;
+    focusRegion(
+      root?.querySelector(".outcome") ??
+        firstAssigned(root?.querySelector('slot[name="signed-out"]')),
+    );
   }
 
   private announce(text: string): void {

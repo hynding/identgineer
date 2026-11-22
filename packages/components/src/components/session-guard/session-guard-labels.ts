@@ -8,6 +8,10 @@ export interface SessionGuardLabels {
   /** "Sign out everywhere" that could not reach the server. */
   readonly signOutEverywhereUnreachable: string;
   readonly dismiss: string;
+  /** Said when the guard shows its content in place of what had focus. */
+  readonly signedIn: string;
+  /** Said when the guard shows its fallback in place of what had focus. */
+  readonly signedOut: string;
 }
 
 export const SESSION_GUARD_LABELS: SessionGuardLabels = {
@@ -18,4 +22,6 @@ export const SESSION_GUARD_LABELS: SessionGuardLabels = {
   signOutEverywhereUnreachable:
     "You are signed out on this device, but the server could not be reached, so your other sessions may stay signed in until they expire. Sign in and try again once you are back online.",
   dismiss: "Dismiss",
+  signedIn: "You are signed in.",
+  signedOut: "You are signed out.",
 };
