@@ -1,20 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { MAX_STORED_LENGTH, STORAGE_KEY } from "./constants.ts";
+import { MemoryStorage } from "./memory-storage.ts";
 import { clearStoredVariations, loadVariations, saveVariations } from "./storage.ts";
 import type { StorageLike } from "./storage.ts";
-
-class MemoryStorage implements StorageLike {
-  readonly data = new Map<string, string>();
-  getItem(key: string): string | null {
-    return this.data.get(key) ?? null;
-  }
-  setItem(key: string, value: string): void {
-    this.data.set(key, value);
-  }
-  removeItem(key: string): void {
-    this.data.delete(key);
-  }
-}
 
 const THROWING: StorageLike = {
   getItem: () => {
