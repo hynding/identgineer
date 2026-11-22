@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { IdentityError } from "../identity-error.ts";
+import type { Profile } from "../types.ts";
 import {
   createBrowser,
   disposeTabs,
@@ -44,6 +45,13 @@ const signedIn = async (label: string) => {
   await tab.signIn({ identifier: account.email, password: account.password });
   return { account, browser, tab };
 };
+
+/** The promise's outcome, never thrown: setup that a gap test only inspects. */
+const settle = <T>(promise: Promise<T>): Promise<PromiseSettledResult<T>> =>
+  promise.then(
+    (value) => ({ status: "fulfilled", value }),
+    (reason: unknown) => ({ status: "rejected", reason }),
+  );
 
 afterEach(disposeTabs);
 
@@ -103,6 +111,7 @@ describe.skipIf(liveBackend === undefined)(
         const tab = openTab(backend.servers.main, browser, { accessTokenLifetimeSeconds: 6 });
         await tab.signIn({ identifier: account.email, password: account.password });
         const first = browser.jar.get(REFRESH_COOKIE)?.value;
+        expect(first).toBeDefined();
         await new Promise((resolve) => setTimeout(resolve, 6_500));
         const second = browser.jar.get(REFRESH_COOKIE)?.value;
         expect(second).toBeDefined();
@@ -127,20 +136,49 @@ describe.skipIf(liveBackend === undefined)(
       // grant's `assign` fills it from the session, so POST /api/profiles answers 400
       // ValidationError "owner must be defined." (core/validation.ts and core/controller.ts in
       // camis' adapter-filament strapi-api). Turns green when camis exempts assigned relations.
-      it.fails(
-        "saves a new profile and updates it (camis gap: assigned owner validated as required)",
-        async () => {
+      describe("saving a profile (camis gap: assigned owner validated as required)", () => {
+        const saved: {
+          created?: PromiseSettledResult<Profile>;
+          updated?: PromiseSettledResult<Profile>;
+          read?: Profile | null;
+        } = {};
+
+        beforeAll(async () => {
           const { tab } = await signedIn("profile-save");
-          const created = await tab.saveProfile({ displayName: "Ada", bio: null, locale: "en" });
-          expect(created).toMatchObject({ displayName: "Ada", bio: null, locale: "en" });
-          const updated = await tab.saveProfile({
-            displayName: "Ada L.",
-            timezone: "Europe/London",
+          saved.created = await settle(
+            tab.saveProfile({ displayName: "Ada", bio: null, locale: "en" }),
+          );
+          if (saved.created.status === "rejected") return;
+          saved.updated = await settle(
+            tab.saveProfile({ displayName: "Ada L.", timezone: "Europe/London" }),
+          );
+          saved.read = await tab.getProfile();
+        });
+
+        // The SDK names no field outside the profile input; the agreement test pins `owner`.
+        it("is refused today as a validation error naming no field the SDK sends", () => {
+          expect(saved.created?.status).toBe("rejected");
+          const error: unknown =
+            saved.created?.status === "rejected" ? saved.created.reason : undefined;
+          expect(error).toBeInstanceOf(IdentityError);
+          expect(error).toMatchObject({ code: "validation" });
+          expect(error).not.toHaveProperty("fields");
+        });
+
+        it.fails("saves a new profile and updates it", () => {
+          expect(saved.created).toMatchObject({
+            status: "fulfilled",
+            value: { displayName: "Ada", bio: null, locale: "en" },
           });
-          expect(updated).toMatchObject({ documentId: created.documentId, displayName: "Ada L." });
-          expect(await tab.getProfile()).toMatchObject({ displayName: "Ada L." });
-        },
-      );
+          const documentId =
+            saved.created?.status === "fulfilled" ? saved.created.value.documentId : undefined;
+          expect(saved.updated).toMatchObject({
+            status: "fulfilled",
+            value: { documentId, displayName: "Ada L." },
+          });
+          expect(saved.read).toMatchObject({ displayName: "Ada L." });
+        });
+      });
 
       it("changes the password: the session goes on, the old password fails, the new one works", async () => {
         const { account, tab } = await signedIn("change");
@@ -267,6 +305,44 @@ describe.skipIf(liveBackend === undefined)(
         });
         expect(wrong.code).toBe("invalid-credentials");
         expect(seen(unknown)).toEqual(seen(wrong));
+      });
+    });
+
+    describe("with access tokens that outlive no request", () => {
+      const server = () => backend.servers.shortLived;
+
+      it("answers a request made with an expired access token by refreshing, rotating the cookie, and retrying", async () => {
+        const account = await registered("expired", server());
+        const browser = createBrowser(backend);
+        const answers: { path: string; status: number }[] = [];
+        const recording: typeof fetch = async (input, init) => {
+          const response = await browser.fetch(input, init);
+          answers.push({
+            path: new URL(input instanceof Request ? input.url : input).pathname,
+            status: response.status,
+          });
+          return response;
+        };
+        const tab = openTab(server(), browser, { fetch: recording });
+        await tab.signIn({ identifier: account.email, password: account.password });
+        const first = browser.jar.get(REFRESH_COOKIE)?.value;
+        expect(first).toBeDefined();
+        await new Promise((resolve) =>
+          setTimeout(resolve, (server().accessTokenLifetimeSeconds + 1) * 1000),
+        );
+        answers.length = 0;
+        expect((await tab.currentUser()).email).toBe(account.email);
+        // Refused, refreshed, then retried; the client may read the user again after a refresh.
+        expect(answers.slice(0, 3)).toEqual([
+          { path: "/api/users/me", status: 401 },
+          { path: "/api/auth/refresh", status: 200 },
+          { path: "/api/users/me", status: 200 },
+        ]);
+        expect(answers.slice(3)).toEqual(
+          answers.slice(3).map(() => ({ path: "/api/users/me", status: 200 })),
+        );
+        expect(browser.jar.get(REFRESH_COOKIE)?.value).not.toBe(first);
+        expect(tab.getState()).toMatchObject({ status: "signed-in" });
       });
     });
 

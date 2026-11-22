@@ -99,6 +99,12 @@ const read = (reader: Reader, body: unknown): unknown => {
   }
 };
 
+export interface Gap {
+  readonly description: string;
+  /** What strapi-php answers today, pinned so the gap cannot change shape unnoticed. */
+  readonly today: Observation;
+}
+
 interface Step {
   readonly name: string;
   readonly reader?: Reader;
@@ -106,7 +112,7 @@ interface Step {
   readonly message?: true;
   readonly retryAfter?: true;
   /** Why the real server is expected to differ from the fake: a camis gap, named. */
-  readonly gap?: string;
+  readonly gap?: Gap;
   readonly request: (state: State) => ProbeRequest | Promise<ProbeRequest>;
   readonly keep?: (state: State, body: unknown) => void;
 }
@@ -388,7 +394,14 @@ const MAIN_STEPS: readonly Step[] = [
   {
     name: "profiles: create",
     reader: "raw",
-    gap: "strapi-php validates the assigned owner as a required body field (400 ValidationError owner)",
+    gap: {
+      description: "strapi-php validates the assigned owner as a required body field",
+      today: {
+        status: 400,
+        error: { name: "ValidationError", fields: ["owner"] },
+        cookie: "unchanged",
+      },
+    },
     request: (s) => ({
       method: "POST",
       path: "/api/profiles",

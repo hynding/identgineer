@@ -10,9 +10,11 @@ import { createCookieJar, type CookieJar } from "./cookie-jar.ts";
 
 /** One running strapi-php server, as cms/scripts/live-backend.js describes it. */
 export interface LiveServer {
-  readonly name: "main" | "confirmation" | "throttled";
+  readonly name: "main" | "confirmation" | "throttled" | "shortLived";
   readonly url: string;
   readonly emailConfirmation: boolean;
+  /** CAMIS_ACCESS_TOKEN_LIFESPAN: 600 seconds, or 2 on the short-lived server. */
+  readonly accessTokenLifetimeSeconds: number;
   readonly throttlePerMinute: number;
   readonly addressThrottlePerMinute: number;
   readonly refreshThrottlePerMinute: number;

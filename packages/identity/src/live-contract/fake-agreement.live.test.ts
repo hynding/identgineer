@@ -29,8 +29,18 @@ const compare = (name: string, scenario: () => Scenario) => {
 
     const steps = liveBackend === undefined ? [] : stepsOf(scenario());
     steps.forEach((step, index) => {
-      const title = step.gap === undefined ? step.name : `${step.name} (camis gap: ${step.gap})`;
-      (step.gap === undefined ? it : it.fails)(title, () => {
+      if (step.gap === undefined) {
+        it(step.name, () => {
+          expect(observed.real[index]).toEqual(observed.fake[index]);
+        });
+        return;
+      }
+      const { description, today } = step.gap;
+      it(`${step.name}: strapi-php answers as it does today (camis gap: ${description})`, () => {
+        expect(observed.real[index]).toEqual(today);
+        expect(observed.fake[index]).not.toEqual(today);
+      });
+      it.fails(`${step.name} (camis gap: ${description})`, () => {
         expect(observed.real[index]).toEqual(observed.fake[index]);
       });
     });
