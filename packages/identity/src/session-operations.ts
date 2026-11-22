@@ -1,7 +1,7 @@
 import type { ClientContext } from "./client-context.ts";
 import { sessionSegment } from "./identifiers.ts";
 import { failureOf } from "./map-error.ts";
-import type { IdentityState } from "./session.ts";
+import type { IdentityState, Tokens } from "./session.ts";
 import { readSessions, readUser } from "./shapes.ts";
 import type { IdentitySession, IdentityUser } from "./types.ts";
 
@@ -11,25 +11,47 @@ export interface SignOutOptions {
 }
 
 /**
- * Signs out here at once and tells the other tabs, then ends the server session (and its refresh
- * cookie) when the server can be reached, and waits for any sign-in still under way to settle.
+ * `signed-out`: no session is left on the server to resume. `server-unreachable`: signed out here
+ * and in the other tabs, but the server could not be reached, so a session may live on there
+ * until it expires (and a reload may resume it).
+ */
+export interface SignOutResult {
+  readonly outcome: "signed-out" | "server-unreachable";
+}
+
+/** The tokens of the server session to end: this tab's, or the shared refresh cookie's. */
+const sessionToEnd = async (
+  context: ClientContext,
+  own: Tokens | undefined,
+): Promise<Tokens | "refused" | "unreachable"> => {
+  if (own !== undefined) return own;
+  // A refresh under way may be rotating the cookie: present the cookie it leaves.
+  await context.refresher.settled();
+  // Even a tab that knew it was signed out may share a cookie another tab signed in with.
+  return context.refresher.detached(undefined);
+};
+
+/**
+ * Signs out here at once and cancels any sign-in under way, then ends the server session (and its
+ * refresh cookie), even one only the cookie holds, and only then tells the other tabs, so that no
+ * tab is told of a sign-out a reload would undo. An unreachable server is reported, not thrown.
  */
 export const signOut =
   (context: ClientContext) =>
-  async (options: SignOutOptions = {}): Promise<void> => {
-    const { session, refresher } = context;
-    const before = session.getState().status;
-    const pending = refresher.pending();
-    let tokens = session.tokens();
+  async (options: SignOutOptions = {}): Promise<SignOutResult> => {
+    const own = context.session.tokens();
+    context.cancelSignIns();
     context.signedOut("user");
+    const tokens = await sessionToEnd(context, own);
+    const server =
+      typeof tokens === "string"
+        ? tokens
+        : await context.endServerSession(tokens, options.everywhere === true);
     context.crossTab.announce("signed-out");
-    // A restore under way may be about to bring back the cookie session: take its tokens.
-    tokens ??= await pending;
-    // Not known to be signed out, so a cookie session may exist that this tab has no token for.
-    if (tokens === undefined && before !== "signed-out")
-      tokens = await refresher.detached(undefined);
-    if (tokens !== undefined) await context.endServerSession(tokens, options.everywhere === true);
     await context.settleSignIns();
+    return Object.freeze({
+      outcome: server === "unreachable" ? "server-unreachable" : "signed-out",
+    });
   };
 
 export const currentUser = (context: ClientContext) => async (): Promise<IdentityUser> => {
@@ -40,18 +62,13 @@ export const currentUser = (context: ClientContext) => async (): Promise<Identit
   return user;
 };
 
-/**
- * Resumes a session after a reload from the HttpOnly refresh cookie, if the backend set one.
- * Without it (no cookie, a backend without sessions) the client is signed out; a network failure
- * leaves the state unknown and rejects, so the caller can try again.
- */
-export const restore = (context: ClientContext) => async (): Promise<IdentityState> => {
+const restoreNow = async (context: ClientContext): Promise<IdentityState> => {
   const { session } = context;
   if (session.getState().status === "signed-in") return session.getState();
-  const generation = session.generation();
+  const ticket = context.sessionTicket();
   const outcome = await context.refresher.refresh();
   const tokens = session.tokens();
-  if (session.generation() !== generation) return session.getState();
+  if (!ticket()) return session.getState();
   if (outcome !== "refreshed" || tokens === undefined) {
     context.signedOut("no-session");
     return session.getState();
@@ -61,27 +78,45 @@ export const restore = (context: ClientContext) => async (): Promise<IdentitySta
     path: "/api/users/me",
     accessToken: tokens.accessToken,
   });
-  if (session.generation() !== generation) return session.getState();
+  if (!ticket()) return session.getState();
   if (!response.ok) {
     context.signedOut("no-session");
     return session.getState();
   }
-  await context.acceptSignIn(tokens, readUser(response.body), generation);
+  await context.acceptSignIn(tokens, readUser(response.body), ticket);
   return session.getState();
 };
 
 /**
- * Another tab signed in, so the shared refresh cookie names a new session. A signed-in tab
- * holding a cookie session refreshes (which checks the user), a signed-out tab resumes it.
+ * Resumes a session after a reload from the HttpOnly refresh cookie, if the backend set one.
+ * Without it (no cookie, a backend without sessions) the client is signed out; a network failure
+ * leaves the state unknown and rejects, so the caller can try again. It waits for a sign-in under
+ * way, which then decides the session, and does nothing after a sign-out made meanwhile.
  */
-export const reevaluate = (context: ClientContext) => async (): Promise<void> => {
-  const { session } = context;
-  const state = session.getState();
-  if (state.status === "signed-in" && session.refreshToken() === undefined) {
-    await context.refreshSession();
-  } else if (state.status === "signed-out") {
-    await restore(context)();
-  }
+export const restore = (context: ClientContext) => (): Promise<IdentityState> => {
+  const notSignedOutSince = context.signInTicket();
+  return context.exclusive(() =>
+    notSignedOutSince() ? restoreNow(context) : Promise.resolve(context.session.getState()),
+  );
+};
+
+/**
+ * Another tab signed in, so the shared refresh cookie names a new session. A signed-in tab
+ * holding a cookie session refreshes (which checks the user), a signed-out tab resumes it. Like
+ * a restore, it waits for a sign-in under way in this tab.
+ */
+export const reevaluate = (context: ClientContext) => (): Promise<void> => {
+  const notSignedOutSince = context.signInTicket();
+  return context.exclusive(async () => {
+    if (!notSignedOutSince()) return;
+    const { session } = context;
+    const state = session.getState();
+    if (state.status === "signed-in" && session.refreshToken() === undefined) {
+      await context.refreshSession();
+    } else if (state.status === "signed-out") {
+      await restoreNow(context);
+    }
+  });
 };
 
 export const listSessions =

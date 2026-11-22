@@ -33,6 +33,7 @@ import {
   revokeSession,
   signOut,
   type SignOutOptions,
+  type SignOutResult,
 } from "./session-operations.ts";
 import type { IdentityState, IdentityStateListener } from "./session.ts";
 import type { IdentitySession, IdentityUser, Profile, ProfileInput } from "./types.ts";
@@ -44,7 +45,11 @@ export interface IdentityClient {
   /** Creates an account. The result does not tell whether the address was already registered. */
   readonly register: (input: RegisterInput) => Promise<RegisterResult>;
   readonly signIn: (input: SignInInput) => Promise<IdentityUser>;
-  readonly signOut: (options?: SignOutOptions) => Promise<void>;
+  /**
+   * Signs out here, ends the server session (even one only the refresh cookie holds) and then
+   * tells the other tabs. Resolves `server-unreachable` when a server session may live on.
+   */
+  readonly signOut: (options?: SignOutOptions) => Promise<SignOutResult>;
   /** Asks for a reset email. Resolves the same whether or not the account exists. */
   readonly requestPasswordReset: (input: EmailInput) => Promise<RequestAccepted>;
   /** Sets a new password with the emailed code, and signs in. */

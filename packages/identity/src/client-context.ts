@@ -43,6 +43,12 @@ export interface IdentityClientOptions {
   readonly onOnline?: OnlineSubscription | null;
 }
 
+/** Whether the operation that took it may still change the session. */
+export type Ticket = () => boolean;
+
+/** Whether the server session a sign-out tried to end is gone, or may live on. */
+export type ServerSignOut = "ended" | "unreachable";
+
 /** What every operation of the client shares. Internal: never handed to callers. */
 export interface ClientContext {
   readonly base: URL;
@@ -72,13 +78,25 @@ export interface ClientContext {
   /** Refreshes the session, signing out if it is over; true when there are fresh tokens. */
   readonly refreshSession: () => Promise<boolean>;
   /**
-   * Adopts a sign-in's tokens if the session is still the one the operation started in;
-   * otherwise ends the server session they opened and rejects.
+   * For a sign-in: valid until a sign-out (here or in another tab) or dispose. A restore, an
+   * expiry or a user change of the session it replaces does not cancel it.
    */
-  readonly acceptSignIn: (tokens: Tokens, user: IdentityUser, generation: number) => Promise<void>;
+  readonly signInTicket: () => Ticket;
+  /** For an operation on the current session: valid while that session lasts. */
+  readonly sessionTicket: () => Ticket;
+  /**
+   * Adopts a sign-in's tokens if its ticket is still valid; otherwise ends the server session
+   * they opened and rejects.
+   */
+  readonly acceptSignIn: (tokens: Tokens, user: IdentityUser, ticket: Ticket) => Promise<void>;
   /** Ends the server session these tokens belong to (and its cookie); never rejects. */
-  readonly endServerSession: (tokens: Tokens, everywhere: boolean) => Promise<void>;
-  /** Runs sign-ins one at a time, in call order, so the last call's session is the one kept. */
+  readonly endServerSession: (tokens: Tokens, everywhere: boolean) => Promise<ServerSignOut>;
+  /** A sign-out here or in another tab: cancels every sign-in under way. */
+  readonly cancelSignIns: () => void;
+  /**
+   * Runs sign-ins and restores one at a time, in call order, so the last sign-in's session is
+   * the one kept and a restore never replaces a sign-in under way.
+   */
   readonly exclusive: <T>(task: () => Promise<T>) => Promise<T>;
   /** Settles once every sign-in started so far has finished. */
   readonly settleSignIns: () => Promise<unknown>;
@@ -118,6 +136,11 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   let disposed = false;
   let otherTabSignedIn = (): void => undefined;
   let signInChain: Promise<unknown> = Promise.resolve();
+  // Counts sign-outs and dispose only: the sign-ins under way they cancel.
+  let cancellations = 0;
+  const cancelSignIns = (): void => {
+    cancellations += 1;
+  };
   const isActive = (): boolean => !disposed;
 
   const signedOut = (reason: SignOutReason): void => {
@@ -152,7 +175,9 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   });
   const crossTab = createCrossTab(options.channelName ?? DEFAULT_CHANNEL_NAME, {
     onSignedOut: () => {
-      if (!disposed) signedOut("other-tab");
+      if (disposed) return;
+      cancelSignIns();
+      signedOut("other-tab");
     },
     onSignedIn: () => {
       if (!disposed) otherTabSignedIn();
@@ -214,7 +239,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     return withToken(request);
   };
 
-  const endServerSession = async (tokens: Tokens, everywhere: boolean): Promise<void> => {
+  const endServerSession = async (tokens: Tokens, everywhere: boolean): Promise<ServerSignOut> => {
     const logout = (accessToken: string): Promise<ApiResponse> =>
       transport.send({
         method: "POST",
@@ -226,24 +251,41 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
           ...(tokens.refreshToken === undefined ? {} : { refreshToken: tokens.refreshToken }),
         },
       });
+    // A server error may have left the session in place; any other answer means it is gone
+    // (404: a backend without sessions, whose tokens cannot be revoked).
+    const outcomeOf = (response: ApiResponse): ServerSignOut =>
+      response.status >= 500 ? "unreachable" : "ended";
     try {
       const response = await logout(tokens.accessToken);
-      if (response.status !== 401) return;
+      if (response.status !== 401) return outcomeOf(response);
       // The access token expired: the logout route needs a live one, so refresh outside the session.
       const fresh = await refresher.detached(tokens.refreshToken);
-      if (fresh !== undefined) await logout(fresh.accessToken);
+      if (fresh === "refused") return "ended";
+      if (fresh === "unreachable") return "unreachable";
+      return outcomeOf(await logout(fresh.accessToken));
     } catch {
-      // Unreachable: the local sign-out stands, and the server session runs out on its own.
+      // The local sign-out stands, and the server session runs out on its own.
+      return "unreachable";
     }
+  };
+
+  const signInTicket = (): Ticket => {
+    const at = cancellations;
+    return () => cancellations === at;
+  };
+
+  const sessionTicket = (): Ticket => {
+    const at = session.generation();
+    return () => session.generation() === at;
   };
 
   const acceptSignIn = async (
     tokens: Tokens,
     user: IdentityUser,
-    generation: number,
+    ticket: Ticket,
   ): Promise<void> => {
     if (disposed) throw new IdentityError("unknown");
-    if (session.generation() !== generation) {
+    if (!ticket()) {
       await endServerSession(tokens, false);
       throw new IdentityError("unauthorized");
     }
@@ -273,8 +315,11 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     credentialRequest,
     authorizedRequest,
     refreshSession,
+    signInTicket,
+    sessionTicket,
     acceptSignIn,
     endServerSession,
+    cancelSignIns,
     exclusive,
     settleSignIns: () => signInChain,
     signedOut,
@@ -283,6 +328,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     },
     dispose: () => {
       disposed = true;
+      cancelSignIns();
       refresher.cancel();
       crossTab.close();
       session.dispose();

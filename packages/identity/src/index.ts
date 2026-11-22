@@ -21,6 +21,6 @@ export type {
   ProviderSignInUrlOptions,
 } from "./provider-operations.ts";
 export { safeRedirectPath } from "./safe-redirect.ts";
-export type { SignOutOptions } from "./session-operations.ts";
+export type { SignOutOptions, SignOutResult } from "./session-operations.ts";
 export type { IdentityState, IdentityStateListener, SignOutReason } from "./session.ts";
 export type { IdentitySession, IdentityUser, Profile, ProfileInput } from "./types.ts";

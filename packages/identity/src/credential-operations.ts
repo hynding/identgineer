@@ -1,4 +1,4 @@
-import type { ClientContext } from "./client-context.ts";
+import type { ClientContext, Ticket } from "./client-context.ts";
 import { IdentityError } from "./identity-error.ts";
 import { errorName } from "./map-error.ts";
 import { readErrorEnvelope, readAuthResponse, type AuthResponse } from "./shapes.ts";
@@ -20,18 +20,18 @@ export const tokensOf = (context: ClientContext, auth: AuthResponse): Tokens | u
   tokensFrom(auth, { fallbackMs: context.tokenLifetimeMs, now: context.clock.now() });
 
 /**
- * Signs in from a token answer that must carry a user, and returns the user, if the session is
- * still the one (`generation`) the operation started in.
+ * Signs in from a token answer that must carry a user, and returns the user, if nothing has
+ * cancelled the operation meanwhile (`ticket`).
  */
 export const signInFrom = async (
   context: ClientContext,
   response: ApiResponse,
-  generation: number,
+  ticket: Ticket,
 ): Promise<IdentityUser> => {
   const auth = readAuthResponse(response.body);
   const tokens = tokensOf(context, auth);
   if (tokens === undefined || auth.user === undefined) throw new IdentityError("unknown");
-  await context.acceptSignIn(tokens, auth.user, generation);
+  await context.acceptSignIn(tokens, auth.user, ticket);
   return auth.user;
 };
 
@@ -52,7 +52,7 @@ export const signIn =
   (context: ClientContext) =>
   (input: SignInInput): Promise<IdentityUser> =>
     context.exclusive(async () => {
-      const generation = context.session.generation();
+      const ticket = context.signInTicket();
       const response = await context.credentialRequest({
         method: "POST",
         path: "/api/auth/local",
@@ -60,7 +60,7 @@ export const signIn =
         cookie: true,
       });
       if (!response.ok) throw signInFailure(context, response);
-      const user = await signInFrom(context, response, generation);
+      const user = await signInFrom(context, response, ticket);
       context.throttle.signInSucceeded();
       // The refresh cookie every tab shares now names this session: let the others re-check.
       context.crossTab.announce("signed-in");

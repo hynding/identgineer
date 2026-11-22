@@ -73,7 +73,7 @@ export const register =
       },
       { nameFields: true },
     );
-    const generation = context.session.generation();
+    const ticket = context.signInTicket();
     const response = await context.credentialRequest({
       method: "POST",
       path: "/api/auth/local/register",
@@ -85,7 +85,7 @@ export const register =
     if (!response.ok) throw failureOf(response, context.clock.now(), REGISTER_FIELDS);
     const auth = readAuthResponse(response.body);
     if (tokensOf(context, auth) === undefined) return CHECK_EMAIL;
-    return { outcome: "signed-in", user: await signInFrom(context, response, generation) };
+    return { outcome: "signed-in", user: await signInFrom(context, response, ticket) };
   };
 
 /**
@@ -123,7 +123,7 @@ export const resetPassword =
       },
       { nameFields: false },
     );
-    const generation = context.session.generation();
+    const ticket = context.signInTicket();
     const response = await context.credentialRequest({
       method: "POST",
       path: "/api/auth/reset-password",
@@ -135,7 +135,7 @@ export const resetPassword =
     });
     if (isRefusedSecret(response)) throw new IdentityError("invalid-credentials");
     if (!response.ok) throw failureOf(response, context.clock.now());
-    return signInFrom(context, response, generation);
+    return signInFrom(context, response, ticket);
   };
 
 /**
@@ -168,7 +168,7 @@ export const changePassword =
       { nameFields: false },
     );
     context.throttle.check();
-    const generation = context.session.generation();
+    const ticket = context.sessionTicket();
     const response = await context.authorizedRequest({
       method: "POST",
       path: "/api/auth/change-password",
@@ -184,5 +184,5 @@ export const changePassword =
     }
     if (!response.ok) throw failureOf(response, context.clock.now());
     // Every session of the account ended on the server; this answer carries the new one.
-    await signInFrom(context, response, generation);
+    await signInFrom(context, response, ticket);
   };

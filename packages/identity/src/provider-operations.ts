@@ -74,7 +74,7 @@ export const completeProviderSignIn =
     const segment = providerSegment(provider);
     const query = callbackQuery(options.search ?? "");
     return context.exclusive(async () => {
-      const generation = context.session.generation();
+      const ticket = context.signInTicket();
       const response = await context.credentialRequest({
         method: "GET",
         path: `/api/auth/${segment}/callback${query}`,
@@ -84,7 +84,7 @@ export const completeProviderSignIn =
         throw new IdentityError("invalid-credentials");
       }
       if (!response.ok) throw failureOf(response, context.clock.now());
-      const user = await signInFrom(context, response, generation);
+      const user = await signInFrom(context, response, ticket);
       context.crossTab.announce("signed-in");
       return { user, redirectTo: safeRedirectPath(options.returnTo) };
     });
