@@ -1,3 +1,4 @@
+import { emitBrandThemeCss, generateBrandTheme, parseBrandKit } from "@identgineer/brand";
 import type { Page } from "@playwright/test";
 import { SCHEMES, THEMES, applyAxes } from "./axes";
 import { contrastRatio } from "./contrast";
@@ -101,6 +102,44 @@ async function hydrated(page: Page): Promise<void> {
   );
 }
 
+/** The primary submit button's fill, border or inset ring reaches 3:1 against what is behind it. */
+async function expectVisibleBoundary(page: Page): Promise<void> {
+  const { background, border, borderWidth, ring, behind } = await page.evaluate(() => {
+    const host = document.querySelector('idg-button[type="submit"]');
+    const control = host?.shadowRoot?.querySelector("button");
+    if (!host || !control) throw new Error("missing the submit button");
+    let node: Node | null = host.parentNode;
+    let page = getComputedStyle(document.documentElement).backgroundColor;
+    while (node) {
+      if (node instanceof Element) {
+        const color = getComputedStyle(node).backgroundColor;
+        if (color !== "rgba(0, 0, 0, 0)") {
+          page = color;
+          break;
+        }
+      }
+      node = node.parentNode instanceof ShadowRoot ? node.parentNode.host : node.parentNode;
+    }
+    const style = getComputedStyle(control);
+    const inset = /(rgba?\([^)]*\))[^,]*\binset\b|\binset\b[^,]*?(rgba?\([^)]*\))/.exec(
+      style.boxShadow,
+    );
+    return {
+      background: style.backgroundColor,
+      border: style.borderTopColor,
+      borderWidth: Number.parseFloat(style.borderTopWidth),
+      ring: inset?.[1] ?? inset?.[2] ?? "",
+      behind: page,
+    };
+  });
+  const edges = [background, ...(borderWidth > 0 ? [border] : []), ...(ring === "" ? [] : [ring])];
+  const best = Math.max(...edges.map((edge) => contrastRatio(edge, behind)));
+  expect(
+    best,
+    `fill ${background}, border ${border} (${String(borderWidth)}px), ring ${ring}, on ${behind}`,
+  ).toBeGreaterThanOrEqual(3);
+}
+
 const FIXTURES = [
   ["forms", "/fixtures/forms.html"],
   ["surfaces", "/fixtures/surfaces.html"],
@@ -135,46 +174,59 @@ test.describe("primary button boundary", () => {
           await page.goto("/fixtures/forms.html");
           await hydrated(page);
           await applyAxes(page, { design, theme, scheme });
-          const { background, border, borderWidth, ring, behind } = await page.evaluate(() => {
-            const host = document.querySelector('idg-button[type="submit"]');
-            const control = host?.shadowRoot?.querySelector("button");
-            if (!host || !control) throw new Error("missing the submit button");
-            let node: Node | null = host.parentNode;
-            let page = getComputedStyle(document.documentElement).backgroundColor;
-            while (node) {
-              if (node instanceof Element) {
-                const color = getComputedStyle(node).backgroundColor;
-                if (color !== "rgba(0, 0, 0, 0)") {
-                  page = color;
-                  break;
-                }
-              }
-              node = node.parentNode instanceof ShadowRoot ? node.parentNode.host : node.parentNode;
-            }
-            const style = getComputedStyle(control);
-            const inset = /(rgba?\([^)]*\))[^,]*\binset\b|\binset\b[^,]*?(rgba?\([^)]*\))/.exec(
-              style.boxShadow,
-            );
-            return {
-              background: style.backgroundColor,
-              border: style.borderTopColor,
-              borderWidth: Number.parseFloat(style.borderTopWidth),
-              ring: inset?.[1] ?? inset?.[2] ?? "",
-              behind: page,
-            };
-          });
-          const edges = [
-            background,
-            ...(borderWidth > 0 ? [border] : []),
-            ...(ring === "" ? [] : [ring]),
-          ];
-          const best = Math.max(...edges.map((edge) => contrastRatio(edge, behind)));
-          expect(
-            best,
-            `fill ${background}, border ${border} (${String(borderWidth)}px), ring ${ring}, on ${behind}`,
-          ).toBeGreaterThanOrEqual(3);
+          await expectVisibleBoundary(page);
         });
       }
+    }
+  }
+});
+
+/** A theme generated from a one-colour kit, adopted as a constructable stylesheet under the policy. */
+async function adoptBrandTheme(page: Page, id: string, primary: string): Promise<void> {
+  const result = parseBrandKit({
+    id,
+    name: "Fixture",
+    colors: { primary },
+    typography: "system",
+    corners: "soft",
+    tone: "balanced",
+  });
+  if (!result.ok) throw new Error(JSON.stringify(result.errors));
+  const css = emitBrandThemeCss(generateBrandTheme(result.kit));
+  await page.evaluate((text) => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(text);
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+  }, css);
+}
+
+test.describe("generated brand themes with a light accent", () => {
+  for (const [id, primary] of [
+    ["sunbeam", "#facc15"],
+    ["snowfall", "#ffffff"],
+  ] as const) {
+    for (const [kind, path] of FIXTURES) {
+      test(`${kind} marks state at 3:1 or more with ${primary} in light`, async ({ page }) => {
+        await page.goto(path);
+        await hydrated(page);
+        await adoptBrandTheme(page, id, primary);
+        await applyAxes(page, { theme: id, scheme: "light" });
+        const accent = await page.evaluate(() =>
+          getComputedStyle(document.documentElement).getPropertyValue("--idg-color-accent").trim(),
+        );
+        expect(accent).toBe(primary);
+        if (kind === "forms") {
+          await applyAxes(page, { design: "soft" });
+          await expectVisibleBoundary(page);
+          await applyAxes(page, { design: "flat" });
+        }
+        for (const { name, mark, against } of await measure(page, kind)) {
+          expect(
+            contrastRatio(mark, against),
+            `${name}: ${mark} on ${against}`,
+          ).toBeGreaterThanOrEqual(3);
+        }
+      });
     }
   }
 });
