@@ -2,6 +2,7 @@ import { createAlarm } from "./alarm.ts";
 import type { Clock } from "./clock.ts";
 import { IdentityError } from "./identity-error.ts";
 import { REFRESH_LOCK, withLock, type LockManagerLike } from "./locks.ts";
+import { THROTTLED_STATUS, throttledError } from "./map-error.ts";
 import type { OnlineSubscription } from "./online.ts";
 import type { Session, Ticket, Tokens } from "./session.ts";
 import { readAuthResponse } from "./shapes.ts";
@@ -75,6 +76,8 @@ export interface RefresherOptions {
 
 const REJECTED_STATUSES = new Set([400, 401, 403]);
 const UNAVAILABLE_STATUS = 404;
+/** The answers that clearly say there is no session to refresh; anything else is unclear. */
+const NO_SESSION_STATUSES = new Set([...REJECTED_STATUSES, UNAVAILABLE_STATUS]);
 
 /**
  * A refresh token held in memory (the backend returned it in a body) is sent in the body without
@@ -92,6 +95,7 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
   let shortStreak = 0;
   let unreachableStreak = 0;
   let stopListening = (): void => undefined;
+  let lastAttemptAt = Number.NEGATIVE_INFINITY;
 
   const tokensOf = (body: unknown): Tokens => {
     const tokens = tokensFrom(readAuthResponse(body), {
@@ -126,6 +130,7 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
     const response = await sendRefresh(heldToken);
     if (response.status === UNAVAILABLE_STATUS) return { outcome: "unavailable" };
     if (REJECTED_STATUSES.has(response.status)) return { outcome: "rejected" };
+    if (response.status === THROTTLED_STATUS) throw throttledError(response, clock.now());
     if (!response.ok) throw new IdentityError("unknown");
     const tokens = tokensOf(response.body);
     // A cookie is shared by every tab: another tab may have signed in as someone else since.
@@ -146,10 +151,12 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
       try {
         return tokensOf(response.body);
       } catch {
-        return "refused";
+        // A success that carries no tokens says nothing about whether a session exists.
+        return "unreachable";
       }
     }
-    return response.status >= 500 ? "unreachable" : "refused";
+    // Only a clear refusal means there is no session; a throttled or failed lookup may hide one.
+    return NO_SESSION_STATUSES.has(response.status) ? "refused" : "unreachable";
   };
 
   const refresh = (): Promise<RefreshResult> => {
@@ -175,12 +182,13 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
   /** Every completion, success or failure, first checks that its session is still current. */
   const runScheduled = (ticket: Ticket): void => {
     if (!session.valid(ticket)) return;
+    lastAttemptAt = clock.now();
     refresh().then(
       (result) => {
         if (session.valid(ticket)) options.applyScheduled(ticket, result);
       },
-      () => {
-        if (session.valid(ticket)) retryLater(ticket);
+      (error: unknown) => {
+        if (session.valid(ticket)) retryLater(ticket, error);
       },
     );
   };
@@ -190,18 +198,31 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
    * well be valid, so the session stays, past even a known expiry (the expired token is no longer
    * sent), and the refresh is tried again with a doubling wait, or at once when back online.
    */
-  const retryLater = (ticket: Ticket): void => {
+  const retryLater = (ticket: Ticket, error: unknown): void => {
     cancel();
-    const wait = Math.min(MAX_REFRESH_BACKOFF_MS, REFRESH_RETRY_MS * 2 ** unreachableStreak);
+    const backoff = Math.min(MAX_REFRESH_BACKOFF_MS, REFRESH_RETRY_MS * 2 ** unreachableStreak);
     unreachableStreak += 1;
-    alarm.set(clock.now() + wait, () => {
+    // A throttled refresh waits at least as long as the server asked.
+    const serverWait =
+      error instanceof IdentityError && error.code === "throttled"
+        ? (error.retryAfterSeconds ?? 0) * 1000
+        : 0;
+    alarm.set(clock.now() + Math.max(backoff, serverWait), () => {
       runScheduled(ticket);
     });
-    if (options.onOnline === null) return;
+    if (options.onOnline === null || serverWait > 0) return;
     const stop = options.onOnline(() => {
       stop();
-      alarm.clear();
-      runScheduled(ticket);
+      // An online event that keeps firing retries no more often than the refresh floor.
+      const due = lastAttemptAt + MIN_REFRESH_DELAY_MS;
+      if (due <= clock.now()) {
+        alarm.clear();
+        runScheduled(ticket);
+      } else {
+        alarm.set(due, () => {
+          runScheduled(ticket);
+        });
+      }
     });
     stopListening = stop;
   };

@@ -269,7 +269,7 @@ describe("scheduled refresh", () => {
     expect(refreshTimes).toEqual([570, 600, 660, 780, 1_020, 1_320, 1_620]);
   });
 
-  it("refreshes at once when the browser comes back online", async () => {
+  it("refreshes when the browser comes back online, without waiting for the next retry", async () => {
     let online = (): void => undefined;
     const onOnline = (listener: () => void): (() => void) => {
       online = listener;
@@ -286,7 +286,7 @@ describe("scheduled refresh", () => {
     api.respondNext("POST", "/api/auth/refresh", "network-error");
     clock.advance(570_000);
     await settle();
-    clock.advance(30_000);
+    clock.advance(40_000);
     await settle();
     const sent = api.requests.length;
     online();
