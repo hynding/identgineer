@@ -84,6 +84,23 @@ describe("createTransport", () => {
     expect(headersOf(calls[0]).has("content-type")).toBe(false);
   });
 
+  it("refuses redirects by default", async () => {
+    const { calls, transport } = setup(() => json({}));
+    await transport.send(POST_BODY);
+    expect(calls[0]?.init.redirect).toBe("error");
+  });
+
+  it("never lets a bearer request follow a redirect", async () => {
+    const { calls, transport } = setup(() => json({}));
+    await transport.send({
+      method: "GET",
+      path: "/api/users/me",
+      accessToken: "t",
+      redirect: "follow",
+    });
+    expect(calls[0]?.init.redirect).toBe("error");
+  });
+
   it("passes the redirect mode through", async () => {
     const { calls, transport } = setup(
       () => new Response(null, { status: 302, headers: { Location: "/" } }),
