@@ -1157,7 +1157,8 @@ cancelable; by default the element then calls `location.assign(url)`). Slots `re
 ### `idg-register`
 
 Username, email and a new password with a reveal toggle and a byte count against bcrypt's 72-byte
-limit (part `byte-count`; "73 of 72 bytes used" marks the field). Props `client`, `labels`. Event
+limit (part `byte-count`; "73 of 72 bytes used" marks the field, each number in a `<bdi>`, and the
+`passwordBytes` label is one sentence with `{used}` and `{max}`, so a translation sets their order). Props `client`, `labels`. Event
 `idgRegistered`: `{ outcome: "check-email" }` (a neutral confirmation, the same for an address
 already taken) or `{ outcome: "signed-in", user }`. The confirmation (part `confirmation`) replaces
 the form and takes focus. Slot `sign-in`; parts `form`, `error`, `throttle`, `byte-count`,
@@ -1179,7 +1180,8 @@ The signed-in owner's page, in three sections: the profile (`displayName`, `bio`
 `idg-avatar` from `avatarSrc`), a password change (current, new and confirmation, with a read-only
 `username` idg-input laid out out of sight and out of the tab order, so a manager can tell the
 account) and the sessions, each with "Sign out",
-plus "Sign out everywhere". Props `client`, `avatarSrc`, `labels`, `clock`. Events
+plus "Sign out everywhere". Props `client`, `avatarSrc`, `headingLevel` (`heading-level`, 2 to 6,
+default 2, for the three section headings), `labels`, `clock`. Events
 `idgProfileSaved` (`{ profile }`), `idgPasswordChanged`, `idgSessionRevoked` (`{ id }`),
 `idgSignedOut` (`{ outcome, everywhere: true }`). Parts `details`, `details-saved`, `password`, `password-saved`,
 `byte-count`, `sessions`, `session`, `error`, `throttle`, `outcome`, `signed-out`. It reloads when

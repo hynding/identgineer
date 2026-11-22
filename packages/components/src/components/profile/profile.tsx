@@ -9,12 +9,16 @@ import { mergeLabels } from "../../identity/labels";
 import { restoreOnce } from "../../identity/restore-once";
 import { StateBinding } from "../../identity/state-binding";
 import { systemTimers, type CountdownClock } from "../../identity/throttle-countdown";
+import { headingLevel } from "../../utils/heading-level";
 import { DetailsSection } from "./profile-details";
 import { PROFILE_LABELS, type ProfileLabels } from "./profile-labels";
 import { PasswordSection } from "./profile-password";
 import type { SectionHost } from "./profile-section";
 import { SessionsSection } from "./profile-sessions";
 import type { ProfileSavedDetail, SessionRevokedDetail } from "./profile-types";
+
+/** The sections sit below the page's own title, so they start at `h2`. */
+const MIN_HEADING_LEVEL = 2;
 
 /**
  * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
@@ -47,6 +51,12 @@ export class IdgProfile {
 
   /** A picture of the owner for the avatar, such as the one their profile links to. */
   @Prop() avatarSrc?: string;
+
+  /**
+   * The level of the section headings, 2 to 6, to fit the page's outline: below a page title
+   * (`h1`), 2.
+   */
+  @Prop({ attribute: "heading-level" }) headingLevel = MIN_HEADING_LEVEL;
 
   /** The text, merged over the English defaults. Assign a new object to change it. */
   @Prop() labels?: Partial<ProfileLabels>;
@@ -152,26 +162,27 @@ export class IdgProfile {
 
   private renderSignedIn(user: IdentityUserView, labels: ProfileLabels) {
     const name = this.details.profile?.displayName ?? user.username;
+    const Heading = `h${String(Math.max(MIN_HEADING_LEVEL, headingLevel(this.headingLevel, MIN_HEADING_LEVEL)))}`;
     return [
       <section class="section" aria-labelledby="details-heading">
         <div class="owner">
           <idg-avatar name={name} src={this.avatarSrc} alt="" size="lg" />
-          <h2 class="heading" id="details-heading">
+          <Heading class="heading" id="details-heading">
             {labels.detailsHeading}
-          </h2>
+          </Heading>
         </div>
         {this.details.render(user, labels)}
       </section>,
       <section class="section" aria-labelledby="password-heading">
-        <h2 class="heading" id="password-heading">
+        <Heading class="heading" id="password-heading">
           {labels.passwordHeading}
-        </h2>
+        </Heading>
         {this.password.render(user, labels)}
       </section>,
       <section class="section" aria-labelledby="sessions-heading">
-        <h2 class="heading" id="sessions-heading">
+        <Heading class="heading" id="sessions-heading">
           {labels.sessionsHeading}
-        </h2>
+        </Heading>
         {this.sessions.render(labels, this.locale())}
       </section>,
     ];

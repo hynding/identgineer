@@ -1,5 +1,5 @@
 import { h, type FunctionalComponent } from "@stencil/core";
-import { fillTemplate } from "./labels";
+import { templateParts } from "./labels";
 import { MAX_PASSWORD_BYTES } from "./password-bytes";
 
 /**
@@ -11,6 +11,9 @@ export const ByteCountView: FunctionalComponent<{
   readonly template: string;
 }> = ({ used, template }) => (
   <p class={{ note: true, "byte-count": true, over: used > MAX_PASSWORD_BYTES }} part="byte-count">
-    {fillTemplate(template, { used: String(used), max: String(MAX_PASSWORD_BYTES) })}
+    {templateParts(template, { used: String(used), max: String(MAX_PASSWORD_BYTES) }).map((part) =>
+      // Each number in its own isolate, so a right-to-left sentence does not carry it off.
+      typeof part === "string" ? part : <bdi>{part.value}</bdi>,
+    )}
   </p>
 );

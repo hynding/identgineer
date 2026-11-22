@@ -99,12 +99,13 @@ export class SessionsSection {
     this.host.changed();
     try {
       const { outcome } = await client.signOut({ everywhere: true });
+      if (client !== this.host.client()) return;
       if (outcome === "server-unreachable") this.outcome = outcome;
       this.events.signedOut({ outcome, everywhere: true });
     } catch {
-      this.outcome = "error";
+      if (client === this.host.client()) this.outcome = "error";
     } finally {
-      this.busy = false;
+      if (client === this.host.client()) this.busy = false;
       this.host.changed();
     }
   };
