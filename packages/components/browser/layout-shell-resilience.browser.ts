@@ -83,20 +83,45 @@ const TEXT_SIZES = [
   { label: "100% with wide text", fontSize: "100%", wide: true },
 ] as const;
 
+/** Whether DejaVu Sans is installed here: a string is wider in it than in the fallback face. */
+function hasWideFont(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const widthIn = (family: string) => {
+      const context = document.createElement("canvas").getContext("2d");
+      if (!context) return 0;
+      context.font = `32px ${family}`;
+      return context.measureText("Identgineer Get started Overview").width;
+    };
+    return widthIn('"DejaVu Sans", sans-serif') !== widthIn('"No Such Font", sans-serif');
+  });
+}
+
 async function setTextSize(page: Page, size: (typeof TEXT_SIZES)[number]): Promise<void> {
-  await page.evaluate(({ fontSize, wide }) => {
-    document.documentElement.style.fontSize = fontSize;
-    const state = window as unknown as { __wide?: CSSStyleSheet };
-    state.__wide ??= new CSSStyleSheet();
-    state.__wide.replaceSync(
-      wide
-        ? ':root:root:root:root { --idg-font-family-body: "DejaVu Sans", sans-serif !important; --idg-font-family-display: "DejaVu Sans", sans-serif !important; }'
-        : "",
-    );
-    if (!document.adoptedStyleSheets.includes(state.__wide)) {
-      document.adoptedStyleSheets = [...document.adoptedStyleSheets, state.__wide];
+  // Without the wide face the variant would be a silent copy of the 100% run, so the text is
+  // widened by about 15% with letter spacing instead, which does not depend on any font.
+  const face = size.wide ? await hasWideFont(page) : true;
+  if (size.wide) {
+    const note = face ? "DejaVu Sans" : "letter-spacing (DejaVu Sans is not installed)";
+    const notes = test.info().annotations;
+    if (!notes.some((annotation) => annotation.type === "wide-text")) {
+      notes.push({ type: "wide-text", description: note });
     }
-  }, size);
+  }
+  await page.evaluate(
+    ({ fontSize, wide, face: installed }) => {
+      document.documentElement.style.fontSize = fontSize;
+      const state = window as unknown as { __wide?: CSSStyleSheet };
+      state.__wide ??= new CSSStyleSheet();
+      const widening = installed
+        ? '--idg-font-family-body: "DejaVu Sans", sans-serif !important; --idg-font-family-display: "DejaVu Sans", sans-serif !important;'
+        : "--idg-font-body-letter-spacing: 0.08em !important; --idg-font-display-letter-spacing: 0.08em !important;";
+      state.__wide.replaceSync(wide ? `:root:root:root:root { ${widening} }` : "");
+      if (!document.adoptedStyleSheets.includes(state.__wide)) {
+        document.adoptedStyleSheets = [...document.adoptedStyleSheets, state.__wide];
+      }
+    },
+    { fontSize: size.fontSize, wide: size.wide, face },
+  );
 }
 
 function overlap(a: Rect, b: Rect): boolean {
@@ -736,6 +761,8 @@ test.describe("the menu button does not move, in any UX mode, at larger text or 
     ["top-bar", 768],
     ["bento", 768],
     ["split-hero", 768],
+    ["top-bar", 1024],
+    ["bento", 1024],
     ["split-hero", 1024],
     ["split-hero", 1280],
   ];
@@ -786,7 +813,8 @@ test.describe("the menu button does not move, in any UX mode, at larger text or 
     });
     // Where the actions wrap onto two rows, or sit on a row of their own, the button is aligned with
     // the brand instead.
-    if (closed.sameRow && closed.actionsHeight <= closed.toggleHeight + 8) {
+    const compared = closed.sameRow && closed.actionsHeight <= closed.toggleHeight + 8;
+    if (compared) {
       expect(
         Math.abs(closed.toggle - closed.actions),
         "toggle centred on the actions",
@@ -811,7 +839,24 @@ test.describe("the menu button does not move, in any UX mode, at larger text or 
     for (const key of ["x", "y", "width", "height"] as const) {
       expect(after?.[key], key).toBeCloseTo(before?.[key] ?? Number.NaN, 0);
     }
+    return compared;
   };
+
+  // The comparison with the actions only applies where they share the button's row, so each layout
+  // must show it ran at least once, or a change of arrangement could leave it checking nothing.
+  for (const layout of new Set(CASES.map(([name]) => name))) {
+    test(`${layout}: the button is compared with the actions beside it in at least one case`, async ({
+      page,
+    }) => {
+      let ran = 0;
+      for (const [name, width] of CASES) {
+        if (name !== layout) continue;
+        await openShell(page, { width, layout });
+        if (await opened(page, layout, width)) ran += 1;
+      }
+      expect(ran, `${layout}: cases that compared the button with its actions`).toBeGreaterThan(0);
+    });
+  }
 
   for (const [layout, width] of CASES) {
     for (const ux of UX_MODES) {
@@ -1285,6 +1330,71 @@ test.describe("nothing in the chrome covers or crowds anything else in it", () =
           }
         }
       }
+    });
+  }
+});
+
+test.describe("the arrangement follows the width however the page has read the styles", () => {
+  /** Reads what a scan or a tool reads: the computed style of slotted items and of the parts. */
+  const readStyles = (page: Page) =>
+    page.locator("#shell").evaluate((host) => {
+      const read: string[] = [];
+      for (const id of ["nav-first", "nav-last", "brand-link", "action-last"]) {
+        const element = document.getElementById(id);
+        if (element) read.push(getComputedStyle(element).color);
+      }
+      for (const part of host.shadowRoot?.querySelectorAll("[part]") ?? []) {
+        read.push(getComputedStyle(part).flexDirection);
+      }
+      return read.length;
+    });
+
+  /** The navigation items' boxes, and whether the last can be reached by the pointer. */
+  const navigationState = (page: Page) =>
+    page.evaluate(() => {
+      const first = document.getElementById("nav-first")?.getBoundingClientRect();
+      const lastElement = document.getElementById("nav-last");
+      const last = lastElement?.getBoundingClientRect();
+      if (!first || !last || !lastElement) throw new Error("missing");
+      const hit = document.elementFromPoint(last.left + last.width / 2, last.top + last.height / 2);
+      return {
+        firstTop: first.top,
+        lastTop: last.top,
+        sameRow:
+          Math.abs(first.top + first.height / 2 - (last.top + last.height / 2)) < first.height / 2,
+        hittable: hit === lastElement,
+      };
+    });
+
+  for (const layout of ["top-bar", "bento", "magazine", "centered"]) {
+    test(`${layout}: styles read at 600px do not keep the inline navigation a column at 1400px`, async ({
+      page,
+    }) => {
+      await openShell(page, { width: 600, layout });
+      await readStyles(page);
+      await page.setViewportSize({ width: 1400, height: 900 });
+      await frames(page, 3);
+      const state = await navigationState(page);
+      expect(state.sameRow, "the navigation items share a row").toBe(true);
+      expect(state.hittable, "the last item can be hit").toBe(true);
+    });
+
+    test(`${layout}: styles read at 1400px do not keep the navigation inline at 600px`, async ({
+      page,
+    }) => {
+      await openShell(page, { width: 1400, layout });
+      await readStyles(page);
+      await page.setViewportSize({ width: 600, height: 900 });
+      await frames(page, 3);
+      const toggle = page.locator("#shell").locator('[part="toggle"]');
+      await expect(toggle).toBeVisible();
+      await toggle.click();
+      await expect
+        .poll(() => page.locator("#shell").evaluate((host) => host.hasAttribute("navigation-open")))
+        .toBe(true);
+      await frames(page, 3);
+      const state = await navigationState(page);
+      expect(state.lastTop, "the items stack").toBeGreaterThan(state.firstTop + 10);
     });
   }
 });
