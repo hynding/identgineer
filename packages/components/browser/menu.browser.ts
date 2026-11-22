@@ -296,3 +296,57 @@ test.describe("idg-menu accessibility while open", () => {
     });
   }
 });
+
+test.describe("idg-menu with items forwarded through a slot", () => {
+  const forwardedSurface = (page: Page) =>
+    page.locator("#forward-menu").locator('idg-menu [part="surface"]');
+
+  test("arrows reach the items another component forwards, groups included, and Enter chooses one", async ({
+    page,
+  }) => {
+    await openOverlays(page);
+    await page.evaluate(() => {
+      const host = document.getElementById("forward-menu");
+      const chosen: string[] = [];
+      Object.assign(window, { chosen });
+      host?.addEventListener("idgSelect", (event) => {
+        chosen.push((event as CustomEvent<{ value: string }>).detail.value);
+      });
+    });
+    await page.locator("#forward-menu-trigger").focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(forwardedSurface(page)).toBeVisible();
+    await expect.poll(() => focusedItem(page)).toBe("Own item");
+    await page.keyboard.press("ArrowDown");
+    await expect.poll(() => focusedItem(page)).toBe("Profile");
+    await page.keyboard.press("ArrowDown");
+    await expect.poll(() => focusedItem(page)).toBe("Docs");
+    await page.keyboard.press("ArrowDown");
+    await expect.poll(() => focusedItem(page)).toBe("Own item");
+    await page.keyboard.press("End");
+    await expect.poll(() => focusedItem(page)).toBe("Docs");
+    await page.keyboard.press("Enter");
+    await expect(forwardedSurface(page)).toBeHidden();
+    expect(await page.evaluate(() => (window as unknown as { chosen: string[] }).chosen)).toEqual([
+      "docs",
+    ]);
+    await expect.poll(() => focusedId(page)).toBe("forward-menu-trigger");
+  });
+
+  test("a click on a forwarded item chooses it", async ({ page }) => {
+    await openOverlays(page);
+    await page.locator("#forward-menu-trigger").click();
+    await expect(forwardedSurface(page)).toBeVisible();
+    const chosen = page.evaluate(
+      () =>
+        new Promise<string>((resolve) => {
+          document.getElementById("forward-menu")?.addEventListener("idgSelect", (event) => {
+            resolve((event as CustomEvent<{ value: string }>).detail.value);
+          });
+        }),
+    );
+    await page.locator("#forward-menu idg-menu-item[value=profile]").click();
+    expect(await chosen).toBe("profile");
+    await expect(forwardedSurface(page)).toBeHidden();
+  });
+});
