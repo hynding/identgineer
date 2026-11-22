@@ -46,8 +46,11 @@ throws a `TypeError` at creation, as an invalid `baseUrl` does.
 
 ## API
 
-Every method rejects with an `IdentityError` only. After `dispose()` every method rejects with
-code `unknown` without sending anything, and `providerSignInUrl` throws it.
+Every method rejects with an `IdentityError` only (`providerSignInUrl` throws one). Inputs are
+checked by type as well as by value, so a JavaScript caller passing `null`, a number or an object
+where a string or options object belongs gets `validation`, with nothing sent and no failed
+attempt counted. After `dispose()` every method rejects with code `unknown` without sending
+anything, and `providerSignInUrl` throws it.
 
 | Method                                                                | Request                                                    | Resolves to                                           |
 | --------------------------------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------- |
@@ -94,8 +97,12 @@ session it opened on the server is ended. A listener hears every transition in o
 state of that transition; a sign-in rejects (`unauthorized`) if a listener signed out on hearing of
 it. `dispose()` ends nothing on the server. It announces nothing to other tabs, except that a
 sign-out still under way (and not superseded) tells them at once, since the page will not get to
-tell them later; that sign-out then looks up no cookie session and logs out none it found, since
-the tab can no longer hear of a newer sign-in, and resolves `server-unreachable`.
+tell them later. Such a sign-out finishes the logout of its own session if that was sent, but from
+then on the tab can no longer hear of a newer sign-in, so it sends no cookie lookup, and no logout
+of a session a lookup found, that had not been sent by the time of `dispose()`. It resolves
+`server-unreachable` when that skipped a lookup or such a logout (it cannot say what is left); a
+sign-out whose server work was already past those points, or that has nothing to look up (a
+backend without sessions, or an own logout that already failed), resolves as it would have.
 
 `saveProfile` takes `displayName` (required, up to 80 characters), `bio` (up to 500, or `null`),
 `locale` (BCP 47), `timezone` (IANA) and `marketingOptIn`, checked against the limits in
@@ -172,12 +179,16 @@ the refreshed token, but only if the same session is still current: a request se
 sign-out or a sign-in as someone else is never retried with the new user's token (`authorizedFetch`
 returns the 401, other methods reject with `unauthorized`).
 
-The refresh cookie is shared by every tab. A cookie refresh runs under the Web Lock
-`identgineer-identity-refresh` (where `locks` is available), so tabs do not present the same
-single-use refresh token at once, and a cookie refresh refused with 401 is retried once, in case
-another tab rotated the cookie in between. When the lock manager fails (a sandboxed frame's
-`SecurityError`) or does not grant the lock within `requestTimeoutMs`, the refresh runs without
-it, relying on that retry; the lock manager's own error never reaches the caller. After every cookie refresh the client reads
+The refresh cookie is shared by every tab, and a request reads it when sent and sets it when
+answered: two cookie requests in flight at once would let the older answer overwrite the newer
+cookie. So every request that presents or sets it (sign-in, the provider callback, a cookie
+refresh, a logout) runs under the Web Lock `identgineer-identity-cookie` (where `locks` is
+available), and the page's tabs send them one at a time. A sign-out holds the lock once across
+its logout, cookie lookup and the logout of what that lookup found; the lock is never held while
+waiting for the operation queue. A cookie refresh refused with 401 is retried once, in case
+another tab rotated the cookie in between without the lock. When the lock manager fails (a
+sandboxed frame's `SecurityError`) or does not grant the lock within `requestTimeoutMs`, the
+request runs without it; the lock manager's own error never reaches the caller. After every cookie refresh the client reads
 `GET /api/users/me` with the new token: if the cookie now belongs to another user (another tab
 signed in as them), this tab drops the tokens and signs out with `reason: "user-changed"`.
 
@@ -218,28 +229,53 @@ sign-out ends what it set out to end and tells the other tabs, and only then doe
 
 Across tabs the later action wins. Another tab's sign-in this tab hears of after the sign-out began
 (by its `signed-in` notice, which a tab sends only once it holds the new session) stands, unless
-that tab signs out again before this sign-out finishes. The sign-out then logs out no session it
-finds in the cookie (it skips the lookup, or the logout after it, once it knows of the newer
-sign-in), tells no tab of a sign-out, and resolves `{ outcome: "superseded" }`; the queued re-check
-brings this tab to the newer session. Without such a sign-in (or once it was followed by that tab's
-`signed-out` notice) it looks up and logs out the cookie's session, and checks once more for a
-notice before telling the other tabs.
+that tab signed out again by the time this sign-out finishes. The sign-out then logs out no
+session it finds in the cookie (it skips the lookup, or the logout after it, once it knows of the
+newer sign-in), tells no tab of a sign-out, and resolves `{ outcome: "superseded" }`; the queued
+re-check brings this tab to the newer session. Three things qualify that:
 
-Two windows remain, and the client cannot close them:
+- A notice heard before the logout of a session the lookup found was answered may be about that
+  very session, which the sign-out has then ended: it resolves `signed-out` and tells the other
+  tabs. Only a notice heard after that supersedes it.
+- A notice heard while the lookup was in flight means the lookup's answer may have set the cookie
+  back to the session being signed out of (possible only without the lock): the sign-out still
+  resolves `superseded`, but the re-check is dropped, so the tab stays signed out and never
+  resumes the session it signed out of.
+- When part of its server work could not be confirmed, it resolves `server-unreachable` instead,
+  stays signed out (no re-check) and tells no tab, since the newer sign-in stands.
 
-- Another tab's sign-in whose notice has not arrived yet looks like nothing this sign-out need
-  spare. If its answer landed just before this tab's cookie lookup, its session is logged out; if
-  it landed after the lookup, its session is left in place and the sign-out resolves `signed-out`
-  though a reload could resume that session. Either way that tab is then signed out by this tab's
-  notice. The notice travels only after the sign-in's answer, so nothing on the client can order
-  the two.
-- A sign-in whose answer lands while this tab's logout is in flight can lose its new cookie: the
-  backend decides to clear the cookie from the one the logout request carried (the old session's),
-  and answers with a `Set-Cookie` that expires the cookie by name, which the browser applies to
-  whatever cookie of that name it holds by then, the new sign-in's. The other tab stays signed in
-  until its next refresh is refused. The cause is in the backend: camis' strapi-php logout clears
-  `strapi_up_refresh` by name; a cookie scoped per session, or leaving the cookie to be cleared by
-  the next refused refresh, would close it.
+If the other tab signed out again by the time the sign-out finishes, it resolves `signed-out` and
+tells the other tabs (that tab's own sign-out ended its session). Without such a sign-in it looks
+up and logs out the cookie's session, and checks once more for a notice before telling the other
+tabs.
+
+What remains, by whether the cookie lock is held:
+
+- **With Web Locks** (granted within `requestTimeoutMs`), no tab's cookie request is in flight
+  during another's, so no answer overwrites a newer cookie, and a logout never clears the cookie of
+  a sign-in that landed while it was in flight. Two windows remain, both around another tab's
+  notice, which travels only after the sign-in's answer:
+  - a sign-in in another tab that finished just before this sign-out's cookie requests began, its
+    notice not yet here, is logged out by them; that tab is then signed out by this tab's notice;
+  - a sign-in in another tab that waited for this sign-out's cookie requests lands just after them.
+    If this tab's notice reaches it first, the sign-in is cancelled, rejects `unauthorized`, and its
+    session is ended; if it was already signed in, it is signed out locally while its session lives
+    on (a reload resumes it); if its notice reaches this tab first, this sign-out resolves
+    `superseded` and joins that session.
+- **Without Web Locks** (older browsers, sandboxed frames, a lock not granted in time), besides
+  those:
+  - a cookie request's answer can overwrite a newer cookie: another tab's refresh in flight when
+    this tab signs in can put the older session back, and this tab is later signed out with
+    `user-changed`; a sign-out's lookup in flight can do the same, and then, as above, the sign-out
+    stays signed out while the old session may live on in the cookie;
+  - another tab's sign-in that lands after the lookup, its notice not yet here, is left in place
+    while the sign-out resolves `signed-out`, and that tab is signed out by this tab's notice;
+  - a sign-in whose answer lands while this tab's logout is in flight can lose its new cookie: the
+    backend decides to clear the cookie from the one the logout request carried (the old
+    session's) and answers with a `Set-Cookie` that expires the cookie by name, which the browser
+    applies to whatever cookie of that name it holds by then. That tab stays signed in until its
+    next refresh is refused. The cause is in the backend (camis' strapi-php logout clears
+    `strapi_up_refresh` by name); the lock closes it where Web Locks exist.
 
 To find the sessions to end: with a token of its own, the tab logs that session out; the logout clears the refresh cookie only when the cookie named that
 session, and the cookie may name another one (another tab's sign-in this tab never heard of). Page
@@ -329,8 +365,9 @@ sign in from the token answer); see `src/passkeys.ts`.
 - Profile avatars are not handled: upload and link them through `authorizedFetch`.
 - `restore()` on a network failure leaves the state `unknown` and rejects, so the caller can retry.
 - Each cookie refresh costs one extra `GET /api/users/me` (the user check under Refresh).
-- Without Web Locks (older browsers, sandboxed frames) two tabs can still present the same refresh
-  cookie at once; the one retry covers the usual case.
+- Without Web Locks (older browsers, sandboxed frames) cookie requests from several tabs can be in
+  flight at once: the one refresh retry covers the usual case, and the sign-out windows above
+  widen.
 - `signOut` costs one refresh request after the logout (or instead of it, in a tab without a
   token), to find any session the cookie still names; refreshes count against the CMS's refresh
   throttle (`CAMIS_REFRESH_THROTTLE_PER_MINUTE`, 60 a minute by default).
@@ -340,7 +377,10 @@ sign in from the token answer); see `src/passkeys.ts`.
 `@identgineer/identity/testing` exports `createFakeIdentityApi(options)`, an in-memory stand-in for
 the endpoints above with strapi-php's behaviour (error envelope, guest routes refusing a bearer
 token, refresh and legacy modes, cookie mode, a browser-like cookie jar read when each request is
-sent, the logout ending the bearer token's own session (a token naming no session drops only
+sent, validation as strict as camis 19b2b1c (a field that is not a string answers a 400
+`ValidationError`; sign-in, recovery and confirmation bodies are checked before their throttle
+turn, and an identifier over 255 characters is refused before any turn; registration caps username
+and email at 255 characters; a password is measured in bytes, at most 72), the logout ending the bearer token's own session (a token naming no session drops only
 itself) and clearing the cookie only when the cookie's session ended or was already unusable, a
 throttle answering `RateLimitError` per group of routes: sign-in, recovery and confirmation counted
 per address and account named under a per-address ceiling (`throttlePerMinute`,
