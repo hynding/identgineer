@@ -194,11 +194,11 @@
         "$type": "gradient",
         "$value": [
           {
-            "color": "#aa8600",
+            "color": "#f4c430",
             "position": 0
           },
           {
-            "color": "#a9de67",
+            "color": "#bfd954",
             "position": 1
           }
         ]
@@ -311,7 +311,7 @@
             "position": 0
           },
           {
-            "color": "#a9de67",
+            "color": "#bfd954",
             "position": 1
           }
         ]

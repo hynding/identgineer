@@ -3,7 +3,7 @@ import { CONTRAST_PAIRS } from "@identgineer/tokens/theme-pipeline";
 import { adjustLightness } from "./adjust-lightness.ts";
 import type { BrandKit } from "./brand-kit.ts";
 import { contrastBetween } from "./contrast.ts";
-import { fromOklch, toOklab, toOklch, type Oklch } from "./oklch.ts";
+import { fromOklch, mapToSrgbGamut, toOklab, toOklch, type Oklch } from "./oklch.ts";
 import { formatHexColor, type Rgb } from "./srgb.ts";
 import { TONE_SETTINGS, type ToneSettings } from "./tone-settings.ts";
 
@@ -97,6 +97,9 @@ const NEUTRAL_TINT = {
   light: { bg: 0.6, "bg-subtle": 1, surface: 0.25, "surface-raised": 0.25, border: 1.2 },
   dark: { bg: 1, "bg-subtle": 1, surface: 1, "surface-raised": 1, border: 1.2 },
 } as const;
+
+/** Below this chroma a colour's hue does not show: its gradient turns in lightness instead. */
+const GREY_CHROMA = 0.02;
 
 /** Below this chroma a colour is treated as grey: its tints stay grey too. */
 const FULL_CHROMA = 0.05;
@@ -387,10 +390,34 @@ function notes(builder: Builder): BrandNote[] {
   });
 }
 
-function gradient(builder: Builder, kit: BrandKit): readonly [Rgb, Rgb] {
-  if (kit.colors.secondary) return [builder.color("accent"), kit.colors.secondary];
-  const primary = toOklch(kit.colors.primary);
-  return [builder.color("accent"), fromOklch({ ...primary, hue: (primary.hue + 40) % 360 })];
+// Analogous turns tried for the gradient's far end, nearest first.
+const GRADIENT_TURNS = [30, -30, 40, -40] as const;
+const GREY_STEP = 0.12;
+
+/**
+ * Where the brand gradient ends without a secondary: the analogous hue (turned 30 or 40 degrees,
+ * either way) that keeps the most chroma at the primary's lightness once mapped into sRGB, so it
+ * never lands on a hue the gamut can only show muddy there. A grey turns in lightness instead,
+ * towards the middle.
+ */
+function gradientPartner(primary: Rgb): Rgb {
+  const start = toOklch(primary);
+  if (start.chroma < GREY_CHROMA) {
+    const step = start.lightness > 0.5 ? -GREY_STEP : GREY_STEP;
+    return fromOklch({ ...start, lightness: start.lightness + step });
+  }
+  const candidates = GRADIENT_TURNS.map((turn) =>
+    mapToSrgbGamut({ ...start, hue: (start.hue + turn + 360) % 360 }),
+  );
+  const best = candidates.reduce((most, candidate) =>
+    candidate.chroma > most.chroma + 1e-9 ? candidate : most,
+  );
+  return fromOklch(best);
+}
+
+/** The primary itself, as the brand gave it, to the secondary or an analogous partner. */
+function gradient(kit: BrandKit): readonly [Rgb, Rgb] {
+  return [kit.colors.primary, kit.colors.secondary ?? gradientPartner(kit.colors.primary)];
 }
 
 /** Every theme-owned colour for one scheme, derived from the kit; see the README for the method. */
@@ -404,7 +431,7 @@ export function generatePalette(kit: BrandKit, scheme: Scheme): SchemePalette {
   onSubtle(builder, kit);
   return {
     colors: builder.colors,
-    gradient: gradient(builder, kit),
+    gradient: gradient(kit),
     adjustments: builder.adjustments,
     notes: notes(builder),
   };

@@ -79,7 +79,7 @@
     --idg-color-on-info: #0d1723;
     --idg-color-info-subtle: #182e4b;
     --idg-color-on-info-subtle: #bedaff;
-    --idg-gradient-brand: linear-gradient(135deg, #5a56f5 0%, #0f766e 100%);
+    --idg-gradient-brand: linear-gradient(135deg, #4f46e5 0%, #0f766e 100%);
   }
 
   @media (prefers-color-scheme: dark) {
@@ -116,7 +116,7 @@
       --idg-color-on-info: #0d1723;
       --idg-color-info-subtle: #182e4b;
       --idg-color-on-info-subtle: #bedaff;
-      --idg-gradient-brand: linear-gradient(135deg, #5a56f5 0%, #0f766e 100%);
+      --idg-gradient-brand: linear-gradient(135deg, #4f46e5 0%, #0f766e 100%);
     }
   }
 }

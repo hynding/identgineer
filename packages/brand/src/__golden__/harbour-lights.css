@@ -35,7 +35,7 @@
     --idg-color-on-info: #ffffff;
     --idg-color-info-subtle: #d1e5ff;
     --idg-color-on-info-subtle: #09417e;
-    --idg-gradient-brand: linear-gradient(135deg, #aa8600 0%, #a9de67 100%);
+    --idg-gradient-brand: linear-gradient(135deg, #f4c430 0%, #bfd954 100%);
     --idg-font-family-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
     --idg-font-family-body: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --idg-font-family-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace;
@@ -79,7 +79,7 @@
     --idg-color-on-info: #0d1723;
     --idg-color-info-subtle: #16365c;
     --idg-color-on-info-subtle: #bedaff;
-    --idg-gradient-brand: linear-gradient(135deg, #f4c430 0%, #a9de67 100%);
+    --idg-gradient-brand: linear-gradient(135deg, #f4c430 0%, #bfd954 100%);
   }
 
   @media (prefers-color-scheme: dark) {
@@ -116,7 +116,7 @@
       --idg-color-on-info: #0d1723;
       --idg-color-info-subtle: #16365c;
       --idg-color-on-info-subtle: #bedaff;
-      --idg-gradient-brand: linear-gradient(135deg, #f4c430 0%, #a9de67 100%);
+      --idg-gradient-brand: linear-gradient(135deg, #f4c430 0%, #bfd954 100%);
     }
   }
 }
