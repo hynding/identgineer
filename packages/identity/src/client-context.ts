@@ -5,8 +5,14 @@ import { IdentityError } from "./identity-error.ts";
 import { THROTTLED_STATUS, throttledError } from "./map-error.ts";
 import { resolveLocks, type LockManagerLike } from "./locks.ts";
 import { resolveOnline, type OnlineSubscription } from "./online.ts";
-import { createRefresher, type Refresher } from "./refresher.ts";
-import { createSession, type Session, type SignOutReason, type Tokens } from "./session.ts";
+import { createRefresher, type Refresher, type RefreshResult } from "./refresher.ts";
+import {
+  createSession,
+  type Session,
+  type SignOutReason,
+  type Ticket,
+  type Tokens,
+} from "./session.ts";
 import { createThrottle, type Throttle } from "./throttle.ts";
 import { createTransport, type ApiRequest, type ApiResponse, type Transport } from "./transport.ts";
 import { readUser } from "./shapes.ts";
@@ -43,9 +49,6 @@ export interface IdentityClientOptions {
   readonly onOnline?: OnlineSubscription | null;
 }
 
-/** Whether the operation that took it may still change the session. */
-export type Ticket = () => boolean;
-
 /** Whether the server session a sign-out tried to end is gone, or may live on. */
 export type ServerSignOut = "ended" | "unreachable";
 
@@ -64,10 +67,11 @@ export interface ClientContext {
   readonly crossTab: CrossTab;
   readonly isActive: () => boolean;
   /**
-   * An access token to send: the current one, or, once its known expiry has passed, a refreshed
-   * one (rejecting `network` when the server cannot be reached, `unauthorized` without a session).
+   * An access token to send for the session `ticket` names: the current one, or, once its known
+   * expiry has passed, a refreshed one (rejecting `network` when the server cannot be reached,
+   * `unauthorized` without a session or once that session is over).
    */
-  readonly accessToken: () => Promise<string>;
+  readonly accessToken: (ticket: Ticket) => Promise<string>;
   /** A credential request: held back while throttled, and a 429 starts the hold. */
   readonly credentialRequest: (request: ApiRequest) => Promise<ApiResponse>;
   /**
@@ -75,31 +79,30 @@ export interface ClientContext {
    * changed while it was under way (it is then never replayed as the new session).
    */
   readonly authorizedRequest: (request: ApiRequest) => Promise<ApiResponse>;
-  /** Refreshes the session, signing out if it is over; true when there are fresh tokens. */
-  readonly refreshSession: () => Promise<boolean>;
   /**
-   * For a sign-in: valid until a sign-out (here or in another tab) or dispose. A restore, an
-   * expiry or a user change of the session it replaces does not cancel it.
+   * Refreshes the session `ticket` names, signing out if it is over; true when it holds fresh
+   * tokens. Nothing happens once that session is no longer current.
    */
-  readonly signInTicket: () => Ticket;
-  /** For an operation on the current session: valid while that session lasts. */
-  readonly sessionTicket: () => Ticket;
+  readonly refreshSession: (ticket: Ticket) => Promise<boolean>;
   /**
-   * Adopts a sign-in's tokens if its ticket is still valid; otherwise ends the server session
-   * they opened and rejects.
+   * Adopts a sign-in's or restore's tokens through the session's gate. A stale ticket ends the
+   * server session the tokens opened and rejects; so does a sign-out made while listeners heard
+   * of the sign-in.
    */
   readonly acceptSignIn: (tokens: Tokens, user: IdentityUser, ticket: Ticket) => Promise<void>;
   /** Ends the server session these tokens belong to (and its cookie); never rejects. */
   readonly endServerSession: (tokens: Tokens, everywhere: boolean) => Promise<ServerSignOut>;
-  /** A sign-out here or in another tab: cancels every sign-in under way. */
-  readonly cancelSignIns: () => void;
   /**
-   * Runs sign-ins and restores one at a time, in call order, so the last sign-in's session is
-   * the one kept and a restore never replaces a sign-in under way.
+   * Runs sign-ins, restores and re-checks one at a time, in call order, behind any sign-out
+   * under way. Each takes its ticket before it is queued and checks it when its turn comes.
    */
   readonly exclusive: <T>(task: () => Promise<T>) => Promise<T>;
-  /** Settles once every sign-in started so far has finished. */
-  readonly settleSignIns: () => Promise<unknown>;
+  /**
+   * Starts a sign-out's server work: everything queued afterwards waits for it. Resolves with
+   * whether it and the work queued before it (sign-ins it cancelled, whose server sessions are
+   * then ended) left no server session behind.
+   */
+  readonly signOutBarrier: (work: () => Promise<ServerSignOut>) => Promise<ServerSignOut>;
   readonly signedOut: (reason: SignOutReason) => void;
   /** What to do when another tab signs in (set by the client). */
   readonly onOtherTabSignedIn: (handler: () => void) => void;
@@ -114,6 +117,9 @@ const positiveOption = (name: string, value: number | undefined, fallback: numbe
   }
   return chosen;
 };
+
+const worse = (left: ServerSignOut, right: ServerSignOut): ServerSignOut =>
+  left === "unreachable" || right === "unreachable" ? "unreachable" : "ended";
 
 export const createClientContext = (options: IdentityClientOptions): ClientContext => {
   const base = parseBaseUrl(options.baseUrl);
@@ -135,12 +141,9 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   const throttle = createThrottle(clock);
   let disposed = false;
   let otherTabSignedIn = (): void => undefined;
-  let signInChain: Promise<unknown> = Promise.resolve();
-  // Counts sign-outs and dispose only: the sign-ins under way they cancel.
-  let cancellations = 0;
-  const cancelSignIns = (): void => {
-    cancellations += 1;
-  };
+  let queue: Promise<unknown> = Promise.resolve();
+  // The endings of server sessions whose sign-ins the gate refused, in order (they are rare).
+  const abandoned: Promise<ServerSignOut>[] = [];
   const isActive = (): boolean => !disposed;
 
   const signedOut = (reason: SignOutReason): void => {
@@ -156,6 +159,31 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     return readUser(response.body).id === state.user.id;
   };
 
+  /** A refresh's result for the session `ticket` names, which the caller checked is current. */
+  const applyRefresh = (ticket: Ticket, result: RefreshResult, scheduled: boolean): boolean => {
+    switch (result.outcome) {
+      case "refreshed": {
+        const adopted = session.adopt(ticket, result.tokens);
+        if (adopted === undefined) return false;
+        refresher.schedule(adopted);
+        return true;
+      }
+      case "switched":
+        signedOut("user-changed");
+        return false;
+      case "rejected":
+        signedOut("expired");
+        return false;
+      case "unavailable": {
+        // Without sessions a known expiry still ends the session; a guessed one waits for a 401.
+        const tokens = session.tokens();
+        if (!scheduled) signedOut("expired");
+        else if (tokens?.lifetime.known === true) refresher.expireAt(ticket, tokens.expiresAt);
+        return false;
+      }
+    }
+  };
+
   const refresher = createRefresher({
     transport,
     session,
@@ -164,19 +192,18 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     locks: resolveLocks(options.locks),
     lockWaitMs: timeoutMs,
     onOnline: resolveOnline(options.onOnline),
-    isActive,
     verifyUser,
+    applyScheduled: (ticket, result) => {
+      applyRefresh(ticket, result, true);
+    },
     onExpired: () => {
       signedOut("expired");
-    },
-    onUserChanged: () => {
-      signedOut("user-changed");
     },
   });
   const crossTab = createCrossTab(options.channelName ?? DEFAULT_CHANNEL_NAME, {
     onSignedOut: () => {
       if (disposed) return;
-      cancelSignIns();
+      session.cancelSignIns();
       signedOut("other-tab");
     },
     onSignedIn: () => {
@@ -195,6 +222,12 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     return response;
   };
 
+  const refreshSession = async (ticket: Ticket): Promise<boolean> => {
+    if (!session.valid(ticket)) return false;
+    const result = await refresher.refresh();
+    return session.valid(ticket) && applyRefresh(ticket, result, false);
+  };
+
   const unexpiredToken = (): string | undefined => {
     const tokens = session.tokens();
     if (tokens === undefined) return undefined;
@@ -203,40 +236,26 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
       : tokens.accessToken;
   };
 
-  const accessToken = async (): Promise<string> => {
+  const accessToken = async (ticket: Ticket): Promise<string> => {
+    if (!session.valid(ticket)) throw new IdentityError("unauthorized");
     const current = unexpiredToken();
     if (current !== undefined) return current;
     // An expired token is never sent: the refresh that replaces it reports a network failure.
-    if (session.tokens() !== undefined && (await refreshSession())) {
+    if (session.tokens() !== undefined && (await refreshSession(ticket))) {
       const refreshed = unexpiredToken();
-      if (refreshed !== undefined) return refreshed;
+      if (refreshed !== undefined && session.valid(ticket)) return refreshed;
     }
     throw new IdentityError("unauthorized");
   };
 
-  const withToken = async (request: ApiRequest): Promise<ApiResponse> =>
-    transport.send({ ...request, accessToken: await accessToken() });
-
-  const refreshSession = async (): Promise<boolean> => {
-    const generation = session.generation();
-    const outcome = await refresher.refresh();
-    if (session.generation() !== generation) return false;
-    if (outcome === "refreshed") return true;
-    if (outcome === "switched") signedOut("user-changed");
-    else if (outcome !== "superseded") signedOut("expired");
-    return false;
-  };
-
   const authorizedRequest = async (request: ApiRequest): Promise<ApiResponse> => {
-    const generation = session.generation();
-    const response = await withToken(request);
+    const ticket = session.ticket("session");
+    const send = async (): Promise<ApiResponse> =>
+      transport.send({ ...request, accessToken: await accessToken(ticket) });
+    const response = await send();
     if (response.status !== 401) return response;
-    if (session.generation() !== generation) throw new IdentityError("unauthorized");
-    const refreshed = await refreshSession();
-    if (!refreshed || session.generation() !== generation) {
-      throw new IdentityError("unauthorized");
-    }
-    return withToken(request);
+    if (!(await refreshSession(ticket))) throw new IdentityError("unauthorized");
+    return send();
   };
 
   const endServerSession = async (tokens: Tokens, everywhere: boolean): Promise<ServerSignOut> => {
@@ -269,14 +288,10 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     }
   };
 
-  const signInTicket = (): Ticket => {
-    const at = cancellations;
-    return () => cancellations === at;
-  };
-
-  const sessionTicket = (): Ticket => {
-    const at = session.generation();
-    return () => session.generation() === at;
+  const abandon = async (tokens: Tokens): Promise<void> => {
+    const ending = endServerSession(tokens, false);
+    abandoned.push(ending);
+    await ending;
   };
 
   const acceptSignIn = async (
@@ -284,19 +299,33 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     user: IdentityUser,
     ticket: Ticket,
   ): Promise<void> => {
-    if (disposed) throw new IdentityError("unknown");
-    if (!ticket()) {
-      await endServerSession(tokens, false);
-      throw new IdentityError("unauthorized");
+    const adopted = session.adopt(ticket, tokens, user);
+    if (adopted === undefined) {
+      await abandon(tokens);
+      throw new IdentityError(disposed ? "unknown" : "unauthorized");
     }
-    session.signIn(tokens, user);
-    refresher.schedule();
+    // A listener may already have signed out again on hearing of it.
+    if (!session.valid(adopted)) throw new IdentityError("unauthorized");
+    refresher.schedule(adopted);
   };
 
   const exclusive = <T>(task: () => Promise<T>): Promise<T> => {
-    const run = signInChain.then(task, task);
-    signInChain = run.catch(() => undefined);
+    const run = queue.then(task, task);
+    queue = run.catch(() => undefined);
     return run;
+  };
+
+  const signOutBarrier = (work: () => Promise<ServerSignOut>): Promise<ServerSignOut> => {
+    const earlier = queue;
+    const from = abandoned.length;
+    const done = (async () => {
+      let outcome = await work();
+      await earlier;
+      for (const ending of abandoned.slice(from)) outcome = worse(outcome, await ending);
+      return outcome;
+    })();
+    queue = Promise.all([earlier, done]).catch(() => undefined);
+    return done;
   };
 
   return {
@@ -315,23 +344,19 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     credentialRequest,
     authorizedRequest,
     refreshSession,
-    signInTicket,
-    sessionTicket,
     acceptSignIn,
     endServerSession,
-    cancelSignIns,
     exclusive,
-    settleSignIns: () => signInChain,
+    signOutBarrier,
     signedOut,
     onOtherTabSignedIn: (handler) => {
       otherTabSignedIn = handler;
     },
     dispose: () => {
       disposed = true;
-      cancelSignIns();
+      session.dispose();
       refresher.cancel();
       crossTab.close();
-      session.dispose();
     },
   };
 };

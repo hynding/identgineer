@@ -1,8 +1,8 @@
-import type { ClientContext, Ticket } from "./client-context.ts";
+import type { ClientContext } from "./client-context.ts";
 import { IdentityError } from "./identity-error.ts";
 import { errorName } from "./map-error.ts";
 import { readErrorEnvelope, readAuthResponse, type AuthResponse } from "./shapes.ts";
-import type { Tokens } from "./session.ts";
+import type { Ticket, Tokens } from "./session.ts";
 import { tokensFrom } from "./tokens.ts";
 import type { ApiResponse } from "./transport.ts";
 import type { IdentityUser } from "./types.ts";
@@ -48,11 +48,27 @@ const signInFailure = (context: ClientContext, response: ApiResponse): IdentityE
   return new IdentityError("unknown");
 };
 
+/**
+ * Runs a sign-in in its turn with the ticket taken now, when it is asked for: a sign-out made
+ * before its turn comes cancels it without a request.
+ */
+export const queuedSignIn = <T>(
+  context: ClientContext,
+  task: (ticket: Ticket) => Promise<T>,
+): Promise<T> => {
+  const ticket = context.session.ticket("sign-in");
+  return context.exclusive(() => {
+    if (!context.session.valid(ticket)) {
+      return Promise.reject(new IdentityError(context.isActive() ? "unauthorized" : "unknown"));
+    }
+    return task(ticket);
+  });
+};
+
 export const signIn =
   (context: ClientContext) =>
   (input: SignInInput): Promise<IdentityUser> =>
-    context.exclusive(async () => {
-      const ticket = context.signInTicket();
+    queuedSignIn(context, async (ticket) => {
       const response = await context.credentialRequest({
         method: "POST",
         path: "/api/auth/local",

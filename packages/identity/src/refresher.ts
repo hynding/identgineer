@@ -3,7 +3,7 @@ import type { Clock } from "./clock.ts";
 import { IdentityError } from "./identity-error.ts";
 import { REFRESH_LOCK, withLock, type LockManagerLike } from "./locks.ts";
 import type { OnlineSubscription } from "./online.ts";
-import type { Session, Tokens } from "./session.ts";
+import type { Session, Ticket, Tokens } from "./session.ts";
 import { readAuthResponse } from "./shapes.ts";
 import { tokensFrom } from "./tokens.ts";
 import type { ApiRequest, Transport } from "./transport.ts";
@@ -20,17 +20,26 @@ const MAX_REFRESH_BACKOFF_MS = 300_000;
 export const REFRESH_RETRY_MS = 30_000;
 
 /**
- * `rejected`: the refresh session is over. `unavailable`: the backend has no sessions (legacy
- * tokens), so nothing can be refreshed. `switched`: the shared refresh cookie now belongs to
- * another user. `superseded`: the session was replaced or ended meanwhile.
+ * `refreshed`: new tokens, not yet in the session (the caller adopts them through the session's
+ * gate). `rejected`: the refresh session is over. `unavailable`: the backend has no sessions
+ * (legacy tokens), so nothing can be refreshed. `switched`: the shared refresh cookie now belongs
+ * to another user than the one signed in.
  */
-export type RefreshOutcome = "refreshed" | "rejected" | "unavailable" | "switched" | "superseded";
+export type RefreshResult =
+  | { readonly outcome: "refreshed"; readonly tokens: Tokens }
+  | { readonly outcome: "rejected" | "unavailable" | "switched" };
 
 export interface Refresher {
-  /** One refresh at a time: concurrent callers share the request in flight. */
-  readonly refresh: () => Promise<RefreshOutcome>;
-  /** Plans the next refresh from the current tokens' lifetime, measured from now. */
-  readonly schedule: () => void;
+  /**
+   * One refresh at a time: concurrent callers share the request in flight. It changes nothing in
+   * the session; it rejects with an IdentityError when the server cannot answer.
+   */
+  readonly refresh: () => Promise<RefreshResult>;
+  /** Plans the next refresh of the session `ticket` names, from its tokens' lifetime. */
+  readonly schedule: (ticket: Ticket) => void;
+  /** Signs that session out at `at` (a known expiry on a backend that cannot refresh). */
+  readonly expireAt: (ticket: Ticket, at: number) => void;
+  /** Clears every timer and listener: nothing armed before can run afterwards. */
   readonly cancel: () => void;
   /** Settles once the refresh in flight, if any, has (so a refresh cookie it rotates is set). */
   readonly settled: () => Promise<void>;
@@ -53,16 +62,15 @@ export interface RefresherOptions {
   readonly lockWaitMs: number;
   /** Lets a refresh that could not reach the server run again as soon as the browser is online. */
   readonly onOnline: OnlineSubscription | null;
-  readonly isActive: () => boolean;
   /**
    * After a cookie refresh: whether the new token is still the signed-in user's (true), another
    * user's (false), or there is no user to compare with (undefined).
    */
   readonly verifyUser: (accessToken: string) => Promise<boolean | undefined>;
-  /** A scheduled refresh found the session over, or a known expiry passed without sessions. */
-  readonly onExpired: () => void;
-  /** A scheduled refresh found the cookie belongs to another user: sign out. */
-  readonly onUserChanged: () => void;
+  /** A scheduled refresh's result, for a session that is still the one it was planned for. */
+  readonly applyScheduled: (ticket: Ticket, result: RefreshResult) => void;
+  /** A known expiry passed on a backend that cannot refresh, for a session still current. */
+  readonly onExpired: (ticket: Ticket) => void;
 }
 
 const REJECTED_STATUSES = new Set([400, 401, 403]);
@@ -80,7 +88,7 @@ const refreshRequest = (refreshToken: string | undefined): ApiRequest =>
 export const createRefresher = (options: RefresherOptions): Refresher => {
   const { clock, session } = options;
   const alarm = createAlarm(clock);
-  let inFlight: Promise<RefreshOutcome> | undefined;
+  let inFlight: Promise<RefreshResult> | undefined;
   let shortStreak = 0;
   let unreachableStreak = 0;
   let stopListening = (): void => undefined;
@@ -113,23 +121,16 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
     );
   };
 
-  const run = async (): Promise<RefreshOutcome> => {
-    const generation = session.generation();
-    if (!options.isActive()) return "superseded";
+  const run = async (): Promise<RefreshResult> => {
     const heldToken = session.refreshToken();
     const response = await sendRefresh(heldToken);
-    if (session.generation() !== generation) return "superseded";
-    if (response.status === UNAVAILABLE_STATUS) return "unavailable";
-    if (REJECTED_STATUSES.has(response.status)) return "rejected";
+    if (response.status === UNAVAILABLE_STATUS) return { outcome: "unavailable" };
+    if (REJECTED_STATUSES.has(response.status)) return { outcome: "rejected" };
     if (!response.ok) throw new IdentityError("unknown");
     const tokens = tokensOf(response.body);
     // A cookie is shared by every tab: another tab may have signed in as someone else since.
     const sameUser = heldToken === undefined ? await options.verifyUser(tokens.accessToken) : true;
-    if (session.generation() !== generation) return "superseded";
-    if (sameUser === false) return "switched";
-    session.setTokens(tokens);
-    schedule();
-    return "refreshed";
+    return sameUser === false ? { outcome: "switched" } : { outcome: "refreshed", tokens };
   };
 
   const detached = async (
@@ -151,7 +152,7 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
     return response.status >= 500 ? "unreachable" : "refused";
   };
 
-  const refresh = (): Promise<RefreshOutcome> => {
+  const refresh = (): Promise<RefreshResult> => {
     if (inFlight === undefined) {
       const promise = run().finally(() => {
         if (inFlight === promise) inFlight = undefined;
@@ -165,19 +166,21 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
     await inFlight?.catch(() => undefined);
   };
 
-  const runScheduled = (): void => {
+  const cancel = (): void => {
+    alarm.clear();
+    stopListening();
+    stopListening = () => undefined;
+  };
+
+  /** Every completion, success or failure, first checks that its session is still current. */
+  const runScheduled = (ticket: Ticket): void => {
+    if (!session.valid(ticket)) return;
     refresh().then(
-      (outcome) => {
-        if (outcome === "rejected") options.onExpired();
-        if (outcome === "switched") options.onUserChanged();
-        // Without sessions a known expiry still ends the session; a guessed one waits for a 401.
-        const tokens = session.tokens();
-        if (outcome === "unavailable" && tokens?.lifetime.known === true) {
-          alarm.set(tokens.expiresAt, options.onExpired);
-        }
+      (result) => {
+        if (session.valid(ticket)) options.applyScheduled(ticket, result);
       },
       () => {
-        if (options.isActive()) retryLater();
+        if (session.valid(ticket)) retryLater(ticket);
       },
     );
   };
@@ -187,33 +190,28 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
    * well be valid, so the session stays, past even a known expiry (the expired token is no longer
    * sent), and the refresh is tried again with a doubling wait, or at once when back online.
    */
-  const retryLater = (): void => {
+  const retryLater = (ticket: Ticket): void => {
+    cancel();
     const wait = Math.min(MAX_REFRESH_BACKOFF_MS, REFRESH_RETRY_MS * 2 ** unreachableStreak);
     unreachableStreak += 1;
-    alarm.set(clock.now() + wait, runScheduled);
-    stopListening();
+    alarm.set(clock.now() + wait, () => {
+      runScheduled(ticket);
+    });
     if (options.onOnline === null) return;
     const stop = options.onOnline(() => {
       stop();
       alarm.clear();
-      runScheduled();
+      runScheduled(ticket);
     });
     stopListening = stop;
   };
 
-  const cancel = (): void => {
-    alarm.clear();
-    stopListening();
-    stopListening = () => undefined;
-  };
-
-  function schedule(): void {
+  const schedule = (ticket: Ticket): void => {
     cancel();
     unreachableStreak = 0;
-    if (!options.isActive()) return;
+    if (!session.valid(ticket)) return;
     const lifetime = session.tokens()?.lifetime;
     if (lifetime === undefined) return;
-    const now = clock.now();
     let delay = lifetime.ms - Math.min(REFRESH_MARGIN_MS, lifetime.ms / 2);
     // A token too short to wait for never makes the refreshes run back to back.
     if (lifetime.ms < MIN_REFRESH_DELAY_MS) {
@@ -223,8 +221,17 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
       delay = Math.max(delay, MIN_REFRESH_DELAY_MS);
       shortStreak = 0;
     }
-    alarm.set(now + delay, runScheduled);
-  }
+    alarm.set(clock.now() + delay, () => {
+      runScheduled(ticket);
+    });
+  };
 
-  return { refresh, schedule, cancel, settled, detached };
+  const expireAt = (ticket: Ticket, at: number): void => {
+    cancel();
+    alarm.set(at, () => {
+      if (session.valid(ticket)) options.onExpired(ticket);
+    });
+  };
+
+  return { refresh, schedule, expireAt, cancel, settled, detached };
 };

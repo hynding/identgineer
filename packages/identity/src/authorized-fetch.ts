@@ -61,8 +61,9 @@ export const authorizedFetch =
   (context: ClientContext) =>
   async (input: string | URL, init: RequestInit = {}): Promise<Response> => {
     const url = resolveTarget(context.base, input);
+    const ticket = context.session.ticket("session");
     const attempt = async (): Promise<Response> => {
-      const accessToken = await context.accessToken();
+      const accessToken = await context.accessToken(ticket);
       const headers = new Headers(init.headers);
       headers.set("Authorization", `Bearer ${accessToken}`);
       const timeout = timeoutSignal(context, init.signal);
@@ -80,12 +81,9 @@ export const authorizedFetch =
         timeout.done();
       }
     };
-    const generation = context.session.generation();
     const response = await attempt();
     if (response.status !== 401) return response;
     // Never replayed under another session than the one it was sent in.
-    if (context.session.generation() !== generation) return response;
-    const refreshed = await context.refreshSession();
-    if (!refreshed || context.session.generation() !== generation) return response;
+    if (!(await context.refreshSession(ticket))) return response;
     return attempt();
   };

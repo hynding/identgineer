@@ -1,6 +1,6 @@
 import { endpointUrl, isSecureOrLocal } from "./base-url.ts";
 import type { ClientContext } from "./client-context.ts";
-import { signInFrom } from "./credential-operations.ts";
+import { queuedSignIn, signInFrom } from "./credential-operations.ts";
 import { providerSegment } from "./identifiers.ts";
 import { IdentityError } from "./identity-error.ts";
 import { failureOf } from "./map-error.ts";
@@ -73,8 +73,7 @@ export const completeProviderSignIn =
   ): Promise<ProviderSignInResult> => {
     const segment = providerSegment(provider);
     const query = callbackQuery(options.search ?? "");
-    return context.exclusive(async () => {
-      const ticket = context.signInTicket();
+    return queuedSignIn(context, async (ticket) => {
       const response = await context.credentialRequest({
         method: "GET",
         path: `/api/auth/${segment}/callback${query}`,

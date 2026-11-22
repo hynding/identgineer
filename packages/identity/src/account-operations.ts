@@ -1,5 +1,5 @@
 import type { ClientContext } from "./client-context.ts";
-import { signInFrom, tokensOf } from "./credential-operations.ts";
+import { queuedSignIn, signInFrom, tokensOf } from "./credential-operations.ts";
 import { IdentityError } from "./identity-error.ts";
 import { errorName, failureOf, fieldsOf } from "./map-error.ts";
 import { isEmail, isFilled, isPassword, requireValid } from "./input-checks.ts";
@@ -73,19 +73,20 @@ export const register =
       },
       { nameFields: true },
     );
-    const ticket = context.signInTicket();
-    const response = await context.credentialRequest({
-      method: "POST",
-      path: "/api/auth/local/register",
-      body: { username: input.username, email: input.email, password: input.password },
+    return queuedSignIn(context, async (ticket) => {
+      const response = await context.credentialRequest({
+        method: "POST",
+        path: "/api/auth/local/register",
+        body: { username: input.username, email: input.email, password: input.password },
+      });
+      // users-permissions answers a taken address or username with an ApplicationError, and so
+      // does a failed confirmation email: both become the neutral answer.
+      if (isApplicationError(response)) return CHECK_EMAIL;
+      if (!response.ok) throw failureOf(response, context.clock.now(), REGISTER_FIELDS);
+      const auth = readAuthResponse(response.body);
+      if (tokensOf(context, auth) === undefined) return CHECK_EMAIL;
+      return { outcome: "signed-in", user: await signInFrom(context, response, ticket) };
     });
-    // users-permissions answers a taken address or username with an ApplicationError, and so
-    // does a failed confirmation email: both become the neutral answer.
-    if (isApplicationError(response)) return CHECK_EMAIL;
-    if (!response.ok) throw failureOf(response, context.clock.now(), REGISTER_FIELDS);
-    const auth = readAuthResponse(response.body);
-    if (tokensOf(context, auth) === undefined) return CHECK_EMAIL;
-    return { outcome: "signed-in", user: await signInFrom(context, response, ticket) };
   };
 
 /**
@@ -123,19 +124,20 @@ export const resetPassword =
       },
       { nameFields: false },
     );
-    const ticket = context.signInTicket();
-    const response = await context.credentialRequest({
-      method: "POST",
-      path: "/api/auth/reset-password",
-      body: {
-        code: input.code,
-        password: input.password,
-        passwordConfirmation: input.passwordConfirmation,
-      },
+    return queuedSignIn(context, async (ticket) => {
+      const response = await context.credentialRequest({
+        method: "POST",
+        path: "/api/auth/reset-password",
+        body: {
+          code: input.code,
+          password: input.password,
+          passwordConfirmation: input.passwordConfirmation,
+        },
+      });
+      if (isRefusedSecret(response)) throw new IdentityError("invalid-credentials");
+      if (!response.ok) throw failureOf(response, context.clock.now());
+      return signInFrom(context, response, ticket);
     });
-    if (isRefusedSecret(response)) throw new IdentityError("invalid-credentials");
-    if (!response.ok) throw failureOf(response, context.clock.now());
-    return signInFrom(context, response, ticket);
   };
 
 /**
@@ -168,7 +170,7 @@ export const changePassword =
       { nameFields: false },
     );
     context.throttle.check();
-    const ticket = context.sessionTicket();
+    const ticket = context.session.ticket("session");
     const response = await context.authorizedRequest({
       method: "POST",
       path: "/api/auth/change-password",
