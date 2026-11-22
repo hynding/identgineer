@@ -1176,8 +1176,9 @@ Slots `request` (in `complete` mode, a link to ask again) and `sign-in`; parts `
 
 The signed-in owner's page, in three sections: the profile (`displayName`, `bio`, `locale`,
 `timezone`, `marketingOptIn`, read with `getProfile` and saved with `saveProfile`, beside an
-`idg-avatar` from `avatarSrc`), a password change (current, new and confirmation, with a hidden
-`username` field so a manager updates the right entry) and the sessions, each with "Sign out",
+`idg-avatar` from `avatarSrc`), a password change (current, new and confirmation, with a read-only
+`username` idg-input laid out out of sight and out of the tab order, so a manager can tell the
+account) and the sessions, each with "Sign out",
 plus "Sign out everywhere". Props `client`, `avatarSrc`, `labels`, `clock`. Events
 `idgProfileSaved` (`{ profile }`), `idgPasswordChanged`, `idgSessionRevoked` (`{ id }`),
 `idgSignedOut` (`{ outcome, everywhere: true }`). Parts `details`, `details-saved`, `password`, `password-saved`,
