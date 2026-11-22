@@ -66,7 +66,11 @@ export function useVariations() {
     (partial: Partial<VariationState>) => applyVariations(partial, { persist: true }),
     [],
   );
-  const shuffle = useCallback(() => applyVariations(shuffleVariations(), { persist: true }), []);
+  const shuffle = useCallback(() => {
+    // The four axes only, as the switcher does: the scheme is a preference, not a variation.
+    const { theme, design, layout, ux } = shuffleVariations();
+    return applyVariations({ theme, design, layout, ux }, { persist: true });
+  }, []);
   const reset = useCallback(() => resetVariations({ persist: true }), []);
   return { state, apply, shuffle, reset };
 }

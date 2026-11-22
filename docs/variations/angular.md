@@ -63,7 +63,10 @@ export class VariationsService {
   }
 
   shuffle(): void {
-    if (this.browser) applyVariations(shuffleVariations(), { persist: true });
+    if (!this.browser) return;
+    // The four axes only, as the switcher does: the scheme is a preference, not a variation.
+    const { theme, design, layout, ux } = shuffleVariations();
+    applyVariations({ theme, design, layout, ux }, { persist: true });
   }
 
   reset(): void {
@@ -206,8 +209,7 @@ export const provideVariationsCookie = () =>
       });
       return;
     }
-    // REQUEST is the incoming request in Angular 20 and later; older versions provide it from
-    // @angular/ssr/tokens.
+    // REQUEST is null during prerendering, and when the server engine in use does not provide it.
     const header = inject(REQUEST, { optional: true })?.headers.get("cookie") ?? "";
     const choice = decodeVariations(new URLSearchParams(cookieValue(header)));
     const renderer = inject(RendererFactory2).createRenderer(null, null);
@@ -217,6 +219,12 @@ export const provideVariationsCookie = () =>
     }
   });
 ```
+
+This needs Angular 19 or later: `REQUEST` is exported from `@angular/core` since 19 (as developer
+preview there) and `provideAppInitializer` is new in 19. The cookie path also depends on the server
+engine in use providing the incoming request through that token. Where it does not, or while
+prerendering (the token is `null` there), `header` is empty, nothing is set and the defaults are
+rendered, which is exactly what the bootstrap script then corrects before paint.
 
 Add `provideVariationsCookie()` to the providers of `app.config.ts`, and keep the bootstrap script as
 well: it also applies a link someone shared. A cookie is sent with every request and needs a consent

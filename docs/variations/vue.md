@@ -51,7 +51,11 @@ export function useVariations(options: { persist?: boolean } = {}) {
   return {
     state: readonly(state),
     apply: (partial: Partial<VariationState>) => applyVariations(partial, { persist }),
-    shuffle: () => applyVariations(shuffleVariations(), { persist }),
+    shuffle: () => {
+      // The four axes only, as the switcher does: the scheme is a preference, not a variation.
+      const { theme, design, layout, ux } = shuffleVariations();
+      return applyVariations({ theme, design, layout, ux }, { persist });
+    },
     reset: () => resetVariations({ persist }),
   };
 }
@@ -185,17 +189,23 @@ import { decodeVariations, encodeVariations, onVariationsChange } from "@identgi
 
 export default defineNuxtPlugin((app) => {
   const cookie = useCookie("idg-variations", { maxAge: 31536000, sameSite: "lax" });
-  const choice = decodeVariations(new URLSearchParams(cookie.value ?? ""));
 
-  useHead({
-    htmlAttrs: {
-      "data-theme": choice.theme,
-      "data-design": choice.design,
-      "data-layout": choice.layout,
-      "data-ux": choice.ux,
-      "data-scheme": choice.scheme === "system" ? undefined : choice.scheme,
-    },
-  });
+  if (import.meta.server) {
+    const choice = decodeVariations(new URLSearchParams(cookie.value ?? ""));
+    // Server only. A head entry made with useHead also runs in the browser, where it holds the
+    // value the cookie had when the page was rendered and could set it again over what the
+    // bootstrap script or the runtime has applied since. useServerHead renders into the HTML and
+    // is not applied again on the client.
+    useServerHead({
+      htmlAttrs: {
+        "data-theme": choice.theme,
+        "data-design": choice.design,
+        "data-layout": choice.layout,
+        "data-ux": choice.ux,
+        "data-scheme": choice.scheme === "system" ? undefined : choice.scheme,
+      },
+    });
+  }
 
   if (import.meta.client) {
     app.hook("app:mounted", () => {
@@ -206,6 +216,10 @@ export default defineNuxtPlugin((app) => {
   }
 });
 ```
+
+`useServerHead` and `import.meta.server` are Nuxt 3's; check the names against the version you run.
+Once the app has mounted, the page's attributes are the truth and are only changed by the runtime
+(through the switcher, your composable or the bootstrap script).
 
 Keep the bootstrap script too: it also applies a link someone shared. A cookie is sent with every
 request and needs a consent decision where the law asks for one.
