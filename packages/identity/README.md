@@ -423,9 +423,9 @@ does:
   as `text/plain`, which a page of any site can send without a CORS preflight. The answer stays
   unreadable to that page, and the refresh cookie is `SameSite=Strict` and refused from an
   unlisted `Origin`, but such a request still takes throttle turns and sends mail.
-- Token answers carry no `expiresIn`, so this client learns an access token's lifetime from the
-  JWT's `exp`, or from `accessTokenLifetimeSeconds`, which must match
-  `CAMIS_ACCESS_TOKEN_LIFESPAN`.
+- Token answers carry no `expiresIn`, and the access tokens are opaque Sanctum tokens with no
+  `exp` to read, so this client knows an access token's lifetime only from
+  `accessTokenLifetimeSeconds`, which must match `CAMIS_ACCESS_TOKEN_LIFESPAN`.
 
 ## Testing
 
@@ -520,4 +520,5 @@ fixed the pin turns red, as a reminder to drop it and the marker. The gaps: crea
 refused (400 `ValidationError` on `owner`, which the grant's `assign` should fill from the
 session); and below the SDK a taken registration answers 400 `ApplicationError`, a resend for a
 confirmed address 400 "Already confirmed", and an unknown account's sign-in is refused in under
-half the time of a wrong password, each telling whether an account exists.
+half the time of a wrong password (the fastest of ten tries each, on a server no other test there
+uses), each telling whether an account exists.
