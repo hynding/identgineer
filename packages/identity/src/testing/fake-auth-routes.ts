@@ -92,6 +92,19 @@ const reissue = (context: RouteContext, user: FakeUser): FakeResponse => {
   return ok({ ...tokens, ...wire });
 };
 
+/**
+ * camis' StrapiRateLimits::folded: PHP's trim, compatibility decomposition, combining marks
+ * stripped, case folded (upper then lower stands in for PHP's full case folding, ß to ss).
+ * A fullwidth or small "@" folds to "@".
+ */
+const folded = (name: string): string =>
+  name
+    .replace(/^[ \t\n\r\0\v]+|[ \t\n\r\0\v]+$/g, "")
+    .normalize("NFKD")
+    .replace(/\p{Mn}+/gu, "")
+    .toUpperCase()
+    .toLowerCase();
+
 const byEmail = (context: RouteContext, email: unknown): FakeUser | undefined =>
   context.store.findUser((user) => user.email === text(email).toLowerCase());
 
@@ -117,10 +130,11 @@ const register: FakeRoute = {
     if (failure !== undefined) return failure;
     const email = text(body.email).toLowerCase();
     const username = text(body.username);
+    const foldedUsername = folded(username);
     if (
       settings.hideAccountExistence &&
-      username.includes("@") &&
-      username.toLowerCase() !== email
+      foldedUsername.includes("@") &&
+      foldedUsername !== folded(email)
     ) {
       return strapiError(
         400,
