@@ -50,7 +50,11 @@ function isSignInClient(value: unknown): value is SignInClient {
  */
 @Component({
   tag: "idg-sign-in",
-  styleUrls: ["../../styles/visually-hidden.css", "../../styles/identity-form.css"],
+  styleUrls: [
+    "../../styles/visually-hidden.css",
+    "../../styles/identity-form.css",
+    "../../styles/narrow-container.css",
+  ],
   shadow: true,
 })
 export class IdgSignIn {
@@ -212,7 +216,7 @@ export class IdgSignIn {
     const feedback = this.feedback;
     const errors = feedback.fieldErrors;
     return (
-      <div class="identity">
+      <div class="identity narrow-container">
         <form
           class="form"
           part="form"

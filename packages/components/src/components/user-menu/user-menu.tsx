@@ -63,8 +63,15 @@ export class IdgUserMenu {
   /** The notice takes focus, which reads it, so it leaves out its live role to be said once. */
   @State() private noticeTakesFocus = false;
 
+  /** What the menu's focus anchor says while it has focus; nothing otherwise. */
+  @State() private anchorText = "";
+
   /** Set after a sign-out that took the focused trigger away, or a dismissed notice. */
   private moveFocus = false;
+  /** What a sign-out that moves focus says, by focus or politely, once focus has gone. */
+  private outcomeText = "";
+  /** Set when the anchor is to take focus after the next render. */
+  private focusAnchorNext = false;
 
   // A restore that could not reach the server is tried again once the browser is back online;
   // until then the menu draws nothing, since it does not know who is signed in.
@@ -124,9 +131,15 @@ export class IdgUserMenu {
       this.moveFocus = focusWithinOrLost(this.host);
       this.notice = outcome;
       this.noticeTakesFocus = this.moveFocus;
-      if (outcome !== "server-unreachable") {
-        this.announce(outcome === "superseded" ? labels.superseded : labels.signedOut);
-      }
+      const text =
+        outcome === "server-unreachable"
+          ? ""
+          : outcome === "superseded"
+            ? labels.superseded
+            : labels.signedOut;
+      // Where focus goes decides how it is said: see componentDidRender.
+      if (this.moveFocus) this.outcomeText = text;
+      else if (text !== "") this.announce(text);
       this.idgSignedOut.emit({ outcome });
     } catch {
       if (client === this.binding.current()) this.notice = "error";
@@ -135,20 +148,36 @@ export class IdgUserMenu {
     }
   }
 
-  // To the warning when there is one, otherwise to what the page shows while signed out when that
-  // takes focus as it is, otherwise to the menu's own box. Nothing of the page's is made focusable.
+  // To the warning when there is one; otherwise to what the page shows while signed out when that
+  // takes focus as it is, with the outcome said politely; otherwise to the menu's hidden anchor,
+  // which says it as it takes focus. Nothing of the page's is made focusable.
   componentDidRender(): void {
+    const root = this.host.shadowRoot;
+    if (this.focusAnchorNext) {
+      this.focusAnchorNext = false;
+      root?.querySelector<HTMLElement>(".focus-anchor")?.focus();
+      return;
+    }
     if (!this.moveFocus || this.state.status === "signed-in") return;
     this.moveFocus = false;
-    const root = this.host.shadowRoot;
+    const text = this.outcomeText;
+    this.outcomeText = "";
     const notice = root?.querySelector<HTMLElement>(".notice");
     if (notice) {
       notice.focus();
       return;
     }
-    if (focusIfFocusable(firstAssigned(root?.querySelector('slot[name="signed-out"]')))) return;
-    root?.querySelector<HTMLElement>(".user-menu")?.focus();
+    if (focusIfFocusable(firstAssigned(root?.querySelector('slot[name="signed-out"]')))) {
+      if (text !== "") this.announce(text);
+      return;
+    }
+    this.anchorText = text === "" ? this.text().signedOut : text;
+    this.focusAnchorNext = true;
   }
+
+  private anchorBlurred = (): void => {
+    this.anchorText = "";
+  };
 
   private announce(text: string): void {
     this.announcement = { text, slot: this.announcement.slot === 0 ? 1 : 0 };
@@ -213,7 +242,10 @@ export class IdgUserMenu {
       content = <slot name="signed-out" />;
     }
     return (
-      <div class="user-menu focusable" role="group" aria-label={labels.region} tabindex="-1">
+      <div class="user-menu">
+        <span class="focus-anchor visually-hidden" tabindex="-1" onBlur={this.anchorBlurred}>
+          {this.anchorText}
+        </span>
         {content}
         {this.renderNotice(labels)}
         <AnnouncementView announcement={this.announcement} />

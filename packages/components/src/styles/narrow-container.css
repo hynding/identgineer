@@ -1,0 +1,40 @@
+/* Shared by the identity components: large text on a narrow screen (320px at 200%) leaves a
+   column of a few words, so inside a `.narrow-container` narrower than nine of its own ems the
+   controls' inline padding and the gaps shrink and the text keeps its line. At normal text size no
+   phone is that narrow, so every UX mode keeps its own padding. */
+:host {
+  /* The UX mode's own values, for a narrow container to scale down from. */
+  --_idg-mode-control-padding-inline: var(--idg-density-control-padding-inline);
+  --_idg-mode-gap-scale: var(--idg-density-gap-scale);
+}
+
+.narrow-container {
+  container-type: inline-size;
+}
+
+@container (inline-size < 9em) {
+  .narrow-container > * {
+    --idg-density-control-padding-inline: min(var(--_idg-mode-control-padding-inline), 4cqi);
+    --idg-density-gap-scale: min(var(--_idg-mode-gap-scale), 1);
+  }
+}
+
+/* A size container has no content width of its own, so a parent that sizes the element around it
+   by its content (a flex row, an auto grid track, fit-content, a dialog or a popover) would give
+   it none. This line, empty and of no height, before the container gives the host (or the
+   `.measured` element) a preferred width of the identity measure (--idg-identity-measure, which a
+   page can set) and a smallest width of nothing: its ten words, set at no size, can each go on a
+   line of their own on a narrow screen. It is hidden, and kept from assistive technology by the
+   empty alternative. */
+:host::before,
+.measured::before {
+  content: "x x x x x x x x x x" / "";
+  display: block;
+  block-size: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-size: 0;
+  line-height: 0;
+  white-space: normal;
+  word-spacing: calc(var(--idg-identity-measure, var(--idg-size-m)) / 9);
+}

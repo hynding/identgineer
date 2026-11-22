@@ -21,9 +21,12 @@
   max-inline-size: min(var(--idg-size-l), 100%);
 }
 
-/* Focus put on these from script is a place to start from, not a control. Only a keyboard user
-   sees the ring (`.focusable:focus-visible`). */
-.user-menu:focus:not(:focus-visible),
+/* Focus put on the notice from script is a place to start from, not a control: only a keyboard
+   user sees the ring, set off from the alert's edge. */
 .notice:focus:not(:focus-visible) {
   outline: none;
+}
+
+.notice:focus-visible {
+  outline-offset: var(--idg-space-3xs);
 }

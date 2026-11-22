@@ -1,22 +1,27 @@
-/* The guard adds one box, its region: a box can take focus, and focus must go somewhere the guard
-   owns when what had focus is taken away. What it shows lays out inside it as in any block. */
+/* The guard adds no box of its own: what it shows lays out as if it were the guard's parent's,
+   so slotted elements are the parent's flex or grid items. */
 :host {
   display: contents;
 }
 
-.region {
-  display: block;
+:host([hidden]) {
+  display: none;
 }
 
-/* Focus put here from script is a place to start from, not a control. Only a keyboard user sees
-   the ring (`.focusable:focus-visible`). */
-.region:focus:not(:focus-visible),
+/* The notice is one block before the content. */
+.notice {
+  display: block;
+  margin-block-end: var(--idg-space-s);
+}
+
+/* Focus put on the notice from script is a place to start from, not a control: only a keyboard
+   user sees the ring, set off from the alert's edge. */
 .notice:focus:not(:focus-visible) {
   outline: none;
 }
 
-:host([hidden]) {
-  display: none;
+.notice:focus-visible {
+  outline-offset: var(--idg-space-3xs);
 }
 
 .message {
@@ -25,8 +30,4 @@
 
 .retry {
   margin-block-start: var(--idg-space-2xs);
-}
-
-.notice {
-  margin-block-end: var(--idg-space-s);
 }

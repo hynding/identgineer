@@ -3,10 +3,6 @@
    broken only when it is wider than the line on its own: `anywhere` would also let a squeezed
    column shrink to the width of one letter. */
 :host {
-  /* The UX mode's own values, for the narrow form below to scale down from. */
-  --_idg-mode-control-padding-inline: var(--idg-density-control-padding-inline);
-  --_idg-mode-gap-scale: var(--idg-density-gap-scale);
-
   display: block;
   min-inline-size: 0;
   color: var(--idg-color-text);
@@ -21,40 +17,11 @@
   display: none;
 }
 
-/* The form below is a size container, which has no content width of its own, so a parent that
-   sizes the element by its content (a flex row, an auto grid track, fit-content, a dialog or a
-   popover) would give it none. This line, empty and of no height, gives the element a preferred
-   width of the identity measure (--idg-identity-measure, which a page can set) and a smallest
-   width of nothing: its ten words, set at no size, can each go on a line of their own on a narrow
-   screen. It is hidden, and kept from assistive technology by the empty alternative. */
-:host::before {
-  content: "x x x x x x x x x x" / "";
-  display: block;
-  block-size: 0;
-  overflow: hidden;
-  visibility: hidden;
-  font-size: 0;
-  line-height: 0;
-  white-space: normal;
-  word-spacing: calc(var(--idg-identity-measure, var(--idg-size-m)) / 9);
-}
-
 .identity {
-  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: calc(var(--idg-space-l) * var(--idg-density-gap-scale));
   min-inline-size: 0;
-}
-
-/* A form narrower than nine of its own ems, which takes large text on a narrow screen (320px at
-   200%): the controls' inline padding and the gaps shrink so the text keeps its line. At normal
-   text size no phone is that narrow, so every UX mode keeps its own padding. */
-@container (inline-size < 9em) {
-  .identity > * {
-    --idg-density-control-padding-inline: min(var(--_idg-mode-control-padding-inline), 4cqi);
-    --idg-density-gap-scale: min(var(--_idg-mode-gap-scale), 1);
-  }
 }
 
 .form {

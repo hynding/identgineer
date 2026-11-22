@@ -13,11 +13,6 @@ export interface UserMenuLabels {
   readonly superseded: string;
   readonly errorUnknown: string;
   readonly dismiss: string;
-  /**
-   * The name of the menu's own box, which takes focus after a sign-out when the signed-out slot
-   * holds nothing that takes focus itself.
-   */
-  readonly region: string;
 }
 
 export const USER_MENU_LABELS: UserMenuLabels = {
@@ -30,5 +25,4 @@ export const USER_MENU_LABELS: UserMenuLabels = {
   superseded: "You are signed in from another tab.",
   errorUnknown: "Something went wrong. Try again later.",
   dismiss: "Dismiss",
-  region: "Account",
 };

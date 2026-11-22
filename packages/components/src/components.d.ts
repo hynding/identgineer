@@ -1282,6 +1282,11 @@ export namespace Components {
      * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
      * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
      * at once.
+     * The guard adds no box around what it shows: the host is `display: contents` and the slots are
+     * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
+     * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
+     * before the content and out of the page's layout, whose text says the change; Tab goes on into
+     * the content. A notice, when the guard shows one, is one block before the content.
      * This is a convenience for the interface, not access control: the content is still in the page
      * for anyone who reads its markup, and only the API decides what a request may read or change.
      */
@@ -2515,6 +2520,11 @@ declare global {
      * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
      * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
      * at once.
+     * The guard adds no box around what it shows: the host is `display: contents` and the slots are
+     * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
+     * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
+     * before the content and out of the page's layout, whose text says the change; Tab goes on into
+     * the content. A notice, when the guard shows one, is one block before the content.
      * This is a convenience for the interface, not access control: the content is still in the page
      * for anyone who reads its markup, and only the API decides what a request may read or change.
      */
@@ -4093,6 +4103,11 @@ declare namespace LocalJSX {
      * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
      * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
      * at once.
+     * The guard adds no box around what it shows: the host is `display: contents` and the slots are
+     * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
+     * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
+     * before the content and out of the page's layout, whose text says the change; Tab goes on into
+     * the content. A notice, when the guard shows one, is one block before the content.
      * This is a convenience for the interface, not access control: the content is still in the page
      * for anyone who reads its markup, and only the API decides what a request may read or change.
      */
@@ -5338,6 +5353,11 @@ declare module "@stencil/core" {
              * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
              * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
              * at once.
+             * The guard adds no box around what it shows: the host is `display: contents` and the slots are
+             * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
+             * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
+             * before the content and out of the page's layout, whose text says the change; Tab goes on into
+             * the content. A notice, when the guard shows one, is one block before the content.
              * This is a convenience for the interface, not access control: the content is still in the page
              * for anyone who reads its markup, and only the API decides what a request may read or change.
              */

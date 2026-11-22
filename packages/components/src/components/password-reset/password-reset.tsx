@@ -54,7 +54,11 @@ function isResetClient(value: unknown): value is PasswordResetClient {
  */
 @Component({
   tag: "idg-password-reset",
-  styleUrls: ["../../styles/visually-hidden.css", "../../styles/identity-form.css"],
+  styleUrls: [
+    "../../styles/visually-hidden.css",
+    "../../styles/identity-form.css",
+    "../../styles/narrow-container.css",
+  ],
   shadow: true,
 })
 export class IdgPasswordReset {
@@ -309,7 +313,7 @@ export class IdgPasswordReset {
     const request = this.currentMode() === "request";
     if (this.done) {
       return (
-        <div class="identity">
+        <div class="identity narrow-container">
           <div
             class="confirmation"
             part="confirmation"
@@ -324,7 +328,7 @@ export class IdgPasswordReset {
       );
     }
     return (
-      <div class="identity">
+      <div class="identity narrow-container">
         <form
           class="form"
           part="form"

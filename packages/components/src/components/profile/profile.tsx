@@ -41,7 +41,12 @@ const MIN_HEADING_LEVEL = 2;
  */
 @Component({
   tag: "idg-profile",
-  styleUrls: ["../../styles/visually-hidden.css", "../../styles/identity-form.css", "profile.css"],
+  styleUrls: [
+    "../../styles/visually-hidden.css",
+    "../../styles/identity-form.css",
+    "../../styles/narrow-container.css",
+    "profile.css",
+  ],
   shadow: true,
 })
 export class IdgProfile {
@@ -202,7 +207,7 @@ export class IdgProfile {
       );
     } else content = <idg-skeleton class="placeholder" lines={6} />;
     return (
-      <div class="identity">
+      <div class="identity narrow-container">
         {this.sessions.renderOutcome(labels)}
         {content}
       </div>

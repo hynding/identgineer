@@ -45,7 +45,11 @@ function isRegisterClient(value: unknown): value is RegisterClient {
  */
 @Component({
   tag: "idg-register",
-  styleUrls: ["../../styles/visually-hidden.css", "../../styles/identity-form.css"],
+  styleUrls: [
+    "../../styles/visually-hidden.css",
+    "../../styles/identity-form.css",
+    "../../styles/narrow-container.css",
+  ],
   shadow: true,
 })
 export class IdgRegister {
@@ -220,12 +224,12 @@ export class IdgRegister {
   render() {
     const labels = this.text();
     if (this.outcome !== undefined) {
-      return <div class="identity">{this.renderConfirmation(labels)}</div>;
+      return <div class="identity narrow-container">{this.renderConfirmation(labels)}</div>;
     }
     const feedback = this.feedback;
     const errors = feedback.fieldErrors;
     return (
-      <div class="identity">
+      <div class="identity narrow-container">
         <form
           class="form"
           part="form"

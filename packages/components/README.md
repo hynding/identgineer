@@ -1215,18 +1215,26 @@ and tries again when the browser is back online. A `server-unreachable` sign-out
 the fallback (part `sign-out-outcome`, dismissible; slot `sign-out-outcome` replaces the text),
 since the content that would have said so is gone. Prop `labels`. Event `idgSessionChange` on each
 transition: `{ status: "signed-in" }`, `{ status: "unknown" }`, `{ status: "unreachable" }` or
-`{ status: "signed-out", reason }`. What it shows sits in one block of its own (part `region`,
-a group named by the `region` label, "Account", with `tabindex="-1"`). When a transition takes
-away what had focus (a sign-in from the fallback, "Sign out everywhere", "Try again", dismissing
-the warning), focus goes to that region, or to the warning when one is shown, and the change is
-said politely ("You are signed in." or "You are signed out.", in `labels`). A sign-out this tab
-asked for waits up to a second for the content's `idgSignedOut`, so focus settles once: on the
-warning, read when it takes focus and not said again, when the server could not confirm it. The
-guard writes no `tabindex` on anything it does not own: on a custom element host it would take
-the host's whole shadow tree out of the Tab order. The design's focus ring shows on the region
-only for keyboard users. The host is `display: contents`. **Not access control**: its children are
-in the DOM all along; see the security notes, and hide it until hydrated with
-`idg-session-guard:not(.hydrated)`.
+`{ status: "signed-out", reason }`.
+
+**Layout.** The guard adds no box: the host is `display: contents` and its slots are its shadow
+root's own children, so what it shows is laid out as the parent's own children (a flex row's or a
+grid's items), and it adds no group or landmark to the accessibility tree. A notice, when one is
+shown, is one extra block before the content (part `notice`, holding part `unreachable` or
+`sign-out-outcome`); it takes the identity measure as the forms do.
+
+**Focus.** When a transition takes away what had focus (a sign-in from the fallback, a sign-out
+from the content or by the page's own `signOut()`, "Try again", dismissing the warning), focus goes
+at once to a hidden anchor of the guard's own: absolutely positioned and clipped, so it is no item
+of the parent's layout, placed before the content, so Tab goes on into the content and Shift+Tab
+back before the guard. Its text is the change ("You are signed in.", "You are signed out." or,
+while trying again, "Checking whether you are signed in.", in `labels`), read once as focus lands;
+no live region says it again. A warning that appears while focus is still on the anchor takes
+focus and is read then (its live role left out); one that appears after the user has moved on is
+announced by its `role="alert"` and leaves focus where it is. The guard writes no `tabindex` on
+anything it does not own: on a custom element host it would take the host's whole shadow tree
+out of the Tab order. **Not access control**: its children are in the DOM all along; see the
+security notes, and hide it until hydrated with `idg-session-guard:not(.hydrated)`.
 
 ### `idg-user-menu`
 
@@ -1238,9 +1246,10 @@ outcome: `signed-out` and `superseded` (another tab's newer sign-in stands; not 
 announced politely, and `server-unreachable` is shown as a warning (part `outcome`) that says the
 session may stay active on the server. Slot `signed-out` while nobody is signed in. It goes when
 another tab signs out. After its own sign-out, focus moves to the warning (read as it takes focus,
-not said again by a live role), or else to the first element of the `signed-out` slot when that
-takes focus as it is, or else to the menu's own box (a group named by the `region` label). It
-writes no `tabindex` on the page's elements.
+not said again by a live role); or else to the first element of the `signed-out` slot when that
+takes focus as it is, with the outcome said politely; or else to a hidden anchor of the menu's own,
+whose text says the outcome as it takes focus. It writes no `tabindex` on the page's elements and
+adds no group to the accessibility tree.
 
 ## Strict CSP and Trusted Types
 
