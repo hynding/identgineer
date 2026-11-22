@@ -18,7 +18,7 @@ export const VECTORS: readonly Vector[] = [
     { name: `${id} with a trailing newline`, value: `${id}\n` },
     { name: `${id} with a NUL`, value: `${id}\0` },
     { name: `${id} with a suffix`, value: `${id}-x` },
-    { name: `${id} with a zero-width space`, value: `${id}​` },
+    { name: `${id} with a zero-width space`, value: `${id}${String.fromCodePoint(0x200b)}` },
   ]),
   { name: "the empty string", value: "" },
   { name: "a space", value: " " },

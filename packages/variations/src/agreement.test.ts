@@ -33,8 +33,10 @@ describe("the runtime and the built bootstrap agree on every hostile vector", ()
           const stored = JSON.stringify({ [key]: value });
           const fromRuntime = runtimeAnswer(
             loadVariations({
-              getItem: (name) => (name === STORAGE_KEY ? stored : null),
-            } as never)[key],
+              getItem: (storageKey: string) => (storageKey === STORAGE_KEY ? stored : null),
+              setItem: () => undefined,
+              removeItem: () => undefined,
+            })[key],
           );
           const fromBootstrap = attributes(run({ stored }).root)[key];
           expect(fromBootstrap, `${name} in storage`).toBe(fromRuntime);
