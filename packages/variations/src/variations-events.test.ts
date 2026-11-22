@@ -315,15 +315,17 @@ describe("two listeners that keep undoing each other", () => {
   function pingPong(): { calls: () => number } {
     let calls = 0;
     onVariationsChange(
-      ({ state }) => {
+      ({ state, changed }) => {
         calls += 1;
-        if (state.theme === "ember") applyVariations({ theme: "tidal" }, { root });
+        if (changed.includes("theme") && state.theme === "ember")
+          applyVariations({ theme: "tidal" }, { root });
       },
       { root },
     );
     onVariationsChange(
-      ({ state }) => {
-        if (state.theme === "tidal") applyVariations({ theme: "ember" }, { root });
+      ({ state, changed }) => {
+        if (changed.includes("theme") && state.theme === "tidal")
+          applyVariations({ theme: "ember" }, { root });
       },
       { root },
     );

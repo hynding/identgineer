@@ -48,6 +48,9 @@ interface Delivery {
 
 const deliveries = new WeakMap<Element, Delivery>();
 
+/** Announcements one outermost call may deliver, so listeners that undo each other cannot hang the page. */
+export const MAX_ANNOUNCEMENTS_PER_DISPATCH = 100;
+
 /**
  * A listener may itself change the state. Its announcement waits until the current one has
  * reached every listener and the event, so everything is seen in order and ends on the final
@@ -59,8 +62,14 @@ function deliver(root: Element, change: VariationsChange): void {
   delivery.pending.push(change);
   if (delivery.busy) return;
   delivery.busy = true;
+  let delivered = 0;
   try {
     for (let next = delivery.pending.shift(); next; next = delivery.pending.shift()) {
+      if (delivered === MAX_ANNOUNCEMENTS_PER_DISPATCH) {
+        abandonDelivery(root, delivery);
+        break;
+      }
+      delivered += 1;
       const channel = channels.get(root);
       for (const subscription of channel ? [...channel.subscriptions] : []) {
         // Unsubscribed by an earlier listener in this same dispatch: not called any more.
@@ -71,6 +80,19 @@ function deliver(root: Element, change: VariationsChange): void {
   } finally {
     delivery.busy = false;
   }
+}
+
+/**
+ * The DOM is the truth: drop what is queued and re-baseline on it, so the next real change is
+ * reported against what is actually there and not against a state nobody was told about.
+ */
+function abandonDelivery(root: Element, delivery: Delivery): void {
+  delivery.pending.length = 0;
+  const channel = channels.get(root);
+  if (channel) channel.last = getVariations(root);
+  console.error(
+    `idg-variations: listeners changed the state more than ${String(MAX_ANNOUNCEMENTS_PER_DISPATCH)} times in one dispatch (they probably undo each other); the remaining announcements were dropped`,
+  );
 }
 
 /**

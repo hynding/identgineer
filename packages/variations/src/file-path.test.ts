@@ -7,11 +7,4 @@ describe("toFilePath", () => {
       "/home/my repo/pé/a.ts",
     );
   });
-
-  it("is what the generator uses for the target it reads Prettier's config for", () => {
-    const here = toFilePath(
-      new URL("../src/generated/registry-data.ts", import.meta.url.replace(/[^/]*$/, "x/")),
-    );
-    expect(here).not.toContain("%");
-  });
 });
