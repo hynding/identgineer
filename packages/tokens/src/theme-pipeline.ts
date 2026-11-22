@@ -1,5 +1,6 @@
 // The theme pipeline for packages that build themes of their own (@identgineer/brand): the same
 // parsing, resolution, verification, contrast checks and emission the built-in themes go through.
+export { brandRadiusVariableName } from "./brand-corners.ts";
 export { CONTRAST_PAIRS, findContrastFailures, formatContrastFailure } from "./check-contrast.ts";
 export type { ContrastFailure, ContrastPair } from "./check-contrast.ts";
 export {

@@ -4,6 +4,7 @@ export {
   RESERVED_THEME_IDS,
 } from "./added-theme-id.ts";
 export type { AddedThemeIdProblem } from "./added-theme-id.ts";
+export { brandRadiusVariableName } from "./brand-corners.ts";
 export { contrastRatio, relativeLuminance } from "./contrast.ts";
 export { DEFAULT_DESIGN_ID, DESIGN_IDS } from "./design-ids.ts";
 export type { DesignId } from "./design-ids.ts";

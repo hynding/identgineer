@@ -19,6 +19,8 @@ export interface ParsedMode {
   readonly file: string;
   readonly label: string;
   readonly description: string;
+  /** Whether a brand theme's corners replace this design's radii; false for layouts and UX modes. */
+  readonly followsBrandCorners: boolean;
   readonly tokens: readonly FlatToken[];
   /** Tokens that replace `tokens` when a design cannot be translucent; always empty for layouts and UX modes. */
   readonly opaque: readonly FlatToken[];
@@ -35,6 +37,29 @@ function readMetadata(source: ModeSource, json: Record<string, unknown>, noun: s
     throw new Error(`${source.file}: ${noun} "${source.id}" needs a $description`);
   }
   return { label, description: json.$description };
+}
+
+function readFollowsBrandCorners(
+  source: ModeSource,
+  json: Record<string, unknown>,
+  axis: ModeAxis,
+) {
+  const extensions = json.$extensions;
+  const identgineer = isRecord(extensions) ? extensions.identgineer : undefined;
+  const flag = isRecord(identgineer) ? identgineer.followsBrandCorners : undefined;
+  const noun = NOUNS[axis];
+  if (axis !== "design") {
+    if (flag === undefined) return false;
+    throw new Error(
+      `${source.file}: ${noun} "${source.id}" cannot declare followsBrandCorners; only designs do`,
+    );
+  }
+  if (typeof flag !== "boolean") {
+    throw new Error(
+      `${source.file}: ${noun} "${source.id}" needs $extensions.identgineer.followsBrandCorners (true or false)`,
+    );
+  }
+  return flag;
 }
 
 function readGroup(source: ModeSource, json: Record<string, unknown>, name: string, noun: string) {
@@ -70,6 +95,7 @@ export function parseMode(source: ModeSource, axis: ModeAxis): ParsedMode {
     id: source.id,
     file: source.file,
     ...readMetadata(source, source.json, noun),
+    followsBrandCorners: readFollowsBrandCorners(source, source.json, axis),
     tokens: readGroup(source, source.json, "tokens", noun),
     opaque: "opaque" in source.json ? readGroup(source, source.json, "opaque", noun) : [],
   };

@@ -59,9 +59,9 @@ describe("followBrandCorners", () => {
 
 describe("the followsBrandCorners flag", () => {
   it("is read from $extensions.identgineer for a design", () => {
-    expect(parseMode(designSource({ followsBrandCorners: true }), "design").followsBrandCorners).toBe(
-      true,
-    );
+    expect(
+      parseMode(designSource({ followsBrandCorners: true }), "design").followsBrandCorners,
+    ).toBe(true);
     expect(
       parseMode(designSource({ followsBrandCorners: false }), "design").followsBrandCorners,
     ).toBe(false);
@@ -79,13 +79,17 @@ describe("the followsBrandCorners flag", () => {
   it("is refused on a layout or UX mode, which own no corners", () => {
     expect(() =>
       parseMode(designSource({ followsBrandCorners: true }, "layouts/test.json"), "layout"),
-    ).toThrow('layouts/test.json: layout "test" cannot declare followsBrandCorners; only designs do');
+    ).toThrow(
+      'layouts/test.json: layout "test" cannot declare followsBrandCorners; only designs do',
+    );
   });
 
   it("is on every design definition, declined by the designs whose identity is their corners", () => {
-    expect(DESIGNS.filter((design) => !design.followsBrandCorners).map(({ id }) => id)).toEqual(
-      DECLINING,
-    );
+    expect(
+      DESIGNS.filter((design) => !design.followsBrandCorners)
+        .map(({ id }) => id)
+        .sort(),
+    ).toEqual(DECLINING);
     for (const source of DESIGN_SOURCES) {
       const design = DESIGNS.find(({ id }) => id === source.id);
       expect(design?.followsBrandCorners, source.id).toBe(
