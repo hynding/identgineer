@@ -208,3 +208,56 @@ test.describe("identity components with large text on a narrow screen", () => {
     });
   });
 });
+
+test.describe("identity components keep the UX mode's padding at normal text size", () => {
+  /** Inline padding found on the fields, submit buttons and summaries, and what the tokens say. */
+  const paddings = (page: Page) =>
+    page.evaluate(() => {
+      const probe = document.createElement("div");
+      document.body.append(probe);
+      const resolve = (value: string) => {
+        probe.style.paddingInlineStart = value;
+        return getComputedStyle(probe).paddingInlineStart;
+      };
+      const control = resolve("var(--idg-density-control-padding-inline)");
+      const surface = resolve("calc(var(--idg-space-s) * var(--idg-density-gap-scale))");
+      probe.remove();
+      const found: string[] = [];
+      const expected: string[] = [];
+      for (const host of document.querySelectorAll("#sign-in, #register")) {
+        const root = host.shadowRoot;
+        const box = root?.querySelector("idg-input")?.shadowRoot?.querySelector(".box");
+        const button = root
+          ?.querySelector("idg-button.submit")
+          ?.shadowRoot?.querySelector('[part="control"]');
+        const alert = root
+          ?.querySelector('idg-alert[part="error"]')
+          ?.shadowRoot?.querySelector(".alert");
+        for (const [name, element, value] of [
+          ["field", box, control],
+          ["button", button, control],
+          ["summary", alert, surface],
+        ] as const) {
+          if (!element) throw new Error(`no ${name} in #${host.id}`);
+          const style = getComputedStyle(element);
+          found.push(`#${host.id} ${name} ${style.paddingInlineStart} ${style.paddingInlineEnd}`);
+          expected.push(`#${host.id} ${name} ${value} ${value}`);
+        }
+      }
+      return { found, expected };
+    });
+
+  for (const ux of UX_MODES) {
+    test(`the ${ux} UX mode's inline padding holds from 320px to 1280px`, async ({ page }) => {
+      await openIdentity(page);
+      await applyAxes(page, { ux });
+      await showFormErrors(page);
+      for (const width of [320, 375, 414, 768, 1280]) {
+        await page.setViewportSize({ width, height: 800 });
+        await settle(page);
+        const { found, expected } = await paddings(page);
+        expect(found, `${String(width)}px`).toEqual(expected);
+      }
+    });
+  }
+});
