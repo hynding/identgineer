@@ -18,7 +18,7 @@ function declarations(directory: string): string[] {
 // build output, so it needs the components built first (CI builds before it tests). Locally it
 // skips when there is no build; in CI a missing build fails, so the guard can never be silently empty.
 describe("the built declarations", () => {
-  it.runIf(Boolean(process.env["CI"]))("are built when running in CI", () => {
+  it.runIf(Boolean(process.env.CI))("are built when running in CI", () => {
     expect(existsSync(TYPES)).toBe(true);
   });
 });

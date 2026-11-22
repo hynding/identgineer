@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 const WORKFLOW = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
 
 function commands(job: string): string[] {
-  const body = WORKFLOW.split(new RegExp(`^  ${job}:`, "m"))[1]?.split(/^  \S/m)[0] ?? "";
+  const body = WORKFLOW.split(new RegExp(`^ {2}${job}:`, "m"))[1]?.split(/^ {2}\S/m)[0] ?? "";
   return [...body.matchAll(/^\s+- run: (.+)$/gm)].map((match) => match[1] ?? "");
 }
 
