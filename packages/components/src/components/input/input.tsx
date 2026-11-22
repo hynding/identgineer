@@ -4,6 +4,7 @@ import {
   Element,
   Event,
   h,
+  Listen,
   Method,
   Prop,
   State,
@@ -156,13 +157,15 @@ export class IdgInput {
 
   // The native input has no form owner across the shadow boundary, so the browser's implicit
   // submission never happens: Enter submits the host's form here instead, as it would natively.
-  private handleKeydown = (event: KeyboardEvent): void => {
+  @Listen("keydown")
+  handleKeydown(event: KeyboardEvent): void {
     if (event.key !== "Enter" || event.isComposing || event.defaultPrevented) return;
+    if (event.composedPath()[0] !== this.native) return;
     const form = this.internals.form;
     if (!form) return;
     event.preventDefault();
     form.requestSubmit();
-  };
+  }
 
   private toggleReveal = (): void => {
     this.revealed = !this.revealed;
@@ -213,7 +216,6 @@ export class IdgInput {
           aria-invalid={this.invalid ? "true" : undefined}
           onInput={this.handleInput}
           onChange={this.handleChange}
-          onKeydown={this.handleKeydown}
         />
         {this.invalid ? <idg-icon class="invalid-mark" name="warning" aria-hidden="true" /> : null}
         {showReveal ? (
