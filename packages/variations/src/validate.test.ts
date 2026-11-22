@@ -39,7 +39,6 @@ describe("isVariationId", () => {
   );
 
   it("rejects a String object, which is not the string primitive", () => {
-    // eslint-disable-next-line no-new-wrappers, @typescript-eslint/no-wrapper-object-types
     expect(isVariationId("theme", new String("ember"))).toBe(false);
   });
 });
@@ -66,8 +65,7 @@ describe("validateVariations", () => {
   });
 
   it("ignores unknown keys and never reads inherited ones", () => {
-    const input = Object.create({ theme: "ember" }) as Record<string, unknown>;
-    input["extra"] = "x";
+    const input = Object.assign(Object.create({ theme: "ember" }) as object, { extra: "x" });
     expect(validateVariations(input)).toEqual({ valid: {}, rejected: [] });
   });
 
