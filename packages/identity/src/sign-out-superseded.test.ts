@@ -114,18 +114,79 @@ describe("a sign-in heard of while the cookie lookup finds a session", () => {
 });
 
 describe("a sign-in asked for in the same tab during its sign-out", () => {
-  it("makes the sign-out superseded, and no other tab is told of a sign-out", async () => {
-    const { api, client, heard } = await twoTabs();
+  it("waits for the sign-out, which finishes and tells the other tabs, then signs in", async () => {
+    const { api, client, other, heard } = await twoTabs();
     const releaseLogout = api.holdNext("POST", "/api/auth/logout");
     const signingOut = client.signOut();
     await settle();
     const signingIn = client.signIn({ identifier: "bob", password: PASSWORD });
     releaseLogout();
-    await expect(signingOut).resolves.toEqual({ outcome: "superseded" });
+    await expect(signingOut).resolves.toEqual({ outcome: "signed-out" });
+    expect(api.activeSessionCount("ada@example.com")).toBe(0);
     await expect(signingIn).resolves.toMatchObject({ username: "bob" });
     await settle();
-    expect(heard).not.toContainEqual({ status: "signed-out", reason: "other-tab" });
+    await settle();
+    expect(heard).toContainEqual({ status: "signed-out", reason: "other-tab" });
     expect(client.getState()).toMatchObject({ status: "signed-in", user: { username: "bob" } });
+    expect(other.getState()).toMatchObject({ status: "signed-in", user: { username: "bob" } });
+  });
+
+  it("that fails leaves the sign-out to finish and tell the other tabs", async () => {
+    const { api, client, other } = await twoTabs();
+    const releaseLogout = api.holdNext("POST", "/api/auth/logout");
+    const signingOut = client.signOut();
+    await settle();
+    const failing = client.signIn({ identifier: "bob", password: "a wrong password" });
+    releaseLogout();
+    await expect(signingOut).resolves.toEqual({ outcome: "signed-out" });
+    await expect(failing).rejects.toMatchObject({ code: "invalid-credentials" });
+    await settle();
+    expect(other.getState()).toEqual({ status: "signed-out", reason: "other-tab" });
+  });
+
+  it("that fails leaves nothing to resume when this tab's token was already dead", async () => {
+    const { api, client } = await twoTabs();
+    api.expireAccessTokens();
+    const releaseLogout = api.holdNext("POST", "/api/auth/logout");
+    const signingOut = client.signOut();
+    await settle();
+    const failing = client.signIn({ identifier: "bob", password: "a wrong password" });
+    releaseLogout();
+    await expect(signingOut).resolves.toEqual({ outcome: "signed-out" });
+    await failing.catch(() => undefined);
+    expect(api.restorableSession()).toBe(false);
+  });
+
+  it("that registers without signing in leaves the sign-out to finish", async () => {
+    const { api, client } = setup({ emailConfirmation: true });
+    await client.signIn({ identifier: "ada", password: PASSWORD });
+    const releaseLogout = api.holdNext("POST", "/api/auth/logout");
+    const signingOut = client.signOut();
+    await settle();
+    const registering = client.register({
+      username: "carol",
+      email: "carol@example.com",
+      password: PASSWORD,
+    });
+    releaseLogout();
+    await expect(signingOut).resolves.toEqual({ outcome: "signed-out" });
+    await expect(registering).resolves.toEqual({ outcome: "check-email" });
+  });
+});
+
+describe("another tab that signs in and out again during a sign-out", () => {
+  it("does not supersede it: the sign-out finishes and ends what the cookie names", async () => {
+    const { api, client, other } = await twoTabs();
+    const releaseLogout = api.holdNext("POST", "/api/auth/logout");
+    const signingOut = client.signOut();
+    await settle();
+    await other.signIn({ identifier: "bob", password: PASSWORD });
+    await settle();
+    await other.signOut();
+    await settle();
+    releaseLogout();
+    await expect(signingOut).resolves.toEqual({ outcome: "signed-out" });
+    expect(api.restorableSession()).toBe(false);
   });
 });
 

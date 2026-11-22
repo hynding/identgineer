@@ -204,3 +204,18 @@ describe("the fake's refresh cookie origin check, as camis' refuseForeignCookie"
     ).toBe(400);
   });
 });
+
+describe("the fake's restorable user", () => {
+  it("names the account whose session the refresh cookie resumes, if any", async () => {
+    const { api, post, signIn } = fakeApi();
+    expect(api.restorableUser()).toBeUndefined();
+    const ada = await signIn("ada");
+    expect(api.restorableUser()).toBe("ada@example.com");
+    await signIn("bob");
+    expect(api.restorableUser()).toBe("bob@example.com");
+    await post("/api/auth/logout", { bearer: ada });
+    expect(api.restorableUser()).toBe("bob@example.com");
+    api.clearCookies();
+    expect(api.restorableUser()).toBeUndefined();
+  });
+});
