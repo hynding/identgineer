@@ -27,6 +27,9 @@ const nonText = (foreground: string, background: string): ContrastPair => ({
 
 const STATUSES = ["success", "warning", "danger", "info"] as const;
 
+/** Every background a control can sit on: the page, wells, cards and popovers. */
+const PAGE_BACKGROUNDS = ["bg", "bg-subtle", "surface", "surface-raised"] as const;
+
 /** Roles are colour token names without the `color.` prefix. */
 export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   text("text", "bg"),
@@ -37,6 +40,7 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   text("on-accent", "accent"),
   text("on-accent", "accent-hover"),
   text("on-accent-subtle", "accent-subtle"),
+  text("on-accent-indicator", "accent-indicator"),
   text("link", "bg"),
   ...STATUSES.flatMap((status) => [
     text(`on-${status}`, status),
@@ -44,6 +48,12 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   ]),
   nonText("focus-ring", "bg"),
   nonText("border-strong", "bg"),
+  // A checked box or the current page identifies state (WCAG 1.4.11), and a fill the page cannot
+  // tell apart needs an edge that it can; the accent fill itself carries a text label instead.
+  ...PAGE_BACKGROUNDS.flatMap((background) => [
+    nonText("accent-indicator", background),
+    nonText("accent-border", background),
+  ]),
 ];
 
 export function findContrastFailures(colors: ReadonlyMap<string, string>): ContrastFailure[] {

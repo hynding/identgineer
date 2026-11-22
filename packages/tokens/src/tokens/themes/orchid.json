@@ -87,6 +87,15 @@
       "on-accent-subtle": {
         "$value": "#5b0f66"
       },
+      "accent-indicator": {
+        "$value": "#a21caf"
+      },
+      "on-accent-indicator": {
+        "$value": "#ffffff"
+      },
+      "accent-border": {
+        "$value": "#a21caf"
+      },
       "link": {
         "$value": "#86198f"
       },
@@ -203,6 +212,15 @@
       },
       "on-accent-subtle": {
         "$value": "#f5d0fe"
+      },
+      "accent-indicator": {
+        "$value": "#e879f9"
+      },
+      "on-accent-indicator": {
+        "$value": "#1b0720"
+      },
+      "accent-border": {
+        "$value": "#e879f9"
       },
       "link": {
         "$value": "#f0abfc"

@@ -52,6 +52,18 @@
     "on-accent-subtle": {
       "$value": "{palette.blue.900}"
     },
+    "accent-indicator": {
+      "$value": "{palette.blue.600}",
+      "$description": "The accent as a mark of state or selection on the page (a checked box, the current page, a progress fill); 3:1 against every page background."
+    },
+    "on-accent-indicator": {
+      "$value": "{palette.neutral.0}",
+      "$description": "Text and glyphs on accent-indicator."
+    },
+    "accent-border": {
+      "$value": "{palette.blue.600}",
+      "$description": "The boundary of an accent fill; the accent itself when it reaches 3:1 against every page background, otherwise a colour that does."
+    },
     "link": {
       "$value": "{palette.blue.700}"
     },
