@@ -81,7 +81,7 @@ export const createFakeStore = (options: FakeStoreOptions) => {
     deviceId: string | null,
     deviceName: string | null,
   ): IssuedTokens => {
-    const sessionId = `${next().toString(16).padStart(32, "0")}`;
+    const sessionId = next().toString(16).padStart(32, "0");
     const secret = `secret${String(next())}`;
     sessions.set(sessionId, {
       sessionId,

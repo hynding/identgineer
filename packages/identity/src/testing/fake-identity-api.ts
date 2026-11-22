@@ -218,7 +218,7 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
 
   return {
     baseUrl: base.origin,
-    fetch: fetch as typeof globalThis.fetch,
+    fetch: fetch,
     settings,
     /** Every request received, in order. */
     requests: requests as readonly FakeRequest[],
