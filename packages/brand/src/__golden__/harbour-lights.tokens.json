@@ -1,0 +1,321 @@
+{
+  "$description": "Brand theme for Harbour Lights",
+  "$extensions": {
+    "identgineer": {
+      "label": "Harbour Lights",
+      "brand": {
+        "typography": "classic-serif",
+        "corners": "round",
+        "tone": "vivid",
+        "colors": {
+          "primary": "#f4c430",
+          "neutralTint": "#1b2a4a"
+        },
+        "radius": {
+          "$type": "dimension",
+          "sm": {
+            "$value": "0.5rem"
+          },
+          "md": {
+            "$value": "1rem"
+          },
+          "lg": {
+            "$value": "1.5rem"
+          },
+          "pill": {
+            "$value": "9999px"
+          }
+        }
+      }
+    }
+  },
+  "common": {
+    "font": {
+      "family": {
+        "$type": "fontFamily",
+        "display": {
+          "$value": [
+            "Iowan Old Style",
+            "Palatino Linotype",
+            "Palatino",
+            "Book Antiqua",
+            "Georgia",
+            "serif"
+          ]
+        },
+        "body": {
+          "$value": [
+            "system-ui",
+            "Segoe UI",
+            "Roboto",
+            "Helvetica Neue",
+            "Arial",
+            "sans-serif"
+          ]
+        },
+        "mono": {
+          "$value": [
+            "ui-monospace",
+            "SF Mono",
+            "Cascadia Code",
+            "Menlo",
+            "Consolas",
+            "DejaVu Sans Mono",
+            "Liberation Mono",
+            "monospace"
+          ]
+        }
+      },
+      "display": {
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 600
+        },
+        "letter-spacing": {
+          "$type": "dimension",
+          "$value": "0em"
+        },
+        "line-height": {
+          "$type": "number",
+          "$value": 1.2
+        }
+      },
+      "body": {
+        "letter-spacing": {
+          "$type": "dimension",
+          "$value": "0em"
+        },
+        "line-height": {
+          "$type": "number",
+          "$value": 1.6
+        }
+      }
+    }
+  },
+  "light": {
+    "color": {
+      "$type": "color",
+      "bg": {
+        "$value": "#f8faff"
+      },
+      "bg-subtle": {
+        "$value": "#e9f0ff"
+      },
+      "surface": {
+        "$value": "#fefeff"
+      },
+      "surface-raised": {
+        "$value": "#fefeff"
+      },
+      "text": {
+        "$value": "#0a1120"
+      },
+      "text-muted": {
+        "$value": "#444d60"
+      },
+      "border": {
+        "$value": "#d5def0"
+      },
+      "border-strong": {
+        "$value": "#5b6e96"
+      },
+      "accent": {
+        "$value": "#f4c430"
+      },
+      "accent-hover": {
+        "$value": "#ffe297"
+      },
+      "on-accent": {
+        "$value": "#1b1505"
+      },
+      "accent-subtle": {
+        "$value": "#f4e2b2"
+      },
+      "on-accent-subtle": {
+        "$value": "#534000"
+      },
+      "link": {
+        "$value": "#8f6f00"
+      },
+      "focus-ring": {
+        "$value": "#b38c00"
+      },
+      "success": {
+        "$value": "#007835"
+      },
+      "on-success": {
+        "$value": "#ffffff"
+      },
+      "success-subtle": {
+        "$value": "#c8efcf"
+      },
+      "on-success-subtle": {
+        "$value": "#005121"
+      },
+      "warning": {
+        "$value": "#fcab00"
+      },
+      "on-warning": {
+        "$value": "#1e1406"
+      },
+      "warning-subtle": {
+        "$value": "#fadeb8"
+      },
+      "on-warning-subtle": {
+        "$value": "#5b3b00"
+      },
+      "danger": {
+        "$value": "#d50017"
+      },
+      "on-danger": {
+        "$value": "#ffffff"
+      },
+      "danger-subtle": {
+        "$value": "#ffd9d3"
+      },
+      "on-danger-subtle": {
+        "$value": "#74211d"
+      },
+      "info": {
+        "$value": "#006fd7"
+      },
+      "on-info": {
+        "$value": "#ffffff"
+      },
+      "info-subtle": {
+        "$value": "#d1e5ff"
+      },
+      "on-info-subtle": {
+        "$value": "#09417e"
+      }
+    },
+    "gradient": {
+      "brand": {
+        "$type": "gradient",
+        "$value": [
+          {
+            "color": "#f4c430",
+            "position": 0
+          },
+          {
+            "color": "#a9de67",
+            "position": 1
+          }
+        ]
+      }
+    }
+  },
+  "dark": {
+    "color": {
+      "$type": "color",
+      "bg": {
+        "$value": "#0a0f19"
+      },
+      "bg-subtle": {
+        "$value": "#111620"
+      },
+      "surface": {
+        "$value": "#151b25"
+      },
+      "surface-raised": {
+        "$value": "#1f242f"
+      },
+      "text": {
+        "$value": "#f0f5ff"
+      },
+      "text-muted": {
+        "$value": "#b3bed4"
+      },
+      "border": {
+        "$value": "#313846"
+      },
+      "border-strong": {
+        "$value": "#6c80a8"
+      },
+      "accent": {
+        "$value": "#f4c430"
+      },
+      "accent-hover": {
+        "$value": "#ffe297"
+      },
+      "on-accent": {
+        "$value": "#1b1505"
+      },
+      "accent-subtle": {
+        "$value": "#433303"
+      },
+      "on-accent-subtle": {
+        "$value": "#fad36b"
+      },
+      "link": {
+        "$value": "#f4c430"
+      },
+      "focus-ring": {
+        "$value": "#f4c430"
+      },
+      "success": {
+        "$value": "#39d970"
+      },
+      "on-success": {
+        "$value": "#0c1a0f"
+      },
+      "success-subtle": {
+        "$value": "#0f401e"
+      },
+      "on-success-subtle": {
+        "$value": "#85f49f"
+      },
+      "warning": {
+        "$value": "#ffb334"
+      },
+      "on-warning": {
+        "$value": "#1e1406"
+      },
+      "warning-subtle": {
+        "$value": "#4a2f00"
+      },
+      "on-warning-subtle": {
+        "$value": "#ffce8a"
+      },
+      "danger": {
+        "$value": "#ff645a"
+      },
+      "on-danger": {
+        "$value": "#22110f"
+      },
+      "danger-subtle": {
+        "$value": "#57231f"
+      },
+      "on-danger-subtle": {
+        "$value": "#ffc8c1"
+      },
+      "info": {
+        "$value": "#6dadff"
+      },
+      "on-info": {
+        "$value": "#0d1723"
+      },
+      "info-subtle": {
+        "$value": "#16365c"
+      },
+      "on-info-subtle": {
+        "$value": "#bedaff"
+      }
+    },
+    "gradient": {
+      "brand": {
+        "$type": "gradient",
+        "$value": [
+          {
+            "color": "#f4c430",
+            "position": 0
+          },
+          {
+            "color": "#a9de67",
+            "position": 1
+          }
+        ]
+      }
+    }
+  }
+}

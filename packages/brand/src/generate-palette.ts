@@ -64,6 +64,13 @@ const NEUTRAL_LIGHTNESS = {
   dark: { bg: 0.17, "bg-subtle": 0.2, surface: 0.22, "surface-raised": 0.26, border: 0.34 },
 } as const;
 
+// How much of the neutral chroma each neutral takes: light cards stay near white, dark ones keep
+// the tint so they do not read as a different grey from the page.
+const NEUTRAL_TINT = {
+  light: { bg: 0.6, "bg-subtle": 1, surface: 0.25, "surface-raised": 0.25, border: 1.2 },
+  dark: { bg: 1, "bg-subtle": 1, surface: 1, "surface-raised": 1, border: 1.2 },
+} as const;
+
 /** Below this chroma a colour is treated as grey: its tints stay grey too. */
 const FULL_CHROMA = 0.05;
 
@@ -220,7 +227,7 @@ function neutrals(builder: Builder, kit: BrandKit): Oklch {
   const chroma = builder.tone.neutralChroma * tintStrength(source);
   const neutral = { lightness: 0, chroma, hue: source.hue };
   const levels = NEUTRAL_LIGHTNESS[builder.scheme];
-  const tint = { bg: 0.6, "bg-subtle": 1, surface: 0.25, "surface-raised": 0.25, border: 1.2 };
+  const tint = NEUTRAL_TINT[builder.scheme];
   for (const role of ["bg", "bg-subtle", "surface", "surface-raised", "border"] as const) {
     builder.set(
       role,

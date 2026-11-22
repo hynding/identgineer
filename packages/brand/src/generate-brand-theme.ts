@@ -1,9 +1,9 @@
 import type { Scheme } from "@identgineer/tokens";
-import { findBrandIdProblem } from "./brand-id.ts";
 import type { BrandKit } from "./brand-kit.ts";
 import { buildThemeDocument, type BrandThemeDocument } from "./brand-theme-document.ts";
 import { CORNER_RADII, type BrandRadius } from "./corner-radii.ts";
 import { generatePalette, type BrandAdjustment, type SchemePalette } from "./generate-palette.ts";
+import { assertValidKit } from "./validate-kit.ts";
 
 export interface BrandTheme {
   /** The `data-theme` value. */
@@ -20,11 +20,10 @@ export interface BrandTheme {
 /**
  * A complete light and dark theme from a parsed brand kit. Deterministic and total: every kit
  * `parseBrandKit` accepts gives a theme that passes the tokens contrast suite in both schemes.
- * Throws only for a hand-built kit whose id is not a valid brand id.
+ * Throws only for a kit parseBrandKit would refuse (one built or altered by hand).
  */
 export function generateBrandTheme(kit: BrandKit): BrandTheme {
-  const problem = findBrandIdProblem(kit.id);
-  if (problem) throw new TypeError(`not a valid brand id: ${problem.message}`);
+  assertValidKit(kit);
   const palettes: Record<Scheme, SchemePalette> = {
     light: generatePalette(kit, "light"),
     dark: generatePalette(kit, "dark"),

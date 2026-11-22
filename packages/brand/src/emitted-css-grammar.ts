@@ -71,23 +71,28 @@ export function readEmittedCss(css: string, allowedSelectors: readonly string[])
         throw new Error(`${where}: blank line inside a rule`);
       continue;
     }
+    if (declarations && line === `${"  ".repeat(context.length)}}`) {
+      blocks.push({ context: [...context], selectors, declarations });
+      selectors = [];
+      declarations = undefined;
+      continue;
+    }
+    if (
+      !declarations &&
+      selectors.length === 0 &&
+      context.length > 0 &&
+      line === `${"  ".repeat(context.length - 1)}}`
+    ) {
+      context.pop();
+      continue;
+    }
     if (!line.startsWith(indent) || body.startsWith(" "))
       throw new Error(`${where}: bad indentation`);
     if (declarations) {
-      if (body === "}") {
-        blocks.push({ context: [...context], selectors, declarations });
-        selectors = [];
-        declarations = undefined;
-        continue;
-      }
       const match = /^(--idg-[a-z0-9-]+|color-scheme): (.+);$/.exec(body);
       if (!match?.[1] || match[2] === undefined) throw new Error(`${where}: not a declaration`);
       checkDeclaration(match[1], match[2], where);
       declarations.push([match[1], match[2]]);
-      continue;
-    }
-    if (body === "}" && selectors.length === 0 && context.length > 0) {
-      context.pop();
       continue;
     }
     if (AT_RULES.includes(body) && selectors.length === 0) {
