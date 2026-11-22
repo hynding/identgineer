@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Implicit submission fixture</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Implicit submission</h1>
+      <!-- Each case twice: native-* is the browser's own behaviour, idg-* must match it. -->
+      <form id="native-button">
+        <input name="q" aria-label="Query" /><button name="action" value="go">Go</button>
+      </form>
+      <form id="idg-button">
+        <idg-input name="q" accessible-label="Query"></idg-input
+        ><button name="action" value="go">Go</button>
+      </form>
+      <form id="idg-idg-button">
+        <idg-input name="q" accessible-label="Query"></idg-input
+        ><idg-button type="submit">Go</idg-button>
+      </form>
+
+      <form id="native-disabled">
+        <input name="q" aria-label="Query" /><button disabled>Go</button>
+      </form>
+      <form id="idg-disabled">
+        <idg-input name="q" accessible-label="Query"></idg-input><button disabled>Go</button>
+      </form>
+      <form id="idg-idg-disabled">
+        <idg-input name="q" accessible-label="Query"></idg-input
+        ><idg-button type="submit" disabled>Go</idg-button>
+      </form>
+      <form id="idg-idg-loading">
+        <idg-input name="q" accessible-label="Query"></idg-input
+        ><idg-button type="submit" loading>Go</idg-button>
+      </form>
+
+      <form id="native-first-disabled">
+        <input name="q" aria-label="Query" /><button disabled>One</button><button>Two</button>
+      </form>
+      <form id="idg-first-disabled">
+        <idg-input name="q" accessible-label="Query"></idg-input><button disabled>One</button
+        ><button>Two</button>
+      </form>
+
+      <form id="native-plain-button">
+        <input name="q" aria-label="Query" /><button type="button">Not a submit</button>
+      </form>
+      <form id="idg-plain-button">
+        <idg-input name="q" accessible-label="Query"></idg-input
+        ><idg-button type="button">Not a submit</idg-button>
+      </form>
+
+      <form id="native-two">
+        <input name="a" aria-label="First" /><input name="b" aria-label="Second" />
+      </form>
+      <form id="idg-two">
+        <idg-input name="a" accessible-label="First"></idg-input
+        ><idg-input name="b" accessible-label="Second"></idg-input>
+      </form>
+      <form id="idg-two-mixed">
+        <idg-input name="a" accessible-label="First"></idg-input
+        ><input name="b" aria-label="Second" />
+      </form>
+
+      <form id="native-alone"><input name="a" aria-label="Alone" /></form>
+      <form id="idg-alone"><idg-input name="a" accessible-label="Alone"></idg-input></form>
+
+      <form id="native-with-checkbox">
+        <input name="a" aria-label="Text" /><input type="checkbox" name="b" aria-label="Box" />
+      </form>
+      <form id="idg-with-checkbox">
+        <idg-input name="a" accessible-label="Text"></idg-input
+        ><idg-checkbox name="b">Box</idg-checkbox>
+      </form>
+
+      <form id="native-combo">
+        <div class="combo"><input name="c" aria-label="Combo" /></div>
+        <button>Go</button>
+      </form>
+      <form id="idg-combo">
+        <div class="combo"><idg-input name="c" accessible-label="Combo"></idg-input></div>
+        <button>Go</button>
+      </form>
+    </main>
+  </body>
+</html>
