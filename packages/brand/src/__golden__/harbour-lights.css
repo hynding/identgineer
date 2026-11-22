@@ -12,11 +12,14 @@
     --idg-color-text-muted: #444d60;
     --idg-color-border: #d5def0;
     --idg-color-border-strong: #5b6e96;
-    --idg-color-accent: #aa8600;
-    --idg-color-accent-hover: #a38000;
+    --idg-color-accent: #f4c430;
+    --idg-color-accent-hover: #d8ab00;
     --idg-color-on-accent: #1b1505;
     --idg-color-accent-subtle: #f4e2b2;
     --idg-color-on-accent-subtle: #534000;
+    --idg-color-accent-indicator: #aa8600;
+    --idg-color-on-accent-indicator: #1b1505;
+    --idg-color-accent-border: #aa8600;
     --idg-color-link: #7e6200;
     --idg-color-focus-ring: #a07d00;
     --idg-color-success: #007835;
@@ -61,6 +64,9 @@
     --idg-color-on-accent: #1b1505;
     --idg-color-accent-subtle: #433303;
     --idg-color-on-accent-subtle: #fad36b;
+    --idg-color-accent-indicator: #f4c430;
+    --idg-color-on-accent-indicator: #1b1505;
+    --idg-color-accent-border: #f4c430;
     --idg-color-link: #f4c430;
     --idg-color-focus-ring: #f4c430;
     --idg-color-success: #39d970;
@@ -98,6 +104,9 @@
       --idg-color-on-accent: #1b1505;
       --idg-color-accent-subtle: #433303;
       --idg-color-on-accent-subtle: #fad36b;
+      --idg-color-accent-indicator: #f4c430;
+      --idg-color-on-accent-indicator: #1b1505;
+      --idg-color-accent-border: #f4c430;
       --idg-color-link: #f4c430;
       --idg-color-focus-ring: #f4c430;
       --idg-color-success: #39d970;

@@ -120,10 +120,10 @@
         "$value": "#5b6e96"
       },
       "accent": {
-        "$value": "#aa8600"
+        "$value": "#f4c430"
       },
       "accent-hover": {
-        "$value": "#a38000"
+        "$value": "#d8ab00"
       },
       "on-accent": {
         "$value": "#1b1505"
@@ -133,6 +133,15 @@
       },
       "on-accent-subtle": {
         "$value": "#534000"
+      },
+      "accent-indicator": {
+        "$value": "#aa8600"
+      },
+      "on-accent-indicator": {
+        "$value": "#1b1505"
+      },
+      "accent-border": {
+        "$value": "#aa8600"
       },
       "link": {
         "$value": "#7e6200"
@@ -246,6 +255,15 @@
       },
       "on-accent-subtle": {
         "$value": "#fad36b"
+      },
+      "accent-indicator": {
+        "$value": "#f4c430"
+      },
+      "on-accent-indicator": {
+        "$value": "#1b1505"
+      },
+      "accent-border": {
+        "$value": "#f4c430"
       },
       "link": {
         "$value": "#f4c430"

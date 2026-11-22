@@ -70,11 +70,12 @@ const EXTRA_REQUIREMENTS: Readonly<Record<string, readonly Requirement[]>> = {
 };
 
 /**
- * Fills that also mark state on the page (a primary button, a checked control, progress, an error
- * border) must stand out from every background at the non-text level, 3:1. Warning is left out:
+ * Fills that also mark state on the page (a checked control, progress, the current page, an error
+ * border) must stand out from every background at the non-text level, 3:1. The accent fill itself
+ * carries a text label, so it only needs its text; its indicator and edge take the page. Warning is left out:
  * the built-in themes do not give amber 3:1 on a light page either.
  */
-const FILLS_ON_PAGE: readonly string[] = ["accent", "danger", "success", "info"];
+const FILLS_ON_PAGE: readonly string[] = ["accent-indicator", "danger", "success", "info"];
 
 /** Body text is held to AAA (7:1) on every surface, whatever the tone. */
 const TEXT_FLOOR = 7;
@@ -103,37 +104,6 @@ const GREY_CHROMA = 0.02;
 
 /** Below this chroma a colour is treated as grey: its tints stay grey too. */
 const FULL_CHROMA = 0.05;
-
-/** Hover colours to try, best first: the full step away from the text, then the other way and smaller. */
-function hoverCandidates(fill: Oklch, away: number, step: number): Rgb[] {
-  const lightness = (factor: number) =>
-    fromOklch({ ...fill, lightness: Math.min(1, Math.max(0, fill.lightness + factor * step)) });
-  const chroma = (factor: number) =>
-    fromOklch(mapToSrgbGamut({ ...fill, chroma: fill.chroma * factor }));
-  return [
-    lightness(away),
-    lightness(-away),
-    lightness(away * 1.5),
-    lightness(away / 2),
-    lightness(-away / 2),
-    lightness(away / 4),
-    lightness(-away / 4),
-    chroma(0.6),
-    chroma(1.4),
-  ];
-}
-
-/** A last, fine sweep in lightness both ways, nearest first, before giving up on a change. */
-function fineCandidates(fill: Oklch, step: number): Rgb[] {
-  const candidates: Rgb[] = [];
-  for (let offset = 0.005; offset <= step * 2; offset += 0.005) {
-    for (const sign of [-1, 1]) {
-      const lightness = fill.lightness + sign * offset;
-      if (lightness >= 0 && lightness <= 1) candidates.push(fromOklch({ ...fill, lightness }));
-    }
-  }
-  return candidates;
-}
 
 class Builder {
   readonly colors = new Map<string, Rgb>();
@@ -253,52 +223,33 @@ class Builder {
   }
 
   /**
-   * The hover state of a fill: a step away from its text, keeping the text passing and never
-   * weaker against the page than the fill itself. When that step would move towards the page, a
-   * step the other way, a smaller step or a change of chroma is taken instead; only when no
-   * different colour qualifies (a white or black fill already at the end of its range) does the
-   * hover keep the fill's own colour.
+   * The hover state of a fill, as the built-in themes do it: one hover step further from the page
+   * (darker in light, lighter in dark). Where the text on the fill would fail there, or the fill is
+   * already at the end of its range, the step goes towards the page instead. One of the two always
+   * moves away from the text, so the text keeps passing and the hover always differs.
    */
   hover(role: string, fillRole: string, onRole: string): void {
     const fillRgb = this.color(fillRole);
     const fill = toOklch(fillRgb);
     const on = this.color(onRole);
     const minimum = this.minimumBetween(onRole, role);
-    const onPage = FILLS_ON_PAGE.includes(fillRole);
-    const floor = onPage ? this.weakestOnPage(fillRgb) : 0;
-    const qualifies = (rgb: Rgb) =>
-      !sameColor(rgb, fillRgb) &&
-      contrastBetween(rgb, on) >= minimum &&
-      (!onPage || this.weakestOnPage(rgb) >= floor);
-    const away = toOklch(on).lightness > fill.lightness ? -1 : 1;
-    const step = this.tone.hoverStep;
-    const requested = fromOklch({ ...fill, lightness: fill.lightness + away * step });
-    const used =
-      hoverCandidates(fill, away, step).find(qualifies) ??
-      fineCandidates(fill, step).find(qualifies) ??
-      fillRgb;
-    if (!sameColor(used, requested))
-      this.reportHover(role, requested, used, onRole, minimum, floor);
-    this.set(role, used);
-  }
-
-  // Names what the full step failed: the text, or the page background it came too close to.
-  reportHover(
-    role: string,
-    requested: Rgb,
-    used: Rgb,
-    onRole: string,
-    minimum: number,
-    floor: number,
-  ) {
-    if (contrastBetween(requested, this.color(onRole)) < minimum) {
+    const fromPage = this.away === "darker" ? -this.tone.hoverStep : this.tone.hoverStep;
+    // Near black, a small lightness step can round to the same 8-bit colour, so it grows until
+    // the colour changes or the end of the range is reached.
+    const stepped = (step: number) => {
+      for (let size = Math.abs(step); size <= 1; size += 0.01) {
+        const lightness = Math.min(1, Math.max(0, fill.lightness + Math.sign(step) * size));
+        const rgb = fromOklch({ ...fill, lightness });
+        if (!sameColor(rgb, fillRgb) || lightness === 0 || lightness === 1) return rgb;
+      }
+      return fillRgb;
+    };
+    const requested = stepped(fromPage);
+    const qualifies = (rgb: Rgb) => !sameColor(rgb, fillRgb) && contrastBetween(rgb, on) >= minimum;
+    const used = [requested, stepped(-fromPage)].find(qualifies) ?? fillRgb;
+    if (contrastBetween(requested, on) < minimum)
       this.report(role, "generated", requested, used, onRole, minimum);
-      return;
-    }
-    const weakest = PAGE.find(
-      (background) => contrastBetween(requested, this.color(background)) < floor,
-    );
-    if (weakest !== undefined) this.report(role, "generated", requested, used, weakest, floor);
+    this.set(role, used);
   }
 
   weakestOnPage(rgb: Rgb): number {
@@ -411,6 +362,15 @@ function accent(builder: Builder, kit: BrandKit): void {
   const primary = toOklch(kit.colors.primary);
   builder.fill("accent", "on-accent", kit.colors.primary, "primary");
   builder.hover("accent-hover", "accent", "on-accent");
+  const fill = builder.color("accent");
+  if (builder.weakestOnPage(fill) >= 3) {
+    // The accent already marks state on the page: the indicator is the accent, text and all.
+    builder.set("accent-indicator", fill);
+    builder.set("on-accent-indicator", builder.color("on-accent"));
+  } else {
+    builder.fill("accent-indicator", "on-accent-indicator", fill, "primary");
+  }
+  builder.foreground("accent-border", toOklch(fill), "primary", fill);
   builder.foreground("link", primary, "primary", kit.colors.primary);
   const ring = kit.colors.secondary ?? kit.colors.primary;
   builder.foreground(
