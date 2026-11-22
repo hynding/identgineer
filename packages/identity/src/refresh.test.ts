@@ -226,7 +226,7 @@ describe("scheduled refresh", () => {
     expect(paths(api.requests).filter((path) => path === "/api/auth/refresh")).toHaveLength(2);
   });
 
-  it("signs out when a known expiry passed and the server is still unreachable", async () => {
+  it("keeps the session past a known expiry while the server is unreachable, without the expired token", async () => {
     const { api, clock, client, signIn } = setup({
       accessTokens: "jwt",
       accessTokenLifetimeSeconds: 600,
@@ -237,6 +237,81 @@ describe("scheduled refresh", () => {
     clock.advance(570_000);
     await settle();
     clock.advance(30_000);
+    await settle();
+    expect(client.getState()).toMatchObject({ status: "signed-in", user: { username: "ada" } });
+    api.respondNext("POST", "/api/auth/refresh", "network-error");
+    const sent = api.requests.length;
+    await expect(client.authorizedFetch("/api/users/me")).rejects.toMatchObject({
+      code: "network",
+    });
+    await expect(client.currentUser()).rejects.toMatchObject({ code: "network" });
+    expect(paths(api.requests.slice(sent))).toEqual(["/api/auth/refresh", "/api/auth/refresh"]);
+    expect(client.getState().status).toBe("signed-in");
+  });
+
+  it("backs off between refreshes that cannot reach the server, up to five minutes", async () => {
+    const { api, clock, signIn } = setup({ accessTokens: "jwt", accessTokenLifetimeSeconds: 600 });
+    await signIn();
+    for (let failure = 0; failure < 8; failure += 1) {
+      api.respondNext("POST", "/api/auth/refresh", "network-error");
+    }
+    const refreshTimes: number[] = [];
+    let elapsed = 0;
+    for (let second = 0; second < 1_800; second += 30) {
+      const before = paths(api.requests).length;
+      clock.advance(30_000);
+      elapsed += 30;
+      await settle();
+      if (paths(api.requests).length > before) refreshTimes.push(elapsed);
+      if (refreshTimes.length === 7) break;
+    }
+    expect(refreshTimes).toEqual([570, 600, 660, 780, 1_020, 1_320, 1_620]);
+  });
+
+  it("refreshes at once when the browser comes back online", async () => {
+    let online = (): void => undefined;
+    const onOnline = (listener: () => void): (() => void) => {
+      online = listener;
+      return () => {
+        online = () => undefined;
+      };
+    };
+    const { api, clock, client, signIn } = setup(
+      { accessTokens: "jwt", accessTokenLifetimeSeconds: 600 },
+      { onOnline },
+    );
+    await signIn();
+    api.respondNext("POST", "/api/auth/refresh", "network-error");
+    api.respondNext("POST", "/api/auth/refresh", "network-error");
+    clock.advance(570_000);
+    await settle();
+    clock.advance(30_000);
+    await settle();
+    const sent = api.requests.length;
+    online();
+    await settle();
+    await settle();
+    expect(paths(api.requests.slice(sent))).toEqual(["/api/auth/refresh"]);
+    await expect(client.currentUser()).resolves.toMatchObject({ username: "ada" });
+    online();
+    await settle();
+    expect(paths(api.requests.slice(sent))).toEqual(["/api/auth/refresh", "/api/users/me"]);
+  });
+
+  it("still signs out when the refresh is refused after a known expiry", async () => {
+    const { api, clock, client, signIn } = setup({
+      accessTokens: "jwt",
+      accessTokenLifetimeSeconds: 600,
+    });
+    await signIn();
+    api.respondNext("POST", "/api/auth/refresh", "network-error");
+    api.respondNext("POST", "/api/auth/refresh", "network-error");
+    clock.advance(570_000);
+    await settle();
+    clock.advance(30_000);
+    await settle();
+    api.clearCookies();
+    clock.advance(60_000);
     await settle();
     expect(client.getState()).toEqual({ status: "signed-out", reason: "expired" });
   });

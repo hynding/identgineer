@@ -209,4 +209,66 @@ describe("scheduled refresh of opaque tokens", () => {
     await client.currentUser().catch(() => undefined);
     expect(client.getState()).toEqual({ status: "signed-out", reason: "expired" });
   });
+
+  it("keeps the session after a sleep when the first refresh finds no network", async () => {
+    const base = createManualClock(START);
+    let slept = 0;
+    const sleepy: Clock = {
+      now: () => base.now() + slept,
+      setTimeout: base.setTimeout,
+      clearTimeout: base.clearTimeout,
+    };
+    const api = createFakeIdentityApi({ clock: sleepy, accessTokens: "jwt" });
+    api.addUser({ username: "ada", email: "ada@example.com", password: PASSWORD });
+    const client = createIdentityClient({
+      baseUrl: api.baseUrl,
+      fetch: api.fetch,
+      clock: sleepy,
+      channelName: "identgineer-sleep",
+    });
+    try {
+      await client.signIn({ identifier: "ada", password: PASSWORD });
+      slept = 3_600_000;
+      api.respondNext("POST", "/api/auth/refresh", "network-error");
+      base.advance(570_000);
+      await spin(base, 3);
+      expect(client.getState()).toMatchObject({ status: "signed-in" });
+      base.advance(30_000);
+      await settle();
+      await expect(client.currentUser()).resolves.toMatchObject({ username: "ada" });
+    } finally {
+      client.dispose();
+    }
+  });
+
+  it("refreshes before sending a request when the token's known expiry has passed", async () => {
+    const base = createManualClock(START);
+    let slept = 0;
+    const sleepy: Clock = {
+      now: () => base.now() + slept,
+      setTimeout: base.setTimeout,
+      clearTimeout: base.clearTimeout,
+    };
+    const api = createFakeIdentityApi({ clock: sleepy, accessTokens: "jwt" });
+    api.addUser({ username: "ada", email: "ada@example.com", password: PASSWORD });
+    const client = createIdentityClient({
+      baseUrl: api.baseUrl,
+      fetch: api.fetch,
+      clock: sleepy,
+      channelName: "identgineer-sleep-request",
+    });
+    try {
+      await client.signIn({ identifier: "ada", password: PASSWORD });
+      slept = 3_600_000;
+      const sent = api.requests.length;
+      const response = await client.authorizedFetch("/api/users/me");
+      expect(response.status).toBe(200);
+      expect(api.requests.slice(sent).map((request) => request.path)).toEqual([
+        "/api/auth/refresh",
+        "/api/users/me",
+      ]);
+    } finally {
+      client.dispose();
+    }
+  });
 });
