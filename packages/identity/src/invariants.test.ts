@@ -28,13 +28,19 @@ const ticks = async (count: number): Promise<void> => {
   for (let index = 0; index < count; index += 1) await tick();
 };
 
+/**
+ * The request timeout (and cross-tab lock wait) these tabs use: a request in flight arms it, so
+ * the timers judged below leave it out. No session timer uses this delay.
+ */
+const REQUEST_TIMEOUT_MS = 14_999;
+
 /** Lets the fake's answers, their latency and the client's promise chains run. */
 const flush = (): Promise<void> => ticks(16);
 
 interface Tab {
   readonly name: string;
   readonly client: IdentityClient;
-  /** The timers this tab has armed and not yet seen fire or cleared. */
+  /** The session timers (not request timeouts) this tab armed and has not seen fire or cleared. */
   readonly timers: Set<unknown>;
   /** The `online` listeners this tab has subscribed and not yet unsubscribed. */
   readonly online: Set<() => void>;
@@ -60,7 +66,7 @@ const openTab = (name: string, world: World): Tab => {
         timers.delete(timer);
         callback();
       }, ms);
-      timers.add(timer);
+      if (ms !== REQUEST_TIMEOUT_MS) timers.add(timer);
       return timer;
     },
     clearTimeout: (timer) => {
@@ -77,6 +83,7 @@ const openTab = (name: string, world: World): Tab => {
       return response;
     },
     clock: tracked,
+    requestTimeoutMs: REQUEST_TIMEOUT_MS,
     channelName: world.channel,
     locks: {
       request: async (lock, callback) => {
