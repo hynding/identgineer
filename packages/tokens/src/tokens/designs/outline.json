@@ -2,7 +2,8 @@
   "$description": "Transparent surfaces drawn only by 2px borders, no shadow and a wide, offset focus ring.",
   "$extensions": {
     "identgineer": {
-      "label": "Outline"
+      "label": "Outline",
+      "followsBrandCorners": true
     }
   },
   "tokens": {

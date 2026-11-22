@@ -2,7 +2,8 @@
   "$description": "Neumorphic: large radius, paired light and dark shadows drawn from the page colour, no borders.",
   "$extensions": {
     "identgineer": {
-      "label": "Soft"
+      "label": "Soft",
+      "followsBrandCorners": true
     }
   },
   "tokens": {

@@ -2,7 +2,8 @@
   "$description": "Translucent frosted surfaces with a backdrop blur and a luminous hairline edge.",
   "$extensions": {
     "identgineer": {
-      "label": "Glass"
+      "label": "Glass",
+      "followsBrandCorners": true
     }
   },
   "tokens": {

@@ -2,7 +2,8 @@
   "$description": "Zero radius, thick solid borders in the text colour, hard offset shadows and uppercase controls.",
   "$extensions": {
     "identgineer": {
-      "label": "Brutalist"
+      "label": "Brutalist",
+      "followsBrandCorners": false
     }
   },
   "tokens": {

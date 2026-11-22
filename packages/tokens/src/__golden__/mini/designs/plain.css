@@ -4,7 +4,7 @@
 @layer idg.design {
   :where(:root),
   [data-design="plain"] {
-    --idg-shape-radius-md: 4px;
+    --idg-shape-radius-md: var(--idg-brand-radius-md, 4px);
     --idg-border-style: solid;
   }
 }

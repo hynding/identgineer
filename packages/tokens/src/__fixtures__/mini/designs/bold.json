@@ -1,6 +1,6 @@
 {
   "$description": "A fixture design with an opaque fallback.",
-  "$extensions": { "identgineer": { "label": "Bold" } },
+  "$extensions": { "identgineer": { "label": "Bold", "followsBrandCorners": false } },
   "tokens": {
     "shape": { "radius": { "md": { "$type": "dimension", "$value": "0" } } },
     "border": { "style": { "$type": "string", "$value": "double" } },

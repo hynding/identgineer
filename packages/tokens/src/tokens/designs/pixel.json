@@ -2,7 +2,8 @@
   "$description": "Retro: square corners, stepped hard shadows, double and dashed borders and uppercase headings.",
   "$extensions": {
     "identgineer": {
-      "label": "Pixel"
+      "label": "Pixel",
+      "followsBrandCorners": false
     }
   },
   "tokens": {
