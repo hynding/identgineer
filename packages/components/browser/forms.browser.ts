@@ -80,7 +80,7 @@ test.describe("form values", () => {
     await expect(password).toHaveAttribute("autocomplete", "current-password");
     await expect(password).toHaveAttribute("autocapitalize", "none");
     await expect(password).toHaveAttribute("spellcheck", "false");
-    expect(await password.evaluate((input) => input.spellcheck)).toBe(false);
+    expect(await password.evaluate((input) => (input as HTMLInputElement).spellcheck)).toBe(false);
     await expect(page.locator("#email input")).not.toHaveAttribute("spellcheck", /.*/);
   });
 

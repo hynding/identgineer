@@ -209,7 +209,8 @@ export class IdgInput {
           autocomplete={this.autocomplete}
           inputMode={this.inputmode}
           enterKeyHint={this.enterkeyhint}
-          spellcheck={this.spellcheck}
+          // As an attribute: the renderer would set the boolean property, and "false" would be true.
+          {...{ "attr:spellcheck": this.spellcheck }}
           autocapitalize={this.autocapitalize}
           aria-label={this.accessibleLabel}
           aria-describedby={description ? "description" : undefined}
