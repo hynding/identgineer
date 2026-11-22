@@ -1,6 +1,7 @@
 import { contrastRatio } from "@identgineer/tokens";
 import { findThemeProblems } from "@identgineer/tokens/theme-pipeline";
 import { describe, expect, it } from "vitest";
+import { emitBrandThemeCss } from "./emit-brand-theme.ts";
 import { fontPairingFor } from "./font-pairings.ts";
 import { generateBrandTheme, type BrandTheme } from "./generate-brand-theme.ts";
 import { toOklch } from "./oklch.ts";
@@ -171,6 +172,30 @@ describe("generateBrandTheme", () => {
       colors: { primary: "#4f46e5" },
     });
     expect(parsedTheme(generateBrandTheme(kitFrom())).description).toBe("Brand theme for Acme");
+  });
+
+  it("reads a hand-built kit once: a getter cannot pass validation and then change", () => {
+    const reads = { id: 0, tone: 0 };
+    const kit = Object.defineProperties(
+      { ...kitFrom() },
+      {
+        id: {
+          enumerable: true,
+          get: () => (reads.id++ === 0 ? "acme" : 'x"] body{display:none} [y="'),
+        },
+        tone: {
+          enumerable: true,
+          get: () => (reads.tone++ === 0 ? "balanced" : "__proto__"),
+        },
+      },
+    );
+    const theme = generateBrandTheme(kit);
+    expect(theme.id).toBe("acme");
+    expect(theme.kit.tone).toBe("balanced");
+    expect(Object.isFrozen(theme.kit)).toBe(true);
+    const css = emitBrandThemeCss(theme);
+    expect(css).not.toContain("body{");
+    expect(reads).toEqual({ id: 1, tone: 1 });
   });
 
   it("refuses a hand-built kit whose id is not a valid brand id", () => {

@@ -1,7 +1,13 @@
 import { RESERVED_THEME_IDS, THEME_IDS } from "@identgineer/tokens";
 import { describe, expect, it } from "vitest";
 import { BRAND_ID_MAX_LENGTH, RESERVED_BRAND_IDS } from "./brand-id.ts";
-import { parseBrandKit, type BrandKitError } from "./parse-brand-kit.ts";
+import {
+  MAX_REPORTED_ERRORS,
+  NAME_MAX_LENGTH,
+  parseBrandKit,
+  TAGLINE_MAX_LENGTH,
+  type BrandKitError,
+} from "./parse-brand-kit.ts";
 import { seeded } from "./seeded-random.ts";
 
 const VALID = {
@@ -147,6 +153,23 @@ describe("parseBrandKit, the id", () => {
   });
 });
 
+describe("parseBrandKit, text", () => {
+  it.each(["a  b", "Acme  Rockets", "Acme Rockets  Ltd"])(
+    "refuses two spaces in a row: %j",
+    (name) => {
+      expect(pathsOf({ ...VALID, name })).toEqual(["name"]);
+      expect(pathsOf({ ...VALID, tagline: name })).toEqual(["tagline"]);
+    },
+  );
+
+  it("counts length in code points, so letters outside the BMP count once", () => {
+    const letter = String.fromCodePoint(0x1d49c);
+    expect(errorsOf({ ...VALID, name: letter.repeat(NAME_MAX_LENGTH) })).toEqual([]);
+    expect(pathsOf({ ...VALID, name: letter.repeat(NAME_MAX_LENGTH + 1) })).toEqual(["name"]);
+    expect(errorsOf({ ...VALID, tagline: letter.repeat(TAGLINE_MAX_LENGTH) })).toEqual([]);
+  });
+});
+
 describe("parseBrandKit, refusals", () => {
   it.each([[null], [undefined], ["acme"], [42], [true], [["acme"]], [() => VALID]])(
     "refuses the non-object %s at the root",
@@ -239,6 +262,45 @@ describe("parseBrandKit, refusals", () => {
     const revocable = Proxy.revocable({}, {});
     revocable.revoke();
     expect(() => parseBrandKit(revocable.proxy)).not.toThrow();
+  });
+
+  it("reports a field whose getter throws once, as unreadable", () => {
+    const getter = Object.defineProperty({ ...VALID }, "name", {
+      enumerable: true,
+      get() {
+        throw new Error("boom");
+      },
+    });
+    expect(errorsOf(getter)).toEqual([
+      expect.objectContaining({ path: "name", code: "unreadable" }),
+    ]);
+  });
+
+  it.each([
+    ["a Map", new Map(Object.entries(VALID))],
+    ["a Date", new Date(0)],
+    ["a class instance", new (class Kit {})()],
+    ["a boxed string", new String("acme")],
+  ])("refuses %s with one error at the root", (_label, input) => {
+    expect(errorsOf(input)).toEqual([expect.objectContaining({ path: "", code: "not-an-object" })]);
+  });
+
+  it("accepts an object without a prototype", () => {
+    expect(
+      errorsOf(
+        Object.assign(Object.create(null) as object, VALID, {
+          colors: Object.assign(Object.create(null) as object, VALID.colors),
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("caps the errors it reports, ending with one that says so", () => {
+    const input: Record<string, unknown> = { ...VALID };
+    for (let index = 0; index < 500; index += 1) input[`extra${String(index)}`] = index;
+    const errors = errorsOf(input);
+    expect(errors).toHaveLength(MAX_REPORTED_ERRORS + 1);
+    expect(errors.at(-1)).toEqual(expect.objectContaining({ path: "", code: "too-many-errors" }));
   });
 
   it("refuses a symbol key", () => {
