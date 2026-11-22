@@ -4,7 +4,7 @@ import { AnnouncementView } from "../../identity/feedback-view";
 import type { Announcement } from "../../identity/form-feedback";
 import type { IdentityStateView, UserMenuClient } from "../../identity/identity-types";
 import { fillTemplate, mergeLabels } from "../../identity/labels";
-import { restoreOnce } from "../../identity/restore-once";
+import { RestoreWatch } from "../../identity/restore-watch";
 import { StateBinding } from "../../identity/state-binding";
 import type { MenuSelectDetail } from "../menu-item/menu-item-options";
 import { USER_MENU_LABELS, type UserMenuLabels } from "./user-menu-labels";
@@ -55,8 +55,15 @@ export class IdgUserMenu {
   @State() private notice?: Notice;
   @State() private announcement: Announcement = { text: "", slot: 0 };
 
+  // A restore that could not reach the server is tried again once the browser is back online;
+  // until then the menu draws nothing, since it does not know who is signed in.
+  private readonly restoring = new RestoreWatch<UserMenuClient>(
+    () => this.binding.current(),
+    () => undefined,
+  );
   private readonly binding = new StateBinding<UserMenuClient>((state, client) => {
-    if (state.status === "unknown") void restoreOnce(client);
+    if (state.status === "unknown") this.restoring.start(client);
+    else this.restoring.stop();
     this.state = state;
   });
 
@@ -66,6 +73,7 @@ export class IdgUserMenu {
 
   disconnectedCallback(): void {
     this.binding.unbind();
+    this.restoring.stop();
   }
 
   @Watch("client")
@@ -73,6 +81,7 @@ export class IdgUserMenu {
     if (!this.host.isConnected) return;
     this.signingOut = false;
     this.notice = undefined;
+    this.restoring.stop();
     this.bind();
   }
 

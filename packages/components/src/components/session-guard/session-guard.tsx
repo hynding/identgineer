@@ -5,7 +5,7 @@ import type {
   SessionGuardClient,
 } from "../../identity/identity-types";
 import { mergeLabels } from "../../identity/labels";
-import { restoreOnce, retryRestore, type RestoreOutcome } from "../../identity/restore-once";
+import { RestoreWatch } from "../../identity/restore-watch";
 import { StateBinding } from "../../identity/state-binding";
 import { SESSION_GUARD_LABELS, type SessionGuardLabels } from "./session-guard-labels";
 import type { SessionChangeDetail } from "./session-guard-types";
@@ -49,9 +49,19 @@ export class IdgSessionGuard {
   @State() private unreachable = false;
 
   private reported?: SessionChangeDetail["status"];
+  private readonly restoring = new RestoreWatch<SessionGuardClient>(
+    () => this.binding.current(),
+    (unreachable) => {
+      this.unreachable = unreachable;
+      this.report({ status: unreachable ? "unreachable" : "unknown" });
+    },
+  );
   private readonly binding = new StateBinding<SessionGuardClient>((state, client) => {
-    if (state.status === "unknown") this.restore(client, restoreOnce);
-    else this.unreachable = false;
+    if (state.status === "unknown") this.restoring.start(client);
+    else {
+      this.unreachable = false;
+      this.restoring.stop();
+    }
     this.show(state);
   });
 
@@ -61,7 +71,7 @@ export class IdgSessionGuard {
 
   disconnectedCallback(): void {
     this.binding.unbind();
-    this.listenForOnline(false);
+    this.restoring.stop();
   }
 
   @Watch("client")
@@ -70,34 +80,8 @@ export class IdgSessionGuard {
     // The first state the new client reports is announced even when it is the same status.
     this.reported = undefined;
     this.unreachable = false;
-    this.listenForOnline(false);
+    this.restoring.stop();
     this.bind();
-  }
-
-  private restore(
-    client: SessionGuardClient,
-    attempt: (client: SessionGuardClient) => Promise<RestoreOutcome>,
-  ): void {
-    void attempt(client).then((outcome) => {
-      if (client !== this.binding.current() || client.getState().status !== "unknown") return;
-      this.unreachable = outcome === "unreachable";
-      this.listenForOnline(this.unreachable);
-      if (this.unreachable) this.report({ status: "unreachable" });
-    });
-  }
-
-  private retry = (): void => {
-    const client = this.binding.current();
-    if (!client) return;
-    this.unreachable = false;
-    this.listenForOnline(false);
-    this.report({ status: "unknown" });
-    this.restore(client, retryRestore);
-  };
-
-  private listenForOnline(on: boolean): void {
-    window.removeEventListener("online", this.retry);
-    if (on) window.addEventListener("online", this.retry);
   }
 
   private bind(): void {
@@ -128,7 +112,13 @@ export class IdgSessionGuard {
       return (
         <idg-alert class="unreachable" part="unreachable" variant="warning">
           <span class="message">{labels.unreachable}</span>
-          <idg-button class="retry" part="retry" variant="secondary" size="sm" onClick={this.retry}>
+          <idg-button
+            class="retry"
+            part="retry"
+            variant="secondary"
+            size="sm"
+            onClick={this.restoring.retry}
+          >
             {labels.retry}
           </idg-button>
         </idg-alert>
