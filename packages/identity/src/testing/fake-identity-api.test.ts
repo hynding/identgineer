@@ -381,6 +381,22 @@ describe("the fake's hidden account existence, as camis' CAMIS_AUTH_HIDE_ACCOUNT
     expect((await registerAs(post, "Carol@Example.com", "carol@example.com")).status).toBe(200);
   });
 
+  it.each([
+    ["a fullwidth @", "x\uFF20other.example"],
+    ["a small @", "x\uFE6Bother.example"],
+  ])("reads a username with %s as an address, as camis folds it", async (_label, username) => {
+    const { post } = fakeApi({ emailConfirmation: true });
+    const answer = await registerAs(post, username, "x@example.com");
+    expect(answer.status).toBe(400);
+    expect(answer.body.error).toMatchObject({ name: "ValidationError" });
+  });
+
+  it("takes the registering address as its username, padded or in another case", async () => {
+    const { post } = fakeApi({ emailConfirmation: true });
+    const answer = await registerAs(post, "  Carol@Example.com ", "carol@example.com");
+    expect(answer).toMatchObject({ status: 200, body: { sent: true } });
+  });
+
   it("still answers a taken registration with Strapi's error without email confirmation", async () => {
     const { post } = fakeApi();
     const taken = await registerAs(post, "ada", "ada2@example.com");
