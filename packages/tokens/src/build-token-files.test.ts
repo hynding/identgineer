@@ -63,7 +63,7 @@ describe("buildTokenFiles", () => {
     const index = files["index.css"];
     expect(
       index?.match(
-        /@layer idg\.tokens, idg\.theme, idg\.design, idg\.layout, idg\.ux, idg\.preferences;/g,
+        /@layer idg\.tokens, idg\.theme, idg\.design, idg\.layout, idg\.ux, idg\.brand, idg\.preferences;/g,
       ),
     ).toHaveLength(1);
     expect(index).toContain("--idg-motion-duration-base: 200ms;");

@@ -27,7 +27,7 @@ describe("built tokens", () => {
 
   it("declares the layer order once per file, with preferences last so they win over every mode", () => {
     expect(LAYER_ORDER).toBe(
-      "@layer idg.tokens, idg.theme, idg.design, idg.layout, idg.ux, idg.preferences;",
+      "@layer idg.tokens, idg.theme, idg.design, idg.layout, idg.ux, idg.brand, idg.preferences;",
     );
     for (const [name, css] of Object.entries(files)) {
       expect(css.split(LAYER_ORDER).length - 1, name).toBe(1);
