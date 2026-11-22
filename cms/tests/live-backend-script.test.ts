@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -73,6 +73,41 @@ describe("cms/scripts/live-backend.js", () => {
     expect(existsSync(join(pkg, "src.php"))).toBe(true);
     expect(existsSync(join(pkg, ".git"))).toBe(false);
   });
+
+  it(
+    "scaffolds again after a scaffold that was interrupted, keeping nothing of the partial app",
+    { timeout: 30_000 },
+    async () => {
+      const setup = fake({ scaffolded: false, scaffoldMode: "hang" });
+      const started = join(setup.camisBin, "scaffold.started");
+      const child = spawn(NODE, [SCRIPT, "--", NODE, "-e", ""], {
+        env: setup.env,
+        stdio: "ignore",
+      });
+      const exit = new Promise<number | null>((resolve) =>
+        child.on("exit", (code) => {
+          resolve(code);
+        }),
+      );
+      while (!existsSync(started) && child.exitCode === null) {
+        await new Promise((wake) => setTimeout(wake, 50));
+      }
+      child.kill("SIGINT");
+      expect(await exit).toBe(130);
+      const app = join(setup.live, "strapi-php");
+      writeFileSync(join(app, "partial-leftover"), "");
+      rmSync(join(setup.camisBin, "scaffold-mode"));
+      const again = runFake(setup, [NODE, "-e", ""]);
+      expect(again.stderr).toBe("");
+      expect(again.status).toBe(0);
+      expect(again.stdout).toContain("scaffolding the Laravel app");
+      expect(existsSync(join(app, "partial-leftover"))).toBe(false);
+      expect(existsSync(join(app, "vendor", "acme", "pkg", ".git"))).toBe(false);
+      const third = runFake(setup, [NODE, "-e", ""]);
+      expect(third.status).toBe(0);
+      expect(third.stdout).not.toContain("scaffolding the Laravel app");
+    },
+  );
 
   it("makes a fresh APP_KEY on every run", { timeout: 30_000 }, () => {
     const setup = fake();

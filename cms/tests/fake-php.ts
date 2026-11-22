@@ -47,7 +47,8 @@ if (first === "-r") {
 
 /**
  * A stand-in camis CLI: `scaffold filament <dir>` lays out a Laravel app whose vendor package carries its
- * git checkout, as Composer leaves one it could only clone; `build` records its process id in
+ * git checkout, as Composer leaves one it could only clone (and, when the file `scaffold-mode`
+ * says `hang`, stops there until killed, as if interrupted mid-scaffold); `build` records its process id in
  * `build.pid` and, when the file `build-mode` says `hang`, runs until it is killed.
  */
 const FAKE_CAMIS = `import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -62,6 +63,12 @@ if (command === "scaffold") {
   writeFileSync(join(dir, "vendor", "autoload.php"), "<?php\\n");
   writeFileSync(join(dir, "vendor", "acme", "pkg", "src.php"), "<?php\\n");
   writeFileSync(join(dir, "vendor", "acme", "pkg", ".git", "HEAD"), "ref: refs/heads/main\\n");
+  // Like camis' scaffold, which has vendor/autoload.php after its first step and goes on for minutes.
+  const mode = join(here, "scaffold-mode");
+  if (existsSync(mode) && readFileSync(mode, "utf8") === "hang") {
+    writeFileSync(join(here, "scaffold.started"), "");
+    setInterval(() => {}, 1000);
+  }
 } else if (command === "build") {
   writeFileSync(join(here, "build.pid"), String(process.pid));
   const mode = join(here, "build-mode");
@@ -89,6 +96,7 @@ export const fake = (
     /** false: no app yet, and a stand-in `composer` on the PATH for the scaffold. */
     scaffolded?: boolean;
     buildMode?: "hang";
+    scaffoldMode?: "hang";
   } = {},
 ): Fake => {
   const root = mkdtempSync(join(tmpdir(), "live-backend-"));
@@ -103,6 +111,9 @@ export const fake = (
   mkdirSync(camis, { recursive: true });
   writeFileSync(join(camis, "camis.mjs"), FAKE_CAMIS);
   if (options.buildMode !== undefined) writeFileSync(join(camis, "build-mode"), options.buildMode);
+  if (options.scaffoldMode !== undefined) {
+    writeFileSync(join(camis, "scaffold-mode"), options.scaffoldMode);
+  }
   const live = join(root, "live");
   const app = join(live, "strapi-php");
   if (options.scaffolded === false) {
@@ -113,6 +124,7 @@ export const fake = (
       mkdirSync(join(app, dir), { recursive: true });
     }
     writeFileSync(join(app, "vendor", "autoload.php"), "<?php\n");
+    writeFileSync(join(live, "strapi-php.scaffolded"), "");
   }
   return {
     root,
