@@ -23,15 +23,20 @@
    by its content (a flex row, an auto grid track, fit-content, a dialog or a popover) would give
    it none. This line, before the container and of no height, gives the host (or the `.measured`
    element) a preferred width of the identity measure (--idg-identity-measure, which a page can
-   set) and a smallest width of nothing. It is two zero-width spaces (each escape is followed by a
-   space that ends it, then the space between them) with the measure as the word spacing: on one
-   line it is the measure wide, the spacing less about one space; where that does not fit, each goes on a line of its
-   own and is no width. The line keeps the element's own font size, so a measure in em or ch is
-   the element's em or ch, and a browser minimum font size has nothing to enlarge. It is hidden,
-   and kept from assistive technology by the empty alternative. A percentage word spacing is of the
-   space's width, so a percentage measure does not work: the README says so. */
+   set) and a smallest width of nothing. It is a tab between two zero-width spaces, with the
+   measure as the tab size: on one line the tab reaches the first tab stop, the measure from the
+   line's start, whatever the font; where that does not fit, the line breaks after the tab and
+   each piece is no width. The line keeps the element's own font, so a measure in em or ch is the
+   element's em or ch, and it takes none of the page's letter spacing, word spacing or indent. It
+   is hidden, and kept from assistive technology by the empty alternative. A percentage is not a
+   valid tab size, so a percentage measure is ignored and the line takes the default tab size of
+   eight spaces: the README says so. */
 :host::before,
 .measured::before {
+  /* Where a length is not a valid tab size: two zero-width spaces (each escape is followed by a
+     space that ends it, then the space between them) with the measure as the word spacing, less
+     a typical space (about a quarter em) that the line holds besides. This is close but follows
+     the font's space, which a monospace font or a minimum font size makes wider. */
   content: "\200b  \200b" / "";
   display: block;
   block-size: 0;
@@ -39,8 +44,19 @@
   visibility: hidden;
   line-height: 0;
   white-space: normal;
-  /* Less a typical space (about a quarter em), which the line holds besides the spacing. */
+  letter-spacing: 0;
   word-spacing: calc(var(--idg-identity-measure, var(--idg-size-m)) - 0.25em);
+  text-indent: 0;
   pointer-events: none;
   user-select: none;
+}
+
+@supports (tab-size: 1px) {
+  :host::before,
+  .measured::before {
+    content: "\200b\9\200b" / "";
+    white-space: pre-wrap;
+    tab-size: var(--idg-identity-measure, var(--idg-size-m));
+    word-spacing: 0;
+  }
 }

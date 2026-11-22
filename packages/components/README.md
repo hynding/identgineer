@@ -181,22 +181,22 @@ with `aria-pressed`; it changes only the native input's `type`, never the value.
 hidden again when its form is submitted (before the submit event's listeners run), when the form
 is reset and when the value is set from outside, such as a form clearing it.
 
-**Enter submits the form** as Enter in a native input does in Chromium, following the HTML
-implicit submission algorithm, since the native input has no form owner across the shadow
-boundary and the browser would not do it. It is done on the keypress, as the browser does: a
-keydown cancelled with `preventDefault()` has no keypress, and the decision is made once the
-keypress has reached every listener, so any listener on its path (a combobox around the field) can
-cancel either. It never happens while an input method is composing, nor with Control, Alt or Meta
-held (Shift+Enter submits), nor for a key event a script dispatches (`isTrusted` false), which a
-native input ignores too. The default button (the first submit button among the form's elements:
-a native submit button or an `idg-button type="submit"` without an `href`, which is a link and is
-never followed) is clicked, so its click listeners run; a disabled or `loading` default button stops
-the submission. Without a submit button, the form is submitted only when it has no other text field;
-as in Chromium, a date or time field does not count. Two differences from a native input remain. A
-listener that stops the keypress from reaching the element (`stopPropagation()` in the capture phase
-at `window` or `document`) prevents it, since the element hears the keypress on its way out of the
-shadow root. And with an `idg-button` as the default button, `SubmitEvent.submitter` is `null`: the
-button's native control is inside its own shadow root, so it cannot be the form's submitter; read the
+**Enter submits the form** as Enter in a native input does in Chromium, following the HTML implicit
+submission algorithm, since the native input has no form owner across the shadow boundary and the
+browser would not do it. It is done on the keypress, as the browser does: a keydown cancelled with
+`preventDefault()` has no keypress, and the decision is made once the keypress has reached every
+listener, so any listener on its path (a combobox around the field) can cancel either. It never
+happens while an input method is composing, nor with Control, Alt or Meta held (Shift+Enter
+submits), nor for a key event a script dispatches (`isTrusted` false), which a native input ignores
+too. The default button (the first submit button among the form's elements: a native submit button
+or an `idg-button type="submit"` without an `href`, which is a link and is never followed) is
+clicked, so its click listeners run; a disabled or `loading` default button stops the submission.
+Without a submit button, the form is submitted only when it has no other text field; as in Chromium,
+a date or time field does not count. Two differences from a native input remain. A listener that
+stops the keypress from reaching the element (`stopPropagation()` in the capture phase at `window`
+or `document`) prevents it, since the element hears the keypress on its way out of the shadow root.
+And with an `idg-button` as the default button, `SubmitEvent.submitter` is `null`: the button's
+native control is inside its own shadow root, so it cannot be the form's submitter; read the
 button's value some other way. A native submit button is the submitter as usual.
 
 `spellcheck` is given to the native input as an attribute, so `spellcheck="false"` turns spell
@@ -406,9 +406,9 @@ variant is the theme's subtle background with its on-subtle text, which the toke
 - **Announcement.** `warning` and `danger` are `role="alert"` (assertive); `info` and `success` are
   `role="status"` (polite). The role carries the live behaviour, and no `aria-live` is added beside
   it, which would announce a message twice. A live region announces what is inserted, not what was
-  on the page already, so render an alert at the moment it applies. `quiet` drops the role and keeps the
-  look, for a message that changes while it is shown (such as a countdown), which would otherwise
-  be announced at every change; announce it some other way.
+  on the page already, so render an alert at the moment it applies. `quiet` drops the role and keeps
+  the look, for a message that changes while it is shown (such as a countdown), which would
+  otherwise be announced at every change; announce it some other way.
 - **Dismiss** is a real button. It emits `idgDismiss`, a cancelable event, and the alert then
   hides itself (sets `hidden`) unless a listener calls `preventDefault()`.
 - The alert is a surface of the design language (surface border, radius and first elevation) filled
@@ -1157,11 +1157,13 @@ What the forms share:
 - **Width.** The forms and `idg-profile` fill their container. In a parent that sizes them by
   their content (a flex row, an auto grid track, `fit-content`, `idg-cluster`, a `<dialog>` or a
   popover) they take the identity measure, `--idg-identity-measure` (`var(--idg-size-m)`, 20rem, by
-  default; set it on any ancestor), and shrink below it on a narrow screen. Any length works, and
-  `em` or `ch` is the element's own; a percentage does not (it has nothing to be a percentage of
-  in a parent sized by its content) and leaves the element with no preferred width. Each is an inline-size
-  container, so with large text on a narrow screen (narrower than nine of its own ems) the
-  controls' inline padding and the gaps shrink; at normal text size every UX mode keeps its own.
+  default; set it on any ancestor), and shrink below it on a narrow screen. The measure is a
+  length, in any unit, and `em` or `ch` is the element's own. A percentage is not a valid measure:
+  it is ignored, and in such a parent the element is then as narrow as eight of its spaces. Leave
+  the element's own `display` as it is: as a flex or grid container it would lay its measure out
+  as an item beside its content, with the gap between them. Each is an inline-size container, so
+  with large text on a narrow screen (narrower than nine of its own ems) the controls' inline
+  padding and the gaps shrink; at normal text size every UX mode keeps its own.
 
 ### `idg-sign-in`
 
@@ -1199,13 +1201,13 @@ The signed-in owner's page, in three sections: the profile (`displayName`, `bio`
 `idg-avatar` from `avatarSrc`), a password change (current, new and confirmation, with a read-only
 `username` idg-input laid out out of sight and out of the tab order, so a manager can tell the
 account, and the same said in visible text above the fields, part `password-account`: "Changing the
-password for {name}") and the sessions, each with "Sign out",
-plus "Sign out everywhere". Props `client`, `avatarSrc`, `headingLevel` (`heading-level`, 2 to 6,
-default 2, for the three section headings), `labels`, `clock`. Events
-`idgProfileSaved` (`{ profile }`), `idgPasswordChanged`, `idgSessionRevoked` (`{ id }`),
-`idgSignedOut` (`{ outcome, everywhere: true }`). Parts `details`, `details-saved`, `password`, `password-account`, `password-saved`,
-`byte-count`, `sessions`, `session`, `error`, `throttle`, `outcome`, `signed-out`. It reloads when
-another user signs in, and shows only a note while nobody is.
+password for {name}") and the sessions, each with "Sign out", plus "Sign out everywhere". Props
+`client`, `avatarSrc`, `headingLevel` (`heading-level`, 2 to 6, default 2, for the three section
+headings), `labels`, `clock`. Events `idgProfileSaved` (`{ profile }`), `idgPasswordChanged`,
+`idgSessionRevoked` (`{ id }`), `idgSignedOut` (`{ outcome, everywhere: true }`). Parts `details`,
+`details-saved`, `password`, `password-account`, `password-saved`, `byte-count`, `sessions`,
+`session`, `error`, `throttle`, `outcome`, `signed-out`. It reloads when another user signs in, and
+shows only a note while nobody is.
 
 ### `idg-session-guard`
 
