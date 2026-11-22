@@ -22,9 +22,10 @@ function colorInput(value: unknown, field: string): string | undefined {
 
 /**
  * Holds a kit that did not come from parseBrandKit (built by hand, or altered since) to the same
- * rules, by reading it again: the generator and emitters never work from an unchecked kit.
+ * rules by reading it again, once, and returns the frozen kit that reading produced. Callers use
+ * only that copy, so a getter cannot pass validation and then return something else.
  */
-export function assertValidKit(kit: BrandKit): void {
+export function validatedKit(kit: BrandKit): BrandKit {
   // Typed as a kit, but it may not be one: read it as untrusted data.
   const untrusted: unknown = kit;
   const colors: unknown =
@@ -40,7 +41,7 @@ export function assertValidKit(kit: BrandKit): void {
   const secondary = read("secondary");
   const neutralTint = read("neutralTint");
   const result = parseBrandKit({
-    ...kit,
+    ...withoutColors(kit),
     colors: {
       primary,
       ...(secondary !== undefined && { secondary }),
@@ -52,4 +53,14 @@ export function assertValidKit(kit: BrandKit): void {
       `not a valid brand kit: ${result.errors.map((error) => error.message).join("; ")}`,
     );
   }
+  return result.kit;
+}
+
+// Copies every own field but colors (read separately above), so colors' getter runs only once.
+function withoutColors(kit: BrandKit): Record<string, unknown> {
+  const copy: Record<string, unknown> = {};
+  for (const key of Object.keys(kit)) {
+    if (key !== "colors") copy[key] = (kit as unknown as Record<string, unknown>)[key];
+  }
+  return copy;
 }

@@ -51,12 +51,14 @@ if (isVariationId("theme", theme.id)) applyVariations({ theme: theme.id });
 
 `parseBrandKit(input: unknown)` returns `{ ok: true, kit }` or `{ ok: false, errors }`, each error
 naming its field (`path`), a `code` and a message that never repeats the refused value. It never
-throws, also not on a throwing getter or a revoked proxy.
+throws, also not on a throwing getter or a revoked proxy. Only a plain object (or one without a
+prototype) is a kit; a Map, a Date or a class instance is refused at the root. At most 50 errors are
+listed, followed by one `too-many-errors` entry. Lengths are counted in code points.
 
 | Field                | Rule                                                                                                                                                                                                                                                                                                                                                                                          |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `id`                 | The `data-theme` value, by the tokens package's added theme id rule: 2 to 32 lower-case letters and digits in words joined by single hyphens, starting with a letter; not a built-in id of any axis, a CSS-wide keyword, `default`, `none`, `auto`, `system`, `light`, `dark`, `brand`, `theme`, `custom`, `constructor` or `prototype` (`RESERVED_BRAND_IDS`, which is `RESERVED_THEME_IDS`) |
-| `name`               | 1 to 60 characters: letters, marks and digits of any script, single inner spaces and `. , ' ’ & ! ? -`                                                                                                                                                                                                                                                                                        |
+| `name`               | 1 to 60 characters: letters, marks and digits of any script, single inner spaces (never two in a row) and `. , ' ’ & ! ? -`                                                                                                                                                                                                                                                                   |
 | `tagline` (optional) | The same, up to 120 characters                                                                                                                                                                                                                                                                                                                                                                |
 | `colors.primary`     | `#rgb` or `#rrggbb`, either case                                                                                                                                                                                                                                                                                                                                                              |
 | `colors.secondary`   | Optional, the same                                                                                                                                                                                                                                                                                                                                                                            |
@@ -142,8 +144,9 @@ Colour and font inputs only ever become CSS custom property values, never raw CS
   from the pairing. No input string reaches the CSS.
 - The id passes the slug rule and is then written as an escaped CSS string in the attribute
   selector. The name and tagline never reach the CSS; in the JSON they are escaped as above.
-- `generateBrandTheme` and both emitters re-validate the kit, so a kit built or altered by hand is
-  held to the parser's rules, and the emitters regenerate the theme from its kit and refuse one
+- `generateBrandTheme` and both emitters re-validate the kit, reading a kit built or altered by
+  hand once and working only from the frozen copy that reading produced, so a getter cannot pass
+  validation and then change, and the emitters regenerate the theme from its kit and refuse one
   whose document or radii were changed after generation.
 - The tests feed CSS injection, markup, `url(javascript:…)`, `expression(…)`, `@import`,
   backslash and Unicode escapes, newlines, NULs, bidirectional controls, lone surrogates, very

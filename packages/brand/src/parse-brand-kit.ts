@@ -22,7 +22,8 @@ export type BrandKitErrorCode =
   | "reserved-id"
   | "invalid-text"
   | "invalid-color"
-  | "not-allowed";
+  | "not-allowed"
+  | "too-many-errors";
 
 /** Located: `path` names the field (`colors.primary`), and `message` never repeats the value. */
 export interface BrandKitError {
@@ -35,9 +36,12 @@ export type BrandKitResult =
   | { readonly ok: true; readonly kit: BrandKit }
   | { readonly ok: false; readonly errors: readonly BrandKitError[] };
 
+/** Lengths are counted in code points. */
 export const NAME_MAX_LENGTH = 60;
 export const TAGLINE_MAX_LENGTH = 120;
 const HEX_MAX_LENGTH = 7;
+/** Reporting stops here, with one final error saying so, so hostile input cannot flood a response. */
+export const MAX_REPORTED_ERRORS = 50;
 
 // Letters, marks and digits of any script, single spaces and a little punctuation. Name and tagline
 // never reach CSS, but they do reach the brand guide and the token JSON, so anything that is
@@ -51,9 +55,17 @@ const COLOR_KEYS = ["primary", "secondary", "neutralTint"] as const;
 
 type Fields<Key extends string> = Partial<Record<Key, unknown>>;
 
+/** Stands for a field whose getter threw: already reported, so it is neither missing nor wrong. */
+const UNREADABLE: unique symbol = Symbol("unreadable");
+
 class Errors {
   readonly list: BrandKitError[] = [];
   add(path: string, code: BrandKitErrorCode, message: string): void {
+    if (this.list.length > MAX_REPORTED_ERRORS) return;
+    if (this.list.length === MAX_REPORTED_ERRORS) {
+      this.list.push({ path: "", code: "too-many-errors", message: "too many errors to list" });
+      return;
+    }
     this.list.push({ path, code, message: path === "" ? message : `${path}: ${message}` });
   }
 }
@@ -67,8 +79,12 @@ function showKey(key: string | symbol): string {
   return SHOWABLE_KEY.test(key) ? key : "(a key that cannot be shown)";
 }
 
+// Only a plain object (or one without a prototype) is a kit: a Map, a Date or a class instance
+// would otherwise read as an object with every field missing.
 function isPlainObject(value: unknown): value is object {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const prototype: unknown = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 /** Reads only the allowed own keys; any other key is an error. Throws only through a hostile proxy. */
@@ -93,12 +109,14 @@ function readFields<Key extends string>(
       fields[known] = (value as Record<string, unknown>)[known];
     } catch {
       errors.add(join(prefix, known), "unreadable", "could not be read");
+      fields[known] = UNREADABLE;
     }
   }
   return fields;
 }
 
 function readString(value: unknown, path: string, errors: Errors): string | undefined {
+  if (value === UNREADABLE) return undefined;
   if (value === undefined) {
     errors.add(path, "missing", "is required");
     return undefined;
@@ -126,11 +144,13 @@ function readText(value: unknown, path: string, max: number, errors: Errors): st
     errors.add(path, "too-short", "must not be empty");
     return undefined;
   }
-  if (text.length > max) {
+  // Code points, not UTF-16 units: a letter outside the BMP counts once. The first test keeps a
+  // huge string from being split at all.
+  if (text.length > max * 2 || Array.from(text).length > max) {
     errors.add(path, "too-long", `takes at most ${String(max)} characters`);
     return undefined;
   }
-  if (!TEXT.test(text) || text.trim() !== text) {
+  if (!TEXT.test(text) || text.trim() !== text || text.includes("  ")) {
     errors.add(
       path,
       "invalid-text",
@@ -163,6 +183,7 @@ function readChoice<Choice extends string>(
 }
 
 function readColors(value: unknown, errors: Errors): BrandColors | undefined {
+  if (value === UNREADABLE) return undefined;
   if (value === undefined) {
     errors.add("colors", "missing", "is required");
     return undefined;

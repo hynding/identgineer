@@ -276,12 +276,16 @@ describe("parseBrandKit, refusals", () => {
     ]);
   });
 
-  it.each([
+  class Kit {
+    readonly id = "acme";
+  }
+  const notPlain: [string, unknown][] = [
     ["a Map", new Map(Object.entries(VALID))],
     ["a Date", new Date(0)],
-    ["a class instance", new (class Kit {})()],
+    ["a class instance", new Kit()],
     ["a boxed string", new String("acme")],
-  ])("refuses %s with one error at the root", (_label, input) => {
+  ];
+  it.each(notPlain)("refuses %s with one error at the root", (_label, input) => {
     expect(errorsOf(input)).toEqual([expect.objectContaining({ path: "", code: "not-an-object" })]);
   });
 
