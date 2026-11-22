@@ -16,13 +16,22 @@ function scripts(directory: string): string[] {
 }
 
 // Strings only the identity SDK or its fake contain: the cookie lock's name, the refresh-cookie
-// header, the fake's factory and its sign-in route table.
+// header, the fake's sign-in route table and its factory.
 const SDK_MARKERS = [
   "identgineer-identity-cookie",
   "x-strapi-refresh-cookie",
-  "createFakeIdentityApi",
   "RateLimitError",
+  "createFakeIdentityApi",
 ];
+
+// Stencil copies every script under src into the collection, the browser fixtures' included. The
+// identity fixture imports the SDK and its fake by URL from the test server (/identity-sdk), so it
+// names the fake's factory, but none of their code is in it.
+const FIXTURES = join(PACKAGE, "dist", "collection", "fixtures");
+const markersFor = (file: string) =>
+  file.startsWith(FIXTURES)
+    ? SDK_MARKERS.filter((marker) => marker !== "createFakeIdentityApi")
+    : SDK_MARKERS;
 
 // Reads the build output, so it needs the components built first (CI builds before it tests).
 describe.skipIf(!SHIPPED.every((directory) => existsSync(directory)))(
@@ -38,9 +47,9 @@ describe.skipIf(!SHIPPED.every((directory) => existsSync(directory)))(
     it("contain no code of the identity SDK or its fake", () => {
       const leaking = files.flatMap((file) => {
         const code = readFileSync(file, "utf8");
-        return SDK_MARKERS.filter((marker) => code.includes(marker)).map(
-          (marker) => `${file.slice(PACKAGE.length)}: ${marker}`,
-        );
+        return markersFor(file)
+          .filter((marker) => code.includes(marker))
+          .map((marker) => `${file.slice(PACKAGE.length)}: ${marker}`);
       });
       expect(leaking).toEqual([]);
     });
