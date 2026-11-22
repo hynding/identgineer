@@ -21,6 +21,24 @@
   display: none;
 }
 
+/* The form below is a size container, which has no content width of its own, so a parent that
+   sizes the element by its content (a flex row, an auto grid track, fit-content, a dialog or a
+   popover) would give it none. This line, empty and of no height, gives the element a preferred
+   width of the identity measure (--idg-identity-measure, which a page can set) and a smallest
+   width of nothing: its ten words, set at no size, can each go on a line of their own on a narrow
+   screen. It is hidden, and kept from assistive technology by the empty alternative. */
+:host::before {
+  content: "x x x x x x x x x x" / "";
+  display: block;
+  block-size: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-size: 0;
+  line-height: 0;
+  white-space: normal;
+  word-spacing: calc(var(--idg-identity-measure, var(--idg-size-m)) / 9);
+}
+
 .identity {
   container-type: inline-size;
   display: flex;
