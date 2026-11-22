@@ -15,8 +15,15 @@ function declarations(directory: string): string[] {
 
 // The variations package is TypeScript source with `.ts` import specifiers, which a consumer's
 // compiler refuses to read (TS5097). Nothing a consumer can import may point at it. This reads the
-// build output, so it only runs once the components have been built (`pnpm build` runs before it).
-describe.skipIf(!existsSync(TYPES))("the built declarations", () => {
+// build output, so it needs the components built first (CI builds before it tests). Locally it
+// skips when there is no build; in CI a missing build fails, so the guard can never be silently empty.
+describe("the built declarations", () => {
+  it.runIf(Boolean(process.env["CI"]))("are built when running in CI", () => {
+    expect(existsSync(TYPES)).toBe(true);
+  });
+});
+
+describe.skipIf(!existsSync(TYPES))("the built declarations, once built", () => {
   const files = existsSync(TYPES) ? declarations(TYPES) : [];
 
   it("are there", () => {
