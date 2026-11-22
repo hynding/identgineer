@@ -24,7 +24,16 @@ describe("adjustLightness", () => {
     expect(start.lightness - moved.lightness).toBeLessThan(0.2);
   });
 
-  it("returns the extreme when nothing passes, for the caller to report", () => {
-    expect(adjustLightness(toOklch([128, 128, 128]), "lighter", () => false)).toEqual(WHITE);
+  it("returns undefined when nothing in that direction passes", () => {
+    expect(adjustLightness(toOklch([128, 128, 128]), "lighter", () => false)).toBeUndefined();
+  });
+
+  it("finds a passing band in the middle, where neither the start nor the extreme passes", () => {
+    // Dark text needs the fill light enough; a white page needs it dark enough: only a band passes.
+    const ink: Rgb = [20, 20, 20];
+    const passes = (rgb: Rgb) =>
+      contrastBetween(rgb, ink) >= 4.5 && contrastBetween(rgb, WHITE) >= 3;
+    const found = adjustLightness(toOklch([255, 230, 0]), "darker", passes);
+    expect(found && passes(found)).toBe(true);
   });
 });

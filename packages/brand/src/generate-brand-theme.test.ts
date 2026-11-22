@@ -79,11 +79,49 @@ describe("generateBrandTheme", () => {
     expect(JSON.stringify(generateBrandTheme(kit))).toBe(JSON.stringify(generateBrandTheme(kit)));
   });
 
-  it("uses a primary that already carries text unchanged as the accent in both schemes", () => {
+  it("uses a primary that carries text and stands out from the page unchanged in both schemes", () => {
+    const theme = generateBrandTheme(kitFrom({ colors: { primary: "#2f9e44" } }));
+    expect(resolvedColors(theme, "light").get("accent")).toBe("#2f9e44");
+    expect(resolvedColors(theme, "dark").get("accent")).toBe("#2f9e44");
+    expect(theme.adjustments.filter((entry) => entry.token === "color.accent")).toEqual([]);
+  });
+
+  it("keeps the primary in the scheme where it stands out and moves it in the other", () => {
     const theme = generateBrandTheme(kitFrom({ colors: { primary: "#1d4ed8" } }));
     expect(resolvedColors(theme, "light").get("accent")).toBe("#1d4ed8");
-    expect(resolvedColors(theme, "dark").get("accent")).toBe("#1d4ed8");
-    expect(theme.adjustments.filter((entry) => entry.token === "color.accent")).toEqual([]);
+    const dark = theme.adjustments.find(
+      (entry) => entry.token === "color.accent" && entry.scheme === "dark",
+    );
+    expect(dark).toMatchObject({ origin: "primary", requested: "#1d4ed8", minimum: 3 });
+  });
+
+  it.each([
+    ["#111827", "dark"],
+    ["#ffffff", "light"],
+    ["#000000", "dark"],
+    ["#fefce8", "light"],
+  ] as const)("moves %s off the %s page: at least 3:1 on every background", (primary, scheme) => {
+    const colors = resolvedColors(generateBrandTheme(kitFrom({ colors: { primary } })), scheme);
+    for (const background of ["bg", "bg-subtle", "surface", "surface-raised"]) {
+      expect(
+        contrastRatio(colors.get("accent") ?? "", colors.get(background) ?? ""),
+        background,
+      ).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it("notes a status colour that sits close to the accent, for the brand guide", () => {
+    const red = generateBrandTheme(kitFrom({ colors: { primary: "#dc2626" } }));
+    expect(red.notes).toContainEqual(
+      expect.objectContaining({
+        kind: "status-near-accent",
+        scheme: "light",
+        token: "color.danger",
+        against: "color.accent",
+      }),
+    );
+    const indigo = generateBrandTheme(kitFrom());
+    expect(indigo.notes.filter((note) => note.token === "color.danger")).toEqual([]);
   });
 
   it("adjusts a primary that cannot carry text either way, and reports it", () => {

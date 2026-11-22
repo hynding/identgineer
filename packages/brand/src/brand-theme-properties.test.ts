@@ -1,3 +1,4 @@
+import { contrastRatio } from "@identgineer/tokens";
 import { findThemeProblems } from "@identgineer/tokens/theme-pipeline";
 import { describe, expect, it } from "vitest";
 import { CORNERS, TONES } from "./brand-kit.ts";
@@ -6,6 +7,7 @@ import { generateBrandTheme } from "./generate-brand-theme.ts";
 import { toOklch } from "./oklch.ts";
 import { formatHexColor, parseHexColor, type Rgb } from "./srgb.ts";
 import { seeded } from "./seeded-random.ts";
+import { BUILT_IN_PAIRS, failingUsedPairs } from "./used-pairs.ts";
 import {
   contrastProblems,
   hueDistance,
@@ -121,6 +123,14 @@ function checkCase(entry: Case): string[] {
       }
     }
   }
+  for (const scheme of ["light", "dark"] as const) {
+    const colors = resolvedColors(theme, scheme);
+    problems.push(...failingUsedPairs(colors).map((failure) => `${scheme} ${failure}`));
+    for (const background of ["bg", "bg-subtle", "surface", "surface-raised"]) {
+      const ratio = contrastRatio(colors.get("accent") ?? "", colors.get(background) ?? "");
+      if (ratio < 3) problems.push(`${scheme} accent on ${background} is ${ratio.toFixed(2)}:1`);
+    }
+  }
   for (const adjustment of theme.adjustments) {
     // The accent moves only as far as its text needs: it lands just past the threshold.
     if (
@@ -156,6 +166,10 @@ describe("brand theme properties", () => {
       if (failures.length > 20) break;
     }
     expect(failures).toEqual([]);
+  });
+
+  it("holds generated themes to pairs every built-in theme passes", () => {
+    expect(BUILT_IN_PAIRS.length).toBeGreaterThan(20);
   });
 
   it("covers every tone and corner style with the random cases", () => {
