@@ -14,3 +14,7 @@
 .retry {
   margin-block-start: var(--idg-space-2xs);
 }
+
+.sign-out-outcome {
+  margin-block-end: var(--idg-space-s);
+}

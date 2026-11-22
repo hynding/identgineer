@@ -100,7 +100,7 @@ export class SessionsSection {
     try {
       const { outcome } = await client.signOut({ everywhere: true });
       if (outcome === "server-unreachable") this.outcome = outcome;
-      this.events.signedOut({ outcome });
+      this.events.signedOut({ outcome, everywhere: true });
     } catch {
       this.outcome = "error";
     } finally {

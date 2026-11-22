@@ -104,7 +104,9 @@ if (reset) reset.code = new URLSearchParams(location.search).get("code") ?? unde
 ```
 
 An element given no client draws nothing that needs one. `idg-session-guard` and
-`idg-user-menu` restore the session once (`client.restore()`) if nobody has done so yet. A client
+`idg-user-menu` restore the session once (`client.restore()`) if nobody has done so yet. When
+that cannot reach the server, the guard shows a notice with "Try again", and both try again when
+the browser is back online. A client
 assigned later, or swapped for another, is picked up, and the old one is let go.
 
 The identity package is TypeScript source with `.ts` import specifiers, so a bundler (Vite,
@@ -126,9 +128,23 @@ password, a token or an email address.
 | `idg-profile`        | `idgProfileSaved`    | `{ profile }`                                                   |
 | `idg-profile`        | `idgPasswordChanged` | none                                                            |
 | `idg-profile`        | `idgSessionRevoked`  | `{ id }`                                                        |
-| `idg-profile`        | `idgSignedOut`       | `{ outcome }` after "Sign out everywhere"                       |
-| `idg-session-guard`  | `idgSessionChange`   | `{ status }`, with `reason` when signed out                     |
+| `idg-profile`        | `idgSignedOut`       | `{ outcome, everywhere: true }` after "Sign out everywhere"     |
+| `idg-session-guard`  | `idgSessionChange`   | `{ status }`, with `reason` when signed out; or `unreachable`   |
 | `idg-user-menu`      | `idgSignedOut`       | `{ outcome }`: `signed-out`, `server-unreachable`, `superseded` |
+
+A sign-out the server could not confirm (`outcome: "server-unreachable"`) leaves the session
+alive on the server, and the user must be told. `idg-user-menu` says so beside its trigger, and
+`idg-session-guard` says so above its fallback for a sign-out from the content it guards, such as
+`idg-profile`'s "Sign out everywhere", which is gone by then. A page that signs out some other way,
+or navigates away at once, tells the user itself:
+
+```js
+document.addEventListener("idgSignedOut", (event) => {
+  // Carry the warning to the next page, which shows it.
+  const warning = event.detail.outcome === "server-unreachable" ? "?unconfirmed" : "";
+  location.assign(`/${warning}`);
+});
+```
 
 Moving to another page is the page's job:
 

@@ -1180,7 +1180,7 @@ The signed-in owner's page, in three sections: the profile (`displayName`, `bio`
 `username` field so a manager updates the right entry) and the sessions, each with "Sign out",
 plus "Sign out everywhere". Props `client`, `avatarSrc`, `labels`, `clock`. Events
 `idgProfileSaved` (`{ profile }`), `idgPasswordChanged`, `idgSessionRevoked` (`{ id }`),
-`idgSignedOut` (`{ outcome }`). Parts `details`, `details-saved`, `password`, `password-saved`,
+`idgSignedOut` (`{ outcome, everywhere: true }`). Parts `details`, `details-saved`, `password`, `password-saved`,
 `byte-count`, `sessions`, `session`, `error`, `throttle`, `outcome`, `signed-out`. It reloads when
 another user signs in, and shows only a note while nobody is.
 
@@ -1188,9 +1188,14 @@ another user signs in, and shows only a note while nobody is.
 
 The default slot only while signed in, `fallback` while signed out, `pending` while the state is
 unknown; nothing is drawn as protected before the client knows. It calls `restore()` once while
-the state is unknown (once per client, across all elements). Event `idgSessionChange` on each
-transition: `{ status: "signed-in" }`, `{ status: "unknown" }` or `{ status: "signed-out", reason
-}`. `display: contents`. **Not access control**: its children are in the DOM all along; see the
+the state is unknown (once per client, across all elements). When that restore cannot reach the
+server it shows a notice (part `unreachable`) with "Try again" (part `retry`) in place of `pending`,
+and tries again when the browser is back online. A `server-unreachable` sign-out from its content
+(`idgSignedOut` from inside, such as `idg-profile`'s "Sign out everywhere") is kept in view above
+the fallback (part `sign-out-outcome`, dismissible; slot `sign-out-outcome` replaces the text),
+since the content that would have said so is gone. Prop `labels`. Event `idgSessionChange` on each
+transition: `{ status: "signed-in" }`, `{ status: "unknown" }`, `{ status: "unreachable" }` or
+`{ status: "signed-out", reason }`. `display: contents`. **Not access control**: its children are in the DOM all along; see the
 security notes, and hide it until hydrated with `idg-session-guard:not(.hydrated)`.
 
 ### `idg-user-menu`

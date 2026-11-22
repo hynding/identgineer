@@ -282,7 +282,9 @@ describe("idg-profile sessions", () => {
     );
     await settle(waitForChanges);
     expect(client.getState().status).toBe("signed-out");
-    expect(events.seen).toEqual([{ type: "idgSignedOut", detail: { outcome: "signed-out" } }]);
+    expect(events.seen).toEqual([
+      { type: "idgSignedOut", detail: { outcome: "signed-out", everywhere: true } },
+    ]);
     expect(textOf(root, '[part="signed-out"]')).toBe("Sign in to see your profile.");
   });
 

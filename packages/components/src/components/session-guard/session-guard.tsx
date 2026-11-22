@@ -1,4 +1,15 @@
-import { Component, Element, Event, h, Prop, State, Watch, type EventEmitter } from "@stencil/core";
+import {
+  Component,
+  Element,
+  Event,
+  h,
+  Listen,
+  Prop,
+  State,
+  Watch,
+  type EventEmitter,
+} from "@stencil/core";
+import type { SignedOutDetail } from "../../identity/event-details";
 import type {
   IdentityStateView,
   IdentityStatus,
@@ -25,8 +36,13 @@ const UNKNOWN: IdentityStateView = { status: "unknown" };
  * @slot - What only a signed-in user sees.
  * @slot fallback - What is shown while nobody is signed in, such as a sign-in form or link.
  * @slot pending - What is shown while the client does not know yet, such as a skeleton.
+ * @slot sign-out-outcome - Your own words for a sign-out the server could not confirm, in place
+ *   of the default text.
  * @part unreachable - The notice shown when the restore could not reach the server.
  * @part retry - Its "Try again" button. The guard also tries again when the browser is back online.
+ * @part sign-out-outcome - Above the fallback: a sign-out from the guarded content (such as
+ *   idg-profile's "Sign out everywhere") that the server could not confirm. The content that would
+ *   have said so is gone, so the guard says it.
  */
 @Component({
   tag: "idg-session-guard",
@@ -47,6 +63,7 @@ export class IdgSessionGuard {
 
   @State() private status: IdentityStatus = "unknown";
   @State() private unreachable = false;
+  @State() private signOutNotice?: "this-device" | "everywhere";
 
   private reported?: SessionChangeDetail["status"];
   private readonly restoring = new RestoreWatch<SessionGuardClient>(
@@ -62,6 +79,7 @@ export class IdgSessionGuard {
       this.unreachable = false;
       this.restoring.stop();
     }
+    if (state.status === "signed-in") this.signOutNotice = undefined;
     this.show(state);
   });
 
@@ -80,8 +98,41 @@ export class IdgSessionGuard {
     // The first state the new client reports is announced even when it is the same status.
     this.reported = undefined;
     this.unreachable = false;
+    this.signOutNotice = undefined;
     this.restoring.stop();
     this.bind();
+  }
+
+  // From the guarded content, which goes as soon as the client is signed out.
+  @Listen("idgSignedOut")
+  handleSignedOut(event: CustomEvent<SignedOutDetail>): void {
+    if (event.detail.outcome !== "server-unreachable") return;
+    this.signOutNotice = event.detail.everywhere === true ? "everywhere" : "this-device";
+  }
+
+  private dismissNotice = (event: CustomEvent<void>): void => {
+    event.preventDefault();
+    this.signOutNotice = undefined;
+  };
+
+  private renderSignOutNotice(labels: SessionGuardLabels) {
+    if (this.signOutNotice === undefined) return null;
+    return (
+      <idg-alert
+        class="sign-out-outcome"
+        part="sign-out-outcome"
+        variant="warning"
+        dismissible
+        dismissLabel={labels.dismiss}
+        onIdgDismiss={this.dismissNotice}
+      >
+        <slot name="sign-out-outcome">
+          {this.signOutNotice === "everywhere"
+            ? labels.signOutEverywhereUnreachable
+            : labels.signOutUnreachable}
+        </slot>
+      </idg-alert>
+    );
   }
 
   private bind(): void {
@@ -105,10 +156,12 @@ export class IdgSessionGuard {
   }
 
   render() {
+    const labels = mergeLabels(SESSION_GUARD_LABELS, this.labels);
     if (this.status === "signed-in") return <slot />;
-    if (this.status === "signed-out") return <slot name="fallback" />;
+    if (this.status === "signed-out") {
+      return [this.renderSignOutNotice(labels), <slot name="fallback" />];
+    }
     if (this.unreachable) {
-      const labels = mergeLabels(SESSION_GUARD_LABELS, this.labels);
       return (
         <idg-alert class="unreachable" part="unreachable" variant="warning">
           <span class="message">{labels.unreachable}</span>

@@ -12,6 +12,8 @@ export interface SignedInDetail {
 /** Detail of `idgSignedOut`. `superseded`: another tab signed in since, and that session stands. */
 export interface SignedOutDetail {
   readonly outcome: "signed-out" | "server-unreachable" | "superseded";
+  /** Set when every session of the account was to be signed out, not only this one. */
+  readonly everywhere?: boolean;
 }
 
 export function userDetail(user: {
