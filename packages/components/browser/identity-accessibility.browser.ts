@@ -131,8 +131,9 @@ test.describe("identity components with large text on a narrow screen", () => {
 
   /**
    * What no longer fits, across every identity element's shadow tree: a password's reveal button
-   * past its field's edge, and a word broken across lines, as when a column is squeezed to the
-   * width of a letter.
+   * past its field's edge, and a word broken across lines although it is well narrower than the
+   * column, as when padding squeezes a line to a few letters. A word about as wide as the whole
+   * column may break: at 320px with doubled text, some are wider than the screen allows.
    */
   const misfits = (page: Page) =>
     page.evaluate(() => {
@@ -140,6 +141,7 @@ test.describe("identity components with large text on a narrow screen", () => {
       const hosts = document.querySelectorAll(
         "idg-sign-in, idg-register, idg-password-reset, idg-profile, idg-session-guard, idg-user-menu",
       );
+      const column = Math.max(...Array.from(hosts, (host) => host.getBoundingClientRect().width));
       const roots: ShadowRoot[] = [];
       for (const host of hosts) if (host.shadowRoot) roots.push(host.shadowRoot);
       for (const root of roots) {
@@ -166,12 +168,10 @@ test.describe("identity components with large text on a narrow screen", () => {
           for (const match of text.matchAll(/\S+/g)) {
             range.setStart(node, match.index);
             range.setEnd(node, match.index + match[0].length);
-            const lines = new Set(
-              Array.from(range.getClientRects())
-                .filter((rect) => rect.width > 0)
-                .map((rect) => Math.round(rect.top)),
-            );
-            if (lines.size > 1)
+            const pieces = Array.from(range.getClientRects()).filter((rect) => rect.width > 0);
+            const lines = new Set(pieces.map((rect) => Math.round(rect.top)));
+            const width = pieces.reduce((sum, rect) => sum + rect.width, 0);
+            if (lines.size > 1 && width < column * 0.75)
               found.push(`"${match[0]}" is broken over ${String(lines.size)} lines`);
           }
         }

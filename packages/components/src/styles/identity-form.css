@@ -1,5 +1,7 @@
 /* Shared by the identity components: a column of fields that fills its container and lets every
-   line wrap, so the forms fit a 320px screen and 200% text without scrolling sideways. */
+   line wrap, so the forms fit a 320px screen and 200% text without scrolling sideways. A word is
+   broken only when it is wider than the line on its own: `anywhere` would also let a squeezed
+   column shrink to the width of one letter. */
 :host {
   display: block;
   min-inline-size: 0;
@@ -8,7 +10,7 @@
   font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
   line-height: var(--idg-font-body-line-height);
   letter-spacing: var(--idg-font-body-letter-spacing);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 :host([hidden]) {

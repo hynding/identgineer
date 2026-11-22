@@ -6,7 +6,9 @@
     var(--idg-density-target-size),
     calc(var(--idg-density-control-height) * var(--_height-scale))
   );
-  padding-inline: calc(var(--idg-density-control-padding-inline) * var(--_padding-scale));
+  /* No wider than a few percent of the screen, so a spacious UX mode at 320px with large text
+     leaves the label room to fit its words. */
+  padding-inline: min(calc(var(--idg-density-control-padding-inline) * var(--_padding-scale)), 4vw);
   padding-block: var(--idg-density-control-padding-block);
   font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
   box-shadow: var(--idg-elevation-sm);

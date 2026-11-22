@@ -12,7 +12,7 @@
 
 .chevron {
   position: absolute;
-  inset-inline-end: var(--idg-density-control-padding-inline);
+  inset-inline-end: var(--_padding-inline);
   inset-block-start: 50%;
   color: var(--idg-color-text-muted);
   pointer-events: none;

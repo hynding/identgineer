@@ -1158,7 +1158,8 @@ cancelable; by default the element then calls `location.assign(url)`). Slots `re
 
 Username, email and a new password with a reveal toggle and a byte count against bcrypt's 72-byte
 limit (part `byte-count`; "73 of 72 bytes used" marks the field, each number in a `<bdi>`, and the
-`passwordBytes` label is one sentence with `{used}` and `{max}`, so a translation sets their order). Props `client`, `labels`. Event
+`passwordBytes` label is one sentence with `{used}` and `{max}`, so a translation sets their
+order). Props `client`, `labels`. Event
 `idgRegistered`: `{ outcome: "check-email" }` (a neutral confirmation, the same for an address
 already taken) or `{ outcome: "signed-in", user }`. The confirmation (part `confirmation`) replaces
 the form and takes focus. Slot `sign-in`; parts `form`, `error`, `throttle`, `byte-count`,
@@ -1307,7 +1308,10 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   confirmation on and `?hold-restore` keeps the first restore unanswered until the test lets it go.
   The identity browser tests (`identity*.browser.ts`) cover autofill hints on the real inputs,
   keyboard and focus, enumeration parity, the throttle countdown, cross-tab sign-out, no browser
-  storage writes, axe across every axis, right to left and 200% text at 320px.
+  storage writes, axe across every axis, right to left, and 200% text at 320px in every UX mode
+  (no sideways scroll, no reveal button past its field, no word broken in a squeezed line). Text
+  controls, buttons and alerts cap their inline padding at `4vw`, so a roomy UX mode still leaves
+  the line its text needs on a narrow screen.
 - `src/testing/` holds spec helpers (a recording `ElementInternals`, since the mock DOM has none) and
   is excluded from the Stencil build.
 - `tsconfig.json` is the strict config for tooling and editors. `tsconfig.build.json` is the one
