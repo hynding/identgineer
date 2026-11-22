@@ -203,7 +203,7 @@ describe("idg-profile password", () => {
     // An idg-input like the password fields, out of sight but laid out: managers skip a field
     // that is display: none, and the companion must be built as the fields it pairs with are.
     const username = shadowOf(root).querySelector<
-      HTMLElement & { value?: string; readonly?: boolean }
+      HTMLElement & { value?: string; readonly?: boolean; autocomplete?: string }
     >(`${PASSWORD_FORM} .username-companion idg-input[name="username"]`);
     expect(username?.value).toBe("ada");
     expect(username?.readonly).toBe(true);
