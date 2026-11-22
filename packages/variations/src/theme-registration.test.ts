@@ -137,3 +137,73 @@ describe("registerThemeIds", () => {
     }
   });
 });
+
+describe("a stored generated theme on a page that has not registered it", () => {
+  function storedWith(value: unknown): MemoryStorage {
+    const storage = new MemoryStorage();
+    storage.setItem(STORAGE_KEY, JSON.stringify(value));
+    return storage;
+  }
+
+  function stored(storage: MemoryStorage): unknown {
+    return JSON.parse(storage.getItem(STORAGE_KEY) ?? "null");
+  }
+
+  it("is kept when another axis is persisted, and never applied", () => {
+    const storage = storedWith({ theme: "acme", ux: "focus" });
+    const root = createTestDocument().documentElement;
+    const result = applyVariations({ design: "glass" }, { root, storage, persist: true });
+    expect(stored(storage)).toEqual({ theme: "acme", design: "glass", ux: "focus" });
+    expect(root.hasAttribute("data-theme")).toBe(false);
+    expect(result.state.theme).toBe("aurora");
+    expect(loadVariations(storage)).toEqual({ design: "glass", ux: "focus" });
+  });
+
+  it("applies once a later page registers it", () => {
+    const storage = storedWith({ theme: "acme" });
+    applyVariations(
+      { design: "glass" },
+      { root: createTestDocument().documentElement, storage, persist: true },
+    );
+    register(["acme"]);
+    expect(loadVariations(storage)).toEqual({ theme: "acme", design: "glass" });
+  });
+
+  it("is replaced by a theme the page chooses", () => {
+    const storage = storedWith({ theme: "acme" });
+    applyVariations(
+      { theme: "ember" },
+      { root: createTestDocument().documentElement, storage, persist: true },
+    );
+    expect(stored(storage)).toEqual({ theme: "ember" });
+  });
+
+  it.each([
+    ["a reserved id", "flat"],
+    ["an id that breaks the slug rule", "Acme"],
+    ["an id longer than 32 characters", `a${"b".repeat(32)}`],
+    ["a non-string", ["acme"]],
+    ["markup", "<script>"],
+  ])("is dropped when it is %s", (_label, theme) => {
+    const storage = storedWith({ theme });
+    applyVariations(
+      { design: "glass" },
+      { root: createTestDocument().documentElement, storage, persist: true },
+    );
+    expect(stored(storage)).toEqual({ design: "glass" });
+  });
+
+  it("keeps only the one theme slug, nothing else unknown", () => {
+    const storage = storedWith({
+      theme: "acme",
+      extra: "acme",
+      design: "nope",
+      layout: "unknown-layout",
+    });
+    applyVariations(
+      { ux: "focus" },
+      { root: createTestDocument().documentElement, storage, persist: true },
+    );
+    expect(stored(storage)).toEqual({ theme: "acme", ux: "focus" });
+  });
+});
