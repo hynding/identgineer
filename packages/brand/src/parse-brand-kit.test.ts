@@ -113,6 +113,11 @@ describe("parseBrandKit, the id", () => {
     ]);
   });
 
+  it("reserves the prototype names that fit the id rule", () => {
+    expect(RESERVED_BRAND_IDS).toContain("constructor");
+    expect(RESERVED_BRAND_IDS).toContain("prototype");
+  });
+
   it("reserves the CSS-wide keywords and the scheme words", () => {
     for (const word of [
       "inherit",
