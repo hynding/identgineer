@@ -34,6 +34,11 @@ const api = createFakeIdentityApi({
   sessions: params.get("sessions") === "legacy" ? "legacy" : "refresh",
 });
 api.addUser({ username: "ada", email: "ada@example.com", password: PASSWORD });
+// `?hold-restore` keeps the first restore unanswered until the test lets it go, so the state
+// stays unknown for as long as a test needs to look at it.
+const releaseRestore = params.has("hold-restore")
+  ? api.holdNext("POST", "/api/auth/refresh")
+  : () => undefined;
 
 /** A client on the fake; a second one on the same channel stands in for another tab. */
 const makeClient = () =>
@@ -51,5 +56,5 @@ await Promise.all(TAGS.map((tag) => customElements.whenDefined(tag)));
 for (const element of document.querySelectorAll(TAGS.join(", "))) element.client = client;
 document.getElementById("sign-in").providers = [{ name: "github", label: "GitHub" }];
 
-window.identityFixture = { api, client, makeClient, events, password: PASSWORD };
+window.identityFixture = { api, client, makeClient, events, releaseRestore, password: PASSWORD };
 document.documentElement.dataset.identityReady = "true";
