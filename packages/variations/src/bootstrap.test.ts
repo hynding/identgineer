@@ -17,6 +17,10 @@ import { encodeVariations } from "./url.ts";
 
 const SCRIPT = buildBootstrapFiles()["bootstrap.js"] ?? "";
 
+function execute(window: Window): void {
+  window.eval(SCRIPT);
+}
+
 interface Run {
   readonly root: HTMLElement;
   readonly window: Window;
@@ -38,7 +42,7 @@ function run(
   if (options.storage === "absent") {
     Object.defineProperty(window, "localStorage", { value: undefined });
   }
-  window.eval(SCRIPT);
+  execute(window);
   return { root: window.document.documentElement as unknown as HTMLElement, window };
 }
 
@@ -118,7 +122,7 @@ describe("the bootstrap script", () => {
   it("removes data-scheme for an explicit system scheme in the URL", () => {
     const window = new Window({ url: "https://example.test/?idg-scheme=system" });
     window.document.documentElement.setAttribute("data-scheme", "dark");
-    window.eval(SCRIPT);
+    execute(window);
     expect(window.document.documentElement.hasAttribute("data-scheme")).toBe(false);
   });
 
@@ -175,27 +179,31 @@ describe("the bootstrap script", () => {
     window.localStorage.getItem = () => {
       throw new DOMException("quota", "QuotaExceededError");
     };
-    expect(() => window.eval(SCRIPT)).not.toThrow();
+    expect(() => {
+      execute(window);
+    }).not.toThrow();
     expect(window.document.documentElement.getAttribute("data-ux")).toBe("focus");
   });
 
   it("does not throw on a document without a root element", () => {
     const window = new Window({ url: "https://example.test/" });
     window.document.documentElement.remove();
-    expect(() => window.eval(SCRIPT)).not.toThrow();
+    expect(() => {
+      execute(window);
+    }).not.toThrow();
   });
 
   it("does not announce a change: nothing is listening yet in <head>", () => {
     const window = new Window({ url: "https://example.test/?idg-theme=ember" });
     let heard = 0;
     window.document.addEventListener(CHANGE_EVENT, () => (heard += 1));
-    window.eval(SCRIPT);
+    execute(window);
     expect(heard).toBe(0);
   });
 
   it("writes nothing to storage", () => {
     const window = new Window({ url: "https://example.test/?idg-theme=ember" });
-    window.eval(SCRIPT);
+    execute(window);
     expect(window.localStorage.length).toBe(0);
   });
 });
