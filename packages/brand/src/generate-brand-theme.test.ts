@@ -155,7 +155,34 @@ describe("generateBrandTheme", () => {
     expect(resolvedColors(theme, "light").get("focus-ring")).toBe("#0f766e");
     const gradient = theme.document.light.gradient.brand.$value;
     expect(gradient.at(-1)?.color).toBe("#0f766e");
-    expect(gradient[0]?.color).toBe(resolvedColors(theme, "light").get("accent"));
+    expect(gradient[0]?.color).toBe("#4f46e5");
+  });
+
+  it.each(["#d97706", "#f4c430", "#4f46e5", "#14b8a6", "#dc2626", "#16a34a", "#9333ea"])(
+    "pairs %s in its gradient with an analogous hue that stays as colourful, not a muddy one",
+    (primary) => {
+      const theme = generateBrandTheme(kitFrom({ colors: { primary } }));
+      for (const scheme of ["light", "dark"] as const) {
+        const [start, end] = theme.document[scheme].gradient.brand.$value;
+        expect(start?.color, scheme).toBe(primary);
+        const from = toOklch(parseHexColor(primary) ?? [0, 0, 0]);
+        const to = toOklch(parseHexColor(end?.color ?? "") ?? [0, 0, 0]);
+        const turn = hueDistance(from.hue, to.hue);
+        expect(turn, `${primary} ${scheme}`).toBeGreaterThanOrEqual(25);
+        expect(turn, `${primary} ${scheme}`).toBeLessThanOrEqual(50);
+        expect(to.chroma, `${primary} ${scheme}`).toBeGreaterThanOrEqual(from.chroma * 0.8);
+        expect(Math.abs(to.lightness - from.lightness), `${primary} ${scheme}`).toBeLessThan(0.02);
+      }
+    },
+  );
+
+  it("turns a grey primary's gradient in lightness, staying grey", () => {
+    const theme = generateBrandTheme(kitFrom({ colors: { primary: "#777777" } }));
+    const [start, end] = theme.document.light.gradient.brand.$value;
+    expect(start?.color).toBe("#777777");
+    const to = toOklch(parseHexColor(end?.color ?? "") ?? [0, 0, 0]);
+    expect(to.chroma).toBeLessThan(0.01);
+    expect(Math.abs(to.lightness - toOklch([119, 119, 119]).lightness)).toBeGreaterThan(0.08);
   });
 
   it("tints the neutrals with the neutral tint's hue", () => {
