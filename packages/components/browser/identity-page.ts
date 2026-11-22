@@ -41,3 +41,46 @@ export function recordedEvents(page: Page) {
         .identityFixture.events,
   );
 }
+
+/**
+ * The element focus is on, through every shadow root, as the chain of hosts that leads to it:
+ * `["idg-sign-in#sign-in", "idg-input[name=password]", "input"]`.
+ */
+export function focusPath(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const describe = (element: Element) => {
+      const name = element.getAttribute("name");
+      if (element.id) return `${element.localName}#${element.id}`;
+      return name === null ? element.localName : `${element.localName}[name=${name}]`;
+    };
+    const chain: string[] = [];
+    let element = document.activeElement === document.body ? null : document.activeElement;
+    while (element) {
+      chain.push(describe(element));
+      element = element.shadowRoot?.activeElement ?? null;
+    }
+    return chain;
+  });
+}
+
+/**
+ * The composed tree under `selector`, shadow roots included, as markup of tags, attributes and
+ * text: what a comparison of two renders, or a search for a secret, needs to see.
+ */
+export function composedMarkup(page: Page, selector: string): Promise<string> {
+  return page.locator(selector).evaluate((host) => {
+    const write = (node: Node): string => {
+      if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+      if (!(node instanceof Element)) return "";
+      const attributes = [...node.attributes]
+        .map((attribute) => ` ${attribute.name}="${attribute.value}"`)
+        .join("");
+      const shadow = node.shadowRoot
+        ? `<#shadow>${[...node.shadowRoot.childNodes].map(write).join("")}</#shadow>`
+        : "";
+      const children = [...node.childNodes].map(write).join("");
+      return `<${node.localName}${attributes}>${shadow}${children}</${node.localName}>`;
+    };
+    return write(host);
+  });
+}
