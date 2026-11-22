@@ -417,3 +417,18 @@ describe("a restore while an older cookie session's refresh is under way", () =>
     });
   });
 });
+
+describe("a sign-out in a tab disposed before its cookie lookup", () => {
+  it("looks nothing up: the tab can no longer hear of a newer sign-in it would end", async () => {
+    const { api, client, signIn } = setup();
+    await signIn();
+    const releaseLogout = api.holdNext("POST", "/api/auth/logout");
+    const signingOut = client.signOut();
+    await settle();
+    client.dispose();
+    const sent = api.requests.length;
+    releaseLogout();
+    await expect(signingOut).resolves.toEqual({ outcome: "server-unreachable" });
+    expect(paths(api, sent)).toEqual([]);
+  });
+});

@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Clock } from "./clock.ts";
+import type { RegisterResult } from "./account-operations.ts";
 import { createIdentityClient, type IdentityClient } from "./identity-client.ts";
 import type { LockManagerLike } from "./locks.ts";
 import { PASSWORD, START } from "./test-harness.ts";
@@ -21,7 +22,7 @@ const seeded = (seed: number) => {
 
 const tick = (): Promise<void> =>
   new Promise((resolve) => {
-    setTimeout(resolve, 0);
+    setImmediate(resolve);
   });
 
 const ticks = async (count: number): Promise<void> => {
@@ -36,6 +37,29 @@ const REQUEST_TIMEOUT_MS = 14_999;
 
 /** Lets the fake's answers, their latency and the client's promise chains run. */
 const flush = (): Promise<void> => ticks(16);
+
+/**
+ * Who posted each notice: every channel a tab opens is tagged with the tab, and its posts are
+ * queued per channel name in the order the listeners receive them.
+ */
+const NativeChannel = globalThis.BroadcastChannel;
+let opening: string | undefined;
+const senders = new Map<string, (string | undefined)[]>();
+class TaggedChannel extends NativeChannel {
+  readonly #owner = opening;
+  override postMessage(message: unknown): void {
+    const queue = senders.get(this.name) ?? [];
+    queue.push(this.#owner);
+    senders.set(this.name, queue);
+    super.postMessage(message);
+  }
+}
+beforeAll(() => {
+  globalThis.BroadcastChannel = TaggedChannel;
+});
+afterAll(() => {
+  globalThis.BroadcastChannel = NativeChannel;
+});
 
 interface Tab {
   readonly name: string;
@@ -74,6 +98,7 @@ const openTab = (name: string, world: World): Tab => {
       clock.clearTimeout(timer);
     },
   };
+  opening = name;
   const client = createIdentityClient({
     baseUrl: api.baseUrl,
     fetch: async (input, init) => {
@@ -98,6 +123,7 @@ const openTab = (name: string, world: World): Tab => {
       };
     },
   });
+  opening = undefined;
   return { name, client, timers, online };
 };
 
@@ -110,10 +136,14 @@ const REFUSAL = {
 /** A sign-in, registration, reset, provider sign-in or password change: each opens a session. */
 interface SessionOpening {
   readonly tab: Tab;
-  /** Whether it presents the shared refresh cookie, which another tab's sign-out may find. */
-  readonly cookie: boolean;
+  /** The account a cookie sign-in opens a session for; undefined for one without the cookie. */
+  readonly cookieUser: string | undefined;
   /** A sign-out in the same tab was asked for while it was under way: it must reject. */
   cancelled: boolean;
+  /** When it was asked for, and when it resolved having opened a session (marks in event order). */
+  readonly startedAt: number;
+  succeededAt: number | undefined;
+  failedAt: number | undefined;
   settled: boolean;
 }
 
@@ -131,26 +161,53 @@ const runScenario = async (seed: number, steps: number): Promise<void> => {
     channel: `identgineer-invariants-${String(seed)}`,
     latency: () => Math.floor(random() * 4),
   };
+  let events = 0;
+  /*
+   * Every notice on the channel. Opened before any tab, this listener hears each notice first,
+   * and every tab hears it before any later step of its own can run.
+   */
+  const notices: { readonly type: unknown; readonly at: number; readonly from: unknown }[] = [];
+  const spy = new BroadcastChannel(world.channel);
+  spy.onmessage = (event: MessageEvent) => {
+    events += 1;
+    const from = senders.get(world.channel)?.shift();
+    notices.push({ type: (event.data as { type?: unknown }).type, at: events, from });
+  };
   const tabs = ["A", "B", "C"].map((name) => openTab(name, world));
   const closed: Tab[] = [];
   const openings: SessionOpening[] = [];
   const violations: string[] = [];
-  let signedInNotices = 0;
-  const listener = new BroadcastChannel(world.channel);
-  listener.onmessage = (event: MessageEvent) => {
-    if ((event.data as { type?: unknown }).type === "signed-in") signedInNotices += 1;
-  };
   let serial = 0;
+
+  const signedInBy = (result: RegisterResult): boolean => result.outcome === "signed-in";
 
   const passwordOf = (email: string): string => api.findUser(email)?.password ?? PASSWORD;
 
   /** Tracks an operation that opens a session, and judges how it settled. */
-  const opening = <T>(tab: Tab, cookie: boolean, step: number, run: () => Promise<T>) => {
-    const entry: SessionOpening = { tab, cookie, cancelled: false, settled: false };
+  const opening = <T>(
+    tab: Tab,
+    cookieUser: string | undefined,
+    step: number,
+    run: () => Promise<T>,
+    opened: (value: T) => boolean = () => true,
+  ) => {
+    events += 1;
+    const entry: SessionOpening = {
+      tab,
+      cookieUser,
+      startedAt: events,
+      cancelled: false,
+      succeededAt: undefined,
+      failedAt: undefined,
+      settled: false,
+    };
     openings.push(entry);
     return run().then(
-      () => {
+      (value) => {
         entry.settled = true;
+        if (!opened(value)) return;
+        events += 1;
+        entry.succeededAt = events;
         if (entry.cancelled) {
           violations.push(
             `seed ${String(seed)} step ${String(step)}: ${tab.name} opened a session asked for before its own sign-out`,
@@ -159,22 +216,58 @@ const runScenario = async (seed: number, steps: number): Promise<void> => {
       },
       () => {
         entry.settled = true;
+        events += 1;
+        entry.failedAt = events;
       },
     );
   };
 
   const signIn = (tab: Tab, step: number) => {
     const email = pick(["ada@example.com", "bob@example.com"]);
-    return opening(tab, true, step, () =>
+    return opening(tab, email, step, () =>
       tab.client.signIn({ identifier: email, password: passwordOf(email) }),
     );
   };
 
+  const wrongPassword = (tab: Tab, step: number) =>
+    opening(tab, "ada@example.com", step, () =>
+      tab.client.signIn({ identifier: "ada@example.com", password: "not the password at all" }),
+    );
+
+  /** Taken names resolve as `check-email` without a session, as an unknown one would. */
+  const registerTaken = (tab: Tab, step: number) =>
+    opening(
+      tab,
+      undefined,
+      step,
+      () => tab.client.register({ username: "ada", email: "ada@example.com", password: PASSWORD }),
+      signedInBy,
+    );
+
+  const wrongResetCode = (tab: Tab, step: number) =>
+    opening(tab, undefined, step, () =>
+      tab.client.resetPassword({
+        code: "not a code",
+        password: `${PASSWORD} x`,
+        passwordConfirmation: `${PASSWORD} x`,
+      }),
+    );
+
+  /** A callback without the provider round trip's session fails. */
+  const providerWithoutRoundTrip = (tab: Tab, step: number) =>
+    opening(tab, "lin@example.com", step, () =>
+      tab.client.completeProviderSignIn("github", { search: "" }),
+    );
+
   const register = (tab: Tab, step: number) => {
     serial += 1;
     const username = `user${String(serial)}`;
-    return opening(tab, false, step, () =>
-      tab.client.register({ username, email: `${username}@example.com`, password: PASSWORD }),
+    return opening(
+      tab,
+      undefined,
+      step,
+      () => tab.client.register({ username, email: `${username}@example.com`, password: PASSWORD }),
+      signedInBy,
     );
   };
 
@@ -184,14 +277,14 @@ const runScenario = async (seed: number, steps: number): Promise<void> => {
     serial += 1;
     const password = `${PASSWORD} ${String(serial)}`;
     const code = api.findUser(email)?.resetCode ?? "none";
-    return opening(tab, false, step, () =>
+    return opening(tab, undefined, step, () =>
       tab.client.resetPassword({ code, password, passwordConfirmation: password }),
     );
   };
 
   const providerSignIn = (tab: Tab, step: number) => {
     api.completeProviderRoundTrip("github", "lin@example.com");
-    return opening(tab, true, step, () =>
+    return opening(tab, "lin@example.com", step, () =>
       tab.client.completeProviderSignIn("github", { search: "" }),
     );
   };
@@ -201,7 +294,7 @@ const runScenario = async (seed: number, steps: number): Promise<void> => {
     if (state.status !== "signed-in") return undefined;
     serial += 1;
     const password = `${PASSWORD} ${String(serial)}`;
-    return opening(tab, false, step, () =>
+    return opening(tab, undefined, step, () =>
       tab.client.changePassword({
         currentPassword: passwordOf(state.user.email),
         password,
@@ -211,29 +304,70 @@ const runScenario = async (seed: number, steps: number): Promise<void> => {
   };
 
   /**
-   * Judges a sign-out against what happened while it was under way. The later action wins: a
-   * sign-in this tab knew of after it began supersedes it; otherwise it leaves no session a
-   * reload could resume, unless another tab's cookie sign-in was under way meanwhile (the
-   * documented window: a notice that has not arrived yet).
+   * Judges a sign-out against what happened while it was under way. The later action wins:
+   * another tab's cookie sign-in that succeeded meanwhile (and was announced) may supersede it,
+   * and is then the only session left to resume. Otherwise it leaves no session a reload could
+   * resume, unless such a sign-in succeeded while it ran (the documented window: a notice that
+   * has not arrived yet). A sign-in in its own tab, failing or not, never supersedes it.
    */
   const signOut = (tab: Tab, step: number) => {
     const where = `seed ${String(seed)} step ${String(step)}: ${tab.name}.signOut`;
     const before = openings.filter((entry) => !entry.settled);
     for (const entry of before) if (entry.tab === tab) entry.cancelled = true;
-    const from = openings.length;
-    const notices = signedInNotices;
+    events += 1;
+    const began = events;
     return tab.client.signOut().then(async (result) => {
-      const during = [...before, ...openings.slice(from)];
-      const restorable = api.restorableSession();
-      const otherCookieSignIn = during.some((entry) => entry.tab !== tab && entry.cookie);
-      const ownLaterSignIn = openings.slice(from).some((entry) => entry.tab === tab);
+      events += 1;
+      const ended = events;
+      const restorable = api.restorableUser();
+      // A sign-in whose answer landed before the sign-out resolved may resolve just after it.
       await flush();
-      const heardSignIn = signedInNotices !== notices;
-      if (result.outcome === "signed-out" && restorable && !otherCookieSignIn) {
-        violations.push(`${where} resolved signed-out with a session to resume`);
+      const later = api.restorableUser();
+      const elsewhere = openings.filter(
+        (entry) => entry.tab !== tab && entry.cookieUser !== undefined && entry.startedAt < ended,
+      );
+      const standing = elsewhere.filter(
+        (entry) => entry.succeededAt !== undefined && entry.succeededAt > began,
+      );
+      /**
+       * Whether the session left is another tab's sign-in of the window: one that stands, or one
+       * its tab then dropped (cancelled by this sign-out's notice) whose session was ended since.
+       */
+      const fromWindow = (user: string): boolean =>
+        standing.some((entry) => entry.cookieUser === user) ||
+        (later !== user &&
+          elsewhere.some(
+            (entry) =>
+              entry.cookieUser === user && entry.failedAt !== undefined && entry.failedAt > began,
+          ));
+      const standingNotice = notices.some(
+        (notice) =>
+          notice.from !== tab.name &&
+          notice.at > began &&
+          notice.at < ended &&
+          notice.type === "signed-in" &&
+          !notices.some(
+            (after) =>
+              after.type === "signed-out" &&
+              after.from !== tab.name &&
+              after.at > notice.at &&
+              after.at < ended,
+          ),
+      );
+      if (result.outcome === "signed-out") {
+        if (restorable !== undefined && !fromWindow(restorable)) {
+          violations.push(`${where} resolved signed-out with ${restorable}'s session to resume`);
+        }
+        if (standingNotice) {
+          violations.push(`${where} resolved signed-out after a standing sign-in's notice`);
+        }
       }
-      if (result.outcome === "superseded" && !ownLaterSignIn && !heardSignIn) {
-        violations.push(`${where} resolved superseded with no later sign-in`);
+      if (result.outcome === "superseded") {
+        if (standing.length === 0) {
+          violations.push(`${where} resolved superseded with no other tab's sign-in`);
+        } else if (restorable !== undefined && !fromWindow(restorable)) {
+          violations.push(`${where} resolved superseded leaving ${restorable}'s session`);
+        }
       }
     });
   };
@@ -255,6 +389,10 @@ const runScenario = async (seed: number, steps: number): Promise<void> => {
     (step) => resetPassword(pick(tabs), step),
     (step) => providerSignIn(pick(tabs), step),
     (step) => changePassword(pick(tabs), step),
+    (step) => wrongPassword(pick(tabs), step),
+    (step) => registerTaken(pick(tabs), step),
+    (step) => wrongResetCode(pick(tabs), step),
+    (step) => providerWithoutRoundTrip(pick(tabs), step),
     () => {
       reopen(pick(tabs));
       return undefined;
@@ -335,12 +473,12 @@ const runScenario = async (seed: number, steps: number): Promise<void> => {
     await check(step);
   }
   for (const tab of tabs) tab.client.dispose();
-  listener.close();
+  spy.close();
   expect(violations).toEqual([]);
 };
 
 describe("session invariants under interleaved operations in three tabs", () => {
-  it.each(Array.from({ length: 24 }, (_, index) => index + 1))(
+  it.each(Array.from({ length: 200 }, (_, index) => index + 1))(
     "hold for seed %i",
     async (seed) => {
       await runScenario(seed, 30);
