@@ -28,6 +28,8 @@ export interface IdentityClientOptions {
 export interface ClientContext {
   readonly base: URL;
   readonly clock: Clock;
+  readonly fetch: typeof globalThis.fetch;
+  readonly timeoutMs: number;
   readonly transport: Transport;
   readonly session: Session;
   readonly throttle: Throttle;
@@ -44,12 +46,9 @@ export interface ClientContext {
 export const createClientContext = (options: IdentityClientOptions): ClientContext => {
   const base = parseBaseUrl(options.baseUrl);
   const clock = options.clock ?? systemClock;
-  const transport = createTransport({
-    base,
-    fetch: options.fetch ?? globalThis.fetch.bind(globalThis),
-    clock,
-    timeoutMs: options.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS,
-  });
+  const fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
+  const timeoutMs = options.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const transport = createTransport({ base, fetch, clock, timeoutMs });
   const session = createSession();
   const throttle = createThrottle(clock);
 
@@ -103,6 +102,8 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   return {
     base,
     clock,
+    fetch,
+    timeoutMs,
     transport,
     session,
     throttle,

@@ -13,9 +13,10 @@ import {
   type RequestAccepted,
   type ResetPasswordInput,
 } from "./account-operations.ts";
+import { authorizedFetch } from "./authorized-fetch.ts";
 import { createClientContext, type IdentityClientOptions } from "./client-context.ts";
 import { signIn, type SignInInput } from "./credential-operations.ts";
-import { currentUser, signOut, type SignOutOptions } from "./session-operations.ts";
+import { currentUser, restore, signOut, type SignOutOptions } from "./session-operations.ts";
 import type { IdentityState, IdentityStateListener } from "./session.ts";
 import type { IdentityUser } from "./types.ts";
 
@@ -40,6 +41,13 @@ export interface IdentityClient {
   readonly retryAfterSeconds: () => number;
   /** Reads the signed-in account again from the server. */
   readonly currentUser: () => Promise<IdentityUser>;
+  /** Resumes the session from the refresh cookie after a reload; call once at start. */
+  readonly restore: () => Promise<IdentityState>;
+  /**
+   * `fetch` for requests to the CMS under the base URL: adds the bearer token and refreshes once
+   * on a 401. Refuses any other origin, so the token never leaves the CMS.
+   */
+  readonly authorizedFetch: (input: string, init?: RequestInit) => Promise<Response>;
   readonly getState: () => IdentityState;
   /** Calls the listener on every change of state; returns the function that stops it. */
   readonly subscribe: (listener: IdentityStateListener) => () => void;
@@ -61,6 +69,8 @@ export const createIdentityClient = (options: IdentityClientOptions): IdentityCl
     changePassword: changePassword(context),
     retryAfterSeconds: context.throttle.remainingSeconds,
     currentUser: currentUser(context),
+    restore: restore(context),
+    authorizedFetch: authorizedFetch(context),
     getState: context.session.getState,
     subscribe: context.session.subscribe,
     dispose: () => {

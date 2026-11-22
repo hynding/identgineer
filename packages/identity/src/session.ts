@@ -63,6 +63,8 @@ export const createSession = () => {
     signOut: (reason: SignOutReason): void => {
       generation += 1;
       tokens = undefined;
+      // Concurrent requests that all find the session over report it once.
+      if (state.status === "signed-out" && state.reason === reason) return;
       announce({ status: "signed-out", reason });
     },
   };
