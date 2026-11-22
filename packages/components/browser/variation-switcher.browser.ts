@@ -266,13 +266,26 @@ test.describe("two switchers", () => {
     await expect.poll(() => checkedValue(page, "theme", ASIDE)).toBe("paper");
   });
 
-  test("a removed switcher stops listening and the other goes on", async ({ page }) => {
+  test("a removed switcher stops listening: it no longer follows the page", async ({ page }) => {
     await open(page);
+    // Only a live listener makes a switcher show a change, so a removed one that still shows it is
+    // one that leaked its subscription.
     await page.evaluate(() => {
-      document.querySelector("#switcher-aside")?.remove();
+      const aside = document.querySelector("#switcher-aside");
+      (window as unknown as { __removed: Element | null }).__removed = aside;
+      aside?.remove();
     });
     await choose(page, "theme", "citrus");
-    expect(await rootAttribute(page, "data-theme")).toBe("citrus");
+    await expect.poll(() => checkedValue(page, "theme")).toBe("citrus");
+    await frames(page, 4);
+    const removed = await page.evaluate(() => {
+      const element = (window as unknown as { __removed: Element }).__removed;
+      const group = element.shadowRoot?.querySelector(
+        'idg-field[data-control="theme"] idg-radio-group',
+      );
+      return (group as unknown as { value: string } | null)?.value;
+    });
+    expect(removed).toBe("aurora");
   });
 });
 
@@ -440,6 +453,105 @@ test.describe("copy link and the share link round trip", () => {
   });
 });
 
+test.describe("the live region and the manual link", () => {
+  /** Counts what is added to the live region, which is what a screen reader announces. */
+  async function watchStatus(page: Page): Promise<void> {
+    await page.evaluate(() => {
+      const region = document
+        .querySelector("#switcher")
+        ?.shadowRoot?.querySelector('[role="status"]');
+      const state = window as unknown as { __additions: number };
+      state.__additions = 0;
+      if (!region) throw new Error("no live region");
+      new MutationObserver((records) => {
+        for (const record of records) {
+          if (record.type === "characterData" && record.target.textContent) state.__additions += 1;
+          for (const node of record.addedNodes) if (node.textContent) state.__additions += 1;
+        }
+      }).observe(region, { childList: true, subtree: true, characterData: true });
+    });
+  }
+
+  const additions = (page: Page) =>
+    page.evaluate(() => (window as unknown as { __additions: number }).__additions);
+
+  test("an identical message is announced again", async ({ page }) => {
+    await open(page);
+    await watchStatus(page);
+    await choose(page, "theme", "ember");
+    await expect.poll(() => additions(page)).toBeGreaterThan(0);
+    const first = await additions(page);
+    await page.evaluate(() => {
+      document.documentElement.removeAttribute("data-theme");
+    });
+    await frames(page);
+    await choose(page, "theme", "ember");
+    await expect(status(page)).toHaveText("Theme: Ember.");
+    expect(await additions(page)).toBeGreaterThan(first);
+  });
+
+  test("a second copy is announced again", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await open(page);
+    await watchStatus(page);
+    const copy = page.locator(MAIN).getByRole("button", { name: "Copy link" });
+    await copy.click();
+    await expect(status(page)).toHaveText("Link copied.");
+    const first = await additions(page);
+    await copy.click();
+    await expect.poll(() => additions(page)).toBeGreaterThan(first);
+  });
+
+  async function refuseClipboard(page: Page): Promise<void> {
+    await page.evaluate(() => {
+      Object.defineProperty(navigator.clipboard, "writeText", {
+        configurable: true,
+        value: () => Promise.reject(new DOMException("denied", "NotAllowedError")),
+      });
+    });
+  }
+
+  test("the manual link is focused with its text selected", async ({ page }) => {
+    await open(page);
+    await choose(page, "theme", "ember");
+    await refuseClipboard(page);
+    await page.locator(MAIN).getByRole("button", { name: "Copy link" }).click();
+    const input = page.locator(`${MAIN} .fallback input`);
+    await expect(input).toBeFocused();
+    await expect
+      .poll(() =>
+        input.evaluate((element: HTMLInputElement) => [
+          element.selectionStart,
+          element.selectionEnd,
+          element.value.length,
+        ]),
+      )
+      .toEqual([0, expect.any(Number), expect.any(Number)]);
+    const [start, end, length] = await input.evaluate((element: HTMLInputElement) => [
+      element.selectionStart,
+      element.selectionEnd,
+      element.value.length,
+    ]);
+    expect(start).toBe(0);
+    expect(end).toBe(length);
+    expect(length).toBeGreaterThan(0);
+  });
+
+  test("the manual link goes when the page changes, so it never says something old", async ({
+    page,
+  }) => {
+    await open(page);
+    await refuseClipboard(page);
+    await page.locator(MAIN).getByRole("button", { name: "Copy link" }).click();
+    await expect(page.locator(`${MAIN} .fallback input`)).toBeVisible();
+    await page.evaluate(() => {
+      document.documentElement.setAttribute("data-theme", "paper");
+    });
+    await expect(page.locator(`${MAIN} .fallback`)).toHaveCount(0);
+    await expect(status(page)).toHaveText("");
+  });
+});
+
 test.describe("persistence", () => {
   test("remembers the choice across a reload when persist is set", async ({ page }) => {
     await open(page);
@@ -506,6 +618,49 @@ test.describe("layout holds up", () => {
     expect(overflow, label).toEqual([]);
   }
 
+  /** Whether anything in a panel, nested shadow roots included, sticks out of the panel's box. */
+  async function expectDeepFit(page: Page, label: string): Promise<void> {
+    const problems = await page.evaluate(() => {
+      const found: string[] = [];
+      for (const host of document.querySelectorAll("idg-variation-switcher")) {
+        const panel = host.shadowRoot?.querySelector(".panel");
+        if (!panel) continue;
+        const edge = panel.getBoundingClientRect();
+        const walk = (root: Document | ShadowRoot | Element, path: string): void => {
+          for (const element of root.querySelectorAll("*")) {
+            const box = element.getBoundingClientRect();
+            if (box.width > 0 && (box.right > edge.right + 0.5 || box.left < edge.left - 0.5)) {
+              found.push(`${host.id}: ${path}${element.localName}.${element.className}`);
+            }
+            if (element.shadowRoot) walk(element.shadowRoot, `${path}${element.localName}>`);
+          }
+        };
+        walk(panel, "");
+      }
+      return found;
+    });
+    expect(problems, label).toEqual([]);
+  }
+
+  for (const ux of UX_MODES) {
+    test(`nothing sticks out of the panel at 320px, 200% wide text, in the ${ux} mode`, async ({
+      page,
+    }) => {
+      await open(page, 320);
+      await applyAxes(page, { ux });
+      await setTextSize(page, { label: "200% with wide text", fontSize: "200%", wide: true });
+      await frames(page);
+      await expectDeepFit(page, `${ux} stacked`);
+      await page.evaluate(() => {
+        for (const element of document.querySelectorAll("idg-variation-switcher")) {
+          element.setAttribute("orientation", "inline");
+        }
+      });
+      await frames(page);
+      await expectDeepFit(page, `${ux} inline`);
+    });
+  }
+
   for (const width of [320, 390, 768, 1280, 1920]) {
     test(`no sideways scroll at ${String(width)}px, at every text size`, async ({ page }) => {
       await open(page, width);
@@ -533,6 +688,44 @@ test.describe("layout holds up", () => {
       await frames(page);
       await expectFits(page, `${layout} inline`);
     });
+  }
+
+  for (const [name, selector] of [
+    ["the main panel", MAIN],
+    ["the aside panel", ASIDE],
+  ] as const) {
+    for (const width of [320, 390, 768, 1280]) {
+      test(`${name} lays the theme and scheme options on aligned grids at ${String(width)}px`, async ({
+        page,
+      }) => {
+        await open(page, width);
+        const boxes = (control: string) =>
+          page
+            .locator(`${selector} idg-field[data-control="${control}"] idg-radio`)
+            .evaluateAll((radios) =>
+              radios.map((radio) => {
+                const box = radio.getBoundingClientRect();
+                return {
+                  left: Math.round(box.left),
+                  top: Math.round(box.top),
+                  width: Math.round(box.width),
+                };
+              }),
+            );
+        const themes = await boxes("theme");
+        expect(themes).toHaveLength(8);
+        // One width for all, and each starts at one of a few column edges: a grid, not ragged rows.
+        expect(new Set(themes.map((box) => box.width)).size).toBe(1);
+        const columns = new Set(themes.map((box) => box.left)).size;
+        expect(columns).toBeLessThanOrEqual(4);
+        expect(Math.ceil(8 / columns)).toBe(new Set(themes.map((box) => box.top)).size);
+        const schemes = await boxes("scheme");
+        const oneRow = new Set(schemes.map((box) => box.top)).size === 1;
+        const oneColumn = new Set(schemes.map((box) => box.left)).size === 1;
+        // Three options in one row or one column, never two and one over.
+        expect(oneRow || oneColumn).toBe(true);
+      });
+    }
   }
 
   test("the inline orientation puts controls side by side where there is room", async ({
