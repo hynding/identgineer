@@ -322,12 +322,33 @@ test.describe("idg-session-guard and idg-user-menu keep every control reachable 
     await retry.focus();
     await page.keyboard.press("Enter");
     await expect(retry).toBeVisible();
-    // It failed again while focus waited on the anchor: the notice that is back takes it.
+    // It failed again: the notice takes focus and is read then.
     await expect.poll(() => focusHoldsGuardNotice(page, "unreachable")).toBe(true);
+    // The text the anchor has each time it takes focus: never changed under it afterwards.
+    await guard(page).evaluate((host) => {
+      const record = window as unknown as { anchorTexts: string[] };
+      record.anchorTexts = [];
+      host.shadowRoot?.addEventListener("focusin", (event) => {
+        const target = event.target as Element;
+        if (target.classList.contains("focus-anchor")) {
+          record.anchorTexts.push(target.textContent);
+        }
+      });
+    });
+    await page.evaluate(
+      `window.releaseRefresh = window.identityFixture.api.holdNext("POST", "/api/auth/refresh")`,
+    );
     await retry.focus();
     await page.keyboard.press("Enter");
+    // While it tries again, focus stays on the busy button.
+    await expect(guard(page).locator('[part="retry"]')).toHaveAttribute("loading", "");
+    await expect(guard(page).locator('[part="retry"] button')).toBeFocused();
+    await page.evaluate("window.releaseRefresh()");
     await expect(inputOf(page, "#sign-in", "identifier")).toBeVisible();
-    await expect.poll(() => focusedAnchorText(page)).not.toBeNull();
+    await expect.poll(() => focusedAnchorText(page)).toBe("You are signed out.");
+    expect(
+      await page.evaluate(() => (window as unknown as { anchorTexts: string[] }).anchorTexts),
+    ).toEqual(["You are signed out."]);
     await expectNoTabindexWritten(page);
     await expectReachableByTab(page, SIGN_IN_STOPS);
   });
