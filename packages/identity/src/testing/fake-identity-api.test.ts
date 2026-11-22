@@ -348,3 +348,149 @@ describe("the fake's strict validation, as camis' StrapiUsers::validate", () => 
     expect(errorMessage(answer)).toBe("Password must be less than 73 bytes");
   });
 });
+
+describe("the fake's hidden account existence, as camis' CAMIS_AUTH_HIDE_ACCOUNT_EXISTENCE", () => {
+  const registerAs = (post: ReturnType<typeof fakeApi>["post"], username: string, email: string) =>
+    post("/api/auth/local/register", { body: { username, email, password: PASSWORD } });
+
+  it("answers every registration alike with email confirmation on, by default", async () => {
+    const { api, post } = fakeApi({ emailConfirmation: true });
+    const answers = [
+      await registerAs(post, "carol", "Carol@Example.com"),
+      await registerAs(post, "carol2", "ada@example.com"),
+      await registerAs(post, "bob", "dave@example.com"),
+    ];
+    expect(answers.map(({ status, body }) => ({ status, body }))).toEqual([
+      { status: 200, body: { email: "carol@example.com", sent: true } },
+      { status: 200, body: { email: "ada@example.com", sent: true } },
+      { status: 200, body: { email: "dave@example.com", sent: true } },
+    ]);
+    expect(api.findUser("carol@example.com")?.confirmationCode).toBeDefined();
+    expect(api.findUser("dave@example.com")).toBeUndefined();
+  });
+
+  it("refuses a username that is an address other than the one registering", async () => {
+    const { api, post } = fakeApi({ emailConfirmation: true });
+    const other = await registerAs(post, "carol@elsewhere.example", "carol@example.com");
+    expect(other.status).toBe(400);
+    expect(other.body.error).toMatchObject({
+      name: "ValidationError",
+      message: "username must not be an email address other than the one registering",
+    });
+    expect(api.findUser("carol@example.com")).toBeUndefined();
+    expect((await registerAs(post, "Carol@Example.com", "carol@example.com")).status).toBe(200);
+  });
+
+  it("still answers a taken registration with Strapi's error without email confirmation", async () => {
+    const { post } = fakeApi();
+    const taken = await registerAs(post, "ada", "ada2@example.com");
+    expect(taken.status).toBe(400);
+    expect(taken.body.error).toMatchObject({ name: "ApplicationError" });
+    expect((await registerAs(post, "x@elsewhere.example", "x@example.com")).status).toBe(400);
+  });
+
+  it("answers every confirmation resend alike, lower-casing the address", async () => {
+    const { api, post } = fakeApi({ emailConfirmation: true });
+    api.addUser({
+      username: "eve",
+      email: "eve@example.com",
+      password: PASSWORD,
+      confirmed: false,
+    });
+    api.addUser({
+      username: "mal",
+      email: "mal@example.com",
+      password: PASSWORD,
+      blocked: true,
+      confirmed: false,
+    });
+    for (const email of [
+      "Ada@Example.com",
+      "eve@example.com",
+      "mal@example.com",
+      "nobody@example.com",
+    ]) {
+      const answer = await post("/api/auth/send-email-confirmation", { body: { email } });
+      expect(answer).toMatchObject({
+        status: 200,
+        body: { email: email.toLowerCase(), sent: true },
+      });
+    }
+    expect(api.findUser("eve@example.com")?.confirmationCode).toBeDefined();
+    expect(api.findUser("mal@example.com")?.confirmationCode).toBeUndefined();
+  });
+
+  it("answers as Strapi does with the setting off", async () => {
+    const { post } = fakeApi({ emailConfirmation: true, hideAccountExistence: false });
+    const created = await registerAs(post, "carol", "carol@example.com");
+    expect(created.body).toMatchObject({ user: { email: "carol@example.com" } });
+    expect((await registerAs(post, "ada", "ada2@example.com")).body.error).toMatchObject({
+      name: "ApplicationError",
+    });
+    expect((await registerAs(post, "x@elsewhere.example", "x@example.com")).status).toBe(200);
+    const confirmed = await post("/api/auth/send-email-confirmation", {
+      body: { email: "ada@example.com" },
+    });
+    expect(confirmed.body.error).toMatchObject({
+      name: "ApplicationError",
+      message: "Already confirmed",
+    });
+  });
+});
+
+describe("the fake's JSON bodies, as camis' StrapiJsonBody", () => {
+  it.each([
+    ["text/plain", "{}"],
+    ["application/x-www-form-urlencoded", "identifier=ada&password=x"],
+  ])("refuses a %s body on an auth write with 415, taking no turn", async (type, body) => {
+    const { api } = fakeApi({ throttlePerMinute: 1 });
+    const response = await api.fetch(`${api.baseUrl}/api/auth/local`, {
+      method: "POST",
+      headers: { "Content-Type": type },
+      body,
+    });
+    expect(response.status).toBe(415);
+    expect(await response.json()).toMatchObject({
+      data: null,
+      error: { status: 415, name: "UnsupportedMediaTypeError" },
+    });
+    const signIn = await api.fetch(`${api.baseUrl}/api/auth/local`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier: "ada", password: PASSWORD }),
+    });
+    expect(signIn.status).toBe(200);
+  });
+
+  it("takes a request with no body, and a +json type", async () => {
+    const { api } = fakeApi();
+    const refresh = await api.fetch(`${api.baseUrl}/api/auth/refresh`, {
+      method: "POST",
+      headers: { "X-Requested-With": "identgineer" },
+    });
+    expect(refresh.status).toBe(400);
+    const signIn = await api.fetch(`${api.baseUrl}/api/auth/local`, {
+      method: "POST",
+      headers: { "Content-Type": "application/vnd.api+json" },
+      body: JSON.stringify({ identifier: "ada", password: PASSWORD }),
+    });
+    expect(signIn.status).toBe(200);
+  });
+});
+
+describe("the fake's token lifetime, as camis' expiresIn", () => {
+  it("says how long the access token lasts in refresh mode, and not in legacy mode", async () => {
+    const refresh = fakeApi({ accessTokenLifetimeSeconds: 120 });
+    const signedIn = await refresh.post("/api/auth/local", {
+      body: { identifier: "ada", password: PASSWORD },
+      cookies: false,
+      headers: { "x-strapi-refresh-cookie": "" },
+    });
+    expect(signedIn.body.expiresIn).toBe(120);
+    const legacy = fakeApi({ sessions: "legacy" });
+    const lasting = await legacy.post("/api/auth/local", {
+      body: { identifier: "ada", password: PASSWORD },
+    });
+    expect(lasting.body.expiresIn).toBeUndefined();
+  });
+});
