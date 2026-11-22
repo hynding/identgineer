@@ -32,14 +32,17 @@ export function encodeVariations(
 }
 
 /**
- * The query of whatever string was given: after the first `?` if there is one, up to the first
+ * The query of whatever string was given: from the first `?` if there is one, up to the first
  * `#`. So `location.search`, `location.href`, a relative URL and a bare query all read the same,
- * and a hash is never mistaken for part of the last value.
+ * and a hash is never mistaken for part of the last value. The `?` itself is kept, because
+ * URLSearchParams drops exactly one: a second one stays in the name, as it does for the browser
+ * and for the bootstrap script.
  */
 function queryOf(input: string): string {
   const hashAt = input.indexOf("#");
   const withoutHash = hashAt === -1 ? input : input.slice(0, hashAt);
-  return withoutHash.slice(withoutHash.indexOf("?") + 1);
+  const queryAt = withoutHash.indexOf("?");
+  return queryAt === -1 ? withoutHash : withoutHash.slice(queryAt);
 }
 
 export function decodeVariations(input: string | URLSearchParams): Partial<VariationState> {
