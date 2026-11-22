@@ -34,9 +34,9 @@ web-safe stacks only.
 - `data-scheme="light" | "dark"` forces a colour scheme. Without it the theme follows
   `prefers-color-scheme`.
 - Layers are declared as `@layer idg.tokens, idg.theme, idg.design, idg.layout, idg.ux, idg.brand, idg.preferences;`.
-  Unlayered CSS always wins over all of them. `idg.brand` is empty here: it holds the corner radii
-  of a theme generated from a brand kit by [`@identgineer/brand`](../brand/README.md), which
-  override the design language's.
+  Unlayered CSS always wins over all of them. `idg.brand` is empty here: it holds the corner
+  preference of a theme generated from a brand kit by [`@identgineer/brand`](../brand/README.md)
+  (see [Brand corners](#brand-corners)).
 - Put `data-design` and `data-ux` on the same element as `data-theme`, or on a descendant of it.
   Shadows and borders are built from theme colours with `var()`, which resolves where the rule
   matches, so a design set on an ancestor of the theme would read the wrong colours.
@@ -58,7 +58,8 @@ import {
 ```
 
 `THEMES` lists `id`, `label`, `description`, resolved `fonts` and preview `swatches` for both
-schemes. `DESIGNS`, `LAYOUTS` and `UX_MODES` list `id`, `label` and `description`. All four are built from
+schemes. `DESIGNS`, `LAYOUTS` and `UX_MODES` list `id`, `label` and `description`; each design
+also has `followsBrandCorners` (see [Brand corners](#brand-corners)). All four are built from
 the same JSON as the CSS, so they cannot drift.
 
 ## Token names
@@ -118,6 +119,24 @@ are never below 24px (WCAG 2.2 AA, 2.5.8); the build fails otherwise.
 | `elevated`    | Layered soft shadows, no borders, modest radius                                 |
 | `pixel`       | Square, stepped hard shadows, double and dashed borders, uppercase headings     |
 | `editorial`   | Print-like: rules above and below surfaces only, underlined headings            |
+
+### Brand corners
+
+A theme generated from a brand kit states its corners as a preference, never as radii:
+`--idg-brand-radius-sm|md|lg|pill`, set on its `[data-theme]` element in the `idg.brand` layer
+(`brandRadiusVariableName(name)` gives the name). Nothing in this package declares those
+properties. Whether a design takes them is its own decision, declared in its JSON as
+`$extensions.identgineer.followsBrandCorners`, which every design must state as `true` or
+`false` (the build refuses a design without it, and a layout or UX mode with it):
+
+- A design that follows (`flat`, `soft`, `glass`, `outline`, `elevated`) is emitted with each
+  radius as `var(--idg-brand-radius-<name>, <its own value>)`. Without a brand theme the
+  preference is undeclared, so every radius computes to exactly the design's own value.
+- A design whose identity is its corners declines (`brutalist`, `pixel`, `editorial`: all square)
+  and is emitted with plain radii, so a brand never rounds it.
+
+The preference is read where the design's rule matches, so it reaches a design set on the same
+element as the brand theme or on a descendant of it, as the axes require anyway.
 
 Layout tokens: `layout.content-max` (maximum inline size of the page content, `100%` for edge to
 edge), `layout.page-gutter`, `layout.section-gap`, `layout.gap` (the default gap inside the layout

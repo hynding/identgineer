@@ -117,6 +117,12 @@ unregister(); // later, if the theme goes away: an id another registration holds
 - A registered id is accepted everywhere the check is used: `applyVariations`, `getVariations`
   reading the attribute back, `decodeVariations` and `loadVariations`. Unregistered again, an id
   left on the page reads as the default.
+- `applyVariations(partial, { persist: true })` on a page that has not registered a stored
+  generated theme keeps it in storage: if the stored theme passes the added theme id rule, choosing
+  another axis there leaves it as it is, so the next page that registers it applies it. It is
+  never applied while unregistered, and nothing else unknown is kept: one theme slug at most,
+  checked by the same rule. Choosing a theme replaces it. `saveVariations` and `loadVariations`
+  still write and read only what the page can validate.
 - `REGISTRY`, its previews and `shuffleVariations` keep to the built-in themes: a generated theme
   has no entry there.
 - The bootstrap script embeds the built-in ids when it is built and does not know registered ones,

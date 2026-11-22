@@ -41,7 +41,8 @@ components that take the identity client of `packages/identity`. Guides:
 A brand kit (name, colours, a font pairing, corners and tone) becomes a theme of its own:
 `packages/brand` checks the kit, derives a light and dark palette that passes the same contrast
 checks as the built-in themes, and emits it as CSS scoped to `data-theme="<your id>"` and as DTCG
-tokens. See [packages/brand/README.md](packages/brand/README.md).
+tokens. Its corners are a preference that designs may decline: the square designs (brutalist,
+editorial, pixel) keep their own. See [packages/brand/README.md](packages/brand/README.md).
 
 ## Repository layout
 

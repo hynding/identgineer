@@ -83,22 +83,54 @@ implemented here (Björn Ottosson's OKLab, tested against reference values). For
 sets the neutrals at fixed lightness levels, tinted with the hue of the neutral tint or the
 primary at a chroma set by the tone (none for a grey). Every foreground role then starts from a
 colour of its own and, if it fails, moves in lightness only, away from its backgrounds, until it
-passes: a bisection over OKLCH lightness at constant hue, each candidate gamut-mapped back to sRGB
-by reducing chroma alone and judged after rounding to 8 bits, so it passes exactly as tested. The
-requirements are the tokens package's `CONTRAST_PAIRS`, read at run time, plus two of its own:
-links and the focus ring also pass on cards, and body text is held to 7:1.
+passes: a search over OKLCH lightness at constant hue (a bisection, or a scan for the band that
+passes when both ends fail), each candidate gamut-mapped back to sRGB by reducing chroma alone and
+judged after rounding to 8 bits, so it passes exactly as tested.
 
-The primary becomes the accent unchanged whenever near-white or near-black text passes on it,
-which is the case for most colours; otherwise the accent moves the shorter way in lightness, just
-far enough. The hover state moves further from the text. Links and the focus ring start from the
-primary (the focus ring from the secondary when there is one) and move only if they must. Status
-colours start from fixed hues (green, amber, red, blue). The gradient runs from the accent to the
-secondary, or to the primary turned 40°. Tone scales the chroma of tints, neutrals and status
-colours, and how far text and strong borders sit from the page; it never changes the accent.
+The requirements are the tokens package's `CONTRAST_PAIRS`, read at run time, plus every pairing
+the components draw that all eight built-in themes meet, each at its WCAG level:
+
+| Role                                  | Also on                                                   | Level |
+| ------------------------------------- | --------------------------------------------------------- | ----- |
+| `text`                                | `bg-subtle`, `accent-subtle` (and 7:1 on every surface)   | 4.5:1 |
+| `text-muted`                          | `bg-subtle`, `surface-raised`, `accent-subtle`            | 4.5:1 |
+| `link`                                | `bg-subtle`, `surface`, `surface-raised`, `accent-subtle` | 4.5:1 |
+| `on-accent-subtle`                    | `bg`, `bg-subtle`, `surface`, `surface-raised`            | 4.5:1 |
+| `focus-ring`                          | `bg-subtle`, `surface`, `surface-raised`, `accent-subtle` | 3:1   |
+| `border-strong`                       | `surface`, `surface-raised`                               | 3:1   |
+| `accent`, `danger`, `success`, `info` | `bg`, `bg-subtle`, `surface`, `surface-raised`            | 3:1   |
+
+The fills in the last row mark state on the page (a primary button, a checked control, progress,
+an error border), so they must stand out from every page background as well as carry their own
+text. `warning` is left out of that row because the built-in themes do not give amber 3:1 on a
+light page either; danger used as text is likewise only required at 3:1, as in the built-ins.
+
+The primary becomes the accent unchanged whenever it reaches 3:1 on the page, cards and popovers
+of the scheme and near-white or near-black text passes on it. Otherwise the accent moves the
+shorter way in lightness, towards whichever end passes sooner, with either text colour, just far
+enough; the move is reported. Over 20,000 seeded random kits the accent moves in about 55% of
+light schemes (10,986) and 35% of dark ones (7,017): mid-light colours fail on a near-white page
+and dark ones on a dark page. The hover state moves further from the text. Links and the focus
+ring start from the primary (the focus ring from the secondary when there is one) and move only if
+they must. Status colours start from fixed hues (green, amber, red, blue). Tone scales the chroma
+of tints, neutrals and status colours, and how far text and strong borders sit from the page; it
+never changes the accent.
+
+The gradient starts at the primary exactly as given. It ends at the secondary or, without one, at
+the analogous hue (the primary turned 30° or 40°, either way) that keeps the most chroma at the
+primary's lightness once mapped into sRGB, so it never lands on a hue the gamut can only show
+muddy there. A grey primary's gradient turns in lightness instead, 0.12 towards the middle.
 
 Every move is reported in `theme.adjustments`: scheme, token, origin (`primary`, `secondary` or
 `generated`), requested and used colour, the background that bound the move, the threshold, and
 the contrast before and after.
+
+`theme.notes` lists what passes but a brand guide should know about. Today there is one kind,
+`status-near-accent`: a status colour whose OKLab distance from the accent is below
+`STATUS_NEAR_ACCENT` (0.08), so that a red brand's danger, or a green brand's success, reads like
+the accent. The status keeps its fixed hue (moving it would make it a worse status colour); the
+note names the scheme, the status token, the accent and the distance, so you can pair the status
+with an icon or label, or choose a primary further from it. About one kit in five gets a note.
 
 The theme comes back as `theme.document`, a DTCG theme source in exactly the shape of the
 built-in ones (`common` typography, `light` and `dark` colour and gradient, label and
@@ -111,13 +143,21 @@ Tested on every run:
 - **Total.** Every kit `parseBrandKit` accepts gives a theme: white, black, greys, fully saturated
   colours, identical and near-identical primary and secondary all do.
 - **Passing.** Every generated theme defines every theme-owned role in both schemes and nothing
-  else (`findThemeProblems`) and passes the whole contrast suite in both schemes
-  (`findContrastFailures`), checked with the tokens package's own functions over 2,700 seeded
-  random colour sets and twenty edge sets, for every tone and corner style.
+  else (`findThemeProblems`), passes the whole contrast suite in both schemes
+  (`findContrastFailures`) and meets every pairing in the table above, checked with the tokens
+  package's own functions over 2,700 seeded random colour sets and twenty edge sets, for every
+  tone and corner style. That includes the accent at 3:1 on `bg`, `bg-subtle`, `surface` and
+  `surface-raised` in each scheme.
 - **Recognisable.** The primary is used unchanged unless a move is reported; a moved brand colour
-  keeps its hue within 3° while it still has colour (about 2.4° at most over 20,000 random sets); a moved
-  accent lands within half a point of its threshold.
-- **Deterministic.** The same kit gives byte-identical output; golden files hold two sample kits.
+  keeps its hue within 3° while it still has colour (OKLCH chroma of at least 0.04; about 2.4° at
+  most over 20,000 random sets, up to 5° for near-greys whose hue barely shows); a moved colour stops
+  within 12% of the threshold that bound it.
+- **Deterministic in one engine.** The same kit gives byte-identical output in the same JavaScript
+  engine, and golden files hold two sample kits. The colour maths uses `Math.cbrt` and `**`, which
+  the language does not require to be correctly rounded, so another engine could in principle
+  round a colour on the other side of an 8-bit step. The output is still valid there (every
+  colour is checked after rounding), but it is not promised to be byte-identical across engines.
+  Generate once, on the server, and serve the result.
 
 ## Emission
 
@@ -126,10 +166,14 @@ is scoped exactly like a built-in theme file: `[data-theme="<id>"]` for light, `
 for forced dark, and the `prefers-color-scheme: dark` rule for a page without `data-scheme`. It
 never answers to a bare `:root`; only the default theme does.
 
-The corners set the design-owned `shape.radius.sm|md|lg|pill`, which a theme may not own. They go
-in a separate rule in the `idg.brand` cascade layer, which the tokens layer order places after the
-UX modes and before the preferences: on the element carrying `data-theme`, a brand's corners
-override the design language's radii. A `data-design` set on a descendant still sets its own.
+The corners are a preference, not an override. A separate rule in the `idg.brand` cascade layer
+sets `--idg-brand-radius-sm|md|lg|pill` on the element carrying `data-theme`. Radii belong to the
+design language: a design that declares `followsBrandCorners: true` (flat, elevated, glass,
+outline, soft) resolves each `--idg-shape-radius-*` as `var(--idg-brand-radius-*, <its own value>)`,
+so it takes the brand's corners; a design whose identity is its corners declares `false`
+(brutalist, editorial, pixel) and keeps its own whatever the brand says. See
+[Brand corners](../tokens/README.md#brand-corners). As with any theme, put `data-design` on the
+same element as `data-theme` or on a descendant of it.
 
 `emitBrandThemeTokens(theme)` writes `theme.document` as formatted JSON, with `<`, `>`, `&`, U+2028
 and U+2029 escaped so it is safe inside an HTML `<script>` element. In the JSON the corners and the
