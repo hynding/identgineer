@@ -320,6 +320,11 @@ const runScenario = async (seed: number, steps: number): Promise<void> => {
       events += 1;
       const ended = events;
       const restorable = api.restorableUser();
+      // It waits for the work it cancelled, and ends the sessions that work opened.
+      const unsettled = before.filter((entry) => entry.tab === tab && !entry.settled).length;
+      if (unsettled > 0) {
+        violations.push(`${where} resolved before ${String(unsettled)} sign-ins it cancelled`);
+      }
       // A sign-in whose answer landed before the sign-out resolved may resolve just after it.
       await flush();
       const later = api.restorableUser();
