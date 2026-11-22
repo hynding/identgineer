@@ -42,8 +42,12 @@ describe("a sign-in in another tab during a sign-out (the later action wins)", (
     await settle();
     expect(other.getState()).toMatchObject({ status: "signed-in", user: { username: "bob" } });
     expect(heard.map((state) => state.status)).not.toContain("signed-out");
-    expect(client.getState()).toMatchObject({ status: "signed-in", user: { username: "bob" } });
-    expect(api.restorableSession()).toBe(true);
+    // The residual window: the logout already in flight carried the old cookie, so the backend
+    // cleared the cookie the newer sign-in had set when it ended the old session. That tab stays
+    // signed in on its tokens, but no tab can resume from the cookie, so this one stays out.
+    expect(api.activeSessionCount("bob@example.com")).toBe(1);
+    expect(api.restorableSession()).toBe(false);
+    expect(client.getState()).toEqual({ status: "signed-out", reason: "user" });
   });
 
   it("stands when it lands while the cookie lookup is under way", async () => {

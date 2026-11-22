@@ -16,18 +16,23 @@ export interface SignOutOptions {
  * until it expires (and a reload may resume it).
  */
 export interface SignOutResult {
-  readonly outcome: "signed-out" | "server-unreachable";
+  readonly outcome: "signed-out" | "server-unreachable" | "superseded";
 }
 
-/** Ends whatever session the shared refresh cookie names, once any refresh under way has rotated it. */
+/**
+ * Ends whatever session the shared refresh cookie names, unless a newer sign-in is known by
+ * then: the cookie may be that sign-in's, and it stands.
+ */
 const endCookieSession = async (
   context: ClientContext,
   everywhere: boolean,
+  newer: () => boolean,
 ): Promise<ServerSignOut> => {
-  await context.refresher.settled();
+  if (newer()) return "ended";
   const found = await context.refresher.detached(undefined);
   if (found === "refused") return "ended";
   if (found === "unreachable") return "unreachable";
+  if (newer()) return "ended";
   return context.endServerSession(found, everywhere);
 };
 
@@ -35,36 +40,46 @@ const endCookieSession = async (
  * Ends this tab's own server session, then whatever session the cookie still names: another
  * tab's sign-in this tab never heard of leaves the cookie on its session, and the logout clears
  * the cookie only with the session it names. Page script cannot see whether it did, so the cookie
- * is looked up once more (one refresh request, refused when nothing is left), which is what keeps
- * "nothing to resume in this browser" true. A tab without a token of its own starts there.
+ * is looked up once more (one refresh request, refused when nothing is left). A tab without a
+ * token of its own starts there.
  */
 const endSessions = async (
   context: ClientContext,
   own: Tokens | undefined,
   everywhere: boolean,
+  newer: () => boolean,
 ): Promise<ServerSignOut> => {
-  if (own === undefined) return endCookieSession(context, everywhere);
+  if (own === undefined) return endCookieSession(context, everywhere, newer);
   const ended = await context.endServerSession(own, everywhere);
-  return ended === "ended" ? endCookieSession(context, everywhere) : ended;
+  return ended === "ended" ? endCookieSession(context, everywhere, newer) : ended;
 };
 
+const SUPERSEDED: SignOutResult = Object.freeze({ outcome: "superseded" });
+
 /**
- * The strongest operation. At once: signs out here and cancels every sign-in, restore and
- * re-check asked for before it, so none of them can leave the tab signed in. Then ends the server
- * session (even one only the cookie holds), waits for the work it cancelled (ending the sessions
- * that work opened), and only then tells the other tabs, so no tab hears of a sign-out a reload
- * would undo. Work asked for meanwhile waits for it and then runs afresh. An unreachable server is
- * reported, not thrown.
+ * The strongest operation in this tab. At once: signs out here and cancels every sign-in,
+ * restore and re-check asked for before it, so none of them can leave the tab signed in. Then
+ * ends the server session (and whatever session the cookie still names), waits for the work it
+ * cancelled (ending the sessions that work opened), and only then tells the other tabs. Work
+ * asked for meanwhile waits for it and then runs afresh.
+ *
+ * Across tabs the later action wins: a sign-in this tab hears of (or is asked for) after the
+ * sign-out began stands. The sign-out then logs out no session it finds in the cookie, tells no
+ * tab of a sign-out, and resolves `superseded`; the queued re-check brings this tab to the newer
+ * session. An unreachable server is reported, not thrown.
  */
 export const signOut =
   (context: ClientContext) =>
   async (options: SignOutOptions = {}): Promise<SignOutResult> => {
     const own = context.session.tokens();
+    const seen = context.signInsSeen();
+    const newer = (): boolean => context.signInsSeen() !== seen;
     context.session.cancelSignIns();
     context.signedOut("user");
     const server = await context.signOutBarrier(() =>
-      endSessions(context, own, options.everywhere === true),
+      endSessions(context, own, options.everywhere === true, newer),
     );
+    if (newer()) return SUPERSEDED;
     context.crossTab.announce("signed-out");
     return Object.freeze({
       outcome: server === "unreachable" ? "server-unreachable" : "signed-out",
@@ -79,15 +94,24 @@ export const currentUser = (context: ClientContext) => async (): Promise<Identit
   return user;
 };
 
-const restoreNow = async (context: ClientContext, ticket: Ticket): Promise<IdentityState> => {
+/**
+ * `quiet`: a re-check, which leaves a signed-out state as it is (and its reason) when it finds
+ * no session to resume.
+ */
+const restoreNow = async (
+  context: ClientContext,
+  ticket: Ticket,
+  quiet = false,
+): Promise<IdentityState> => {
   const { session } = context;
   if (!session.valid(ticket) || session.getState().status === "signed-in") {
     return session.getState();
   }
   const result = await context.refresher.refresh();
   if (!session.valid(ticket)) return session.getState();
+  const signedOutAlready = session.getState().status === "signed-out";
   if (result.outcome !== "refreshed") {
-    context.signedOut("no-session");
+    if (!(quiet && signedOutAlready)) context.signedOut("no-session");
     return session.getState();
   }
   const response = await context.transport.send({
@@ -97,7 +121,7 @@ const restoreNow = async (context: ClientContext, ticket: Ticket): Promise<Ident
   });
   if (!session.valid(ticket)) return session.getState();
   if (!response.ok) {
-    context.signedOut("no-session");
+    if (!(quiet && signedOutAlready)) context.signedOut("no-session");
     return session.getState();
   }
   await context.acceptSignIn(result.tokens, readUser(response.body), ticket);
@@ -129,7 +153,7 @@ export const reevaluate = (context: ClientContext) => (): Promise<void> => {
     if (state.status === "signed-in" && session.refreshToken() === undefined) {
       await context.refreshSession(ticket);
     } else if (state.status === "signed-out") {
-      await restoreNow(context, ticket);
+      await restoreNow(context, ticket, true);
     }
   });
 };

@@ -107,6 +107,12 @@ export interface ClientContext {
    */
   readonly signOutBarrier: (work: () => Promise<ServerSignOut>) => Promise<ServerSignOut>;
   readonly signedOut: (reason: SignOutReason) => void;
+  /**
+   * Counts the sign-ins this tab knows of: another tab's (by its notice) and this tab's own (when
+   * asked for). A sign-out compares it before and after, since the later action wins.
+   */
+  readonly signInsSeen: () => number;
+  readonly noteSignIn: () => void;
   /** What to do when another tab signs in (set by the client). */
   readonly onOtherTabSignedIn: (handler: () => void) => void;
   readonly dispose: () => void;
@@ -144,6 +150,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   const throttle = createThrottle(clock);
   let disposed = false;
   let otherTabSignedIn = (): void => undefined;
+  let signInsSeen = 0;
   let queue: Promise<unknown> = Promise.resolve();
   // The endings of server sessions whose sign-ins the gate refused, in order (they are rare).
   const abandoned: Promise<ServerSignOut>[] = [];
@@ -210,7 +217,9 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
       signedOut("other-tab");
     },
     onSignedIn: () => {
-      if (!disposed) otherTabSignedIn();
+      if (disposed) return;
+      signInsSeen += 1;
+      otherTabSignedIn();
     },
   });
 
@@ -357,6 +366,10 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     exclusive,
     signOutBarrier,
     signedOut,
+    signInsSeen: () => signInsSeen,
+    noteSignIn: () => {
+      signInsSeen += 1;
+    },
     onOtherTabSignedIn: (handler) => {
       otherTabSignedIn = handler;
     },

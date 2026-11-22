@@ -160,20 +160,21 @@ describe("work requested during a sign-out", () => {
     expect(client.getState()).toMatchObject({ status: "signed-in", user: { username: "bob" } });
   });
 
-  it("runs another tab's re-check only once the sign-out has finished", async () => {
+  it("runs another tab's re-check only once the sign-out has finished, which that sign-in supersedes", async () => {
     const { api, client, makeClient, signIn } = setup();
     await signIn();
     const other = makeClient({ sharedChannel: true });
-    const release = api.holdNext("POST", "/api/auth/logout");
+    const releaseLookup = api.holdNext("POST", "/api/auth/refresh");
     const signingOut = client.signOut();
     await settle();
     await other.signIn({ identifier: "ada", password: PASSWORD });
     await settle();
-    release();
-    await expect(signingOut).resolves.toEqual({ outcome: "signed-out" });
-    await settle();
-    await settle();
     expect(client.getState().status).toBe("signed-out");
+    releaseLookup();
+    await expect(signingOut).resolves.toEqual({ outcome: "superseded" });
+    await settle();
+    await settle();
+    expect(client.getState()).toMatchObject({ status: "signed-in", user: { username: "ada" } });
   });
 });
 
