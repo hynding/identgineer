@@ -208,8 +208,10 @@ interrupted, so the suite can be run repeatedly with
 `IDENTITY_LIVE_BACKEND=cms/generated/live/backend.json pnpm vitest run --project identity-live`.
 Each boot starts with fresh databases and throttle buckets; servers kept up keep both between
 runs, so a rerun within a minute may wait out the throttled server's register window.
-Everything it writes is under the git-ignored `generated/live`; delete that directory to scaffold
-again. It is not part of `pnpm test` or CI, which have no camis checkout.
+Everything it writes is under the git-ignored `generated/live`, one scaffold only; delete that
+directory to scaffold again. After scaffolding it removes the VCS checkouts Composer leaves in
+`vendor` when it clones packages rather than downloading their archives, which can take
+gigabytes. It is not part of `pnpm test` or CI, which have no camis checkout.
 
 Running the generated projects needs each target's own tooling, which this repository does not
 install:
