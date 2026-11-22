@@ -46,6 +46,10 @@ export const config: Config = {
         { src: "csp-demo.html" },
         { src: "fixtures" },
         { src: "../../tokens/dist", dest: "tokens" },
+        // The variation switcher fixture loads the bootstrap script as a page would, from its own
+        // origin. The file comes from the variations build, which runs first because this package
+        // depends on it, and is served at /variations/bootstrap.js.
+        { src: "../../variations/dist/bootstrap.js", dest: "variations/bootstrap.js" },
       ],
     },
   ],

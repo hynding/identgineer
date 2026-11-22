@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>variation switcher fixture</title>
+    <!-- Blocking and first, so the attributes are set before anything is painted. The file is
+         copied from @identgineer/variations by the components build (stencil.config.ts), and a
+         test holds this integrity to what that package builds. -->
+    <script
+      src="/variations/bootstrap.js"
+      integrity="sha384-90Lxs8qMajPIRuhv619BpDGraXL2vJUXTJRdetxy3PDbENimMT3lD9+PrHPwTeJJ"
+    ></script>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/fixtures/layout-shell.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+  </head>
+  <body>
+    <idg-layout id="shell">
+      <a slot="brand" class="brand" href="#top">
+        <idg-icon name="sparkles"></idg-icon>
+        <span>Identgineer</span>
+      </a>
+
+      <a slot="navigation" href="#overview" aria-current="page">Overview</a>
+      <a slot="navigation" href="#appearance">Appearance</a>
+      <a slot="navigation" href="#docs">Docs</a>
+
+      <idg-button slot="actions" size="sm">Get started</idg-button>
+
+      <div slot="hero" class="hero-content">
+        <p class="eyebrow">One page, four axes</p>
+        <h1>Make the page yours</h1>
+        <p class="lede">Pick a theme, a design, a layout and a UX mode, and the page follows.</p>
+      </div>
+
+      <section class="plain" id="appearance" aria-labelledby="appearance-title">
+        <h2 id="appearance-title">Appearance</h2>
+        <idg-variation-switcher
+          id="switcher"
+          heading="Customise this page"
+        ></idg-variation-switcher>
+      </section>
+
+      <section class="plain" id="overview" aria-labelledby="overview-title">
+        <h2 id="overview-title">Overview</h2>
+        <idg-grid id="cards">
+          <idg-card heading="Projects">
+            Fourteen active, three waiting for review.
+            <idg-button size="sm" variant="secondary">Open</idg-button>
+          </idg-card>
+          <idg-card heading="Members" variant="raised">
+            Forty-one people across six teams.
+            <idg-button size="sm">Invite</idg-button>
+          </idg-card>
+          <idg-card heading="Deploys" variant="accent">Twenty-two this week.</idg-card>
+        </idg-grid>
+        <p>
+          Switching a layout re-houses this page: the navigation, the aside and the hero change
+          places, and the markup stays as it is.
+        </p>
+      </section>
+
+      <div slot="aside" class="aside-content">
+        <h2 class="aside-title">Quick look</h2>
+        <idg-variation-switcher
+          id="switcher-aside"
+          axes="theme,scheme"
+          orientation="inline"
+          heading="Theme and scheme"
+        ></idg-variation-switcher>
+      </div>
+
+      <div slot="footer" class="footer-content">
+        <p class="footer-text">Identgineer. Identity, tracking and a UI that adapts.</p>
+      </div>
+    </idg-layout>
+  </body>
+</html>
