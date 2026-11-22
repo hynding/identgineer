@@ -1,4 +1,5 @@
 import { MAX_STORED_LENGTH, STORAGE_KEY } from "./constants.ts";
+import { isAddableThemeId } from "./theme-registration.ts";
 import { parseVariations } from "./validate.ts";
 import type { VariationState } from "./variation-state.ts";
 
@@ -27,16 +28,53 @@ export function saveVariations(
   }
 }
 
+// The stored value as JSON, or undefined for anything this package would not have written.
+function readStored(storage: StorageLike): unknown {
+  try {
+    const raw: unknown = storage.getItem(STORAGE_KEY);
+    if (typeof raw !== "string" || raw.length > MAX_STORED_LENGTH) return undefined;
+    return JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+}
+
 export function loadVariations(
   storage: StorageLike | undefined = defaultStorage(),
 ): Partial<VariationState> {
-  if (!storage) return {};
+  return storage ? parseVariations(readStored(storage)) : {};
+}
+
+/**
+ * A stored theme that passes the added theme id rule although this page has not registered it:
+ * a generated theme chosen on a page that did. It is kept, never applied.
+ */
+function storedAddedTheme(stored: unknown): string | undefined {
+  if (typeof stored !== "object" || stored === null || !("theme" in stored)) return undefined;
+  return isAddableThemeId(stored.theme) ? stored.theme : undefined;
+}
+
+/**
+ * Stores `choice` merged over the stored choice. Of what the page cannot validate, only one theme
+ * slug that passes the added theme id rule survives, so choosing another axis here does not
+ * forget a generated theme that a page registering it would apply.
+ */
+export function mergeStoredVariations(
+  choice: Partial<VariationState>,
+  storage: StorageLike | undefined = defaultStorage(),
+): boolean {
+  if (!storage) return false;
+  const stored = readStored(storage);
+  const merged = { ...parseVariations(stored), ...parseVariations(choice) };
+  const kept = merged.theme === undefined ? storedAddedTheme(stored) : undefined;
   try {
-    const raw: unknown = storage.getItem(STORAGE_KEY);
-    if (typeof raw !== "string" || raw.length > MAX_STORED_LENGTH) return {};
-    return parseVariations(JSON.parse(raw));
+    storage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(kept === undefined ? merged : { theme: kept, ...merged }),
+    );
+    return true;
   } catch {
-    return {};
+    return false;
   }
 }
 

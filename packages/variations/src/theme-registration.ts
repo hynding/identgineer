@@ -18,7 +18,8 @@ export interface ThemeRegistration {
   readonly unregister: () => void;
 }
 
-function isAddableThemeId(value: unknown): value is RegisteredThemeId {
+/** Whether `value` passes the added theme id rule; registered or not. */
+export function isAddableThemeId(value: unknown): value is RegisteredThemeId {
   return (
     typeof value === "string" &&
     value.length >= RULE.minLength &&
