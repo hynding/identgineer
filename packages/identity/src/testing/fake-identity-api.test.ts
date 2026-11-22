@@ -116,6 +116,46 @@ describe("the fake's session list, as camis' StrapiSessions::list", () => {
   });
 });
 
+describe("the fake's session metadata, as camis' StrapiSessions", () => {
+  const listSessions = async (api: ReturnType<typeof fakeApi>["api"], jwt: string) => {
+    const response = await api.fetch(`${api.baseUrl}/api/auth/sessions`, {
+      headers: { Authorization: `Bearer ${jwt}` },
+    });
+    return ((await response.json()) as { data: Record<string, unknown>[] }).data;
+  };
+
+  it("names the device of a registration's session, as of a sign-in's", async () => {
+    const { api, post } = fakeApi();
+    const answer = await post("/api/auth/local/register", {
+      cookies: false,
+      body: { username: "eve", email: "eve@example.com", password: PASSWORD },
+    });
+    const [session] = await listSessions(api, answer.body.jwt as string);
+    expect(session).toMatchObject({ deviceName: "Firefox on Linux" });
+    expect(session?.deviceId).toEqual(expect.any(String));
+  });
+
+  it("gives the session a password change opens no device name and no sign-in time", async () => {
+    const { api, post, signIn } = fakeApi();
+    const jwt = await signIn("ada");
+    const changed = await post("/api/auth/change-password", {
+      bearer: jwt,
+      body: {
+        currentPassword: PASSWORD,
+        password: "another password",
+        passwordConfirmation: "another password",
+      },
+    });
+    const [session] = await listSessions(api, changed.body.jwt as string);
+    expect(Object.keys(session ?? {}).sort()).toEqual([
+      "current",
+      "deviceId",
+      "id",
+      "lastActiveAt",
+    ]);
+  });
+});
+
 describe("the fake's throttle, as camis' StrapiRateLimits", () => {
   it("keeps one bucket per group of routes", async () => {
     const { post } = fakeApi({ throttlePerMinute: 2 });
