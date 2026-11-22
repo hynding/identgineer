@@ -329,6 +329,11 @@ const MAIN_STEPS: readonly Step[] = [
     keep: keepJwt("changed"),
   },
   {
+    name: "sessions: list after the password change",
+    reader: "sessions",
+    request: (s) => ({ method: "GET", path: "/api/auth/sessions", token: s.tokens.changed ?? "" }),
+  },
+  {
     name: "current user: a token of a session the password change ended",
     request: (s) => ({ method: "GET", path: "/api/users/me", token: s.tokens.refreshed ?? "" }),
   },
