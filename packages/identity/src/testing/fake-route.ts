@@ -20,6 +20,12 @@ export interface FakeSettings {
   readonly allowedOrigins: readonly string[];
   /** Whether a 429 carries a `Retry-After` the client can read. */
   readonly retryAfterHeader: boolean;
+  /**
+   * `CAMIS_AUTH_HIDE_ACCOUNT_EXISTENCE` (on by default): with email confirmation on, every
+   * registration and every confirmation resend is answered alike, and a username naming another
+   * address is refused. Off, Strapi's answers, which tell a taken or confirmed account apart.
+   */
+  readonly hideAccountExistence: boolean;
 }
 
 export interface RouteContext {

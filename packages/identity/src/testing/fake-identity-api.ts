@@ -21,7 +21,10 @@ export interface FakeIdentityApiOptions extends Partial<FakeSettings> {
   readonly accessTokens?: "jwt" | "opaque";
   /** Defaults to camis': 600 s in refresh mode, 30 days for legacy tokens. */
   readonly accessTokenLifetimeSeconds?: number;
-  /** Adds `expiresIn` (seconds) to every token answer, as a backend that reports it would. */
+  /**
+   * Adds `expiresIn` (seconds) to every token answer. On by default in refresh mode, as camis
+   * answers; legacy tokens carry none.
+   */
   readonly reportExpiresIn?: boolean;
 }
 
@@ -61,6 +64,27 @@ const DEFAULT_SETTINGS: FakeSettings = {
   addressThrottlePerMinute: 50,
   allowedOrigins: [],
   retryAfterHeader: true,
+  hideAccountExistence: true,
+};
+
+// camis' StrapiJsonBody guards every auth write.
+const JSON_ONLY = new Set([
+  "/api/auth/local",
+  "/api/auth/local/register",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+  "/api/auth/send-email-confirmation",
+  "/api/auth/refresh",
+  "/api/auth/change-password",
+  "/api/auth/logout",
+]);
+
+/** A body given as anything but JSON (`application/json` or `application/*+json`). */
+const notJson = (url: URL, init: RequestInit): boolean => {
+  if ((init.method ?? "GET").toUpperCase() !== "POST" || !JSON_ONLY.has(url.pathname)) return false;
+  if (init.body === undefined || init.body === null || init.body === "") return false;
+  const type = (new Headers(init.headers).get("Content-Type") ?? "").split(";")[0]?.trim() ?? "";
+  return !/^application\/([\w.+-]+\+)?json$/i.test(type);
 };
 
 const readRequest = (url: URL, init: RequestInit): FakeRequest => {
@@ -243,7 +267,8 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
 
   const withExpiresIn = (result: FakeResponse): FakeResponse => {
     const body = result.body as { jwt?: unknown } | undefined;
-    if (options.reportExpiresIn !== true || typeof body?.jwt !== "string") return result;
+    const report = options.reportExpiresIn ?? settings.sessions === "refresh";
+    if (!report || typeof body?.jwt !== "string") return result;
     return { ...result, body: { ...body, expiresIn: lifetimeSeconds } };
   };
 
@@ -291,6 +316,15 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
     if (hold !== -1) await holds.splice(hold, 1)[0]?.gate;
     await Promise.resolve();
     if (init.signal?.aborted === true) throw abortError();
+    if (notJson(url, init)) {
+      return toResponse(
+        strapiError(
+          415,
+          "UnsupportedMediaTypeError",
+          "The request body must be JSON (Content-Type: application/json)",
+        ),
+      );
+    }
     const result = withExpiresIn(await answer(request, init.signal ?? null));
     applyCookies(request, result);
     return toResponse(result);
