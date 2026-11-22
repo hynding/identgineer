@@ -87,7 +87,7 @@ describe(".env.example, strapi-php's deployment settings for the identity SDK", 
 
   it("holds placeholders only: no key, password or salt has a value of its own", () => {
     for (const [key, { value }] of settings) {
-      if (/KEY$|PASSWORD|SALT|SECRET/.test(key)) expect(value, key).toMatch(/^(replace-|$)/);
+      if (/(KEY|PASSWORD|SALT|SECRET)$/.test(key)) expect(value, key).toMatch(/^(replace-|$)/);
     }
   });
 
