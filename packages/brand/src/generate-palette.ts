@@ -462,6 +462,8 @@ const GRADIENT_TURNS = [30, -30, 40, -40] as const;
 const GREY_STEP = 0.12;
 /** Closer than this in OKLab, the gradient's two ends read as one colour. */
 const GRADIENT_MIN_DISTANCE = 0.08;
+/** A lightness turn also differs this much in WCAG contrast, so a black gradient is visible. */
+const GRADIENT_MIN_CONTRAST = 1.5;
 
 /** Yellow-green hues below a pale lightness read as olive, which no brand gradient wants. */
 function isOlive(color: Oklch): boolean {
@@ -478,8 +480,14 @@ function isOlive(color: Oklch): boolean {
 function gradientPartner(primary: Rgb): Rgb {
   const start = toOklch(primary);
   const byLightness = () => {
-    const step = start.lightness > 0.5 ? -GREY_STEP : GREY_STEP;
-    return fromOklch({ ...start, lightness: start.lightness + step });
+    const sign = start.lightness > 0.5 ? -1 : 1;
+    // OKLab overstates differences next to black, so the step grows until luminance differs too.
+    for (let step = GREY_STEP; step < 1; step += 0.01) {
+      const lightness = Math.min(1, Math.max(0, start.lightness + sign * step));
+      const partner = fromOklch({ ...start, lightness });
+      if (contrastBetween(primary, partner) >= GRADIENT_MIN_CONTRAST) return partner;
+    }
+    return fromOklch({ ...start, lightness: sign > 0 ? 1 : 0 });
   };
   if (start.chroma < GREY_CHROMA) return byLightness();
   const distinct = GRADIENT_TURNS.map((turn) =>
