@@ -43,7 +43,7 @@ export const setup = (
   client.subscribe((state) => states.push(state));
   const ada = api.addUser({ username: "ada", email: "ada@example.com", password: PASSWORD });
   const signIn = () => client.signIn({ identifier: "ada@example.com", password: PASSWORD });
-  return { api, clock, client, states, ada, signIn, makeClient };
+  return { api, clock, client, states, ada, signIn, makeClient, channelName: sharedChannel };
 };
 
 /** Lets pending promise chains and the fake's answers run. */

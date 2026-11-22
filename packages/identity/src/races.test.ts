@@ -276,3 +276,85 @@ describe("a restore while an older session's refresh is under way", () => {
     expect(await restoring).toMatchObject({ status: "signed-in", user: { username: "bob" } });
   });
 });
+
+const REFUSED = {
+  status: 401,
+  body: {
+    data: null,
+    error: { status: 401, name: "UnauthorizedError", message: "x", details: {} },
+  },
+};
+
+/** Refuses the next refresh once `release` is called, and the one after at once. */
+const refusingLater = (api: FakeIdentityApi): (() => void) => {
+  let release = (): void => undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  api.respondNext("POST", "/api/auth/refresh", async () => {
+    await gate;
+    return REFUSED;
+  });
+  api.respondNext("POST", "/api/auth/refresh", REFUSED);
+  return release;
+};
+
+describe("an old session's refresh refused after another tab signed out and this one in again", () => {
+  const signedOutElsewhere = async (channelName: string) => {
+    const channel = new BroadcastChannel(channelName);
+    channel.postMessage({ type: "signed-out" });
+    channel.close();
+    await settle();
+  };
+
+  it("does not end the new session when the refresh was asked for by a request", async () => {
+    const { api, client, signIn, channelName } = setup();
+    addBob(api);
+    await signIn();
+    api.expireAccessTokens();
+    const release = refusingLater(api);
+    const fetching = client.authorizedFetch("/api/users/me").catch(() => undefined);
+    await settle();
+    await signedOutElsewhere(channelName);
+    expect(client.getState()).toEqual({ status: "signed-out", reason: "other-tab" });
+    await client.signIn({ identifier: "bob", password: PASSWORD });
+    release();
+    await fetching;
+    await settle();
+    expect(client.getState()).toMatchObject({ status: "signed-in", user: { username: "bob" } });
+  });
+
+  it("does not end the new session when the refresh was scheduled", async () => {
+    const { api, client, clock, signIn, channelName } = setup();
+    addBob(api);
+    await signIn();
+    const release = refusingLater(api);
+    clock.advance(570_000);
+    await settle();
+    await signedOutElsewhere(channelName);
+    await client.signIn({ identifier: "bob", password: PASSWORD });
+    release();
+    await settle();
+    expect(client.getState()).toMatchObject({ status: "signed-in", user: { username: "bob" } });
+  });
+});
+
+describe("a sign-in queued before a sign-out", () => {
+  it("is waited for and rejected, and its session ended before the sign-out resolves", async () => {
+    const { api, client } = setup();
+    const release = api.holdNext("POST", "/api/auth/local");
+    const signingIn = rejection(client.signIn({ identifier: "ada", password: PASSWORD }));
+    await settle();
+    let resolved = false;
+    const signingOut = client.signOut().then((result) => {
+      resolved = true;
+      return result;
+    });
+    await settle();
+    expect(resolved).toBe(false);
+    release();
+    await expect(signingOut).resolves.toEqual({ outcome: "signed-out" });
+    expect(await signingIn).toMatchObject({ code: "unauthorized" });
+    expect(api.activeSessionCount("ada@example.com")).toBe(0);
+  });
+});
