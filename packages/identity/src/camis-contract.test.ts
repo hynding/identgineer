@@ -154,7 +154,9 @@ describe.skipIf(!HAS_CAMIS)(TITLE, () => {
   });
 
   it("confirms email with the query parameter the controller reads", () => {
-    expect(authEmitter).toContain("'confirmation' => ['required']");
+    // The rule's other entries (a string check) may change; the parameter must stay required.
+    const controller = camisFile(`${STRAPI_API}/__golden__/strapi-api/AuthController.php`);
+    expect(controller).toMatch(/'confirmation' => \[[^\]]*'required'/);
     const request = authRequests.find(
       (candidate) => candidate.path === "/api/auth/email-confirmation",
     );
