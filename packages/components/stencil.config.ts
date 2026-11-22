@@ -6,11 +6,13 @@ const VARIATIONS_SOURCE = "/packages/variations/src/";
 // @identgineer/variations is consumed as TypeScript source, like every workspace package. Stencil
 // only compiles what its own tsconfig includes, and including a sibling package's source would
 // make it emit that package's files next to this one. So the files of that package alone are
-// transpiled here, one by one, which erases types and leaves every import as written.
+// transpiled here, one by one, which erases types and leaves every import as written. That is
+// transpilation only: a type error in that source is caught by `pnpm typecheck`, never by this build.
 const transpileVariations = {
   name: "transpile-variations",
   transform(code: string, id: string): { code: string; map: null } | null {
-    if (!id.includes(VARIATIONS_SOURCE) || !id.endsWith(".ts")) return null;
+    // Module ids use backslashes on Windows.
+    if (!id.replaceAll("\\", "/").includes(VARIATIONS_SOURCE) || !id.endsWith(".ts")) return null;
     const { outputText } = ts.transpileModule(code, {
       fileName: id,
       compilerOptions: {

@@ -49,8 +49,46 @@
   min-inline-size: 0;
 }
 
+/* Each control is a size container, so how its options are arranged follows the room the control
+   has, not the viewport and not the panel. */
 .control {
   min-inline-size: 0;
+  /* Inherited into the field's own shadow root, so a label wider than a very narrow control breaks
+     inside its word rather than leave the panel. */
+  overflow-wrap: anywhere;
+  container-type: inline-size;
+  container-name: idg-control;
+}
+
+/* The options of a radio group are laid out here, on the group's own box (its group part), as
+   aligned tracks. The theme is two columns, one where the control is narrow and four where wide. The
+   scheme is three options in one row where they fit and one column where they do not, never two and
+   one over. 14rem, 20rem and 36rem are --idg-size-s, --idg-size-m and the width of four themes. */
+.control[data-control="theme"] idg-radio-group::part(group),
+.control[data-control="scheme"] idg-radio-group::part(group) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: calc(var(--idg-space-3xs) * var(--idg-density-gap-scale));
+  column-gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+}
+
+@container idg-control (min-inline-size: 14rem) {
+  .control[data-control="theme"] idg-radio-group::part(group) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container idg-control (min-inline-size: 36rem) {
+  .control[data-control="theme"] idg-radio-group::part(group) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@container idg-control (min-inline-size: 20rem) {
+  .control[data-control="scheme"] idg-radio-group::part(group) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 /* Inline: the controls sit side by side and wrap by what fits. A control cannot be narrower than
@@ -86,7 +124,7 @@
    panel's padding back to its controls. 20rem is --idg-size-m. */
 @container idg-variation-switcher (max-inline-size: 20rem) {
   .panel {
-    --_pad: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+    --_pad: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
   }
 }
 
@@ -127,7 +165,9 @@ idg-radio {
    it gets an edge in a system colour there. */
 .swatch {
   flex: none;
-  inline-size: 2em;
+  /* The percentage lets the swatch shrink with a very narrow option instead of pushing it wider than
+     its track; the picture keeps its proportions. */
+  inline-size: min(2em, 100%);
   block-size: 1em;
   border-radius: var(--idg-shape-radius-sm);
   box-shadow: 0 0 0 1px var(--idg-color-border-strong);

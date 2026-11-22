@@ -715,9 +715,10 @@ test.describe("layout holds up", () => {
         const themes = await boxes("theme");
         expect(themes).toHaveLength(8);
         // One width for all, and each starts at one of a few column edges: a grid, not ragged rows.
-        expect(new Set(themes.map((box) => box.width)).size).toBe(1);
+        const widths = themes.map((box) => box.width);
+        expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(1);
         const columns = new Set(themes.map((box) => box.left)).size;
-        expect(columns).toBeLessThanOrEqual(4);
+        expect([1, 2, 4]).toContain(columns);
         expect(Math.ceil(8 / columns)).toBe(new Set(themes.map((box) => box.top)).size);
         const schemes = await boxes("scheme");
         const oneRow = new Set(schemes.map((box) => box.top)).size === 1;
