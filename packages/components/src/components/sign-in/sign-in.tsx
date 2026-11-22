@@ -1,4 +1,5 @@
 import { Component, Event, h, Prop, State, Watch, type EventEmitter } from "@stencil/core";
+import { Attempts } from "../../identity/attempts";
 import { userDetail, type SignedInDetail } from "../../identity/event-details";
 import { AnnouncementView, SummaryView } from "../../identity/feedback-view";
 import {
@@ -85,19 +86,19 @@ export class IdgSignIn {
     this.version += 1;
   });
   private readonly controls: Partial<Record<Field, ValueControl>> = {};
-  private attempt = 0;
+  private readonly attempts = new Attempts();
   private focusInvalid = false;
 
   @Watch("client")
   clientChanged(): void {
     // A sign-in still under way belongs to the old client: its answer is dropped.
-    this.attempt += 1;
+    this.attempts.cancel();
     this.pending = false;
     this.feedback.reset();
   }
 
   disconnectedCallback(): void {
-    this.attempt += 1;
+    this.attempts.cancel();
     this.pending = false;
     this.feedback.reset();
     clearControls([this.controls.password]);
@@ -145,23 +146,23 @@ export class IdgSignIn {
       this.feedback.fail({ code: "unknown", fields: [] }, undefined, this.timers(), labels);
       return;
     }
-    const attempt = (this.attempt += 1);
+    const attempt = this.attempts.start();
     this.pending = true;
     this.feedback.clear();
     try {
       const user = await client.signIn({ identifier, password: rawValue(this.controls.password) });
-      if (attempt !== this.attempt) return;
+      if (!this.attempts.isCurrent(attempt)) return;
       clearControls([this.controls.password]);
       this.feedback.announce(labels.signedIn);
       this.idgSignedIn.emit(userDetail(user));
     } catch (error) {
-      if (attempt !== this.attempt) return;
+      if (!this.attempts.isCurrent(attempt)) return;
       const failure = readIdentityError(error);
       // A refused password is gone; one that never reached the server is kept for the retry.
       if (failure.code === "invalid-credentials") clearControls([this.controls.password]);
       this.feedback.fail(failure, client, this.timers(), labels);
     } finally {
-      if (attempt === this.attempt) this.pending = false;
+      if (this.attempts.isCurrent(attempt)) this.pending = false;
     }
   }
 
