@@ -10,7 +10,7 @@ import {
   type FakeResponse,
 } from "./fake-http.ts";
 import { PROFILE_ROUTES } from "./fake-profile-routes.ts";
-import type { FakeRoute, FakeSettings, RouteContext } from "./fake-route.ts";
+import type { FakeRoute, FakeSettings, RouteContext, ThrottleGroup } from "./fake-route.ts";
 import { PROVIDER_SESSION_COOKIE, SESSION_ROUTES } from "./fake-session-routes.ts";
 import { createFakeStore, type FakeUser, type IssuedTokens } from "./fake-store.ts";
 
@@ -50,6 +50,8 @@ const DEFAULT_SETTINGS: FakeSettings = {
   refreshCookieName: "strapi_up_refresh",
   providers: ["github"],
   throttlePerMinute: Number.POSITIVE_INFINITY,
+  refreshThrottlePerMinute: 60,
+  allowedOrigins: [],
   retryAfterHeader: true,
 };
 
@@ -107,15 +109,22 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
   // The cookies each request carried, read when it was sent, as a browser does.
   const sentCookies = new WeakMap<FakeRequest, ReadonlyMap<string, string>>();
   const holds: { method: string; path: string; gate: Promise<void> }[] = [];
-  let throttleWindow = { start: Number.NEGATIVE_INFINITY, count: 0 };
+  const throttleWindows = new Map<ThrottleGroup, { start: number; count: number }>();
 
-  const throttle = (): FakeResponse | undefined => {
+  /** One window a minute per group of routes, as camis' StrapiRateLimits keeps its buckets. */
+  const throttle = (group: ThrottleGroup): FakeResponse | undefined => {
     const now = clock.now();
-    if (now - throttleWindow.start >= 60_000) throttleWindow = { start: now, count: 0 };
-    throttleWindow.count += 1;
-    if (throttleWindow.count <= settings.throttlePerMinute) return undefined;
-    const wait = Math.ceil((throttleWindow.start + 60_000 - now) / 1000);
-    const answer = strapiError(429, "HttpError", "Too Many Attempts.");
+    let window = throttleWindows.get(group);
+    if (window === undefined || now - window.start >= 60_000) {
+      window = { start: now, count: 0 };
+      throttleWindows.set(group, window);
+    }
+    window.count += 1;
+    const rate =
+      group === "refresh" ? settings.refreshThrottlePerMinute : settings.throttlePerMinute;
+    if (window.count <= rate) return undefined;
+    const wait = Math.max(1, Math.ceil((window.start + 60_000 - now) / 1000));
+    const answer = strapiError(429, "RateLimitError", "Too Many Attempts.");
     return settings.retryAfterHeader
       ? { ...answer, headers: { "Retry-After": String(wait) } }
       : answer;
@@ -144,6 +153,16 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
       },
       currentSession: () => token?.sessionId ?? undefined,
       cookieMode,
+      fromOwnPage: () => {
+        const origin = request.headers.get("Origin");
+        if (origin === null) {
+          return (
+            request.headers.has("X-Requested-With") ||
+            request.headers.has("x-strapi-refresh-cookie")
+          );
+        }
+        return origin === base.origin || settings.allowedOrigins.includes(origin);
+      },
       tokenAnswer: (tokens: IssuedTokens, extra = {}) =>
         cookieMode()
           ? ok(
@@ -172,7 +191,7 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
       if (context.user().blocked) return unauthorized();
     }
     if (route.refreshOnly === true && settings.sessions !== "refresh") return notFound();
-    return route.throttled === true ? throttle() : undefined;
+    return route.throttled === undefined ? undefined : throttle(route.throttled);
   };
 
   const route = (request: FakeRequest): FakeResponse => {
@@ -279,6 +298,15 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
     },
     /** The HttpOnly refresh cookie in the browser's jar (tests only: page script cannot see it). */
     refreshCookie: (): string | undefined => cookieJar.get(settings.refreshCookieName),
+    /** Puts a refresh cookie in the jar, as a stale or foreign one would be. */
+    setRefreshCookie: (value: string): void => {
+      cookieJar.set(settings.refreshCookieName, value);
+    },
+    /** Whether the jar's refresh cookie names a session a reload could resume. */
+    restorableSession: (): boolean => {
+      const cookie = cookieJar.get(settings.refreshCookieName);
+      return cookie !== undefined && store.sessionOf(cookie) !== undefined;
+    },
     clearCookies: (): void => {
       cookieJar.clear();
     },

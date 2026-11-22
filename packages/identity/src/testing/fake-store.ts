@@ -162,6 +162,7 @@ export const createFakeStore = (options: FakeStoreOptions) => {
       }
       return successor;
     },
+    sessionExists: (sessionId: string): boolean => sessions.has(sessionId),
     sessionOf: (refreshToken: string | undefined): string | undefined =>
       refreshToken === undefined ? undefined : usableSession(refreshToken)?.sessionId,
     activeSessions: (userId: number) =>

@@ -74,7 +74,7 @@ const register: FakeRoute = {
   method: "POST",
   path: /^\/api\/auth\/local\/register$/,
   guest: true,
-  throttled: true,
+  throttled: "register",
   handle: (context) => {
     const { store, settings } = context;
     const body = context.jsonBody();
@@ -120,7 +120,7 @@ const login: FakeRoute = {
   method: "POST",
   path: /^\/api\/auth\/local$/,
   guest: true,
-  throttled: true,
+  throttled: "sign-in",
   handle: (context) => {
     const body = context.jsonBody();
     const failure = validate(body, { identifier: ["required"], password: ["required"] });
@@ -146,7 +146,7 @@ const forgotPassword: FakeRoute = {
   method: "POST",
   path: /^\/api\/auth\/forgot-password$/,
   guest: true,
-  throttled: true,
+  throttled: "recovery",
   handle: (context) => {
     const body = context.jsonBody();
     const failure = validate(body, { email: ["required", "email"] });
@@ -162,7 +162,7 @@ const resetPassword: FakeRoute = {
   method: "POST",
   path: /^\/api\/auth\/reset-password$/,
   guest: true,
-  throttled: true,
+  throttled: "recovery",
   handle: (context) => {
     const body = context.jsonBody();
     const failure = validate(body, {
@@ -199,7 +199,7 @@ const sendEmailConfirmation: FakeRoute = {
   method: "POST",
   path: /^\/api\/auth\/send-email-confirmation$/,
   guest: true,
-  throttled: true,
+  throttled: "confirmation",
   handle: (context) => {
     const body = context.jsonBody();
     const failure = validate(body, { email: ["required", "email"] });
@@ -216,6 +216,7 @@ const sendEmailConfirmation: FakeRoute = {
 const changePassword: FakeRoute = {
   method: "POST",
   path: /^\/api\/auth\/change-password$/,
+  throttled: "password-change",
   authenticated: true,
   handle: (context) => {
     const user = context.user();

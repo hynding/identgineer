@@ -10,7 +10,12 @@ export interface FakeSettings {
   readonly httpOnlyCookies: boolean;
   readonly refreshCookieName: string;
   readonly providers: readonly string[];
+  /** Each group's credential attempts a minute (`CAMIS_AUTH_THROTTLE_PER_MINUTE`). */
   readonly throttlePerMinute: number;
+  /** Refreshes a minute, in their own bucket (`CAMIS_REFRESH_THROTTLE_PER_MINUTE`, 60). */
+  readonly refreshThrottlePerMinute: number;
+  /** Origins besides the CMS's own that CORS lets send credentials (`cors.allowed_origins`). */
+  readonly allowedOrigins: readonly string[];
   /** Whether a 429 carries a `Retry-After` the client can read. */
   readonly retryAfterHeader: boolean;
 }
@@ -28,6 +33,8 @@ export interface RouteContext {
   /** The session behind the request's access token, if it has one. */
   readonly currentSession: () => string | undefined;
   readonly cookieMode: () => boolean;
+  /** Whether the request came from a page the refresh cookie may be taken from. */
+  readonly fromOwnPage: () => boolean;
   /** Tokens in the body, or the refresh token in a cookie in cookie mode. */
   readonly tokenAnswer: (
     tokens: IssuedTokens,
@@ -35,13 +42,17 @@ export interface RouteContext {
   ) => FakeResponse;
 }
 
+export type ThrottleGroup =
+  "sign-in" | "register" | "recovery" | "confirmation" | "provider" | "refresh" | "password-change";
+
 export interface FakeRoute {
   readonly method: string;
   readonly path: RegExp;
   /** A public-role route that refuses a request carrying a session. */
   readonly guest?: boolean;
   readonly authenticated?: boolean;
-  readonly throttled?: boolean;
+  /** The throttle bucket the route counts against, as camis groups its routes. */
+  readonly throttled?: ThrottleGroup;
   /** Served in refresh mode only, as users-permissions' session routes are. */
   readonly refreshOnly?: boolean;
   readonly handle: (context: RouteContext) => FakeResponse;

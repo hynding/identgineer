@@ -16,8 +16,16 @@ const refresh: FakeRoute = {
   method: "POST",
   path: /^\/api\/auth\/refresh$/,
   guest: true,
+  throttled: "refresh",
   refreshOnly: true,
   handle: (context) => {
+    if (context.cookies.has(context.settings.refreshCookieName) && !context.fromOwnPage()) {
+      return strapiError(
+        403,
+        "ForbiddenError",
+        "The refresh cookie is not accepted from this origin",
+      );
+    }
     const token = presented(context);
     if (token === undefined) return strapiError(400, "BadRequestError", "Missing refresh token");
     const tokens = context.store.rotate(token);
@@ -35,18 +43,23 @@ const logout: FakeRoute = {
     const { store } = context;
     const user = context.user();
     const body = context.jsonBody();
+    const cookieSession = store.sessionOf(presented(context));
     if (body.scope === "all") {
       store.invalidate(user.id);
     } else if (typeof body.deviceId === "string" && body.deviceId !== "") {
       store.invalidate(user.id, body.deviceId);
     } else {
-      const session = store.sessionOf(presented(context)) ?? context.currentSession();
+      // The access token names the caller's own session; the cookie may be another tab's.
+      const session = context.currentSession() ?? cookieSession;
       if (session === undefined) store.invalidate(user.id);
       else store.revoke(user.id, session);
     }
-    const cookies = context.cookieMode()
-      ? [{ name: context.settings.refreshCookieName, value: null }]
-      : [];
+    // The cookie is cleared only when its session was the one ended, or was unusable already.
+    const cookieEnded = cookieSession === undefined || !store.sessionExists(cookieSession);
+    const cookies =
+      context.cookieMode() && cookieEnded
+        ? [{ name: context.settings.refreshCookieName, value: null }]
+        : [];
     return ok({ ok: true }, { cookies });
   },
 };
@@ -94,7 +107,7 @@ const connect: FakeRoute = {
   method: "GET",
   path: /^\/api\/connect\/([^/]+)$/,
   guest: true,
-  throttled: true,
+  throttled: "provider",
   handle: (context) => {
     const provider = decodeURIComponent(context.params[0] ?? "");
     return (
@@ -110,6 +123,7 @@ const providerCallback: FakeRoute = {
   method: "GET",
   path: /^\/api\/auth\/([^/]+)\/callback$/,
   guest: true,
+  throttled: "sign-in",
   handle: (context) => {
     const provider = decodeURIComponent(context.params[0] ?? "");
     const disabled = providerEnabled(context, provider);
