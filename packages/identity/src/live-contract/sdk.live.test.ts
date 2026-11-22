@@ -332,15 +332,15 @@ describe.skipIf(liveBackend === undefined)(
         );
         answers.length = 0;
         expect((await tab.currentUser()).email).toBe(account.email);
-        // Refused, refreshed, then retried; the client may read the user again after a refresh.
-        expect(answers.slice(0, 3)).toEqual([
+        // Refused, refreshed, then the user read twice: once to check the refreshed session is
+        // still this tab's user (the cookie is the browser's, and another tab may have signed in
+        // as someone else since), then the retried request.
+        expect(answers).toEqual([
           { path: "/api/users/me", status: 401 },
           { path: "/api/auth/refresh", status: 200 },
           { path: "/api/users/me", status: 200 },
+          { path: "/api/users/me", status: 200 },
         ]);
-        expect(answers.slice(3)).toEqual(
-          answers.slice(3).map(() => ({ path: "/api/users/me", status: 200 })),
-        );
         expect(browser.jar.get(REFRESH_COOKIE)?.value).not.toBe(first);
         expect(tab.getState()).toMatchObject({ status: "signed-in" });
       });

@@ -59,14 +59,17 @@ const signedIn = async (label: string) => {
 const errorName = (body: unknown): unknown =>
   (body as { error?: { name?: unknown } } | null)?.error?.name;
 
-const median = (values: number[]): number => {
-  const sorted = [...values].sort((a, b) => a - b);
-  return sorted[Math.floor(sorted.length / 2)] ?? 0;
-};
+// Waiting behind other requests (PHP's server takes one at a time) only adds time, so the fastest
+// of several tries is the closest to the work a sign-in does.
+const fastest = (values: number[]): number => Math.min(...values);
 
+/** Times a refused sign-in on the short-lived server, which no other test here uses. */
 const timeSignIn = async (identifier: string): Promise<number> => {
   const start = performance.now();
-  await post(backend.servers.main, "/api/auth/local", { identifier, password: "not the password" });
+  await post(backend.servers.shortLived, "/api/auth/local", {
+    identifier,
+    password: "not the password",
+  });
   return performance.now() - start;
 };
 
@@ -329,8 +332,8 @@ describe.skipIf(liveBackend === undefined)(
           email: freshAccount("nobody").email,
         });
 
-        const known = await registered(backend.servers.main, "timing");
-        for (let round = 0; round < 5; round += 1) {
+        const known = await registered(backend.servers.shortLived, "timing");
+        for (let round = 0; round < 10; round += 1) {
           seen.signInKnown.push(await timeSignIn(known.email));
           seen.signInUnknown.push(await timeSignIn(freshAccount("nobody").email));
         }
@@ -383,11 +386,11 @@ describe.skipIf(liveBackend === undefined)(
       // auth.ts in camis' adapter-filament strapi-api (AuthController::login, the
       // `$user === null || … Hash::check` line).
       it("refuses an unknown account in under half the time of a wrong password today (camis gap: sign-in timing)", () => {
-        expect(median(seen.signInUnknown)).toBeLessThan(median(seen.signInKnown) * 0.5);
+        expect(fastest(seen.signInUnknown)).toBeLessThan(fastest(seen.signInKnown) * 0.5);
       });
 
       it.fails("takes as long to refuse an unknown account as a wrong password", () => {
-        expect(median(seen.signInUnknown)).toBeGreaterThan(median(seen.signInKnown) * 0.5);
+        expect(fastest(seen.signInUnknown)).toBeGreaterThan(fastest(seen.signInKnown) * 0.5);
       });
     });
   },
