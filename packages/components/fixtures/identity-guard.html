@@ -18,6 +18,10 @@
         <idg-menu-item slot="items" value="profile">Your profile</idg-menu-item>
         <a slot="signed-out" href="#account-title">Sign in</a>
       </idg-user-menu>
+      <!-- Signed-out content that does not take focus: the menu must not make it focusable. -->
+      <idg-user-menu id="menu-text">
+        <span slot="signed-out">Signed out</span>
+      </idg-user-menu>
     </header>
     <main class="identity-main">
       <h1 id="account-title">Your account</h1>

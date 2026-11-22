@@ -26,6 +26,34 @@
       <idg-sign-in></idg-sign-in>
       <p>Beside the form</p>
     </idg-cluster>
+    <!-- A guard in a flex row and in a grid, each beside a twin without one: what the guard
+         shows must be laid out exactly as the twin's children are. -->
+    <div class="case cards flex-row" data-case="twin-flex">
+      <div class="card">One</div>
+      <div class="card">Two</div>
+      <div class="card">Three</div>
+    </div>
+    <div class="case cards flex-row" data-case="guard-flex">
+      <idg-session-guard>
+        <div class="card">One</div>
+        <div class="card">Two</div>
+        <div class="card">Three</div>
+        <p slot="fallback">Sign in to see the cards.</p>
+      </idg-session-guard>
+    </div>
+    <div class="case cards grid-3" data-case="twin-grid">
+      <div class="card">One</div>
+      <div class="card">Two</div>
+      <div class="card">Three</div>
+    </div>
+    <div class="case cards grid-3" data-case="guard-grid">
+      <idg-session-guard>
+        <div class="card">One</div>
+        <div class="card">Two</div>
+        <div class="card">Three</div>
+        <p slot="fallback">Sign in to see the cards.</p>
+      </idg-session-guard>
+    </div>
     <dialog id="dialog" data-case="dialog">
       <idg-register></idg-register>
     </dialog>

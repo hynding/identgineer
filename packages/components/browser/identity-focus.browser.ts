@@ -7,12 +7,15 @@ import { PASSWORD, focusPath, inputOf } from "./identity-page";
 const GUARD_PAGE = "/fixtures/identity-guard.html";
 
 const guard = (page: Page) => page.locator("#guard");
-const region = (page: Page) => guard(page).locator('[part="region"]');
 const guardNotice = (page: Page) => guard(page).locator('[part="sign-out-outcome"]');
 const menuTrigger = (page: Page) => page.locator("#menu").locator('[part="trigger"] button');
 
 interface FixtureHandle {
-  api: { respondNext: (method: string, path: string, answer: unknown) => void };
+  api: {
+    respondNext: (method: string, path: string, answer: unknown) => void;
+    holdNext: (method: string, path: string) => () => void;
+  };
+  client: { signOut: () => Promise<unknown> };
 }
 
 function withFixture(page: Page, script: (fixture: FixtureHandle) => unknown): Promise<unknown> {
@@ -73,7 +76,7 @@ async function expectNoTabindexWritten(page: Page): Promise<void> {
       document.querySelectorAll("[tabindex]"),
       (element) => element.localName,
     );
-    for (const id of ["guard", "menu"]) {
+    for (const id of ["guard", "menu", "menu-text"]) {
       const root = document.getElementById(id)?.shadowRoot;
       for (const element of root?.querySelectorAll("[tabindex]") ?? []) {
         if (element.localName.includes("-")) found.push(`${id} > ${element.localName}`);
@@ -84,38 +87,36 @@ async function expectNoTabindexWritten(page: Page): Promise<void> {
   expect(written).toEqual([]);
 }
 
-/** Records where focus goes from now on, as focus paths. */
-async function recordFocusSteps(page: Page): Promise<() => Promise<string[]>> {
-  await page.evaluate(() => {
-    const steps: string[] = [];
-    (window as unknown as { focusSteps: string[] }).focusSteps = steps;
-    document.addEventListener("focusin", () => {
-      const chain: string[] = [];
-      let element: Element | null = document.activeElement;
-      while (element) {
-        chain.push(element.id ? `${element.localName}#${element.id}` : element.localName);
-        element = element.shadowRoot?.activeElement ?? null;
-      }
-      steps.push(chain.join(" > "));
-    });
+/**
+ * The text of the guard's focus anchor when focus is on it, the anchor being the guard's own and
+ * nothing of the page's; null when focus is elsewhere.
+ */
+function focusedAnchorText(page: Page, host = "#guard"): Promise<string | null> {
+  return page.locator(host).evaluate((element) => {
+    const active = element.shadowRoot?.activeElement;
+    if (document.activeElement !== element || !active?.classList.contains("focus-anchor")) {
+      return null;
+    }
+    return active.textContent;
   });
-  return () => page.evaluate(() => [...(window as unknown as { focusSteps: string[] }).focusSteps]);
 }
 
-/** What the guard's own polite status says, not that of the content it shows. */
-function guardStatus(page: Page): Promise<string> {
-  return guard(page).evaluate(
-    (host) => host.shadowRoot?.querySelector('p[role="status"]')?.textContent ?? "",
-  );
-}
-
-/** Whether focus is on an element of the guard's own that holds its notice. */
-function focusHoldsGuardNotice(page: Page): Promise<boolean> {
-  return guard(page).evaluate((host) => {
+/** Whether focus is on an element of the guard's own that holds the notice `part` names. */
+function focusHoldsGuardNotice(page: Page, part = "sign-out-outcome"): Promise<boolean> {
+  return guard(page).evaluate((host, name) => {
     const active = host.shadowRoot?.activeElement;
-    const notice = host.shadowRoot?.querySelector('[part="sign-out-outcome"]');
+    const notice = host.shadowRoot?.querySelector(`[part="${name}"]`);
     return Boolean(active && notice && active.contains(notice));
+  }, part);
+}
+
+/** Puts focus back on the guard's anchor, as after a transition, and presses `key`. */
+async function pressFromAnchor(page: Page, key: string): Promise<string> {
+  await guard(page).evaluate((host) => {
+    host.shadowRoot?.querySelector<HTMLElement>(".focus-anchor")?.focus();
   });
+  await page.keyboard.press(key);
+  return (await focusPath(page)).join(" > ");
 }
 
 const PROFILE_STOPS = [
@@ -128,15 +129,24 @@ const SIGN_IN_STOPS = [
 ];
 
 test.describe("idg-session-guard and idg-user-menu keep every control reachable by Tab", () => {
-  test("after a sign-in through the guard's fallback, focus is on the guard and the profile is reachable", async ({
+  test("after a sign-in through the guard's fallback, focus is on the guard's anchor, which says so, and the profile is reachable", async ({
     page,
   }) => {
     await openGuardPage(page);
     await signInThroughFallback(page);
-    await expect(region(page)).toBeFocused();
-    await expect(region(page)).toHaveAttribute("aria-label", "Account");
-    await expect.poll(() => guardStatus(page)).toBe("You are signed in.");
+    await expect.poll(() => focusedAnchorText(page)).toBe("You are signed in.");
+    // Said by the focus alone: no live region of the guard says it again.
+    expect(
+      await guard(page).evaluate((host) =>
+        host.shadowRoot?.querySelector("[role=status], [aria-live]"),
+      ),
+    ).toBeNull();
     await expectNoTabindexWritten(page);
+    // From the anchor, Tab goes into the content and Shift+Tab to what is before the guard.
+    expect(await pressFromAnchor(page, "Tab")).toMatch(/^idg-profile#profile > /);
+    expect(await pressFromAnchor(page, "Shift+Tab")).toMatch(
+      /^idg-user-menu#menu-text|^idg-user-menu#menu/,
+    );
     await expectReachableByTab(page, PROFILE_STOPS);
   });
 
@@ -162,20 +172,49 @@ test.describe("idg-session-guard and idg-user-menu keep every control reachable 
     await expectReachableByTab(page, PROFILE_STOPS);
   });
 
-  test("after Sign out everywhere, focus is on the guard and the sign-in form is reachable", async ({
+  test("after Sign out in a menu whose signed-out content takes no focus, focus is on the menu's own anchor", async ({
+    page,
+  }) => {
+    await openGuardPage(page);
+    await signInThroughFallback(page);
+    await page.locator("#menu-text").locator('[part="trigger"] button').focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      page.locator("#menu-text").getByRole("menuitem", { name: "Sign out" }),
+    ).toBeVisible();
+    await page.keyboard.press("End");
+    await page.keyboard.press("Enter");
+    await expect.poll(() => focusedAnchorText(page, "#menu-text")).toBe("You are signed out.");
+    await expectNoTabindexWritten(page);
+    await expectReachableByTab(page, SIGN_IN_STOPS);
+  });
+
+  test("after Sign out everywhere, focus is on the guard's anchor, which says so, and the sign-in form is reachable", async ({
     page,
   }) => {
     await openGuardPage(page);
     await signInThroughFallback(page);
     await page.locator("#profile").getByRole("button", { name: "Sign out everywhere" }).focus();
     await page.keyboard.press("Enter");
-    await expect(region(page)).toBeFocused();
-    await expect.poll(() => guardStatus(page)).toBe("You are signed out.");
+    await expect.poll(() => focusedAnchorText(page)).toBe("You are signed out.");
     await expectNoTabindexWritten(page);
+    expect(await pressFromAnchor(page, "Tab")).toMatch(/^idg-sign-in#sign-in > /);
     await expectReachableByTab(page, SIGN_IN_STOPS);
   });
 
-  test("after a Sign out everywhere the server could not confirm, focus settles once on the notice, which is said once", async ({
+  test("a sign-out the page asks for itself moves focus to the anchor at once", async ({
+    page,
+  }) => {
+    await openGuardPage(page);
+    await signInThroughFallback(page);
+    await inputOf(page, "#profile", "displayName").focus();
+    await withFixture(page, (fixture) => {
+      void fixture.client.signOut();
+    });
+    await expect.poll(() => focusedAnchorText(page), { timeout: 300 }).toBe("You are signed out.");
+  });
+
+  test("after a Sign out everywhere the server could not confirm, focus goes on from the anchor to the notice, read once", async ({
     page,
   }) => {
     await openGuardPage(page);
@@ -184,15 +223,12 @@ test.describe("idg-session-guard and idg-user-menu keep every control reachable 
       fixture.api.respondNext("POST", "/api/auth/logout", "network-error");
     });
     await page.locator("#profile").getByRole("button", { name: "Sign out everywhere" }).focus();
-    const focusSteps = await recordFocusSteps(page);
-    const statusBefore = await guardStatus(page);
     await page.keyboard.press("Enter");
     await expect(guardNotice(page)).toBeVisible();
     await expect.poll(() => focusHoldsGuardNotice(page)).toBe(true);
-    // Read when it takes focus, so neither a live role nor the polite message says it again.
-    expect(await guardStatus(page)).toBe(statusBefore);
+    // Read when it takes focus, so no live role says it again.
     await expect(guardNotice(page).getByRole("alert")).toHaveCount(0);
-    expect(await focusSteps()).toHaveLength(1);
+    await expect(guard(page).locator('[part="notice"]')).toHaveCount(1);
     await expectNoTabindexWritten(page);
     await expectReachableByTab(page, [
       "idg-session-guard#guard > idg-alert > button",
@@ -200,7 +236,27 @@ test.describe("idg-session-guard and idg-user-menu keep every control reachable 
     ]);
   });
 
-  test("dismissing the guard's notice puts focus on the guard, and the sign-in form is reachable", async ({
+  test("a notice that comes after the user has moved on is said, and leaves focus where it is", async ({
+    page,
+  }) => {
+    await openGuardPage(page);
+    await signInThroughFallback(page);
+    await page.evaluate(`
+      window.identityFixture.api.respondNext("POST", "/api/auth/logout", "network-error");
+      window.releaseLogout = window.identityFixture.api.holdNext("POST", "/api/auth/logout");
+    `);
+    await page.locator("#profile").getByRole("button", { name: "Sign out everywhere" }).focus();
+    await page.keyboard.press("Enter");
+    await expect.poll(() => focusedAnchorText(page)).toBe("You are signed out.");
+    const identifier = inputOf(page, "#sign-in", "identifier");
+    await identifier.focus();
+    await page.evaluate("window.releaseLogout()");
+    await expect(guardNotice(page)).toBeVisible();
+    await expect(guardNotice(page).getByRole("alert")).toHaveCount(1);
+    await expect(identifier).toBeFocused();
+  });
+
+  test("dismissing the guard's notice puts focus on the anchor, and the sign-in form is reachable", async ({
     page,
   }) => {
     await openGuardPage(page);
@@ -212,7 +268,7 @@ test.describe("idg-session-guard and idg-user-menu keep every control reachable 
     await guardNotice(page).getByRole("button", { name: "Dismiss" }).focus();
     await page.keyboard.press("Enter");
     await expect(guardNotice(page)).toHaveCount(0);
-    await expect(region(page)).toBeFocused();
+    await expect.poll(() => focusedAnchorText(page)).toBe("You are signed out.");
     await expectNoTabindexWritten(page);
     await expectReachableByTab(page, SIGN_IN_STOPS);
   });
@@ -251,7 +307,7 @@ test.describe("idg-session-guard and idg-user-menu keep every control reachable 
     ]);
   });
 
-  test("when the restore cannot reach the server, Try again keeps focus on the guard whether it fails again or not", async ({
+  test("when the restore cannot reach the server, Try again keeps focus in the guard whether it fails again or not", async ({
     page,
   }) => {
     await openGuardPage(page, "?restore-fail");
@@ -264,13 +320,13 @@ test.describe("idg-session-guard and idg-user-menu keep every control reachable 
     });
     await retry.focus();
     await page.keyboard.press("Enter");
-    await expect(region(page)).toBeFocused();
     await expect(retry).toBeVisible();
-    await expect(region(page)).toBeFocused();
+    // It failed again while focus waited on the anchor: the notice that is back takes it.
+    await expect.poll(() => focusHoldsGuardNotice(page, "unreachable")).toBe(true);
     await retry.focus();
     await page.keyboard.press("Enter");
     await expect(inputOf(page, "#sign-in", "identifier")).toBeVisible();
-    await expect(region(page)).toBeFocused();
+    await expect.poll(() => focusedAnchorText(page)).not.toBeNull();
     await expectNoTabindexWritten(page);
     await expectReachableByTab(page, SIGN_IN_STOPS);
   });

@@ -8,7 +8,9 @@ const FORMS = "idg-sign-in, idg-register, idg-password-reset";
 async function open(page: Page): Promise<void> {
   await page.goto(PAGE);
   await expect(page.locator("html[data-identity-ready]")).toHaveCount(1);
-  await expect(page.locator(`:is(${FORMS}, idg-cluster):not(.hydrated)`)).toHaveCount(0);
+  await expect(
+    page.locator(`:is(${FORMS}, idg-cluster, idg-session-guard):not(.hydrated)`),
+  ).toHaveCount(0);
   await page.evaluate(() => {
     (document.getElementById("dialog") as HTMLDialogElement).showModal();
     document.getElementById("popover")?.showPopover();
@@ -76,5 +78,49 @@ test.describe("identity forms in parents that size them by their content", () =>
     const { measure, forms } = await widths(page);
     expect(measure).toBe(400);
     for (const form of forms) expect(Math.round(form.width), form.name).toBe(400);
+  });
+});
+
+test.describe("idg-session-guard in a flex row or a grid", () => {
+  /** The boxes of a case's cards, relative to the case. */
+  const cardBoxes = (page: Page, name: string) =>
+    page.locator(`[data-case="${name}"]`).evaluate((container) => {
+      const origin = container.getBoundingClientRect();
+      return Array.from(container.querySelectorAll(".card"), (card) => {
+        const box = card.getBoundingClientRect();
+        return [box.x - origin.x, box.y - origin.y, box.width, box.height].map(Math.round);
+      });
+    });
+
+  async function signIn(page: Page): Promise<void> {
+    await page.evaluate(`window.identityFixture.client.signIn({
+      identifier: "ada", password: window.identityFixture.password })`);
+    await expect(page.locator('[data-case="guard-flex"] .card').first()).toBeVisible();
+    await settle(page);
+  }
+
+  test("lays out what it shows as the parent's own items, as a twin without a guard", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await open(page);
+    await signIn(page);
+    for (const layout of ["flex", "grid"]) {
+      const twin = await cardBoxes(page, `twin-${layout}`);
+      expect(twin).toHaveLength(3);
+      expect(twin[0]?.[2], layout).toBeGreaterThan(200);
+      expect(await cardBoxes(page, `guard-${layout}`), layout).toEqual(twin);
+    }
+  });
+
+  test("adds no group, region or other node to the accessibility tree", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await open(page);
+    await signIn(page);
+    for (const layout of ["flex", "grid"]) {
+      expect(await page.locator(`[data-case="guard-${layout}"]`).ariaSnapshot(), layout).toBe(
+        await page.locator(`[data-case="twin-${layout}"]`).ariaSnapshot(),
+      );
+    }
   });
 });
