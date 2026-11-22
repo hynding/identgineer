@@ -31,6 +31,8 @@ export interface ProbeRequest {
   /** Send and keep cookies, as the SDK's cookie requests do (`credentials: "include"`). */
   readonly cookie?: boolean;
   readonly headers?: Readonly<Record<string, string>>;
+  /** A body sent as written, with the type `headers` give it, in place of `body` as JSON. */
+  readonly rawBody?: string;
   /** The page the request comes from; the site's own page by default. */
   readonly page?: string;
 }
@@ -62,6 +64,8 @@ export interface Observation {
     readonly message?: string;
   };
   readonly shape?: unknown;
+  /** Values the SDK acts on, where the answer has them: the token's lifetime, a mail sent. */
+  readonly values?: { readonly expiresIn?: unknown; readonly sent?: unknown };
   readonly cookie: "set" | "cleared" | "unchanged";
   readonly retryAfter?: boolean;
 }
@@ -88,7 +92,11 @@ const read = (reader: Reader, body: unknown): unknown => {
       case "user":
         return outline(readUser(body));
       case "sessions":
-        return readSessions(body).map((session) => outline(session));
+        // Which session is the current one is a value the SDK reads, not only its type.
+        return readSessions(body).map((session) => ({
+          ...(outline(session) as object),
+          current: session.current,
+        }));
       case "profiles":
         return outline(readProfileList(body));
       case "raw":
@@ -184,6 +192,27 @@ const MAIN_STEPS: readonly Step[] = [
     },
   },
   { name: "sign-in: wrong password", request: (s) => signIn(s, "not the password") },
+  {
+    name: "sign-in: a JSON body sent as text/plain",
+    request: (s) => ({
+      method: "POST",
+      path: "/api/auth/local",
+      headers: { "Content-Type": "text/plain" },
+      rawBody: JSON.stringify({ identifier: s.account.email, password: s.account.password }),
+    }),
+  },
+  {
+    name: "sign-in: a form body",
+    request: (s) => ({
+      method: "POST",
+      path: "/api/auth/local",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      rawBody: new URLSearchParams({
+        identifier: s.account.email,
+        password: s.account.password,
+      }).toString(),
+    }),
+  },
   {
     name: "sign-in: unknown account",
     request: (s) => ({
@@ -424,6 +453,10 @@ const MAIN_STEPS: readonly Step[] = [
     request: () => ({ method: "POST", path: "/api/auth/logout", body: {} }),
   },
   {
+    name: "logout: no token and no body, which the JSON rule lets through",
+    request: () => ({ method: "POST", path: "/api/auth/logout" }),
+  },
+  {
     name: "sign-in: cookie mode, to log out",
     reader: "auth",
     request: (s) => ({ ...signIn(s, NEW_PASSWORD), cookie: true, headers: COOKIE_HEADERS }),
@@ -484,6 +517,18 @@ const CONFIRMATION_STEPS: readonly Step[] = [
       method: "POST",
       path: "/api/auth/local/register",
       body: { ...s.account, email: s.unknownEmail },
+    }),
+  },
+  {
+    name: "register: a username naming another address with a fullwidth @",
+    request: (s) => ({
+      method: "POST",
+      path: "/api/auth/local/register",
+      body: {
+        username: `${s.account.username}\uFF20elsewhere.example`,
+        email: `fullwidth-${s.account.email}`,
+        password: s.account.password,
+      },
     }),
   },
   {
@@ -569,6 +614,18 @@ export const scenarios = (backend: LiveBackend) => ({
 
 export type Scenario = ReturnType<typeof scenarios>[keyof ReturnType<typeof scenarios>];
 
+/** The values of the fields the SDK acts on, both servers being set up with the same lifetime. */
+const valuesOf = (body: unknown): Pick<Observation, "values"> => {
+  if (typeof body !== "object" || body === null) return {};
+  const fields = body as Record<string, unknown>;
+  const values = Object.fromEntries(
+    (["expiresIn", "sent"] as const)
+      .filter((key) => key in fields)
+      .map((key) => [key, fields[key]]),
+  );
+  return Object.keys(values).length === 0 ? {} : { values };
+};
+
 const observe = async (step: Step, state: State): Promise<Observation> => {
   const before = state.target.refreshCookie();
   const answer = await state.target.send(await step.request(state));
@@ -589,6 +646,7 @@ const observe = async (step: Step, state: State): Promise<Observation> => {
           },
         }),
     ...(ok && step.reader !== undefined ? { shape: read(step.reader, answer.body) } : {}),
+    ...(ok ? valuesOf(answer.body) : {}),
     cookie,
     ...(step.retryAfter === true ? { retryAfter: answer.retryAfter !== null } : {}),
   };
@@ -638,6 +696,7 @@ const initOf = (request: ProbeRequest): RequestInit => ({
     ...request.headers,
   },
   ...(request.body === undefined ? {} : { body: JSON.stringify(request.body) }),
+  ...(request.rawBody === undefined ? {} : { body: request.rawBody }),
   credentials: request.cookie === true ? "include" : "omit",
   redirect: "manual",
 });
@@ -675,6 +734,7 @@ export const fakeTarget = (backend: LiveBackend, server: LiveServer): ProbeTarge
     sessions: "refresh",
     emailConfirmation: server.emailConfirmation,
     hideAccountExistence: server.hideAccountExistence,
+    accessTokenLifetimeSeconds: server.accessTokenLifetimeSeconds,
     throttlePerMinute: server.throttlePerMinute,
     addressThrottlePerMinute: server.addressThrottlePerMinute,
     refreshThrottlePerMinute: server.refreshThrottlePerMinute,

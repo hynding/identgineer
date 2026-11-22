@@ -435,8 +435,9 @@ SDK does):
   time shows whether one was sent.
 - A new registration's insert takes a few milliseconds more; the blocked and unconfirmed errors
   come only after a correct password, as in Strapi.
-- `SANCTUM_TOKEN_EXPIRATION` is still not read: lifetimes come from `CAMIS_JWT_LIFESPAN` and
-  `CAMIS_ACCESS_TOKEN_LIFESPAN`.
+
+Apart from that list, `SANCTUM_TOKEN_EXPIRATION` is still not read: access token lifetimes come
+from `CAMIS_JWT_LIFESPAN` and `CAMIS_ACCESS_TOKEN_LIFESPAN`, and each answer's `expiresIn` says it.
 
 ## Testing
 
@@ -534,7 +535,9 @@ only exposed response headers visible, and an unfollowed redirect answered as an
   accounts telling them apart;
 - `fake-agreement.live.test.ts`: the same raw requests and failures sent to the real server and
   to `createFakeIdentityApi` set up alike, comparing status, error name, error fields and the body
-  as the SDK's readers see it, step by step, on every server but the short-lived one; none is an
+  as the SDK's readers see it, with the values the SDK acts on (`expiresIn`, `sent`, which session
+  is current), step by step, on every server but the short-lived one, a JSON body sent as
+  `text/plain` and a form body (415 on both) and a body-less logout among the steps; none is an
   expected failure.
 
 The gaps the first live run found (a profile create refused on `owner`; a taken registration, a
