@@ -135,6 +135,18 @@ describe("the fake's session metadata, as camis' StrapiSessions", () => {
     expect(session?.deviceId).toEqual(expect.any(String));
   });
 
+  it("keeps a session's sign-in time across a refresh, as the rotated session's metadata", async () => {
+    const { api, clock, post, signIn } = fakeApi();
+    await signIn("ada");
+    clock.advance(5_000);
+    const refreshed = await post("/api/auth/refresh");
+    const [session] = await listSessions(api, refreshed.body.jwt as string);
+    expect(session).toMatchObject({
+      loginAt: new Date(START).toISOString(),
+      lastActiveAt: new Date(START + 5_000).toISOString(),
+    });
+  });
+
   it("gives the session a password change opens no device name and no sign-in time", async () => {
     const { api, post, signIn } = fakeApi();
     const jwt = await signIn("ada");
