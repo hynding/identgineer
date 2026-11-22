@@ -53,9 +53,11 @@ nothing sent and no failed attempt counted. So does a string with a lone surroga
 would send as `\ud800` and `encodeURIComponent` cannot encode), an identifier, username or email
 over 255 characters (camis' limit), a password over 72 bytes on registration, reset or change, a
 reset code or confirmation token over 512 characters (camis issues 128 and 40), a provider
-callback query over 16 KiB or a `returnTo` over 2048 characters, and `authorizedFetch` headers
-that `Headers` cannot read or a `signal` that is not an `AbortSignal`. A sign-in's password is not
-capped: bcrypt reads only its first 72 bytes, so a longer one set elsewhere still signs in. After `dispose()` every method rejects with code `unknown` without sending
+callback query over 16384 characters or a `returnTo` over 2048 characters, and `authorizedFetch` headers
+that `Headers` cannot read or a `signal` that is not an `AbortSignal`. A sign-in's password and a
+current password are capped at 4096 bytes, not 72: bcrypt reads only the first 72, so a longer
+one set elsewhere still signs in. A token answer whose `jwt` or `refreshToken` is not visible
+ASCII is refused as a malformed answer (`unknown`), since it could not be sent back. After `dispose()` every method rejects with code `unknown` without sending
 anything, and `providerSignInUrl` throws it.
 
 | Method                                                                | Request                                                    | Resolves to                                           |
@@ -196,10 +198,14 @@ waiting for the operation queue. Both sides of the lock are bounded:
 - A holder keeps it at most three request timeouts (45 seconds by default): enough for a
   sign-out's own logout, lookup and the logout of what it found even when each takes nearly its
   whole timeout. Then its requests are aborted, the lock is let go, and the operation says what
-  it could not finish: a sign-out resolves `server-unreachable`, anything else rejects `network`.
+  it could not finish: a sign-out resolves `server-unreachable`, a sign-in it cancelled rejects
+  `unauthorized` (`unknown` once disposed) as before, and anything else rejects `network`.
 - A request waits for the lock at most four request timeouts (one more than any holder of this
   client keeps it). Not granted by then, it fails closed: it is never sent, and rejects `network`
-  (a scheduled refresh tries again with its backoff; a sign-in can be retried).
+  (a scheduled refresh tries again with its backoff; a sign-in can be retried), and a sign-out
+  resolves `server-unreachable`. A sign-in cancelled while it waits (by a sign-out in this tab, or
+  `dispose()`, which also ends every wait at once) is not sent when the lock comes: it rejects
+  `unauthorized`, or `unknown` once disposed.
 
 A cookie request runs without the lock only when there is no lock manager (`locks: null`, or no
 `navigator.locks`) or the manager itself fails (a sandboxed frame's `SecurityError`, whose error
@@ -412,8 +418,8 @@ and the refresh cookie refused with a 403 from a foreign `Origin` unless listed 
 `allowedOrigins`), `createManualClock(start)` and `createMemoryLocks(options)` (an in-memory lock
 manager for the `locks` option; a request for a lock from within that lock's own holder, which a
 browser would leave waiting forever, throws and fails the test run, tracked with Node's
-`AsyncLocalStorage`, which before Node 24 is cheap only with `--experimental-async-context-frame`,
-as this package's tests run; `detectNested: false` turns the check off, and `onNestedRequest`
+`AsyncLocalStorage`, which before Node 24 is cheap only with `--experimental-async-context-frame`
+(Node 22.7 or later), as this package's tests run; `detectNested: false` turns the check off, and `onNestedRequest`
 receives the error instead). Pass `api.fetch`, `api.baseUrl` and the clock to the client. The fake
 issues opaque tokens by default, living 600 seconds in refresh mode and 30 days in legacy mode
 (`accessTokens: "jwt"`, `accessTokenLifetimeSeconds` and `reportExpiresIn` change that), and
