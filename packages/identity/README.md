@@ -39,9 +39,10 @@ const response = await identity.authorizedFetch("/api/brand-kits");
 `locks` (an object with `request(name, callback)` as `navigator.locks`; by default
 `navigator.locks` where the browser has it, and `null` turns locking off) and `onOnline` (a
 function that subscribes a listener to the browser coming back online and returns the function
-that unsubscribes it; by default the window's `online` event, and `null` turns it off).
-`requestTimeoutMs` and `accessTokenLifetimeSeconds` must be positive finite numbers; anything
-else throws a `TypeError` at creation, as an invalid `baseUrl` does.
+that unsubscribes it, typed `OnlineSubscription`; by default the window's `online` event, and
+`null` turns it off). `requestTimeoutMs` and `accessTokenLifetimeSeconds` must be positive and at
+most 2^31−1 milliseconds (about 24.8 days, the longest delay `setTimeout` keeps); anything else
+throws a `TypeError` at creation, as an invalid `baseUrl` does.
 
 ## API
 
@@ -76,19 +77,24 @@ code `unknown` without sending anything, and `providerSignInUrl` throws it.
 Every piece of work that may change the session takes a ticket the moment it is called, before it
 waits for anything, and its tokens enter the session only through one gate that refuses a stale
 ticket. A sign-in's ticket (`signIn`, `completeProviderSignIn`, `register`, `resetPassword`) lasts
-until a sign-out, here or in another tab, or `dispose()`; every other ticket (`restore()`, the
-re-check another tab's sign-in triggers, scheduled refreshes and their retries, the refresh after a 401) lasts only while the session it was taken in does, so any sign-in or sign-out ends it. A
+until a sign-out, here or in another tab, or `dispose()`; every other ticket (`changePassword`,
+`restore()`, the re-check another tab's sign-in triggers, scheduled refreshes and their retries,
+the refresh after a 401) lasts only while the session it was taken in does, so any sign-in or
+sign-out ends it. Callers share a refresh in flight only when they hold the same session and
+refresh token: a restore after a sign-out never takes the answer of the old session's refresh. A
 refresh's tokens are taken only while signed in: a signed-out client never holds a token, and on
 sign-out every timer and `online` listener is cleared, and a completion that arrives afterwards
 finds its ticket stale and does nothing.
 
-Sign-ins, `restore()` and re-checks run one after another, in call order: with two sign-ins the
+Sign-ins, password changes, `restore()` and re-checks run one after another, in call order: with two sign-ins the
 later one decides who is signed in, and a restore or re-check waits for a sign-in under way instead
 of replacing it. A cancelled sign-in sends nothing if its turn has not come; if it has, its answer
 is dropped, its call rejects (`unauthorized`, or `unknown` once disposed), no token is kept, and the
 session it opened on the server is ended. A listener hears every transition in order, each as the
 state of that transition; a sign-in rejects (`unauthorized`) if a listener signed out on hearing of
-it. `dispose()` ends nothing on the server and announces nothing to other tabs.
+it. `dispose()` ends nothing on the server. It announces nothing to other tabs, except that a
+sign-out still under way (and not superseded) tells them at once, since the page will not get to
+tell them later.
 
 `saveProfile` takes `displayName` (required, up to 80 characters), `bio` (up to 500, or `null`),
 `locale` (BCP 47), `timezone` (IANA) and `marketingOptIn`, checked against the limits in
@@ -202,26 +208,53 @@ is sent, and any other message is ignored.
 
 **Sign-out.** `signOut` is the strongest operation. At once it signs out locally and cancels every
 sign-in, restore and re-check asked for before it, so none of them can leave the tab signed in.
-Then it ends the session on the server, waits for the work it cancelled (ending any session that
-work opened), and only then tells the other tabs, so no tab is told of a sign-out that a reload
-would undo. Anything asked for meanwhile (a sign-in, restore or re-check) waits for it to finish and
-then runs afresh.
+Then it ends the session on the server, waits for the work it cancelled (a sign-in or password
+change; it ends any session that work opened), and only then tells the other tabs. Anything asked
+for meanwhile (a sign-in, restore or re-check) waits for it to finish and then runs afresh.
 
-On a shared device, "Sign out" leaves nothing to resume in this browser. With a token of its own,
-the tab logs that session out; the logout clears the refresh cookie only when the cookie named that
+Across tabs the later action wins. A sign-in this tab hears of (another tab's `signed-in` notice) or
+is asked for after the sign-out began stands: the sign-out then logs out no session it finds in the
+cookie (it skips the lookup, or the logout after it, once it knows of the newer sign-in), tells no
+tab of a sign-out, and resolves `{ outcome: "superseded" }`; the queued re-check brings this tab to
+the newer session. Without such a sign-in it looks up and logs out the cookie's session, and checks
+once more for a notice before telling the other tabs.
+
+Two windows remain, and the client cannot close them:
+
+- Another tab's sign-in whose notice has not arrived yet (its answer landed just before this tab's
+  cookie lookup) looks like a session this sign-out should end, so it is logged out and that tab is
+  then signed out by the notice. The notice travels only after the sign-in's answer, so nothing on
+  the client can order the two.
+- A sign-in whose answer lands while this tab's logout is in flight can lose its new cookie: the
+  backend decides to clear the cookie from the one the logout request carried (the old session's),
+  and answers with a `Set-Cookie` that expires the cookie by name, which the browser applies to
+  whatever cookie of that name it holds by then, the new sign-in's. The other tab stays signed in
+  until its next refresh is refused. The cause is in the backend: camis' strapi-php logout clears
+  `strapi_up_refresh` by name; a cookie scoped per session, or leaving the cookie to be cleared by
+  the next refused refresh, would close it.
+
+To find the sessions to end: with a token of its own, the tab logs that session out; the logout clears the refresh cookie only when the cookie named that
 session, and the cookie may name another one (another tab's sign-in this tab never heard of). Page
 script cannot see whether it was cleared, so the tab then refreshes from the cookie once more (one
-request, refused when nothing is left) and logs out whatever session it finds. A tab without a
+request, refused when nothing is left) and logs out whatever session it finds; if the logout
+refuses the token that lookup found (it expired or was revoked on the way), it looks up once more,
+and reports `server-unreachable` if refused again. A tab without a
 token (the state is `unknown`, a `restore()` is in flight, or it was already signed out, say with
-`user-changed`) starts with that lookup, after any refresh under way. On a backend without sessions
-there is nothing to look up.
+`user-changed`) starts with that lookup. On a backend without sessions there is nothing to look
+up.
 
-It resolves to `{ outcome: "signed-out" }` only when that is true at the time it resolves: no
-server session is left for the cookie to resume. A lookup the server refuses clearly (400, 401,
-403, or 404 without sessions) means there was none. Anything else, from a network failure or a
-server error to a throttled (429) or malformed answer, resolves `{ outcome: "server-unreachable" }`:
-the other tabs are still told, but a server session may live on until it expires, and a reload may
-resume it.
+The logout's own answer counts as follows: only a 2xx ended the session; a 404 is a backend without
+sessions; a 401 means the token was already dead, so the session is over or only the refresh token
+reaches it (a cookie session is found by the lookup; a body refresh token is refreshed outside the
+session and that token logged out); anything else (a 429, a 5xx, a network failure) may have left
+the session in place.
+
+It resolves to `{ outcome: "signed-out" }` when every session it set out to end was ended or
+clearly absent: a lookup the server refuses clearly (400, 401, 403, or 404 without sessions) means
+there was none. Subject to the windows above, no session is then left for the cookie to resume.
+Anything that cannot be confirmed, from a network failure or a server error to a throttled (429)
+or malformed answer, resolves `{ outcome: "server-unreachable" }`: the other tabs are still told,
+but a server session may live on until it expires, and a reload may resume it.
 
 **Input.** Provider names and session and document ids are checked against strict patterns and
 URL-encoded. `authorizedFetch` resolves its target first (a path beginning with `/` is joined to
@@ -299,18 +332,30 @@ sign in from the token answer); see `src/passkeys.ts`.
 `@identgineer/identity/testing` exports `createFakeIdentityApi(options)`, an in-memory stand-in for
 the endpoints above with strapi-php's behaviour (error envelope, guest routes refusing a bearer
 token, refresh and legacy modes, cookie mode, a browser-like cookie jar read when each request is
-sent, the logout ending the bearer token's own session and clearing the cookie only with the session
-it names, a throttle bucket per group of routes with refreshes in their own (`throttlePerMinute`,
-`refreshThrottlePerMinute`, default 60) answering `RateLimitError`, and the refresh cookie refused
-with a 403 from a foreign `Origin` unless listed in `allowedOrigins`), `createManualClock(start)` and `createMemoryLocks()` (an in-memory lock manager
+sent, the logout ending the bearer token's own session (a token naming no session drops only
+itself) and clearing the cookie only when the cookie's session ended or was already unusable, a
+throttle answering `RateLimitError` per group of routes: sign-in, recovery and confirmation counted
+per address and account named under a per-address ceiling (`throttlePerMinute`,
+`addressThrottlePerMinute`, default 50), password reset in its own address bucket, and only failed
+refreshes counted (`refreshThrottlePerMinute`, default 60), so a valid refresh is never refused;
+and the refresh cookie refused with a 403 from a foreign `Origin` unless listed in
+`allowedOrigins`), `createManualClock(start)` and `createMemoryLocks()` (an in-memory lock manager
 for the `locks` option). Pass `api.fetch`, `api.baseUrl` and the clock to the client. The fake
 issues opaque tokens by default, living 600 seconds in refresh mode and 30 days in legacy mode
 (`accessTokens: "jwt"`, `accessTokenLifetimeSeconds` and `reportExpiresIn` change that), and
 `api.holdNext(method, path)` holds the next such request until the returned function is called, to
 interleave tabs and races. `api.restorableSession()` tells whether the cookie names a session a
-reload could resume, and `api.setRefreshCookie(value)` plants a stale or foreign one.
-`src/invariants.test.ts` fires sign-ins, sign-outs, restores, timers, network failures, throttling
-and other tabs' notices in seeded random orders and checks the invariants above after each step.
+reload could resume, `api.setRefreshCookie(value)` plants a stale or foreign one, and
+`api.issueLastingToken(email)` issues an access token naming no session.
+`src/invariants.test.ts` runs three tabs whose requests and lock grants arrive after random delays,
+and fires sign-ins, sign-outs, restores, registrations, password resets and changes, provider
+sign-ins, disposes, timers, network failures, throttling and expired tokens in seeded random
+orders (24 seeds of 30 steps). After each step it checks that a signed-in tab's token is its
+user's, and that a signed-out tab holds no token, timer or `online` listener; it judges each call
+against what happened while it ran: a session-opening call asked for before a sign-out in the same
+tab must reject, and a sign-out may resolve `superseded` only after a later sign-in it could know
+of, and `signed-out` with a session left to resume only while another tab's cookie sign-in was
+under way (the first window above). It samples interleavings; it does not prove their absence.
 
 `src/camis-contract.test.ts` checks the client's routes, methods and body fields against camis'
 strapi-php emitter and route golden when `CAMIS_DIR` names a camis checkout (as for
