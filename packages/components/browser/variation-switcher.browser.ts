@@ -537,6 +537,21 @@ test.describe("the live region and the manual link", () => {
     expect(length).toBeGreaterThan(0);
   });
 
+  test("the manual link stays, with its message, when Reset has nothing to change", async ({
+    page,
+  }) => {
+    await open(page);
+    await refuseClipboard(page);
+    await page.locator(MAIN).getByRole("button", { name: "Copy link" }).click();
+    await expect(page.locator(`${MAIN} .fallback input`)).toBeVisible();
+    await page.locator(MAIN).getByRole("button", { name: "Reset" }).click();
+    await expect(page.locator(`${MAIN} .fallback input`)).toBeVisible();
+    await expect(status(page)).toContainText("copy it yourself");
+    await choose(page, "theme", "ember");
+    await expect(page.locator(`${MAIN} .fallback`)).toHaveCount(0);
+    await expect(status(page)).not.toContainText("copy it yourself");
+  });
+
   test("the manual link goes when the page changes, so it never says something old", async ({
     page,
   }) => {

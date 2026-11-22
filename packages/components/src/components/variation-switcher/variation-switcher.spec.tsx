@@ -539,6 +539,35 @@ describe("idg-variation-switcher copy link", () => {
     expect(status(root)).toBe("");
   });
 
+  it("keeps the manual link and its message when Reset changes nothing", async () => {
+    stubClipboard(undefined);
+    const { root, waitForChanges } = await render(<idg-variation-switcher />);
+    action(root, "copy");
+    await waitForChanges();
+    await waitForChanges();
+    action(root, "reset");
+    await waitForChanges();
+    await waitForChanges();
+    expect(shadow(root).querySelector(".fallback")).not.toBeNull();
+    expect(status(root)).toBe(
+      "The link could not be copied. Select it below and copy it yourself.",
+    );
+  });
+
+  it("drops the manual link and its message when Reset really changes something", async () => {
+    stubClipboard(undefined);
+    applyVariations({ theme: "ember" });
+    const { root, waitForChanges } = await render(<idg-variation-switcher />);
+    action(root, "copy");
+    await waitForChanges();
+    await waitForChanges();
+    action(root, "reset");
+    await waitForChanges();
+    await waitForChanges();
+    expect(shadow(root).querySelector(".fallback")).toBeNull();
+    expect(status(root)).not.toContain("copy it yourself");
+  });
+
   it("focuses the manual link and selects its text, since the message says to copy it", async () => {
     // The mock DOM's elements share a prototype two levels up from a plain element.
     const proto = Object.getPrototypeOf(
