@@ -23,6 +23,12 @@ export default defineConfig({
       },
       {
         test: {
+          name: "identity",
+          include: ["packages/identity/src/**/*.test.ts"],
+        },
+      },
+      {
+        test: {
           name: "cms",
           include: ["cms/tests/**/*.test.ts"],
         },
