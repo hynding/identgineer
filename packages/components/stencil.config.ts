@@ -46,7 +46,9 @@ export const config: Config = {
         { src: "demo.css" },
         { src: "demo.js" },
         { src: "csp-demo.html" },
-        { src: "fixtures" },
+        // The browser fixtures live outside src: Stencil copies every script and SVG under src into
+        // the dist collection, and test pages are not part of the package.
+        { src: "../fixtures", dest: "fixtures" },
         { src: "../../tokens/dist", dest: "tokens" },
         // The variation switcher fixture loads the bootstrap script as a page would, from its own
         // origin. The file comes from the variations build, which runs first because this package

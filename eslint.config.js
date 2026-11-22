@@ -45,7 +45,7 @@ export default tseslint.config(
   },
   {
     // The demo pages' script runs in the browser.
-    files: ["packages/components/src/demo.js", "packages/components/src/fixtures/*.js"],
+    files: ["packages/components/src/demo.js", "packages/components/fixtures/*.js"],
     languageOptions: { globals: globals.browser },
   },
   prettier,
