@@ -19,22 +19,25 @@ afterEach(() => {
 
 /**
  * The real identity client on the SDK's fake API and a manual clock, as the components meet it in
- * a page. No lock manager and no online listener: the unit tests run one tab at a time, except
- * where a second client on the same channel stands in for another tab.
+ * a page. No lock manager and no online listener: the unit tests run one tab at a time.
  */
 export function identitySetup(apiOptions: FakeIdentityApiOptions = {}) {
   const clock = createManualClock(START);
   const api = createFakeIdentityApi({ clock, ...apiOptions });
   channel += 1;
   const channelName = `identgineer-components-test-${String(channel)}`;
+  let own = 0;
+  // Each client has a channel of its own: the mock DOM's events cannot carry a BroadcastChannel
+  // message, so clients in these tests never hear each other. Cross-tab runs in the browser tests.
   const makeClient = (): IdentityClient => {
+    own += 1;
     const client = createIdentityClient({
       baseUrl: api.baseUrl,
       fetch: api.fetch,
       clock,
       locks: null,
       onOnline: null,
-      channelName,
+      channelName: `${channelName}-${String(own)}`,
     });
     disposers.push(client.dispose);
     return client;
