@@ -178,6 +178,52 @@ describe("idg-session-guard", () => {
     expect(shadowOf(root).querySelector('[part="retry"]')?.textContent).toBe("Erneut versuchen");
   });
 
+  it("keeps a sign-out its content could not confirm with the server in view, above the fallback", async () => {
+    const { client, signIn } = identitySetup();
+    await signIn();
+    const { root, waitForChanges } = await mount(client);
+    root.querySelector(".protected")?.dispatchEvent(
+      new CustomEvent("idgSignedOut", {
+        detail: { outcome: "server-unreachable", everywhere: true },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await client.signOut();
+    await waitForChanges();
+    expect(drawn(root)).toEqual(["sign-out-outcome", "fallback"]);
+    const notice = shadowOf(root).querySelector('[part="sign-out-outcome"]');
+    expect(notice?.getAttribute("variant")).toBe("warning");
+    expect(notice?.textContent).toBe(
+      "You are signed out on this device, but the server could not be reached, so your other sessions may stay signed in until they expire. Sign in and try again once you are back online.",
+    );
+    notice?.dispatchEvent(new CustomEvent("idgDismiss", { cancelable: true }));
+    await waitForChanges();
+    expect(shadowOf(root).querySelector('[part="sign-out-outcome"]')).toBeNull();
+  });
+
+  it("says a sign-out of this device only could not reach the server, and forgets it once signed in", async () => {
+    const { client, signIn } = identitySetup();
+    await signIn();
+    const { root, waitForChanges } = await mount(client);
+    root.querySelector(".protected")?.dispatchEvent(
+      new CustomEvent("idgSignedOut", {
+        detail: { outcome: "server-unreachable" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await client.signOut();
+    await waitForChanges();
+    expect(shadowOf(root).querySelector('[part="sign-out-outcome"]')?.textContent).toBe(
+      "You are signed out on this device, but the server could not be reached. Your session may stay active there until it expires.",
+    );
+    await signIn();
+    await client.signOut();
+    await waitForChanges();
+    expect(shadowOf(root).querySelector('[part="sign-out-outcome"]')).toBeNull();
+  });
+
   it("ignores a client property that is not a client", async () => {
     const { root, waitForChanges } = await mount();
     root.client = { getState: "nope" };

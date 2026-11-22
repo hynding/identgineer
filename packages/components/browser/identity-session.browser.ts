@@ -199,6 +199,27 @@ test.describe("idg-profile", () => {
   });
 });
 
+test.describe("a sign-out the server could not confirm", () => {
+  test("Sign out everywhere says so above the fallback, though the profile is gone", async ({
+    page,
+  }) => {
+    await openIdentity(page);
+    await signInThroughForm(page);
+    await withFixture(page, (fixture) => {
+      fixture.api.respondNext("POST", "/api/auth/logout", "network-error");
+    });
+    await page.locator("#profile").getByRole("button", { name: "Sign out everywhere" }).click();
+    await expect(page.locator("#guard-fallback")).toBeVisible();
+    await expect(page.locator("#profile")).toBeHidden();
+    const notice = page.locator("#guard").locator('[part="sign-out-outcome"]');
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText("your other sessions may stay signed in");
+    expect((await recordedEvents(page)).filter((event) => event.type === "idgSignedOut")).toEqual([
+      { type: "idgSignedOut", detail: { outcome: "server-unreachable", everywhere: true } },
+    ]);
+  });
+});
+
 test.describe("identity components and browser storage", () => {
   test("a whole session writes nothing to localStorage, sessionStorage, cookies or IndexedDB", async ({
     page,
