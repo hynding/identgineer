@@ -460,23 +460,35 @@ function notes(builder: Builder): BrandNote[] {
 // Analogous turns tried for the gradient's far end, nearest first.
 const GRADIENT_TURNS = [30, -30, 40, -40] as const;
 const GREY_STEP = 0.12;
+/** Closer than this in OKLab, the gradient's two ends read as one colour. */
+const GRADIENT_MIN_DISTANCE = 0.08;
+
+/** Yellow-green hues below a pale lightness read as olive, which no brand gradient wants. */
+function isOlive(color: Oklch): boolean {
+  return color.hue >= 95 && color.hue <= 135 && color.lightness < 0.85;
+}
 
 /**
- * Where the brand gradient ends without a secondary: the analogous hue (turned 30 or 40 degrees,
- * either way) that keeps the most chroma at the primary's lightness once mapped into sRGB, so it
- * never lands on a hue the gamut can only show muddy there. A grey turns in lightness instead,
- * towards the middle.
+ * Where the brand gradient ends without a secondary: an analogous hue (turned 30 or 40 degrees,
+ * either way) mapped into sRGB at the primary's lightness. Only turns that can be told apart from
+ * the primary count; of those, hues outside the olive band are preferred and, among them, the one
+ * that keeps the most chroma. When the primary is grey, or no turn is far enough from it (a
+ * near-black), it turns in lightness instead, towards the middle.
  */
 function gradientPartner(primary: Rgb): Rgb {
   const start = toOklch(primary);
-  if (start.chroma < GREY_CHROMA) {
+  const byLightness = () => {
     const step = start.lightness > 0.5 ? -GREY_STEP : GREY_STEP;
     return fromOklch({ ...start, lightness: start.lightness + step });
-  }
-  const candidates = GRADIENT_TURNS.map((turn) =>
+  };
+  if (start.chroma < GREY_CHROMA) return byLightness();
+  const distinct = GRADIENT_TURNS.map((turn) =>
     mapToSrgbGamut({ ...start, hue: (start.hue + turn + 360) % 360 }),
-  );
-  const best = candidates.reduce((most, candidate) =>
+  ).filter((candidate) => oklabDistance(primary, fromOklch(candidate)) >= GRADIENT_MIN_DISTANCE);
+  const pleasant = distinct.filter((candidate) => !isOlive(candidate));
+  const choices = pleasant.length > 0 ? pleasant : distinct;
+  if (choices.length === 0) return byLightness();
+  const best = choices.reduce((most, candidate) =>
     candidate.chroma > most.chroma + 1e-9 ? candidate : most,
   );
   return fromOklch(best);
