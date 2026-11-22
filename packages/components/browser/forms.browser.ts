@@ -72,6 +72,18 @@ test.describe("form values", () => {
     expect(entries).not.toHaveProperty("alerts");
   });
 
+  test("the native input takes the autofill and spelling hints it is given, false included", async ({
+    page,
+  }) => {
+    await open(page);
+    const password = page.locator("#password input");
+    await expect(password).toHaveAttribute("autocomplete", "current-password");
+    await expect(password).toHaveAttribute("autocapitalize", "none");
+    await expect(password).toHaveAttribute("spellcheck", "false");
+    expect(await password.evaluate((input) => input.spellcheck)).toBe(false);
+    await expect(page.locator("#email input")).not.toHaveAttribute("spellcheck", /.*/);
+  });
+
   test("the reveal toggle shows the password without changing the value", async ({ page }) => {
     await open(page);
     const input = page.locator("#password input");
