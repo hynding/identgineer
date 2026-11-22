@@ -93,6 +93,29 @@ describe("the fake's logout, as camis' SessionController::logout", () => {
   });
 });
 
+describe("the fake's session list, as camis' StrapiSessions::list", () => {
+  it("lists the current session first, then the others latest used first", async () => {
+    const { api, clock, signIn } = fakeApi();
+    await signIn("ada");
+    clock.advance(1_000);
+    const middle = await signIn("ada");
+    clock.advance(1_000);
+    await signIn("ada");
+    const response = await api.fetch(`${api.baseUrl}/api/auth/sessions`, {
+      headers: { Authorization: `Bearer ${middle}` },
+    });
+    const { data } = (await response.json()) as {
+      data: { current: boolean; lastActiveAt: string }[];
+    };
+    expect(data.map((session) => session.current)).toEqual([true, false, false]);
+    expect(data.map((session) => session.lastActiveAt)).toEqual([
+      new Date(START + 1_000).toISOString(),
+      new Date(START + 2_000).toISOString(),
+      new Date(START).toISOString(),
+    ]);
+  });
+});
+
 describe("the fake's throttle, as camis' StrapiRateLimits", () => {
   it("keeps one bucket per group of routes", async () => {
     const { post } = fakeApi({ throttlePerMinute: 2 });
