@@ -80,8 +80,8 @@ ticket. A sign-in's ticket (`signIn`, `completeProviderSignIn`, `register`, `res
 until a sign-out, here or in another tab, or `dispose()`; every other ticket (`changePassword`,
 `restore()`, the re-check another tab's sign-in triggers, scheduled refreshes and their retries,
 the refresh after a 401) lasts only while the session it was taken in does, so any sign-in or
-sign-out ends it. Callers share a refresh in flight only when they hold the same session and
-refresh token: a restore after a sign-out never takes the answer of the old session's refresh. A
+sign-out ends it. Callers share a refresh in flight only within one session: a restore after a
+sign-out never takes the answer of the old session's refresh. A
 refresh's tokens are taken only while signed in: a signed-out client never holds a token, and on
 sign-out every timer and `online` listener is cleared, and a completion that arrives afterwards
 finds its ticket stale and does nothing.
@@ -94,7 +94,8 @@ session it opened on the server is ended. A listener hears every transition in o
 state of that transition; a sign-in rejects (`unauthorized`) if a listener signed out on hearing of
 it. `dispose()` ends nothing on the server. It announces nothing to other tabs, except that a
 sign-out still under way (and not superseded) tells them at once, since the page will not get to
-tell them later.
+tell them later; that sign-out then looks up no cookie session and logs out none it found, since
+the tab can no longer hear of a newer sign-in, and resolves `server-unreachable`.
 
 `saveProfile` takes `displayName` (required, up to 80 characters), `bio` (up to 500, or `null`),
 `locale` (BCP 47), `timezone` (IANA) and `marketingOptIn`, checked against the limits in
@@ -210,21 +211,28 @@ is sent, and any other message is ignored.
 sign-in, restore and re-check asked for before it, so none of them can leave the tab signed in.
 Then it ends the session on the server, waits for the work it cancelled (a sign-in or password
 change; it ends any session that work opened), and only then tells the other tabs. Anything asked
-for meanwhile (a sign-in, restore or re-check) waits for it to finish and then runs afresh.
+for meanwhile (a sign-in, restore or re-check) waits for it to finish and then runs afresh. So a
+sign-in asked for in the same tab during a sign-out, failing or not, never cuts it short: the
+sign-out ends what it set out to end and tells the other tabs, and only then does the sign-in run
+(and, if it succeeds, tell the other tabs of itself).
 
-Across tabs the later action wins. A sign-in this tab hears of (another tab's `signed-in` notice) or
-is asked for after the sign-out began stands: the sign-out then logs out no session it finds in the
-cookie (it skips the lookup, or the logout after it, once it knows of the newer sign-in), tells no
-tab of a sign-out, and resolves `{ outcome: "superseded" }`; the queued re-check brings this tab to
-the newer session. Without such a sign-in it looks up and logs out the cookie's session, and checks
-once more for a notice before telling the other tabs.
+Across tabs the later action wins. Another tab's sign-in this tab hears of after the sign-out began
+(by its `signed-in` notice, which a tab sends only once it holds the new session) stands, unless
+that tab signs out again before this sign-out finishes. The sign-out then logs out no session it
+finds in the cookie (it skips the lookup, or the logout after it, once it knows of the newer
+sign-in), tells no tab of a sign-out, and resolves `{ outcome: "superseded" }`; the queued re-check
+brings this tab to the newer session. Without such a sign-in (or once it was followed by that tab's
+`signed-out` notice) it looks up and logs out the cookie's session, and checks once more for a
+notice before telling the other tabs.
 
 Two windows remain, and the client cannot close them:
 
-- Another tab's sign-in whose notice has not arrived yet (its answer landed just before this tab's
-  cookie lookup) looks like a session this sign-out should end, so it is logged out and that tab is
-  then signed out by the notice. The notice travels only after the sign-in's answer, so nothing on
-  the client can order the two.
+- Another tab's sign-in whose notice has not arrived yet looks like nothing this sign-out need
+  spare. If its answer landed just before this tab's cookie lookup, its session is logged out; if
+  it landed after the lookup, its session is left in place and the sign-out resolves `signed-out`
+  though a reload could resume that session. Either way that tab is then signed out by this tab's
+  notice. The notice travels only after the sign-in's answer, so nothing on the client can order
+  the two.
 - A sign-in whose answer lands while this tab's logout is in flight can lose its new cookie: the
   backend decides to clear the cookie from the one the logout request carried (the old session's),
   and answers with a `Set-Cookie` that expires the cookie by name, which the browser applies to
@@ -345,17 +353,27 @@ issues opaque tokens by default, living 600 seconds in refresh mode and 30 days 
 (`accessTokens: "jwt"`, `accessTokenLifetimeSeconds` and `reportExpiresIn` change that), and
 `api.holdNext(method, path)` holds the next such request until the returned function is called, to
 interleave tabs and races. `api.restorableSession()` tells whether the cookie names a session a
-reload could resume, `api.setRefreshCookie(value)` plants a stale or foreign one, and
+reload could resume and `api.restorableUser()` whose it is, `api.setRefreshCookie(value)` plants a
+stale or foreign one, and
 `api.issueLastingToken(email)` issues an access token naming no session.
 `src/invariants.test.ts` runs three tabs whose requests and lock grants arrive after random delays,
-and fires sign-ins, sign-outs, restores, registrations, password resets and changes, provider
-sign-ins, disposes, timers, network failures, throttling and expired tokens in seeded random
-orders (24 seeds of 30 steps). After each step it checks that a signed-in tab's token is its
-user's, and that a signed-out tab holds no token, timer or `online` listener; it judges each call
-against what happened while it ran: a session-opening call asked for before a sign-out in the same
-tab must reject, and a sign-out may resolve `superseded` only after a later sign-in it could know
-of, and `signed-out` with a session left to resume only while another tab's cookie sign-in was
-under way (the first window above). It samples interleavings; it does not prove their absence.
+and fires sign-ins (some with a wrong password), sign-outs, restores, registrations (some of taken
+names), password resets (some with a wrong code) and changes, provider sign-ins (some without the
+round trip), disposes, timers, network failures, throttling and expired tokens in seeded random
+orders (200 seeds of 30 steps, about 2 seconds). After each step it checks that a signed-in tab's
+token is its user's, and that a signed-out tab holds no token, timer or `online` listener. It
+judges each call against what happened while it ran, using which calls succeeded and who sent each
+notice:
+
+- a call that opens a session, asked for before a sign-out in the same tab, must not succeed;
+- a sign-out resolves only after the calls it cancelled have settled;
+- `signed-out` with a session left to resume is excused only when that session is another tab's
+  cookie sign-in that succeeded during the sign-out (the first window above), and `signed-out` is
+  wrong after another tab's standing `signed-in` notice reached the sign-out;
+- `superseded` needs another tab's cookie sign-in that succeeded during the sign-out, and may leave
+  only that sign-in's account to resume.
+
+It samples interleavings; it does not prove their absence.
 
 `src/camis-contract.test.ts` checks the client's routes, methods and body fields against camis'
 strapi-php emitter and route golden when `CAMIS_DIR` names a camis checkout (as for
