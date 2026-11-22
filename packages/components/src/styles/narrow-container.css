@@ -21,20 +21,26 @@
 
 /* A size container has no content width of its own, so a parent that sizes the element around it
    by its content (a flex row, an auto grid track, fit-content, a dialog or a popover) would give
-   it none. This line, empty and of no height, before the container gives the host (or the
-   `.measured` element) a preferred width of the identity measure (--idg-identity-measure, which a
-   page can set) and a smallest width of nothing: its ten words, set at no size, can each go on a
-   line of their own on a narrow screen. It is hidden, and kept from assistive technology by the
-   empty alternative. */
+   it none. This line, before the container and of no height, gives the host (or the `.measured`
+   element) a preferred width of the identity measure (--idg-identity-measure, which a page can
+   set) and a smallest width of nothing. It is two zero-width spaces (each escape is followed by a
+   space that ends it, then the space between them) with the measure as the word spacing: on one
+   line it is the measure wide, the spacing less about one space; where that does not fit, each goes on a line of its
+   own and is no width. The line keeps the element's own font size, so a measure in em or ch is
+   the element's em or ch, and a browser minimum font size has nothing to enlarge. It is hidden,
+   and kept from assistive technology by the empty alternative. A percentage word spacing is of the
+   space's width, so a percentage measure does not work: the README says so. */
 :host::before,
 .measured::before {
-  content: "x x x x x x x x x x" / "";
+  content: "\200b  \200b" / "";
   display: block;
   block-size: 0;
   overflow: hidden;
   visibility: hidden;
-  font-size: 0;
   line-height: 0;
   white-space: normal;
-  word-spacing: calc(var(--idg-identity-measure, var(--idg-size-m)) / 9);
+  /* Less a typical space (about a quarter em), which the line holds besides the spacing. */
+  word-spacing: calc(var(--idg-identity-measure, var(--idg-size-m)) - 0.25em);
+  pointer-events: none;
+  user-select: none;
 }

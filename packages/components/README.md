@@ -1157,7 +1157,9 @@ What the forms share:
 - **Width.** The forms and `idg-profile` fill their container. In a parent that sizes them by
   their content (a flex row, an auto grid track, `fit-content`, `idg-cluster`, a `<dialog>` or a
   popover) they take the identity measure, `--idg-identity-measure` (`var(--idg-size-m)`, 20rem, by
-  default; set it on any ancestor), and shrink below it on a narrow screen. Each is an inline-size
+  default; set it on any ancestor), and shrink below it on a narrow screen. Any length works, and
+  `em` or `ch` is the element's own; a percentage does not (it has nothing to be a percentage of
+  in a parent sized by its content) and leaves the element with no preferred width. Each is an inline-size
   container, so with large text on a narrow screen (narrower than nine of its own ems) the
   controls' inline padding and the gaps shrink; at normal text size every UX mode keeps its own.
 
