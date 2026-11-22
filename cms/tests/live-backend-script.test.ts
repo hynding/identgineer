@@ -9,7 +9,7 @@ import { readCmsText } from "./model";
 const SCRIPT = fileURLToPath(new URL("../scripts/live-backend.js", import.meta.url));
 
 const run = (camisDir: string | undefined) => {
-  const env = { ...process.env, CAMIS_DIR: camisDir };
+  const env: NodeJS.ProcessEnv = { ...process.env, CAMIS_DIR: camisDir };
   if (camisDir === undefined) delete env.CAMIS_DIR;
   return spawnSync(process.execPath, [SCRIPT, "--", "true"], { encoding: "utf8", env });
 };
