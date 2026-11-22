@@ -154,6 +154,16 @@ export class IdgInput {
     this.idgChange.emit({ value: this.value });
   };
 
+  // The native input has no form owner across the shadow boundary, so the browser's implicit
+  // submission never happens: Enter submits the host's form here instead, as it would natively.
+  private handleKeydown = (event: KeyboardEvent): void => {
+    if (event.key !== "Enter" || event.isComposing || event.defaultPrevented) return;
+    const form = this.internals.form;
+    if (!form) return;
+    event.preventDefault();
+    form.requestSubmit();
+  };
+
   private toggleReveal = (): void => {
     this.revealed = !this.revealed;
   };
@@ -203,6 +213,7 @@ export class IdgInput {
           aria-invalid={this.invalid ? "true" : undefined}
           onInput={this.handleInput}
           onChange={this.handleChange}
+          onKeydown={this.handleKeydown}
         />
         {this.invalid ? <idg-icon class="invalid-mark" name="warning" aria-hidden="true" /> : null}
         {showReveal ? (
