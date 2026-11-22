@@ -104,6 +104,9 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
   const cookieJar = new Map<string, string>();
   const requests: FakeRequest[] = [];
   const overrides: { method: string; path: string; answer: FakeOverride }[] = [];
+  // The cookies each request carried, read when it was sent, as a browser does.
+  const sentCookies = new WeakMap<FakeRequest, ReadonlyMap<string, string>>();
+  const holds: { method: string; path: string; gate: Promise<void> }[] = [];
   let throttleWindow = { start: Number.NEGATIVE_INFINITY, count: 0 };
 
   const throttle = (): FakeResponse | undefined => {
@@ -226,6 +229,11 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
     if (url.origin !== base.origin) throw new TypeError(`unexpected request to ${url.origin}`);
     const request = readRequest(url, init);
     requests.push(request);
+    if (request.credentials === "include") sentCookies.set(request, new Map(cookieJar));
+    const hold = holds.findIndex(
+      (entry) => entry.method === request.method && entry.path === request.path,
+    );
+    if (hold !== -1) await holds.splice(hold, 1)[0]?.gate;
     await Promise.resolve();
     if (init.signal?.aborted === true) throw abortError();
     const result = withExpiresIn(await answer(request, init.signal ?? null));
@@ -253,6 +261,18 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
     /** Answers the next matching request with `answer` instead of the route. */
     respondNext: (method: string, path: string, answer: FakeOverride): void => {
       overrides.push({ method, path, answer });
+    },
+    /**
+     * Holds the next matching request after it is sent (its cookies already read) until the
+     * returned function is called, so tests can interleave requests.
+     */
+    holdNext: (method: string, path: string): (() => void) => {
+      let release = (): void => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      holds.push({ method, path, gate });
+      return release;
     },
     /** Leaves the provider round trip's grant in the browser's session, as `/connect` would. */
     completeProviderRoundTrip: (provider: string, email: string): void => {

@@ -253,7 +253,7 @@ describe("scheduled refresh", () => {
 describe("cross-tab sign-out", () => {
   it("drops the session in other tabs when one tab signs out", async () => {
     const { api, client, makeClient, signIn } = setup();
-    const other = makeClient();
+    const other = makeClient({ sharedChannel: true });
     await signIn();
     await other.restore();
     expect(other.getState().status).toBe("signed-in");

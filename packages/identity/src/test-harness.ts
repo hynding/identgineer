@@ -22,18 +22,23 @@ export const setup = (
   const clock = createManualClock(START);
   const api = createFakeIdentityApi({ clock, ...apiOptions });
   channel += 1;
-  const makeClient = () => {
+  const sharedChannel = `identgineer-test-${String(channel)}`;
+  let own = 0;
+  /** Another client on the same fake: a tab of the same page with `sharedChannel`, else apart. */
+  const makeClient = (options: { readonly sharedChannel?: boolean } = {}) => {
+    own += 1;
     const client = createIdentityClient({
       baseUrl: api.baseUrl,
       fetch: api.fetch,
       clock,
-      channelName: `identgineer-test-${String(channel)}`,
+      channelName:
+        options.sharedChannel === true ? sharedChannel : `${sharedChannel}-own-${String(own)}`,
       ...clientOptions,
     });
     disposers.push(client.dispose);
     return client;
   };
-  const client = makeClient();
+  const client = makeClient({ sharedChannel: true });
   const states: IdentityState[] = [];
   client.subscribe((state) => states.push(state));
   const ada = api.addUser({ username: "ada", email: "ada@example.com", password: PASSWORD });
