@@ -121,6 +121,25 @@ describe("the live tests' cookie jar", () => {
     ).toBeUndefined();
   });
 
+  it("refuses a Strict or Lax cookie set by a response to a cross-site request, but keeps a None one", () => {
+    const { jar } = jarAt();
+    const foreign = new URL("https://evil.example");
+    jar.store(API, REFRESH_COOKIE, foreign);
+    jar.store(API, "lax=1; path=/", foreign);
+    jar.store(API, "open=1; path=/; secure; samesite=none", foreign);
+    expect(jar.all().map((cookie) => cookie.name)).toEqual(["open"]);
+    jar.store(API, REFRESH_COOKIE, PAGE);
+    expect(jar.get("strapi_up_refresh")).toBeDefined();
+  });
+
+  it("treats a Domain attribute naming the IP address it came from as host-only", () => {
+    const { jar } = jarAt();
+    jar.store(API, "ip=1; path=/; domain=127.0.0.1");
+    expect(jar.get("ip")).toMatchObject({ domain: "127.0.0.1", hostOnly: true });
+    jar.store(API, "other=1; path=/; domain=127.0.0.2");
+    expect(jar.get("other")).toBeUndefined();
+  });
+
   it("defaults the path to the request's directory", () => {
     const { jar } = jarAt();
     jar.store(API, "d=1");

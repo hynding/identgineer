@@ -176,8 +176,73 @@ describe("the live tests' browser-like fetch", () => {
     const answer = await browser.fetch(`${API}/api/auth/email-confirmation?confirmation=x`, {
       redirect: "manual",
     });
-    expect(answer.status).toBe(302);
+    expect(answer.type).toBe("opaqueredirect");
+    expect(answer.status).toBe(0);
+    expect(answer.ok).toBe(false);
     expect(answer.headers.get("Location")).toBeNull();
     expect(await answer.text()).toBe("");
+  });
+
+  it("sets the headers a page may not set itself, whatever the caller passes", async () => {
+    const jar = createCookieJar();
+    const net = network(() => json());
+    const browser = createBrowserFetch({ jar, pageOrigin: PAGE, fetch: net.fetch });
+    await browser.fetch(`${API}/api/users/me`, {
+      headers: {
+        Cookie: "strapi_up_refresh=planted",
+        Cookie2: "x",
+        Origin: "https://evil.example",
+        Host: "evil.example",
+        Referer: "https://evil.example/",
+        "Sec-Fetch-Site": "same-origin",
+        "Proxy-Authorization": "x",
+        Connection: "close",
+        "Content-Length": "1",
+        "Set-Cookie": "a=1",
+        "Accept-Encoding": "identity",
+        Authorization: "Bearer allowed",
+      },
+    });
+    const sent = net.seen.at(-1)?.headers ?? new Headers();
+    for (const name of [
+      "cookie",
+      "cookie2",
+      "host",
+      "referer",
+      "sec-fetch-site",
+      "proxy-authorization",
+      "connection",
+      "content-length",
+      "set-cookie",
+      "accept-encoding",
+    ]) {
+      expect(sent.get(name), name).toBeNull();
+    }
+    expect(sent.get("Origin")).toBe(PAGE);
+    expect(sent.get("Authorization")).toBe("Bearer allowed");
+  });
+
+  it("refuses a Request as input rather than drop its method, headers and body", async () => {
+    const browser = createBrowserFetch({
+      jar: createCookieJar(),
+      pageOrigin: PAGE,
+      fetch: network(() => json()).fetch,
+    });
+    await expect(
+      browser.fetch(new Request(`${API}/api/auth/local`, { method: "POST", body: "{}" })),
+    ).rejects.toThrow(TypeError);
+  });
+
+  it("keeps no Strict or Lax cookie a cross-site page's request was answered with", async () => {
+    const jar = createCookieJar();
+    const browser = createBrowserFetch({
+      jar,
+      pageOrigin: "https://evil.example",
+      cors: false,
+      fetch: network(() => json({ "Set-Cookie": "strict=1; Path=/; Secure; SameSite=Strict" }))
+        .fetch,
+    });
+    await browser.fetch(`${API}/api/auth/local`, { method: "POST", credentials: "include" });
+    expect(jar.all()).toEqual([]);
   });
 });
