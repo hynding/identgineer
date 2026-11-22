@@ -4,53 +4,13 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import * as runtime from "../packages/variations/src/index.ts";
 import * as bootstrapTag from "../packages/variations/src/bootstrap-tag.ts";
+import { importsOf, namesIn } from "./docs-code.ts";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const DOCS = join(ROOT, "docs", "variations");
 const GUIDES = ["plain-html.md", "react.md", "vue.md", "angular.md"];
 
 const read = (path: string) => readFileSync(path, "utf8");
-
-/** The code in fenced blocks, so prose that mentions a name is not mistaken for an import. */
-function codeBlocks(markdown: string): string[] {
-  return [...markdown.matchAll(/^```[^\n]*\n([\s\S]*?)^```/gm)].map((match) => match[1] ?? "");
-}
-
-interface Import {
-  readonly source: string;
-  readonly name: string;
-  readonly typeOnly: boolean;
-}
-
-const IMPORT =
-  /import\s+(type\s+)?\{([^}]*)\}\s+from\s+["'](@identgineer\/(?:variations|components)[^"']*)["']/g;
-
-function importsOf(markdown: string): Import[] {
-  return codeBlocks(markdown).flatMap((block) =>
-    [...block.matchAll(IMPORT)].flatMap((match) =>
-      (match[2] ?? "")
-        .split(",")
-        .map((entry) => entry.trim())
-        .filter((entry) => entry !== "")
-        .map((entry) => {
-          const inline = /^type\s+/.test(entry);
-          const name = entry.replace(/^type\s+/, "").split(/\s+as\s+/)[0] ?? "";
-          return { source: match[3] ?? "", name, typeOnly: inline || match[1] !== undefined };
-        }),
-    ),
-  );
-}
-
-// Types have no runtime export to look up, so they are read from the entry's `export type` lists.
-const namesIn = (source: string, pattern: RegExp): Set<string> =>
-  new Set(
-    [...source.matchAll(pattern)].flatMap((match) =>
-      (match[1] ?? "")
-        .split(",")
-        .map((name) => name.trim())
-        .filter((name) => name !== ""),
-    ),
-  );
 
 const ENTRY_SOURCE = read(join(ROOT, "packages", "variations", "src", "index.ts"));
 const TYPE_NAMES = namesIn(ENTRY_SOURCE, /export type \{([^}]*)\}/g);
@@ -107,7 +67,7 @@ describe("the variations adoption guides", () => {
 
   describe.each(GUIDES)("%s", (guide) => {
     const markdown = read(join(DOCS, guide));
-    const imports = importsOf(markdown);
+    const imports = importsOf(markdown, ["variations", "components"]);
 
     it("imports from the package in at least one example, except the plain HTML guide", () => {
       if (guide !== "plain-html.md") expect(imports.length).toBeGreaterThan(0);
