@@ -200,11 +200,16 @@ describe("idg-profile password", () => {
   it("has the fields a password manager pairs with the account", async () => {
     const { client } = await signedIn();
     const { root } = await mount(client);
-    const username = shadowOf(root).querySelector<HTMLInputElement>(
-      `${PASSWORD_FORM} input[autocomplete="username"]`,
-    );
+    // An idg-input like the password fields, out of sight but laid out: managers skip a field
+    // that is display: none, and the companion must be built as the fields it pairs with are.
+    const username = shadowOf(root).querySelector<
+      HTMLElement & { value?: string; readonly?: boolean }
+    >(`${PASSWORD_FORM} .username-companion idg-input[name="username"]`);
     expect(username?.value).toBe("ada");
-    expect(username?.hasAttribute("hidden")).toBe(true);
+    expect(username?.readonly).toBe(true);
+    expect(username?.getAttribute("autocomplete")).toBe("username");
+    expect(username?.getAttribute("tabindex")).toBe("-1");
+    expect(shadowOf(root).querySelector(`${PASSWORD_FORM} input[hidden]`)).toBeNull();
     expect(nativeInput(root, "currentPassword").getAttribute("autocomplete")).toBe(
       "current-password",
     );

@@ -7,6 +7,7 @@ import {
   inputOf,
   openIdentity,
   recordedEvents,
+  signInThroughForm,
 } from "./identity-page";
 
 const NEW_PASSWORD = "a brand new passphrase";
@@ -81,6 +82,7 @@ test.describe("identity forms and password managers", () => {
     page,
   }) => {
     await openIdentity(page);
+    await signInThroughForm(page);
     const pairs = await page.evaluate(() => {
       const found: string[] = [];
       const visit = (root: Document | ShadowRoot) => {
@@ -104,6 +106,52 @@ test.describe("identity forms and password managers", () => {
     });
     expect(pairs).toContain("username webauthn | current-password");
     expect(pairs).toContain("username | email | new-password");
+    expect(pairs).toContain("username | current-password | new-password | new-password");
+  });
+});
+
+test.describe("identity forms and form association", () => {
+  test("every field is an idg-input that submits its value, its native input has no form owner", async ({
+    page,
+  }) => {
+    await openIdentity(page);
+    await signInThroughForm(page);
+    await inputOf(page, "#profile", "currentPassword").fill(PASSWORD);
+    const form = await page.locator("#profile").evaluate((host) => {
+      const element = host.shadowRoot?.querySelector('form[part="password"]');
+      if (!(element instanceof HTMLFormElement)) throw new Error("no password form");
+      const natives = [...element.querySelectorAll("idg-input")].map(
+        (control) => control.shadowRoot?.querySelector("input")?.form ?? null,
+      );
+      return {
+        entries: [...new FormData(element).keys()],
+        ownedNatives: natives.filter((owner) => owner !== null).length,
+        plainInputs: element.querySelectorAll("input").length,
+      };
+    });
+    expect(form).toEqual({
+      entries: ["username", "currentPassword", "newPassword", "passwordConfirmation"],
+      ownedNatives: 0,
+      plainInputs: 0,
+    });
+  });
+
+  test("the profile's username companion is laid out but out of sight and out of the tab order", async ({
+    page,
+  }) => {
+    await openIdentity(page);
+    await signInThroughForm(page);
+    const companion = inputOf(page, "#profile", "username");
+    await expect(companion).toHaveValue("ada");
+    await expect(companion).toHaveAttribute("autocomplete", "username");
+    const box = await companion.boundingBox();
+    expect(box).not.toBeNull();
+    expect(await companion.evaluate((input) => getComputedStyle(input).display)).not.toBe("none");
+    await inputOf(page, "#profile", "bio").focus();
+    for (let step = 0; step < 12; step += 1) {
+      await page.keyboard.press("Tab");
+      expect(await focusPath(page)).not.toContain("input[name=username]");
+    }
   });
 });
 
