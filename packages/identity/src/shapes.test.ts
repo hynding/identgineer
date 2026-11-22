@@ -21,7 +21,9 @@ const USER = {
   publishedAt: "2026-01-01T00:00:00.000Z",
 };
 
-const unknownError = expect.objectContaining({ code: "unknown" });
+const expectMalformed = (read: () => unknown): void => {
+  expect(read).toThrow(expect.objectContaining({ code: "unknown" }));
+};
 
 describe("readUser", () => {
   it("keeps the known fields and freezes the result", () => {
@@ -61,7 +63,7 @@ describe("readUser", () => {
     { ...USER, email: null },
     { ...USER, confirmed: "yes" },
   ])("refuses %j", (value) => {
-    expect(() => readUser(value)).toThrow(unknownError);
+    expectMalformed(() => readUser(value));
   });
 });
 
@@ -85,7 +87,7 @@ describe("readAuthResponse", () => {
   it.each([{ jwt: "" }, { jwt: 1 }, { jwt: "x", refreshToken: 2 }, { jwt: "x", user: "u" }, {}])(
     "refuses %j",
     (value) => {
-      expect(() => readAuthResponse(value)).toThrow(unknownError);
+      expectMalformed(() => readAuthResponse(value));
     },
   );
 });
@@ -157,7 +159,7 @@ describe("readSessions", () => {
   it.each([{}, { data: {} }, { data: [{ id: 1, current: true }] }, { data: [{ id: "x" }] }])(
     "refuses %j",
     (value) => {
-      expect(() => readSessions(value)).toThrow(unknownError);
+      expectMalformed(() => readSessions(value));
     },
   );
 });
@@ -196,6 +198,6 @@ describe("readProfile", () => {
     { data: { ...PROFILE, documentId: 3 } },
     { data: { ...PROFILE, displayName: 1 } },
   ])("refuses %j", (value) => {
-    expect(() => readProfile(value)).toThrow(unknownError);
+    expectMalformed(() => readProfile(value));
   });
 });
