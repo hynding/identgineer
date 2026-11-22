@@ -35,13 +35,13 @@ async function open(page: Page): Promise<void> {
 }
 
 /** Presses Enter, as a user does, in the form's first idg-input, or its first native field. */
-async function pressEnter(page: Page, id: string): Promise<Outcome> {
+async function pressEnter(page: Page, id: string, key = "Enter"): Promise<Outcome> {
   const form = page.locator(`#${id}`);
   const field = id.startsWith("idg-")
     ? form.locator("idg-input input").first()
-    : form.locator("input:not([type=checkbox])").first();
+    : form.locator("input:not([type=checkbox], [type=date])").first();
   await field.focus();
-  await page.keyboard.press("Enter");
+  await page.keyboard.press(key);
   // Implicit submission is decided once the keydown has been dispatched to every listener.
   await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 50)));
   return page.evaluate(
@@ -120,5 +120,66 @@ test.describe("Enter in an idg-input submits as Enter in a native input does", (
     const native = await pressEnter(page, "native-combo");
     expect(native.submits).toBe(0);
     expect(await pressEnter(page, "idg-combo")).toEqual(native);
+  });
+
+  test("a button that does not submit before the submit button is passed over", async ({
+    page,
+  }) => {
+    await open(page);
+    const native = await pressEnter(page, "native-plain-first");
+    expect(native).toEqual({ submits: 1, submitter: "Go", clicks: 1 });
+    expect(await pressEnter(page, "idg-plain-first")).toEqual(native);
+    expect(await pressEnter(page, "idg-idg-plain-first")).toMatchObject({ submits: 1, clicks: 1 });
+  });
+
+  test("Enter with Control, Alt or Meta held submits nothing; with Shift it does", async ({
+    page,
+  }) => {
+    await open(page);
+    for (const modifier of ["Control", "Alt", "Meta", "Shift"]) {
+      await open(page);
+      const native = await pressEnter(page, "native-modifier", `${modifier}+Enter`);
+      expect(native.submits, modifier).toBe(modifier === "Shift" ? 1 : 0);
+      expect(await pressEnter(page, "idg-modifier", `${modifier}+Enter`), modifier).toEqual(native);
+    }
+  });
+
+  test("an ancestor that cancels the keypress keeps the form from being submitted", async ({
+    page,
+  }) => {
+    await open(page);
+    await page.evaluate(() => {
+      document.querySelector(".keypress-guard")?.addEventListener("keypress", (event) => {
+        if ((event as KeyboardEvent).key === "Enter") event.preventDefault();
+      });
+    });
+    const native = await pressEnter(page, "native-keypress");
+    expect(native.submits).toBe(0);
+    expect(await pressEnter(page, "idg-keypress")).toEqual(native);
+  });
+
+  test("an idg-button with an href is a link, not a default button, and is never followed", async ({
+    page,
+  }) => {
+    await open(page);
+    const native = await pressEnter(page, "native-link");
+    expect(native).toEqual({ submits: 1, submitter: null, clicks: 0 });
+    expect(await pressEnter(page, "idg-link")).toEqual(native);
+    expect(new URL(page.url()).hash).toBe("");
+  });
+
+  test("a date field neither submits alone nor keeps a text field from submitting", async ({
+    page,
+  }) => {
+    await open(page);
+    await page.locator("#native-date input").focus();
+    await page.keyboard.press("Enter");
+    const alone = await page.evaluate(
+      () => (window as unknown as { outcomes: Record<string, Outcome> }).outcomes["native-date"],
+    );
+    expect(alone?.submits).toBe(0);
+    const native = await pressEnter(page, "native-date-mixed");
+    expect(native.submits).toBe(1);
+    expect(await pressEnter(page, "idg-date-mixed")).toEqual(native);
   });
 });

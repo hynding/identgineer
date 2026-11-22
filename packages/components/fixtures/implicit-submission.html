@@ -86,6 +86,49 @@
         <div class="combo"><idg-input name="c" accessible-label="Combo"></idg-input></div>
         <button>Go</button>
       </form>
+
+      <form id="native-plain-first">
+        <input name="q" aria-label="Query" /><button type="button">Plain</button><button>Go</button>
+      </form>
+      <form id="idg-plain-first">
+        <idg-input name="q" accessible-label="Query"></idg-input><button type="button">Plain</button
+        ><button>Go</button>
+      </form>
+      <form id="idg-idg-plain-first">
+        <idg-input name="q" accessible-label="Query"></idg-input
+        ><idg-button type="button">Plain</idg-button><idg-button type="submit">Go</idg-button>
+      </form>
+
+      <form id="native-modifier"><input name="q" aria-label="Query" /><button>Go</button></form>
+      <form id="idg-modifier">
+        <idg-input name="q" accessible-label="Query"></idg-input><button>Go</button>
+      </form>
+
+      <div class="keypress-guard">
+        <form id="native-keypress"><input name="q" aria-label="Query" /><button>Go</button></form>
+        <form id="idg-keypress">
+          <idg-input name="q" accessible-label="Query"></idg-input><button>Go</button>
+        </form>
+      </div>
+
+      <!-- A link styled as a button is no submit button: Enter never follows it. -->
+      <form id="native-link">
+        <input name="q" aria-label="Query" /><a href="#elsewhere">Elsewhere</a>
+      </form>
+      <form id="idg-link">
+        <idg-input name="q" accessible-label="Query"></idg-input
+        ><idg-button type="submit" href="#elsewhere">Elsewhere</idg-button>
+      </form>
+
+      <!-- Chromium: a date or time field neither submits alone nor keeps a text field from it. -->
+      <form id="native-date"><input type="date" name="d" aria-label="Day" /></form>
+      <form id="native-date-mixed">
+        <input name="q" aria-label="Query" /><input type="date" name="d" aria-label="Day" />
+      </form>
+      <form id="idg-date-mixed">
+        <idg-input name="q" accessible-label="Query"></idg-input
+        ><input type="date" name="d" aria-label="Day" />
+      </form>
     </main>
   </body>
 </html>
