@@ -38,6 +38,23 @@ export default tseslint.config(
     },
   },
   {
+    // Brand builds on tokens, never the other way round: tokens is the lower layer.
+    files: ["packages/tokens/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@identgineer/brand", "@identgineer/brand/*", "**/brand/src/**"],
+              message: "tokens must not depend on brand.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Config files are plain JS and sit outside every tsconfig.
     files: ["**/*.js"],
     extends: [tseslint.configs.disableTypeChecked],

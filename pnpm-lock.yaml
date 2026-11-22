@@ -38,6 +38,12 @@ importers:
 
   apps/site: {}
 
+  packages/brand:
+    dependencies:
+      '@identgineer/tokens':
+        specifier: workspace:*
+        version: link:../tokens
+
   packages/components:
     dependencies:
       '@identgineer/variations':
