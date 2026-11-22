@@ -583,7 +583,15 @@ const answerOf = async (response: Response): Promise<ProbeAnswer> => {
   } catch {
     body = text;
   }
-  return { status: response.status, body, retryAfter: response.headers.get("Retry-After") };
+  // Every probe leaves redirects unfollowed, and a page sees such a redirect as status 0 (the
+  // browser fetch answers so; the fake answers the raw 3xx).
+  const redirect =
+    response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400);
+  return {
+    status: redirect ? 0 : response.status,
+    body,
+    retryAfter: response.headers.get("Retry-After"),
+  };
 };
 
 const initOf = (request: ProbeRequest): RequestInit => ({

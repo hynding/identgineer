@@ -49,6 +49,42 @@ const SAFELISTED_RESPONSE_HEADERS = [
 // A browser always sends one; the CMS names each session's device from it.
 const FIREFOX_ON_LINUX = "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0";
 
+// Fetch's forbidden request headers: the browser sets these, never page script.
+const FORBIDDEN_REQUEST_HEADERS = new Set([
+  "accept-charset",
+  "accept-encoding",
+  "access-control-request-headers",
+  "access-control-request-method",
+  "connection",
+  "content-length",
+  "cookie",
+  "cookie2",
+  "date",
+  "dnt",
+  "expect",
+  "host",
+  "keep-alive",
+  "origin",
+  "referer",
+  "set-cookie",
+  "te",
+  "trailer",
+  "transfer-encoding",
+  "upgrade",
+  "via",
+]);
+const isForbidden = (name: string): boolean =>
+  FORBIDDEN_REQUEST_HEADERS.has(name) || name.startsWith("proxy-") || name.startsWith("sec-");
+
+/** What a browser hands page script for a redirect it was told not to follow. */
+const opaqueRedirect = (): Response =>
+  Object.defineProperties(new Response(null), {
+    type: { value: "opaqueredirect" },
+    status: { value: 0 },
+    ok: { value: false },
+    statusText: { value: "" },
+  });
+
 const failed = (): TypeError => new TypeError("Failed to fetch");
 
 const list = (value: string | null): string[] =>
@@ -138,9 +174,12 @@ export const createBrowserFetch = (options: BrowserFetchOptions) => {
     input: RequestInfo | URL,
     init: RequestInit = {},
   ): Promise<Response> => {
-    const url = new URL(input instanceof Request ? input.url : String(input));
+    // The SDK passes a URL string; a Request's method, headers and body would be lost here.
+    if (input instanceof Request) throw new TypeError("browser fetch takes a URL, not a Request");
+    const url = new URL(String(input));
     const method = (init.method ?? "GET").toUpperCase();
     const headers = new Headers(init.headers);
+    for (const name of [...headers.keys()]) if (isForbidden(name)) headers.delete(name);
     const crossOrigin = url.origin !== page.origin;
     const credentials =
       init.credentials === "include" || (!crossOrigin && init.credentials !== "omit");
@@ -163,13 +202,12 @@ export const createBrowserFetch = (options: BrowserFetchOptions) => {
     });
     sent.push({ method, url: url.href, status: response.status, preflight: false });
     if (credentials) {
-      for (const header of response.headers.getSetCookie()) options.jar.store(url, header);
+      for (const header of response.headers.getSetCookie()) options.jar.store(url, header, page);
     }
-    // A redirect left unfollowed is opaque to page script: no headers or body. (A browser also
-    // reports status 0, which a Node Response cannot carry; the SDK reads either as a redirect.)
+    // A redirect left unfollowed is opaque to page script: status 0, no headers or body.
     if (manual && response.status >= 300 && response.status < 400) {
       await response.body?.cancel();
-      return new Response(null, { status: response.status });
+      return opaqueRedirect();
     }
     if (cors && crossOrigin && !allowsOrigin(response, page.origin, credentials)) {
       await response.body?.cancel();

@@ -28,6 +28,9 @@ const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
 /**
  * Whether the URL is a secure context for cookies: https, or http on a loopback host, which
  * Chromium and Firefox treat as potentially trustworthy (they set and send Secure cookies there).
+ * WebKit does not: Safari drops a Secure cookie set over http://127.0.0.1, so a real Safari on
+ * the live setup would keep no refresh cookie. That is a property of the test setup only; a
+ * deployment serves the API over https.
  */
 export const isTrustworthy = (url: URL): boolean =>
   url.protocol === "https:" || (url.protocol === "http:" && LOOPBACK.has(url.hostname));
@@ -108,8 +111,12 @@ export const createCookieJar = (options: CookieJarOptions = {}) => {
     return [...cookies.values()];
   };
 
-  /** Applies one `Set-Cookie` value the response to `url` carried; refused ones are dropped. */
-  const store = (url: URL, header: string): void => {
+  /**
+   * Applies one `Set-Cookie` value the response to `url` carried; refused ones are dropped. With
+   * `pageOrigin`, the request came from that page: a cross-site one can set no Strict or Lax
+   * cookie, as a fetch is never a top-level navigation.
+   */
+  const store = (url: URL, header: string, pageOrigin?: URL): void => {
     const [pair = "", ...attributes] = header.split(";");
     const separator = pair.indexOf("=");
     if (separator === -1) return;
@@ -121,11 +128,16 @@ export const createCookieJar = (options: CookieJarOptions = {}) => {
     if (parsed.domain !== undefined && !domainMatches(host, parsed.domain)) return;
     if (parsed.secure && !isTrustworthy(url)) return;
     if (parsed.sameSite === "none" && !parsed.secure) return;
+    if (parsed.sameSite !== "none" && pageOrigin !== undefined && !isSameSite(url, pageOrigin)) {
+      return;
+    }
+    // RFC 6265bis 5.6 step 9: a Domain naming an IP address is the host itself, so host-only.
+    const hostOnly = parsed.domain === undefined || isIpAddress(host);
     const cookie: StoredCookie = {
       name,
       value,
-      domain: parsed.domain ?? host,
-      hostOnly: parsed.domain === undefined,
+      domain: hostOnly ? host : (parsed.domain ?? host),
+      hostOnly,
       path: parsed.path?.startsWith("/") === true ? parsed.path : defaultPath(url),
       secure: parsed.secure,
       httpOnly: parsed.httpOnly,
