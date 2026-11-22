@@ -1189,11 +1189,12 @@ The signed-in owner's page, in three sections: the profile (`displayName`, `bio`
 `timezone`, `marketingOptIn`, read with `getProfile` and saved with `saveProfile`, beside an
 `idg-avatar` from `avatarSrc`), a password change (current, new and confirmation, with a read-only
 `username` idg-input laid out out of sight and out of the tab order, so a manager can tell the
-account) and the sessions, each with "Sign out",
+account, and the same said in visible text above the fields, part `password-account`: "Changing the
+password for {name}") and the sessions, each with "Sign out",
 plus "Sign out everywhere". Props `client`, `avatarSrc`, `headingLevel` (`heading-level`, 2 to 6,
 default 2, for the three section headings), `labels`, `clock`. Events
 `idgProfileSaved` (`{ profile }`), `idgPasswordChanged`, `idgSessionRevoked` (`{ id }`),
-`idgSignedOut` (`{ outcome, everywhere: true }`). Parts `details`, `details-saved`, `password`, `password-saved`,
+`idgSignedOut` (`{ outcome, everywhere: true }`). Parts `details`, `details-saved`, `password`, `password-account`, `password-saved`,
 `byte-count`, `sessions`, `session`, `error`, `throttle`, `outcome`, `signed-out`. It reloads when
 another user signs in, and shows only a note while nobody is.
 

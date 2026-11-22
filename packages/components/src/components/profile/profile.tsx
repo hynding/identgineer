@@ -29,6 +29,7 @@ const MIN_HEADING_LEVEL = 2;
  * @part details - The profile form.
  * @part details-saved - The confirmation of a saved profile.
  * @part password - The password form.
+ * @part password-account - Above the password fields: whose password the change is for.
  * @part password-saved - The confirmation of a changed password.
  * @part byte-count - How many of the new password's 72 bytes are used.
  * @part sessions - The sessions and "Sign out everywhere".

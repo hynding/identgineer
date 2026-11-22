@@ -13,6 +13,7 @@ import { FormFeedback } from "../../identity/form-feedback";
 import { keepsPasswordForRetry, readIdentityError } from "../../identity/identity-error";
 import type { IdentityUserView } from "../../identity/identity-types";
 import { markPasswordLength, newPasswordErrors } from "../../identity/new-password";
+import { templateParts } from "../../identity/labels";
 import { utf8ByteLength } from "../../identity/password-bytes";
 import type { ValueDetail } from "../../utils/event-details";
 import type { ProfileLabels } from "./profile-labels";
@@ -158,6 +159,11 @@ export class PasswordSection {
           }}
           retry
         />
+        <p class="note" part="password-account">
+          {templateParts(labels.passwordAccount, { name: user.username }).map((part) =>
+            typeof part === "string" ? part : <bdi>{part.value}</bdi>,
+          )}
+        </p>
         {/* The account the password belongs to, for a password manager to update the right entry.
             Built as the password fields are, and laid out out of sight rather than hidden, since
             managers skip a field that is not rendered; out of the tab order, as it is not to be
