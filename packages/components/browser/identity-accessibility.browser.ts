@@ -162,6 +162,11 @@ test.describe("identity components with large text on a narrow screen", () => {
             );
           }
         }
+        // An alert's text that runs past its box, as a word does that cannot break.
+        for (const content of root.querySelectorAll(".alert .content")) {
+          const over = content.scrollWidth - content.clientWidth;
+          if (over > 1) found.push(`an alert's text runs ${String(over)}px past its box`);
+        }
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
         for (let node = walker.nextNode(); node; node = walker.nextNode()) {
           const text = node.textContent ?? "";
@@ -205,6 +210,15 @@ test.describe("identity components with large text on a narrow screen", () => {
       if (!surface) throw new Error("the account menu is not laid out");
       expect(surface.x).toBeGreaterThanOrEqual(0);
       expect(surface.x + surface.width).toBeLessThanOrEqual(320);
+      // The guard's warning after a Sign out everywhere the server could not confirm.
+      await page.keyboard.press("Escape");
+      await page.evaluate(`window.identityFixture.api.respondNext(
+        "POST", "/api/auth/logout", "network-error")`);
+      await page.locator("#profile").getByRole("button", { name: "Sign out everywhere" }).click();
+      await expect(page.locator("#guard").locator('[part="sign-out-outcome"]')).toBeVisible();
+      await settle(page);
+      expect(await overflow(page)).toBeLessThanOrEqual(0);
+      expect(await misfits(page)).toEqual([]);
     });
   });
 });
