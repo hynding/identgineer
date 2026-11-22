@@ -1,6 +1,18 @@
-/* The guard adds no box of its own: what it shows lays out as if it were the guard's parent's. */
+/* The guard adds one box, its region: a box can take focus, and focus must go somewhere the guard
+   owns when what had focus is taken away. What it shows lays out inside it as in any block. */
 :host {
   display: contents;
+}
+
+.region {
+  display: block;
+}
+
+/* Focus put here from script is a place to start from, not a control. Only a keyboard user sees
+   the ring (`.focusable:focus-visible`). */
+.region:focus:not(:focus-visible),
+.notice:focus:not(:focus-visible) {
+  outline: none;
 }
 
 :host([hidden]) {
@@ -15,6 +27,6 @@
   margin-block-start: var(--idg-space-2xs);
 }
 
-.sign-out-outcome {
+.notice {
   margin-block-end: var(--idg-space-s);
 }

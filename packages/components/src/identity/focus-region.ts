@@ -1,8 +1,8 @@
 // Focus management for the identity components that swap what they show: when the element that
 // had focus is taken away, focus would fall back to the document, and a keyboard or screen reader
-// user would lose their place.
-
-const FOCUSABLE = "a[href], button, input, select, textarea, [tabindex], [contenteditable]";
+// user would lose their place. Focus goes to an element of the component's own, never to one the
+// page owns: a tabindex written on a page element, a custom element host above all, would take it
+// (and, for a host, its whole shadow tree) out of the Tab order for good.
 
 /** Whether focus is on `host` or inside it, through any shadow root. */
 export function focusWithin(host: HTMLElement): boolean {
@@ -19,12 +19,14 @@ export function focusWithinOrLost(host: HTMLElement): boolean {
   return active === null || active === host.ownerDocument.body || focusWithin(host);
 }
 
-/** Focuses `element`, making it focusable from script first when it is not already. */
-export function focusRegion(element: Element | null | undefined): boolean {
+/**
+ * Focuses `element` when it takes focus as it is, and says whether it did. Nothing is written on
+ * it: an element that is not focusable is left alone.
+ */
+export function focusIfFocusable(element: Element | null | undefined): boolean {
   if (!(element instanceof HTMLElement)) return false;
-  if (!element.matches(FOCUSABLE)) element.setAttribute("tabindex", "-1");
   element.focus();
-  return true;
+  return element.matches(":focus, :focus-within");
 }
 
 /** The first element the slot shows, whether assigned or forwarded. */

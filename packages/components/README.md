@@ -1199,11 +1199,18 @@ and tries again when the browser is back online. A `server-unreachable` sign-out
 the fallback (part `sign-out-outcome`, dismissible; slot `sign-out-outcome` replaces the text),
 since the content that would have said so is gone. Prop `labels`. Event `idgSessionChange` on each
 transition: `{ status: "signed-in" }`, `{ status: "unknown" }`, `{ status: "unreachable" }` or
-`{ status: "signed-out", reason }`. When a transition takes away what had focus (a sign-in from the fallback, "Sign out
-everywhere"), focus moves to the first element now shown (given `tabindex="-1"` if it cannot take
-focus otherwise), or to the sign-out warning, and the change is said politely ("You are signed
-in." or "You are signed out.", in `labels`). `display: contents`. **Not access control**: its children are in the DOM all along; see the
-security notes, and hide it until hydrated with `idg-session-guard:not(.hydrated)`.
+`{ status: "signed-out", reason }`. What it shows sits in one block of its own (part `region`,
+a group named by the `region` label, "Account", with `tabindex="-1"`). When a transition takes
+away what had focus (a sign-in from the fallback, "Sign out everywhere", "Try again", dismissing
+the warning), focus goes to that region, or to the warning when one is shown, and the change is
+said politely ("You are signed in." or "You are signed out.", in `labels`). A sign-out this tab
+asked for waits up to a second for the content's `idgSignedOut`, so focus settles once: on the
+warning, read when it takes focus and not said again, when the server could not confirm it. The
+guard writes no `tabindex` on anything it does not own: on a custom element host it would take
+the host's whole shadow tree out of the Tab order. The design's focus ring shows on the region
+only for keyboard users. The host is `display: contents`. **Not access control**: its children are
+in the DOM all along; see the security notes, and hide it until hydrated with
+`idg-session-guard:not(.hydrated)`.
 
 ### `idg-user-menu`
 
@@ -1214,8 +1221,10 @@ for {name}") that opens an `idg-menu` with a group "Signed in as {name}", the pa
 outcome: `signed-out` and `superseded` (another tab's newer sign-in stands; not an error) are
 announced politely, and `server-unreachable` is shown as a warning (part `outcome`) that says the
 session may stay active on the server. Slot `signed-out` while nobody is signed in. It goes when
-another tab signs out. After its own sign-out, focus moves to the warning, or else to the first element
-of the `signed-out` slot (given `tabindex="-1"` when it cannot take focus otherwise).
+another tab signs out. After its own sign-out, focus moves to the warning (read as it takes focus,
+not said again by a live role), or else to the first element of the `signed-out` slot when that
+takes focus as it is, or else to the menu's own box (a group named by the `region` label). It
+writes no `tabindex` on the page's elements.
 
 ## Strict CSP and Trusted Types
 

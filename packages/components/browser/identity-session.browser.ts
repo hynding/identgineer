@@ -237,59 +237,7 @@ test.describe("focus across sign-in and sign-out", () => {
     const link = page.locator("#menu").getByRole("link", { name: "Sign in", exact: true });
     await expect(link).toBeFocused();
   });
-
-  test("after Sign out everywhere, focus is on what the guard shows, and the change is said", async ({
-    page,
-  }) => {
-    await openIdentity(page);
-    await signInThroughForm(page);
-    await page.locator("#profile").getByRole("button", { name: "Sign out everywhere" }).focus();
-    await page.keyboard.press("Enter");
-    await expect(page.locator("#guard-fallback")).toBeFocused();
-    await expect(page.locator("#guard").getByRole("status")).toHaveText("You are signed out.");
-  });
-
-  test("after a sign-out the server could not confirm, focus is on the guard's notice", async ({
-    page,
-  }) => {
-    await openIdentity(page);
-    await signInThroughForm(page);
-    await withFixture(page, (fixture) => {
-      fixture.api.respondNext("POST", "/api/auth/logout", "network-error");
-    });
-    await page.locator("#profile").getByRole("button", { name: "Sign out everywhere" }).focus();
-    await page.keyboard.press("Enter");
-    await expect(page.locator("#guard").locator('[part="sign-out-outcome"]')).toBeFocused();
-  });
-
-  test("after a sign-in from the guard's fallback, focus is on the content it shows", async ({
-    page,
-  }) => {
-    await openIdentity(page);
-    // The documented layout: the sign-in form is the guard's fallback.
-    await page.evaluate(() => {
-      const fixture = (window as unknown as { identityFixture: { client: unknown } })
-        .identityFixture;
-      const guard = document.createElement("idg-session-guard");
-      guard.id = "second-guard";
-      const account = document.createElement("h2");
-      account.textContent = "Your account";
-      const signIn = document.createElement("idg-sign-in");
-      signIn.id = "second-sign-in";
-      signIn.slot = "fallback";
-      guard.append(account, signIn);
-      document.querySelector("main")?.append(guard);
-      Object.assign(guard, { client: fixture.client });
-      Object.assign(signIn, { client: fixture.client });
-    });
-    await inputOf(page, "#second-sign-in", "identifier").fill("ada@example.com");
-    await inputOf(page, "#second-sign-in", "password").fill(PASSWORD);
-    await inputOf(page, "#second-sign-in", "password").press("Enter");
-    await expect(page.locator("#second-guard h2")).toBeFocused();
-    await expect(page.locator("#second-guard").getByRole("status")).toHaveText(
-      "You are signed in.",
-    );
-  });
+  // The guard's own focus handling is followed in identity-focus.browser.ts.
 });
 
 test.describe("identity components and browser storage", () => {

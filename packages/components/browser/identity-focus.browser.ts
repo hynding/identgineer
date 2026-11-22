@@ -105,7 +105,7 @@ async function recordFocusSteps(page: Page): Promise<() => Promise<string[]>> {
 /** What the guard's own polite status says, not that of the content it shows. */
 function guardStatus(page: Page): Promise<string> {
   return guard(page).evaluate(
-    (host) => host.shadowRoot?.querySelector(':scope > [role="status"]')?.textContent ?? "",
+    (host) => host.shadowRoot?.querySelector('p[role="status"]')?.textContent ?? "",
   );
 }
 
@@ -134,6 +134,8 @@ test.describe("idg-session-guard and idg-user-menu keep every control reachable 
     await openGuardPage(page);
     await signInThroughFallback(page);
     await expect(region(page)).toBeFocused();
+    await expect(region(page)).toHaveAttribute("aria-label", "Account");
+    await expect.poll(() => guardStatus(page)).toBe("You are signed in.");
     await expectNoTabindexWritten(page);
     await expectReachableByTab(page, PROFILE_STOPS);
   });
@@ -183,11 +185,12 @@ test.describe("idg-session-guard and idg-user-menu keep every control reachable 
     });
     await page.locator("#profile").getByRole("button", { name: "Sign out everywhere" }).focus();
     const focusSteps = await recordFocusSteps(page);
+    const statusBefore = await guardStatus(page);
     await page.keyboard.press("Enter");
     await expect(guardNotice(page)).toBeVisible();
     await expect.poll(() => focusHoldsGuardNotice(page)).toBe(true);
     // Read when it takes focus, so neither a live role nor the polite message says it again.
-    expect(await guardStatus(page)).toBe("");
+    expect(await guardStatus(page)).toBe(statusBefore);
     await expect(guardNotice(page).getByRole("alert")).toHaveCount(0);
     expect(await focusSteps()).toHaveLength(1);
     await expectNoTabindexWritten(page);

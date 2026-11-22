@@ -17,6 +17,13 @@
   max-inline-size: 100%;
 }
 
-.outcome {
+.notice {
   max-inline-size: min(var(--idg-size-l), 100%);
+}
+
+/* Focus put on these from script is a place to start from, not a control. Only a keyboard user
+   sees the ring (`.focusable:focus-visible`). */
+.user-menu:focus:not(:focus-visible),
+.notice:focus:not(:focus-visible) {
+  outline: none;
 }

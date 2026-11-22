@@ -1,7 +1,12 @@
 import { Component, Element, Event, h, Prop, State, Watch, type EventEmitter } from "@stencil/core";
 import type { SignedOutDetail } from "../../identity/event-details";
 import { AnnouncementView } from "../../identity/feedback-view";
-import { firstAssigned, focusRegion, focusWithinOrLost } from "../../identity/focus-region";
+import {
+  firstAssigned,
+  focusIfFocusable,
+  focusWithin,
+  focusWithinOrLost,
+} from "../../identity/focus-region";
 import type { Announcement } from "../../identity/form-feedback";
 import type { IdentityStateView, UserMenuClient } from "../../identity/identity-types";
 import { fillTemplate, mergeLabels } from "../../identity/labels";
@@ -30,7 +35,7 @@ type Notice = "signed-out" | "superseded" | "server-unreachable" | "error";
  */
 @Component({
   tag: "idg-user-menu",
-  styleUrls: ["../../styles/visually-hidden.css", "user-menu.css"],
+  styleUrls: ["../../styles/focus-ring.css", "../../styles/visually-hidden.css", "user-menu.css"],
   shadow: true,
 })
 export class IdgUserMenu {
@@ -55,8 +60,10 @@ export class IdgUserMenu {
   @State() private signingOut = false;
   @State() private notice?: Notice;
   @State() private announcement: Announcement = { text: "", slot: 0 };
+  /** The notice takes focus, which reads it, so it leaves out its live role to be said once. */
+  @State() private noticeTakesFocus = false;
 
-  /** Set after a sign-out that took the focused trigger away. */
+  /** Set after a sign-out that took the focused trigger away, or a dismissed notice. */
   private moveFocus = false;
 
   // A restore that could not reach the server is tried again once the browser is back online;
@@ -109,12 +116,14 @@ export class IdgUserMenu {
     if (this.signingOut || !client) return;
     this.signingOut = true;
     this.notice = undefined;
+    this.noticeTakesFocus = false;
     const labels = this.text();
     try {
       const { outcome } = await client.signOut();
       if (client !== this.binding.current()) return;
       this.moveFocus = focusWithinOrLost(this.host);
       this.notice = outcome;
+      this.noticeTakesFocus = this.moveFocus;
       if (outcome !== "server-unreachable") {
         this.announce(outcome === "superseded" ? labels.superseded : labels.signedOut);
       }
@@ -126,15 +135,19 @@ export class IdgUserMenu {
     }
   }
 
-  // To the warning when there is one, otherwise to what the page shows while signed out.
+  // To the warning when there is one, otherwise to what the page shows while signed out when that
+  // takes focus as it is, otherwise to the menu's own box. Nothing of the page's is made focusable.
   componentDidRender(): void {
     if (!this.moveFocus || this.state.status === "signed-in") return;
     this.moveFocus = false;
     const root = this.host.shadowRoot;
-    focusRegion(
-      root?.querySelector(".outcome") ??
-        firstAssigned(root?.querySelector('slot[name="signed-out"]')),
-    );
+    const notice = root?.querySelector<HTMLElement>(".notice");
+    if (notice) {
+      notice.focus();
+      return;
+    }
+    if (focusIfFocusable(firstAssigned(root?.querySelector('slot[name="signed-out"]')))) return;
+    root?.querySelector<HTMLElement>(".user-menu")?.focus();
   }
 
   private announce(text: string): void {
@@ -143,7 +156,9 @@ export class IdgUserMenu {
 
   private dismissNotice = (event: CustomEvent<void>): void => {
     event.preventDefault();
+    this.moveFocus = focusWithin(this.host);
     this.notice = undefined;
+    this.noticeTakesFocus = false;
   };
 
   private renderMenu(name: string, labels: UserMenuLabels) {
@@ -171,16 +186,19 @@ export class IdgUserMenu {
   private renderNotice(labels: UserMenuLabels) {
     if (this.notice !== "server-unreachable" && this.notice !== "error") return null;
     return (
-      <idg-alert
-        class="outcome"
-        part="outcome"
-        variant="warning"
-        dismissible
-        dismissLabel={labels.dismiss}
-        onIdgDismiss={this.dismissNotice}
-      >
-        {this.notice === "error" ? labels.errorUnknown : labels.serverUnreachable}
-      </idg-alert>
+      <div class="notice focusable" tabindex="-1">
+        <idg-alert
+          class="outcome"
+          part="outcome"
+          variant="warning"
+          quiet={this.noticeTakesFocus}
+          dismissible
+          dismissLabel={labels.dismiss}
+          onIdgDismiss={this.dismissNotice}
+        >
+          {this.notice === "error" ? labels.errorUnknown : labels.serverUnreachable}
+        </idg-alert>
+      </div>
     );
   }
 
@@ -195,7 +213,7 @@ export class IdgUserMenu {
       content = <slot name="signed-out" />;
     }
     return (
-      <div class="user-menu">
+      <div class="user-menu focusable" role="group" aria-label={labels.region} tabindex="-1">
         {content}
         {this.renderNotice(labels)}
         <AnnouncementView announcement={this.announcement} />

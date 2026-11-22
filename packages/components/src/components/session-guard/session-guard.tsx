@@ -11,7 +11,7 @@ import {
 } from "@stencil/core";
 import type { SignedOutDetail } from "../../identity/event-details";
 import { AnnouncementView } from "../../identity/feedback-view";
-import { firstAssigned, focusRegion, focusWithin } from "../../identity/focus-region";
+import { focusWithin } from "../../identity/focus-region";
 import type { Announcement } from "../../identity/form-feedback";
 import type {
   IdentityStateView,
@@ -25,6 +25,15 @@ import { SESSION_GUARD_LABELS, type SessionGuardLabels } from "./session-guard-l
 import type { SessionChangeDetail } from "./session-guard-types";
 
 const UNKNOWN: IdentityStateView = { status: "unknown" };
+
+/**
+ * How long a sign-out this tab asked for waits for the guarded content to say how it went before
+ * focus settles on the fallback: a notice that follows would otherwise move focus a second time.
+ */
+const OUTCOME_WAIT_MS = 1000;
+
+/** Where focus goes after the next render: the guard's region, or the notice inside it. */
+type FocusTarget = "region" | "notice";
 
 /**
  * Shows its content only while someone is signed in, through the identity client it is given in
@@ -41,6 +50,9 @@ const UNKNOWN: IdentityStateView = { status: "unknown" };
  * @slot pending - What is shown while the client does not know yet, such as a skeleton.
  * @slot sign-out-outcome - Your own words for a sign-out the server could not confirm, in place
  *   of the default text.
+ * @part region - The guard's own box around what it shows, named by the `region` label. Focus goes
+ *   there when what had focus is taken away, as by a sign-in through the fallback; it is not in the
+ *   Tab order, and the design's focus ring shows on it only for keyboard users.
  * @part unreachable - The notice shown when the restore could not reach the server.
  * @part retry - Its "Try again" button. The guard also tries again when the browser is back online.
  * @part sign-out-outcome - Above the fallback: a sign-out from the guarded content (such as
@@ -49,7 +61,11 @@ const UNKNOWN: IdentityStateView = { status: "unknown" };
  */
 @Component({
   tag: "idg-session-guard",
-  styleUrls: ["../../styles/visually-hidden.css", "session-guard.css"],
+  styleUrls: [
+    "../../styles/focus-ring.css",
+    "../../styles/visually-hidden.css",
+    "session-guard.css",
+  ],
   shadow: true,
 })
 export class IdgSessionGuard {
@@ -68,9 +84,13 @@ export class IdgSessionGuard {
   @State() private unreachable = false;
   @State() private signOutNotice?: "this-device" | "everywhere";
   @State() private announcement: Announcement = { text: "", slot: 0 };
+  /** The notice takes focus, which reads it, so it leaves out its live role to be said once. */
+  @State() private noticeTakesFocus = false;
 
-  /** Set when what had focus is taken away by a transition: focus goes to what is shown next. */
-  private moveFocus = false;
+  /** Set when what had focus is taken away by a transition: focus goes there after rendering. */
+  private focusTarget?: FocusTarget;
+  /** Running while a sign-out from the content waits for its outcome; see `OUTCOME_WAIT_MS`. */
+  private outcomeWait?: ReturnType<typeof setTimeout>;
 
   private reported?: SessionChangeDetail["status"];
   private readonly restoring = new RestoreWatch<SessionGuardClient>(
@@ -86,7 +106,7 @@ export class IdgSessionGuard {
       this.unreachable = false;
       this.restoring.stop();
     }
-    if (state.status === "signed-in") this.signOutNotice = undefined;
+    if (state.status === "signed-in") this.clearNotice();
     this.show(state);
   });
 
@@ -97,6 +117,7 @@ export class IdgSessionGuard {
   disconnectedCallback(): void {
     this.binding.unbind();
     this.restoring.stop();
+    this.stopWaiting();
   }
 
   @Watch("client")
@@ -105,7 +126,8 @@ export class IdgSessionGuard {
     // The first state the new client reports is announced even when it is the same status.
     this.reported = undefined;
     this.unreachable = false;
-    this.signOutNotice = undefined;
+    this.clearNotice();
+    this.stopWaiting();
     this.restoring.stop();
     this.bind();
   }
@@ -113,34 +135,56 @@ export class IdgSessionGuard {
   // From the guarded content, which goes as soon as the client is signed out.
   @Listen("idgSignedOut")
   handleSignedOut(event: CustomEvent<SignedOutDetail>): void {
-    if (event.detail.outcome !== "server-unreachable") return;
+    const waited = this.stopWaiting();
+    if (event.detail.outcome !== "server-unreachable") {
+      if (waited) this.settle();
+      return;
+    }
     this.signOutNotice = event.detail.everywhere === true ? "everywhere" : "this-device";
-    // The sign-out may already have shown the fallback: the warning matters more.
-    if (focusWithin(this.host)) this.moveFocus = true;
+    // The warning matters more than the fallback, so it takes focus, and only it is said.
+    if (waited || focusWithin(this.host)) {
+      this.noticeTakesFocus = true;
+      this.focusTarget = "notice";
+    }
   }
 
   private dismissNotice = (event: CustomEvent<void>): void => {
     event.preventDefault();
-    this.signOutNotice = undefined;
+    if (focusWithin(this.host)) this.focusRegion();
+    this.clearNotice();
   };
+
+  private retry = (): void => {
+    // The button goes while the guard tries again, and comes back if that fails too.
+    if (focusWithin(this.host)) this.focusRegion();
+    this.restoring.retry();
+  };
+
+  private clearNotice(): void {
+    this.signOutNotice = undefined;
+    this.noticeTakesFocus = false;
+  }
 
   private renderSignOutNotice(labels: SessionGuardLabels) {
     if (this.signOutNotice === undefined) return null;
     return (
-      <idg-alert
-        class="sign-out-outcome"
-        part="sign-out-outcome"
-        variant="warning"
-        dismissible
-        dismissLabel={labels.dismiss}
-        onIdgDismiss={this.dismissNotice}
-      >
-        <slot name="sign-out-outcome">
-          {this.signOutNotice === "everywhere"
-            ? labels.signOutEverywhereUnreachable
-            : labels.signOutUnreachable}
-        </slot>
-      </idg-alert>
+      <div class="notice focusable" tabindex="-1">
+        <idg-alert
+          class="sign-out-outcome"
+          part="sign-out-outcome"
+          variant="warning"
+          quiet={this.noticeTakesFocus}
+          dismissible
+          dismissLabel={labels.dismiss}
+          onIdgDismiss={this.dismissNotice}
+        >
+          <slot name="sign-out-outcome">
+            {this.signOutNotice === "everywhere"
+              ? labels.signOutEverywhereUnreachable
+              : labels.signOutUnreachable}
+          </slot>
+        </idg-alert>
+      </div>
     );
   }
 
@@ -151,10 +195,12 @@ export class IdgSessionGuard {
 
   private show(state: IdentityStateView): void {
     const known = state.status !== "unknown" && this.status !== "unknown";
+    if (state.status !== "signed-out") this.stopWaiting();
     if (known && state.status !== this.status && focusWithin(this.host)) {
-      this.moveFocus = true;
-      const labels = mergeLabels(SESSION_GUARD_LABELS, this.labels);
-      this.announce(state.status === "signed-in" ? labels.signedIn : labels.signedOut);
+      // A sign-out this tab asked for, most likely from the content: how it went may follow.
+      if (state.status === "signed-out" && state.reason === "user") this.waitForOutcome();
+      else this.focusTarget = "region";
+      if (this.focusTarget) this.announceStatus(state.status);
     }
     this.status = state.status;
     this.report(
@@ -164,20 +210,50 @@ export class IdgSessionGuard {
     );
   }
 
+  private waitForOutcome(): void {
+    this.stopWaiting();
+    this.outcomeWait = setTimeout(() => {
+      this.outcomeWait = undefined;
+      this.settle();
+    }, OUTCOME_WAIT_MS);
+  }
+
+  /** Whether a wait was running. */
+  private stopWaiting(): boolean {
+    if (this.outcomeWait === undefined) return false;
+    clearTimeout(this.outcomeWait);
+    this.outcomeWait = undefined;
+    return true;
+  }
+
+  /** Focus to the region, and the change said, once nothing more is to follow. */
+  private settle(): void {
+    this.focusTarget = "region";
+    this.announceStatus(this.status);
+  }
+
+  private announceStatus(status: IdentityStatus): void {
+    const labels = mergeLabels(SESSION_GUARD_LABELS, this.labels);
+    this.announce(status === "signed-in" ? labels.signedIn : labels.signedOut);
+  }
+
   private announce(text: string): void {
     this.announcement = { text, slot: this.announcement.slot === 0 ? 1 : 0 };
   }
 
+  private focusRegion(): void {
+    this.host.shadowRoot?.querySelector<HTMLElement>(".region")?.focus();
+  }
+
   componentDidRender(): void {
-    if (!this.moveFocus) return;
-    this.moveFocus = false;
-    const root = this.host.shadowRoot;
-    const notice = root?.querySelector(".sign-out-outcome");
-    if (notice) {
-      focusRegion(notice);
-      return;
+    const target = this.focusTarget;
+    if (target === undefined) return;
+    this.focusTarget = undefined;
+    if (target === "notice") {
+      this.host.shadowRoot?.querySelector<HTMLElement>(".notice")?.focus();
+    } else {
+      this.focusRegion();
     }
-    focusRegion(firstAssigned(root?.querySelector("slot:not([name='sign-out-outcome'])")));
   }
 
   private report(detail: SessionChangeDetail): void {
@@ -186,29 +262,37 @@ export class IdgSessionGuard {
     this.idgSessionChange.emit(detail);
   }
 
-  render() {
-    const labels = mergeLabels(SESSION_GUARD_LABELS, this.labels);
-    const announcement = <AnnouncementView announcement={this.announcement} />;
-    if (this.status === "signed-in") return [<slot />, announcement];
+  private renderContent(labels: SessionGuardLabels) {
+    if (this.status === "signed-in") return <slot />;
     if (this.status === "signed-out") {
-      return [this.renderSignOutNotice(labels), <slot name="fallback" />, announcement];
+      return [this.renderSignOutNotice(labels), <slot name="fallback" />];
     }
     if (this.unreachable) {
       return (
         <idg-alert class="unreachable" part="unreachable" variant="warning">
           <span class="message">{labels.unreachable}</span>
-          <idg-button
-            class="retry"
-            part="retry"
-            variant="secondary"
-            size="sm"
-            onClick={this.restoring.retry}
-          >
+          <idg-button class="retry" part="retry" variant="secondary" size="sm" onClick={this.retry}>
             {labels.retry}
           </idg-button>
         </idg-alert>
       );
     }
     return <slot name="pending" />;
+  }
+
+  render() {
+    const labels = mergeLabels(SESSION_GUARD_LABELS, this.labels);
+    return [
+      <div
+        class="region focusable"
+        part="region"
+        role="group"
+        aria-label={labels.region}
+        tabindex="-1"
+      >
+        {this.renderContent(labels)}
+      </div>,
+      <AnnouncementView announcement={this.announcement} />,
+    ];
   }
 }
