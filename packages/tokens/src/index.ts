@@ -1,3 +1,4 @@
+export { contrastRatio, relativeLuminance } from "./contrast.ts";
 export { DEFAULT_DESIGN_ID, DESIGN_IDS } from "./design-ids.ts";
 export type { DesignId } from "./design-ids.ts";
 export { DESIGNS } from "./design-registry.ts";
