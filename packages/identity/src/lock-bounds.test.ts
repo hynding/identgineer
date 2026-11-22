@@ -95,6 +95,29 @@ describe("a sign-out's cookie section that outlasts its bound", () => {
   });
 });
 
+describe("without a lock manager, a cookie section", () => {
+  it("is still cut off at its bound: a cancelled sign-in's logout leaves the sign-out server-unreachable", async () => {
+    const { api, clock, client } = setup({}, { locks: null, requestTimeoutMs: TIMEOUT });
+    const releaseSignIn = api.holdNext("POST", "/api/auth/local");
+    const signingIn = rejection(client.signIn({ identifier: "ada", password: PASSWORD }));
+    await settle();
+    let result: unknown;
+    void client.signOut().then((outcome) => {
+      result = outcome;
+    });
+    await settle();
+    const releaseLogout = api.holdNext("POST", "/api/auth/logout");
+    releaseSignIn();
+    await settle();
+    expect(api.requests.at(-1)?.path).toBe("/api/auth/logout");
+    clock.advance(3 * TIMEOUT);
+    await settle();
+    expect(result).toEqual({ outcome: "server-unreachable" });
+    expect(await signingIn).toMatchObject({ code: "unauthorized" });
+    releaseLogout();
+  });
+});
+
 describe("with Web Locks, a sign-out slower in total than one request timeout", () => {
   it.each([
     ["a tab without a token", true],

@@ -186,4 +186,33 @@ describe("createTransport", () => {
     await expect(transport.send(POST_BODY)).rejects.toMatchObject({ code: "unknown" });
     expect(text).not.toHaveBeenCalled();
   });
+
+  it("sends nothing for a cookie section already cut off, and rejects network", async () => {
+    const { calls, transport } = setup(() => json({}));
+    const section = new AbortController();
+    section.abort();
+    await expect(transport.send(POST_BODY, section.signal)).rejects.toMatchObject({
+      code: "network",
+    });
+    expect(calls).toHaveLength(0);
+  });
+
+  it("aborts a request when its cookie section is cut off", async () => {
+    let seen: AbortSignal | undefined;
+    const { transport } = setup(
+      (_url, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          seen = init.signal ?? undefined;
+          init.signal?.addEventListener("abort", () => {
+            reject(new DOMException("aborted", "AbortError"));
+          });
+        }),
+    );
+    const section = new AbortController();
+    const sending = transport.send(POST_BODY, section.signal);
+    await Promise.resolve();
+    section.abort();
+    await expect(sending).rejects.toMatchObject({ code: "network" });
+    expect(seen?.aborted).toBe(true);
+  });
 });

@@ -172,6 +172,10 @@ const malformed: [string, (client: IdentityClient) => Promise<unknown>][] = [
     (client) => client.authorizedFetch("/api/x", { signal: loose({}) }),
   ],
   [
+    "authorizedFetch with an event target that is not an AbortSignal",
+    (client) => client.authorizedFetch("/api/x", { signal: loose(new EventTarget()) }),
+  ],
+  [
     "completeProviderSignIn with a null returnTo",
     (client) => client.completeProviderSignIn("github", loose({ search: "", returnTo: null })),
   ],
@@ -287,6 +291,21 @@ describe("malformed, over-long or misshapen strings", () => {
   ])("%s throws validation", (_label, call) => {
     const { client } = setup();
     expect(() => call(client)).toThrow(expect.objectContaining({ code: "validation" }));
+  });
+});
+
+describe("without String.prototype.isWellFormed", () => {
+  it("still finds a lone surrogate, high or low, and accepts a pair", () => {
+    const native = Object.getOwnPropertyDescriptor(String.prototype, "isWellFormed");
+    Reflect.deleteProperty(String.prototype, "isWellFormed");
+    try {
+      expect(isEmail("ada\ud800@example.com")).toBe(false);
+      expect(isEmail("ada\udc00@example.com")).toBe(false);
+      expect(isEmail("a\udc00\ud800@example.com")).toBe(false);
+      expect(isEmail("ada😀@example.com")).toBe(true);
+    } finally {
+      if (native !== undefined) Object.defineProperty(String.prototype, "isWellFormed", native);
+    }
   });
 });
 
