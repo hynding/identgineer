@@ -2,6 +2,7 @@ import { createAlarm } from "./alarm.ts";
 import type { Clock } from "./clock.ts";
 import { IdentityError } from "./identity-error.ts";
 import { REFRESH_LOCK, withLock, type LockManagerLike } from "./locks.ts";
+import type { OnlineSubscription } from "./online.ts";
 import type { Session, Tokens } from "./session.ts";
 import { readAuthResponse } from "./shapes.ts";
 import { tokensFrom } from "./tokens.ts";
@@ -15,7 +16,7 @@ export const REFRESH_MARGIN_MS = 30_000;
  */
 export const MIN_REFRESH_DELAY_MS = 5_000;
 const MAX_REFRESH_BACKOFF_MS = 300_000;
-/** How soon a scheduled refresh that could not reach the server tries again. */
+/** How soon a scheduled refresh that could not reach the server first tries again (then doubled). */
 export const REFRESH_RETRY_MS = 30_000;
 
 /**
@@ -45,13 +46,15 @@ export interface RefresherOptions {
   readonly locks: LockManagerLike | null;
   /** How long to wait for the cross-tab lock before refreshing without it. */
   readonly lockWaitMs: number;
+  /** Lets a refresh that could not reach the server run again as soon as the browser is online. */
+  readonly onOnline: OnlineSubscription | null;
   readonly isActive: () => boolean;
   /**
    * After a cookie refresh: whether the new token is still the signed-in user's (true), another
    * user's (false), or there is no user to compare with (undefined).
    */
   readonly verifyUser: (accessToken: string) => Promise<boolean | undefined>;
-  /** A scheduled refresh found the session over, or a known expiry passed: sign out. */
+  /** A scheduled refresh found the session over, or a known expiry passed without sessions. */
   readonly onExpired: () => void;
   /** A scheduled refresh found the cookie belongs to another user: sign out. */
   readonly onUserChanged: () => void;
@@ -73,9 +76,9 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
   const { clock, session } = options;
   const alarm = createAlarm(clock);
   let inFlight: { promise: Promise<RefreshOutcome>; tokens?: Tokens } | undefined;
-  let expiresAt = 0;
-  let expiryKnown = false;
   let shortStreak = 0;
+  let unreachableStreak = 0;
+  let stopListening = (): void => undefined;
 
   const tokensOf = (body: unknown): Tokens => {
     const tokens = tokensFrom(readAuthResponse(body), {
@@ -161,24 +164,49 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
         if (outcome === "rejected") options.onExpired();
         if (outcome === "switched") options.onUserChanged();
         // Without sessions a known expiry still ends the session; a guessed one waits for a 401.
-        if (outcome === "unavailable" && expiryKnown) alarm.set(expiresAt, options.onExpired);
+        const tokens = session.tokens();
+        if (outcome === "unavailable" && tokens?.lifetime.known === true) {
+          alarm.set(tokens.expiresAt, options.onExpired);
+        }
       },
       () => {
-        if (!options.isActive()) return;
-        if (expiryKnown && clock.now() >= expiresAt) options.onExpired();
-        else alarm.set(clock.now() + REFRESH_RETRY_MS, runScheduled);
+        if (options.isActive()) retryLater();
       },
     );
   };
 
-  function schedule(): void {
+  /**
+   * The server could not be reached (a laptop waking before its network): the refresh cookie may
+   * well be valid, so the session stays, past even a known expiry (the expired token is no longer
+   * sent), and the refresh is tried again with a doubling wait, or at once when back online.
+   */
+  const retryLater = (): void => {
+    const wait = Math.min(MAX_REFRESH_BACKOFF_MS, REFRESH_RETRY_MS * 2 ** unreachableStreak);
+    unreachableStreak += 1;
+    alarm.set(clock.now() + wait, runScheduled);
+    stopListening();
+    if (options.onOnline === null) return;
+    const stop = options.onOnline(() => {
+      stop();
+      alarm.clear();
+      runScheduled();
+    });
+    stopListening = stop;
+  };
+
+  const cancel = (): void => {
     alarm.clear();
+    stopListening();
+    stopListening = () => undefined;
+  };
+
+  function schedule(): void {
+    cancel();
+    unreachableStreak = 0;
     if (!options.isActive()) return;
     const lifetime = session.tokens()?.lifetime;
     if (lifetime === undefined) return;
     const now = clock.now();
-    expiresAt = now + lifetime.ms;
-    expiryKnown = lifetime.known;
     let delay = lifetime.ms - Math.min(REFRESH_MARGIN_MS, lifetime.ms / 2);
     // A token too short to wait for never makes the refreshes run back to back.
     if (lifetime.ms < MIN_REFRESH_DELAY_MS) {
@@ -191,5 +219,5 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
     alarm.set(now + delay, runScheduled);
   }
 
-  return { refresh, schedule, cancel: alarm.clear, pending, detached };
+  return { refresh, schedule, cancel, pending, detached };
 };

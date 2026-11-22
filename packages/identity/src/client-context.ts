@@ -4,6 +4,7 @@ import { createCrossTab, type CrossTab } from "./cross-tab.ts";
 import { IdentityError } from "./identity-error.ts";
 import { THROTTLED_STATUS, throttledError } from "./map-error.ts";
 import { resolveLocks, type LockManagerLike } from "./locks.ts";
+import { resolveOnline, type OnlineSubscription } from "./online.ts";
 import { createRefresher, type Refresher } from "./refresher.ts";
 import { createSession, type Session, type SignOutReason, type Tokens } from "./session.ts";
 import { createThrottle, type Throttle } from "./throttle.ts";
@@ -35,6 +36,11 @@ export interface IdentityClientOptions {
    * Defaults to `navigator.locks` where available; `null` turns it off.
    */
   readonly locks?: LockManagerLike | null;
+  /**
+   * Subscribes to the browser coming back online, so a refresh that could not reach the server
+   * runs again at once. Defaults to the window's `online` event; `null` turns it off.
+   */
+  readonly onOnline?: OnlineSubscription | null;
 }
 
 /** What every operation of the client shares. Internal: never handed to callers. */
@@ -51,6 +57,11 @@ export interface ClientContext {
   readonly refresher: Refresher;
   readonly crossTab: CrossTab;
   readonly isActive: () => boolean;
+  /**
+   * An access token to send: the current one, or, once its known expiry has passed, a refreshed
+   * one (rejecting `network` when the server cannot be reached, `unauthorized` without a session).
+   */
+  readonly accessToken: () => Promise<string>;
   /** A credential request: held back while throttled, and a 429 starts the hold. */
   readonly credentialRequest: (request: ApiRequest) => Promise<ApiResponse>;
   /**
@@ -129,6 +140,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     tokenLifetimeMs,
     locks: resolveLocks(options.locks),
     lockWaitMs: timeoutMs,
+    onOnline: resolveOnline(options.onOnline),
     isActive,
     verifyUser,
     onExpired: () => {
@@ -158,11 +170,27 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     return response;
   };
 
-  const withToken = (request: ApiRequest): Promise<ApiResponse> => {
-    const accessToken = session.accessToken();
-    if (accessToken === undefined) throw new IdentityError("unauthorized");
-    return transport.send({ ...request, accessToken });
+  const unexpiredToken = (): string | undefined => {
+    const tokens = session.tokens();
+    if (tokens === undefined) return undefined;
+    return tokens.lifetime.known && clock.now() >= tokens.expiresAt
+      ? undefined
+      : tokens.accessToken;
   };
+
+  const accessToken = async (): Promise<string> => {
+    const current = unexpiredToken();
+    if (current !== undefined) return current;
+    // An expired token is never sent: the refresh that replaces it reports a network failure.
+    if (session.tokens() !== undefined && (await refreshSession())) {
+      const refreshed = unexpiredToken();
+      if (refreshed !== undefined) return refreshed;
+    }
+    throw new IdentityError("unauthorized");
+  };
+
+  const withToken = async (request: ApiRequest): Promise<ApiResponse> =>
+    transport.send({ ...request, accessToken: await accessToken() });
 
   const refreshSession = async (): Promise<boolean> => {
     const generation = session.generation();
@@ -241,6 +269,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     refresher,
     crossTab,
     isActive,
+    accessToken,
     credentialRequest,
     authorizedRequest,
     refreshSession,

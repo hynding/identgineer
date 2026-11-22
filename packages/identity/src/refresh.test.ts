@@ -244,6 +244,7 @@ describe("scheduled refresh", () => {
     await expect(client.authorizedFetch("/api/users/me")).rejects.toMatchObject({
       code: "network",
     });
+    api.respondNext("POST", "/api/auth/refresh", "network-error");
     await expect(client.currentUser()).rejects.toMatchObject({ code: "network" });
     expect(paths(api.requests.slice(sent))).toEqual(["/api/auth/refresh", "/api/auth/refresh"]);
     expect(client.getState().status).toBe("signed-in");
@@ -291,11 +292,16 @@ describe("scheduled refresh", () => {
     online();
     await settle();
     await settle();
-    expect(paths(api.requests.slice(sent))).toEqual(["/api/auth/refresh"]);
+    // The refresh, then the check that the cookie is still this user's.
+    expect(paths(api.requests.slice(sent))).toEqual(["/api/auth/refresh", "/api/users/me"]);
     await expect(client.currentUser()).resolves.toMatchObject({ username: "ada" });
     online();
     await settle();
-    expect(paths(api.requests.slice(sent))).toEqual(["/api/auth/refresh", "/api/users/me"]);
+    expect(paths(api.requests.slice(sent))).toEqual([
+      "/api/auth/refresh",
+      "/api/users/me",
+      "/api/users/me",
+    ]);
   });
 
   it("still signs out when the refresh is refused after a known expiry", async () => {

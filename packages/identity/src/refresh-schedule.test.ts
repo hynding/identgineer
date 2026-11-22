@@ -266,6 +266,7 @@ describe("scheduled refresh of opaque tokens", () => {
       expect(api.requests.slice(sent).map((request) => request.path)).toEqual([
         "/api/auth/refresh",
         "/api/users/me",
+        "/api/users/me",
       ]);
     } finally {
       client.dispose();

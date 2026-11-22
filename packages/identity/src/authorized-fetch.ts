@@ -62,8 +62,7 @@ export const authorizedFetch =
   async (input: string | URL, init: RequestInit = {}): Promise<Response> => {
     const url = resolveTarget(context.base, input);
     const attempt = async (): Promise<Response> => {
-      const accessToken = context.session.accessToken();
-      if (accessToken === undefined) throw new IdentityError("unauthorized");
+      const accessToken = await context.accessToken();
       const headers = new Headers(init.headers);
       headers.set("Authorization", `Bearer ${accessToken}`);
       const timeout = timeoutSignal(context, init.signal);

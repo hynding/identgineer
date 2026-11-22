@@ -17,7 +17,8 @@ export const tokensFrom = (
     },
     options,
   );
+  const expiresAt = options.now + lifetime.ms;
   return refreshToken === undefined
-    ? { accessToken, lifetime }
-    : { accessToken, refreshToken, lifetime };
+    ? { accessToken, lifetime, expiresAt }
+    : { accessToken, refreshToken, lifetime, expiresAt };
 };

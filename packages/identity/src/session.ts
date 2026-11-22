@@ -20,6 +20,8 @@ export interface Tokens {
   /** Only when the backend returned it in a body; a cookie-held one is never seen. */
   readonly refreshToken?: string;
   readonly lifetime: TokenLifetime;
+  /** When the access token runs out, by the client's clock (receipt time plus the lifetime). */
+  readonly expiresAt: number;
 }
 
 const UNKNOWN: IdentityState = Object.freeze({ status: "unknown" });
