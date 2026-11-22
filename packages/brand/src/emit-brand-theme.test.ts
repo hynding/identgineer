@@ -6,9 +6,10 @@ import {
   parseTheme,
   resolveThemeScheme,
 } from "@identgineer/tokens/theme-pipeline";
-import { TOKEN_NAMES } from "@identgineer/tokens";
+import { brandRadiusVariableName, TOKEN_NAMES } from "@identgineer/tokens";
 import { describe, expect, it } from "vitest";
 import { COLOR_ROLES } from "./brand-theme-document.ts";
+import { RADIUS_NAMES } from "./corner-radii.ts";
 import { emitBrandThemeCss, emitBrandThemeTokens } from "./emit-brand-theme.ts";
 import { readEmittedCss } from "./emitted-css-grammar.ts";
 import { generateBrandTheme, type BrandTheme } from "./generate-brand-theme.ts";
@@ -104,24 +105,25 @@ describe("emitBrandThemeCss", () => {
         context: ["@layer idg.brand"],
         selectors: [themed],
         names: [
-          "--idg-shape-radius-sm",
-          "--idg-shape-radius-md",
-          "--idg-shape-radius-lg",
-          "--idg-shape-radius-pill",
+          "--idg-brand-radius-sm",
+          "--idg-brand-radius-md",
+          "--idg-brand-radius-lg",
+          "--idg-brand-radius-pill",
         ],
       },
     ]);
   });
 
-  it("sets only custom properties the tokens base layer declares", () => {
-    const declared = new Set(TOKEN_NAMES);
+  it("sets only custom properties the tokens base layer declares, and the brand corner preferences", () => {
+    const declared = new Set([...TOKEN_NAMES, ...RADIUS_NAMES.map(brandRadiusVariableName)]);
     for (const match of css.matchAll(/^\s+(--[a-z0-9-]+):/gm)) {
       expect(declared.has(match[1] ?? "")).toBe(true);
     }
   });
 
-  it("writes the corner radii into the brand layer", () => {
-    expect(css).toContain("--idg-shape-radius-md: 1rem;");
+  it("states the corners as a preference, never setting a design's radius itself", () => {
+    expect(css).toContain("--idg-brand-radius-md: 1rem;");
+    expect(css).not.toContain("--idg-shape-radius");
   });
 
   it("never writes the kit's name or tagline", () => {

@@ -123,9 +123,9 @@
 
 @layer idg.brand {
   [data-theme="acme"] {
-    --idg-shape-radius-sm: 0.25rem;
-    --idg-shape-radius-md: 0.5rem;
-    --idg-shape-radius-lg: 0.75rem;
-    --idg-shape-radius-pill: 9999px;
+    --idg-brand-radius-sm: 0.25rem;
+    --idg-brand-radius-md: 0.5rem;
+    --idg-brand-radius-lg: 0.75rem;
+    --idg-brand-radius-pill: 9999px;
   }
 }

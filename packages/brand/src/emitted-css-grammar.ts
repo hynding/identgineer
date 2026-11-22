@@ -42,7 +42,7 @@ const VALUE_RULES: readonly (readonly [RegExp, (value: string) => boolean])[] = 
   [/^--idg-font-display-weight$/, (value) => /^[4-9]00$/.test(value)],
   [/^--idg-font-(display|body)-letter-spacing$/, (value) => /^-?0(\.\d{1,3})?em$/.test(value)],
   [/^--idg-font-(display|body)-line-height$/, (value) => /^1(\.\d{1,2})?$/.test(value)],
-  [/^--idg-shape-radius-(sm|md|lg|pill)$/, (value) => /^(\d+(\.\d{1,3})?rem|9999px)$/.test(value)],
+  [/^--idg-brand-radius-(sm|md|lg|pill)$/, (value) => /^(\d+(\.\d{1,3})?rem|9999px)$/.test(value)],
 ];
 
 function checkDeclaration(name: string, value: string, where: string): void {

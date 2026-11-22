@@ -123,9 +123,9 @@
 
 @layer idg.brand {
   [data-theme="harbour-lights"] {
-    --idg-shape-radius-sm: 0.5rem;
-    --idg-shape-radius-md: 1rem;
-    --idg-shape-radius-lg: 1.5rem;
-    --idg-shape-radius-pill: 9999px;
+    --idg-brand-radius-sm: 0.5rem;
+    --idg-brand-radius-md: 1rem;
+    --idg-brand-radius-lg: 1.5rem;
+    --idg-brand-radius-pill: 9999px;
   }
 }
