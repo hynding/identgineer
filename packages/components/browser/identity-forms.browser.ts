@@ -181,6 +181,55 @@ test.describe("identity forms by keyboard", () => {
     await expect(page.locator("#menu").locator('[part="trigger"]')).toBeVisible();
   });
 
+  test("a registration the network failed keeps the password, and Try again sends it", async ({
+    page,
+  }) => {
+    await openIdentity(page, "?confirm");
+    await failNext(page, "/api/auth/local/register");
+    await inputOf(page, "#register", "username").fill("grace");
+    await inputOf(page, "#register", "email").fill("grace@example.com");
+    await inputOf(page, "#register", "password").fill(NEW_PASSWORD);
+    await inputOf(page, "#register", "password").press("Enter");
+    await expect(summaryOf(page, "#register")).toContainText("The service could not be reached.");
+    await expect(inputOf(page, "#register", "password")).toHaveValue(NEW_PASSWORD);
+    await page.locator("#register").locator("idg-button.retry button").click();
+    await expect(page.locator("#register").locator('[part="confirmation"]')).toBeVisible();
+    await expect(inputOf(page, "#register", "password")).toHaveCount(0);
+  });
+
+  test("a new password the network failed is kept, and Try again sets it", async ({ page }) => {
+    await openIdentity(page);
+    const code = await page.evaluate(() => {
+      const fixture = (
+        window as unknown as {
+          identityFixture: {
+            client: { requestPasswordReset: (input: { email: string }) => Promise<unknown> };
+            api: { findUser: (email: string) => { resetCode?: string } | undefined };
+          };
+        }
+      ).identityFixture;
+      return fixture.client
+        .requestPasswordReset({ email: "ada@example.com" })
+        .then(() => fixture.api.findUser("ada@example.com")?.resetCode ?? "");
+    });
+    await page.locator("#reset-complete").evaluate((host, value) => {
+      (host as HTMLElement & { code: string }).code = value;
+    }, code);
+    await failNext(page, "/api/auth/reset-password");
+    await inputOf(page, "#reset-complete", "password").fill(NEW_PASSWORD);
+    await inputOf(page, "#reset-complete", "passwordConfirmation").fill(NEW_PASSWORD);
+    await inputOf(page, "#reset-complete", "passwordConfirmation").press("Enter");
+    await expect(summaryOf(page, "#reset-complete")).toContainText(
+      "The service could not be reached.",
+    );
+    await expect(inputOf(page, "#reset-complete", "password")).toHaveValue(NEW_PASSWORD);
+    await expect(inputOf(page, "#reset-complete", "passwordConfirmation")).toHaveValue(
+      NEW_PASSWORD,
+    );
+    await page.locator("#reset-complete").locator("idg-button.retry button").click();
+    await expect(page.locator("#reset-complete").locator('[part="confirmation"]')).toBeVisible();
+  });
+
   test("registering moves focus to the confirmation", async ({ page }) => {
     await openIdentity(page, "?confirm");
     await inputOf(page, "#register", "username").fill("grace");

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { IdentityError } from "@identgineer/identity";
-import { readIdentityError } from "./identity-error";
+import { keepsPasswordForRetry, readIdentityError } from "./identity-error";
+import { IDENTITY_ERROR_CODES } from "./identity-types";
 
 describe("readIdentityError", () => {
   it("reads the code, the fields and the wait of the SDK's error", () => {
@@ -29,5 +30,12 @@ describe("readIdentityError", () => {
       code: "throttled",
       fields: [],
     });
+  });
+});
+
+describe("keepsPasswordForRetry", () => {
+  it("keeps a password only when the server never judged it: no connection, or throttled", () => {
+    const kept = IDENTITY_ERROR_CODES.filter((code) => keepsPasswordForRetry({ code, fields: [] }));
+    expect(kept).toEqual(["throttled", "network"]);
   });
 });
