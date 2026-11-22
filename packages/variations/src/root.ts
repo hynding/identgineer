@@ -11,7 +11,12 @@ export function resolveRoot(root?: VariationsRoot): Element | undefined {
   const candidate = root ?? (globalThis as { document?: Document }).document;
   if (!candidate) return undefined;
   if (!("documentElement" in candidate)) return candidate;
-  // A document can lack a root element although the DOM types say it cannot.
-  const element: Element | null = candidate.documentElement;
-  return element ?? undefined;
+  return rootElementOf(candidate);
+}
+
+// A document can lack a root element although the DOM types say it cannot.
+function rootElementOf(document: {
+  readonly documentElement: Element | null;
+}): Element | undefined {
+  return document.documentElement ?? undefined;
 }
