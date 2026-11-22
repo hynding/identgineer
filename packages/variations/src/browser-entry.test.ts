@@ -63,8 +63,8 @@ async function bundle(minify: boolean): Promise<string> {
 }
 
 describe("the bundled browser entry", () => {
-  // The measured minified size, plus about 25% headroom.
-  const BUDGET_BYTES = 18_000;
+  // Measured at 14,968 bytes minified (about 5.2 KB gzipped), plus about 25% headroom.
+  const BUDGET_BYTES = 18_700;
 
   it("stays inside its size budget", async () => {
     expect(Buffer.byteLength(await bundle(true))).toBeLessThan(BUDGET_BYTES);
