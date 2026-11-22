@@ -994,6 +994,75 @@ fit on one row in the larger type scales or a wider font. Nothing is clipped and
 scroll sideways; ordinary words elsewhere never break, because a word only breaks where it is wider
 than the line.
 
+## Variation switcher
+
+### `idg-variation-switcher`
+
+A control panel with which a visitor changes the four variation axes and the colour scheme of the
+page. It is built on [`@identgineer/variations`](../variations/README.md), which this package
+depends on, and it always acts on the document's root element: the page's attributes stay the
+single truth. Put the bootstrap script of that package in the `<head>` so a remembered or shared
+choice is applied before first paint.
+
+```html
+<idg-variation-switcher heading="Appearance" persist></idg-variation-switcher>
+<idg-variation-switcher axes="theme,scheme" orientation="inline"></idg-variation-switcher>
+```
+
+| Prop          | Attribute     | Values                                                      | Default   |
+| ------------- | ------------- | ----------------------------------------------------------- | --------- |
+| `persist`     | `persist`     | boolean: save each change with the runtime's persistence    | `false`   |
+| `axes`        | `axes`        | comma separated `theme`, `design`, `layout`, `ux`, `scheme` | all five  |
+| `orientation` | `orientation` | `stacked`, `inline`                                         | `stacked` |
+| `heading`     | `heading`     | visible heading, which also names the panel                 |           |
+
+- **Controls.** Theme is a radio group of the eight themes, each with a swatch of its colours in both
+  schemes. Design, Layout and UX are selects of the eight registry options (label from `REGISTRY`),
+  and Scheme is a radio group of System, Light and Dark. Each is an `idg-field`, so it has a visible
+  label, an accessible name, and the chosen option's description as its hint (shown in the `guided`
+  mode and always part of the accessible description). `axes` shows a subset in the panel's own order;
+  unknown names are ignored, and a list with no known name shows every control.
+- **Actions.** "Surprise me" applies `shuffleVariations()` (the scheme is left alone), "Reset"
+  removes every attribute (and the stored choice, with `persist`), and "Copy link" writes
+  `variationsUrl(state, location.href)` with `navigator.clipboard.writeText`. If the clipboard is
+  missing, blocked or refuses, the link is shown in a read-only field, focused, to be copied by hand;
+  `document.execCommand` is never used. Every result is announced in a polite live region. The copy
+  result is also shown as text; the other messages are for assistive technology only.
+- **Persist.** With `persist` the panel passes `{ persist: true }` to `applyVariations` and
+  `resetVariations`. The panel itself never reads storage: the bootstrap script applies the stored
+  choice before paint. Without the bootstrap script the choice is saved but only restored by your
+  own code (`loadVariations()`).
+- **Sync.** The panel subscribes with `onVariationsChange` when it is connected and unsubscribes when
+  it is disconnected, so it shows a change made by markup, a script or another switcher. Several
+  switchers on a page stay in step without feedback loops: only the panel the visitor used emits.
+- **Event.** `idgVariationsChange`, detail `{ state, changed }` (type `VariationsChangeDetail`), when
+  the visitor changes something through the panel and something actually changed. A change made
+  elsewhere does not fire it; listen to `onVariationsChange` for that. The inner controls' own
+  `idgChange` does not leave the panel.
+- **Parts:** `panel`, `heading`, `controls`, `actions`, `status`.
+- **Layout.** The host is a size container: `stacked` is one column, and two from 40rem
+  (`--idg-size-xl`) with the theme across both; `inline` puts controls side by side as far as they
+  fit. Below 20rem (`--idg-size-m`, which is wider in pixels at large text sizes) the padding is
+  reduced. The host needs a width of its own (it is a block, so it fills its parent; in a flex or
+  grid parent give it `min-inline-size: 0` and a width). Verified at 320px to 1920px, at 200% text
+  with a wider face, in right-to-left text, and in every layout.
+- **Accessibility.** The panel is a `role="group"` named by `heading`, or "Appearance". Everything is
+  keyboard operable: the theme and scheme groups have one tab stop and arrows choose (the horizontal
+  arrows swap in right-to-left text), the selects change with the arrow keys, and the buttons take
+  Enter and Space. Targets follow `--idg-density-target-size`. axe reports nothing in any UX mode or
+  design, in both schemes. In `forced-colors` the swatches keep their colours (`forced-color-adjust:
+none`) and get an edge in `CanvasText`. The panel has no motion of its own.
+- **CSP.** A swatch is an inline `svg` whose `fill` attributes are set from the registry. SVG
+  presentation attributes are not inline styles, so `style-src 'self'` does not govern them, and
+  nothing writes a `style` attribute or property. Each colour is checked to be a hex colour before it
+  reaches an attribute. Everything that comes from the URL or storage goes through
+  `@identgineer/variations`, which accepts only registry ids. There is no `innerHTML`, `eval` or
+  `execCommand`.
+- **Server rendering.** Nothing touches the DOM when the module is loaded. The state is read when the
+  element connects.
+- **Bundle.** The Stencil build compiles the variations source into the components' own chunks
+  (about 5 KB gzipped); `@identgineer/tokens` is not part of it.
+
 ## Strict CSP and Trusted Types
 
 Every component is verified in Chromium against
