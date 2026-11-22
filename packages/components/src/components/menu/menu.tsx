@@ -189,8 +189,7 @@ export class IdgMenu {
   @Listen("click")
   handleClick(event: MouseEvent): void {
     const item = (event.target as Element).closest("idg-menu-item");
-    if (!this.shown || !item) return;
-    if (item.closest("idg-menu") !== this.host) return;
+    if (!this.shown || !item || !this.items().includes(item)) return;
     if (item.disabled) {
       event.preventDefault();
       return;
@@ -238,10 +237,28 @@ export class IdgMenu {
     );
   }
 
+  // The items drawn in the menu: its own children and those another component forwards to it
+  // through a slot of its own (the default slot's assignment, flattened), each with the items of
+  // a group it holds. An item of a menu nested in one of them belongs to that menu.
   private items(): HTMLIdgMenuItemElement[] {
-    return Array.from(this.host.querySelectorAll("idg-menu-item")).filter(
-      (item) => !item.hidden && item.closest("idg-menu") === this.host,
-    );
+    return this.slottedElements()
+      .flatMap((element) =>
+        element.localName === "idg-menu-item"
+          ? [element as HTMLIdgMenuItemElement]
+          : Array.from(element.querySelectorAll("idg-menu-item")).filter((item) => {
+              const owner = item.closest("idg-menu");
+              return owner === null || !element.contains(owner);
+            }),
+      )
+      .filter((item) => !item.hidden);
+  }
+
+  // The mock DOM of the unit tests has no slot assignment; there the children stand in for it.
+  private slottedElements(): Element[] {
+    const slot = this.host.shadowRoot?.querySelector<HTMLSlotElement>("slot:not([name])");
+    if (typeof slot?.assignedElements === "function")
+      return slot.assignedElements({ flatten: true });
+    return Array.from(this.host.children).filter((child) => !child.hasAttribute("slot"));
   }
 
   // Without a label the menu is named by its trigger. The reference points out of this shadow
@@ -339,7 +356,9 @@ export class IdgMenu {
     const trigger = this.trigger;
     const lost = active === null || active === document.body;
     const inside =
-      active !== null && isWithin(active, this.host) && !(trigger && isWithin(active, trigger));
+      active !== null &&
+      (isWithin(active, this.host) || this.items().some((item) => isWithin(active, item))) &&
+      !(trigger && isWithin(active, trigger));
     if (trigger && (lost || inside)) focusInto(trigger);
     this.idgClose.emit();
   }
