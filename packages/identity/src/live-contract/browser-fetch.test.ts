@@ -170,11 +170,13 @@ describe("the live tests' browser-like fetch", () => {
     const browser = createBrowserFetch({
       jar: createCookieJar(),
       pageOrigin: PAGE,
-      fetch: network(() => new Response("moved", { status: 302, headers: { Location: "/x" } }))
-        .fetch,
+      fetch: network(
+        () => new Response("moved", { status: 302, headers: { ...CORS_OK, Location: "/x" } }),
+      ).fetch,
     });
     const answer = await browser.fetch(`${API}/api/auth/email-confirmation?confirmation=x`, {
       redirect: "manual",
+      credentials: "include",
     });
     expect(answer.type).toBe("opaqueredirect");
     expect(answer.status).toBe(0);
@@ -244,5 +246,50 @@ describe("the live tests' browser-like fetch", () => {
     });
     await browser.fetch(`${API}/api/auth/local`, { method: "POST", credentials: "include" });
     expect(jar.all()).toEqual([]);
+  });
+
+  it("fails an unfollowed cross-origin redirect CORS does not allow, keeping its cookies", async () => {
+    const jar = createCookieJar();
+    const browser = createBrowserFetch({
+      jar,
+      pageOrigin: PAGE,
+      fetch: network(
+        () =>
+          new Response(null, {
+            status: 302,
+            headers: { Location: "/x", "Set-Cookie": "seen=1; Path=/; SameSite=Lax" },
+          }),
+      ).fetch,
+    });
+    await expect(
+      browser.fetch(`${API}/api/auth/email-confirmation?confirmation=x`, {
+        redirect: "manual",
+        credentials: "include",
+      }),
+    ).rejects.toThrow(TypeError);
+    expect(jar.get("seen")).toBeDefined();
+  });
+
+  it("drops a method-override header naming a forbidden method, and keeps any other", async () => {
+    const net = network(() => json());
+    const browser = createBrowserFetch({
+      jar: createCookieJar(),
+      pageOrigin: PAGE,
+      cors: false,
+      fetch: net.fetch,
+    });
+    await browser.fetch(`${API}/api/users/me`, {
+      headers: {
+        "X-HTTP-Method": "TRACE",
+        "X-HTTP-Method-Override": "get, connect",
+        "X-Method-Override": "track",
+      },
+    });
+    const forbidden = net.seen.at(-1)?.headers ?? new Headers();
+    expect(forbidden.get("X-HTTP-Method")).toBeNull();
+    expect(forbidden.get("X-HTTP-Method-Override")).toBeNull();
+    expect(forbidden.get("X-Method-Override")).toBeNull();
+    await browser.fetch(`${API}/api/users/me`, { headers: { "X-HTTP-Method-Override": "DELETE" } });
+    expect(net.seen.at(-1)?.headers.get("X-HTTP-Method-Override")).toBe("DELETE");
   });
 });

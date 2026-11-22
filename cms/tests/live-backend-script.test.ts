@@ -64,6 +64,16 @@ describe("cms/scripts/live-backend.js", () => {
     },
   );
 
+  it("scaffolds once and keeps no VCS metadata in vendor", { timeout: 30_000 }, () => {
+    const setup = fake({ scaffolded: false });
+    const result = runFake(setup, [NODE, "-e", ""]);
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    const pkg = join(setup.live, "strapi-php", "vendor", "acme", "pkg");
+    expect(existsSync(join(pkg, "src.php"))).toBe(true);
+    expect(existsSync(join(pkg, ".git"))).toBe(false);
+  });
+
   it("makes a fresh APP_KEY on every run", { timeout: 30_000 }, () => {
     const setup = fake();
     const key = () =>
@@ -123,6 +133,27 @@ describe("cms/scripts/live-backend.js", () => {
     expect(Date.now() - started).toBeLessThan(15_000);
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/the \w+ server exited with code 3/);
+  });
+
+  it("stops camis when signalled while it builds, and exits 143", { timeout: 30_000 }, async () => {
+    const setup = fake({ buildMode: "hang" });
+    const pidFile = join(setup.camisBin, "build.pid");
+    const child = spawn(NODE, [SCRIPT, "--", NODE, "-e", ""], { env: setup.env, stdio: "ignore" });
+    const exit = new Promise<number | null>((resolve) =>
+      child.on("exit", (code) => {
+        resolve(code);
+      }),
+    );
+    while (!existsSync(pidFile) && child.exitCode === null) {
+      await new Promise((wake) => setTimeout(wake, 50));
+    }
+    const started = Date.now();
+    child.kill("SIGTERM");
+    expect(await exit).toBe(143);
+    expect(Date.now() - started).toBeLessThan(5_000);
+    await new Promise((wake) => setTimeout(wake, 200));
+    expect(alive(Number(readFileSync(pidFile, "utf8")))).toBe(false);
+    expect(setup.records("server.jsonl")).toEqual([]);
   });
 
   it(

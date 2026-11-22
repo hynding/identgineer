@@ -45,10 +45,36 @@ if (first === "-r") {
 }
 `;
 
+/**
+ * A stand-in camis CLI: `scaffold filament <dir>` lays out a Laravel app whose vendor package carries its
+ * git checkout, as Composer leaves one it could only clone; `build` records its process id in
+ * `build.pid` and, when the file `build-mode` says `hang`, runs until it is killed.
+ */
+const FAKE_CAMIS = `import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+const here = import.meta.dirname;
+const [command, ...rest] = process.argv.slice(2);
+const dir = rest.at(-1);
+if (command === "scaffold") {
+  for (const sub of ["public", join("storage", "logs"), join("vendor", "acme", "pkg", ".git")]) {
+    mkdirSync(join(dir, sub), { recursive: true });
+  }
+  writeFileSync(join(dir, "vendor", "autoload.php"), "<?php\\n");
+  writeFileSync(join(dir, "vendor", "acme", "pkg", "src.php"), "<?php\\n");
+  writeFileSync(join(dir, "vendor", "acme", "pkg", ".git", "HEAD"), "ref: refs/heads/main\\n");
+} else if (command === "build") {
+  writeFileSync(join(here, "build.pid"), String(process.pid));
+  const mode = join(here, "build-mode");
+  if (existsSync(mode) && readFileSync(mode, "utf8") === "hang") setInterval(() => {}, 1000);
+}
+`;
+
 export interface Fake {
   readonly root: string;
   readonly live: string;
   readonly env: NodeJS.ProcessEnv;
+  /** The directory of the stand-in camis CLI, where `build.pid` lands. */
+  readonly camisBin: string;
   readonly records: (
     file: string,
   ) => { args: string[]; env: Record<string, string>; pid: number }[];
@@ -56,7 +82,15 @@ export interface Fake {
 
 const roots: string[] = [];
 
-export const fake = (options: { version?: string; serverMode?: string } = {}): Fake => {
+export const fake = (
+  options: {
+    version?: string;
+    serverMode?: string;
+    /** false: no app yet, and a stand-in `composer` on the PATH for the scaffold. */
+    scaffolded?: boolean;
+    buildMode?: "hang";
+  } = {},
+): Fake => {
   const root = mkdtempSync(join(tmpdir(), "live-backend-"));
   roots.push(root);
   const bin = join(root, "bin");
@@ -67,16 +101,23 @@ export const fake = (options: { version?: string; serverMode?: string } = {}): F
   if (options.serverMode !== undefined) writeFileSync(join(bin, "server-mode"), options.serverMode);
   const camis = join(root, "camis", "packages", "cli", "bin");
   mkdirSync(camis, { recursive: true });
-  writeFileSync(join(camis, "camis.mjs"), "");
+  writeFileSync(join(camis, "camis.mjs"), FAKE_CAMIS);
+  if (options.buildMode !== undefined) writeFileSync(join(camis, "build-mode"), options.buildMode);
   const live = join(root, "live");
   const app = join(live, "strapi-php");
-  for (const dir of ["vendor", "public", join("storage", "logs")]) {
-    mkdirSync(join(app, dir), { recursive: true });
+  if (options.scaffolded === false) {
+    writeFileSync(join(bin, "composer"), `#!${NODE}\n`);
+    chmodSync(join(bin, "composer"), 0o755);
+  } else {
+    for (const dir of ["vendor", "public", join("storage", "logs")]) {
+      mkdirSync(join(app, dir), { recursive: true });
+    }
+    writeFileSync(join(app, "vendor", "autoload.php"), "<?php\n");
   }
-  writeFileSync(join(app, "vendor", "autoload.php"), "<?php\n");
   return {
     root,
     live,
+    camisBin: camis,
     env: { PATH: bin, HOME: root, CAMIS_DIR: join(root, "camis"), IDENTITY_LIVE_DIR: live },
     records: (file) =>
       existsSync(join(bin, file))
