@@ -204,6 +204,39 @@ test.describe("identity forms by keyboard", () => {
 });
 
 test.describe("identity forms and secrets", () => {
+  test("a shown password is hidden again when the form is sent, and stays hidden", async ({
+    page,
+  }) => {
+    await openIdentity(page);
+    const password = inputOf(page, "#sign-in", "password");
+    // The type the native input has while the form's submit event runs.
+    await page.locator("#sign-in").evaluate((host) => {
+      const record = window as unknown as { typesAtSubmit: string[] };
+      record.typesAtSubmit = [];
+      const form = host.shadowRoot?.querySelector("form");
+      const input = host.shadowRoot
+        ?.querySelector('idg-input[name="password"]')
+        ?.shadowRoot?.querySelector("input");
+      form?.addEventListener("submit", () => record.typesAtSubmit.push(input?.type ?? ""));
+    });
+    const reveal = page.locator("#sign-in").locator('idg-input[name="password"] button.reveal');
+    await inputOf(page, "#sign-in", "identifier").fill("ada@example.com");
+    await password.fill("not the password");
+    await reveal.click();
+    await expect(password).toHaveAttribute("type", "text");
+    await password.press("Enter");
+    await expect(summaryOf(page, "#sign-in")).toBeVisible();
+    await expect(password).toHaveAttribute("type", "password");
+    await password.fill(PASSWORD);
+    await reveal.click();
+    await password.press("Enter");
+    await expect(page.locator("#menu").locator('[part="trigger"]')).toBeVisible();
+    await expect(password).toHaveAttribute("type", "password");
+    expect(
+      await page.evaluate(() => (window as unknown as { typesAtSubmit: string[] }).typesAtSubmit),
+    ).toEqual(["password", "password"]);
+  });
+
   test("no password reaches an attribute, a text node or an event", async ({ page }) => {
     await openIdentity(page);
     await inputOf(page, "#sign-in", "identifier").fill("ada@example.com");

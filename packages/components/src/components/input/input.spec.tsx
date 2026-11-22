@@ -187,6 +187,25 @@ describe("idg-input password reveal", () => {
     expect(native(root).value).toBe("hunter2");
   });
 
+  it("hides the password again when the value is set from outside or the form is reset", async () => {
+    const { root, waitForChanges } = await renderWithInternals(
+      <idg-input type="password" reveal value="hunter2" />,
+    );
+    const button = () => root.shadowRoot?.querySelector("button");
+    const host = root as unknown as { value: string; formResetCallback: () => void };
+    button()?.click();
+    await waitForChanges();
+    host.value = "";
+    expect(native(root).getAttribute("type")).toBe("password");
+    await waitForChanges();
+    expect(button()?.getAttribute("aria-pressed")).toBe("false");
+    button()?.click();
+    await waitForChanges();
+    host.formResetCallback();
+    await waitForChanges();
+    expect(native(root).getAttribute("type")).toBe("password");
+  });
+
   it("takes the label for the toggle from revealLabel", async () => {
     const { root } = await render(<idg-input type="password" reveal revealLabel="Mostrar" />);
     expect(root.shadowRoot?.querySelector("button")?.getAttribute("aria-label")).toBe("Mostrar");
