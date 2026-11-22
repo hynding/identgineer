@@ -7,7 +7,7 @@ export function mergeLabels<T extends object>(defaults: T, overrides: Partial<T>
   // Typed loosely on purpose: the prop is set from JavaScript, which checks nothing.
   const source: unknown = overrides;
   if (typeof source !== "object" || source === null) return defaults;
-  const merged: Record<string, unknown> = { ...defaults };
+  const merged = { ...defaults } as Record<string, unknown>;
   for (const key of Object.keys(defaults)) {
     const value = (source as Record<string, unknown>)[key];
     if (typeof value === "string") merged[key] = value;

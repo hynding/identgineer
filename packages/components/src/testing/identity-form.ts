@@ -38,9 +38,9 @@ export function nativeInput(root: HTMLElement, name: string): HTMLInputElement {
 
 /** The idg-field around the control named `name`. */
 export function fieldOf(root: HTMLElement, name: string): FieldElement {
-  const field = control(root, name).closest("idg-field");
+  const field: FieldElement | null = control(root, name).closest("idg-field");
   if (!field) throw new Error(`the control ${name} is not in a field`);
-  return field as FieldElement;
+  return field;
 }
 
 export function fill(root: HTMLElement, values: Readonly<Record<string, string>>): void {

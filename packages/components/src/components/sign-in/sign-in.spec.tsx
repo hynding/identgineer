@@ -86,7 +86,7 @@ describe("idg-sign-in form", () => {
 
   it("has a submit button that is never disabled as validation", async () => {
     const { root } = await mount();
-    const submitButton = button(root, 'idg-button[type="submit"]');
+    const submitButton = button(root, "idg-button.submit");
     expect(submitButton.textContent).toContain("Sign in");
     expect(submitButton.hasAttribute("disabled")).toBe(false);
   });
@@ -132,11 +132,11 @@ describe("idg-sign-in signing in", () => {
     submit(root);
     submit(root);
     await waitForChanges();
-    expect(button(root, 'idg-button[type="submit"]').loading).toBe(true);
+    expect(button(root, "idg-button.submit").loading).toBe(true);
     release();
     await settle(waitForChanges);
     expect(api.requests.filter((request) => request.path === "/api/auth/local")).toHaveLength(1);
-    expect(button(root, 'idg-button[type="submit"]').loading).toBe(false);
+    expect(button(root, "idg-button.submit").loading).toBe(false);
   });
 
   it("checks for empty fields itself: marks each, focuses the first and sends nothing", async () => {
@@ -174,7 +174,7 @@ describe("idg-sign-in signing in", () => {
     expect(textOf(root, '[part="error"]')).toBe("The email, username or password is not correct.");
     expect(wrongPassword).toBe(unknownAccount);
     expect(control(root, "password").value).toBe("");
-    expect(button(root, 'idg-button[type="submit"]').loading).toBe(false);
+    expect(button(root, "idg-button.submit").loading).toBe(false);
   });
 
   it("never shows the server's own words", async () => {
@@ -226,7 +226,7 @@ describe("idg-sign-in throttling", () => {
   it("counts down from the client's wait, announces it politely once, and says when it is over", async () => {
     const { api, client, clock } = identitySetup();
     const { root, waitForChanges } = await mount(client);
-    (root as SignInElement).clock = clock;
+    root.clock = clock;
     api.respondNext("POST", "/api/auth/local", throttledAnswer(65));
     fill(root, { identifier: "ada@example.com", password: PASSWORD });
     submit(root);
@@ -240,7 +240,7 @@ describe("idg-sign-in throttling", () => {
     await waitForChanges();
     expect(textOf(root, '[part="throttle"]')).toBe("Too many attempts. You can try again in 1:04.");
     expect(textOf(root, '[role="status"]')).toBe("Too many attempts. You can try again in 1:05.");
-    expect(button(root, 'idg-button[type="submit"]').hasAttribute("disabled")).toBe(false);
+    expect(button(root, "idg-button.submit").hasAttribute("disabled")).toBe(false);
     clock.advance(64_000);
     await waitForChanges();
     expect(shadowOf(root).querySelector('[part="throttle"]')).toBeNull();
@@ -250,7 +250,7 @@ describe("idg-sign-in throttling", () => {
   it("stops counting once disconnected", async () => {
     const { api, client, clock } = identitySetup();
     const { root, waitForChanges } = await mount(client);
-    (root as SignInElement).clock = clock;
+    root.clock = clock;
     api.respondNext("POST", "/api/auth/local", throttledAnswer(30));
     fill(root, { identifier: "ada@example.com", password: PASSWORD });
     submit(root);
@@ -287,7 +287,7 @@ describe("idg-sign-in client", () => {
     await waitForChanges();
     root.client = second.client;
     await waitForChanges();
-    expect(button(root, 'idg-button[type="submit"]').loading).toBe(false);
+    expect(button(root, "idg-button.submit").loading).toBe(false);
     release();
     await settle(waitForChanges);
     expect(events.seen.filter((seen) => seen.type === "idgSignedIn")).toEqual([]);
@@ -359,7 +359,7 @@ describe("idg-sign-in labels", () => {
     const { root, waitForChanges } = await mount();
     root.labels = { submit: "Anmelden", identifierRequired: "Bitte ausfüllen." };
     await waitForChanges();
-    expect(button(root, 'idg-button[type="submit"]').textContent).toContain("Anmelden");
+    expect(button(root, "idg-button.submit").textContent).toContain("Anmelden");
     expect(fieldOf(root, "password").label).toBe("Password");
     submit(root);
     await waitForChanges();

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { fillTemplate, mergeLabels } from "./labels";
 
-const DEFAULTS = { submit: "Sign in", title: "Welcome" } as const;
+const DEFAULTS: { readonly submit: string; readonly title: string } = {
+  submit: "Sign in",
+  title: "Welcome",
+};
 
 describe("mergeLabels", () => {
   it("keeps every default without overrides", () => {

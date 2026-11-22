@@ -9,7 +9,7 @@ const restored = new WeakSet();
  * signed in, once per client. A failure leaves the state unknown; the page may call `restore()`
  * again itself.
  */
-export function restoreOnce(client: StateSource & RestoreSource): void {
+export function restoreOnce(client: Pick<StateSource, "getState"> & RestoreSource): void {
   if (restored.has(client) || client.getState().status !== "unknown") return;
   restored.add(client);
   try {

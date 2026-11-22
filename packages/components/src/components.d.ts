@@ -28,6 +28,11 @@ import { PageChangeDetail } from "./components/pagination/pagination-options";
 import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
 import { SidebarSide } from "./components/sidebar/sidebar-options";
+import { SignInClient } from "./identity/identity-types";
+import { SignInLabels } from "./components/sign-in/sign-in-labels";
+import { ProviderSignInDetail, SignInProvider } from "./components/sign-in/sign-in-types";
+import { CountdownClock } from "./identity/throttle-countdown";
+import { SignedInDetail } from "./identity/event-details";
 import { SkeletonVariant } from "./components/skeleton/skeleton-options";
 import { StackAlignment } from "./components/stack/stack-options";
 import { StatDirection, StatSentiment } from "./components/stat/stat-options";
@@ -61,6 +66,11 @@ export { PageChangeDetail } from "./components/pagination/pagination-options";
 export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
 export { SidebarSide } from "./components/sidebar/sidebar-options";
+export { SignInClient } from "./identity/identity-types";
+export { SignInLabels } from "./components/sign-in/sign-in-labels";
+export { ProviderSignInDetail, SignInProvider } from "./components/sign-in/sign-in-types";
+export { CountdownClock } from "./identity/throttle-countdown";
+export { SignedInDetail } from "./identity/event-details";
 export { SkeletonVariant } from "./components/skeleton/skeleton-options";
 export { StackAlignment } from "./components/stack/stack-options";
 export { StatDirection, StatSentiment } from "./components/stat/stat-options";
@@ -159,6 +169,11 @@ export namespace Components {
           * @default false
          */
         "dismissible": boolean;
+        /**
+          * Leaves out the live role, for a message that changes while it is shown (a countdown, say), which a live role would announce on every change. Announce it some other way.
+          * @default false
+         */
+        "quiet": boolean;
         /**
           * Meaning and urgency. Warning and danger interrupt assistive technology; info and success do not.
           * @default "info"
@@ -1184,6 +1199,33 @@ export namespace Components {
         "sideWidth"?: SizeStep;
     }
     /**
+     * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
+     * password: the password is read from its input when the form is sent and the input is emptied
+     * after a sign-in, a refused one, or when the element leaves the page.
+     */
+    interface IdgSignIn {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: SignInClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<SignInLabels>;
+        /**
+          * The page the CMS sends the browser back to after a provider sign-in.
+         */
+        "providerCallback"?: string;
+        /**
+          * Provider buttons, in order. Each starts the provider's sign-in through the client.
+         */
+        "providers"?: readonly SignInProvider[];
+    }
+    /**
      * A placeholder shaped like content that is still loading. It is always hidden from assistive
      * technology, so it announces nothing by itself. Mark the region being loaded with
      * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
@@ -1726,6 +1768,10 @@ export interface IdgSelectCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgSelectElement;
 }
+export interface IdgSignInCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgSignInElement;
+}
 export interface IdgSwitchCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgSwitchElement;
@@ -2230,6 +2276,29 @@ declare global {
         prototype: HTMLIdgSidebarElement;
         new (): HTMLIdgSidebarElement;
     };
+    interface HTMLIdgSignInElementEventMap {
+        "idgSignedIn": SignedInDetail;
+        "idgProviderSignIn": ProviderSignInDetail;
+    }
+    /**
+     * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
+     * password: the password is read from its input when the form is sent and the input is emptied
+     * after a sign-in, a refused one, or when the element leaves the page.
+     */
+    interface HTMLIdgSignInElement extends Components.IdgSignIn, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgSignInElementEventMap>(type: K, listener: (this: HTMLIdgSignInElement, ev: IdgSignInCustomEvent<HTMLIdgSignInElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgSignInElementEventMap>(type: K, listener: (this: HTMLIdgSignInElement, ev: IdgSignInCustomEvent<HTMLIdgSignInElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgSignInElement: {
+        prototype: HTMLIdgSignInElement;
+        new (): HTMLIdgSignInElement;
+    };
     /**
      * A placeholder shaped like content that is still loading. It is always hidden from assistive
      * technology, so it announces nothing by itself. Mark the region being loaded with
@@ -2496,6 +2565,7 @@ declare global {
         "idg-radio-group": HTMLIdgRadioGroupElement;
         "idg-select": HTMLIdgSelectElement;
         "idg-sidebar": HTMLIdgSidebarElement;
+        "idg-sign-in": HTMLIdgSignInElement;
         "idg-skeleton": HTMLIdgSkeletonElement;
         "idg-stack": HTMLIdgStackElement;
         "idg-stat": HTMLIdgStatElement;
@@ -2604,6 +2674,11 @@ declare namespace LocalJSX {
           * Fires when the dismiss button is activated. The alert then hides itself, unless a listener calls `preventDefault()` to remove or keep it some other way.
          */
         "onIdgDismiss"?: (event: IdgAlertCustomEvent<void>) => void;
+        /**
+          * Leaves out the live role, for a message that changes while it is shown (a countdown, say), which a live role would announce on every change. Announce it some other way.
+          * @default false
+         */
+        "quiet"?: boolean;
         /**
           * Meaning and urgency. Warning and danger interrupt assistive technology; info and success do not.
           * @default "info"
@@ -3625,6 +3700,41 @@ declare namespace LocalJSX {
         "sideWidth"?: SizeStep;
     }
     /**
+     * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
+     * password: the password is read from its input when the form is sent and the input is emptied
+     * after a sign-in, a refused one, or when the element leaves the page.
+     */
+    interface IdgSignIn {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: SignInClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<SignInLabels>;
+        /**
+          * Fires before going to a provider's sign-in. Cancel it to navigate yourself; otherwise the browser goes to `detail.url` with `location.assign`.
+         */
+        "onIdgProviderSignIn"?: (event: IdgSignInCustomEvent<ProviderSignInDetail>) => void;
+        /**
+          * Fires after a sign-in, with the user's id and username. Navigating on is the page's job.
+         */
+        "onIdgSignedIn"?: (event: IdgSignInCustomEvent<SignedInDetail>) => void;
+        /**
+          * The page the CMS sends the browser back to after a provider sign-in.
+         */
+        "providerCallback"?: string;
+        /**
+          * Provider buttons, in order. Each starts the provider's sign-in through the client.
+         */
+        "providers"?: readonly SignInProvider[];
+    }
+    /**
      * A placeholder shaped like content that is still loading. It is always hidden from assistive
      * technology, so it announces nothing by itself. Mark the region being loaded with
      * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
@@ -4144,6 +4254,7 @@ declare namespace LocalJSX {
     }
     interface IdgAlertAttributes {
         "variant": AlertVariant;
+        "quiet": boolean;
         "dismissible": boolean;
         "dismissLabel": string;
     }
@@ -4374,6 +4485,9 @@ declare namespace LocalJSX {
         "sideWidth": SizeStep;
         "gap": GapStep;
     }
+    interface IdgSignInAttributes {
+        "providerCallback": string;
+    }
     interface IdgSkeletonAttributes {
         "variant": SkeletonVariant;
         "lines": number;
@@ -4519,6 +4633,7 @@ declare namespace LocalJSX {
         "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
         "idg-select": Omit<IdgSelect, keyof IdgSelectAttributes> & { [K in keyof IdgSelect & keyof IdgSelectAttributes]?: IdgSelect[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `attr:${K}`]?: IdgSelectAttributes[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `prop:${K}`]?: IdgSelect[K] };
         "idg-sidebar": Omit<IdgSidebar, keyof IdgSidebarAttributes> & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes]?: IdgSidebar[K] } & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `attr:${K}`]?: IdgSidebarAttributes[K] } & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `prop:${K}`]?: IdgSidebar[K] };
+        "idg-sign-in": Omit<IdgSignIn, keyof IdgSignInAttributes> & { [K in keyof IdgSignIn & keyof IdgSignInAttributes]?: IdgSignIn[K] } & { [K in keyof IdgSignIn & keyof IdgSignInAttributes as `attr:${K}`]?: IdgSignInAttributes[K] } & { [K in keyof IdgSignIn & keyof IdgSignInAttributes as `prop:${K}`]?: IdgSignIn[K] };
         "idg-skeleton": Omit<IdgSkeleton, keyof IdgSkeletonAttributes> & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes]?: IdgSkeleton[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `attr:${K}`]?: IdgSkeletonAttributes[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `prop:${K}`]?: IdgSkeleton[K] };
         "idg-stack": Omit<IdgStack, keyof IdgStackAttributes> & { [K in keyof IdgStack & keyof IdgStackAttributes]?: IdgStack[K] } & { [K in keyof IdgStack & keyof IdgStackAttributes as `attr:${K}`]?: IdgStackAttributes[K] } & { [K in keyof IdgStack & keyof IdgStackAttributes as `prop:${K}`]?: IdgStack[K] };
         "idg-stat": Omit<IdgStat, keyof IdgStatAttributes> & { [K in keyof IdgStat & keyof IdgStatAttributes]?: IdgStat[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `attr:${K}`]?: IdgStatAttributes[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `prop:${K}`]?: IdgStat[K] };
@@ -4719,6 +4834,12 @@ declare module "@stencil/core" {
              * when it is at the end.
              */
             "idg-sidebar": LocalJSX.IntrinsicElements["idg-sidebar"] & JSXBase.HTMLAttributes<HTMLIdgSidebarElement>;
+            /**
+             * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
+             * password: the password is read from its input when the form is sent and the input is emptied
+             * after a sign-in, a refused one, or when the element leaves the page.
+             */
+            "idg-sign-in": LocalJSX.IntrinsicElements["idg-sign-in"] & JSXBase.HTMLAttributes<HTMLIdgSignInElement>;
             /**
              * A placeholder shaped like content that is still loading. It is always hidden from assistive
              * technology, so it announces nothing by itself. Mark the region being loaded with
