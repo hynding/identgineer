@@ -1,0 +1,63 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  min-inline-size: 0;
+}
+
+.section-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  min-inline-size: 0;
+}
+
+.section-body > *,
+.form > idg-button {
+  max-inline-size: 100%;
+}
+
+.form > idg-button {
+  align-self: flex-start;
+}
+
+.owner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  min-inline-size: 0;
+}
+
+.sessions {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+  inline-size: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  row-gap: var(--idg-space-3xs);
+  padding-block: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+  border-block-end: var(--idg-border-width) var(--idg-border-style) var(--idg-border-color);
+}
+
+.session-device {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--idg-space-2xs);
+  font-weight: var(--idg-font-weight-semibold);
+}
+
+.revoke {
+  margin-inline-start: auto;
+}

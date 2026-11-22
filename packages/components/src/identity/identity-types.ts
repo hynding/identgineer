@@ -110,7 +110,12 @@ export interface SignOutSource {
   readonly signOut: (options?: { readonly everywhere?: boolean }) => Promise<SignOutOutcome>;
 }
 
-export interface ProfileClient extends StateSource, ThrottleSource, SignOutSource {
+/** Resumes the session from the refresh cookie; called once while the state is unknown. */
+export interface RestoreSource {
+  readonly restore: () => Promise<unknown>;
+}
+
+export interface ProfileClient extends StateSource, RestoreSource, ThrottleSource, SignOutSource {
   readonly getProfile: () => Promise<ProfileView | null>;
   readonly saveProfile: (input: ProfileInputView) => Promise<ProfileView>;
   readonly changePassword: (input: {
@@ -120,11 +125,6 @@ export interface ProfileClient extends StateSource, ThrottleSource, SignOutSourc
   }) => Promise<void>;
   readonly listSessions: () => Promise<readonly SessionView[]>;
   readonly revokeSession: (id: string) => Promise<void>;
-}
-
-/** Resumes the session from the refresh cookie; called once while the state is unknown. */
-export interface RestoreSource {
-  readonly restore: () => Promise<unknown>;
 }
 
 export interface SessionGuardClient extends StateSource, RestoreSource {}

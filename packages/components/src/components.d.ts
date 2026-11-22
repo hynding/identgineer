@@ -25,11 +25,13 @@ import { NavigationToggleDetail } from "./components/layout/layout-options";
 import { Placement } from "./utils/position";
 import { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 import { PageChangeDetail } from "./components/pagination/pagination-options";
-import { PasswordResetClient, RegisterClient, SessionGuardClient, SignInClient, UserMenuClient } from "./identity/identity-types";
+import { PasswordResetClient, ProfileClient, RegisterClient, SessionGuardClient, SignInClient, UserMenuClient } from "./identity/identity-types";
 import { PasswordResetMode } from "./components/password-reset/password-reset-options";
 import { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
 import { CountdownClock } from "./identity/throttle-countdown";
 import { SignedInDetail, SignedOutDetail } from "./identity/event-details";
+import { ProfileLabels } from "./components/profile/profile-labels";
+import { ProfileSavedDetail, SessionRevokedDetail } from "./components/profile/profile-types";
 import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
 import { RegisterLabels } from "./components/register/register-labels";
@@ -69,11 +71,13 @@ export { NavigationToggleDetail } from "./components/layout/layout-options";
 export { Placement } from "./utils/position";
 export { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 export { PageChangeDetail } from "./components/pagination/pagination-options";
-export { PasswordResetClient, RegisterClient, SessionGuardClient, SignInClient, UserMenuClient } from "./identity/identity-types";
+export { PasswordResetClient, ProfileClient, RegisterClient, SessionGuardClient, SignInClient, UserMenuClient } from "./identity/identity-types";
 export { PasswordResetMode } from "./components/password-reset/password-reset-options";
 export { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
 export { CountdownClock } from "./identity/throttle-countdown";
 export { SignedInDetail, SignedOutDetail } from "./identity/event-details";
+export { ProfileLabels } from "./components/profile/profile-labels";
+export { ProfileSavedDetail, SessionRevokedDetail } from "./components/profile/profile-types";
 export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
 export { RegisterLabels } from "./components/register/register-labels";
@@ -1034,6 +1038,30 @@ export namespace Components {
         "toggle": () => Promise<void>;
     }
     /**
+     * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
+     * (display name, about, language, time zone and email preference), a password change, and the
+     * sessions of the account with a button to sign each other one out and one to sign out everywhere.
+     * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
+     */
+    interface IdgProfile {
+        /**
+          * A picture of the owner for the avatar, such as the one their profile links to.
+         */
+        "avatarSrc"?: string;
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: ProfileClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<ProfileLabels>;
+    }
+    /**
      * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
      * the browser's own. Without a value it is indeterminate.
      */
@@ -1862,6 +1890,10 @@ export interface IdgPopoverCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgPopoverElement;
 }
+export interface IdgProfileCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgProfileElement;
+}
 export interface IdgRadioCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgRadioElement;
@@ -2327,6 +2359,32 @@ declare global {
         prototype: HTMLIdgPopoverElement;
         new (): HTMLIdgPopoverElement;
     };
+    interface HTMLIdgProfileElementEventMap {
+        "idgProfileSaved": ProfileSavedDetail;
+        "idgPasswordChanged": void;
+        "idgSessionRevoked": SessionRevokedDetail;
+        "idgSignedOut": SignedOutDetail;
+    }
+    /**
+     * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
+     * (display name, about, language, time zone and email preference), a password change, and the
+     * sessions of the account with a button to sign each other one out and one to sign out everywhere.
+     * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
+     */
+    interface HTMLIdgProfileElement extends Components.IdgProfile, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgProfileElementEventMap>(type: K, listener: (this: HTMLIdgProfileElement, ev: IdgProfileCustomEvent<HTMLIdgProfileElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgProfileElementEventMap>(type: K, listener: (this: HTMLIdgProfileElement, ev: IdgProfileCustomEvent<HTMLIdgProfileElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgProfileElement: {
+        prototype: HTMLIdgProfileElement;
+        new (): HTMLIdgProfileElement;
+    };
     /**
      * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
      * the browser's own. Without a value it is indeterminate.
@@ -2777,6 +2835,7 @@ declare global {
         "idg-pagination": HTMLIdgPaginationElement;
         "idg-password-reset": HTMLIdgPasswordResetElement;
         "idg-popover": HTMLIdgPopoverElement;
+        "idg-profile": HTMLIdgProfileElement;
         "idg-progress": HTMLIdgProgressElement;
         "idg-radio": HTMLIdgRadioElement;
         "idg-radio-group": HTMLIdgRadioGroupElement;
@@ -3753,6 +3812,46 @@ declare namespace LocalJSX {
           * @default "bottom-start"
          */
         "placement"?: Placement;
+    }
+    /**
+     * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
+     * (display name, about, language, time zone and email preference), a password change, and the
+     * sessions of the account with a button to sign each other one out and one to sign out everywhere.
+     * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
+     */
+    interface IdgProfile {
+        /**
+          * A picture of the owner for the avatar, such as the one their profile links to.
+         */
+        "avatarSrc"?: string;
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: ProfileClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<ProfileLabels>;
+        /**
+          * Fires after the password is changed. It carries nothing.
+         */
+        "onIdgPasswordChanged"?: (event: IdgProfileCustomEvent<void>) => void;
+        /**
+          * Fires after the profile is saved, with the saved fields.
+         */
+        "onIdgProfileSaved"?: (event: IdgProfileCustomEvent<ProfileSavedDetail>) => void;
+        /**
+          * Fires after another session is signed out, with its id.
+         */
+        "onIdgSessionRevoked"?: (event: IdgProfileCustomEvent<SessionRevokedDetail>) => void;
+        /**
+          * Fires after "Sign out everywhere", with how it went. Navigating on is the page's job.
+         */
+        "onIdgSignedOut"?: (event: IdgProfileCustomEvent<SignedOutDetail>) => void;
     }
     /**
      * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
@@ -4776,6 +4875,9 @@ declare namespace LocalJSX {
         "open": boolean;
         "for": string;
     }
+    interface IdgProfileAttributes {
+        "avatarSrc": string;
+    }
     interface IdgProgressAttributes {
         "label": string;
         "value": number;
@@ -4967,6 +5069,7 @@ declare namespace LocalJSX {
         "idg-pagination": Omit<IdgPagination, keyof IdgPaginationAttributes> & { [K in keyof IdgPagination & keyof IdgPaginationAttributes]?: IdgPagination[K] } & { [K in keyof IdgPagination & keyof IdgPaginationAttributes as `attr:${K}`]?: IdgPaginationAttributes[K] } & { [K in keyof IdgPagination & keyof IdgPaginationAttributes as `prop:${K}`]?: IdgPagination[K] };
         "idg-password-reset": Omit<IdgPasswordReset, keyof IdgPasswordResetAttributes> & { [K in keyof IdgPasswordReset & keyof IdgPasswordResetAttributes]?: IdgPasswordReset[K] } & { [K in keyof IdgPasswordReset & keyof IdgPasswordResetAttributes as `attr:${K}`]?: IdgPasswordResetAttributes[K] } & { [K in keyof IdgPasswordReset & keyof IdgPasswordResetAttributes as `prop:${K}`]?: IdgPasswordReset[K] };
         "idg-popover": Omit<IdgPopover, keyof IdgPopoverAttributes> & { [K in keyof IdgPopover & keyof IdgPopoverAttributes]?: IdgPopover[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `attr:${K}`]?: IdgPopoverAttributes[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `prop:${K}`]?: IdgPopover[K] };
+        "idg-profile": Omit<IdgProfile, keyof IdgProfileAttributes> & { [K in keyof IdgProfile & keyof IdgProfileAttributes]?: IdgProfile[K] } & { [K in keyof IdgProfile & keyof IdgProfileAttributes as `attr:${K}`]?: IdgProfileAttributes[K] } & { [K in keyof IdgProfile & keyof IdgProfileAttributes as `prop:${K}`]?: IdgProfile[K] };
         "idg-progress": Omit<IdgProgress, keyof IdgProgressAttributes> & { [K in keyof IdgProgress & keyof IdgProgressAttributes]?: IdgProgress[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `attr:${K}`]?: IdgProgressAttributes[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `prop:${K}`]?: IdgProgress[K] };
         "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
         "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
@@ -5151,6 +5254,13 @@ declare module "@stencil/core" {
              * not contained, and Tab moves on from the content.
              */
             "idg-popover": LocalJSX.IntrinsicElements["idg-popover"] & JSXBase.HTMLAttributes<HTMLIdgPopoverElement>;
+            /**
+             * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
+             * (display name, about, language, time zone and email preference), a password change, and the
+             * sessions of the account with a button to sign each other one out and one to sign out everywhere.
+             * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
+             */
+            "idg-profile": LocalJSX.IntrinsicElements["idg-profile"] & JSXBase.HTMLAttributes<HTMLIdgProfileElement>;
             /**
              * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
              * the browser's own. Without a value it is indeterminate.

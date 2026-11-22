@@ -98,7 +98,7 @@ describe("idg-profile details", () => {
     expect(avatar?.src).toBe("/avatars/ada.png");
   });
 
-  it("starts from the username when there is no profile yet, and creates one on save", async () => {
+  it("starts from the username when there is no profile yet, and creates one on save with the CMS's defaults for what is left empty", async () => {
     const { client } = await signedIn();
     const { root, waitForChanges } = await mount(client);
     expect(control(root, "displayName").value).toBe("ada");
@@ -115,8 +115,8 @@ describe("idg-profile details", () => {
           profile: {
             displayName: "ada",
             bio: "Analyst",
-            locale: null,
-            timezone: null,
+            locale: "en",
+            timezone: "UTC",
             marketingOptIn: false,
           },
         },
@@ -203,7 +203,7 @@ describe("idg-profile password", () => {
     const username = shadowOf(root).querySelector<HTMLInputElement>(
       `${PASSWORD_FORM} input[autocomplete="username"]`,
     );
-    expect(username?.getAttribute("value")).toBe("ada");
+    expect(username?.value).toBe("ada");
     expect(username?.hasAttribute("hidden")).toBe(true);
     expect(nativeInput(root, "currentPassword").getAttribute("autocomplete")).toBe(
       "current-password",

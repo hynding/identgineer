@@ -20,9 +20,13 @@ export function clearControls(controls: readonly (ValueControl | undefined)[]): 
   for (const control of controls) if (control) control.value = "";
 }
 
+interface Focusable {
+  setFocus?: () => Promise<void>;
+}
+
 /** Focuses the first control, in the given order, that has an error. */
 export function focusFirstInvalid(
-  ordered: readonly (readonly [string, ValueControl | undefined])[],
+  ordered: readonly (readonly [string, Focusable | undefined])[],
   errors: Readonly<Record<string, string>>,
 ): void {
   const first = ordered.find(([name]) => errors[name] !== undefined)?.[1];
