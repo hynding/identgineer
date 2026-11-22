@@ -3,7 +3,7 @@ import { systemClock, type Clock } from "./clock.ts";
 import { createCrossTab, type CrossTab } from "./cross-tab.ts";
 import { IdentityError } from "./identity-error.ts";
 import { THROTTLED_STATUS, throttledError } from "./map-error.ts";
-import { resolveLocks, type LockManagerLike } from "./locks.ts";
+import { COOKIE_LOCK, resolveLocks, withLock, type LockManagerLike } from "./locks.ts";
 import { resolveOnline, type OnlineSubscription } from "./online.ts";
 import { createRefresher, type Refresher, type RefreshResult } from "./refresher.ts";
 import {
@@ -38,8 +38,9 @@ export interface IdentityClientOptions {
    */
   readonly accessTokenLifetimeSeconds?: number;
   /**
-   * Serialises cookie refreshes across the page's tabs, since the refresh token rotates once.
-   * Defaults to `navigator.locks` where available; `null` turns it off.
+   * Serialises the requests that present or set the shared refresh cookie (sign-in, provider
+   * sign-in, cookie refresh, logout) across the page's tabs. Defaults to `navigator.locks` where
+   * available; `null` turns it off.
    */
   readonly locks?: LockManagerLike | null;
   /**
@@ -70,6 +71,12 @@ export interface ClientContext {
   readonly crossTab: CrossTab;
   readonly isActive: () => boolean;
   /**
+   * Runs `task` holding the cross-tab cookie lock, which is not re-entrant: a task needing several
+   * cookie requests takes it once, and nothing holding it waits on the operation queue. Not
+   * granted within `requestTimeoutMs`, the task runs without it.
+   */
+  readonly cookieLock: <T>(task: () => Promise<T>) => Promise<T>;
+  /**
    * An access token to send for the session `ticket` names: the current one, or, once its known
    * expiry has passed, a refreshed one (rejecting `network` when the server cannot be reached,
    * `unauthorized` without a session or once that session is over).
@@ -94,7 +101,8 @@ export interface ClientContext {
    */
   readonly acceptSignIn: (tokens: Tokens, user: IdentityUser, ticket: Ticket) => Promise<void>;
   /**
-   * Ends the server session these tokens belong to (and its cookie); never rejects. When the
+   * Ends the server session these tokens belong to (and its cookie); never rejects. The caller
+   * holds the cookie lock. When the
    * logout refuses the access token of a cookie session, `deadCookieToken` decides (by default
    * "ended": the cookie lookup that follows every sign-out finds the session if it lives on).
    */
@@ -154,7 +162,7 @@ const durationOption = (
 };
 
 /** The less certain of two sign-out outcomes. */
-export const worse = (left: ServerSignOut, right: ServerSignOut): ServerSignOut =>
+const worse = (left: ServerSignOut, right: ServerSignOut): ServerSignOut =>
   left === "unreachable" || right === "unreachable" ? "unreachable" : "ended";
 
 export const createClientContext = (options: IdentityClientOptions): ClientContext => {
@@ -173,6 +181,9 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     1000,
   );
   const transport = createTransport({ base, fetch, clock, timeoutMs });
+  const locks = resolveLocks(options.locks);
+  const cookieLock = <T>(task: () => Promise<T>): Promise<T> =>
+    withLock(locks, COOKIE_LOCK, { clock, waitMs: timeoutMs }, task);
   const session = createSession();
   const throttle = createThrottle(clock);
   let disposed = false;
@@ -230,8 +241,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     session,
     clock,
     tokenLifetimeMs,
-    locks: resolveLocks(options.locks),
-    lockWaitMs: timeoutMs,
+    cookieLock,
     onOnline: resolveOnline(options.onOnline),
     verifyUser,
     applyScheduled: (ticket, result) => {
@@ -259,7 +269,9 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
 
   const credentialRequest = async (request: ApiRequest): Promise<ApiResponse> => {
     throttle.check();
-    const response = await transport.send(request);
+    const response = await (request.cookie === true
+      ? cookieLock(() => transport.send(request))
+      : transport.send(request));
     if (response.status === THROTTLED_STATUS) {
       const error = throttledError(response, clock.now());
       throttle.serverThrottled(error.retryAfterSeconds ?? 0);
@@ -344,7 +356,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   };
 
   const abandon = async (tokens: Tokens): Promise<void> => {
-    const ending = endServerSession(tokens, false);
+    const ending = cookieLock(() => endServerSession(tokens, false));
     for (const collector of collectors) collector.push(ending);
     await ending;
   };
@@ -400,6 +412,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     refresher,
     crossTab,
     isActive,
+    cookieLock,
     accessToken,
     credentialRequest,
     authorizedRequest,

@@ -225,3 +225,21 @@ describe("a sign-in in another tab heard of before the cookie lookup", () => {
     expect(refreshes).toHaveLength(1);
   });
 });
+
+describe("a sign-out superseded whose own logout could not reach the server", () => {
+  it("reports the server unreachable and stays signed out, telling no tab", async () => {
+    const { api, client, other } = await twoTabs();
+    const releaseLogout = api.holdNext("POST", "/api/auth/logout");
+    api.respondNext("POST", "/api/auth/logout", "network-error");
+    const signingOut = client.signOut();
+    await settle();
+    await other.signIn({ identifier: "bob", password: PASSWORD });
+    await settle();
+    releaseLogout();
+    await expect(signingOut).resolves.toEqual({ outcome: "server-unreachable" });
+    await settle();
+    await settle();
+    expect(client.getState()).toEqual({ status: "signed-out", reason: "user" });
+    expect(other.getState()).toMatchObject({ status: "signed-in", user: { username: "bob" } });
+  });
+});

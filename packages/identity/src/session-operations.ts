@@ -1,4 +1,4 @@
-import { worse, type ClientContext, type ServerSignOut } from "./client-context.ts";
+import type { ClientContext, ServerSignOut } from "./client-context.ts";
 import { sessionSegment } from "./identifiers.ts";
 import { failureOf } from "./map-error.ts";
 import type { IdentityState, Ticket, Tokens } from "./session.ts";
@@ -19,6 +19,24 @@ export interface SignOutResult {
   readonly outcome: "signed-out" | "server-unreachable" | "superseded";
 }
 
+/** What one sign-out learns while it ends sessions. */
+interface SignOutRun {
+  readonly everywhere: boolean;
+  /** Whether another tab's sign-in stands against this sign-out (the later action wins). */
+  readonly newer: () => boolean;
+  /**
+   * The notice mark once the logout of a session the cookie lookup found was answered: a sign-in
+   * heard of before then may be that session, which this sign-out ended; one heard of after it
+   * is newer than all of this sign-out's server work.
+   */
+  foundEndedAt: number | undefined;
+  /**
+   * A newer sign-in was heard of while the lookup was in flight: the lookup's answer may have
+   * set the cookie back to the session this sign-out meant to end, so nothing resumes from it.
+   */
+  lookupRaced: boolean;
+}
+
 /**
  * Ends whatever session the shared refresh cookie names, unless a newer sign-in is known by
  * then: the cookie may be that sign-in's, and it stands. A found token the logout refuses (it
@@ -27,22 +45,24 @@ export interface SignOutResult {
  */
 const endCookieSession = async (
   context: ClientContext,
-  everywhere: boolean,
-  newer: () => boolean,
+  run: SignOutRun,
   lookups = 2,
 ): Promise<ServerSignOut> => {
-  if (newer()) return "ended";
+  if (run.newer()) return "ended";
   if (!context.isActive()) return "unreachable";
   const found = await context.refresher.detached(undefined);
   if (found === "refused") return "ended";
   if (found === "unreachable") return "unreachable";
-  if (newer()) return "ended";
+  if (run.newer()) {
+    run.lookupRaced = true;
+    return "ended";
+  }
   if (!context.isActive()) return "unreachable";
-  return context.endServerSession(found, everywhere, () =>
-    lookups > 1
-      ? endCookieSession(context, everywhere, newer, lookups - 1)
-      : Promise.resolve("unreachable"),
+  const ended = await context.endServerSession(found, run.everywhere, () =>
+    lookups > 1 ? endCookieSession(context, run, lookups - 1) : Promise.resolve("unreachable"),
   );
+  run.foundEndedAt = context.noticeMark();
+  return ended;
 };
 
 /**
@@ -50,20 +70,22 @@ const endCookieSession = async (
  * tab's sign-in this tab never heard of leaves the cookie on its session, and the logout clears
  * the cookie only with the session it names. Page script cannot see whether it did, so the cookie
  * is looked up once more (one refresh request, refused when nothing is left). A tab without a
- * token of its own starts there.
+ * token of its own starts there. It all runs holding the cookie lock once, so no other tab's
+ * cookie request lands in between.
  */
-const endSessions = async (
+const endSessions = (
   context: ClientContext,
   own: Tokens | undefined,
-  everywhere: boolean,
-  newer: () => boolean,
-): Promise<ServerSignOut> => {
-  if (own === undefined) return endCookieSession(context, everywhere, newer);
-  const ended = await context.endServerSession(own, everywhere);
-  return ended === "ended" ? endCookieSession(context, everywhere, newer) : ended;
-};
+  run: SignOutRun,
+): Promise<ServerSignOut> =>
+  context.cookieLock(async () => {
+    if (own === undefined) return endCookieSession(context, run);
+    const ended = await context.endServerSession(own, run.everywhere);
+    return ended === "ended" ? endCookieSession(context, run) : ended;
+  });
 
 const SUPERSEDED: SignOutResult = Object.freeze({ outcome: "superseded" });
+const UNREACHABLE: SignOutResult = Object.freeze({ outcome: "server-unreachable" });
 
 /**
  * The strongest operation in this tab. At once: signs out here and cancels every sign-in,
@@ -75,36 +97,40 @@ const SUPERSEDED: SignOutResult = Object.freeze({ outcome: "superseded" });
  * Across tabs the later action wins: another tab's sign-in this tab hears of after the sign-out
  * began stands, unless that tab signed out again. The sign-out then logs out no session it finds
  * in the cookie, tells no tab of a sign-out, and resolves `superseded`; the queued re-check brings
- * this tab to the newer session. A sign-in asked for in this tab never supersedes it: it waits
- * for the sign-out to finish. An unreachable server is reported, not thrown.
+ * this tab to the newer session, unless the sign-in was heard of while the lookup was in flight
+ * (the lookup's answer may have put the old session back in the cookie), when the tab stays
+ * signed out. A sign-in heard of before the logout of a session the lookup found was answered
+ * may be that session, which the sign-out ended: it says so (`signed-out`, and the other tabs are
+ * told); only one heard of afterwards supersedes it. A sign-in asked for in this tab never
+ * supersedes it: it waits for the sign-out to finish. An unreachable server is reported, not
+ * thrown, and outranks `superseded` (the tab then stays signed out, and no tab is told).
  */
 export const signOut =
   (context: ClientContext) =>
   async (options: SignOutOptions = {}): Promise<SignOutResult> => {
     const own = context.session.tokens();
-    const everywhere = options.everywhere === true;
     const mark = context.noticeMark();
-    const newer = (): boolean => context.signedInSince(mark);
-    let skipped = false;
-    const newerSkips = (): boolean => {
-      if (newer()) skipped = true;
-      return skipped;
+    const run: SignOutRun = {
+      everywhere: options.everywhere === true,
+      newer: () => context.signedInSince(mark),
+      foundEndedAt: undefined,
+      lookupRaced: false,
     };
+    const superseded = (): boolean =>
+      run.newer() && (run.foundEndedAt === undefined || context.signedInSince(run.foundEndedAt));
     context.session.cancelSignIns();
     context.signedOut("user");
-    const settle = context.signOutPending(newer);
+    const settle = context.signOutPending(superseded);
     const server = await context
-      .signOutBarrier(async () => {
-        let outcome = await endSessions(context, own, everywhere, newerSkips);
-        // A newer sign-in whose tab signed out again no longer stands: end what the cookie names.
-        while (skipped && !newer()) {
-          skipped = false;
-          outcome = worse(outcome, await endCookieSession(context, everywhere, newerSkips));
-        }
-        return outcome;
-      })
+      .signOutBarrier(() => endSessions(context, own, run))
       .finally(settle);
-    if (newer()) return SUPERSEDED;
+    if (superseded()) {
+      // A newer sign-in stands, so no tab is told of a sign-out. If the cookie may name what this
+      // sign-out failed to end, or the old session again, the queued re-check (asked for in the
+      // session this ends) does nothing.
+      if (run.lookupRaced || server === "unreachable") context.signedOut("user");
+      return server === "unreachable" ? UNREACHABLE : SUPERSEDED;
+    }
     context.crossTab.announce("signed-out");
     return Object.freeze({
       outcome: server === "unreachable" ? "server-unreachable" : "signed-out",

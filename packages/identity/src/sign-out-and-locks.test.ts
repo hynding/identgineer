@@ -140,7 +140,7 @@ describe("cookie refreshes from several tabs", () => {
     const { client, signIn, makeClient } = setup();
     await signIn();
     await makeClient().restore();
-    expect(names).toContain("identgineer-identity-refresh");
+    expect(names).toContain("identgineer-identity-cookie");
     expect(client.getState().status).toBe("signed-in");
   });
 });
@@ -174,7 +174,10 @@ describe("a lock manager that fails", () => {
   it("stops waiting for a lock that is never granted after the request timeout", async () => {
     const never = { request: (): Promise<never> => new Promise<never>(() => undefined) };
     const { api, clock, makeClient, signIn } = setup({}, { locks: never, requestTimeoutMs: 5_000 });
-    await signIn();
+    const signingIn = signIn();
+    await settle();
+    clock.advance(5_000);
+    await signingIn;
     const tab = makeClient();
     let restored: unknown;
     void tab.restore().then((state) => {

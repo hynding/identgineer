@@ -327,7 +327,6 @@ const runScenario = async (seed: number, steps: number): Promise<void> => {
       }
       // A sign-in whose answer landed before the sign-out resolved may resolve just after it.
       await flush();
-      const later = api.restorableUser();
       const elsewhere = openings.filter(
         (entry) => entry.tab !== tab && entry.cookieUser !== undefined && entry.startedAt < ended,
       );
@@ -336,15 +335,15 @@ const runScenario = async (seed: number, steps: number): Promise<void> => {
       );
       /**
        * Whether the session left is another tab's sign-in of the window: one that stands, or one
-       * its tab then dropped (cancelled by this sign-out's notice) whose session was ended since.
+       * its tab then dropped (cancelled by this sign-out's notice; the focused tests check that
+       * such a session is ended).
        */
       const fromWindow = (user: string): boolean =>
         standing.some((entry) => entry.cookieUser === user) ||
-        (later !== user &&
-          elsewhere.some(
-            (entry) =>
-              entry.cookieUser === user && entry.failedAt !== undefined && entry.failedAt > began,
-          ));
+        elsewhere.some(
+          (entry) =>
+            entry.cookieUser === user && entry.failedAt !== undefined && entry.failedAt > began,
+        );
       const standingNotice = notices.some(
         (notice) =>
           notice.from !== tab.name &&
@@ -363,7 +362,8 @@ const runScenario = async (seed: number, steps: number): Promise<void> => {
         if (restorable !== undefined && !fromWindow(restorable)) {
           violations.push(`${where} resolved signed-out with ${restorable}'s session to resume`);
         }
-        if (standingNotice) {
+        // Unless it had already sent the logout of that sign-in's session, which it then ended.
+        if (standingNotice && restorable !== undefined) {
           violations.push(`${where} resolved signed-out after a standing sign-in's notice`);
         }
       }
