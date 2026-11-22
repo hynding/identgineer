@@ -7,6 +7,7 @@ import {
 } from "../identity-client.ts";
 import { createBrowserFetch } from "./browser-fetch.ts";
 import { createCookieJar, type CookieJar } from "./cookie-jar.ts";
+import { linkParameterIn, mailsIn } from "./mail-log.ts";
 
 /** One running strapi-php server, as cms/scripts/live-backend.js describes it. */
 export interface LiveServer {
@@ -99,7 +100,7 @@ export const disposeTabs = (): void => {
   for (const client of clients.splice(0)) client.dispose();
 };
 
-/** Every mail logged to `to` so far, oldest first, decoded from quoted-printable as links need. */
+/** Every mail logged to `to` so far, oldest first. */
 export const mailsTo = (backend: LiveBackend, to: string): string[] => {
   let log: string;
   try {
@@ -107,11 +108,7 @@ export const mailsTo = (backend: LiveBackend, to: string): string[] => {
   } catch {
     return [];
   }
-  const mails = log.split(/^\[\d{4}-\d\d-\d\d [\d:]+\] \w+\.DEBUG: /m);
-  // Mail headers end their lines with CRLF.
-  return mails
-    .filter((mail) => mail.split(/\r?\n/).includes(`To: ${to}`))
-    .map((mail) => mail.replace(/=\r?\n/g, "").replace(/=3D/gi, "="));
+  return mailsIn(log, to);
 };
 
 const pause = (ms: number): Promise<void> =>
@@ -151,7 +148,7 @@ export const linkParameter = async (
   count = 1,
 ): Promise<string> => {
   const mail = (await waitForMails(backend, to, count))[count - 1] ?? "";
-  const value = new RegExp(`[?&]${name}=([A-Za-z0-9]+)`).exec(mail)?.[1];
+  const value = linkParameterIn(mail, name);
   if (value === undefined) throw new Error(`no ${name} in mail ${String(count)} to ${to}`);
   return value;
 };
