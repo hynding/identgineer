@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { settle, setup } from "./test-harness.ts";
+import { PASSWORD, settle, setup } from "./test-harness.ts";
 import type { FakeIdentityApi } from "./testing/fake-identity-api.ts";
 import { createMemoryLocks } from "./testing/memory-locks.ts";
 
@@ -36,6 +36,59 @@ describe("signing out a cookie session the tab has no token for", () => {
     expect(api.refreshCookie()).toBeUndefined();
     expect(api.activeSessionCount("ada@example.com")).toBe(0);
     expect(await makeClient().restore()).toEqual({ status: "signed-out", reason: "no-session" });
+  });
+});
+
+describe("signing out in a tab that already knew it was signed out", () => {
+  it("ends the cookie session another tab opened before telling the other tabs", async () => {
+    const { api, client, makeClient, signIn } = setup();
+    api.addUser({ username: "bob", email: "bob@example.com", password: PASSWORD });
+    const other = makeClient({ sharedChannel: true });
+    await signIn();
+    await other.signIn({ identifier: "bob", password: PASSWORD });
+    await settle();
+    await settle();
+    expect(client.getState()).toEqual({ status: "signed-out", reason: "user-changed" });
+    await expect(client.signOut()).resolves.toEqual({ outcome: "signed-out" });
+    await settle();
+    expect(api.activeSessionCount("bob@example.com")).toBe(0);
+    expect(other.getState()).toEqual({ status: "signed-out", reason: "other-tab" });
+    expect(await makeClient().restore()).toEqual({ status: "signed-out", reason: "no-session" });
+  });
+});
+
+describe("telling other tabs about a sign-out", () => {
+  it("waits until the server session is ended", async () => {
+    const { api, client, makeClient, signIn } = setup();
+    await signIn();
+    const other = makeClient({ sharedChannel: true });
+    await other.restore();
+    const release = api.holdNext("POST", "/api/auth/logout");
+    const signingOut = client.signOut();
+    await settle();
+    expect(other.getState().status).toBe("signed-in");
+    release();
+    await signingOut;
+    await settle();
+    expect(other.getState()).toEqual({ status: "signed-out", reason: "other-tab" });
+  });
+
+  it("still tells them when the server cannot be reached", async () => {
+    const { api, client, makeClient, signIn } = setup();
+    await signIn();
+    const other = makeClient({ sharedChannel: true });
+    await other.restore();
+    api.respondNext("POST", "/api/auth/logout", "network-error");
+    await expect(client.signOut()).resolves.toEqual({ outcome: "server-unreachable" });
+    await settle();
+    expect(other.getState()).toEqual({ status: "signed-out", reason: "other-tab" });
+  });
+
+  it("says the server could not be reached when the cookie session could not be looked up", async () => {
+    const { api, client } = setup();
+    api.respondNext("POST", "/api/auth/refresh", "network-error");
+    await expect(client.signOut()).resolves.toEqual({ outcome: "server-unreachable" });
+    expect(client.getState()).toEqual({ status: "signed-out", reason: "user" });
   });
 });
 
@@ -145,5 +198,27 @@ describe("a lock manager that fails", () => {
     for (let round = 0; round < 3; round += 1) await settle();
     expect(signedOut).toBe(true);
     expect(api.requests.at(-1)?.path).toBe("/api/auth/refresh");
+  });
+});
+
+describe("several tabs told about a sign-in", () => {
+  it.each([
+    ["without locks", null],
+    ["with a shared lock", createMemoryLocks()],
+  ])("stay signed in and refresh once each %s", async (_name, locks) => {
+    const { api, makeClient } = setup({}, { locks });
+    const tabs = [0, 1, 2].map(() => makeClient({ sharedChannel: true }));
+    await tabs[0]?.signIn({ identifier: "ada", password: PASSWORD });
+    for (const tab of tabs.slice(1)) await tab.restore();
+    for (let round = 0; round < 5; round += 1) await settle();
+    const before = refreshes(api);
+    await makeClient({ sharedChannel: true }).signIn({ identifier: "ada", password: PASSWORD });
+    for (let round = 0; round < 10; round += 1) await settle();
+    expect(tabs.map((tab) => tab.getState().status)).toEqual([
+      "signed-in",
+      "signed-in",
+      "signed-in",
+    ]);
+    expect(refreshes(api) - before).toBeLessThanOrEqual(tabs.length);
   });
 });

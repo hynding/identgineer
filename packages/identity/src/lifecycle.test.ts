@@ -48,6 +48,58 @@ describe("sign-out racing a sign-in", () => {
   });
 });
 
+describe("a restore finishing during a sign-in", () => {
+  it("keeps the explicit sign-in, not the cookie's earlier user", async () => {
+    const { api, client, makeClient } = setup();
+    addBob(api);
+    const previousPage = makeClient();
+    await previousPage.signIn({ identifier: "ada", password: PASSWORD });
+    previousPage.dispose();
+    const release = api.holdNext("POST", "/api/auth/local");
+    const signingIn = client.signIn({ identifier: "bob", password: PASSWORD });
+    await settle();
+    const restoring = client.restore();
+    await settle();
+    release();
+    await expect(signingIn).resolves.toMatchObject({ username: "bob" });
+    expect(await restoring).toMatchObject({ status: "signed-in", user: { username: "bob" } });
+    expect(client.getState()).toMatchObject({ status: "signed-in", user: { username: "bob" } });
+    expect(api.refreshCookie()).toBeDefined();
+    expect(await makeClient().restore()).toMatchObject({ user: { username: "bob" } });
+  });
+
+  it("keeps the sign-in when another tab's sign-in notice arrives during it", async () => {
+    const { api, client, makeClient } = setup();
+    addBob(api);
+    await client.restore();
+    const release = api.holdNext("POST", "/api/auth/local");
+    const signingIn = client.signIn({ identifier: "bob", password: PASSWORD });
+    await settle();
+    await makeClient({ sharedChannel: true }).signIn({ identifier: "ada", password: PASSWORD });
+    await settle();
+    release();
+    await expect(signingIn).resolves.toMatchObject({ username: "bob" });
+    await settle();
+    await settle();
+    expect(client.getState()).toMatchObject({ status: "signed-in", user: { username: "bob" } });
+  });
+
+  it("is still cancelled by a sign-out", async () => {
+    const { api, client, signIn } = setup();
+    const release = api.holdNext("POST", "/api/auth/local");
+    const signingIn = rejection(signIn());
+    await settle();
+    const restoring = client.restore();
+    const signingOut = client.signOut();
+    release();
+    await signingOut;
+    await restoring;
+    expect(await signingIn).toMatchObject({ code: "unauthorized" });
+    expect(client.getState()).toEqual({ status: "signed-out", reason: "user" });
+    expect(api.activeSessionCount("ada@example.com")).toBe(0);
+  });
+});
+
 describe("overlapping sign-ins", () => {
   it("lets the later call win, even when the earlier answer comes last", async () => {
     const { api, client, makeClient } = setup();
@@ -193,6 +245,18 @@ describe("another tab signing in as someone else", () => {
     const response = await client.authorizedFetch("/api/users/me");
     expect(response.status).toBe(401);
     expect(client.getState()).toEqual({ status: "signed-out", reason: "user-changed" });
+  });
+
+  it("keeps this tab's own user when the user check after a refresh fails", async () => {
+    const { api, client, makeClient, signIn } = setup();
+    addBob(api);
+    await signIn();
+    api.respondNext("GET", "/api/users/me", "network-error");
+    await makeClient({ sharedChannel: true }).signIn({ identifier: "bob", password: PASSWORD });
+    await settle();
+    await settle();
+    const response = await client.authorizedFetch("/api/users/me");
+    expect(((await response.json()) as { username: string }).username).toBe("ada");
   });
 
   it("re-checks at once when told another tab signed in", async () => {

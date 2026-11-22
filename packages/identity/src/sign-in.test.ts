@@ -194,11 +194,17 @@ describe("signOut", () => {
     expect(api.activeSessionCount("ada@example.com")).toBe(0);
   });
 
-  it("signs out locally even when the server cannot be reached", async () => {
+  it("resolves to say whether the server session was ended", async () => {
+    const { client, signIn } = setup();
+    await signIn();
+    await expect(client.signOut()).resolves.toEqual({ outcome: "signed-out" });
+  });
+
+  it("signs out locally even when the server cannot be reached, and says so", async () => {
     const { api, client, signIn } = setup();
     await signIn();
     api.respondNext("POST", "/api/auth/logout", "network-error");
-    await client.signOut();
+    await expect(client.signOut()).resolves.toEqual({ outcome: "server-unreachable" });
     expect(client.getState()).toEqual({ status: "signed-out", reason: "user" });
     await expect(client.currentUser()).rejects.toMatchObject({ code: "unauthorized" });
   });
@@ -206,7 +212,7 @@ describe("signOut", () => {
   it("signs out locally on a backend without sessions (legacy tokens)", async () => {
     const { client, signIn } = setup({ sessions: "legacy" });
     await signIn();
-    await client.signOut();
+    await expect(client.signOut()).resolves.toEqual({ outcome: "signed-out" });
     expect(client.getState()).toEqual({ status: "signed-out", reason: "user" });
   });
 
@@ -223,12 +229,12 @@ describe("signOut", () => {
     expect(api.activeSessionCount("ada@example.com")).toBe(0);
   });
 
-  it("makes no request when already signed out", async () => {
+  it("looks for a cookie session even when already signed out", async () => {
     const { api, client } = setup();
     await client.restore();
     const sent = api.requests.length;
-    await client.signOut();
-    expect(api.requests).toHaveLength(sent);
+    await expect(client.signOut()).resolves.toEqual({ outcome: "signed-out" });
+    expect(api.requests.slice(sent).map((request) => request.path)).toEqual(["/api/auth/refresh"]);
     expect(client.getState()).toEqual({ status: "signed-out", reason: "user" });
   });
 
