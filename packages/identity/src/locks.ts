@@ -42,8 +42,6 @@ export interface LockBounds {
   readonly holdMs: number;
   /** The longest a task waits for the lock before failing closed. */
   readonly waitMs: number;
-  /** Aborted when the client is disposed: a task still waiting then rejects `unknown`. */
-  readonly disposed: AbortSignal;
 }
 
 /**
@@ -73,13 +71,15 @@ const runSection = <T>(
  * that long), it fails closed with `network` and never runs: a cookie request sent beside
  * another would let the older answer overwrite the newer cookie. It runs without the lock only
  * when there is no lock manager, or the manager itself fails (a sandboxed frame's
- * SecurityError), whose error never reaches the caller.
+ * SecurityError), whose error never reaches the caller. `cancel`, aborted while it still waits,
+ * ends the wait at once with `unknown`.
  */
 export const withLock = <T>(
   locks: LockManagerLike | null,
   name: string,
   bounds: LockBounds,
   task: (section: CookieSection) => Promise<T>,
+  cancel?: AbortSignal,
 ): Promise<T> => {
   if (locks === null) return runSection(bounds, task);
   return new Promise<T>((resolve, reject) => {
@@ -87,7 +87,7 @@ export const withLock = <T>(
     const stopWaiting = (): void => {
       waiting = false;
       bounds.clock.clearTimeout(gaveUp);
-      bounds.disposed.removeEventListener("abort", disposed);
+      cancel?.removeEventListener("abort", cancelled);
     };
     const run = (): Promise<void> => {
       stopWaiting();
@@ -103,11 +103,11 @@ export const withLock = <T>(
       stopWaiting();
       reject(new IdentityError("network"));
     }, bounds.waitMs);
-    const disposed = (): void => {
+    const cancelled = (): void => {
       stopWaiting();
       reject(new IdentityError("unknown"));
     };
-    bounds.disposed.addEventListener("abort", disposed);
+    cancel?.addEventListener("abort", cancelled);
     // A lock granted once the task ran without it, or gave up waiting, is let go at once.
     const granted = (): Promise<void> => (waiting ? run() : Promise.resolve());
     const managerFailed = (): void => {

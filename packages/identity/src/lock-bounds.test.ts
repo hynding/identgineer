@@ -169,7 +169,6 @@ describe("withLock", () => {
     clock,
     holdMs: 3 * TIMEOUT,
     waitMs: 4 * TIMEOUT,
-    disposed: new AbortController().signal,
   });
 
   it("aborts a section at its deadline, rejects network and lets the next holder in", async () => {
