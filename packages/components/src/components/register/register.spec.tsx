@@ -240,4 +240,16 @@ describe("idg-register checks", () => {
     expect(button(root, "idg-button.submit").textContent).toContain("Konto erstellen");
     expect(textOf(root, '[part="byte-count"]')).toBe("0/72");
   });
+
+  it("isolates each number of the byte count, so a right-to-left sentence keeps them in place", async () => {
+    const { root, waitForChanges } = await mount();
+    root.labels = { passwordBytes: "{max} מתוך {used} בתים" };
+    await waitForChanges();
+    const numbers = Array.from(
+      shadowOf(root).querySelectorAll('[part="byte-count"] bdi'),
+      (number) => number.textContent,
+    );
+    expect(numbers).toEqual(["72", "0"]);
+    expect(textOf(root, '[part="byte-count"]')).toBe("72 מתוך 0 בתים");
+  });
 });

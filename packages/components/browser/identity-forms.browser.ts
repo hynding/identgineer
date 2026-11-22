@@ -358,9 +358,9 @@ test.describe("identity forms and secrets", () => {
 
 test.describe("identity forms and account enumeration", () => {
   /** Registers `email` on a fresh page and returns what the form then shows and says. */
-  async function registerOutcome(page: Page, email: string) {
+  async function registerOutcome(page: Page, email: string, username = "grace") {
     await openIdentity(page, "?confirm");
-    await inputOf(page, "#register", "username").fill("grace");
+    await inputOf(page, "#register", "username").fill(username);
     await inputOf(page, "#register", "email").fill(email);
     await inputOf(page, "#register", "password").fill(NEW_PASSWORD);
     await inputOf(page, "#register", "password").press("Enter");
@@ -386,6 +386,15 @@ test.describe("identity forms and account enumeration", () => {
   test("registering a taken address looks and reads as registering a new one", async ({ page }) => {
     const taken = await registerOutcome(page, "ada@example.com");
     const fresh = await registerOutcome(page, "grace@example.com");
+    expect(fresh.markup).toBe(taken.markup);
+    expect(fresh.tree).toBe(taken.tree);
+  });
+
+  test("registering a taken username looks and reads as registering a new one", async ({
+    page,
+  }) => {
+    const taken = await registerOutcome(page, "grace@example.com", "ada");
+    const fresh = await registerOutcome(page, "grace@example.com", "grace");
     expect(fresh.markup).toBe(taken.markup);
     expect(fresh.tree).toBe(taken.tree);
   });

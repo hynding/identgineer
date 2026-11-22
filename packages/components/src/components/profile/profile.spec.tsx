@@ -293,6 +293,44 @@ describe("idg-profile sessions", () => {
     expect(textOf(root, '[part="signed-out"]')).toBe("Sign in to see your profile.");
   });
 
+  it("ignores a sign-out everywhere that ends after the client was swapped", async () => {
+    const { client, makeClient } = await signedIn();
+    let finish = (): void => undefined;
+    const slow = {
+      ...client,
+      signOut: () =>
+        new Promise<{ outcome: "server-unreachable" }>((resolve) => {
+          finish = () => {
+            resolve({ outcome: "server-unreachable" });
+          };
+        }),
+    };
+    const { root, waitForChanges } = await mount(slow);
+    await settle(waitForChanges);
+    button(root, "idg-button.sign-out-everywhere").dispatchEvent(
+      new MouseEvent("click", { bubbles: true }),
+    );
+    root.client = makeClient();
+    await waitForChanges();
+    finish();
+    await settle(waitForChanges);
+    expect(events.seen.filter((event) => event.type === "idgSignedOut")).toEqual([]);
+    expect(shadowOf(root).querySelector('[part="outcome"]')).toBeNull();
+  });
+
+  it("draws its section headings at the level it is given, 2 by default", async () => {
+    const { client } = await signedIn();
+    const { root, waitForChanges } = await mount(client);
+    await settle(waitForChanges);
+    expect(shadowOf(root).querySelectorAll("h2.heading")).toHaveLength(3);
+    (root as HTMLElement & { headingLevel?: number }).headingLevel = 4;
+    await waitForChanges();
+    expect(shadowOf(root).querySelectorAll("h4.heading")).toHaveLength(3);
+    (root as HTMLElement & { headingLevel?: number }).headingLevel = 1;
+    await waitForChanges();
+    expect(shadowOf(root).querySelectorAll("h2.heading")).toHaveLength(3);
+  });
+
   it("says plainly when signing out everywhere could not reach the server", async () => {
     const { client, api } = await signedIn();
     const { root, waitForChanges } = await mount(client);

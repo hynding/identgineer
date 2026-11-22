@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fillTemplate, mergeLabels } from "./labels";
+import { fillTemplate, mergeLabels, templateParts } from "./labels";
 
 const DEFAULTS: { readonly submit: string; readonly title: string } = {
   submit: "Sign in",
@@ -41,5 +41,23 @@ describe("fillTemplate", () => {
 
   it("does not read a replacement as a pattern", () => {
     expect(fillTemplate("{name}", { name: "$& $1" })).toBe("$& $1");
+  });
+});
+
+describe("templateParts", () => {
+  it("splits a template into its text and its filled placeholders, in the template's order", () => {
+    expect(templateParts("{max}中 {used} バイト", { used: "3", max: "72" })).toEqual([
+      { value: "72" },
+      "中 ",
+      { value: "3" },
+      " バイト",
+    ]);
+  });
+
+  it("keeps an unknown placeholder as text", () => {
+    expect(templateParts("{used} of {limit}", { used: "1" })).toEqual([
+      { value: "1" },
+      " of {limit}",
+    ]);
   });
 });
