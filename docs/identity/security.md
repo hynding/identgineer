@@ -71,15 +71,35 @@ since the session may stay active on the server until it expires.
 `labels` replaces visible text only. It is set as text, never parsed as HTML, so a translation
 cannot inject markup. `{name}` and the other placeholders are filled with text, too.
 
-## Password managers and autofill
+## Password managers, autofill and passkeys
 
-The forms set `autocomplete` on the real inputs: `username webauthn` and `current-password` to sign
-in, `username`, `email` and `new-password` to register, `one-time-code` for a reset code, and
-`new-password` twice to choose a password. They also set `autocapitalize="none"` and
-`spellcheck="false"`. The profile's password change has a hidden `username` field, so a manager
-updates the right entry. The inputs are inside shadow roots, and managers differ in how well they
-reach them: see the `idg-input` notes in the
-[components README](../../packages/components/README.md#idg-input).
+What is verified, in Chromium, by the browser tests:
+
+- Every field is an `idg-input`, a form-associated custom element: the element is owned by its
+  form and submits its value, and the form's `FormData` holds it. The native `<input>` the user
+  types into is inside the element's shadow root, so its own `form` is `null`. Implicit submission
+  (Enter) is done by the element, case by case as a native input does.
+- The native inputs carry the hints a manager reads: `autocomplete` (`username webauthn` and
+  `current-password` to sign in; `username`, `email` and `new-password` to register;
+  `one-time-code` for a reset code; `new-password` twice to choose a password), `type`, `name`,
+  `autocapitalize="none"` and `spellcheck="false"`.
+- The profile's password change has a `username` field built the same way, read-only, laid out
+  out of sight (not `display: none`, which managers skip) and out of the tab order, so a manager
+  can tell which account the new password belongs to.
+
+What is not verified, and may not work:
+
+- That any password manager offers, fills or saves these fields. No manager or browser autofill
+  UI runs in the headless test browser. Managers find fields across shadow roots unevenly, and
+  many group fields by the native input's form, which here is `null`. See the `idg-input` notes in
+  the [components README](../../packages/components/README.md#idg-input) for what is known per
+  browser.
+- That a passkey is offered through `autocomplete="username webauthn"`: conditional mediation
+  needs the page to call `navigator.credentials.get({ mediation: "conditional" })`, which these
+  elements do not do, and whether a browser offers it for an input in a shadow root is untested.
+
+For a sign-in page where a working manager matters most, test the managers you support, or use
+native `<input>` elements in the page's own form.
 
 ## Content-Security-Policy
 

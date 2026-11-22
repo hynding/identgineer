@@ -20,6 +20,8 @@ export interface ProfileLabels extends FeedbackLabels, NewPasswordLabels {
   readonly localeInvalid: string;
   readonly timezoneInvalid: string;
   readonly passwordHeading: string;
+  /** The name of the out-of-sight username field a password manager pairs the password with. */
+  readonly username: string;
   readonly currentPassword: string;
   readonly newPassword: string;
   readonly confirmPassword: string;
@@ -65,6 +67,7 @@ export const PROFILE_LABELS: ProfileLabels = {
   localeInvalid: "Use a language tag such as en-GB.",
   timezoneInvalid: "Choose a time zone from the list.",
   passwordHeading: "Password",
+  username: "Username",
   currentPassword: "Current password",
   newPassword: "New password",
   confirmPassword: "Confirm new password",

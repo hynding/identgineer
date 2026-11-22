@@ -162,14 +162,23 @@ export class PasswordSection {
           }}
           onRetry={this.retry}
         />
-        <input
-          type="text"
-          name="username"
-          autocomplete="username"
-          value={user.username}
-          readOnly
-          hidden
-        />
+        {/* The account the password belongs to, for a password manager to update the right entry.
+            Built as the password fields are, and laid out out of sight rather than hidden, since
+            managers skip a field that is not rendered; out of the tab order, as it is not to be
+            edited. */}
+        <div class="username-companion visually-hidden">
+          <idg-input
+            name="username"
+            type="text"
+            autocomplete="username"
+            autocapitalize="none"
+            spellcheck="false"
+            value={user.username}
+            readonly
+            tabindex="-1"
+            accessibleLabel={labels.username}
+          />
+        </div>
         <idg-field label={labels.currentPassword} error={errors.currentPassword} required>
           <idg-input
             name="currentPassword"

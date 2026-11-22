@@ -207,7 +207,7 @@ describe("idg-profile password", () => {
     >(`${PASSWORD_FORM} .username-companion idg-input[name="username"]`);
     expect(username?.value).toBe("ada");
     expect(username?.readonly).toBe(true);
-    expect(username?.getAttribute("autocomplete")).toBe("username");
+    expect(username?.autocomplete).toBe("username");
     expect(username?.getAttribute("tabindex")).toBe("-1");
     expect(shadowOf(root).querySelector(`${PASSWORD_FORM} input[hidden]`)).toBeNull();
     expect(nativeInput(root, "currentPassword").getAttribute("autocomplete")).toBe(

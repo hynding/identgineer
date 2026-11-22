@@ -147,11 +147,15 @@ test.describe("identity forms and form association", () => {
     const box = await companion.boundingBox();
     expect(box).not.toBeNull();
     expect(await companion.evaluate((input) => getComputedStyle(input).display)).not.toBe("none");
-    await inputOf(page, "#profile", "bio").focus();
+    await inputOf(page, "#profile", "displayName").focus();
+    // Tab walks from the profile form into the password form, past where the companion sits.
+    const visited: string[] = [];
     for (let step = 0; step < 12; step += 1) {
       await page.keyboard.press("Tab");
-      expect(await focusPath(page)).not.toContain("input[name=username]");
+      visited.push((await focusPath(page)).at(-1) ?? "");
     }
+    expect(visited).toContain("input[name=currentPassword]");
+    expect(visited).not.toContain("input[name=username]");
   });
 });
 
