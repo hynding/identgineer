@@ -73,14 +73,19 @@ export const completeProviderSignIn =
   ): Promise<ProviderSignInResult> => {
     const segment = providerSegment(provider);
     const query = callbackQuery(options.search ?? "");
-    const response = await context.credentialRequest({
-      method: "GET",
-      path: `/api/auth/${segment}/callback${query}`,
-      cookie: true,
+    return context.exclusive(async () => {
+      const generation = context.session.generation();
+      const response = await context.credentialRequest({
+        method: "GET",
+        path: `/api/auth/${segment}/callback${query}`,
+        cookie: true,
+      });
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        throw new IdentityError("invalid-credentials");
+      }
+      if (!response.ok) throw failureOf(response, context.clock.now());
+      const user = await signInFrom(context, response, generation);
+      context.crossTab.announce("signed-in");
+      return { user, redirectTo: safeRedirectPath(options.returnTo) };
     });
-    if (response.status >= 400 && response.status < 500 && response.status !== 429) {
-      throw new IdentityError("invalid-credentials");
-    }
-    if (!response.ok) throw failureOf(response, context.clock.now());
-    return { user: signInFrom(context, response), redirectTo: safeRedirectPath(options.returnTo) };
   };

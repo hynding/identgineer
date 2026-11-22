@@ -7,6 +7,7 @@ import { createRefresher, type Refresher } from "./refresher.ts";
 import { createSession, type Session, type SignOutReason, type Tokens } from "./session.ts";
 import { createThrottle, type Throttle } from "./throttle.ts";
 import { createTransport, type ApiRequest, type ApiResponse, type Transport } from "./transport.ts";
+import { readUser } from "./shapes.ts";
 import type { IdentityUser } from "./types.ts";
 
 export const DEFAULT_TIMEOUT_MS = 15_000;
@@ -43,12 +44,31 @@ export interface ClientContext {
   readonly throttle: Throttle;
   readonly refresher: Refresher;
   readonly crossTab: CrossTab;
+  readonly isActive: () => boolean;
   /** A credential request: held back while throttled, and a 429 starts the hold. */
   readonly credentialRequest: (request: ApiRequest) => Promise<ApiResponse>;
-  /** A request with the bearer token, refreshed and retried once on a 401. */
+  /**
+   * A request with the bearer token, refreshed and retried once on a 401, unless the session
+   * changed while it was under way (it is then never replayed as the new session).
+   */
   readonly authorizedRequest: (request: ApiRequest) => Promise<ApiResponse>;
-  readonly signedIn: (tokens: Tokens, user: IdentityUser) => void;
+  /** Refreshes the session, signing out if it is over; true when there are fresh tokens. */
+  readonly refreshSession: () => Promise<boolean>;
+  /**
+   * Adopts a sign-in's tokens if the session is still the one the operation started in;
+   * otherwise ends the server session they opened and rejects.
+   */
+  readonly acceptSignIn: (tokens: Tokens, user: IdentityUser, generation: number) => Promise<void>;
+  /** Ends the server session these tokens belong to (and its cookie); never rejects. */
+  readonly endServerSession: (tokens: Tokens, everywhere: boolean) => Promise<void>;
+  /** Runs sign-ins one at a time, in call order, so the last call's session is the one kept. */
+  readonly exclusive: <T>(task: () => Promise<T>) => Promise<T>;
+  /** Settles once every sign-in started so far has finished. */
+  readonly settleSignIns: () => Promise<unknown>;
   readonly signedOut: (reason: SignOutReason) => void;
+  /** What to do when another tab signs in (set by the client). */
+  readonly onOtherTabSignedIn: (handler: () => void) => void;
+  readonly dispose: () => void;
 }
 
 export const createClientContext = (options: IdentityClientOptions): ClientContext => {
@@ -61,22 +81,45 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   const transport = createTransport({ base, fetch, clock, timeoutMs });
   const session = createSession();
   const throttle = createThrottle(clock);
+  let disposed = false;
+  let otherTabSignedIn = (): void => undefined;
+  let signInChain: Promise<unknown> = Promise.resolve();
+  const isActive = (): boolean => !disposed;
 
   const signedOut = (reason: SignOutReason): void => {
     refresher.cancel();
     session.signOut(reason);
   };
+
+  const verifyUser = async (accessToken: string): Promise<boolean | undefined> => {
+    const state = session.getState();
+    if (state.status !== "signed-in") return undefined;
+    const response = await transport.send({ method: "GET", path: "/api/users/me", accessToken });
+    if (!response.ok) throw new IdentityError("unknown");
+    return readUser(response.body).id === state.user.id;
+  };
+
   const refresher = createRefresher({
     transport,
     session,
     clock,
     tokenLifetimeMs,
+    isActive,
+    verifyUser,
     onExpired: () => {
       signedOut("expired");
     },
+    onUserChanged: () => {
+      signedOut("user-changed");
+    },
   });
-  const crossTab = createCrossTab(options.channelName ?? DEFAULT_CHANNEL_NAME, () => {
-    signedOut("other-tab");
+  const crossTab = createCrossTab(options.channelName ?? DEFAULT_CHANNEL_NAME, {
+    onSignedOut: () => {
+      if (!disposed) signedOut("other-tab");
+    },
+    onSignedIn: () => {
+      if (!disposed) otherTabSignedIn();
+    },
   });
 
   const credentialRequest = async (request: ApiRequest): Promise<ApiResponse> => {
@@ -96,18 +139,69 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     return transport.send({ ...request, accessToken });
   };
 
-  const authorizedRequest = async (request: ApiRequest): Promise<ApiResponse> => {
-    const response = await withToken(request);
-    if (response.status !== 401) return response;
+  const refreshSession = async (): Promise<boolean> => {
+    const generation = session.generation();
     const outcome = await refresher.refresh();
-    if (outcome === "refreshed") return withToken(request);
-    if (outcome !== "superseded") signedOut("expired");
-    throw new IdentityError("unauthorized");
+    if (session.generation() !== generation) return false;
+    if (outcome === "refreshed") return true;
+    if (outcome === "switched") signedOut("user-changed");
+    else if (outcome !== "superseded") signedOut("expired");
+    return false;
   };
 
-  const signedIn = (tokens: Tokens, user: IdentityUser): void => {
+  const authorizedRequest = async (request: ApiRequest): Promise<ApiResponse> => {
+    const generation = session.generation();
+    const response = await withToken(request);
+    if (response.status !== 401) return response;
+    if (session.generation() !== generation) throw new IdentityError("unauthorized");
+    const refreshed = await refreshSession();
+    if (!refreshed || session.generation() !== generation) {
+      throw new IdentityError("unauthorized");
+    }
+    return withToken(request);
+  };
+
+  const endServerSession = async (tokens: Tokens, everywhere: boolean): Promise<void> => {
+    const logout = (accessToken: string): Promise<ApiResponse> =>
+      transport.send({
+        method: "POST",
+        path: "/api/auth/logout",
+        accessToken,
+        cookie: true,
+        body: {
+          ...(everywhere ? { scope: "all" } : {}),
+          ...(tokens.refreshToken === undefined ? {} : { refreshToken: tokens.refreshToken }),
+        },
+      });
+    try {
+      const response = await logout(tokens.accessToken);
+      if (response.status !== 401) return;
+      // The access token expired: the logout route needs a live one, so refresh outside the session.
+      const fresh = await refresher.detached(tokens.refreshToken);
+      if (fresh !== undefined) await logout(fresh.accessToken);
+    } catch {
+      // Unreachable: the local sign-out stands, and the server session runs out on its own.
+    }
+  };
+
+  const acceptSignIn = async (
+    tokens: Tokens,
+    user: IdentityUser,
+    generation: number,
+  ): Promise<void> => {
+    if (disposed) throw new IdentityError("unknown");
+    if (session.generation() !== generation) {
+      await endServerSession(tokens, false);
+      throw new IdentityError("unauthorized");
+    }
     session.signIn(tokens, user);
     refresher.schedule();
+  };
+
+  const exclusive = <T>(task: () => Promise<T>): Promise<T> => {
+    const run = signInChain.then(task, task);
+    signInChain = run.catch(() => undefined);
+    return run;
   };
 
   return {
@@ -121,9 +215,23 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     throttle,
     refresher,
     crossTab,
+    isActive,
     credentialRequest,
     authorizedRequest,
-    signedIn,
+    refreshSession,
+    acceptSignIn,
+    endServerSession,
+    exclusive,
+    settleSignIns: () => signInChain,
     signedOut,
+    onOtherTabSignedIn: (handler) => {
+      otherTabSignedIn = handler;
+    },
+    dispose: () => {
+      disposed = true;
+      refresher.cancel();
+      crossTab.close();
+      session.dispose();
+    },
   };
 };

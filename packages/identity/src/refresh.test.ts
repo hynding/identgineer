@@ -93,16 +93,18 @@ describe("authorizedFetch", () => {
     expect(api.requests).toHaveLength(sent);
   });
 
-  it("refreshes once on a 401 and retries", async () => {
+  it("refreshes once on a 401, checks the cookie's user, and retries", async () => {
     const { api, client, signIn } = setup();
     await signIn();
+    const sent = api.requests.length;
     api.expireAccessTokens();
-    const response = await client.authorizedFetch("/api/users/me");
+    const response = await client.authorizedFetch("/api/profiles");
     expect(response.status).toBe(200);
-    expect(paths(api.requests).slice(-3)).toEqual([
-      "/api/users/me",
+    expect(paths(api.requests.slice(sent))).toEqual([
+      "/api/profiles",
       "/api/auth/refresh",
       "/api/users/me",
+      "/api/profiles",
     ]);
   });
 

@@ -72,10 +72,12 @@ export const authorizedFetch =
         timeout.done();
       }
     };
+    const generation = context.session.generation();
     const response = await attempt();
     if (response.status !== 401) return response;
-    const outcome = await context.refresher.refresh();
-    if (outcome === "refreshed") return attempt();
-    if (outcome !== "superseded") context.signedOut("expired");
-    return response;
+    // Never replayed under another session than the one it was sent in.
+    if (context.session.generation() !== generation) return response;
+    const refreshed = await context.refreshSession();
+    if (!refreshed || context.session.generation() !== generation) return response;
+    return attempt();
   };

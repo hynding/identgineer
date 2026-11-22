@@ -14,6 +14,7 @@ import {
   type ResetPasswordInput,
 } from "./account-operations.ts";
 import { authorizedFetch } from "./authorized-fetch.ts";
+import { IdentityError } from "./identity-error.ts";
 import { createClientContext, type IdentityClientOptions } from "./client-context.ts";
 import { signIn, type SignInInput } from "./credential-operations.ts";
 import { getProfile, saveProfile } from "./profile-operations.ts";
@@ -27,6 +28,7 @@ import {
 import {
   currentUser,
   listSessions,
+  reevaluate,
   restore,
   revokeSession,
   signOut,
@@ -81,37 +83,53 @@ export interface IdentityClient {
   readonly getState: () => IdentityState;
   /** Calls the listener on every change of state; returns the function that stops it. */
   readonly subscribe: (listener: IdentityStateListener) => () => void;
-  /** Stops timers and the cross-tab channel. The client is not usable afterwards. */
+  /**
+   * Stops timers and the cross-tab channel and drops the tokens. Every later call rejects with
+   * an `unknown` IdentityError. It does not sign out: the refresh cookie stays for the next page.
+   */
   readonly dispose: () => void;
 }
 
 /** A client for the CMS's users-permissions API. Tokens are kept in this closure only. */
 export const createIdentityClient = (options: IdentityClientOptions): IdentityClient => {
   const context = createClientContext(options);
+  const disposedError = (): IdentityError => new IdentityError("unknown");
+  // After dispose every operation is refused before it touches the network or the state.
+  const live =
+    <A extends unknown[], R>(operation: (...args: A) => Promise<R>) =>
+    (...args: A): Promise<R> =>
+      context.isActive() ? operation(...args) : Promise.reject(disposedError());
+  const liveSync =
+    <A extends unknown[], R>(operation: (...args: A) => R) =>
+    (...args: A): R => {
+      if (!context.isActive()) throw disposedError();
+      return operation(...args);
+    };
+  const reevaluateOnSignIn = reevaluate(context);
+  context.onOtherTabSignedIn(() => {
+    reevaluateOnSignIn().catch(() => undefined);
+  });
   return Object.freeze({
-    register: register(context),
-    signIn: signIn(context),
-    signOut: signOut(context),
-    requestPasswordReset: requestPasswordReset(context),
-    resetPassword: resetPassword(context),
-    confirmEmail: confirmEmail(context),
-    resendConfirmation: resendConfirmation(context),
-    changePassword: changePassword(context),
+    register: live(register(context)),
+    signIn: live(signIn(context)),
+    signOut: live(signOut(context)),
+    requestPasswordReset: live(requestPasswordReset(context)),
+    resetPassword: live(resetPassword(context)),
+    confirmEmail: live(confirmEmail(context)),
+    resendConfirmation: live(resendConfirmation(context)),
+    changePassword: live(changePassword(context)),
     retryAfterSeconds: context.throttle.remainingSeconds,
-    currentUser: currentUser(context),
-    listSessions: listSessions(context),
-    revokeSession: revokeSession(context),
-    getProfile: getProfile(context),
-    saveProfile: saveProfile(context),
-    providerSignInUrl: providerSignInUrl(context),
-    completeProviderSignIn: completeProviderSignIn(context),
-    restore: restore(context),
-    authorizedFetch: authorizedFetch(context),
+    currentUser: live(currentUser(context)),
+    listSessions: live(listSessions(context)),
+    revokeSession: live(revokeSession(context)),
+    getProfile: live(getProfile(context)),
+    saveProfile: live(saveProfile(context)),
+    providerSignInUrl: liveSync(providerSignInUrl(context)),
+    completeProviderSignIn: live(completeProviderSignIn(context)),
+    restore: live(restore(context)),
+    authorizedFetch: live(authorizedFetch(context)),
     getState: context.session.getState,
     subscribe: context.session.subscribe,
-    dispose: () => {
-      context.refresher.cancel();
-      context.crossTab.close();
-    },
+    dispose: context.dispose,
   });
 };

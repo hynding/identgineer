@@ -19,12 +19,19 @@ export interface SignInInput {
 export const tokensOf = (context: ClientContext, auth: AuthResponse): Tokens | undefined =>
   tokensFrom(auth, { fallbackMs: context.tokenLifetimeMs, now: context.clock.now() });
 
-/** Signs in from a token answer that must carry a user, and returns the user. */
-export const signInFrom = (context: ClientContext, response: ApiResponse): IdentityUser => {
+/**
+ * Signs in from a token answer that must carry a user, and returns the user, if the session is
+ * still the one (`generation`) the operation started in.
+ */
+export const signInFrom = async (
+  context: ClientContext,
+  response: ApiResponse,
+  generation: number,
+): Promise<IdentityUser> => {
   const auth = readAuthResponse(response.body);
   const tokens = tokensOf(context, auth);
   if (tokens === undefined || auth.user === undefined) throw new IdentityError("unknown");
-  context.signedIn(tokens, auth.user);
+  await context.acceptSignIn(tokens, auth.user, generation);
   return auth.user;
 };
 
@@ -43,15 +50,19 @@ const signInFailure = (context: ClientContext, response: ApiResponse): IdentityE
 
 export const signIn =
   (context: ClientContext) =>
-  async (input: SignInInput): Promise<IdentityUser> => {
-    const response = await context.credentialRequest({
-      method: "POST",
-      path: "/api/auth/local",
-      body: { identifier: input.identifier, password: input.password },
-      cookie: true,
+  (input: SignInInput): Promise<IdentityUser> =>
+    context.exclusive(async () => {
+      const generation = context.session.generation();
+      const response = await context.credentialRequest({
+        method: "POST",
+        path: "/api/auth/local",
+        body: { identifier: input.identifier, password: input.password },
+        cookie: true,
+      });
+      if (!response.ok) throw signInFailure(context, response);
+      const user = await signInFrom(context, response, generation);
+      context.throttle.signInSucceeded();
+      // The refresh cookie every tab shares now names this session: let the others re-check.
+      context.crossTab.announce("signed-in");
+      return user;
     });
-    if (!response.ok) throw signInFailure(context, response);
-    const user = signInFrom(context, response);
-    context.throttle.signInSucceeded();
-    return user;
-  };

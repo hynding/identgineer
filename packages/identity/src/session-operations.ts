@@ -11,29 +11,17 @@ export interface SignOutOptions {
 }
 
 /**
- * Ends the session on the server (and its refresh cookie), then locally whatever the server
- * said, and tells the other tabs.
+ * Signs out here at once and tells the other tabs, then ends the server session (and its refresh
+ * cookie) when the server can be reached, and waits for any sign-in still under way to settle.
  */
 export const signOut =
   (context: ClientContext) =>
   async (options: SignOutOptions = {}): Promise<void> => {
-    const { session } = context;
-    if (session.accessToken() !== undefined) {
-      const refreshToken = session.refreshToken();
-      await context
-        .authorizedRequest({
-          method: "POST",
-          path: "/api/auth/logout",
-          body: {
-            ...(options.everywhere === true ? { scope: "all" } : {}),
-            ...(refreshToken === undefined ? {} : { refreshToken }),
-          },
-          cookie: true,
-        })
-        .catch(() => undefined);
-    }
+    const tokens = context.session.tokens();
     context.signedOut("user");
-    context.crossTab.announceSignedOut();
+    context.crossTab.announce("signed-out");
+    if (tokens !== undefined) await context.endServerSession(tokens, options.everywhere === true);
+    await context.settleSignIns();
   };
 
 export const currentUser = (context: ClientContext) => async (): Promise<IdentityUser> => {
@@ -52,19 +40,40 @@ export const currentUser = (context: ClientContext) => async (): Promise<Identit
 export const restore = (context: ClientContext) => async (): Promise<IdentityState> => {
   const { session } = context;
   if (session.getState().status === "signed-in") return session.getState();
+  const generation = session.generation();
   const outcome = await context.refresher.refresh();
-  if (outcome === "superseded") return session.getState();
-  const response =
-    outcome === "refreshed"
-      ? await context.authorizedRequest({ method: "GET", path: "/api/users/me" })
-      : undefined;
   const tokens = session.tokens();
-  if (response?.ok !== true || tokens === undefined) {
+  if (session.generation() !== generation) return session.getState();
+  if (outcome !== "refreshed" || tokens === undefined) {
     context.signedOut("no-session");
     return session.getState();
   }
-  context.signedIn(tokens, readUser(response.body));
+  const response = await context.transport.send({
+    method: "GET",
+    path: "/api/users/me",
+    accessToken: tokens.accessToken,
+  });
+  if (session.generation() !== generation) return session.getState();
+  if (!response.ok) {
+    context.signedOut("no-session");
+    return session.getState();
+  }
+  await context.acceptSignIn(tokens, readUser(response.body), generation);
   return session.getState();
+};
+
+/**
+ * Another tab signed in, so the shared refresh cookie names a new session. A signed-in tab
+ * holding a cookie session refreshes (which checks the user), a signed-out tab resumes it.
+ */
+export const reevaluate = (context: ClientContext) => async (): Promise<void> => {
+  const { session } = context;
+  const state = session.getState();
+  if (state.status === "signed-in" && session.refreshToken() === undefined) {
+    await context.refreshSession();
+  } else if (state.status === "signed-out") {
+    await restore(context)();
+  }
 };
 
 export const listSessions =

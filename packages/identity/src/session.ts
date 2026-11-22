@@ -1,8 +1,12 @@
 import type { TokenLifetime } from "./token-lifetime.ts";
 import type { IdentityUser } from "./types.ts";
 
-/** Why the client is signed out: by the user, because the session ran out, in another tab, or at start. */
-export type SignOutReason = "user" | "expired" | "other-tab" | "no-session";
+/**
+ * Why the client is signed out: by the user, because the session ran out, in another tab, at
+ * start with no session to resume, or because the shared refresh cookie now belongs to another
+ * user (another tab signed in as someone else).
+ */
+export type SignOutReason = "user" | "expired" | "other-tab" | "no-session" | "user-changed";
 
 export type IdentityState =
   | { readonly status: "unknown" }
@@ -62,6 +66,12 @@ export const createSession = () => {
     },
     setUser: (user: IdentityUser): void => {
       if (state.status === "signed-in") announce({ status: "signed-in", user });
+    },
+    /** Drops tokens and listeners without announcing anything: the client is being disposed. */
+    dispose: (): void => {
+      generation += 1;
+      tokens = undefined;
+      listeners.clear();
     },
     signOut: (reason: SignOutReason): void => {
       generation += 1;
