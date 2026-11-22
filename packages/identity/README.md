@@ -71,13 +71,24 @@ code `unknown` without sending anything, and `providerSignInUrl` throws it.
 | `retryAfterSeconds()`                                                 | none                                                       | seconds until credential requests are accepted again  |
 | `dispose()`                                                           | none                                                       | stops timers and the cross-tab channel; see below     |
 
-Sign-ins (`signIn`, `completeProviderSignIn`) and `restore()` run one after another, so with two
-sign-ins the later one decides who is signed in, and a restore (or the re-check another tab's
-sign-in triggers) waits for a sign-in under way instead of replacing it. Only a sign-out, here or in
-another tab, or `dispose()` cancels a sign-in: its answer is then dropped, its call rejects
-(`unauthorized`, or `unknown` once disposed), no token is kept, and the session it opened on the
-server is ended. A restore queued before a sign-out does nothing. `dispose()` ends nothing on the
-server and announces nothing to other tabs.
+### Concurrency
+
+Every piece of work that may change the session takes a ticket the moment it is called, before it
+waits for anything, and its tokens enter the session only through one gate that refuses a stale
+ticket. A sign-in's ticket (`signIn`, `completeProviderSignIn`, `register`, `resetPassword`) lasts
+until a sign-out, here or in another tab, or `dispose()`; every other ticket (`restore()`, the
+re-check another tab's sign-in triggers, scheduled refreshes and their retries, the refresh after a 401) lasts only while the session it was taken in does, so any sign-in or sign-out ends it. A
+refresh's tokens are taken only while signed in: a signed-out client never holds a token, and on
+sign-out every timer and `online` listener is cleared, and a completion that arrives afterwards
+finds its ticket stale and does nothing.
+
+Sign-ins, `restore()` and re-checks run one after another, in call order: with two sign-ins the
+later one decides who is signed in, and a restore or re-check waits for a sign-in under way instead
+of replacing it. A cancelled sign-in sends nothing if its turn has not come; if it has, its answer
+is dropped, its call rejects (`unauthorized`, or `unknown` once disposed), no token is kept, and the
+session it opened on the server is ended. A listener hears every transition in order, each as the
+state of that transition; a sign-in rejects (`unauthorized`) if a listener signed out on hearing of
+it. `dispose()` ends nothing on the server and announces nothing to other tabs.
 
 `saveProfile` takes `displayName` (required, up to 80 characters), `bio` (up to 500, or `null`),
 `locale` (BCP 47), `timezone` (IANA) and `marketingOptIn`, checked against the limits in
@@ -144,10 +155,12 @@ the token.
 
 A refresh that cannot reach the server (a laptop waking before its network) never signs out, even
 past a known expiry: the refresh cookie may well still be valid. It is tried again after 30
-seconds, then with a wait that doubles up to 5 minutes, and at once when the browser comes back
-online (`onOnline`). Meanwhile the state stays `signed-in`, but a token past its known expiry is
+seconds, then with a wait that doubles up to 5 minutes (or the server's `Retry-After`, if it
+throttled the refresh and asked for longer), and when the browser comes back online
+(`onOnline`), though never sooner than 5 seconds after the last attempt, however often the event
+fires, and not before a throttled refresh's `Retry-After` has passed. Meanwhile the state stays `signed-in`, but a token past its known expiry is
 never sent: a request first tries the refresh itself and rejects with `network` while the server
-stays out of reach. Only a refused refresh signs out. Concurrent 401s share one refresh, and a request that gets a 401 is retried once on
+stays out of reach (or `throttled`, with `retryAfterSeconds`, while it refuses refreshes with a 429). Only a refused refresh signs out. Concurrent 401s share one refresh, and a request that gets a 401 is retried once on
 the refreshed token, but only if the same session is still current: a request sent before a
 sign-out or a sign-in as someone else is never retried with the new user's token (`authorizedFetch`
 returns the 401, other methods reject with `unauthorized`).
@@ -187,16 +200,28 @@ cookie, and a signed-in tab holding no refresh token of its own refreshes from t
 which signs it out with `user-changed` if the other tab signed in as someone else. No token or user
 is sent, and any other message is ignored.
 
-**Sign-out.** `signOut` signs out locally at once and cancels any sign-in under way, then ends the
-session on the server, and only then tells the other tabs, so no tab is told of a sign-out that a
-reload would undo. When the tab holds no token (the state is `unknown`, a `restore()` is in
-flight, or it was already signed out, say with `user-changed` because another tab signed in as
-someone else) it waits for any refresh under way and then refreshes from the shared cookie itself,
-so that a cookie session, whoever opened it, is ended too: on a shared device, "Sign out" leaves no
-session to resume. It resolves to `{ outcome: "signed-out" }` when no server session is left, and
-to `{ outcome: "server-unreachable" }` when the server could not be reached (or answered with a
-server error): the other tabs are still told, but the server session may live on until it expires,
-and a reload may resume it.
+**Sign-out.** `signOut` is the strongest operation. At once it signs out locally and cancels every
+sign-in, restore and re-check asked for before it, so none of them can leave the tab signed in.
+Then it ends the session on the server, waits for the work it cancelled (ending any session that
+work opened), and only then tells the other tabs, so no tab is told of a sign-out that a reload
+would undo. Anything asked for meanwhile (a sign-in, restore or re-check) waits for it to finish and
+then runs afresh.
+
+On a shared device, "Sign out" leaves nothing to resume in this browser. With a token of its own,
+the tab logs that session out; the logout clears the refresh cookie only when the cookie named that
+session, and the cookie may name another one (another tab's sign-in this tab never heard of). Page
+script cannot see whether it was cleared, so the tab then refreshes from the cookie once more (one
+request, refused when nothing is left) and logs out whatever session it finds. A tab without a
+token (the state is `unknown`, a `restore()` is in flight, or it was already signed out, say with
+`user-changed`) starts with that lookup, after any refresh under way. On a backend without sessions
+there is nothing to look up.
+
+It resolves to `{ outcome: "signed-out" }` only when that is true at the time it resolves: no
+server session is left for the cookie to resume. A lookup the server refuses clearly (400, 401,
+403, or 404 without sessions) means there was none. Anything else, from a network failure or a
+server error to a throttled (429) or malformed answer, resolves `{ outcome: "server-unreachable" }`:
+the other tabs are still told, but a server session may live on until it expires, and a reload may
+resume it.
 
 **Input.** Provider names and session and document ids are checked against strict patterns and
 URL-encoded. `authorizedFetch` resolves its target first (a path beginning with `/` is joined to
@@ -265,19 +290,27 @@ sign in from the token answer); see `src/passkeys.ts`.
 - Each cookie refresh costs one extra `GET /api/users/me` (the user check under Refresh).
 - Without Web Locks (older browsers, sandboxed frames) two tabs can still present the same refresh
   cookie at once; the one retry covers the usual case.
-- `signOut` in a tab that holds no token costs one refresh, to find the cookie session to end.
+- `signOut` costs one refresh request after the logout (or instead of it, in a tab without a
+  token), to find any session the cookie still names; refreshes count against the CMS's refresh
+  throttle (`CAMIS_REFRESH_THROTTLE_PER_MINUTE`, 60 a minute by default).
 
 ## Testing
 
 `@identgineer/identity/testing` exports `createFakeIdentityApi(options)`, an in-memory stand-in for
 the endpoints above with strapi-php's behaviour (error envelope, guest routes refusing a bearer
-token, refresh and legacy modes, cookie mode, throttling, a browser-like cookie jar read when each
-request is sent), `createManualClock(start)` and `createMemoryLocks()` (an in-memory lock manager
+token, refresh and legacy modes, cookie mode, a browser-like cookie jar read when each request is
+sent, the logout ending the bearer token's own session and clearing the cookie only with the session
+it names, a throttle bucket per group of routes with refreshes in their own (`throttlePerMinute`,
+`refreshThrottlePerMinute`, default 60) answering `RateLimitError`, and the refresh cookie refused
+with a 403 from a foreign `Origin` unless listed in `allowedOrigins`), `createManualClock(start)` and `createMemoryLocks()` (an in-memory lock manager
 for the `locks` option). Pass `api.fetch`, `api.baseUrl` and the clock to the client. The fake
 issues opaque tokens by default, living 600 seconds in refresh mode and 30 days in legacy mode
 (`accessTokens: "jwt"`, `accessTokenLifetimeSeconds` and `reportExpiresIn` change that), and
 `api.holdNext(method, path)` holds the next such request until the returned function is called, to
-interleave tabs and races.
+interleave tabs and races. `api.restorableSession()` tells whether the cookie names a session a
+reload could resume, and `api.setRefreshCookie(value)` plants a stale or foreign one.
+`src/invariants.test.ts` fires sign-ins, sign-outs, restores, timers, network failures, throttling
+and other tabs' notices in seeded random orders and checks the invariants above after each step.
 
 `src/camis-contract.test.ts` checks the client's routes, methods and body fields against camis'
 strapi-php emitter and route golden when `CAMIS_DIR` names a camis checkout (as for
