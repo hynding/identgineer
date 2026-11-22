@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-layout="top-bar" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Identity guard fixture</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/fixtures/identity.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+    <!-- The documented page: the sign-in form is the guard's fallback, the profile its content. -->
+    <script type="module" src="/fixtures/identity.js"></script>
+  </head>
+  <body>
+    <header class="identity-header">
+      <a id="before" href="#account-title">Skip to your account</a>
+      <idg-user-menu id="menu">
+        <idg-menu-item slot="items" value="profile">Your profile</idg-menu-item>
+        <a slot="signed-out" href="#account-title">Sign in</a>
+      </idg-user-menu>
+    </header>
+    <main class="identity-main">
+      <h1 id="account-title">Your account</h1>
+      <idg-session-guard id="guard">
+        <idg-profile id="profile"></idg-profile>
+        <idg-sign-in id="sign-in" slot="fallback"></idg-sign-in>
+        <idg-skeleton slot="pending" lines="3"></idg-skeleton>
+      </idg-session-guard>
+      <p><a id="after" href="#account-title">Back to the top</a></p>
+    </main>
+  </body>
+</html>

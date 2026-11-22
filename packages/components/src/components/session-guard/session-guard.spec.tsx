@@ -224,6 +224,45 @@ describe("idg-session-guard", () => {
     expect(shadowOf(root).querySelector('[part="sign-out-outcome"]')).toBeNull();
   });
 
+  it("shows no notice after a sign-out the server confirmed", async () => {
+    const { client, signIn } = identitySetup();
+    await signIn();
+    const { root, waitForChanges } = await mount(client);
+    await client.signOut();
+    root.querySelector(".protected")?.dispatchEvent(
+      new CustomEvent("idgSignedOut", {
+        detail: { outcome: "signed-out", everywhere: true },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await waitForChanges();
+    expect(drawn(root)).toEqual(["fallback"]);
+    expect(shadowOf(root).querySelector('[part="sign-out-outcome"]')).toBeNull();
+  });
+
+  it("forgets a sign-out notice when it is given another client", async () => {
+    const { client, signIn } = identitySetup();
+    await signIn();
+    const { root, waitForChanges } = await mount(client);
+    root.querySelector(".protected")?.dispatchEvent(
+      new CustomEvent("idgSignedOut", {
+        detail: { outcome: "server-unreachable" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await client.signOut();
+    await waitForChanges();
+    expect(shadowOf(root).querySelector('[part="sign-out-outcome"]')).not.toBeNull();
+    const other = identitySetup();
+    await other.client.restore().catch(() => undefined);
+    root.client = other.client;
+    await settle(waitForChanges);
+    expect(drawn(root)).toEqual(["fallback"]);
+    expect(shadowOf(root).querySelector('[part="sign-out-outcome"]')).toBeNull();
+  });
+
   it("ignores a client property that is not a client", async () => {
     const { root, waitForChanges } = await mount();
     root.client = { getState: "nope" };
