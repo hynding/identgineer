@@ -1,4 +1,4 @@
-import type { ClientContext, ServerSignOut } from "./client-context.ts";
+import { worse, type ClientContext, type ServerSignOut } from "./client-context.ts";
 import { sessionSegment } from "./identifiers.ts";
 import { failureOf } from "./map-error.ts";
 import type { IdentityState, Ticket, Tokens } from "./session.ts";
@@ -69,22 +69,37 @@ const SUPERSEDED: SignOutResult = Object.freeze({ outcome: "superseded" });
  * cancelled (ending the sessions that work opened), and only then tells the other tabs. Work
  * asked for meanwhile waits for it and then runs afresh.
  *
- * Across tabs the later action wins: a sign-in this tab hears of (or is asked for) after the
- * sign-out began stands. The sign-out then logs out no session it finds in the cookie, tells no
- * tab of a sign-out, and resolves `superseded`; the queued re-check brings this tab to the newer
- * session. An unreachable server is reported, not thrown.
+ * Across tabs the later action wins: another tab's sign-in this tab hears of after the sign-out
+ * began stands, unless that tab signed out again. The sign-out then logs out no session it finds
+ * in the cookie, tells no tab of a sign-out, and resolves `superseded`; the queued re-check brings
+ * this tab to the newer session. A sign-in asked for in this tab never supersedes it: it waits
+ * for the sign-out to finish. An unreachable server is reported, not thrown.
  */
 export const signOut =
   (context: ClientContext) =>
   async (options: SignOutOptions = {}): Promise<SignOutResult> => {
     const own = context.session.tokens();
-    const seen = context.signInsSeen();
-    const newer = (): boolean => context.signInsSeen() !== seen;
+    const everywhere = options.everywhere === true;
+    const mark = context.noticeMark();
+    const newer = (): boolean => context.signedInSince(mark);
+    let skipped = false;
+    const newerSkips = (): boolean => {
+      if (newer()) skipped = true;
+      return skipped;
+    };
     context.session.cancelSignIns();
     context.signedOut("user");
     const settle = context.signOutPending(newer);
     const server = await context
-      .signOutBarrier(() => endSessions(context, own, options.everywhere === true, newer))
+      .signOutBarrier(async () => {
+        let outcome = await endSessions(context, own, everywhere, newerSkips);
+        // A newer sign-in whose tab signed out again no longer stands: end what the cookie names.
+        while (skipped && !newer()) {
+          skipped = false;
+          outcome = worse(outcome, await endCookieSession(context, everywhere, newerSkips));
+        }
+        return outcome;
+      })
       .finally(settle);
     if (newer()) return SUPERSEDED;
     context.crossTab.announce("signed-out");

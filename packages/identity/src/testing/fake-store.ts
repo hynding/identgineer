@@ -163,6 +163,9 @@ export const createFakeStore = (options: FakeStoreOptions) => {
       return successor;
     },
     sessionExists: (sessionId: string): boolean => sessions.has(sessionId),
+    /** The account whose usable session this refresh token names. */
+    sessionOwner: (refreshToken: string | undefined): number | undefined =>
+      refreshToken === undefined ? undefined : usableSession(refreshToken)?.userId,
     sessionOf: (refreshToken: string | undefined): string | undefined =>
       refreshToken === undefined ? undefined : usableSession(refreshToken)?.sessionId,
     activeSessions: (userId: number) =>

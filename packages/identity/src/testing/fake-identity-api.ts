@@ -348,6 +348,11 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
       const cookie = cookieJar.get(settings.refreshCookieName);
       return cookie !== undefined && store.sessionOf(cookie) !== undefined;
     },
+    /** The address of the account whose session the jar's refresh cookie resumes, if any. */
+    restorableUser: (): string | undefined => {
+      const owner = store.sessionOwner(cookieJar.get(settings.refreshCookieName));
+      return owner === undefined ? undefined : store.findUser((user) => user.id === owner)?.email;
+    },
     clearCookies: (): void => {
       cookieJar.clear();
     },

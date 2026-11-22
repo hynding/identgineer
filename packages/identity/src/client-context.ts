@@ -115,12 +115,14 @@ export interface ClientContext {
    */
   readonly signOutBarrier: (work: () => Promise<ServerSignOut>) => Promise<ServerSignOut>;
   readonly signedOut: (reason: SignOutReason) => void;
+  /** A mark in the sequence of other tabs' notices, taken when a sign-out begins. */
+  readonly noticeMark: () => number;
   /**
-   * Counts the sign-ins this tab knows of: another tab's (by its notice) and this tab's own (when
-   * asked for). A sign-out compares it before and after, since the later action wins.
+   * Whether another tab signed in after `mark` and has not signed out since: its session stands
+   * against a sign-out begun at `mark`, since the later action wins. A tab sends that notice only
+   * once it adopted the session. This tab's own sign-ins never count: they wait for its sign-out.
    */
-  readonly signInsSeen: () => number;
-  readonly noteSignIn: () => void;
+  readonly signedInSince: (mark: number) => boolean;
   /**
    * Registers a sign-out under way (`superseded` says whether a later sign-in won), so that a
    * dispose before it finishes still tells the other tabs. Returns its removal.
@@ -151,7 +153,8 @@ const durationOption = (
   return chosen;
 };
 
-const worse = (left: ServerSignOut, right: ServerSignOut): ServerSignOut =>
+/** The less certain of two sign-out outcomes. */
+export const worse = (left: ServerSignOut, right: ServerSignOut): ServerSignOut =>
   left === "unreachable" || right === "unreachable" ? "unreachable" : "ended";
 
 export const createClientContext = (options: IdentityClientOptions): ClientContext => {
@@ -174,7 +177,9 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   const throttle = createThrottle(clock);
   let disposed = false;
   let otherTabSignedIn = (): void => undefined;
-  let signInsSeen = 0;
+  let notices = 0;
+  let lastSignedIn = 0;
+  let lastSignedOut = 0;
   let queue: Promise<unknown> = Promise.resolve();
   // Each sign-out under way collects the endings of the sessions its cancelled work opened.
   const collectors = new Set<Promise<ServerSignOut>[]>();
@@ -239,12 +244,15 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   const crossTab = createCrossTab(options.channelName ?? DEFAULT_CHANNEL_NAME, {
     onSignedOut: () => {
       if (disposed) return;
+      notices += 1;
+      lastSignedOut = notices;
       session.cancelSignIns();
       signedOut("other-tab");
     },
     onSignedIn: () => {
       if (disposed) return;
-      signInsSeen += 1;
+      notices += 1;
+      lastSignedIn = notices;
       otherTabSignedIn();
     },
   });
@@ -401,10 +409,8 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     exclusive,
     signOutBarrier,
     signedOut,
-    signInsSeen: () => signInsSeen,
-    noteSignIn: () => {
-      signInsSeen += 1;
-    },
+    noticeMark: () => notices,
+    signedInSince: (mark) => lastSignedIn > mark && lastSignedIn > lastSignedOut,
     signOutPending: (superseded) => {
       pendingSignOuts.add(superseded);
       return () => pendingSignOuts.delete(superseded);

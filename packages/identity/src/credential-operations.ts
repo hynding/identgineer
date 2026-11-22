@@ -57,7 +57,6 @@ export const queuedSignIn = <T>(
   task: (ticket: Ticket) => Promise<T>,
 ): Promise<T> => {
   const ticket = context.session.ticket("sign-in");
-  context.noteSignIn();
   return context.exclusive(() => {
     if (!context.session.valid(ticket)) {
       return Promise.reject(new IdentityError(context.isActive() ? "unauthorized" : "unknown"));
