@@ -50,6 +50,20 @@ test.describe("idg-session-guard", () => {
     });
   });
 
+  test("says so when the restore cannot reach the server, and Try again recovers", async ({
+    page,
+  }) => {
+    await openIdentity(page, "?restore-fail");
+    const notice = page.locator("#guard").locator('[part="unreachable"]');
+    await expect(notice).toContainText("The service could not be reached.");
+    await expect(page.locator("#guard-pending")).toBeHidden();
+    await expect(page.locator("#profile")).toBeHidden();
+    await notice.getByRole("button", { name: "Try again" }).click();
+    await expect(page.locator("#guard-fallback")).toBeVisible();
+    await expect(notice).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
+  });
+
   test("shows the content once signed in, and says so with an event", async ({ page }) => {
     await openIdentity(page);
     await signInThroughForm(page);

@@ -36,6 +36,8 @@ const api = createFakeIdentityApi({
 api.addUser({ username: "ada", email: "ada@example.com", password: PASSWORD });
 // `?hold-restore` keeps the first restore unanswered until the test lets it go, so the state
 // stays unknown for as long as a test needs to look at it.
+// `?restore-fail` makes the first restore fail as an unreachable server would.
+if (params.has("restore-fail")) api.respondNext("POST", "/api/auth/refresh", "network-error");
 const releaseRestore = params.has("hold-restore")
   ? api.holdNext("POST", "/api/auth/refresh")
   : () => undefined;

@@ -139,6 +139,45 @@ describe("idg-session-guard", () => {
     expect(events.seen).toEqual([{ type: "idgSessionChange", detail: { status: "signed-in" } }]);
   });
 
+  it("says the server could not be reached when the restore fails, and tries again on Try again", async () => {
+    const { client, api } = identitySetup();
+    api.respondNext("POST", "/api/auth/refresh", "network-error");
+    const { root, waitForChanges } = await mount(client);
+    await settle(waitForChanges);
+    expect(drawn(root)).toEqual([]);
+    const notice = shadowOf(root).querySelector('[part="unreachable"]');
+    expect(notice?.textContent).toContain(
+      "The service could not be reached. Check your connection and try again.",
+    );
+    expect(events.seen.at(-1)?.detail).toEqual({ status: "unreachable" });
+    shadowOf(root).querySelector<HTMLElement>('[part="retry"]')?.click();
+    await settle(waitForChanges);
+    expect(drawn(root)).toEqual(["fallback"]);
+    expect(api.requests.filter((request) => request.path === "/api/auth/refresh")).toHaveLength(2);
+  });
+
+  it("tries the restore again when the browser comes back online", async () => {
+    const { client, api } = identitySetup();
+    api.respondNext("POST", "/api/auth/refresh", "network-error");
+    const { root, waitForChanges } = await mount(client);
+    await settle(waitForChanges);
+    window.dispatchEvent(new Event("online"));
+    await settle(waitForChanges);
+    expect(drawn(root)).toEqual(["fallback"]);
+    expect(shadowOf(root).querySelector('[part="unreachable"]')).toBeNull();
+  });
+
+  it("uses the labels it is given for the notice", async () => {
+    const { client, api } = identitySetup();
+    api.respondNext("POST", "/api/auth/refresh", "network-error");
+    const { root, waitForChanges } = await mount(client);
+    (root as GuardElement & { labels?: Record<string, string> }).labels = {
+      retry: "Erneut versuchen",
+    };
+    await settle(waitForChanges);
+    expect(shadowOf(root).querySelector('[part="retry"]')?.textContent).toBe("Erneut versuchen");
+  });
+
   it("ignores a client property that is not a client", async () => {
     const { root, waitForChanges } = await mount();
     root.client = { getState: "nope" };
