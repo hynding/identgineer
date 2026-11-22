@@ -32,8 +32,8 @@ export type RefreshResult =
 
 export interface Refresher {
   /**
-   * Refreshes the session `ticket` names. Callers for the same session and refresh token share
-   * the request in flight; one for another session never takes an older session's answer. It
+   * Refreshes the session `ticket` names. Callers for the same session share the request in
+   * flight; one for another session never takes an older session's answer. It
    * changes nothing in the session; it rejects with an IdentityError when the server cannot
    * answer.
    */
@@ -91,7 +91,7 @@ const refreshRequest = (refreshToken: string | undefined): ApiRequest =>
 export const createRefresher = (options: RefresherOptions): Refresher => {
   const { clock, session } = options;
   const alarm = createAlarm(clock);
-  let inFlight: { readonly key: string; readonly promise: Promise<RefreshResult> } | undefined;
+  let inFlight: { readonly key: number; readonly promise: Promise<RefreshResult> } | undefined;
   let shortStreak = 0;
   let unreachableStreak = 0;
   let stopListening = (): void => undefined;
@@ -160,7 +160,8 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
   };
 
   const refresh = (ticket: Ticket): Promise<RefreshResult> => {
-    const key = `${String(ticket.epoch)}:${session.refreshToken() ?? ""}`;
+    // Within one session the refresh token changes only once the refresh in flight has settled.
+    const key = ticket.epoch;
     if (inFlight?.key === key) return inFlight.promise;
     const promise = run().finally(() => {
       if (inFlight?.promise === promise) inFlight = undefined;
