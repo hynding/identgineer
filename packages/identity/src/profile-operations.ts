@@ -1,6 +1,6 @@
 import type { ClientContext } from "./client-context.ts";
 import { documentSegment } from "./identifiers.ts";
-import { requireValid } from "./input-checks.ts";
+import { requireObject, requireValid } from "./input-checks.ts";
 import { failureOf } from "./map-error.ts";
 import { readProfile, readProfileList } from "./shapes.ts";
 import type { Profile, ProfileInput } from "./types.ts";
@@ -19,6 +19,7 @@ const optional = (value: unknown, check: (present: unknown) => boolean): boolean
   value === undefined || check(value);
 
 const checkProfile = (input: ProfileInput): void => {
+  requireObject(input);
   requireValid(
     {
       displayName: fits(input.displayName, 80) && input.displayName.trim() !== "",

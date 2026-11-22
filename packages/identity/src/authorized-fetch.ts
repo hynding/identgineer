@@ -1,6 +1,7 @@
 import { endpointUrl } from "./base-url.ts";
 import type { ClientContext } from "./client-context.ts";
 import { IdentityError } from "./identity-error.ts";
+import { requireObject } from "./input-checks.ts";
 
 const ENCODED_SEPARATOR = /%(?:2f|5c|2e)/i;
 
@@ -60,6 +61,7 @@ const timeoutSignal = (
 export const authorizedFetch =
   (context: ClientContext) =>
   async (input: string | URL, init: RequestInit = {}): Promise<Response> => {
+    requireObject(init);
     const url = resolveTarget(context.base, input);
     const ticket = context.session.ticket("session");
     const attempt = async (): Promise<Response> => {

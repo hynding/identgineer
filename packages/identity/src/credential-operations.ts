@@ -1,5 +1,6 @@
 import type { ClientContext } from "./client-context.ts";
 import { IdentityError } from "./identity-error.ts";
+import { isText, requireObject, requireValid } from "./input-checks.ts";
 import { errorName } from "./map-error.ts";
 import { readErrorEnvelope, readAuthResponse, type AuthResponse } from "./shapes.ts";
 import type { Ticket, Tokens } from "./session.ts";
@@ -67,8 +68,14 @@ export const queuedSignIn = <T>(
 
 export const signIn =
   (context: ClientContext) =>
-  (input: SignInInput): Promise<IdentityUser> =>
-    queuedSignIn(context, async (ticket) => {
+  async (input: SignInInput): Promise<IdentityUser> => {
+    // An empty identifier is still sent: it fails like any wrong credentials.
+    requireObject(input);
+    requireValid(
+      { identifier: isText(input.identifier), password: isText(input.password) },
+      { nameFields: false },
+    );
+    return queuedSignIn(context, async (ticket) => {
       const response = await context.credentialRequest({
         method: "POST",
         path: "/api/auth/local",
@@ -82,3 +89,4 @@ export const signIn =
       context.crossTab.announce("signed-in");
       return user;
     });
+  };

@@ -3,6 +3,7 @@ import type { ClientContext } from "./client-context.ts";
 import { queuedSignIn, signInFrom } from "./credential-operations.ts";
 import { providerSegment } from "./identifiers.ts";
 import { IdentityError } from "./identity-error.ts";
+import { isOptional, requireObject } from "./input-checks.ts";
 import { failureOf } from "./map-error.ts";
 import { safeRedirectPath } from "./safe-redirect.ts";
 import type { IdentityUser } from "./types.ts";
@@ -33,6 +34,7 @@ export interface ProviderSignInResult {
 const FORWARDED_PARAMS = ["access_token", "id_token", "access_secret"] as const;
 
 const isAllowedCallback = (callback: string): boolean => {
+  if (typeof callback !== "string") return false;
   try {
     return isSecureOrLocal(new URL(callback));
   } catch {
@@ -43,6 +45,7 @@ const isAllowedCallback = (callback: string): boolean => {
 export const providerSignInUrl =
   (context: ClientContext) =>
   (provider: string, options: ProviderSignInUrlOptions = {}): string => {
+    requireObject(options);
     const url = endpointUrl(context.base, `/api/connect/${providerSegment(provider)}`);
     if (options.callback === undefined) return url;
     if (!isAllowedCallback(options.callback)) throw new IdentityError("validation");
@@ -72,6 +75,10 @@ export const completeProviderSignIn =
     options: CompleteProviderSignInOptions = {},
   ): Promise<ProviderSignInResult> => {
     const segment = providerSegment(provider);
+    requireObject(options);
+    if (!isOptional(options.search, "string") || !isOptional(options.returnTo, "string")) {
+      throw new IdentityError("validation");
+    }
     const query = callbackQuery(options.search ?? "");
     return queuedSignIn(context, async (ticket) => {
       const response = await context.credentialRequest({

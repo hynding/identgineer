@@ -6,7 +6,7 @@ const PROVIDER = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const OPAQUE_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 const segment = (value: string, pattern: RegExp): string => {
-  if (!pattern.test(value)) throw new IdentityError("validation");
+  if (typeof value !== "string" || !pattern.test(value)) throw new IdentityError("validation");
   return encodeURIComponent(value);
 };
 

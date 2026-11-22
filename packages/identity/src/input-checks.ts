@@ -4,12 +4,28 @@ import { IdentityError } from "./identity-error.ts";
 const MAX_PASSWORD_BYTES = 72;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const isEmail = (value: string): boolean => EMAIL.test(value);
+// Every check takes `unknown`: a JavaScript caller can pass anything, and a wrong type is a
+// validation error like any other, never a TypeError.
+export const isEmail = (value: unknown): boolean => typeof value === "string" && EMAIL.test(value);
 
-export const isPassword = (value: string): boolean =>
-  value !== "" && new TextEncoder().encode(value).length <= MAX_PASSWORD_BYTES;
+export const isPassword = (value: unknown): boolean =>
+  typeof value === "string" &&
+  value !== "" &&
+  new TextEncoder().encode(value).length <= MAX_PASSWORD_BYTES;
 
-export const isFilled = (value: string): boolean => value.trim() !== "";
+export const isFilled = (value: unknown): boolean =>
+  typeof value === "string" && value.trim() !== "";
+
+export const isText = (value: unknown): boolean => typeof value === "string";
+
+/** Left out, or of the given type. */
+export const isOptional = (value: unknown, type: "string" | "boolean"): boolean =>
+  value === undefined || typeof value === type;
+
+/** Refuses an input that is not an object (`null`, a string, a number) before a field is read. */
+export const requireObject = (input: unknown): void => {
+  if (typeof input !== "object" || input === null) throw new IdentityError("validation");
+};
 
 /** Throws a validation error naming the failed fields (when they may be named) if any failed. */
 export const requireValid = (

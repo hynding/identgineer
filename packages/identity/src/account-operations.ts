@@ -2,7 +2,7 @@ import type { ClientContext } from "./client-context.ts";
 import { queuedSignIn, signInFrom, tokensOf } from "./credential-operations.ts";
 import { IdentityError } from "./identity-error.ts";
 import { errorName, failureOf, fieldsOf } from "./map-error.ts";
-import { isEmail, isFilled, isPassword, requireValid } from "./input-checks.ts";
+import { isEmail, isFilled, isPassword, requireObject, requireValid } from "./input-checks.ts";
 import { readAuthResponse } from "./shapes.ts";
 import type { ApiResponse } from "./transport.ts";
 import type { IdentityUser } from "./types.ts";
@@ -65,6 +65,7 @@ const isRefusedSecret = (response: ApiResponse): boolean =>
 export const register =
   (context: ClientContext) =>
   async (input: RegisterInput): Promise<RegisterResult> => {
+    requireObject(input);
     requireValid(
       {
         username: isFilled(input.username),
@@ -97,6 +98,7 @@ export const register =
 const neutralEmailRequest =
   (context: ClientContext, path: string) =>
   async (input: EmailInput): Promise<RequestAccepted> => {
+    requireObject(input);
     requireValid({ email: isEmail(input.email) }, { nameFields: false });
     const response = await context.credentialRequest({
       method: "POST",
@@ -116,6 +118,7 @@ export const resendConfirmation = (context: ClientContext) =>
 export const resetPassword =
   (context: ClientContext) =>
   async (input: ResetPasswordInput): Promise<IdentityUser> => {
+    requireObject(input);
     requireValid(
       {
         code: isFilled(input.code),
@@ -147,6 +150,7 @@ export const resetPassword =
 export const confirmEmail =
   (context: ClientContext) =>
   async (input: ConfirmEmailInput): Promise<void> => {
+    requireObject(input);
     requireValid({ confirmation: isFilled(input.confirmation) }, { nameFields: false });
     const response = await context.transport.send({
       method: "GET",
@@ -161,6 +165,7 @@ export const confirmEmail =
 export const changePassword =
   (context: ClientContext) =>
   async (input: ChangePasswordInput): Promise<void> => {
+    requireObject(input);
     requireValid(
       {
         currentPassword: isFilled(input.currentPassword),
