@@ -3,7 +3,8 @@ import { STORAGE_KEY } from "./constants.ts";
 import { createTestDocument } from "./create-test-document.ts";
 import { MemoryStorage } from "./memory-storage.ts";
 import type { StorageLike } from "./storage.ts";
-import { applyVariations, getVariations, resetVariations } from "./variations-state.ts";
+import { getVariations } from "./read-variations.ts";
+import { applyVariations, resetVariations } from "./variations-state.ts";
 
 const DEFAULTS = {
   theme: "aurora",
