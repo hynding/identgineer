@@ -16,6 +16,7 @@ export type { StorageLike } from "./storage.ts";
 export { shuffleVariations } from "./shuffle-variations.ts";
 export type { RandomSource } from "./shuffle-variations.ts";
 export { decodeVariations, encodeVariations, variationsUrl } from "./url.ts";
+export type { EncodeOptions } from "./url.ts";
 export { isVariationId, parseVariations, validateVariations } from "./validate.ts";
 export type { RejectedVariation, ValidatedVariations } from "./validate.ts";
 export type { SchemeChoice, StateKey, VariationAxis, VariationState } from "./variation-state.ts";
