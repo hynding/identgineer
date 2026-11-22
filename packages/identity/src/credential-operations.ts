@@ -3,6 +3,7 @@ import { IdentityError } from "./identity-error.ts";
 import { errorName } from "./map-error.ts";
 import { readErrorEnvelope, readAuthResponse, type AuthResponse } from "./shapes.ts";
 import type { Tokens } from "./session.ts";
+import { tokensFrom } from "./tokens.ts";
 import type { ApiResponse } from "./transport.ts";
 import type { IdentityUser } from "./types.ts";
 
@@ -15,17 +16,13 @@ export interface SignInInput {
   readonly password: string;
 }
 
-export const tokensOf = (auth: AuthResponse): Tokens | undefined => {
-  if (auth.accessToken === undefined) return undefined;
-  return auth.refreshToken === undefined
-    ? { accessToken: auth.accessToken }
-    : { accessToken: auth.accessToken, refreshToken: auth.refreshToken };
-};
+export const tokensOf = (context: ClientContext, auth: AuthResponse): Tokens | undefined =>
+  tokensFrom(auth, { fallbackMs: context.tokenLifetimeMs, now: context.clock.now() });
 
 /** Signs in from a token answer that must carry a user, and returns the user. */
 export const signInFrom = (context: ClientContext, response: ApiResponse): IdentityUser => {
   const auth = readAuthResponse(response.body);
-  const tokens = tokensOf(auth);
+  const tokens = tokensOf(context, auth);
   if (tokens === undefined || auth.user === undefined) throw new IdentityError("unknown");
   context.signedIn(tokens, auth.user);
   return auth.user;

@@ -75,6 +75,6 @@ export const authorizedFetch =
     if (response.status !== 401) return response;
     const outcome = await context.refresher.refresh();
     if (outcome === "refreshed") return attempt();
-    if (outcome === "rejected") context.signedOut("expired");
+    if (outcome !== "superseded") context.signedOut("expired");
     return response;
   };

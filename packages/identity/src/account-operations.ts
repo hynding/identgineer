@@ -83,7 +83,7 @@ export const register =
     if (isApplicationError(response)) return CHECK_EMAIL;
     if (!response.ok) throw failureOf(response, context.clock.now(), REGISTER_FIELDS);
     const auth = readAuthResponse(response.body);
-    if (tokensOf(auth) === undefined) return CHECK_EMAIL;
+    if (tokensOf(context, auth) === undefined) return CHECK_EMAIL;
     return { outcome: "signed-in", user: signInFrom(context, response) };
   };
 

@@ -63,15 +63,30 @@ export interface AuthResponse {
   readonly accessToken?: string;
   readonly refreshToken?: string;
   readonly user?: IdentityUser;
+  /** The access token's lifetime in seconds, when a backend reports it. */
+  readonly expiresIn?: number;
+  /** When the access token expires, when a backend reports it. */
+  readonly expiresAt?: string | number;
 }
 
 /** A sign-in, registration or refresh answer: a token, a user, or both. */
 export const readAuthResponse = (value: unknown): AuthResponse => {
   const fields = record(value);
-  const result: { accessToken?: string; refreshToken?: string; user?: IdentityUser } = {};
+  const result: {
+    accessToken?: string;
+    refreshToken?: string;
+    user?: IdentityUser;
+    expiresIn?: number;
+    expiresAt?: string | number;
+  } = {};
   if (fields.jwt !== undefined) result.accessToken = nonEmptyText(fields.jwt);
   if (fields.refreshToken !== undefined) result.refreshToken = nonEmptyText(fields.refreshToken);
   if (fields.user !== undefined) result.user = readUser(fields.user);
+  // Hints only: an unreadable one is ignored rather than failing the sign-in.
+  if (typeof fields.expiresIn === "number") result.expiresIn = fields.expiresIn;
+  if (typeof fields.expiresAt === "string" || typeof fields.expiresAt === "number") {
+    result.expiresAt = fields.expiresAt;
+  }
   if (result.accessToken === undefined && result.user === undefined) throw malformed();
   return result;
 };

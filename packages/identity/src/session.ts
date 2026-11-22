@@ -1,3 +1,4 @@
+import type { TokenLifetime } from "./token-lifetime.ts";
 import type { IdentityUser } from "./types.ts";
 
 /** Why the client is signed out: by the user, because the session ran out, in another tab, or at start. */
@@ -14,6 +15,7 @@ export interface Tokens {
   readonly accessToken: string;
   /** Only when the backend returned it in a body; a cookie-held one is never seen. */
   readonly refreshToken?: string;
+  readonly lifetime: TokenLifetime;
 }
 
 const UNKNOWN: IdentityState = Object.freeze({ status: "unknown" });
@@ -45,6 +47,7 @@ export const createSession = () => {
         listeners.delete(listener);
       };
     },
+    tokens: (): Tokens | undefined => tokens,
     accessToken: (): string | undefined => tokens?.accessToken,
     refreshToken: (): string | undefined => tokens?.refreshToken,
     /** Bumped whenever the session is replaced or ended, so stale refreshes can be ignored. */

@@ -11,6 +11,7 @@ import type { IdentityUser } from "./types.ts";
 
 export const DEFAULT_TIMEOUT_MS = 15_000;
 export const DEFAULT_CHANNEL_NAME = "identgineer-identity";
+export const DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS = 600;
 
 export interface IdentityClientOptions {
   /** The CMS's address: `https:`, or `http:` on localhost or 127.0.0.1 for development. */
@@ -22,6 +23,11 @@ export interface IdentityClientOptions {
   readonly requestTimeoutMs?: number;
   /** The BroadcastChannel name the page's tabs share sign-outs on. */
   readonly channelName?: string;
+  /**
+   * How long an access token lives when neither the answer (`expiresIn`, `expiresAt`) nor the
+   * token (a JWT's `exp`) says: camis' `CAMIS_ACCESS_TOKEN_LIFESPAN`, 600 seconds by default.
+   */
+  readonly accessTokenLifetimeSeconds?: number;
 }
 
 /** What every operation of the client shares. Internal: never handed to callers. */
@@ -30,6 +36,8 @@ export interface ClientContext {
   readonly clock: Clock;
   readonly fetch: typeof globalThis.fetch;
   readonly timeoutMs: number;
+  /** The access token lifetime assumed when nothing says otherwise. */
+  readonly tokenLifetimeMs: number;
   readonly transport: Transport;
   readonly session: Session;
   readonly throttle: Throttle;
@@ -48,6 +56,8 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   const clock = options.clock ?? systemClock;
   const fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
   const timeoutMs = options.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const tokenLifetimeMs =
+    (options.accessTokenLifetimeSeconds ?? DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS) * 1000;
   const transport = createTransport({ base, fetch, clock, timeoutMs });
   const session = createSession();
   const throttle = createThrottle(clock);
@@ -60,6 +70,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     transport,
     session,
     clock,
+    tokenLifetimeMs,
     onExpired: () => {
       signedOut("expired");
     },
@@ -90,7 +101,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     if (response.status !== 401) return response;
     const outcome = await refresher.refresh();
     if (outcome === "refreshed") return withToken(request);
-    if (outcome === "rejected") signedOut("expired");
+    if (outcome !== "superseded") signedOut("expired");
     throw new IdentityError("unauthorized");
   };
 
@@ -104,6 +115,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     clock,
     fetch,
     timeoutMs,
+    tokenLifetimeMs,
     transport,
     session,
     throttle,

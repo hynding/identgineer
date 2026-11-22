@@ -58,16 +58,12 @@ export const restore = (context: ClientContext) => async (): Promise<IdentitySta
     outcome === "refreshed"
       ? await context.authorizedRequest({ method: "GET", path: "/api/users/me" })
       : undefined;
-  const accessToken = session.accessToken();
-  if (response?.ok !== true || accessToken === undefined) {
+  const tokens = session.tokens();
+  if (response?.ok !== true || tokens === undefined) {
     context.signedOut("no-session");
     return session.getState();
   }
-  const refreshToken = session.refreshToken();
-  context.signedIn(
-    refreshToken === undefined ? { accessToken } : { accessToken, refreshToken },
-    readUser(response.body),
-  );
+  context.signedIn(tokens, readUser(response.body));
   return session.getState();
 };
 
