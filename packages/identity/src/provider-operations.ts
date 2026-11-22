@@ -3,7 +3,7 @@ import type { ClientContext } from "./client-context.ts";
 import { queuedSignIn, signInFrom } from "./credential-operations.ts";
 import { providerSegment } from "./identifiers.ts";
 import { IdentityError } from "./identity-error.ts";
-import { isOptional, requireObject } from "./input-checks.ts";
+import { isOptionalTextWithin, isText, requireObject } from "./input-checks.ts";
 import { failureOf } from "./map-error.ts";
 import { safeRedirectPath } from "./safe-redirect.ts";
 import type { IdentityUser } from "./types.ts";
@@ -33,8 +33,13 @@ export interface ProviderSignInResult {
 // strapi-php keeps them in the round trip's session instead and reads none of these.
 const FORWARDED_PARAMS = ["access_token", "id_token", "access_secret"] as const;
 
-const isAllowedCallback = (callback: string): boolean => {
-  if (typeof callback !== "string") return false;
+// A callback query carries at most the provider's tokens (an OpenID id token runs to a few KiB);
+// a path to return to is a URL path, which camis caps at 2048 characters.
+const MAX_SEARCH_CHARACTERS = 16_384;
+const MAX_RETURN_TO_CHARACTERS = 2048;
+
+const isAllowedCallback = (callback: unknown): boolean => {
+  if (!isText(callback)) return false;
   try {
     return isSecureOrLocal(new URL(callback));
   } catch {
@@ -76,7 +81,10 @@ export const completeProviderSignIn =
   ): Promise<ProviderSignInResult> => {
     const segment = providerSegment(provider);
     requireObject(options);
-    if (!isOptional(options.search, "string") || !isOptional(options.returnTo, "string")) {
+    if (
+      !isOptionalTextWithin(options.search, MAX_SEARCH_CHARACTERS) ||
+      !isOptionalTextWithin(options.returnTo, MAX_RETURN_TO_CHARACTERS)
+    ) {
       throw new IdentityError("validation");
     }
     const query = callbackQuery(options.search ?? "");

@@ -1,6 +1,12 @@
 import type { ClientContext } from "./client-context.ts";
 import { IdentityError } from "./identity-error.ts";
-import { isText, requireObject, requireValid } from "./input-checks.ts";
+import {
+  MAX_NAME_CHARACTERS,
+  isText,
+  isTextWithin,
+  requireObject,
+  requireValid,
+} from "./input-checks.ts";
 import { errorName } from "./map-error.ts";
 import { readErrorEnvelope, readAuthResponse, type AuthResponse } from "./shapes.ts";
 import type { Ticket, Tokens } from "./session.ts";
@@ -72,7 +78,10 @@ export const signIn =
     // An empty identifier is still sent: it fails like any wrong credentials.
     requireObject(input);
     requireValid(
-      { identifier: isText(input.identifier), password: isText(input.password) },
+      {
+        identifier: isTextWithin(input.identifier, MAX_NAME_CHARACTERS),
+        password: isText(input.password),
+      },
       { nameFields: false },
     );
     return queuedSignIn(context, async (ticket) => {

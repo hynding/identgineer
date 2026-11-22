@@ -1,6 +1,6 @@
 import type { ClientContext } from "./client-context.ts";
 import { documentSegment } from "./identifiers.ts";
-import { requireObject, requireValid } from "./input-checks.ts";
+import { isTextWithin, requireObject, requireValid } from "./input-checks.ts";
 import { failureOf } from "./map-error.ts";
 import { readProfile, readProfileList } from "./shapes.ts";
 import type { Profile, ProfileInput } from "./types.ts";
@@ -13,7 +13,7 @@ const LOCALE = /^[a-z]{2,3}(-[A-Z][a-z]{3})?(-([A-Z]{2}|[0-9]{3}))?$/;
 const TIMEZONE = /^[A-Za-z_]+(\/[A-Za-z0-9_+-]+)*$/;
 
 const fits = (value: unknown, maxLength: number, pattern?: RegExp): boolean =>
-  typeof value === "string" && value.length <= maxLength && (pattern?.test(value) ?? true);
+  isTextWithin(value, maxLength) && (pattern?.test(value) ?? true);
 
 const optional = (value: unknown, check: (present: unknown) => boolean): boolean =>
   value === undefined || check(value);

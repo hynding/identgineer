@@ -86,7 +86,10 @@ export interface IdentityClient {
    */
   readonly authorizedFetch: (input: string | URL, init?: RequestInit) => Promise<Response>;
   readonly getState: () => IdentityState;
-  /** Calls the listener on every change of state; returns the function that stops it. */
+  /**
+   * Calls the listener on every change of state; returns the function that stops it. A listener
+   * that is not a function throws a `validation` IdentityError.
+   */
   readonly subscribe: (listener: IdentityStateListener) => () => void;
   /**
    * Stops timers and the cross-tab channel and drops the tokens. Every later call rejects with
@@ -134,7 +137,10 @@ export const createIdentityClient = (options: IdentityClientOptions): IdentityCl
     restore: live(restore(context)),
     authorizedFetch: live(authorizedFetch(context)),
     getState: context.session.getState,
-    subscribe: context.session.subscribe,
+    subscribe: (listener: IdentityStateListener) => {
+      if (typeof listener !== "function") throw new IdentityError("validation");
+      return context.session.subscribe(listener);
+    },
     dispose: context.dispose,
   });
 };

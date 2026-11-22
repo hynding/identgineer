@@ -2,7 +2,16 @@ import type { ClientContext } from "./client-context.ts";
 import { queuedSignIn, signInFrom, tokensOf } from "./credential-operations.ts";
 import { IdentityError } from "./identity-error.ts";
 import { errorName, failureOf, fieldsOf } from "./map-error.ts";
-import { isEmail, isFilled, isPassword, requireObject, requireValid } from "./input-checks.ts";
+import {
+  MAX_CODE_CHARACTERS,
+  MAX_NAME_CHARACTERS,
+  isEmail,
+  isFilled,
+  isPassword,
+  isTextWithin,
+  requireObject,
+  requireValid,
+} from "./input-checks.ts";
 import { readAuthResponse } from "./shapes.ts";
 import type { ApiResponse } from "./transport.ts";
 import type { IdentityUser } from "./types.ts";
@@ -68,7 +77,7 @@ export const register =
     requireObject(input);
     requireValid(
       {
-        username: isFilled(input.username),
+        username: isFilled(input.username) && isTextWithin(input.username, MAX_NAME_CHARACTERS),
         email: isEmail(input.email),
         password: isPassword(input.password),
       },
@@ -121,7 +130,7 @@ export const resetPassword =
     requireObject(input);
     requireValid(
       {
-        code: isFilled(input.code),
+        code: isFilled(input.code) && isTextWithin(input.code, MAX_CODE_CHARACTERS),
         password: isPassword(input.password),
         passwordConfirmation: input.password === input.passwordConfirmation,
       },
@@ -151,7 +160,13 @@ export const confirmEmail =
   (context: ClientContext) =>
   async (input: ConfirmEmailInput): Promise<void> => {
     requireObject(input);
-    requireValid({ confirmation: isFilled(input.confirmation) }, { nameFields: false });
+    requireValid(
+      {
+        confirmation:
+          isFilled(input.confirmation) && isTextWithin(input.confirmation, MAX_CODE_CHARACTERS),
+      },
+      { nameFields: false },
+    );
     const response = await context.transport.send({
       method: "GET",
       path: `/api/auth/email-confirmation?confirmation=${encodeURIComponent(input.confirmation)}`,

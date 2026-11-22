@@ -33,6 +33,22 @@ const resolveTarget = (base: URL, target: unknown): string => {
   return url.href;
 };
 
+/** The caller's headers, refused as a validation error when `Headers` cannot read them. */
+const headersOf = (headers: unknown): Headers => {
+  try {
+    return new Headers(headers as HeadersInit | undefined);
+  } catch {
+    throw new IdentityError("validation");
+  }
+};
+
+const isAbortSignal = (signal: unknown): signal is AbortSignal =>
+  typeof signal === "object" &&
+  signal !== null &&
+  typeof (signal as Partial<AbortSignal>).aborted === "boolean" &&
+  typeof (signal as Partial<AbortSignal>).addEventListener === "function" &&
+  typeof (signal as Partial<AbortSignal>).removeEventListener === "function";
+
 /** The caller's signal and the client's timeout, whichever aborts first. */
 const timeoutSignal = (
   context: ClientContext,
@@ -62,11 +78,13 @@ export const authorizedFetch =
   (context: ClientContext) =>
   async (input: string | URL, init: RequestInit = {}): Promise<Response> => {
     requireObject(init);
+    const callerHeaders = headersOf(init.headers);
+    if (init.signal != null && !isAbortSignal(init.signal)) throw new IdentityError("validation");
     const url = resolveTarget(context.base, input);
     const ticket = context.session.ticket("session");
     const attempt = async (): Promise<Response> => {
       const accessToken = await context.accessToken(ticket);
-      const headers = new Headers(init.headers);
+      const headers = new Headers(callerHeaders);
       headers.set("Authorization", `Bearer ${accessToken}`);
       const timeout = timeoutSignal(context, init.signal);
       try {

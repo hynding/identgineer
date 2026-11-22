@@ -2,7 +2,7 @@ import type { ClientContext, ServerSignOut } from "./client-context.ts";
 import type { CookieSection } from "./locks.ts";
 import { sessionSegment } from "./identifiers.ts";
 import { IdentityError } from "./identity-error.ts";
-import { isOptional, requireObject } from "./input-checks.ts";
+import { isOptionalBoolean, requireObject } from "./input-checks.ts";
 import { failureOf } from "./map-error.ts";
 import type { IdentityState, Ticket, Tokens } from "./session.ts";
 import { readSessions, readUser } from "./shapes.ts";
@@ -118,7 +118,7 @@ export const signOut =
   (context: ClientContext) =>
   async (options: SignOutOptions = {}): Promise<SignOutResult> => {
     requireObject(options);
-    if (!isOptional(options.everywhere, "boolean")) throw new IdentityError("validation");
+    if (!isOptionalBoolean(options.everywhere)) throw new IdentityError("validation");
     const own = context.session.tokens();
     const mark = context.noticeMark();
     const run: SignOutRun = {
