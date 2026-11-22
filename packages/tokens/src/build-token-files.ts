@@ -1,3 +1,4 @@
+import { withAccentEdge } from "./accent-edge.ts";
 import { followBrandCorners } from "./brand-corners.ts";
 import { emitBaseCss, emitStylesheet, emitThemeCss } from "./emit-css.ts";
 import { emitDesignCss, emitLayoutCss, emitPreferencesCss, emitUxCss } from "./emit-mode-css.ts";
@@ -53,8 +54,8 @@ function themeBodies(sources: TokenSources, shared: readonly FlatToken[]): Body[
       body: emitThemeCss({
         id: theme.id,
         isDefault: theme.id === sources.defaultThemeId,
-        light: resolveThemeScheme(shared, theme, "light"),
-        dark: resolveThemeScheme(shared, theme, "dark"),
+        light: withAccentEdge(resolveThemeScheme(shared, theme, "light")),
+        dark: withAccentEdge(resolveThemeScheme(shared, theme, "dark")),
       }),
     };
   });
@@ -142,7 +143,7 @@ export function buildTokenFiles(sources: TokenSources): Record<string, string> {
     "UX modes",
   );
   const shared = mergeTokens(...sources.shared.map(({ file, json }) => flattenTokens(file, json)));
-  const baseBody = emitBaseCss(resolveShared(shared));
+  const baseBody = emitBaseCss(withAccentEdge(resolveShared(shared)));
   const themes = themeBodies(sources, shared);
   const designs = designBodies(sources, shared);
   const layouts = layoutBodies(sources, shared);
