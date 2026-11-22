@@ -31,6 +31,21 @@ describe("sign-out racing a sign-in", () => {
     expect(api.activeSessionCount("ada@example.com")).toBe(0);
     expect(api.refreshCookie()).toBeUndefined();
   });
+
+  it("stays signed out when another tab signs out during the sign-in", async () => {
+    const { api, client, makeClient, signIn } = setup();
+    const other = makeClient({ sharedChannel: true });
+    const release = api.holdNext("POST", "/api/auth/local");
+    const signingIn = signIn().catch((error: unknown) => error);
+    await settle();
+    await other.signOut();
+    await settle();
+    release();
+    await signingIn;
+    await settle();
+    expect(client.getState()).toMatchObject({ status: "signed-out" });
+    expect(api.activeSessionCount("ada@example.com")).toBe(0);
+  });
 });
 
 describe("overlapping sign-ins", () => {

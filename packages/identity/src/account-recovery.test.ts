@@ -293,6 +293,21 @@ describe("throttling", () => {
     });
   });
 
+  it("fails and backs off the same way for a missing account and a wrong password", async () => {
+    const outcomes = async (identifier: string): Promise<string[]> => {
+      const { client } = setup();
+      const seen: string[] = [];
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const error = (await rejection(
+          client.signIn({ identifier, password: "wrong-password" }),
+        )) as { code: string; retryAfterSeconds?: number };
+        seen.push(`${error.code}:${String(error.retryAfterSeconds)}`);
+      }
+      return seen;
+    };
+    expect(await outcomes("nobody@example.com")).toEqual(await outcomes("ada@example.com"));
+  });
+
   it("backs off after repeated failed sign-ins and counts down", async () => {
     const { api, clock, client } = setup();
     const wrong = () => client.signIn({ identifier: "ada", password: "wrong" });
