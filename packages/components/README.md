@@ -181,16 +181,25 @@ with `aria-pressed`; it changes only the native input's `type`, never the value.
 hidden again when its form is submitted (before the submit event's listeners run), when the form
 is reset and when the value is set from outside, such as a form clearing it.
 
-**Enter submits the form** as Enter in a native input does, following the HTML implicit
-submission algorithm, since the native input has no form owner across the shadow boundary and the
-browser would not do it. The decision is made once the keydown has reached every listener, so any
-listener on its path (a combobox around the field) can cancel it with `preventDefault()`, and never
-while an input method is composing. The default button (the first submit button among the form's
-elements: a native submit button or an `idg-button type="submit"`) is clicked, so its click
-listeners run and a native one is the submitter; a disabled or `loading` default button stops the
-submission. Without a submit button, the form is submitted only when it has no other text field.
-`spellcheck` is given to the
-native input as an attribute, so `spellcheck="false"` turns spell checking off.
+**Enter submits the form** as Enter in a native input does in Chromium, following the HTML
+implicit submission algorithm, since the native input has no form owner across the shadow
+boundary and the browser would not do it. It is done on the keypress, as the browser does: a
+keydown cancelled with `preventDefault()` has no keypress, and the decision is made once the
+keypress has reached every listener, so any listener on its path (a combobox around the field) can
+cancel either. It never happens while an input method is composing, nor with Control, Alt or Meta
+held (Shift+Enter submits). The default button (the first submit button among the form's elements:
+a native submit button or an `idg-button type="submit"` without an `href`, which is a link and is
+never followed) is clicked, so its click listeners run; a disabled or `loading` default button stops
+the submission. Without a submit button, the form is submitted only when it has no other text field;
+as in Chromium, a date or time field does not count. Two differences from a native input remain. A
+listener that stops the keypress from reaching the element (`stopPropagation()` in the capture phase
+at `window` or `document`) prevents it, since the element hears the keypress on its way out of the
+shadow root. And with an `idg-button` as the default button, `SubmitEvent.submitter` is `null`: the
+button's native control is inside its own shadow root, so it cannot be the form's submitter; read the
+button's value some other way. A native submit button is the submitter as usual.
+
+`spellcheck` is given to the native input as an attribute, so `spellcheck="false"` turns spell
+checking off.
 
 **Autofill and password managers.** Everything a password manager reads is on the native input:
 `type`, `name`, `autocomplete` (use `username` and `current-password` or `new-password`) and

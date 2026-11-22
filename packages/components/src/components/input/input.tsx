@@ -18,6 +18,10 @@ import { validityFlags } from "../../utils/validity";
 import { INPUT_SIZES, INPUT_TYPES, type InputSize, type InputType } from "./input-options";
 
 /**
+ * A form-associated text field. Enter submits its form as a native input does (see the README):
+ * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
+ * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
+ *
  * @slot start - Content inside the box before the text, such as an icon.
  * @slot end - Content inside the box after the text.
  * @part control - The native input.
@@ -179,12 +183,14 @@ export class IdgInput {
   };
 
   // The native input has no form owner across the shadow boundary, so the browser's implicit
-  // submission never happens: it is done here instead. It is decided once the keydown has reached
-  // every listener on its path, as the browser decides, so a listener further out (a combobox
-  // that takes Enter for itself) can still cancel it.
-  @Listen("keydown")
-  handleKeydown(event: KeyboardEvent): void {
+  // submission never happens: it is done here instead, on the keypress, as the browser does it. A
+  // keydown cancelled anywhere has no keypress, and the decision waits until the keypress has
+  // reached every listener on its path, so a listener further out (a combobox that takes Enter for
+  // itself) can cancel either. Enter with Control, Alt or Meta held submits nothing, as in Chromium.
+  @Listen("keypress")
+  handleKeypress(event: KeyboardEvent): void {
     if (event.key !== "Enter" || event.isComposing || event.defaultPrevented) return;
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
     if (event.composedPath()[0] !== this.native) return;
     const form = this.internals.form;
     if (!form) return;

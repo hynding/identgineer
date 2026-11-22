@@ -2,25 +2,17 @@
 // such an input has no form owner, so the browser never submits the form on Enter by itself.
 // https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#implicit-submission
 
-/** The input types whose Enter submits implicitly; every type of idg-input is one of them. */
-const BLOCKING_TYPES = new Set([
-  "text",
-  "search",
-  "url",
-  "tel",
-  "email",
-  "password",
-  "date",
-  "month",
-  "week",
-  "time",
-  "datetime-local",
-  "number",
-]);
+/**
+ * The input types that block implicit submission; every type of idg-input is one of them. The
+ * spec lists the date and time types too, but Chromium leaves them out (a date field next to one
+ * text field does not keep it from submitting), and the comparison is with the browser.
+ */
+const BLOCKING_TYPES = new Set(["text", "search", "url", "tel", "email", "password", "number"]);
 
 interface TypedElement extends Element {
   readonly type?: unknown;
   readonly loading?: unknown;
+  readonly href?: unknown;
 }
 
 function isSubmitButton(element: TypedElement): boolean {
@@ -30,7 +22,8 @@ function isSubmitButton(element: TypedElement): boolean {
     case "input":
       return element.type === "submit" || element.type === "image";
     case "idg-button":
-      return element.type === "submit";
+      // With an href it is a link, whatever its type: Enter must never follow it.
+      return element.type === "submit" && !element.href && !element.hasAttribute("href");
     default:
       return false;
   }

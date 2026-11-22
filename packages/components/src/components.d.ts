@@ -653,6 +653,11 @@ export namespace Components {
          */
         "size": IconSize;
     }
+    /**
+     * A form-associated text field. Enter submits its form as a native input does (see the README):
+     * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
+     * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
+     */
     interface IdgInput {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -2191,6 +2196,11 @@ declare global {
         "idgInput": ValueDetail;
         "idgChange": ValueDetail;
     }
+    /**
+     * A form-associated text field. Enter submits its form as a native input does (see the README):
+     * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
+     * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
+     */
     interface HTMLIdgInputElement extends Components.IdgInput, HTMLStencilElement {
         addEventListener<K extends keyof HTMLIdgInputElementEventMap>(type: K, listener: (this: HTMLIdgInputElement, ev: IdgInputCustomEvent<HTMLIdgInputElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
         addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
@@ -3434,6 +3444,11 @@ declare namespace LocalJSX {
          */
         "size"?: IconSize;
     }
+    /**
+     * A form-associated text field. Enter submits its form as a native input does (see the README):
+     * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
+     * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
+     */
     interface IdgInput {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -5213,6 +5228,11 @@ declare module "@stencil/core" {
              * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
              */
             "idg-icon": LocalJSX.IntrinsicElements["idg-icon"] & JSXBase.HTMLAttributes<HTMLIdgIconElement>;
+            /**
+             * A form-associated text field. Enter submits its form as a native input does (see the README):
+             * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
+             * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
+             */
             "idg-input": LocalJSX.IntrinsicElements["idg-input"] & JSXBase.HTMLAttributes<HTMLIdgInputElement>;
             /**
              * The page shell. One page, written once, is housed in the structure the `data-layout` attribute of

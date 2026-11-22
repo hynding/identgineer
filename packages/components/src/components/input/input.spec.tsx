@@ -306,7 +306,7 @@ describe("idg-input as a form control", () => {
   });
 
   function pressEnter(root: HTMLElement, init: KeyboardEventInit = {}): KeyboardEvent {
-    const event = new KeyboardEvent("keydown", {
+    const event = new KeyboardEvent("keypress", {
       key: "Enter",
       bubbles: true,
       cancelable: true,
@@ -320,7 +320,7 @@ describe("idg-input as a form control", () => {
   /** What a form needs for the input to watch its submit, here without listeners. */
   const listenerless = () => ({ addEventListener: vi.fn(), removeEventListener: vi.fn() });
 
-  /** Lets the keydown finish its dispatch: implicit submission is decided after it. */
+  /** Lets the keypress finish its dispatch: implicit submission is decided after it. */
   const afterDispatch = () =>
     new Promise((resolve) => {
       setTimeout(resolve, 0);
@@ -329,7 +329,7 @@ describe("idg-input as a form control", () => {
   // The native input sits in a shadow root and has no form owner, so the browser's implicit
   // submission never reaches the form: Enter would do nothing in a form of idg-input elements.
   // The cases of the algorithm itself run in the browser tests, against native inputs.
-  it("submits its form on Enter once the keydown is dispatched, as a native input does", async () => {
+  it("submits its form on Enter once the keypress is dispatched, as a native input does", async () => {
     const form = { ...listenerless(), requestSubmit: vi.fn(), elements: [] as Element[] };
     const { root } = await renderWithInternals(<idg-input />, form);
     form.elements.push(root);
@@ -339,12 +339,19 @@ describe("idg-input as a form control", () => {
     expect(form.requestSubmit).toHaveBeenCalledTimes(1);
   });
 
-  it("leaves Enter alone while composing, once handled, or when a listener further out takes it", async () => {
+  it("leaves Enter alone while composing, with Control, Alt or Meta, once handled, or when a listener further out takes it", async () => {
     const form = { ...listenerless(), requestSubmit: vi.fn(), elements: [] as Element[] };
     const { root } = await renderWithInternals(<idg-input />, form);
     form.elements.push(root);
     pressEnter(root, { isComposing: true });
-    const handled = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    pressEnter(root, { ctrlKey: true });
+    pressEnter(root, { altKey: true });
+    pressEnter(root, { metaKey: true });
+    const handled = new KeyboardEvent("keypress", {
+      key: "Enter",
+      bubbles: true,
+      cancelable: true,
+    });
     handled.preventDefault();
     native(root).dispatchEvent(handled);
     pressEnter(root, { key: "a" });
