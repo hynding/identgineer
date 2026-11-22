@@ -4,12 +4,12 @@ import {
   createBrowser,
   disposeTabs,
   freshAccount,
-  lastMailTo,
   linkParameter,
   liveBackend,
   openTab,
   PASSWORD,
   post,
+  settledMailsTo,
   SKIP_NOTE,
   type LiveBackend,
 } from "./live-backend.ts";
@@ -178,7 +178,7 @@ describe.skipIf(liveBackend === undefined)(
         expect(await tab.requestPasswordReset({ email: account.email })).toEqual({
           outcome: "accepted",
         });
-        const code = linkParameter(backend, account.email, "code");
+        const code = await linkParameter(backend, account.email, "code");
         const user = await tab.resetPassword({
           code,
           password: NEW_PASSWORD,
@@ -196,7 +196,7 @@ describe.skipIf(liveBackend === undefined)(
         const unknown = freshAccount("nobody").email;
         const tab = openTab(backend.servers.main, createBrowser(backend));
         expect(await tab.requestPasswordReset({ email: unknown })).toEqual({ outcome: "accepted" });
-        expect(lastMailTo(backend, unknown)).toBeUndefined();
+        expect(await settledMailsTo(backend, unknown)).toEqual([]);
       });
 
       it("lists the account's sessions with this one current, and revokes another", async () => {
@@ -283,7 +283,7 @@ describe.skipIf(liveBackend === undefined)(
         );
         expect(early.code).toBe("email-not-confirmed");
         await tab.confirmEmail({
-          confirmation: linkParameter(backend, account.email, "confirmation"),
+          confirmation: await linkParameter(backend, account.email, "confirmation"),
         });
         const user = await tab.signIn({ identifier: account.email, password: account.password });
         expect(user).toMatchObject({ email: account.email, confirmed: true });
@@ -307,7 +307,7 @@ describe.skipIf(liveBackend === undefined)(
         await tab.register(pending);
         await tab.register(confirmed);
         await tab.confirmEmail({
-          confirmation: linkParameter(backend, confirmed.email, "confirmation"),
+          confirmation: await linkParameter(backend, confirmed.email, "confirmation"),
         });
         const answers = await Promise.all(
           [pending.email, confirmed.email, freshAccount("nobody").email].map((email) =>

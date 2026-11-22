@@ -97,23 +97,60 @@ export const disposeTabs = (): void => {
   for (const client of clients.splice(0)) client.dispose();
 };
 
-/** The last mail logged to `to`, decoded from quoted-printable as far as links need. */
-export const lastMailTo = (backend: LiveBackend, to: string): string | undefined => {
-  const log = readFileSync(backend.mailLog, "utf8");
+/** Every mail logged to `to` so far, oldest first, decoded from quoted-printable as links need. */
+export const mailsTo = (backend: LiveBackend, to: string): string[] => {
+  let log: string;
+  try {
+    log = readFileSync(backend.mailLog, "utf8");
+  } catch {
+    return [];
+  }
   const mails = log.split(/^\[\d{4}-\d\d-\d\d [\d:]+\] \w+\.DEBUG: /m);
   // Mail headers end their lines with CRLF.
-  const mine = mails.filter((mail) => mail.split(/\r?\n/).includes(`To: ${to}`));
-  return mine
-    .at(-1)
-    ?.replace(/=\r?\n/g, "")
-    .replace(/=3D/gi, "=");
+  return mails
+    .filter((mail) => mail.split(/\r?\n/).includes(`To: ${to}`))
+    .map((mail) => mail.replace(/=\r?\n/g, "").replace(/=3D/gi, "="));
 };
 
-/** A query parameter of the first link in the last mail to `to`. */
-export const linkParameter = (backend: LiveBackend, to: string, name: string): string => {
-  const mail = lastMailTo(backend, to) ?? "";
+const pause = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+/**
+ * The mails to `to` once at least `count` have been logged. PHP buffers its log stream and may
+ * flush it only after the answer has gone out, so a mail can land a moment after its request.
+ */
+export const waitForMails = async (
+  backend: LiveBackend,
+  to: string,
+  count: number,
+): Promise<string[]> => {
+  const deadline = Date.now() + 5_000;
+  for (;;) {
+    const mails = mailsTo(backend, to);
+    if (mails.length >= count) return mails;
+    if (Date.now() > deadline) throw new Error(`${String(count)} mails to ${to} never arrived`);
+    await pause(50);
+  }
+};
+
+/** Waits a moment for any mail still on its way, then the mails to `to`: for checking none came. */
+export const settledMailsTo = async (backend: LiveBackend, to: string): Promise<string[]> => {
+  await pause(500);
+  return mailsTo(backend, to);
+};
+
+/** A query parameter of the link in the `count`th mail to `to`, waiting for that mail. */
+export const linkParameter = async (
+  backend: LiveBackend,
+  to: string,
+  name: string,
+  count = 1,
+): Promise<string> => {
+  const mail = (await waitForMails(backend, to, count))[count - 1] ?? "";
   const value = new RegExp(`[?&]${name}=([A-Za-z0-9]+)`).exec(mail)?.[1];
-  if (value === undefined) throw new Error(`no ${name} in a mail to ${to}`);
+  if (value === undefined) throw new Error(`no ${name} in mail ${String(count)} to ${to}`);
   return value;
 };
 
@@ -122,11 +159,15 @@ export const post = async (
   server: LiveServer,
   path: string,
   body: unknown,
-): Promise<{ status: number; body: unknown }> => {
+): Promise<{ status: number; body: unknown; retryAfter: number }> => {
   const response = await fetch(`${server.url}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(body),
   });
-  return { status: response.status, body: (await response.json()) as unknown };
+  return {
+    status: response.status,
+    body: (await response.json()) as unknown,
+    retryAfter: Number(response.headers.get("Retry-After") ?? "0"),
+  };
 };

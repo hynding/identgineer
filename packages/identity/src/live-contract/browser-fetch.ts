@@ -47,8 +47,7 @@ const SAFELISTED_RESPONSE_HEADERS = [
 ];
 
 // A browser always sends one; the CMS names each session's device from it.
-const FIREFOX_ON_LINUX =
-  "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0";
+const FIREFOX_ON_LINUX = "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0";
 
 const failed = (): TypeError => new TypeError("Failed to fetch");
 

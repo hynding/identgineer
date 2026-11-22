@@ -44,8 +44,10 @@ export interface ProbeAnswer {
 export interface ProbeTarget {
   readonly send: (request: ProbeRequest) => Promise<ProbeAnswer>;
   readonly refreshCookie: () => string | undefined;
-  readonly resetCode: (email: string) => string;
-  readonly confirmation: (email: string) => string;
+  /** The code of the `count`th reset mail to `email`. */
+  readonly resetCode: (email: string, count: number) => Promise<string>;
+  /** The token of the `count`th confirmation mail to `email`. */
+  readonly confirmation: (email: string, count: number) => Promise<string>;
 }
 
 /** How the SDK reads a successful answer. */
@@ -105,7 +107,7 @@ interface Step {
   readonly retryAfter?: true;
   /** Why the real server is expected to differ from the fake: a camis gap, named. */
   readonly gap?: string;
-  readonly request: (state: State) => ProbeRequest;
+  readonly request: (state: State) => ProbeRequest | Promise<ProbeRequest>;
   readonly keep?: (state: State, body: unknown) => void;
 }
 
@@ -366,11 +368,12 @@ const MAIN_STEPS: readonly Step[] = [
   {
     name: "reset password: the mailed code",
     reader: "auth",
-    request: (s) => ({
+    // The one reset mail of the scenario, from "forgot password: a known address".
+    request: async (s) => ({
       method: "POST",
       path: "/api/auth/reset-password",
       body: {
-        code: s.target.resetCode(s.account.email),
+        code: await s.target.resetCode(s.account.email, 1),
         password: NEW_PASSWORD,
         passwordConfirmation: NEW_PASSWORD,
       },
@@ -490,9 +493,10 @@ const CONFIRMATION_STEPS: readonly Step[] = [
   },
   {
     name: "confirm: the mailed token",
-    request: (s) => ({
+    // The second confirmation mail: the registration's, then the resend's, which replaced it.
+    request: async (s) => ({
       method: "GET",
-      path: `/api/auth/email-confirmation?confirmation=${s.target.confirmation(s.account.email)}`,
+      path: `/api/auth/email-confirmation?confirmation=${await s.target.confirmation(s.account.email, 2)}`,
     }),
   },
   {
@@ -532,7 +536,7 @@ export type Scenario = ReturnType<typeof scenarios>[keyof ReturnType<typeof scen
 
 const observe = async (step: Step, state: State): Promise<Observation> => {
   const before = state.target.refreshCookie();
-  const answer = await state.target.send(step.request(state));
+  const answer = await state.target.send(await step.request(state));
   const after = state.target.refreshCookie();
   const cookie = after === before ? "unchanged" : after === undefined ? "cleared" : "set";
   const envelope = answer.status >= 400 ? readErrorEnvelope(answer.body) : undefined;
@@ -615,8 +619,8 @@ export const realTarget = (backend: LiveBackend, server: LiveServer): ProbeTarge
     send: async (request) =>
       answerOf(await pageFetch(request.page)(`${server.url}${request.path}`, initOf(request))),
     refreshCookie: () => browser.jar.get(REFRESH_COOKIE)?.value,
-    resetCode: (email) => linkParameter(backend, email, "code"),
-    confirmation: (email) => linkParameter(backend, email, "confirmation"),
+    resetCode: (email, count) => linkParameter(backend, email, "code", count),
+    confirmation: (email, count) => linkParameter(backend, email, "confirmation", count),
   };
 };
 
@@ -640,8 +644,8 @@ export const fakeTarget = (backend: LiveBackend, server: LiveServer): ProbeTarge
       return answerOf(await api.fetch(`${server.url}${request.path}`, { ...init, headers }));
     },
     refreshCookie: () => api.refreshCookie(),
-    resetCode: (email) => api.findUser(email)?.resetCode ?? "",
-    confirmation: (email) => api.findUser(email)?.confirmationCode ?? "",
+    resetCode: (email) => Promise.resolve(api.findUser(email)?.resetCode ?? ""),
+    confirmation: (email) => Promise.resolve(api.findUser(email)?.confirmationCode ?? ""),
   };
 };
 

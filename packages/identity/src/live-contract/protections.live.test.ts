@@ -28,9 +28,18 @@ const rejection = async (promise: Promise<unknown>): Promise<IdentityError> => {
   throw new Error("expected a rejection");
 };
 
+/**
+ * An account registered straight on the server. On the throttled server a run started within a
+ * minute of the last may find the register bucket still full, so a 429 waits out its window.
+ */
 const registered = async (server: LiveServer, label: string) => {
   const account = freshAccount(label);
-  expect((await post(server, "/api/auth/local/register", account)).status).toBe(200);
+  let answer = await post(server, "/api/auth/local/register", account);
+  if (answer.status === 429) {
+    await new Promise((resolve) => setTimeout(resolve, (answer.retryAfter + 1) * 1000));
+    answer = await post(server, "/api/auth/local/register", account);
+  }
+  expect(answer.status).toBe(200);
   return account;
 };
 
@@ -94,16 +103,20 @@ describe.skipIf(liveBackend === undefined)(
         expect(Number(raw.headers.get("Retry-After"))).toBeGreaterThan(0);
       });
 
-      it("counts sign-ins per name given: another account is not locked out", async () => {
-        const victim = await registered(server(), "victim");
-        const identifier = freshAccount("guessed").email;
-        for (let attempt = 0; attempt <= server().throttlePerMinute; attempt += 1) {
-          await post(server(), "/api/auth/local", { identifier, password: "not the password" });
-        }
-        const tab = openTab(server(), createBrowser(backend));
-        const user = await tab.signIn({ identifier: victim.email, password: victim.password });
-        expect(user.email).toBe(victim.email);
-      });
+      it(
+        "counts sign-ins per name given: another account is not locked out",
+        { timeout: 90_000 },
+        async () => {
+          const victim = await registered(server(), "victim");
+          const identifier = freshAccount("guessed").email;
+          for (let attempt = 0; attempt <= server().throttlePerMinute; attempt += 1) {
+            await post(server(), "/api/auth/local", { identifier, password: "not the password" });
+          }
+          const tab = openTab(server(), createBrowser(backend));
+          const user = await tab.signIn({ identifier: victim.email, password: victim.password });
+          expect(user.email).toBe(victim.email);
+        },
+      );
 
       it("maps a registration 429 to throttled", async () => {
         // The register bucket counts per address; the victim above took one turn of it.
@@ -257,7 +270,7 @@ describe.skipIf(liveBackend === undefined)(
           const server = backend.servers.confirmation;
           const account = freshAccount("resend");
           await post(server, "/api/auth/local/register", account);
-          const confirmation = linkParameter(backend, account.email, "confirmation");
+          const confirmation = await linkParameter(backend, account.email, "confirmation");
           await fetch(`${server.url}/api/auth/email-confirmation?confirmation=${confirmation}`, {
             redirect: "manual",
           });

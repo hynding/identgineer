@@ -5,10 +5,11 @@
 //   node cms/scripts/live-backend.js -- <command> [args…]   run the command, then stop the servers
 //   node cms/scripts/live-backend.js                        serve until interrupted (Ctrl-C)
 //
-// The command gets IDENTITY_LIVE_BACKEND, the path of a JSON file describing the servers.
+// The command gets IDENTITY_LIVE_BACKEND, the path of a JSON file describing the servers. Each
+// server logs its requests to cms/generated/live/<name>.server.log.
 import { spawn, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -218,12 +219,14 @@ const startServer = async (server) => {
     "resources",
     "server.php",
   );
+  // The server logs every request to stderr: a file, never a pipe this process would have to drain.
+  const log = openSync(join(LIVE_DIR, `${server.name}.server.log`), "w");
   const child = spawn("php", ["-S", `${HOST}:${String(port)}`, router], {
     cwd: join(APP_DIR, "public"),
     env: { ...process.env, ...env },
-    stdio: ["ignore", "ignore", "pipe"],
+    stdio: ["ignore", log, log],
   });
-  child.stderr.resume();
+  closeSync(log);
   children.push(child);
   await waitUntilUp(env.APP_URL);
   step(`${server.name} server on ${env.APP_URL}`);
@@ -264,13 +267,19 @@ const main = async () => {
     return;
   }
   const [executable = "", ...args] = command;
-  const result = spawnSync(executable, args, {
+  const runner = spawn(executable, args, {
     stdio: "inherit",
     env: { ...process.env, IDENTITY_LIVE_BACKEND: description },
     shell: process.platform === "win32",
   });
-  stopServers();
-  process.exit(result.status ?? 1);
+  runner.on("error", (error) => {
+    stopServers();
+    fail(`could not run ${executable}: ${error.message}`);
+  });
+  runner.on("exit", (code) => {
+    stopServers();
+    process.exit(code ?? 1);
+  });
 };
 
 main().catch((error) => {
