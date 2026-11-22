@@ -48,11 +48,47 @@ describe("authorizedFetch under a base path", () => {
     "https://cms.example.test/admin/secret",
     "https://cms.example.test/cms/../admin/secret",
     "https://cms.example.test/cmsfoo/secret",
+    "/api/x/..%2F..%2Fadmin",
+    "/api/x/..%2f..%2fadmin",
+    "/api/x/..%5Cadmin",
+    "/api/x/..%5cadmin",
+    "/api/x%2Ejson",
+    "/api/x%2ejson",
   ])("refuses %j, which leaves the base path", async (input) => {
     const { client, sent } = await underBasePath();
     try {
       const before = sent.length;
       await expect(client.authorizedFetch(input)).rejects.toMatchObject({ code: "validation" });
+      expect(sent).toHaveLength(before);
+    } finally {
+      client.dispose();
+    }
+  });
+
+  it("takes a URL object", async () => {
+    const { api, client, sent } = await underBasePath();
+    try {
+      const response = await client.authorizedFetch(new URL(`${api.baseUrl}/cms/api/users/me`));
+      expect(response.status).toBe(200);
+      expect(sent.at(-1)?.url).toBe(`${api.baseUrl}/cms/api/users/me`);
+    } finally {
+      client.dispose();
+    }
+  });
+
+  it.each<unknown>([
+    42,
+    null,
+    undefined,
+    {},
+    new Request("https://cms.example.test/cms/api/users/me"),
+  ])("refuses the input %s with a validation error", async (input) => {
+    const { client, sent } = await underBasePath();
+    try {
+      const before = sent.length;
+      await expect(client.authorizedFetch(input as string)).rejects.toMatchObject({
+        code: "validation",
+      });
       expect(sent).toHaveLength(before);
     } finally {
       client.dispose();

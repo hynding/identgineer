@@ -90,6 +90,25 @@ describe("dispose", () => {
     expect(clock.pendingTimers()).toBe(0);
   });
 
+  it("arms no retry when a scheduled refresh fails after it", async () => {
+    const { api, clock, client, signIn } = setup();
+    await signIn();
+    let release = (): void => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    api.respondNext("POST", "/api/auth/refresh", async () => {
+      await gate;
+      throw new TypeError("offline");
+    });
+    clock.advance(570_000);
+    await settle();
+    client.dispose();
+    release();
+    await settle();
+    expect(clock.pendingTimers()).toBe(0);
+  });
+
   it("makes every later call reject with an IdentityError", async () => {
     const { api, client, signIn } = setup();
     await signIn();

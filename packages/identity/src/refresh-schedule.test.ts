@@ -71,6 +71,22 @@ describe("scheduled refresh timing", () => {
     expect(refreshes(api)).toBe(2);
   });
 
+  it("refreshes 8-second tokens every 5 seconds, before each one expires", async () => {
+    const { api, clock, signIn } = setup(
+      { accessTokenLifetimeSeconds: 8 },
+      { accessTokenLifetimeSeconds: 8 },
+    );
+    await signIn();
+    const times: number[] = [];
+    for (let second = 1; second <= 60; second += 1) {
+      const before = refreshes(api);
+      clock.advance(1000);
+      await settle();
+      if (refreshes(api) > before) times.push(second);
+    }
+    expect(times).toEqual([5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]);
+  });
+
   it("never asks for a timer longer than setTimeout can hold (30-day legacy JWT)", async () => {
     const delays: number[] = [];
     const manual = createManualClock(START);
