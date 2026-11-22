@@ -62,6 +62,31 @@ describe("idg-alert announcement", () => {
   });
 });
 
+describe("idg-alert quiet", () => {
+  // A message that changes while it is shown, such as a countdown, would be announced on every
+  // change from a live role; its owner announces it some other way.
+  it.each(["info", "success", "warning", "danger"] as const)(
+    "a quiet %s alert has no live role, and keeps its look and icon",
+    async (variant) => {
+      const { root } = await render(
+        <idg-alert variant={variant} quiet>
+          Text
+        </idg-alert>,
+      );
+      const element = alert(root);
+      expect(element.hasAttribute("role")).toBe(false);
+      expect(root.shadowRoot?.querySelector("[aria-live]")).toBeNull();
+      expect(element.classList.contains(`variant-${variant}`)).toBe(true);
+      expect(root.shadowRoot?.querySelector('[part="icon"]')).not.toBeNull();
+    },
+  );
+
+  it("reflects quiet, so it can be set in markup", async () => {
+    const { root } = await render(<idg-alert quiet>Text</idg-alert>);
+    expect(root.hasAttribute("quiet")).toBe(true);
+  });
+});
+
 describe("idg-alert dismissing", () => {
   it("has no dismiss button unless it is dismissible", async () => {
     const { root } = await render(<idg-alert>Text</idg-alert>);
