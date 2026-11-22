@@ -59,8 +59,8 @@ export function applyVariations(
   const state = target ? getVariations(target) : { ...before, ...valid };
   if (options.persist === true) persistChoice(valid, options.storage);
   const changed = changedKeys(before, state);
-  if (target && changed.length > 0) announceChange(target, { state, changed });
-  return { state, rejected, changed };
+  if (target) announceChange(target, state, before);
+  return { state: Object.freeze(state), rejected, changed: Object.freeze(changed) };
 }
 
 /** Removes every attribute, so the stylesheet defaults apply again. */
@@ -71,6 +71,6 @@ export function resetVariations(options: RootOptions = {}): VariationsResult {
   const state = defaultVariations();
   if (options.persist === true) clearStoredVariations(options.storage);
   const changed = changedKeys(before, state);
-  if (target && changed.length > 0) announceChange(target, { state, changed });
-  return { state, changed };
+  if (target) announceChange(target, state, before);
+  return { state: Object.freeze(state), changed: Object.freeze(changed) };
 }

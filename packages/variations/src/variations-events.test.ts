@@ -216,7 +216,7 @@ describe("changes made from outside in the same tick as a call", () => {
     expect(received[0]?.state).toMatchObject({ theme: "ember", design: "glass" });
     expect(events.map((change) => change.changed)).toEqual([["theme", "design"]]);
     // What the call returns stays relative to the state before the call.
-    expect(result.changed).toEqual(["design", "theme"].filter((key) => key === "theme"));
+    expect(result.changed).toEqual(["theme"]);
   });
 });
 

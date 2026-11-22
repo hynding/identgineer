@@ -41,17 +41,55 @@ function dispatch(root: Element, change: VariationsChange): void {
   root.dispatchEvent(new view.CustomEvent(CHANGE_EVENT, { detail: change, bubbles: true }));
 }
 
+interface Delivery {
+  busy: boolean;
+  readonly pending: VariationsChange[];
+}
+
+const deliveries = new WeakMap<Element, Delivery>();
+
+/**
+ * A listener may itself change the state. Its announcement waits until the current one has
+ * reached every listener and the event, so everything is seen in order and ends on the final
+ * state, instead of a later listener seeing the newer state first.
+ */
+function deliver(root: Element, change: VariationsChange): void {
+  const delivery = deliveries.get(root) ?? { busy: false, pending: [] };
+  deliveries.set(root, delivery);
+  delivery.pending.push(change);
+  if (delivery.busy) return;
+  delivery.busy = true;
+  try {
+    for (let next = delivery.pending.shift(); next; next = delivery.pending.shift()) {
+      const channel = channels.get(root);
+      for (const subscription of channel ? [...channel.subscriptions] : []) {
+        // Unsubscribed by an earlier listener in this same dispatch: not called any more.
+        if (channel?.subscriptions.has(subscription) === true) callListener(subscription, next);
+      }
+      dispatch(root, next);
+    }
+  } finally {
+    delivery.busy = false;
+  }
+}
+
 /**
  * The one place a change is announced. `applyVariations` calls it after writing and the
- * observer calls it for outside changes; the baseline in the channel makes the second a no-op.
+ * observer calls it for outside changes. What is announced is measured against what listeners
+ * were last told, so an outside change that happened just before a call is included rather than
+ * lost, and one that was already announced is not announced again. Without listeners there is no
+ * such baseline, so the state before the call is used.
  */
-export function announceChange(root: Element, change: VariationsChange): void {
+export function announceChange(root: Element, after: VariationState, before: VariationState): void {
   const channel = channels.get(root);
-  if (channel) {
-    channel.last = change.state;
-    for (const subscription of [...channel.subscriptions]) callListener(subscription, change);
-  }
-  dispatch(root, change);
+  const changed = changedKeys(channel?.last ?? before, after);
+  if (changed.length === 0) return;
+  // The baseline is a private copy: nothing handed out can alter it.
+  if (channel) channel.last = { ...after };
+  deliver(
+    root,
+    Object.freeze({ state: Object.freeze({ ...after }), changed: Object.freeze(changed) }),
+  );
 }
 
 function observe(root: Element, channel: Channel): MutationObserver | undefined {
@@ -59,8 +97,7 @@ function observe(root: Element, channel: Channel): MutationObserver | undefined 
   if (!view) return undefined;
   const observer = new view.MutationObserver(() => {
     const state = getVariations(root);
-    const changed = changedKeys(channel.last, state);
-    if (changed.length > 0) announceChange(root, { state, changed });
+    announceChange(root, state, channel.last);
   });
   observer.observe(root, {
     attributes: true,
