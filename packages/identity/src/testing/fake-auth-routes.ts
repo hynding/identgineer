@@ -162,7 +162,7 @@ const resetPassword: FakeRoute = {
   method: "POST",
   path: /^\/api\/auth\/reset-password$/,
   guest: true,
-  throttled: "recovery",
+  throttled: "password-reset",
   handle: (context) => {
     const body = context.jsonBody();
     const failure = validate(body, {

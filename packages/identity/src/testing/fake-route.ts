@@ -12,7 +12,9 @@ export interface FakeSettings {
   readonly providers: readonly string[];
   /** Each group's credential attempts a minute (`CAMIS_AUTH_THROTTLE_PER_MINUTE`). */
   readonly throttlePerMinute: number;
-  /** Refreshes a minute, in their own bucket (`CAMIS_REFRESH_THROTTLE_PER_MINUTE`, 60). */
+  /** Sign-in, recovery or confirmation turns a minute for the client address, across every account it names (50). */
+  readonly addressThrottlePerMinute: number;
+  /** Failed refreshes a minute, in their own bucket (`CAMIS_REFRESH_THROTTLE_PER_MINUTE`, 60). */
   readonly refreshThrottlePerMinute: number;
   /** Origins besides the CMS's own that CORS lets send credentials (`cors.allowed_origins`). */
   readonly allowedOrigins: readonly string[];
@@ -33,6 +35,10 @@ export interface RouteContext {
   /** The session behind the request's access token, if it has one. */
   readonly currentSession: () => string | undefined;
   readonly cookieMode: () => boolean;
+  /** Counts a failed attempt in the group's bucket: the 429 to answer instead once it is full. */
+  readonly refuseFailure: (group: ThrottleGroup) => FakeResponse | undefined;
+  /** Ends the request's own access token alone. */
+  readonly dropAccessToken: () => void;
   /** Whether the request came from a page the refresh cookie may be taken from. */
   readonly fromOwnPage: () => boolean;
   /** Tokens in the body, or the refresh token in a cookie in cookie mode. */
@@ -43,7 +49,14 @@ export interface RouteContext {
 }
 
 export type ThrottleGroup =
-  "sign-in" | "register" | "recovery" | "confirmation" | "provider" | "refresh" | "password-change";
+  | "sign-in"
+  | "register"
+  | "recovery"
+  | "password-reset"
+  | "confirmation"
+  | "provider"
+  | "refresh"
+  | "password-change";
 
 export interface FakeRoute {
   readonly method: string;

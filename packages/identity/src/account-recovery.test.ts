@@ -267,7 +267,8 @@ describe("changePassword", () => {
 describe("throttling", () => {
   it("reports the server's wait from Retry-After and refuses attempts locally until it passes", async () => {
     const { api, clock, client, signIn } = setup({ throttlePerMinute: 1 });
-    await rejection(client.signIn({ identifier: "ada", password: "wrong" }));
+    // The CMS counts sign-ins per account named, so both attempts name the same one.
+    await rejection(client.signIn({ identifier: "ada@example.com", password: "wrong" }));
     const error = await rejection(signIn());
     expect(error).toMatchObject({ code: "throttled", retryAfterSeconds: 60 });
     const sent = api.requests.length;

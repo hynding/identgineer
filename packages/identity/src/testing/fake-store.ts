@@ -180,6 +180,9 @@ export const createFakeStore = (options: FakeStoreOptions) => {
           .map((session) => session.sessionId),
       );
     },
+    dropAccessToken: (token: string): void => {
+      accessTokens.delete(token);
+    },
     dropLastingTokens: (userId: number): void => {
       for (const [token, record] of accessTokens) {
         if (record.userId === userId && record.sessionId === null) accessTokens.delete(token);

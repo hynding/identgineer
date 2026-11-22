@@ -43,6 +43,13 @@ const LEGACY_LIFETIME_SECONDS = 2_592_000;
 
 const ROUTES: readonly FakeRoute[] = [...AUTH_ROUTES, ...SESSION_ROUTES, ...PROFILE_ROUTES];
 
+/** The groups counted per account named, by the body field that names it. */
+const IDENTIFIED: Partial<Record<ThrottleGroup, string>> = {
+  "sign-in": "identifier",
+  recovery: "email",
+  confirmation: "email",
+};
+
 const DEFAULT_SETTINGS: FakeSettings = {
   sessions: "refresh",
   emailConfirmation: false,
@@ -51,6 +58,7 @@ const DEFAULT_SETTINGS: FakeSettings = {
   providers: ["github"],
   throttlePerMinute: Number.POSITIVE_INFINITY,
   refreshThrottlePerMinute: 60,
+  addressThrottlePerMinute: 50,
   allowedOrigins: [],
   retryAfterHeader: true,
 };
@@ -109,25 +117,48 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
   // The cookies each request carried, read when it was sent, as a browser does.
   const sentCookies = new WeakMap<FakeRequest, ReadonlyMap<string, string>>();
   const holds: { method: string; path: string; gate: Promise<void> }[] = [];
-  const throttleWindows = new Map<ThrottleGroup, { start: number; count: number }>();
+  const throttleWindows = new Map<string, { start: number; count: number }>();
 
-  /** One window a minute per group of routes, as camis' StrapiRateLimits keeps its buckets. */
-  const throttle = (group: ThrottleGroup): FakeResponse | undefined => {
+  /** A turn of one bucket: undefined when allowed, else the seconds until the next one. */
+  const take = (key: string, rate: number): number | undefined => {
     const now = clock.now();
-    let window = throttleWindows.get(group);
+    let window = throttleWindows.get(key);
     if (window === undefined || now - window.start >= 60_000) {
       window = { start: now, count: 0 };
-      throttleWindows.set(group, window);
+      throttleWindows.set(key, window);
     }
     window.count += 1;
-    const rate =
-      group === "refresh" ? settings.refreshThrottlePerMinute : settings.throttlePerMinute;
     if (window.count <= rate) return undefined;
-    const wait = Math.max(1, Math.ceil((window.start + 60_000 - now) / 1000));
+    return Math.max(1, Math.ceil((window.start + 60_000 - now) / 1000));
+  };
+
+  const tooMany = (wait: number): FakeResponse => {
     const answer = strapiError(429, "RateLimitError", "Too Many Attempts.");
     return settings.retryAfterHeader
       ? { ...answer, headers: { "Retry-After": String(wait) } }
       : answer;
+  };
+
+  /**
+   * As camis' StrapiRateLimits (the fake has one client address): a bucket per group, and for
+   * sign-in, recovery and confirmation one per account the body names, under a ceiling for the
+   * address across every name.
+   */
+  const throttle = (group: ThrottleGroup, request: FakeRequest): FakeResponse | undefined => {
+    const rate =
+      group === "refresh" ? settings.refreshThrottlePerMinute : settings.throttlePerMinute;
+    const field = IDENTIFIED[group];
+    if (field === undefined) {
+      const wait = take(group, rate);
+      return wait === undefined ? undefined : tooMany(wait);
+    }
+    const body = typeof request.body === "object" && request.body !== null ? request.body : {};
+    const value = (body as Record<string, unknown>)[field];
+    const name = typeof value === "string" ? value.trim().toLowerCase() : "";
+    const named = take(`${group}|id:${name}`, rate);
+    const ceiling = take(group, Math.max(rate, settings.addressThrottlePerMinute));
+    if (named === undefined && ceiling === undefined) return undefined;
+    return tooMany(Math.max(named ?? 0, ceiling ?? 0));
   };
 
   const contextFor = (request: FakeRequest, params: readonly string[]): RouteContext => {
@@ -153,6 +184,10 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
       },
       currentSession: () => token?.sessionId ?? undefined,
       cookieMode,
+      refuseFailure: (group) => throttle(group, request),
+      dropAccessToken: () => {
+        if (bearer !== undefined) store.dropAccessToken(bearer);
+      },
       fromOwnPage: () => {
         const origin = request.headers.get("Origin");
         if (origin === null) {
@@ -191,7 +226,7 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
       if (context.user().blocked) return unauthorized();
     }
     if (route.refreshOnly === true && settings.sessions !== "refresh") return notFound();
-    return route.throttled === undefined ? undefined : throttle(route.throttled);
+    return route.throttled === undefined ? undefined : throttle(route.throttled, context.request);
   };
 
   const route = (request: FakeRequest): FakeResponse => {
@@ -298,6 +333,12 @@ export const createFakeIdentityApi = (options: FakeIdentityApiOptions = {}) => {
     },
     /** The HttpOnly refresh cookie in the browser's jar (tests only: page script cannot see it). */
     refreshCookie: (): string | undefined => cookieJar.get(settings.refreshCookieName),
+    /** An access token naming no session, as one issued before refresh mode would be. */
+    issueLastingToken: (email: string): string => {
+      const user = store.findUser((candidate) => candidate.email === email.toLowerCase());
+      if (user === undefined) throw new Error(`no account ${email}`);
+      return store.lastingToken(user.id);
+    },
     /** Puts a refresh cookie in the jar, as a stale or foreign one would be. */
     setRefreshCookie: (value: string): void => {
       cookieJar.set(settings.refreshCookieName, value);

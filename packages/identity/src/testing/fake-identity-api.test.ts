@@ -113,7 +113,7 @@ describe("the fake's throttle, as camis' StrapiRateLimits", () => {
   });
 
   it("counts sign-ins per account named, under a ceiling for the address", async () => {
-    const { post } = fakeApi({ throttlePerMinute: 2, addressThrottlePerMinute: 3 });
+    const { post } = fakeApi({ throttlePerMinute: 2, addressThrottlePerMinute: 4 });
     const wrong = (identifier: string) => ({ body: { identifier, password: "wrong" } });
     await post("/api/auth/local", wrong("ada"));
     await post("/api/auth/local", wrong("ada"));

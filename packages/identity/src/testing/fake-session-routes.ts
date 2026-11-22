@@ -16,20 +16,24 @@ const refresh: FakeRoute = {
   method: "POST",
   path: /^\/api\/auth\/refresh$/,
   guest: true,
-  throttled: "refresh",
   refreshOnly: true,
   handle: (context) => {
+    // Only a refresh that rotates nothing takes a turn, so a valid token is never refused.
+    const failed = (answer: FakeResponse): FakeResponse =>
+      context.refuseFailure("refresh") ?? answer;
     if (context.cookies.has(context.settings.refreshCookieName) && !context.fromOwnPage()) {
-      return strapiError(
-        403,
-        "ForbiddenError",
-        "The refresh cookie is not accepted from this origin",
+      return failed(
+        strapiError(403, "ForbiddenError", "The refresh cookie is not accepted from this origin"),
       );
     }
     const token = presented(context);
-    if (token === undefined) return strapiError(400, "BadRequestError", "Missing refresh token");
+    if (token === undefined) {
+      return failed(strapiError(400, "BadRequestError", "Missing refresh token"));
+    }
     const tokens = context.store.rotate(token);
-    if (tokens === undefined) return strapiError(401, "UnauthorizedError", "Invalid refresh token");
+    if (tokens === undefined) {
+      return failed(strapiError(401, "UnauthorizedError", "Invalid refresh token"));
+    }
     return context.tokenAnswer(tokens);
   },
 };
@@ -49,10 +53,10 @@ const logout: FakeRoute = {
     } else if (typeof body.deviceId === "string" && body.deviceId !== "") {
       store.invalidate(user.id, body.deviceId);
     } else {
-      // The access token names the caller's own session; the cookie may be another tab's.
-      const session = context.currentSession() ?? cookieSession;
-      if (session === undefined) store.invalidate(user.id);
-      else store.revoke(user.id, session);
+      // The access token names the caller's own session; the cookie may be another tab's. A
+      // token naming none, or a session already gone, ends itself alone.
+      const session = context.currentSession();
+      if (session === undefined || !store.revoke(user.id, session)) context.dropAccessToken();
     }
     // The cookie is cleared only when its session was the one ended, or was unusable already.
     const cookieEnded = cookieSession === undefined || !store.sessionExists(cookieSession);
