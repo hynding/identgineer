@@ -341,6 +341,9 @@ request is aborted after `requestTimeoutMs`.
 
 ## Backend configuration this client needs
 
+[`cms/.env.example`](../../cms/.env.example) lists every strapi-php setting below with its value
+and a one-line reason; copy its strapi-php section into the deployment's `.env`.
+
 - **Sessions:** `CAMIS_JWT_MANAGEMENT=refresh` on strapi-php (`jwtManagement: 'refresh'` on
   Strapi). Without it there is no refresh, `restore()` finds no session, the session ends on
   reload and `signOut` cannot revoke the token on the server. Set `accessTokenLifetimeSeconds` to the
@@ -390,6 +393,9 @@ sign in from the token answer); see `src/passkeys.ts`.
   request. Use `signOut` instead.
 - `authorizedFetch` retries with the same `init`, so its body must be re-sendable (not a stream).
 - Profile avatars are not handled: upload and link them through `authorizedFetch`.
+- Against strapi-php as camis generates it today, `saveProfile` cannot create a profile: the
+  server refuses the create with a `validation` error on `owner`, which its grant should fill from
+  the session (see Live contract). Updating an existing profile is unaffected.
 - `restore()` on a network failure leaves the state `unknown` and rejects, so the caller can retry.
 - Each cookie refresh costs one extra `GET /api/users/me` (the user check under Refresh).
 - Without Web Locks (older browsers, sandboxed frames) cookie requests from several tabs can be in
@@ -454,3 +460,35 @@ It samples interleavings; it does not prove their absence.
 `src/camis-contract.test.ts` checks the client's routes, methods and body fields against camis'
 strapi-php emitter and route golden when `CAMIS_DIR` names a camis checkout (as for
 `pnpm cms:validate`); without it the checks are skipped with a note.
+
+### Live contract
+
+`pnpm contract:live` (from the repository root, with `CAMIS_DIR` set, PHP 8.3 and Composer)
+generates strapi-php from `cms/`, boots it on 127.0.0.1 with the settings of
+`cms/.env.example` (see [cms/README.md](../../cms/README.md#live-contract-test)) and runs the
+`identity-live` Vitest project against it. The live tests (`src/live-contract/*.live.test.ts`) are
+skipped unless `IDENTITY_LIVE_BACKEND` names the description the boot script writes, so
+`pnpm test` and CI skip them. They run the real `createIdentityClient` through a browser-like
+`fetch` (`src/live-contract/browser-fetch.ts`, test code only): a cookie jar honouring `Path`,
+`Secure` (http on a loopback host counts as secure, as in browsers), `HttpOnly`, `SameSite` and
+`Max-Age`, cookies sent and kept only for `credentials: "include"`, CORS preflights, answers CORS
+refuses failing as network errors, and only exposed response headers visible. They cover:
+
+- `sdk.live.test.ts`: registration with and without email confirmation, sign-in and the cookie's
+  attributes, the current user, restoring from the cookie in a fresh client, a scheduled refresh
+  rotating the cookie, the profile, password change, forgot and reset password with the mailed
+  code, confirmation with the mailed token, listing and revoking sessions, sign-out and sign-out
+  everywhere, and that a wrong password, an unknown account, a taken registration and every
+  resend answer alike;
+- `protections.live.test.ts`: throttling (a 429 with `Retry-After` read through CORS becomes
+  `throttled`, per name given), the refresh cookie not sent from another site, refused (403) from
+  an unlisted page or without the client's headers, logout needing the access token, and CORS
+  refusing a foreign page;
+- `fake-agreement.live.test.ts`: the same raw requests and failures sent to the real server and
+  to `createFakeIdentityApi` set up alike, comparing status, error name, error fields and the body
+  as the SDK's readers see it, step by step.
+
+Where the backend is wrong the test is an expected failure (`it.fails`) naming the camis gap, so
+it turns red, as a reminder to drop the marker, once camis is fixed: creating a profile is refused
+(the assigned `owner` is validated as a required body field), and below the SDK registration,
+the confirmation resend and the sign-in time tell whether an account exists.
