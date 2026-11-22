@@ -67,23 +67,44 @@ the same JSON as the CSS, so they cannot drift.
 Every custom property is `--idg-` plus the token path with dots turned into dashes:
 `color.bg-subtle` is `--idg-color-bg-subtle`.
 
-| Group                                                                           | Examples                                                                                       |
-| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `color.*` (theme-owned)                                                         | `bg`, `surface`, `text`, `text-muted`, `border`, `accent`, `on-accent`, `link`, `focus-ring`   |
-| `color.<status>*` (theme-owned)                                                 | `success`, `on-success`, `success-subtle`, `on-success-subtle`, likewise warning, danger, info |
-| `gradient.brand` (theme-owned)                                                  | signature hero gradient                                                                        |
-| `font.family.*`, `font.display.*`, `font.body.*` (theme-owned)                  | families, display weight, letter-spacing, line-height                                          |
-| `font.size.step-neg1 .. step-6`                                                 | fluid type scale (`clamp()`, 320px to 1280px)                                                  |
-| `space.3xs .. 3xl`                                                              | fluid space scale                                                                              |
-| `font.weight.*`, `font.line-height.*`, `font.letter-spacing.*`                  | shared scales                                                                                  |
-| `shape.*`, `border.*`, `elevation.*`, `surface.*`, `focus.ring-*`, `ornament.*` | design-language-owned                                                                          |
-| `layout.*`                                                                      | layout-owned                                                                                   |
-| `size.xs .. 3xl`, `size.screen`                                                 | fixed size scale for track minimums, side regions, thresholds and cover heights                |
-| `density.*`, `ux.*`, `motion.*`, `feedback.*`, `focus.emphasis`                 | UX-mode-owned                                                                                  |
+| Group                                                                           | Examples                                                                                                                                                 |
+| ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `color.*` (theme-owned)                                                         | `bg`, `surface`, `text`, `text-muted`, `border`, `accent`, `on-accent`, `accent-indicator`, `on-accent-indicator`, `accent-border`, `link`, `focus-ring` |
+| `color.<status>*` (theme-owned)                                                 | `success`, `on-success`, `success-subtle`, `on-success-subtle`, likewise warning, danger, info                                                           |
+| `gradient.brand` (theme-owned)                                                  | signature hero gradient                                                                                                                                  |
+| `font.family.*`, `font.display.*`, `font.body.*` (theme-owned)                  | families, display weight, letter-spacing, line-height                                                                                                    |
+| `font.size.step-neg1 .. step-6`                                                 | fluid type scale (`clamp()`, 320px to 1280px)                                                                                                            |
+| `space.3xs .. 3xl`                                                              | fluid space scale                                                                                                                                        |
+| `font.weight.*`, `font.line-height.*`, `font.letter-spacing.*`                  | shared scales                                                                                                                                            |
+| `shape.*`, `border.*`, `elevation.*`, `surface.*`, `focus.ring-*`, `ornament.*` | design-language-owned                                                                                                                                    |
+| `layout.*`                                                                      | layout-owned                                                                                                                                             |
+| `size.xs .. 3xl`, `size.screen`                                                 | fixed size scale for track minimums, side regions, thresholds and cover heights                                                                          |
+| `density.*`, `ux.*`, `motion.*`, `feedback.*`, `focus.emphasis`                 | UX-mode-owned                                                                                                                                            |
 
 Themes own colour and typography only. The build rejects a theme that defines anything else,
 omits a role in either scheme, or fails WCAG 2.2 AA contrast (4.5:1 for text pairs, 3:1 for
-`focus-ring` and `border-strong` against `bg`).
+`focus-ring` and `border-strong` against `bg`, and for `accent-indicator` and `accent-border`
+against `bg`, `bg-subtle`, `surface` and `surface-raised`).
+
+### Accent fills and indicators
+
+The accent has three roles, because WCAG asks different things of them:
+
+- `accent` (with `on-accent` and `accent-hover`) is a fill that carries a text label, such as a
+  primary button. Only its text must pass (4.5:1), so a theme can keep a light brand colour that
+  barely shows against the page: citrus light's lime is 1.19:1 on its background.
+- `accent-indicator` (with `on-accent-indicator` at 4.5:1 on it) is the accent as a mark of state
+  or selection on the page: a checked box, a switch that is on, a progress fill, the current page,
+  the selected tab. It must reach 3:1 against every page background (WCAG 1.4.11).
+- `accent-border` is the edge of an accent fill, for where the fill alone cannot be told apart from
+  the page. It must reach 3:1 against every page background.
+
+Wherever the accent already reaches 3:1 against all four page backgrounds, a theme sets
+`accent-indicator` and `accent-border` to the accent and `on-accent-indicator` to `on-accent`, so
+nothing changes visually (the theme tests check this for every built-in theme). Among the built-in
+themes only citrus light differs: its indicator is a darker lime, `#5c7d00` with white on it, and
+its fill edge is its strong border colour, `#7f8c2a`. Which component reads which role is listed
+in the [components README](../components/README.md#accent-fills-and-state-indicators).
 
 ## Design languages, layouts and UX modes
 

@@ -90,31 +90,43 @@ judged after rounding to 8 bits, so it passes exactly as tested.
 The requirements are the tokens package's `CONTRAST_PAIRS`, read at run time, plus every pairing
 the components draw that all eight built-in themes meet, each at its WCAG level:
 
-| Role                                  | Also on                                                   | Level |
-| ------------------------------------- | --------------------------------------------------------- | ----- |
-| `text`                                | `bg-subtle`, `accent-subtle` (and 7:1 on every surface)   | 4.5:1 |
-| `text-muted`                          | `bg-subtle`, `surface-raised`, `accent-subtle`            | 4.5:1 |
-| `link`                                | `bg-subtle`, `surface`, `surface-raised`, `accent-subtle` | 4.5:1 |
-| `on-accent-subtle`                    | `bg`, `bg-subtle`, `surface`, `surface-raised`            | 4.5:1 |
-| `focus-ring`                          | `bg-subtle`, `surface`, `surface-raised`, `accent-subtle` | 3:1   |
-| `border-strong`                       | `surface`, `surface-raised`                               | 3:1   |
-| `accent`, `danger`, `success`, `info` | `bg`, `bg-subtle`, `surface`, `surface-raised`            | 3:1   |
+| Role                        | Also on                                                   | Level |
+| --------------------------- | --------------------------------------------------------- | ----- |
+| `text`                      | `bg-subtle`, `accent-subtle` (and 7:1 on every surface)   | 4.5:1 |
+| `text-muted`                | `bg-subtle`, `surface-raised`, `accent-subtle`            | 4.5:1 |
+| `link`                      | `bg-subtle`, `surface`, `surface-raised`, `accent-subtle` | 4.5:1 |
+| `on-accent-subtle`          | `bg`, `bg-subtle`, `surface`, `surface-raised`            | 4.5:1 |
+| `focus-ring`                | `bg-subtle`, `surface`, `surface-raised`, `accent-subtle` | 3:1   |
+| `border-strong`             | `surface`, `surface-raised`                               | 3:1   |
+| `danger`, `success`, `info` | `bg`, `bg-subtle`, `surface`, `surface-raised`            | 3:1   |
 
-The fills in the last row mark state on the page (a primary button, a checked control, progress,
-an error border), so they must stand out from every page background as well as carry their own
-text. `warning` is left out of that row because the built-in themes do not give amber 3:1 on a
-light page either; danger used as text is likewise only required at 3:1, as in the built-ins.
+The status fills in the last row mark state on the page (an error border, a success icon), so
+they must stand out from every page background as well as carry their own text. `warning` is left
+out of that row because the built-in themes do not give amber 3:1 on a light page either; danger
+used as text is likewise only required at 3:1, as in the built-ins.
 
-The primary becomes the accent unchanged whenever it reaches 3:1 on the page, cards and popovers
-of the scheme and near-white or near-black text passes on it. Otherwise the accent moves the
-shorter way in lightness, towards whichever end passes sooner, with either text colour, just far
-enough; the move is reported. Over 20,000 seeded random kits the accent moves in about 55% of
-light schemes (10,986) and 35% of dark ones (7,017): mid-light colours fail on a near-white page
-and dark ones on a dark page. The hover state steps away from the text, unless that step would bring it closer to the page
-than the accent: then it steps the other way, by a smaller step or through chroma, whichever first
-keeps its text passing and its page contrast at least the accent's. Where no other colour can (a
-white or black accent, or one whose text and page windows meet; about 3% of schemes over 20,000
-random kits), the hover keeps the accent's own colour rather than fall below it. Links and the focus
+The primary is the accent fill as given whenever white or near-black text reaches 4.5:1 on it,
+which is 94.4% of colours (18,877 of 20,000 seeded random kits, the same in both schemes): light
+yellows, amber, white and near-black keep their colour. The fill carries a text label, so the page
+does not constrain it. Only a mid-tone that carries neither text moves, the shorter way in
+lightness and just far enough, and the move is reported.
+
+The page constrains the two roles that need it, both held to 3:1 on `bg`, `bg-subtle`, `surface`
+and `surface-raised`:
+
+- `accent-indicator`, the accent as a mark of state or selection (a checked box, a switch, a
+  progress fill, the current page), with `on-accent-indicator` at 4.5:1 on it;
+- `accent-border`, the edge of an accent fill where the fill alone cannot be told apart.
+
+Where the accent already reaches 3:1 on all four they are the accent's own colours (and
+`on-accent-indicator` is `on-accent`), as in the built-in themes. Otherwise each moves from the
+accent in lightness only, keeping its hue, and is reported. That happens in 49% of light schemes
+(9,863 kits) and 29% of dark ones (5,894).
+
+The hover state follows the built-in themes: one hover step further from the page (darker in
+light, lighter in dark). Where the text on it would fail there, or the accent is already at the
+end of its range, it steps towards the page instead. One of the two always moves away from the
+text, so the text keeps passing and the hover always differs from the accent. Links and the focus
 ring start from the primary (the focus ring from the secondary when there is one) and move only if
 they must. Status colours start from fixed hues (green, amber, red, blue). Tone scales the chroma
 of tints, neutrals and status colours, and how far text and strong borders sit from the page; it
@@ -154,9 +166,11 @@ Tested on every run:
   else (`findThemeProblems`), passes the whole contrast suite in both schemes
   (`findContrastFailures`) and meets every pairing in the table above, checked with the tokens
   package's own functions over 2,700 seeded random colour sets and twenty edge sets, for every
-  tone and corner style. That includes the accent at 3:1 on `bg`, `bg-subtle`, `surface` and
-  `surface-raised` in each scheme, and the accent's hover state never weaker against those four
-  than the accent itself.
+  tone and corner style. That includes `accent-indicator` and `accent-border` at 3:1 on `bg`,
+  `bg-subtle`, `surface` and `surface-raised` in each scheme, both equal to the accent wherever
+  the accent itself reaches that, and a hover that differs from the accent.
+- **The brand's own fill.** The accent is the primary unchanged for every primary that white or
+  near-black text reaches 4.5:1 on.
 - **Recognisable.** The primary is used unchanged unless a move is reported; a moved brand colour
   keeps its hue within 3° while it still has colour (OKLCH chroma of at least 0.04; about 2.4° at
   most over 20,000 random sets, up to 5° for near-greys whose hue barely shows); a moved colour stops
