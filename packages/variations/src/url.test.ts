@@ -220,3 +220,12 @@ describe("decodeVariations given a whole URL or a string with a hash", () => {
     }
   });
 });
+
+describe("decodeVariations given a doubled question mark", () => {
+  it("keeps the second one as part of the name, as the browser and the bootstrap do", () => {
+    expect(decodeVariations("??idg-theme=ember")).toEqual({});
+    expect(decodeVariations("https://example.com/??idg-theme=ember&idg-ux=focus")).toEqual({
+      ux: "focus",
+    });
+  });
+});

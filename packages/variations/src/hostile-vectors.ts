@@ -50,6 +50,7 @@ export interface SearchVector {
 
 /** Whole query strings, for what a single value cannot express: repetition and escaped names. */
 export const SEARCHES: readonly SearchVector[] = [
+  { name: "a doubled question mark", search: "??idg-theme=ember" },
   { name: "a repeated parameter, valid first", search: "?idg-theme=ember&idg-theme=tidal" },
   { name: "a repeated parameter, invalid first", search: "?idg-theme=nope&idg-theme=tidal" },
   { name: "a repeated parameter, empty first", search: "?idg-theme=&idg-theme=tidal" },
