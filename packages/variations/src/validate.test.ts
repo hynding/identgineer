@@ -88,6 +88,12 @@ describe("validateVariations", () => {
     expect(Object.keys(valid)).toEqual(["theme", "ux", "scheme"]);
   });
 
+  it("does not throw on a revoked Proxy, where even Array.isArray throws", () => {
+    const { proxy, revoke } = Proxy.revocable({}, {});
+    revoke();
+    expect(validateVariations(proxy)).toEqual({ valid: {}, rejected: [] });
+  });
+
   it("does not throw on a getter that throws", () => {
     const input = {
       get theme(): string {
