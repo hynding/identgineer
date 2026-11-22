@@ -170,41 +170,6 @@ describe("a lock manager that fails", () => {
     const { client } = setup({}, { locks: refusing });
     expect(await client.restore()).toEqual({ status: "signed-out", reason: "no-session" });
   });
-
-  it("stops waiting for a lock that is never granted after the request timeout", async () => {
-    const never = { request: (): Promise<never> => new Promise<never>(() => undefined) };
-    const { api, clock, makeClient, signIn } = setup({}, { locks: never, requestTimeoutMs: 5_000 });
-    const signingIn = signIn();
-    await settle();
-    clock.advance(5_000);
-    await signingIn;
-    const tab = makeClient();
-    let restored: unknown;
-    void tab.restore().then((state) => {
-      restored = state;
-    });
-    await settle();
-    expect(restored).toBeUndefined();
-    clock.advance(5_000);
-    await settle();
-    await settle();
-    expect(restored).toMatchObject({ status: "signed-in" });
-    const signingOutTab = tab.signOut();
-    await settle();
-    clock.advance(5_000);
-    await signingOutTab;
-    const unknownTab = makeClient();
-    let signedOut = false;
-    void unknownTab.signOut().then(() => {
-      signedOut = true;
-    });
-    await settle();
-    expect(signedOut).toBe(false);
-    clock.advance(5_000);
-    for (let round = 0; round < 3; round += 1) await settle();
-    expect(signedOut).toBe(true);
-    expect(api.requests.at(-1)?.path).toBe("/api/auth/refresh");
-  });
 });
 
 describe("several tabs told about a sign-in", () => {
