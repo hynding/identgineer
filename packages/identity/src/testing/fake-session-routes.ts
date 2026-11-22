@@ -82,7 +82,7 @@ const sessions: FakeRoute = {
         ...(session.deviceId === null ? {} : { deviceId: session.deviceId }),
         ...(session.deviceName === null ? {} : { deviceName: session.deviceName }),
         current: session.sessionId === current,
-        loginAt: session.loginAt,
+        ...(session.loginAt === null ? {} : { loginAt: session.loginAt }),
         lastActiveAt: session.createdAt,
       }))
       // camis' order: the current session, then the latest used (a stable sort keeps ties in order).

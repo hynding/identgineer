@@ -66,13 +66,16 @@ const MAX_IDENTIFIER_LENGTH = 255;
 
 const text = (value: unknown): string => (typeof value === "string" ? value : "");
 
+/** The device name camis derives from the user agent of the browser the fake stands in for. */
+const BROWSER_DEVICE = { deviceName: "Firefox on Linux" };
+
 /** A login's answer: the refresh token in the body, or in a cookie when one is asked for. */
 export const loginAnswer = (context: RouteContext, user: FakeUser): FakeResponse => {
   const { store, settings, request } = context;
   const wire = { user: store.wire(user) };
   if (settings.sessions === "legacy") return ok({ jwt: store.lastingToken(user.id), ...wire });
   const deviceId = text((request.body as { deviceId?: unknown } | undefined)?.deviceId);
-  const tokens = store.openSession(user.id, deviceId === "" ? null : deviceId, "Firefox on Linux");
+  const tokens = store.openSession(user.id, deviceId === "" ? null : deviceId, BROWSER_DEVICE);
   return context.tokenAnswer(tokens, wire);
 };
 
@@ -84,6 +87,7 @@ const reissue = (context: RouteContext, user: FakeUser): FakeResponse => {
     return ok({ jwt: store.lastingToken(user.id), ...wire });
   }
   store.invalidate(user.id);
+  // camis records no metadata for the session a password change or reset opens.
   const tokens: IssuedTokens = store.openSession(user.id, `device${String(store.next())}`, null);
   return ok({ ...tokens, ...wire });
 };
@@ -132,7 +136,7 @@ const register: FakeRoute = {
     if (settings.sessions === "legacy") {
       return ok({ jwt: store.lastingToken(user.id), user: store.wire(user) });
     }
-    const tokens = store.openSession(user.id, `device${String(store.next())}`, null);
+    const tokens = store.openSession(user.id, `device${String(store.next())}`, BROWSER_DEVICE);
     return ok({ ...tokens, user: store.wire(user) });
   },
 };
