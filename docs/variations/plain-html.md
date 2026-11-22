@@ -67,8 +67,9 @@ every value against the allowlist and sets the attributes before the page is pai
 
 ## 3. Add the switcher
 
-`<idg-variation-switcher>` is a custom element of `@identgineer/components`. Load the components
-and use the element anywhere in the page:
+`<idg-variation-switcher>` is a custom element of `@identgineer/components`. Load the components'
+lazy loader (`dist/identgineer/identgineer.esm.js` of the built package, served here as
+`/build/identgineer.esm.js`) and use the element anywhere in the page:
 
 ```html
 <script type="module" src="/build/identgineer.esm.js"></script>
