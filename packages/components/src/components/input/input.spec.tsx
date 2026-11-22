@@ -286,6 +286,43 @@ describe("idg-input as a form control", () => {
     expect(native(root).hasAttribute("disabled")).toBe(false);
   });
 
+  function pressEnter(root: HTMLElement, init: KeyboardEventInit = {}): KeyboardEvent {
+    const event = new KeyboardEvent("keydown", {
+      key: "Enter",
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      ...init,
+    });
+    native(root).dispatchEvent(event);
+    return event;
+  }
+
+  // The native input sits in a shadow root and has no form owner, so the browser's implicit
+  // submission never reaches the form: Enter would do nothing in a form of idg-input elements.
+  it("submits its form on Enter, as a native input does", async () => {
+    const form = { requestSubmit: vi.fn() };
+    const { root } = await renderWithInternals(<idg-input />, form);
+    pressEnter(root);
+    expect(form.requestSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves Enter alone while an input method is composing, or once it is handled", async () => {
+    const form = { requestSubmit: vi.fn() };
+    const { root } = await renderWithInternals(<idg-input />, form);
+    pressEnter(root, { isComposing: true });
+    const handled = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    handled.preventDefault();
+    native(root).dispatchEvent(handled);
+    pressEnter(root, { key: "a" });
+    expect(form.requestSubmit).not.toHaveBeenCalled();
+  });
+
+  it("does nothing on Enter outside a form", async () => {
+    const { root } = await renderWithInternals(<idg-input />);
+    expect(pressEnter(root).defaultPrevented).toBe(false);
+  });
+
   it("restores a value the browser saved", async () => {
     const { root, waitForChanges } = await renderWithInternals(<idg-input />);
     (root as unknown as { formStateRestoreCallback: (s: string) => void }).formStateRestoreCallback(
