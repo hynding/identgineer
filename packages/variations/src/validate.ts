@@ -1,4 +1,5 @@
 import { REGISTRY, STATE_KEYS } from "./registry.ts";
+import { isRegisteredThemeId } from "./theme-registration.ts";
 import type { StateKey, VariationState } from "./variation-state.ts";
 
 export interface RejectedVariation {
@@ -29,13 +30,16 @@ const ALLOWED: Readonly<Record<StateKey, ReadonlySet<string>>> = Object.freeze({
 /**
  * The single gate between untrusted text and the DOM: an exact match against the registry.
  * Nothing is trimmed, case-folded or otherwise coerced, so what passes is always one of the
- * registry's own strings.
+ * registry's own strings, or a theme id added through registerThemeIds.
  */
 export function isVariationId<Key extends StateKey>(
   key: Key,
   value: unknown,
 ): value is VariationState[Key] {
-  return typeof value === "string" && ALLOWED[key].has(value);
+  return (
+    typeof value === "string" &&
+    (ALLOWED[key].has(value) || (key === "theme" && isRegisteredThemeId(value)))
+  );
 }
 
 interface OwnRead {
