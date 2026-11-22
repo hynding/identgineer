@@ -47,6 +47,7 @@
     --idg-font-display-line-height: 1.15;
     --idg-font-body-letter-spacing: 0em;
     --idg-font-body-line-height: 1.6;
+    --idg-color-accent-edge: transparent;
   }
 
   [data-theme="acme"][data-scheme="dark"] {
@@ -86,6 +87,7 @@
     --idg-color-info-subtle: #182e4b;
     --idg-color-on-info-subtle: #bedaff;
     --idg-gradient-brand: linear-gradient(135deg, #4f46e5 0%, #0f766e 100%);
+    --idg-color-accent-edge: #5a56f5;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -126,6 +128,7 @@
       --idg-color-info-subtle: #182e4b;
       --idg-color-on-info-subtle: #bedaff;
       --idg-gradient-brand: linear-gradient(135deg, #4f46e5 0%, #0f766e 100%);
+      --idg-color-accent-edge: #5a56f5;
     }
   }
 }
