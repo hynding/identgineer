@@ -150,3 +150,73 @@ describe("variationsUrl", () => {
     expect(variationsUrl({ ...state, theme: "nope" } as never, "/")).toContain("idg-theme=aurora");
   });
 });
+
+describe("decodeVariations given a whole URL or a string with a hash", () => {
+  const BOTH = { theme: "ember", ux: "focus" };
+
+  it.each([
+    ["a full URL", "https://example.com/?idg-theme=ember&idg-ux=focus"],
+    ["a search string with a hash", "?idg-theme=ember&idg-ux=focus#top"],
+    [
+      "a full URL with a path and a hash",
+      "https://example.com/a/b?idg-theme=ember&idg-ux=focus#top",
+    ],
+    ["a relative URL", "/docs?idg-theme=ember&idg-ux=focus"],
+    ["a bare query with a hash", "idg-theme=ember&idg-ux=focus#top"],
+    ["a bare query", "idg-theme=ember&idg-ux=focus"],
+    ["a search string", "?idg-theme=ember&idg-ux=focus"],
+  ])("takes the query of %s", (_name, input) => {
+    expect(decodeVariations(input)).toEqual(BOTH);
+  });
+
+  it("drops everything after the first hash, even without a question mark", () => {
+    expect(decodeVariations("https://example.com/#?idg-theme=ember")).toEqual({});
+    expect(decodeVariations("#idg-theme=ember")).toEqual({});
+    expect(decodeVariations("?idg-theme=ember#?idg-ux=focus")).toEqual({ theme: "ember" });
+  });
+
+  it("takes everything after the first question mark", () => {
+    expect(decodeVariations("https://example.com/?a=?&idg-theme=ember")).toEqual({
+      theme: "ember",
+    });
+  });
+
+  it("leaves URLSearchParams input as it was", () => {
+    expect(decodeVariations(new URLSearchParams("idg-theme=ember#x=1"))).toEqual({});
+    expect(decodeVariations(new URLSearchParams("idg-theme=ember&idg-ux=focus"))).toEqual(BOTH);
+  });
+
+  const BASES = [
+    "https://example.com",
+    "https://example.com/",
+    "https://example.com/docs",
+    "https://example.com/docs#intro",
+    "https://example.com/docs?page=2",
+    "https://example.com/docs?page=2&q=a%20b#intro",
+    "https://example.com/?idg-theme=tidal&idg-ux=calm#x",
+    "/docs?page=2#intro",
+    "/",
+    "?page=2",
+    "#only-a-hash",
+  ];
+  const STATES: Partial<VariationState>[] = [
+    { theme: "ember" },
+    { design: "glass" },
+    { layout: "bento" },
+    { ux: "focus" },
+    { scheme: "dark" },
+    { theme: "terminal", design: "pixel", layout: "immersive", ux: "power", scheme: "light" },
+    { ...DEFAULTS },
+  ];
+
+  it("round-trips variationsUrl for every axis, base URL and hash", () => {
+    for (const base of BASES) {
+      for (const state of STATES) {
+        const expected = { ...DEFAULTS, ...state };
+        const url = variationsUrl(expected, base);
+        expect(decodeVariations(url), `${url}`).toEqual(expected);
+        expect(decodeVariations(new URL(url, "https://example.com").search)).toEqual(expected);
+      }
+    }
+  });
+});
