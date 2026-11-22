@@ -1,31 +1,72 @@
 // Generates the strapi-php backend from this directory with a local camis checkout, boots it on
 // 127.0.0.1 for a test run, runs a command against it and tears it down. camis is found through
-// CAMIS_DIR, as in camis.js. Everything it writes lives in cms/generated/live (git-ignored).
+// CAMIS_DIR, as in camis.js. Everything it writes lives in cms/generated/live (git-ignored;
+// IDENTITY_LIVE_DIR moves it, for this script's own tests).
 //
 //   node cms/scripts/live-backend.js -- <command> [args…]   run the command, then stop the servers
 //   node cms/scripts/live-backend.js                        serve until interrupted (Ctrl-C)
 //
 // The command gets IDENTITY_LIVE_BACKEND, the path of a JSON file describing the servers. Each
-// server logs its requests to cms/generated/live/<name>.server.log.
+// server logs its requests to <live dir>/<name>.server.log. A server that exits stops the run at
+// once; SIGINT, SIGTERM and SIGHUP are passed on to the command, and the script exits as it did.
 import { spawn, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { closeSync, existsSync, mkdirSync, openSync, rmSync, writeFileSync } from "node:fs";
+import { constants } from "node:os";
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer } from "node:net";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const CMS_DIR = fileURLToPath(new URL("..", import.meta.url));
-const LIVE_DIR = join(CMS_DIR, "generated", "live");
+const LIVE_DIR = resolve(process.env.IDENTITY_LIVE_DIR || join(CMS_DIR, "generated", "live"));
 const APP_DIR = join(LIVE_DIR, "strapi-php");
 const HOST = "127.0.0.1";
 // The page the SDK runs on in the test: same site as the API (the host), another origin (port).
 const SITE_ORIGIN = "http://127.0.0.1:5173";
 const MAIL_LOG = join(APP_DIR, "storage", "logs", "laravel.log");
 const BOOT_TIMEOUT_MS = 30_000;
+const MINIMUM_PHP_VERSION_ID = 80300;
+// What PHP and Composer need from this shell. Nothing else passes to them: a variable exported
+// in the shell (MAIL_MAILER, DB_CONNECTION, APP_ENV, CAMIS_…) would otherwise win over the .env
+// written below, since Laravel's dotenv never overrides a variable already set.
+const INHERITED = [
+  "PATH",
+  "HOME",
+  "USER",
+  "TMPDIR",
+  "TMP",
+  "TEMP",
+  "LANG",
+  "LC_ALL",
+  "SYSTEMROOT",
+  "COMPOSER_HOME",
+  "COMPOSER_CACHE_DIR",
+  "COMPOSER_ALLOW_SUPERUSER",
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "NO_PROXY",
+  "http_proxy",
+  "https_proxy",
+  "no_proxy",
+  "SSL_CERT_FILE",
+  "SSL_CERT_DIR",
+  "CURL_CA_BUNDLE",
+];
 
 // Rates high enough that the suite never meets them, except on the server kept for throttling.
 const RELAXED_RATE = 1000;
 const THROTTLED_RATE = 3;
+// camis' default, and on the short-lived server a lifespan short enough to outlive in a test.
+const ACCESS_TOKEN_LIFESPAN = 600;
+const SHORT_ACCESS_TOKEN_LIFESPAN = 2;
 
 /**
  * The deployment settings of cms/.env.example that the SDK needs, as the test run sets them. Only
@@ -48,7 +89,6 @@ const sharedEnvironment = () => ({
   ADMIN_JWT_SECRET: randomBytes(32).toString("hex"),
   TRANSFER_TOKEN_SALT: randomBytes(16).toString("hex"),
   CAMIS_JWT_MANAGEMENT: "refresh",
-  CAMIS_ACCESS_TOKEN_LIFESPAN: "600",
   CAMIS_SESSIONS_COOKIE_SECURE: "true",
   CAMIS_SESSIONS_COOKIE_SAME_SITE: "strict",
   CAMIS_SESSIONS_COOKIE_PATH: "/api/auth",
@@ -65,6 +105,12 @@ const SERVERS = [
   { name: "main", emailConfirmation: false, rate: RELAXED_RATE },
   { name: "confirmation", emailConfirmation: true, rate: RELAXED_RATE },
   { name: "throttled", emailConfirmation: false, rate: THROTTLED_RATE },
+  {
+    name: "shortLived",
+    emailConfirmation: false,
+    rate: RELAXED_RATE,
+    accessTokenLifespan: SHORT_ACCESS_TOKEN_LIFESPAN,
+  },
 ];
 
 const fail = (message) => {
@@ -78,6 +124,16 @@ const step = (message) => {
 
 const onPath = (command) => spawnSync(command, ["--version"], { stdio: "ignore" }).status === 0;
 
+/** The environment PHP runs in: the inherited allowlist, then this script's settings. */
+const phpEnvironment = (settings) => ({
+  ...Object.fromEntries(
+    INHERITED.flatMap((name) =>
+      process.env[name] === undefined ? [] : [[name, process.env[name]]],
+    ),
+  ),
+  ...settings,
+});
+
 const run = (command, args, options = {}) => {
   const result = spawnSync(command, args, { stdio: "inherit", ...options });
   if (result.error !== undefined) fail(`could not run ${command}: ${result.error.message}`);
@@ -86,7 +142,11 @@ const run = (command, args, options = {}) => {
 };
 
 const camis = (...args) => {
-  run(process.execPath, [join(CMS_DIR, "scripts", "camis.js"), ...args], { cwd: CMS_DIR });
+  run(process.execPath, [join(CMS_DIR, "scripts", "camis.js"), ...args], {
+    cwd: CMS_DIR,
+    // Absolute: camis.js resolves it against its own working directory, cms/ here.
+    env: phpEnvironment({ CAMIS_DIR: resolve(process.env.CAMIS_DIR ?? "") }),
+  });
 };
 
 const freePort = () =>
@@ -114,24 +174,37 @@ const checkPrerequisites = () => {
   if (!existsSync(resolve(camisDir, "packages", "cli", "bin", "camis.mjs"))) {
     fail(`CAMIS_DIR does not hold a camis checkout: ${camisDir}`);
   }
-  for (const command of ["php", "composer"]) {
-    if (!onPath(command))
-      fail(`${command} is not on PATH; the strapi-php backend needs PHP 8.3 and Composer.`);
+  const version = spawnSync("php", ["-r", "echo PHP_VERSION_ID, ' ', PHP_VERSION;"], {
+    encoding: "utf8",
+    env: phpEnvironment({}),
+  });
+  if (version.error !== undefined || version.status !== 0) {
+    fail("php is not on PATH; the strapi-php backend needs PHP 8.3 or newer.");
+  }
+  const [id = "0", name = "unknown"] = version.stdout.trim().split(" ");
+  if (Number(id) < MINIMUM_PHP_VERSION_ID) {
+    fail(`PHP ${name} is on PATH; the strapi-php backend needs PHP 8.3 or newer.`);
   }
 };
+
+const scaffolded = () => existsSync(join(APP_DIR, "vendor", "autoload.php"));
 
 /** Scaffolds the Laravel host app once (Composer, network) and regenerates camis' files on it. */
 const generate = () => {
   mkdirSync(LIVE_DIR, { recursive: true });
-  if (!existsSync(join(APP_DIR, "vendor", "autoload.php"))) {
+  if (!scaffolded()) {
+    if (!onPath("composer")) {
+      fail("composer is not on PATH; the first run scaffolds the Laravel app with Composer.");
+    }
     step("scaffolding the Laravel app (once; needs Composer and Packagist)");
     rmSync(APP_DIR, { recursive: true, force: true });
-    camis("scaffold", "filament", "generated/live/strapi-php");
+    camis("scaffold", "filament", APP_DIR);
   }
+  const fromLive = (file) => relative(LIVE_DIR, join(CMS_DIR, file));
   const config = {
-    ir: "../../camis.json",
-    roles: "../../roles.json",
-    protected: "../../protected",
+    ir: fromLive("camis.json"),
+    roles: fromLive("roles.json"),
+    protected: fromLive("protected"),
     targets: [
       {
         target: "filament",
@@ -143,19 +216,20 @@ const generate = () => {
   };
   writeFileSync(join(LIVE_DIR, "camis.config.json"), `${JSON.stringify(config, null, 2)}\n`);
   step("generating the backend from cms/camis.json");
-  camis("build", "--config", "generated/live/camis.config.json");
+  camis("build", "--config", join(LIVE_DIR, "camis.config.json"));
 };
 
 /** The rates a server runs with: camis' defaults for the ceiling and refresh unless relaxed. */
 const ratesOf = (server) => ({
   throttlePerMinute: server.rate,
   addressThrottlePerMinute: Math.max(server.rate, 50),
-  refreshThrottlePerMinute: server.rate === RELAXED_RATE ? RELAXED_RATE : 60,
+  refreshThrottlePerMinute: server.rate,
 });
 
 const serverEnvironment = (server, port) => {
   const rates = ratesOf(server);
   return {
+    CAMIS_ACCESS_TOKEN_LIFESPAN: String(server.accessTokenLifespan ?? ACCESS_TOKEN_LIFESPAN),
     DB_DATABASE: join(LIVE_DIR, `${server.name}.sqlite`),
     APP_URL: `http://${HOST}:${String(port)}`,
     CAMIS_EMAIL_CONFIRMATION: String(server.emailConfirmation),
@@ -169,11 +243,7 @@ const serverEnvironment = (server, port) => {
 const prepareDatabase = (env) => {
   rmSync(env.DB_DATABASE, { force: true });
   writeFileSync(env.DB_DATABASE, "");
-  const options = {
-    cwd: APP_DIR,
-    env: { ...process.env, ...env },
-    stdio: ["ignore", "ignore", "inherit"],
-  };
+  const options = { cwd: APP_DIR, env, stdio: ["ignore", "ignore", "inherit"] };
   run("php", ["artisan", "migrate", "--force", "--no-interaction"], options);
   run(
     "php",
@@ -182,9 +252,9 @@ const prepareDatabase = (env) => {
   );
 };
 
-const waitUntilUp = async (url) => {
+const waitUntilUp = async (url, exited) => {
   const deadline = Date.now() + BOOT_TIMEOUT_MS;
-  while (Date.now() < deadline) {
+  while (Date.now() < deadline && !exited()) {
     try {
       const response = await fetch(`${url}/up`);
       if (response.ok) return;
@@ -197,14 +267,36 @@ const waitUntilUp = async (url) => {
 };
 
 const children = [];
+let stopping = false;
 
 const stopServers = () => {
+  stopping = true;
   for (const child of children.splice(0)) child.kill("SIGTERM");
 };
 
-const startServer = async (server) => {
+/** The end of a server's log, for the message when it stops. */
+const tail = (path) => {
+  try {
+    return readFileSync(path, "utf8").trimEnd().split("\n").slice(-20).join("\n");
+  } catch {
+    return "(no log)";
+  }
+};
+
+let runner;
+
+/** A server stopped by itself: stop everything, the command too, and say why. */
+const serverExited = (name, code, signal, log) => {
+  if (stopping) return;
+  runner?.kill("SIGTERM");
+  stopServers();
+  const how = signal === null ? `with code ${String(code)}` : `on ${signal}`;
+  fail(`live-backend: the ${name} server exited ${how}; its log, ${log}, ends:\n${tail(log)}`);
+};
+
+const startServer = async (server, shared) => {
   const port = await freePort();
-  const env = serverEnvironment(server, port);
+  const env = phpEnvironment({ ...shared, ...serverEnvironment(server, port) });
   prepareDatabase(env);
   // PHP's built-in server with Laravel's router script, as `php artisan serve` runs it, but with
   // this process's environment passed through so each server gets its own settings.
@@ -220,38 +312,58 @@ const startServer = async (server) => {
     "server.php",
   );
   // The server logs every request to stderr: a file, never a pipe this process would have to drain.
-  const log = openSync(join(LIVE_DIR, `${server.name}.server.log`), "w");
+  const logPath = join(LIVE_DIR, `${server.name}.server.log`);
+  const log = openSync(logPath, "w");
   const child = spawn("php", ["-S", `${HOST}:${String(port)}`, router], {
     cwd: join(APP_DIR, "public"),
-    env: { ...process.env, ...env },
+    env,
     stdio: ["ignore", log, log],
   });
   closeSync(log);
   children.push(child);
-  await waitUntilUp(env.APP_URL);
+  let exited = false;
+  child.on("exit", (code, signal) => {
+    exited = true;
+    serverExited(server.name, code, signal, logPath);
+  });
+  await waitUntilUp(env.APP_URL, () => exited);
   step(`${server.name} server on ${env.APP_URL}`);
   return {
     name: server.name,
     url: env.APP_URL,
     emailConfirmation: server.emailConfirmation,
+    accessTokenLifetimeSeconds: server.accessTokenLifespan ?? ACCESS_TOKEN_LIFESPAN,
     ...ratesOf(server),
   };
+};
+
+/** Passes a signal on to the command and exits as it did, or at once without one. */
+let signalled = false;
+
+const onSignal = (signal) => {
+  signalled = true;
+  const status = 128 + constants.signals[signal];
+  if (runner === undefined || runner.exitCode !== null) {
+    stopServers();
+    process.exit(status);
+  }
+  runner.kill(signal);
+  runner.once("exit", () => {
+    stopServers();
+    process.exit(status);
+  });
 };
 
 const main = async () => {
   checkPrerequisites();
   generate();
-  writeFileSync(join(APP_DIR, ".env"), dotenv(sharedEnvironment()));
+  const shared = sharedEnvironment();
+  writeFileSync(join(APP_DIR, ".env"), dotenv(shared));
   rmSync(MAIL_LOG, { force: true });
   process.on("exit", stopServers);
-  for (const signal of ["SIGINT", "SIGTERM"]) {
-    process.on(signal, () => {
-      stopServers();
-      process.exit(130);
-    });
-  }
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) process.on(signal, onSignal);
   const servers = [];
-  for (const server of SERVERS) servers.push(await startServer(server));
+  for (const server of SERVERS) servers.push(await startServer(server, shared));
   const description = join(LIVE_DIR, "backend.json");
   const backend = {
     siteOrigin: SITE_ORIGIN,
@@ -267,7 +379,7 @@ const main = async () => {
     return;
   }
   const [executable = "", ...args] = command;
-  const runner = spawn(executable, args, {
+  runner = spawn(executable, args, {
     stdio: "inherit",
     env: { ...process.env, IDENTITY_LIVE_BACKEND: description },
     shell: process.platform === "win32",
@@ -276,9 +388,10 @@ const main = async () => {
     stopServers();
     fail(`could not run ${executable}: ${error.message}`);
   });
-  runner.on("exit", (code) => {
+  runner.on("exit", (code, signal) => {
+    if (signalled) return; // onSignal exits once the command has
     stopServers();
-    process.exit(code ?? 1);
+    process.exit(signal === null ? (code ?? 1) : 128 + constants.signals[signal]);
   });
 };
 

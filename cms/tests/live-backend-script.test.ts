@@ -105,13 +105,17 @@ const runFake = (setup: Fake, command: readonly string[], extra: NodeJS.ProcessE
     timeout: 30_000,
   });
 
+/** Whether the process runs: a zombie no init has reaped yet (as in a container) does not. */
 const alive = (pid: number): boolean => {
   try {
     process.kill(pid, 0);
-    return true;
   } catch {
     return false;
   }
+  const stat = existsSync(`/proc/${String(pid)}/stat`)
+    ? readFileSync(`/proc/${String(pid)}/stat`, "utf8")
+    : "";
+  return !/^\d+ \(.*\) Z/.test(stat);
 };
 
 describe("cms/scripts/live-backend.js", () => {
@@ -233,7 +237,9 @@ describe("cms/scripts/live-backend.js", () => {
         stdio: "ignore",
       });
       const exit = new Promise<number | null>((resolve) =>
-        child.on("exit", (code) => resolve(code)),
+        child.on("exit", (code) => {
+          resolve(code);
+        }),
       );
       while (!existsSync(`${marks}.ready`) && child.exitCode === null) {
         await new Promise((wake) => setTimeout(wake, 50));
