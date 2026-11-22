@@ -28,6 +28,16 @@ describe.skipIf(!existsSync(TYPES))("the built declarations, once built", () => 
 
   it("are there", () => {
     expect(files.some((file) => file.endsWith("variation-switcher.d.ts"))).toBe(true);
+    expect(files.some((file) => file.endsWith("sign-in.d.ts"))).toBe(true);
+  });
+
+  it("never import from @identgineer/identity, whose client the page hands to the identity components", () => {
+    const leaking = files.filter((file) =>
+      /from\s+["']@identgineer\/identity|import\(["']@identgineer\/identity/.test(
+        readFileSync(file, "utf8"),
+      ),
+    );
+    expect(leaking.map((file) => file.slice(TYPES.length + 1))).toEqual([]);
   });
 
   it("never import from @identgineer/variations", () => {
