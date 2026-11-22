@@ -92,6 +92,27 @@ describe("a sign-in in another tab during a sign-out (the later action wins)", (
   });
 });
 
+describe("a sign-in heard of while the cookie lookup finds a session", () => {
+  it("leaves the session the lookup found alone", async () => {
+    const { api, client, makeClient, other } = await twoTabs();
+    // A tab apart, whose session the cookie names when the lookup reads it.
+    await makeClient().signIn({ identifier: "bob", password: PASSWORD });
+    const releaseLookup = api.holdNext("POST", "/api/auth/refresh");
+    const signingOut = client.signOut();
+    await settle();
+    const sent = api.requests.length;
+    await other.signIn({ identifier: "bob", password: PASSWORD });
+    await settle();
+    releaseLookup();
+    await expect(signingOut).resolves.toEqual({ outcome: "superseded" });
+    const logouts = api.requests
+      .slice(sent)
+      .filter((request) => request.path === "/api/auth/logout");
+    expect(logouts).toEqual([]);
+    expect(api.activeSessionCount("bob@example.com")).toBe(2);
+  });
+});
+
 describe("a sign-in asked for in the same tab during its sign-out", () => {
   it("makes the sign-out superseded, and no other tab is told of a sign-out", async () => {
     const { api, client, heard } = await twoTabs();

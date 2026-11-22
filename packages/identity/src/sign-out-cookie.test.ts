@@ -99,6 +99,39 @@ describe("a cookie session whose found token the logout refuses", () => {
   });
 });
 
+describe("a session whose refresh token came in a body, its access token dead", () => {
+  const signedUpThenExpired = async () => {
+    const context = setup();
+    await context.client.register({
+      username: "eve",
+      email: "eve@example.com",
+      password: PASSWORD,
+    });
+    context.api.expireAccessTokens();
+    return context;
+  };
+
+  it("is refreshed outside the session and logged out with the new token", async () => {
+    const { api, client } = await signedUpThenExpired();
+    const sent = api.requests.length;
+    await expect(client.signOut()).resolves.toEqual({ outcome: "signed-out" });
+    expect(pathsSince(api, sent)).toEqual([
+      "/api/auth/logout",
+      "/api/auth/refresh",
+      "/api/auth/logout",
+      "/api/auth/refresh",
+    ]);
+    expect(api.activeSessionCount("eve@example.com")).toBe(0);
+  });
+
+  it("is reported as possibly alive when that refresh cannot reach the server", async () => {
+    const { api, client } = await signedUpThenExpired();
+    api.respondNext("POST", "/api/auth/refresh", "network-error");
+    await expect(client.signOut()).resolves.toEqual({ outcome: "server-unreachable" });
+    expect(api.activeSessionCount("eve@example.com")).toBe(1);
+  });
+});
+
 describe("the logout's answer", () => {
   const answer = (status: number) => ({
     status,

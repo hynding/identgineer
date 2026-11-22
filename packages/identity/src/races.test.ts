@@ -358,3 +358,25 @@ describe("a sign-in queued before a sign-out", () => {
     expect(api.activeSessionCount("ada@example.com")).toBe(0);
   });
 });
+
+describe("a password change asked for before a sign-in in the same tab", () => {
+  it("is not sent for the account that sign-in brought", async () => {
+    const { api, client, signIn } = setup();
+    addBob(api);
+    await signIn();
+    const release = api.holdNext("POST", "/api/auth/local");
+    const signingIn = client.signIn({ identifier: "bob", password: PASSWORD });
+    await settle();
+    const changing = rejection(
+      client.changePassword({
+        currentPassword: PASSWORD,
+        password: "another long password 123",
+        passwordConfirmation: "another long password 123",
+      }),
+    );
+    release();
+    await signingIn;
+    expect(await changing).toMatchObject({ code: "unauthorized" });
+    expect(paths(api)).not.toContain("/api/auth/change-password");
+  });
+});
