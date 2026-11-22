@@ -264,6 +264,19 @@ test.describe("idg-menu pointer and layout", () => {
     expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(320);
   });
 
+  test("stays inside a 320px-wide viewport with the text doubled", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await openOverlays(page);
+    await page.locator("html").evaluate((element) => {
+      element.style.fontSize = "200%";
+    });
+    await openByKeyboard(page);
+    await settle(page);
+    const box = await surface(page).boundingBox();
+    expect(box?.x).toBeGreaterThanOrEqual(0);
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(320);
+  });
+
   test("shows a visible boundary and a highlighted item in forced colours", async ({ page }) => {
     await page.emulateMedia({ forcedColors: "active" });
     await openOverlays(page);
