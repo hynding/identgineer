@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { attributes, run } from "./bootstrap-harness.ts";
 import { STORAGE_KEY, URL_PARAM_PREFIX } from "./constants.ts";
-import { VECTORS } from "./hostile-vectors.ts";
+import { SEARCHES, VECTORS } from "./hostile-vectors.ts";
 import { STATE_KEYS } from "./registry.ts";
 import { loadVariations } from "./storage.ts";
 import { decodeVariations } from "./url.ts";
@@ -22,6 +22,16 @@ describe("the runtime and the built bootstrap agree on every hostile vector", ()
           const fromBootstrap = attributes(run({ search }).root)[key];
           expect(fromBootstrap, `${name} in the URL`).toBe(fromRuntime);
         }
+      });
+    }
+  });
+
+  describe("in whole query strings", () => {
+    for (const { name, search } of SEARCHES) {
+      it(name, () => {
+        const decoded = decodeVariations(search);
+        const applied = attributes(run({ search }).root);
+        for (const key of STATE_KEYS) expect(applied[key], key).toBe(runtimeAnswer(decoded[key]));
       });
     }
   });

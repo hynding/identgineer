@@ -54,7 +54,7 @@ const { state, rejected, changed } = applyVariations({ theme: "ember", scheme: "
 // Only the axes you pass change. Defaults are written explicitly, so a later change of a
 // stylesheet default cannot alter a user's choice. scheme "system" removes data-scheme.
 // Invalid values are left out and listed in `rejected`; it never throws.
-// `changed` is relative to the state before this call. The result is frozen.
+// `changed` is relative to the state before this call. The result, `state`, `changed` and `rejected` are frozen.
 
 const stop = onVariationsChange(({ state, changed }) => console.log(changed, state));
 stop();
@@ -78,8 +78,10 @@ shuffleVariations(() => 0.5); // inject the random source for deterministic test
   before a call is announced with it, not lost. A listener that itself applies a change does not
   reorder anything: nested announcements wait until the current one has reached every listener and
   the event, so all of them see the states in order and end on the final one. A listener that is
-  unsubscribed during a dispatch is not called afterwards. What listeners receive is frozen. The same change is dispatched on the root as a bubbling `idg-variations-change`
-  `CustomEvent` with `detail: { state, changed }`. Listeners are given what this package computed,
+  unsubscribed during a dispatch is not called afterwards. What listeners receive is frozen. One
+  dispatch delivers at most 100 announcements: if listeners keep undoing each other, the rest are
+  dropped with a `console.error` and the next change is measured against the DOM. The same change
+  is dispatched on the root as a bubbling `idg-variations-change` `CustomEvent` with `detail: { state, changed }`. Listeners are given what this package computed,
   not the event's `detail`, because any script can dispatch a forged event; treat the event's
   `detail` as a hint if you listen to it directly.
 
@@ -112,9 +114,12 @@ encodeVariations({ theme: "aurora", design: "glass" }, { omitDefaults: true });
 
 decodeVariations("?idg-design=glass&page=2"); // { design: "glass" }, validated like everything else
 
-variationsUrl(state, "https://example.com/docs?page=2#intro");
+variationsUrl(
+  { theme: "ember", design: "flat", layout: "top-bar", ux: "comfortable", scheme: "dark" },
+  "https://example.com/docs?page=2#intro",
+);
 // "https://example.com/docs?page=2&idg-theme=ember&idg-design=flat&idg-layout=top-bar
-//   &idg-ux=comfortable&idg-scheme=system#intro" (one line in reality)
+//   &idg-ux=comfortable&idg-scheme=dark#intro" (one line in reality)
 ```
 
 `variationsUrl` always says all five choices, defaults and `scheme=system` included. A default left
