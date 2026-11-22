@@ -446,6 +446,28 @@ test.describe("idg-session-guard tries again when the browser is back online as 
     await expect(page.locator("a#before")).toBeFocused();
   });
 
+  for (const start of ["Try again", "the browser coming back online"] as const) {
+    test(`a retry from ${start} ends its busy state when the client is disposed while it waits`, async ({
+      page,
+    }) => {
+      await openGuardPage(page, "?restore-fail");
+      const retry = guard(page).locator('[part="retry"]');
+      await expect(retry).toBeVisible();
+      await holdRefresh(page, false);
+      if (start === "Try again") {
+        await guard(page).getByRole("button", { name: "Try again" }).focus();
+        await page.keyboard.press("Enter");
+      } else {
+        await page.evaluate(() => window.dispatchEvent(new Event("online")));
+      }
+      await expect(retry).toHaveAttribute("loading", "");
+      await page.evaluate("window.identityFixture.client.dispose()");
+      await page.evaluate("window.releaseRefresh()");
+      await expect(retry).toBeVisible();
+      await expect(retry).not.toHaveAttribute("loading", "");
+    });
+  }
+
   test("a Try again pressed while the guard is already trying again asks the server once", async ({
     page,
   }) => {
