@@ -1132,11 +1132,20 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   viewport and forced colours for every overlay (axe runs with each one open), boundary contrast, text contrast of badges, alerts,
   avatars and changes in all 8 themes in light and dark, and axe (wcag2a, wcag2aa, wcag21aa, wcag22aa) across the 8 designs in light and dark and
   the 8 UX modes, no sideways page scroll at 320, 768, 1280 and 2560px under all 8 layouts, and the
-  layout primitives' wrapping, column counts and right-to-left placement, on pages in `src/fixtures/` (`button.html`, `forms.html`, `surfaces.html`, `overlays.html`, `navigation.html`, `layout-primitives.html`, `layout-shell.html`; copied to `www/fixtures/`; static HTML, no inline
+  layout primitives' wrapping, column counts and right-to-left placement, on pages in `src/fixtures/` (`button.html`, `forms.html`, `surfaces.html`, `overlays.html`, `navigation.html`, `layout-primitives.html`, `layout-shell.html`, `variation-switcher.html`; copied to `www/fixtures/`; static HTML, no inline
   script or style). Build first. Playwright's own Chromium is installed with
   `pnpm --filter @identgineer/components exec playwright install --with-deps chromium`; where that is
   not possible, set `IDG_CHROMIUM_PATH` to a Chromium binary (`/opt/pw-browsers/chromium` is used if it
   exists). `IDG_BROWSER_PORT` changes the port (4173). Only Chromium is run.
+- **Variations in the build.** `@identgineer/variations` is TypeScript source with `.ts` import
+  specifiers. Stencil only compiles its own `src`, so `stencil.config.ts` carries a small rollup
+  plugin that transpiles that package's files (and nothing else), and `tsconfig.json` allows `.ts`
+  import specifiers for the type check while `tsconfig.build.json` turns that off again, which
+  emit requires. The `variation-switcher.html` fixture loads the bootstrap script from
+  `/variations/bootstrap.js`, which the www build copies from `packages/variations/dist` (that
+  package builds first, since this one depends on it). The fixture's `integrity` attribute is
+  written out, and `checks/fixture-bootstrap.test.ts` fails when it no longer matches what the
+  package builds: copy the new value from `dist/bootstrap.sri.json`.
 - `src/testing/` holds spec helpers (a recording `ElementInternals`, since the mock DOM has none) and
   is excluded from the Stencil build.
 - `tsconfig.json` is the strict config for tooling and editors. `tsconfig.build.json` is the one
