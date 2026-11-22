@@ -42,6 +42,20 @@ function isPrintable(event: KeyboardEvent): boolean {
   );
 }
 
+/** The visible items in an element of the menu, through any slot that forwards items into it. */
+function itemsWithin(element: Element): HTMLIdgMenuItemElement[] {
+  if (element.localName === "idg-menu-item") {
+    return (element as HTMLIdgMenuItemElement).hidden ? [] : [element as HTMLIdgMenuItemElement];
+  }
+  if (element.localName === "idg-menu") return [];
+  const slot = element as HTMLSlotElement;
+  const children =
+    element.localName === "slot" && typeof slot.assignedElements === "function"
+      ? slot.assignedElements({ flatten: true })
+      : Array.from(element.children);
+  return children.flatMap(itemsWithin);
+}
+
 /**
  * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
  * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
@@ -238,19 +252,10 @@ export class IdgMenu {
   }
 
   // The items drawn in the menu: its own children and those another component forwards to it
-  // through a slot of its own (the default slot's assignment, flattened), each with the items of
-  // a group it holds. An item of a menu nested in one of them belongs to that menu.
+  // through a slot of its own, in a group or not (a slot's assignment, flattened). An item of a
+  // menu nested in one of them belongs to that menu.
   private items(): HTMLIdgMenuItemElement[] {
-    return this.slottedElements()
-      .flatMap((element) =>
-        element.localName === "idg-menu-item"
-          ? [element as HTMLIdgMenuItemElement]
-          : Array.from(element.querySelectorAll("idg-menu-item")).filter((item) => {
-              const owner = item.closest("idg-menu");
-              return owner === null || !element.contains(owner);
-            }),
-      )
-      .filter((item) => !item.hidden);
+    return this.slottedElements().flatMap(itemsWithin);
   }
 
   // The mock DOM of the unit tests has no slot assignment; there the children stand in for it.
