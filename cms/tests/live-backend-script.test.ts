@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { fake, NODE, removeFakes, runFake, SCRIPT } from "./fake-php";
+import { fake, NODE, PROVIDERS_BEFORE_AUTH, removeFakes, runFake, SCRIPT } from "./fake-php";
 
 const run = (camisDir: string | undefined) => {
   const env: NodeJS.ProcessEnv = { ...process.env, CAMIS_DIR: camisDir };
@@ -115,6 +115,34 @@ describe("cms/scripts/live-backend.js", () => {
       expect(third.stdout).not.toContain("scaffolding the Laravel app");
     },
   );
+
+  it(
+    "registers camis' auth provider in an app scaffolded before it, once, after the panel's",
+    { timeout: 30_000 },
+    () => {
+      const setup = fake();
+      const providers = join(setup.live, "strapi-php", "bootstrap", "providers.php");
+      expect(runFake(setup, [NODE, "-e", ""]).status).toBe(0);
+      const once = readFileSync(providers, "utf8");
+      expect(once).toBe(
+        PROVIDERS_BEFORE_AUTH.replace(
+          "AdminPanelProvider::class,\n",
+          "AdminPanelProvider::class,\n    ...(class_exists(\\App\\Providers\\CamisAuthServiceProvider::class) ? [\\App\\Providers\\CamisAuthServiceProvider::class] : []),\n",
+        ),
+      );
+      expect(runFake(setup, [NODE, "-e", ""]).status).toBe(0);
+      expect(readFileSync(providers, "utf8")).toBe(once);
+    },
+  );
+
+  it("leaves a providers file without the panel's entry as it is", { timeout: 30_000 }, () => {
+    const setup = fake();
+    const providers = join(setup.live, "strapi-php", "bootstrap", "providers.php");
+    const bare = "<?php\n\nreturn [\n    App\\Providers\\AppServiceProvider::class,\n];\n";
+    writeFileSync(providers, bare);
+    expect(runFake(setup, [NODE, "-e", ""]).status).toBe(0);
+    expect(readFileSync(providers, "utf8")).toBe(bare);
+  });
 
   it("makes a fresh APP_KEY on every run", { timeout: 30_000 }, () => {
     const setup = fake();

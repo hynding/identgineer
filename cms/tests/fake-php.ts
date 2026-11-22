@@ -76,6 +76,15 @@ if (command === "scaffold") {
 }
 `;
 
+/** bootstrap/providers.php of an app scaffolded before camis registered its auth provider. */
+export const PROVIDERS_BEFORE_AUTH = `<?php
+
+return [
+    App\\Providers\\AppServiceProvider::class,
+    App\\Providers\\Filament\\AdminPanelProvider::class,
+];
+`;
+
 export interface Fake {
   readonly root: string;
   readonly live: string;
@@ -120,10 +129,11 @@ export const fake = (
     writeFileSync(join(bin, "composer"), `#!${NODE}\n`);
     chmodSync(join(bin, "composer"), 0o755);
   } else {
-    for (const dir of ["vendor", "public", join("storage", "logs")]) {
+    for (const dir of ["vendor", "public", "bootstrap", join("storage", "logs")]) {
       mkdirSync(join(app, dir), { recursive: true });
     }
     writeFileSync(join(app, "vendor", "autoload.php"), "<?php\n");
+    writeFileSync(join(app, "bootstrap", "providers.php"), PROVIDERS_BEFORE_AUTH);
     writeFileSync(join(live, "strapi-php.scaffolded"), "");
   }
   return {
