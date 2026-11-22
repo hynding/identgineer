@@ -29,8 +29,8 @@
    each piece is no width. The line keeps the element's own font, so a measure in em or ch is the
    element's em or ch, and it takes none of the page's letter spacing, word spacing or indent. It
    is hidden, and kept from assistive technology by the empty alternative. A percentage is not a
-   valid tab size, so a percentage measure is ignored and the line takes the default tab size of
-   eight spaces: the README says so. */
+   valid tab size, so a percentage measure is ignored and the line inherits the page's tab size,
+   eight spaces by default: the README says so. */
 :host::before,
 .measured::before {
   /* Where a length is not a valid tab size: two zero-width spaces (each escape is followed by a

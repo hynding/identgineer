@@ -1159,11 +1159,12 @@ What the forms share:
   popover) they take the identity measure, `--idg-identity-measure` (`var(--idg-size-m)`, 20rem, by
   default; set it on any ancestor), and shrink below it on a narrow screen. The measure is a
   length, in any unit, and `em` or `ch` is the element's own. A percentage is not a valid measure:
-  it is ignored, and in such a parent the element is then as narrow as eight of its spaces. Leave
-  the element's own `display` as it is: as a flex or grid container it would lay its measure out
-  as an item beside its content, with the gap between them. Each is an inline-size container, so
-  with large text on a narrow screen (narrower than nine of its own ems) the controls' inline
-  padding and the gaps shrink; at normal text size every UX mode keeps its own.
+  it is ignored, and in such a parent the element is then as wide as the page's tab size
+  (`tab-size`, eight spaces by default). Leave the element's own `display` as it is: as a flex or
+  grid container it would lay its measure out as an item of its own, with the gap after it. Each
+  is an inline-size container, so with large text on a narrow screen (narrower than nine of its own
+  ems) the controls' inline padding and the gaps shrink; at normal text size every UX mode keeps
+  its own.
 
 ### `idg-sign-in`
 
