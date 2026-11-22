@@ -42,7 +42,13 @@ describe("storage", () => {
 
   it("loads what was saved", () => {
     const storage = new MemoryStorage();
-    const choice = { theme: "ember", design: "glass", layout: "bento", ux: "focus", scheme: "dark" };
+    const choice = {
+      theme: "ember",
+      design: "glass",
+      layout: "bento",
+      ux: "focus",
+      scheme: "dark",
+    };
     saveVariations(choice as never, storage);
     expect(loadVariations(storage)).toEqual(choice);
   });
@@ -127,9 +133,10 @@ describe("storage", () => {
     expect(loadVariations(storage)).toEqual({});
   });
 
-  it("does nothing, and does not throw, when there is no storage at all", () => {
-    expect(loadVariations(undefined)).toEqual({});
-    expect(saveVariations({ theme: "ember" }, undefined)).toBe(false);
-    expect(clearStoredVariations(undefined)).toBe(false);
+  it("does nothing, and does not throw, when the environment has no storage", () => {
+    expect(typeof (globalThis as { localStorage?: unknown }).localStorage).toBe("undefined");
+    expect(loadVariations()).toEqual({});
+    expect(saveVariations({ theme: "ember" })).toBe(false);
+    expect(clearStoredVariations()).toBe(false);
   });
 });
