@@ -219,3 +219,57 @@ describe("the fake's restorable user", () => {
     expect(api.restorableUser()).toBeUndefined();
   });
 });
+
+describe("the fake's strict validation, as camis' StrapiUsers::validate", () => {
+  const errorMessage = (answer: { body: Record<string, unknown> }): unknown =>
+    (answer.body.error as { message?: unknown } | undefined)?.message;
+
+  it("refuses a field that is not a string before a sign-in takes a turn", async () => {
+    const { post } = fakeApi({ throttlePerMinute: 1 });
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const answer = await post("/api/auth/local", { body: { identifier: 5, password: "x" } });
+      expect(answer.status).toBe(400);
+      expect(errorMessage(answer)).toBe(
+        "identifier must be a `string` type, but the final value was: `5`.",
+      );
+    }
+    const wrong = await post("/api/auth/local", { body: { identifier: "ada", password: "x" } });
+    expect(wrong.status).toBe(400);
+  });
+
+  it("refuses an identifier over 255 characters before a turn or a lookup", async () => {
+    const { post } = fakeApi({ throttlePerMinute: 1 });
+    const long = { body: { identifier: "a".repeat(256), password: "x" } };
+    expect(errorMessage(await post("/api/auth/local", long))).toBe(
+      "Invalid identifier or password",
+    );
+    expect((await post("/api/auth/local", long)).status).toBe(400);
+  });
+
+  it("refuses a recovery email that is not a string before a turn", async () => {
+    const { post } = fakeApi({ throttlePerMinute: 1, addressThrottlePerMinute: 1 });
+    await post("/api/auth/forgot-password", { body: { email: ["ada@example.com"] } });
+    const answer = await post("/api/auth/forgot-password", { body: { email: "ada@example.com" } });
+    expect(answer.status).toBe(200);
+  });
+
+  it("refuses a username or email over 255 characters on registration", async () => {
+    const { post } = fakeApi();
+    const answer = await post("/api/auth/local/register", {
+      body: { username: "u".repeat(256), email: "eve@example.com", password: PASSWORD },
+    });
+    expect(errorMessage(answer)).toBe("username must be at most 255 characters");
+    const email = await post("/api/auth/local/register", {
+      body: { username: "eve", email: `${"e".repeat(250)}@example.com`, password: PASSWORD },
+    });
+    expect(errorMessage(email)).toBe("email must be at most 255 characters");
+  });
+
+  it("counts a password's length in bytes", async () => {
+    const { post } = fakeApi();
+    const answer = await post("/api/auth/local/register", {
+      body: { username: "eve", email: "eve@example.com", password: "é".repeat(37) },
+    });
+    expect(errorMessage(answer)).toBe("Password must be less than 73 bytes");
+  });
+});
