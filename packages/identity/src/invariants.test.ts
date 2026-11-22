@@ -157,8 +157,7 @@ const runScenario = async (seed: number, steps: number): Promise<void> => {
   const world: World = {
     api,
     clock,
-    // The focused lock tests catch a nested request; tracking holders here slows the run ninefold.
-    locks: createMemoryLocks({ detectNested: false }),
+    locks: createMemoryLocks(),
     channel: `identgineer-invariants-${String(seed)}`,
     latency: () => Math.floor(random() * 4),
   };

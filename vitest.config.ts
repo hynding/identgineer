@@ -29,6 +29,9 @@ export default defineConfig({
           // waits forever (a lock requested by its own holder) fails fast instead of hanging CI.
           testTimeout: 3_000,
           hookTimeout: 3_000,
+          // The memory lock manager tracks lock holders with AsyncLocalStorage; this flag (the
+          // default from Node 24) makes that tracking cost nothing instead of slowing every promise.
+          execArgv: ["--experimental-async-context-frame"],
         },
       },
       {

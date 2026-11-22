@@ -412,8 +412,9 @@ and the refresh cookie refused with a 403 from a foreign `Origin` unless listed 
 `allowedOrigins`), `createManualClock(start)` and `createMemoryLocks(options)` (an in-memory lock
 manager for the `locks` option; a request for a lock from within that lock's own holder, which a
 browser would leave waiting forever, throws and fails the test run, tracked with Node's
-`AsyncLocalStorage`; `detectNested: false` turns that off for long randomised runs, and
-`onNestedRequest` receives the error instead). Pass `api.fetch`, `api.baseUrl` and the clock to the client. The fake
+`AsyncLocalStorage`, which before Node 24 is cheap only with `--experimental-async-context-frame`,
+as this package's tests run; `detectNested: false` turns the check off, and `onNestedRequest`
+receives the error instead). Pass `api.fetch`, `api.baseUrl` and the clock to the client. The fake
 issues opaque tokens by default, living 600 seconds in refresh mode and 30 days in legacy mode
 (`accessTokens: "jwt"`, `accessTokenLifetimeSeconds` and `reportExpiresIn` change that), and
 `api.holdNext(method, path)` holds the next such request until the returned function is called, to

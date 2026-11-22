@@ -3,8 +3,9 @@ import type { LockManagerLike } from "../locks.ts";
 export interface MemoryLocksOptions {
   /**
    * Whether a request for a lock from within its own holder is caught (default true). It tracks
-   * holders along async calls with Node's AsyncLocalStorage, which slows every promise in the
-   * process: a test running many thousands of steps may turn it off.
+   * holders along async calls with Node's AsyncLocalStorage, which before Node 24 slows every
+   * promise in the process unless Node runs with `--experimental-async-context-frame`: a long
+   * randomised run that cannot pass that flag may turn it off.
    */
   readonly detectNested?: boolean;
   /**
