@@ -222,17 +222,16 @@ describe("signOut", () => {
     expect(client.getState()).toEqual({ status: "signed-out", reason: "user" });
   });
 
-  it("refreshes an expired access token to reach the logout route", async () => {
+  it("finds the session through the cookie when the access token has expired", async () => {
     const { api, client, signIn } = setup();
     await signIn();
     api.expireAccessTokens();
     await client.signOut();
-    // The last refresh is the check that the cookie names nothing more.
-    expect(api.requests.map((request) => request.path).slice(-4)).toEqual([
+    // The dead token's logout, then the cookie lookup finds the session and logs it out.
+    expect(api.requests.map((request) => request.path).slice(-3)).toEqual([
       "/api/auth/logout",
       "/api/auth/refresh",
       "/api/auth/logout",
-      "/api/auth/refresh",
     ]);
     expect(api.activeSessionCount("ada@example.com")).toBe(0);
   });

@@ -273,15 +273,19 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
           ...(tokens.refreshToken === undefined ? {} : { refreshToken: tokens.refreshToken }),
         },
       });
-    // A server error may have left the session in place; any other answer means it is gone.
+    // Only a success ended the session; 404 is a backend without sessions. Anything else (a
+    // throttled, refused or failed logout) may have left the session in place.
     const outcomeOf = (response: ApiResponse): ServerSignOut => {
-      if (response.status === 404) return "no-sessions";
-      return response.status >= 500 ? "unreachable" : "ended";
+      if (response.ok) return "ended";
+      return response.status === 404 ? "no-sessions" : "unreachable";
     };
     try {
       const response = await logout(tokens.accessToken);
       if (response.status !== 401) return outcomeOf(response);
-      // The access token expired: the logout route needs a live one, so refresh outside the session.
+      // The access token was already dead, so its session is over or only the refresh token can
+      // still reach it: a cookie one is found by the cookie lookup that follows every logout, a
+      // body one is refreshed outside the session to log out.
+      if (tokens.refreshToken === undefined) return "ended";
       const fresh = await refresher.detached(tokens.refreshToken);
       if (fresh === "refused") return "ended";
       if (fresh === "unreachable") return "unreachable";
