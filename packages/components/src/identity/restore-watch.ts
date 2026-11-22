@@ -32,9 +32,10 @@ export class RestoreWatch<C extends Restorable> {
   }
 
   private run(client: C, attempt: (client: C) => Promise<RestoreOutcome>): void {
-    void attempt(client).then((outcome) => {
+    // Whatever the outcome, a client still current and still unknown has no answer (a disposed
+    // client's restore settles so): the component says so, and tries again once back online.
+    void attempt(client).then(() => {
       if (client !== this.current() || client.getState().status !== "unknown") return;
-      if (outcome !== "unreachable") return;
       window.addEventListener("online", this.retry);
       this.unreachableChanged(true);
     });
