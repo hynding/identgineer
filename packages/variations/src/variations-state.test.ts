@@ -73,6 +73,14 @@ describe("applyVariations", () => {
     expect(result.changed).toEqual(["theme", "scheme"]);
   });
 
+  it("freezes the whole result, the rejected list and its entries included", () => {
+    const result = applyVariations({ theme: "nope" } as never, { root });
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(Object.isFrozen(result.rejected)).toBe(true);
+    expect(Object.isFrozen(result.rejected[0])).toBe(true);
+    expect(Object.isFrozen(resetVariations({ root }))).toBe(true);
+  });
+
   it("changes only the axes that are present", () => {
     root.setAttribute("data-design", "glass");
     applyVariations({ theme: "ember" }, { root });

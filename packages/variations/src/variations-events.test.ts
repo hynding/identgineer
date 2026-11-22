@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CHANGE_EVENT } from "./constants.ts";
 import { createTestDocument } from "./create-test-document.ts";
 import { getVariations } from "./read-variations.ts";
-import { onVariationsChange } from "./variations-events.ts";
+import { MAX_ANNOUNCEMENTS_PER_DISPATCH, onVariationsChange } from "./variations-events.ts";
 import type { VariationsChange } from "./variations-events.ts";
 import { applyVariations, resetVariations } from "./variations-state.ts";
 
@@ -308,5 +308,49 @@ describe("what listeners and the event are given", () => {
     root.setAttribute("data-theme", "ember");
     await flushMutations();
     expect(received).toHaveLength(1);
+  });
+});
+
+describe("two listeners that keep undoing each other", () => {
+  function pingPong(): { calls: () => number } {
+    let calls = 0;
+    onVariationsChange(
+      ({ state }) => {
+        calls += 1;
+        if (state.theme === "ember") applyVariations({ theme: "tidal" }, { root });
+      },
+      { root },
+    );
+    onVariationsChange(
+      ({ state }) => {
+        if (state.theme === "tidal") applyVariations({ theme: "ember" }, { root });
+      },
+      { root },
+    );
+    return { calls: () => calls };
+  }
+
+  it("is stopped at the limit: the call returns and the problem is logged once, precisely", () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { calls } = pingPong();
+    expect(() => applyVariations({ theme: "ember" }, { root })).not.toThrow();
+    expect(MAX_ANNOUNCEMENTS_PER_DISPATCH).toBe(100);
+    expect(calls()).toBeLessThanOrEqual(MAX_ANNOUNCEMENTS_PER_DISPATCH);
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(String(error.mock.calls[0]?.[0])).toContain(String(MAX_ANNOUNCEMENTS_PER_DISPATCH));
+    error.mockRestore();
+  });
+
+  it("leaves the baseline equal to the DOM, so the next ordinary change is announced correctly", () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const received = collect();
+    pingPong();
+    applyVariations({ theme: "ember" }, { root });
+    received.length = 0;
+    const result = applyVariations({ ux: "focus" }, { root });
+    expect(received.map((change) => change.changed)).toEqual([["ux"]]);
+    expect(received[0]?.state).toEqual(getVariations(root));
+    expect(result.changed).toEqual(["ux"]);
+    error.mockRestore();
   });
 });
