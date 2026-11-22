@@ -125,10 +125,6 @@ export class IdgSignIn {
     void this.submit();
   };
 
-  private retry = (): void => {
-    void this.submit();
-  };
-
   private async submit(): Promise<void> {
     if (this.pending) return;
     const labels = this.text();
@@ -231,7 +227,7 @@ export class IdgSignIn {
               "invalid-credentials": labels.errorInvalidCredentials,
               "email-not-confirmed": labels.errorEmailNotConfirmed,
             }}
-            onRetry={this.retry}
+            retry
           />
           <idg-field label={labels.identifier} error={errors.identifier} required>
             <idg-input

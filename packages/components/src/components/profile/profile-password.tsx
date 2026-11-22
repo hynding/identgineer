@@ -83,10 +83,6 @@ export class PasswordSection {
     void this.submit();
   };
 
-  private retry = (): void => {
-    void this.submit();
-  };
-
   private errors(labels: ProfileLabels): Partial<Record<PasswordField, string>> {
     const current = rawValue(this.controls.currentPassword);
     const password = rawValue(this.controls.newPassword);
@@ -160,7 +156,7 @@ export class PasswordSection {
             "invalid-credentials": labels.errorCurrentPassword,
             unauthorized: labels.errorUnauthorized,
           }}
-          onRetry={this.retry}
+          retry
         />
         {/* The account the password belongs to, for a password manager to update the right entry.
             Built as the password fields are, and laid out out of sight rather than hidden, since

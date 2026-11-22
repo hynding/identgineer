@@ -123,10 +123,6 @@ export class IdgRegister {
     void this.submit();
   };
 
-  private retry = (): void => {
-    void this.submit();
-  };
-
   private checkInput(
     labels: RegisterLabels,
     username: string,
@@ -237,7 +233,7 @@ export class IdgRegister {
           onSubmit={this.handleSubmit}
           ref={containInnerEvents}
         >
-          <SummaryView feedback={feedback} labels={labels} onRetry={this.retry} />
+          <SummaryView feedback={feedback} labels={labels} retry />
           <idg-field label={labels.username} error={errors.username} required>
             <idg-input
               name="username"

@@ -2,6 +2,7 @@ import { h, type FunctionalComponent } from "@stencil/core";
 import { summaryMessage, type FeedbackLabels } from "./feedback-labels";
 import type { Announcement, FormFeedback } from "./form-feedback";
 import type { IdentityErrorCode } from "./identity-types";
+import { submitAgain } from "./form-controls";
 import { fillTemplate } from "./labels";
 import { formatWait } from "./throttle-countdown";
 
@@ -10,8 +11,11 @@ interface SummaryViewProps {
   readonly labels: FeedbackLabels;
   /** The form's own words for the codes it can meet. */
   readonly messages?: Partial<Record<IdentityErrorCode, string>>;
-  /** Sends the form again; offered after a network failure only. */
-  readonly onRetry?: () => void;
+  /**
+   * Offers "Try again" after a network failure, which sends the summary's form again as a submit
+   * does: whatever listens for the submit (a shown password hidden, say) runs as for any other.
+   */
+  readonly retry?: boolean;
 }
 
 /**
@@ -30,12 +34,12 @@ export const SummaryView: FunctionalComponent<SummaryViewProps> = (props) => {
   }
   const summary = feedback.summary;
   if (!summary) return null;
-  const retry = summary.code === "network" ? props.onRetry : undefined;
+  const retry = summary.code === "network" && props.retry === true;
   return (
     <idg-alert key={summary.key} class="feedback" part="error" variant="danger">
       <span class="feedback-message">{summaryMessage(summary.code, labels, props.messages)}</span>
       {retry ? (
-        <idg-button class="retry" variant="secondary" size="sm" onClick={retry}>
+        <idg-button class="retry" variant="secondary" size="sm" onClick={submitAgain}>
           {labels.retry}
         </idg-button>
       ) : null}

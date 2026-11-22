@@ -156,10 +156,6 @@ export class IdgPasswordReset {
     void this.submit();
   };
 
-  private retry = (): void => {
-    void this.submit();
-  };
-
   private async submit(): Promise<void> {
     if (this.pending) return;
     const labels = this.text();
@@ -340,7 +336,7 @@ export class IdgPasswordReset {
             feedback={this.feedback}
             labels={labels}
             messages={{ "invalid-credentials": labels.errorInvalidCode }}
-            onRetry={this.retry}
+            retry
           />
           {request ? this.renderRequestFields(labels) : this.renderCompleteFields(labels)}
           <idg-button class="submit" type="submit" full-width loading={this.pending}>

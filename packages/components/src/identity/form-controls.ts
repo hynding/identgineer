@@ -51,3 +51,15 @@ export function containInnerEvents(form: HTMLElement | undefined): void {
   form.addEventListener("idgInput", stopInnerEvent);
   form.addEventListener("idgChange", stopInnerEvent);
 }
+
+/**
+ * Sends the form the clicked element is in again, as a submit does (`requestSubmit`), so the
+ * form's submit listeners run as for any other submit.
+ */
+export function submitAgain(event: Event): void {
+  const target = event.currentTarget;
+  const form = target instanceof Element ? target.closest("form") : null;
+  if (!form) return;
+  if (typeof form.requestSubmit === "function") form.requestSubmit();
+  else form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+}

@@ -99,10 +99,6 @@ export class DetailsSection {
     void this.save();
   };
 
-  private retry = (): void => {
-    void this.save();
-  };
-
   private retryLoad = (): void => {
     void this.fetch();
   };
@@ -189,7 +185,7 @@ export class DetailsSection {
         onSubmit={this.handleSubmit}
         ref={containInnerEvents}
       >
-        <SummaryView feedback={this.feedback} labels={labels} onRetry={this.retry} />
+        <SummaryView feedback={this.feedback} labels={labels} retry />
         <idg-field label={labels.displayName} error={errors.displayName} required>
           <idg-input
             name="displayName"
