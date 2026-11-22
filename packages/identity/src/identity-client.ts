@@ -16,9 +16,24 @@ import {
 import { authorizedFetch } from "./authorized-fetch.ts";
 import { createClientContext, type IdentityClientOptions } from "./client-context.ts";
 import { signIn, type SignInInput } from "./credential-operations.ts";
-import { currentUser, restore, signOut, type SignOutOptions } from "./session-operations.ts";
+import { getProfile, saveProfile } from "./profile-operations.ts";
+import {
+  completeProviderSignIn,
+  providerSignInUrl,
+  type CompleteProviderSignInOptions,
+  type ProviderSignInResult,
+  type ProviderSignInUrlOptions,
+} from "./provider-operations.ts";
+import {
+  currentUser,
+  listSessions,
+  restore,
+  revokeSession,
+  signOut,
+  type SignOutOptions,
+} from "./session-operations.ts";
 import type { IdentityState, IdentityStateListener } from "./session.ts";
-import type { IdentityUser } from "./types.ts";
+import type { IdentitySession, IdentityUser, Profile, ProfileInput } from "./types.ts";
 
 export type { IdentityClientOptions } from "./client-context.ts";
 
@@ -41,6 +56,21 @@ export interface IdentityClient {
   readonly retryAfterSeconds: () => number;
   /** Reads the signed-in account again from the server. */
   readonly currentUser: () => Promise<IdentityUser>;
+  /** The account's sessions, this one marked `current` (backends with sessions only). */
+  readonly listSessions: () => Promise<readonly IdentitySession[]>;
+  /** Ends one of the account's other sessions by its id. */
+  readonly revokeSession: (id: string) => Promise<void>;
+  /** The owner's profile, or null before one is saved. */
+  readonly getProfile: () => Promise<Profile | null>;
+  /** Creates or updates the owner's profile. */
+  readonly saveProfile: (input: ProfileInput) => Promise<Profile>;
+  /** The CMS URL that starts a provider sign-in; send the browser there. */
+  readonly providerSignInUrl: (provider: string, options?: ProviderSignInUrlOptions) => string;
+  /** Finishes a provider sign-in on the callback page. */
+  readonly completeProviderSignIn: (
+    provider: string,
+    options?: CompleteProviderSignInOptions,
+  ) => Promise<ProviderSignInResult>;
   /** Resumes the session from the refresh cookie after a reload; call once at start. */
   readonly restore: () => Promise<IdentityState>;
   /**
@@ -69,6 +99,12 @@ export const createIdentityClient = (options: IdentityClientOptions): IdentityCl
     changePassword: changePassword(context),
     retryAfterSeconds: context.throttle.remainingSeconds,
     currentUser: currentUser(context),
+    listSessions: listSessions(context),
+    revokeSession: revokeSession(context),
+    getProfile: getProfile(context),
+    saveProfile: saveProfile(context),
+    providerSignInUrl: providerSignInUrl(context),
+    completeProviderSignIn: completeProviderSignIn(context),
     restore: restore(context),
     authorizedFetch: authorizedFetch(context),
     getState: context.session.getState,

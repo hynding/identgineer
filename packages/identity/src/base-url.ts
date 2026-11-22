@@ -1,5 +1,9 @@
 const DEVELOPMENT_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
+/** `https:`, or `http:` on the local machine. */
+export const isSecureOrLocal = (url: URL): boolean =>
+  url.protocol === "https:" || (url.protocol === "http:" && DEVELOPMENT_HOSTS.has(url.hostname));
+
 /**
  * The identity service's address: `https:`, or `http:` on the local machine for development. It
  * carries no credentials, query or fragment, and its path, if any, loses its trailing slash.
@@ -11,8 +15,7 @@ export const parseBaseUrl = (value: string): URL => {
   } catch {
     throw new TypeError("baseUrl must be an absolute URL");
   }
-  const local = url.protocol === "http:" && DEVELOPMENT_HOSTS.has(url.hostname);
-  if (url.protocol !== "https:" && !local) {
+  if (!isSecureOrLocal(url)) {
     throw new TypeError("baseUrl must use https: (http: is allowed for localhost only)");
   }
   if (url.username !== "" || url.password !== "" || url.search !== "" || url.hash !== "") {

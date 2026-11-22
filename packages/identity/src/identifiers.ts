@@ -3,7 +3,7 @@ import { IdentityError } from "./identity-error.ts";
 // Lowercase names as the backends list their providers. `local` is refused: the provider callback
 // route treats it as a password sign-in.
 const PROVIDER = /^[a-z0-9][a-z0-9_-]{0,63}$/;
-const SESSION_ID = /^[A-Za-z0-9_-]{1,128}$/;
+const OPAQUE_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 const segment = (value: string, pattern: RegExp): string => {
   if (!pattern.test(value)) throw new IdentityError("validation");
@@ -17,4 +17,7 @@ export const providerSegment = (name: string): string => {
 };
 
 /** A session id checked against a strict pattern, ready for a URL path. */
-export const sessionSegment = (id: string): string => segment(id, SESSION_ID);
+export const sessionSegment = (id: string): string => segment(id, OPAQUE_ID);
+
+/** An entry's document id checked against a strict pattern, ready for a URL path. */
+export const documentSegment = (id: string): string => segment(id, OPAQUE_ID);

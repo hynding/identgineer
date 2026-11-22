@@ -1,8 +1,9 @@
 import type { ClientContext } from "./client-context.ts";
+import { sessionSegment } from "./identifiers.ts";
 import { failureOf } from "./map-error.ts";
 import type { IdentityState } from "./session.ts";
-import { readUser } from "./shapes.ts";
-import type { IdentityUser } from "./types.ts";
+import { readSessions, readUser } from "./shapes.ts";
+import type { IdentitySession, IdentityUser } from "./types.ts";
 
 export interface SignOutOptions {
   /** Ends every session of the account, on every device. */
@@ -69,3 +70,21 @@ export const restore = (context: ClientContext) => async (): Promise<IdentitySta
   );
   return session.getState();
 };
+
+export const listSessions =
+  (context: ClientContext) => async (): Promise<readonly IdentitySession[]> => {
+    const response = await context.authorizedRequest({ method: "GET", path: "/api/auth/sessions" });
+    if (!response.ok) throw failureOf(response, context.clock.now());
+    return readSessions(response.body);
+  };
+
+/** Ends one of the account's sessions. To end this one, use `signOut`. */
+export const revokeSession =
+  (context: ClientContext) =>
+  async (id: string): Promise<void> => {
+    const response = await context.authorizedRequest({
+      method: "DELETE",
+      path: `/api/auth/sessions/${sessionSegment(id)}`,
+    });
+    if (!response.ok) throw failureOf(response, context.clock.now());
+  };
