@@ -36,7 +36,8 @@ export interface TransportOptions {
 }
 
 export interface Transport {
-  readonly send: (request: ApiRequest) => Promise<ApiResponse>;
+  /** `signal` (a cookie section's) aborts the request as its timeout would. */
+  readonly send: (request: ApiRequest, signal?: AbortSignal) => Promise<ApiResponse>;
 }
 
 const headersFor = (request: ApiRequest): Headers => {
@@ -79,11 +80,14 @@ const readBody = async (response: Response, ok: boolean): Promise<unknown> => {
 
 /** Sends identity API requests: JSON in and out, a timeout, and credentials only when asked. */
 export const createTransport = (options: TransportOptions): Transport => {
-  const send = async (request: ApiRequest): Promise<ApiResponse> => {
+  const send = async (request: ApiRequest, signal?: AbortSignal): Promise<ApiResponse> => {
+    if (signal?.aborted === true) throw new IdentityError("network");
     const controller = new AbortController();
-    const timer = options.clock.setTimeout(() => {
+    const abort = (): void => {
       controller.abort();
-    }, options.timeoutMs);
+    };
+    const timer = options.clock.setTimeout(abort, options.timeoutMs);
+    signal?.addEventListener("abort", abort);
     try {
       let response: Response;
       try {
@@ -108,6 +112,7 @@ export const createTransport = (options: TransportOptions): Transport => {
       };
     } finally {
       options.clock.clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
     }
   };
   return { send };

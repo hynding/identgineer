@@ -1,5 +1,6 @@
 import { createAlarm } from "./alarm.ts";
 import type { Clock } from "./clock.ts";
+import type { CookieSection } from "./locks.ts";
 import { IdentityError } from "./identity-error.ts";
 import { THROTTLED_STATUS, throttledError } from "./map-error.ts";
 import type { OnlineSubscription } from "./online.ts";
@@ -44,12 +45,13 @@ export interface Refresher {
   /** Clears every timer and listener: nothing armed before can run afterwards. */
   readonly cancel: () => void;
   /**
-   * A refresh outside the session (for signing out): its tokens, `refused` when there is no
-   * session to refresh, or `unreachable` when the server could not say. The caller holds the
-   * cookie lock.
+   * A refresh outside the session (for signing out), sent within the caller's cookie section:
+   * its tokens, `refused` when there is no session to refresh, or `unreachable` when the server
+   * could not say.
    */
   readonly detached: (
     refreshToken: string | undefined,
+    section: CookieSection,
   ) => Promise<Tokens | "refused" | "unreachable">;
 }
 
@@ -58,8 +60,8 @@ export interface RefresherOptions {
   readonly session: Session;
   readonly clock: Clock;
   readonly tokenLifetimeMs: number;
-  /** Runs a task holding the cross-tab cookie lock (bounded: it runs without it if not granted). */
-  readonly cookieLock: <T>(task: () => Promise<T>) => Promise<T>;
+  /** Runs a task in a cookie section (holding the cross-tab cookie lock, where there is one). */
+  readonly cookieLock: <T>(task: (section: CookieSection) => Promise<T>) => Promise<T>;
   /** Lets a refresh that could not reach the server run again as soon as the browser is online. */
   readonly onOnline: OnlineSubscription | null;
   /**
@@ -106,18 +108,19 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
   };
 
   /**
-   * A cookie refresh runs under the cross-tab cookie lock (unless the caller holds it), and is
-   * retried once when refused: without the lock another tab may have rotated the cookie between
-   * this request reading it and the server seeing it.
+   * A cookie refresh runs in a cookie section (the caller's, or its own), and is retried once
+   * when refused: without the lock another tab may have rotated the cookie between this request
+   * reading it and the server seeing it.
    */
-  const sendRefresh = (refreshToken: string | undefined, lockHeld = false) => {
-    const send = () => options.transport.send(refreshRequest(refreshToken));
-    if (refreshToken !== undefined) return send();
-    const sendAndRetry = async () => {
-      const response = await send();
-      return response.status === 401 ? send() : response;
+  const sendRefresh = (refreshToken: string | undefined, section?: CookieSection) => {
+    const send = (signal?: AbortSignal) =>
+      options.transport.send(refreshRequest(refreshToken), signal);
+    if (refreshToken !== undefined) return send(section?.signal);
+    const sendAndRetry = async ({ signal }: CookieSection) => {
+      const response = await send(signal);
+      return response.status === 401 ? send(signal) : response;
     };
-    return lockHeld ? sendAndRetry() : options.cookieLock(sendAndRetry);
+    return section === undefined ? options.cookieLock(sendAndRetry) : sendAndRetry(section);
   };
 
   const run = async (): Promise<RefreshResult> => {
@@ -135,10 +138,11 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
 
   const detached = async (
     refreshToken: string | undefined,
+    section: CookieSection,
   ): Promise<Tokens | "refused" | "unreachable"> => {
     let response;
     try {
-      response = await sendRefresh(refreshToken, true);
+      response = await sendRefresh(refreshToken, section);
     } catch {
       return "unreachable";
     }

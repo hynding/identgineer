@@ -3,7 +3,13 @@ import { systemClock, type Clock } from "./clock.ts";
 import { createCrossTab, type CrossTab } from "./cross-tab.ts";
 import { IdentityError } from "./identity-error.ts";
 import { THROTTLED_STATUS, throttledError } from "./map-error.ts";
-import { COOKIE_LOCK, resolveLocks, withLock, type LockManagerLike } from "./locks.ts";
+import {
+  COOKIE_LOCK,
+  resolveLocks,
+  withLock,
+  type CookieSection,
+  type LockManagerLike,
+} from "./locks.ts";
 import { resolveOnline, type OnlineSubscription } from "./online.ts";
 import { createRefresher, type Refresher, type RefreshResult } from "./refresher.ts";
 import {
@@ -21,6 +27,13 @@ import type { IdentityUser } from "./types.ts";
 export const DEFAULT_TIMEOUT_MS = 15_000;
 export const DEFAULT_CHANNEL_NAME = "identgineer-identity";
 export const DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS = 600;
+/**
+ * The longest a cookie section may hold the lock, in request timeouts: the longest usual
+ * section, a sign-out's own logout, cookie lookup and the logout of what it found, fits even
+ * when each request takes nearly its whole timeout. A section that needs more (a lookup that lost
+ * a rotation, a dead token looked up again) is cut off and says what it could not finish.
+ */
+export const COOKIE_SECTION_TIMEOUTS = 3;
 
 export interface IdentityClientOptions {
   /** The CMS's address: `https:`, or `http:` on localhost or 127.0.0.1 for development. */
@@ -71,11 +84,13 @@ export interface ClientContext {
   readonly crossTab: CrossTab;
   readonly isActive: () => boolean;
   /**
-   * Runs `task` holding the cross-tab cookie lock, which is not re-entrant: a task needing several
-   * cookie requests takes it once, and nothing holding it waits on the operation queue. Not
-   * granted within `requestTimeoutMs`, the task runs without it.
+   * Runs `task` in a cookie section: holding the cross-tab cookie lock (where there is a working
+   * lock manager), which is not re-entrant, so a task needing several cookie requests takes it
+   * once, sends them all with its section, and nothing in it waits on the operation queue. The
+   * section is cut off after `COOKIE_SECTION_TIMEOUTS` request timeouts (its requests aborted,
+   * rejecting `network`); a lock not granted within one request timeout more rejects `network`.
    */
-  readonly cookieLock: <T>(task: () => Promise<T>) => Promise<T>;
+  readonly cookieLock: <T>(task: (section: CookieSection) => Promise<T>) => Promise<T>;
   /**
    * An access token to send for the session `ticket` names: the current one, or, once its known
    * expiry has passed, a refreshed one (rejecting `network` when the server cannot be reached,
@@ -101,14 +116,15 @@ export interface ClientContext {
    */
   readonly acceptSignIn: (tokens: Tokens, user: IdentityUser, ticket: Ticket) => Promise<void>;
   /**
-   * Ends the server session these tokens belong to (and its cookie); never rejects. The caller
-   * holds the cookie lock. When the
-   * logout refuses the access token of a cookie session, `deadCookieToken` decides (by default
-   * "ended": the cookie lookup that follows every sign-out finds the session if it lives on).
+   * Ends the server session these tokens belong to (and its cookie), within the caller's cookie
+   * section; never rejects. When the logout refuses the access token of a cookie session,
+   * `deadCookieToken` decides (by default "ended": the cookie lookup that follows every sign-out
+   * finds the session if it lives on).
    */
   readonly endServerSession: (
     tokens: Tokens,
     everywhere: boolean,
+    section: CookieSection,
     deadCookieToken?: () => Promise<ServerSignOut>,
   ) => Promise<ServerSignOut>;
   /**
@@ -182,8 +198,13 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   );
   const transport = createTransport({ base, fetch, clock, timeoutMs });
   const locks = resolveLocks(options.locks);
-  const cookieLock = <T>(task: () => Promise<T>): Promise<T> =>
-    withLock(locks, COOKIE_LOCK, { clock, waitMs: timeoutMs }, task);
+  const sectionBounds = {
+    clock,
+    holdMs: COOKIE_SECTION_TIMEOUTS * timeoutMs,
+    waitMs: (COOKIE_SECTION_TIMEOUTS + 1) * timeoutMs,
+  };
+  const cookieLock = <T>(task: (section: CookieSection) => Promise<T>): Promise<T> =>
+    withLock(locks, COOKIE_LOCK, sectionBounds, task);
   const session = createSession();
   const throttle = createThrottle(clock);
   let disposed = false;
@@ -270,7 +291,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   const credentialRequest = async (request: ApiRequest): Promise<ApiResponse> => {
     throttle.check();
     const response = await (request.cookie === true
-      ? cookieLock(() => transport.send(request))
+      ? cookieLock((section) => transport.send(request, section.signal))
       : transport.send(request));
     if (response.status === THROTTLED_STATUS) {
       const error = throttledError(response, clock.now());
@@ -319,19 +340,23 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   const endServerSession = async (
     tokens: Tokens,
     everywhere: boolean,
+    section: CookieSection,
     deadCookieToken: () => Promise<ServerSignOut> = () => Promise.resolve("ended"),
   ): Promise<ServerSignOut> => {
     const logout = (accessToken: string): Promise<ApiResponse> =>
-      transport.send({
-        method: "POST",
-        path: "/api/auth/logout",
-        accessToken,
-        cookie: true,
-        body: {
-          ...(everywhere ? { scope: "all" } : {}),
-          ...(tokens.refreshToken === undefined ? {} : { refreshToken: tokens.refreshToken }),
+      transport.send(
+        {
+          method: "POST",
+          path: "/api/auth/logout",
+          accessToken,
+          cookie: true,
+          body: {
+            ...(everywhere ? { scope: "all" } : {}),
+            ...(tokens.refreshToken === undefined ? {} : { refreshToken: tokens.refreshToken }),
+          },
         },
-      });
+        section.signal,
+      );
     // Only a success ended the session; 404 is a backend without sessions. Anything else (a
     // throttled, refused or failed logout) may have left the session in place.
     const outcomeOf = (response: ApiResponse): ServerSignOut => {
@@ -345,7 +370,7 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
       // still reach it: a cookie one is left to `deadCookieToken`, a body one is refreshed
       // outside the session to log out.
       if (tokens.refreshToken === undefined) return await deadCookieToken();
-      const fresh = await refresher.detached(tokens.refreshToken);
+      const fresh = await refresher.detached(tokens.refreshToken, section);
       if (fresh === "refused") return "ended";
       if (fresh === "unreachable") return "unreachable";
       return outcomeOf(await logout(fresh.accessToken));
@@ -356,7 +381,10 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   };
 
   const abandon = async (tokens: Tokens): Promise<void> => {
-    const ending = cookieLock(() => endServerSession(tokens, false));
+    // A section cut off or never granted leaves the session to run out on its own.
+    const ending = cookieLock((section) => endServerSession(tokens, false, section)).catch(
+      (): ServerSignOut => "unreachable",
+    );
     for (const collector of collectors) collector.push(ending);
     await ending;
   };

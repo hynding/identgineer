@@ -1,4 +1,5 @@
 import type { Clock } from "./clock.ts";
+import { IdentityError } from "./identity-error.ts";
 
 /** The part of the Web Locks API (`navigator.locks`) the client uses. */
 export interface LockManagerLike {
@@ -27,40 +28,84 @@ export const resolveLocks = (
 };
 
 /**
- * Runs `task` holding the lock, or without it when the lock manager fails (a sandboxed frame's
- * SecurityError) or does not grant the lock within `waitMs`: the task then risks the race the lock
- * prevents (the cookie refresh's one retry covers the usual case) rather than never running.
- * Only the task's own outcome is passed on, never the lock manager's error.
+ * What a task inside a cookie section is given: the cookie lock is held, or there is no working
+ * lock manager to take it from. `signal` aborts at the section's deadline; every request the
+ * section sends carries it.
+ */
+export interface CookieSection {
+  readonly signal: AbortSignal;
+}
+
+export interface LockBounds {
+  readonly clock: Clock;
+  /** The longest a section may run: then its requests are aborted and the lock is let go. */
+  readonly holdMs: number;
+  /** The longest a task waits for the lock before failing closed. */
+  readonly waitMs: number;
+}
+
+/**
+ * Runs `task` within its deadline: once `holdMs` passes it rejects `network` at once, and the
+ * section's signal aborts whatever the task still has in flight.
+ */
+const runSection = <T>(
+  bounds: LockBounds,
+  task: (section: CookieSection) => Promise<T>,
+): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const controller = new AbortController();
+    const deadline = bounds.clock.setTimeout(() => {
+      controller.abort();
+      reject(new IdentityError("network"));
+    }, bounds.holdMs);
+    void (async () => task({ signal: controller.signal }))()
+      .then(resolve, reject)
+      .finally(() => {
+        bounds.clock.clearTimeout(deadline);
+      });
+  });
+
+/**
+ * Runs `task` holding the lock, within the section's deadline. Not granted within `waitMs` (a
+ * holder is cut off at its own deadline, so only a holder outside this client's bounds keeps it
+ * that long), it fails closed with `network` and never runs: a cookie request sent beside
+ * another would let the older answer overwrite the newer cookie. It runs without the lock only
+ * when there is no lock manager, or the manager itself fails (a sandboxed frame's
+ * SecurityError), whose error never reaches the caller.
  */
 export const withLock = <T>(
   locks: LockManagerLike | null,
   name: string,
-  wait: { readonly clock: Clock; readonly waitMs: number },
-  task: () => Promise<T>,
+  bounds: LockBounds,
+  task: (section: CookieSection) => Promise<T>,
 ): Promise<T> => {
-  if (locks === null) return task();
+  if (locks === null) return runSection(bounds, task);
   return new Promise<T>((resolve, reject) => {
-    let started = false;
-    const start = (): Promise<void> => {
-      started = true;
-      wait.clock.clearTimeout(timer);
-      const running = task();
+    let waiting = true;
+    const run = (): Promise<void> => {
+      waiting = false;
+      bounds.clock.clearTimeout(gaveUp);
+      const running = runSection(bounds, task);
       running.then(resolve, reject);
       return running.then(
         () => undefined,
         () => undefined,
       );
     };
-    const startUnlocked = (): void => {
-      if (!started) void start();
+    const gaveUp = bounds.clock.setTimeout(() => {
+      if (!waiting) return;
+      waiting = false;
+      reject(new IdentityError("network"));
+    }, bounds.waitMs);
+    // A lock granted once the task ran without it, or gave up waiting, is let go at once.
+    const granted = (): Promise<void> => (waiting ? run() : Promise.resolve());
+    const managerFailed = (): void => {
+      if (waiting) void run();
     };
-    const timer = wait.clock.setTimeout(startUnlocked, wait.waitMs);
-    // A lock granted after the task already ran without it is let go at once.
-    const granted = (): Promise<void> => (started ? Promise.resolve() : start());
     try {
-      locks.request(name, granted).catch(startUnlocked);
+      locks.request(name, granted).catch(managerFailed);
     } catch {
-      startUnlocked();
+      managerFailed();
     }
   });
 };

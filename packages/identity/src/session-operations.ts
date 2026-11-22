@@ -1,4 +1,5 @@
 import type { ClientContext, ServerSignOut } from "./client-context.ts";
+import type { CookieSection } from "./locks.ts";
 import { sessionSegment } from "./identifiers.ts";
 import { IdentityError } from "./identity-error.ts";
 import { isOptional, requireObject } from "./input-checks.ts";
@@ -48,11 +49,12 @@ interface SignOutRun {
 const endCookieSession = async (
   context: ClientContext,
   run: SignOutRun,
+  section: CookieSection,
   lookups = 2,
 ): Promise<ServerSignOut> => {
   if (run.newer()) return "ended";
   if (!context.isActive()) return "unreachable";
-  const found = await context.refresher.detached(undefined);
+  const found = await context.refresher.detached(undefined, section);
   if (found === "refused") return "ended";
   if (found === "unreachable") return "unreachable";
   if (run.newer()) {
@@ -60,8 +62,10 @@ const endCookieSession = async (
     return "ended";
   }
   if (!context.isActive()) return "unreachable";
-  const ended = await context.endServerSession(found, run.everywhere, () =>
-    lookups > 1 ? endCookieSession(context, run, lookups - 1) : Promise.resolve("unreachable"),
+  const ended = await context.endServerSession(found, run.everywhere, section, () =>
+    lookups > 1
+      ? endCookieSession(context, run, section, lookups - 1)
+      : Promise.resolve("unreachable"),
   );
   run.foundEndedAt = context.noticeMark();
   return ended;
@@ -72,19 +76,22 @@ const endCookieSession = async (
  * tab's sign-in this tab never heard of leaves the cookie on its session, and the logout clears
  * the cookie only with the session it names. Page script cannot see whether it did, so the cookie
  * is looked up once more (one refresh request, refused when nothing is left). A tab without a
- * token of its own starts there. It all runs holding the cookie lock once, so no other tab's
- * cookie request lands in between.
+ * token of its own starts there. It all runs in one cookie section, so no other tab's cookie
+ * request lands in between; a section cut off, or a lock never granted, leaves what it did not
+ * finish unconfirmed.
  */
 const endSessions = (
   context: ClientContext,
   own: Tokens | undefined,
   run: SignOutRun,
 ): Promise<ServerSignOut> =>
-  context.cookieLock(async () => {
-    if (own === undefined) return endCookieSession(context, run);
-    const ended = await context.endServerSession(own, run.everywhere);
-    return ended === "ended" ? endCookieSession(context, run) : ended;
-  });
+  context
+    .cookieLock(async (section) => {
+      if (own === undefined) return endCookieSession(context, run, section);
+      const ended = await context.endServerSession(own, run.everywhere, section);
+      return ended === "ended" ? endCookieSession(context, run, section) : ended;
+    })
+    .catch((): ServerSignOut => "unreachable");
 
 const SUPERSEDED: SignOutResult = Object.freeze({ outcome: "superseded" });
 const UNREACHABLE: SignOutResult = Object.freeze({ outcome: "server-unreachable" });
