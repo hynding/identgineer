@@ -44,6 +44,15 @@ const fakeApi = (options: FakeIdentityApiOptions = {}) => {
 };
 
 describe("the fake's logout, as camis' SessionController::logout", () => {
+  it("ends only the bearer token itself when it names no session", async () => {
+    const { api, post, signIn } = fakeApi();
+    await signIn("ada");
+    const lasting = api.issueLastingToken("ada@example.com");
+    expect((await post("/api/auth/logout", { bearer: lasting })).status).toBe(200);
+    expect(api.activeSessionCount("ada@example.com")).toBe(1);
+    expect((await post("/api/auth/logout", { bearer: lasting })).status).toBe(401);
+  });
+
   it("ends the bearer token's own session and keeps a cookie that names another session", async () => {
     const { api, post, signIn } = fakeApi();
     const ada = await signIn("ada");
@@ -101,6 +110,40 @@ describe("the fake's throttle, as camis' StrapiRateLimits", () => {
     expect(
       (await post("/api/auth/forgot-password", { body: { email: "a@example.com" } })).status,
     ).toBe(200);
+  });
+
+  it("counts sign-ins per account named, under a ceiling for the address", async () => {
+    const { post } = fakeApi({ throttlePerMinute: 2, addressThrottlePerMinute: 3 });
+    const wrong = (identifier: string) => ({ body: { identifier, password: "wrong" } });
+    await post("/api/auth/local", wrong("ada"));
+    await post("/api/auth/local", wrong("ada"));
+    expect((await post("/api/auth/local", wrong(" ADA "))).status).toBe(429);
+    // Another account has its own bucket, until the address meets its ceiling.
+    expect((await post("/api/auth/local", wrong("bob"))).status).toBe(400);
+    expect((await post("/api/auth/local", wrong("eve"))).status).toBe(429);
+  });
+
+  it("gives a password reset a bucket apart from the reset email", async () => {
+    const { post } = fakeApi({ throttlePerMinute: 1 });
+    await post("/api/auth/forgot-password", { body: { email: "ada@example.com" } });
+    expect(
+      (await post("/api/auth/forgot-password", { body: { email: "ada@example.com" } })).status,
+    ).toBe(429);
+    const reset = { body: { code: "x", password: PASSWORD, passwordConfirmation: PASSWORD } };
+    expect((await post("/api/auth/reset-password", reset)).status).toBe(400);
+    expect((await post("/api/auth/reset-password", reset)).status).toBe(429);
+  });
+
+  it("never refuses a valid refresh token, and counts only failed refreshes", async () => {
+    const { post, signIn } = fakeApi({ refreshThrottlePerMinute: 2 });
+    await signIn("ada");
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      expect((await post("/api/auth/refresh")).status).toBe(200);
+    }
+    await post("/api/auth/refresh", { cookies: false });
+    await post("/api/auth/refresh", { cookies: false });
+    expect((await post("/api/auth/refresh", { cookies: false })).status).toBe(429);
+    expect((await post("/api/auth/refresh")).status).toBe(200);
   });
 
   it("throttles refreshes in their own bucket, 60 a minute by default", async () => {
