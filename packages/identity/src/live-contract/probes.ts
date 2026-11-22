@@ -99,20 +99,12 @@ const read = (reader: Reader, body: unknown): unknown => {
   }
 };
 
-export interface Gap {
-  readonly description: string;
-  /** What strapi-php answers today, pinned so the gap cannot change shape unnoticed. */
-  readonly today: Observation;
-}
-
 interface Step {
   readonly name: string;
   readonly reader?: Reader;
   /** The SDK reads this error's message (the not-confirmed sign-in). */
   readonly message?: true;
   readonly retryAfter?: true;
-  /** Why the real server is expected to differ from the fake: a camis gap, named. */
-  readonly gap?: Gap;
   readonly request: (state: State) => ProbeRequest | Promise<ProbeRequest>;
   readonly keep?: (state: State, body: unknown) => void;
 }
@@ -394,14 +386,6 @@ const MAIN_STEPS: readonly Step[] = [
   {
     name: "profiles: create",
     reader: "raw",
-    gap: {
-      description: "strapi-php validates the assigned owner as a required body field",
-      today: {
-        status: 400,
-        error: { name: "ValidationError", fields: ["owner"] },
-        cookie: "unchanged",
-      },
-    },
     request: (s) => ({
       method: "POST",
       path: "/api/profiles",
@@ -415,6 +399,24 @@ const MAIN_STEPS: readonly Step[] = [
           marketingOptIn: false,
         },
       },
+    }),
+    keep: (state, body) => {
+      state.tokens.profile = String((body as { data?: { documentId?: unknown } }).data?.documentId);
+    },
+  },
+  {
+    name: "profiles: the one created",
+    reader: "profiles",
+    request: (s) => ({ method: "GET", path: "/api/profiles", token: s.tokens.reset ?? "" }),
+  },
+  {
+    name: "profiles: update",
+    reader: "raw",
+    request: (s) => ({
+      method: "PUT",
+      path: `/api/profiles/${s.tokens.profile ?? ""}`,
+      token: s.tokens.reset ?? "",
+      body: { data: { displayName: "Ada L.", timezone: "Europe/London" } },
     }),
   },
   {
@@ -467,12 +469,30 @@ const MAIN_STEPS: readonly Step[] = [
 const CONFIRMATION_STEPS: readonly Step[] = [
   {
     name: "register: a new account",
-    reader: "auth",
+    reader: "raw",
     request: (s) => ({ method: "POST", path: "/api/auth/local/register", body: s.account }),
   },
   {
     name: "register: a taken account",
+    reader: "raw",
     request: (s) => ({ method: "POST", path: "/api/auth/local/register", body: s.account }),
+  },
+  {
+    name: "register: a taken username with another address",
+    reader: "raw",
+    request: (s) => ({
+      method: "POST",
+      path: "/api/auth/local/register",
+      body: { ...s.account, email: s.unknownEmail },
+    }),
+  },
+  {
+    name: "register: a username naming another address",
+    request: (s) => ({
+      method: "POST",
+      path: "/api/auth/local/register",
+      body: { ...s.account, username: s.unknownEmail },
+    }),
   },
   { name: "sign-in: before confirming", message: true, request: (s) => signIn(s) },
   {
@@ -506,7 +526,8 @@ const CONFIRMATION_STEPS: readonly Step[] = [
   },
   {
     name: "confirm: the mailed token",
-    // The second confirmation mail: the registration's, then the resend's, which replaced it.
+    // The second mail with a confirmation link: the registration's, then the resend's, which
+    // replaced it (a notice to a taken address between them has none).
     request: async (s) => ({
       method: "GET",
       path: `/api/auth/email-confirmation?confirmation=${await s.target.confirmation(s.account.email, 2)}`,
@@ -539,6 +560,7 @@ const throttledSteps = (rate: number): readonly Step[] => [
 export const scenarios = (backend: LiveBackend) => ({
   main: { server: backend.servers.main, steps: MAIN_STEPS },
   confirmation: { server: backend.servers.confirmation, steps: CONFIRMATION_STEPS },
+  disclosing: { server: backend.servers.disclosing, steps: CONFIRMATION_STEPS },
   throttled: {
     server: backend.servers.throttled,
     steps: throttledSteps(backend.servers.throttled.throttlePerMinute),
@@ -652,6 +674,7 @@ export const fakeTarget = (backend: LiveBackend, server: LiveServer): ProbeTarge
     clock: systemClock,
     sessions: "refresh",
     emailConfirmation: server.emailConfirmation,
+    hideAccountExistence: server.hideAccountExistence,
     throttlePerMinute: server.throttlePerMinute,
     addressThrottlePerMinute: server.addressThrottlePerMinute,
     refreshThrottlePerMinute: server.refreshThrottlePerMinute,
@@ -670,6 +693,6 @@ export const fakeTarget = (backend: LiveBackend, server: LiveServer): ProbeTarge
   };
 };
 
-/** Each step's name and the gap it is expected to show, for the test titles. */
-export const stepsOf = (scenario: Scenario): readonly Pick<Step, "name" | "gap">[] =>
-  scenario.steps.map(({ name, gap }) => (gap === undefined ? { name } : { name, gap }));
+/** Each step's name, for the test titles. */
+export const stepsOf = (scenario: Scenario): readonly string[] =>
+  scenario.steps.map(({ name }) => name);

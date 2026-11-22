@@ -1,6 +1,7 @@
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import type { IdentityClientOptions } from "../identity-client.ts";
 import { IdentityError } from "../identity-error.ts";
-import type { Profile } from "../types.ts";
+import { createManualClock } from "../testing/manual-clock.ts";
 import {
   createBrowser,
   disposeTabs,
@@ -45,13 +46,6 @@ const signedIn = async (label: string) => {
   await tab.signIn({ identifier: account.email, password: account.password });
   return { account, browser, tab };
 };
-
-/** The promise's outcome, never thrown: setup that a gap test only inspects. */
-const settle = <T>(promise: Promise<T>): Promise<PromiseSettledResult<T>> =>
-  promise.then(
-    (value) => ({ status: "fulfilled", value }),
-    (reason: unknown) => ({ status: "rejected", reason }),
-  );
 
 afterEach(disposeTabs);
 
@@ -104,80 +98,18 @@ describe.skipIf(liveBackend === undefined)(
         expect(await elsewhere.restore()).toMatchObject({ status: "signed-out" });
       });
 
-      it("refreshes the access token before it ends, rotating the cookie, and stays signed in", async () => {
-        const account = await registered("refresh");
-        const browser = createBrowser(backend);
-        // A 6-second lifetime makes the client refresh after its 5-second floor.
-        const tab = openTab(backend.servers.main, browser, { accessTokenLifetimeSeconds: 6 });
-        await tab.signIn({ identifier: account.email, password: account.password });
-        const first = browser.jar.get(REFRESH_COOKIE)?.value;
-        expect(first).toBeDefined();
-        await new Promise((resolve) => setTimeout(resolve, 6_500));
-        const second = browser.jar.get(REFRESH_COOKIE)?.value;
-        expect(second).toBeDefined();
-        expect(second).not.toBe(first);
-        expect(tab.getState()).toMatchObject({ status: "signed-in" });
-        expect((await tab.currentUser()).email).toBe(account.email);
-        // The rotated-away token cannot be used again.
-        const replay = await fetch(`${backend.servers.main.url}/api/auth/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refreshToken: first }),
-        });
-        expect(replay.status).toBe(401);
-      });
-
       it("reads no profile for an account that has none", async () => {
         const { tab } = await signedIn("profile");
         expect(await tab.getProfile()).toBeNull();
       });
 
-      // camis gap: strapi-php checks a create's body for the required `owner` relation before the
-      // grant's `assign` fills it from the session, so POST /api/profiles answers 400
-      // ValidationError "owner must be defined." (core/validation.ts and core/controller.ts in
-      // camis' adapter-filament strapi-api). Turns green when camis exempts assigned relations.
-      describe("saving a profile (camis gap: assigned owner validated as required)", () => {
-        const saved: {
-          created?: PromiseSettledResult<Profile>;
-          updated?: PromiseSettledResult<Profile>;
-          read?: Profile | null;
-        } = {};
-
-        beforeAll(async () => {
-          const { tab } = await signedIn("profile-save");
-          saved.created = await settle(
-            tab.saveProfile({ displayName: "Ada", bio: null, locale: "en" }),
-          );
-          if (saved.created.status === "rejected") return;
-          saved.updated = await settle(
-            tab.saveProfile({ displayName: "Ada L.", timezone: "Europe/London" }),
-          );
-          saved.read = await tab.getProfile();
-        });
-
-        // The SDK names no field outside the profile input; the agreement test pins `owner`.
-        it("is refused today as a validation error naming no field the SDK sends", () => {
-          expect(saved.created?.status).toBe("rejected");
-          const error: unknown =
-            saved.created?.status === "rejected" ? saved.created.reason : undefined;
-          expect(error).toBeInstanceOf(IdentityError);
-          expect(error).toMatchObject({ code: "validation" });
-          expect(error).not.toHaveProperty("fields");
-        });
-
-        it.fails("saves a new profile and updates it", () => {
-          expect(saved.created).toMatchObject({
-            status: "fulfilled",
-            value: { displayName: "Ada", bio: null, locale: "en" },
-          });
-          const documentId =
-            saved.created?.status === "fulfilled" ? saved.created.value.documentId : undefined;
-          expect(saved.updated).toMatchObject({
-            status: "fulfilled",
-            value: { documentId, displayName: "Ada L." },
-          });
-          expect(saved.read).toMatchObject({ displayName: "Ada L." });
-        });
+      it("saves a new profile, owned by the session's account, and updates it", async () => {
+        const { tab } = await signedIn("profile-save");
+        const created = await tab.saveProfile({ displayName: "Ada", bio: null, locale: "en" });
+        expect(created).toMatchObject({ displayName: "Ada", bio: null, locale: "en" });
+        const updated = await tab.saveProfile({ displayName: "Ada L.", timezone: "Europe/London" });
+        expect(updated).toMatchObject({ documentId: created.documentId, displayName: "Ada L." });
+        expect(await tab.getProfile()).toMatchObject({ displayName: "Ada L." });
       });
 
       it("changes the password: the session goes on, the old password fails, the new one works", async () => {
@@ -310,9 +242,11 @@ describe.skipIf(liveBackend === undefined)(
 
     describe("with access tokens that outlive no request", () => {
       const server = () => backend.servers.shortLived;
+      const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-      it("answers a request made with an expired access token by refreshing, rotating the cookie, and retrying", async () => {
-        const account = await registered("expired", server());
+      /** A tab signed in on the short-lived server, every answer it gets recorded. */
+      const recordedTab = async (label: string, options: Partial<IdentityClientOptions> = {}) => {
+        const account = await registered(label, server());
         const browser = createBrowser(backend);
         const answers: { path: string; status: number }[] = [];
         const recording: typeof fetch = async (input, init) => {
@@ -323,18 +257,57 @@ describe.skipIf(liveBackend === undefined)(
           });
           return response;
         };
-        const tab = openTab(server(), browser, { fetch: recording });
+        const tab = openTab(server(), browser, { fetch: recording, ...options });
         await tab.signIn({ identifier: account.email, password: account.password });
         const first = browser.jar.get(REFRESH_COOKIE)?.value;
         expect(first).toBeDefined();
-        await new Promise((resolve) =>
-          setTimeout(resolve, (server().accessTokenLifetimeSeconds + 1) * 1000),
-        );
         answers.length = 0;
+        return { account, browser, answers, tab, first };
+      };
+
+      it("schedules the refresh by the server's expiresIn, not the configured lifetime, rotating the cookie", async () => {
+        // The configured 600 seconds would wait ten minutes; the server says 2, so the client
+        // refreshes at its 5-second floor.
+        const { account, browser, tab, first } = await recordedTab("refresh", {
+          accessTokenLifetimeSeconds: 600,
+        });
+        await pause(6_000);
+        const second = browser.jar.get(REFRESH_COOKIE)?.value;
+        expect(second).toBeDefined();
+        expect(second).not.toBe(first);
+        expect(tab.getState()).toMatchObject({ status: "signed-in" });
         expect((await tab.currentUser()).email).toBe(account.email);
-        // Refused, refreshed, then the user read twice: once to check the refreshed session is
-        // still this tab's user (the cookie is the browser's, and another tab may have signed in
-        // as someone else since), then the retried request.
+        // The rotated-away token cannot be used again.
+        const replay = await fetch(`${server().url}/api/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken: first }),
+        });
+        expect(replay.status).toBe(401);
+      });
+
+      it("never sends an access token it knows has expired: it refreshes first", async () => {
+        const { account, answers, tab } = await recordedTab("expired");
+        await pause((server().accessTokenLifetimeSeconds + 1) * 1000);
+        expect((await tab.currentUser()).email).toBe(account.email);
+        // Refreshed, then the user read twice: once to check the refreshed session is still this
+        // tab's user (the cookie is the browser's, and another tab may have signed in as someone
+        // else since), then the request itself.
+        expect(answers).toEqual([
+          { path: "/api/auth/refresh", status: 200 },
+          { path: "/api/users/me", status: 200 },
+          { path: "/api/users/me", status: 200 },
+        ]);
+      });
+
+      it("answers a 401 for a token it thought alive by refreshing, rotating the cookie, and retrying", async () => {
+        // A clock that stands still: the client takes its token for fresh, as one whose timers
+        // were held back (a suspended laptop) would.
+        const { account, answers, browser, first, tab } = await recordedTab("stale", {
+          clock: createManualClock(Date.now()),
+        });
+        await pause((server().accessTokenLifetimeSeconds + 1) * 1000);
+        expect((await tab.currentUser()).email).toBe(account.email);
         expect(answers).toEqual([
           { path: "/api/users/me", status: 401 },
           { path: "/api/auth/refresh", status: 200 },
@@ -346,8 +319,11 @@ describe.skipIf(liveBackend === undefined)(
       });
     });
 
-    describe("with email confirmation", () => {
-      const server = () => backend.servers.confirmation;
+    describe.each([
+      ["with email confirmation", "confirmation"],
+      ["with email confirmation and accounts shown, as Strapi answers", "disclosing"],
+    ] as const)("%s", (_title, name) => {
+      const server = () => backend.servers[name];
 
       it("registers to check-email, refuses sign-in until confirmed, then signs in", async () => {
         const account = freshAccount("confirm");
@@ -365,15 +341,33 @@ describe.skipIf(liveBackend === undefined)(
         expect(user).toMatchObject({ email: account.email, confirmed: true });
       });
 
-      it("answers a registration the same for a new address and a taken one", async () => {
+      it("answers a registration the same for a new address, a registered one and a taken username", async () => {
         const taken = freshAccount("taken");
         const first = await openTab(server(), createBrowser(backend)).register(taken);
         const again = await openTab(server(), createBrowser(backend)).register(taken);
+        const username = await openTab(server(), createBrowser(backend)).register({
+          ...taken,
+          email: freshAccount("other").email,
+        });
         const fresh = await openTab(server(), createBrowser(backend)).register(
           freshAccount("fresh"),
         );
-        expect(again).toEqual(first);
-        expect(again).toEqual(fresh);
+        expect(first).toEqual({ outcome: "check-email" });
+        for (const answer of [again, username, fresh]) expect(answer).toEqual(first);
+      });
+
+      it("refuses a username naming another address as a username validation error, or takes it as Strapi does", async () => {
+        const account = freshAccount("named");
+        const tab = openTab(server(), createBrowser(backend));
+        const attempt = tab.register({ ...account, username: freshAccount("elsewhere").email });
+        if (server().hideAccountExistence) {
+          expect(await rejection(attempt)).toMatchObject({
+            code: "validation",
+            fields: ["username"],
+          });
+        } else {
+          expect(await attempt).toEqual({ outcome: "check-email" });
+        }
       });
 
       it("answers a resend the same for unconfirmed, confirmed and unknown addresses", async () => {
