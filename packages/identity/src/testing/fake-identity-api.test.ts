@@ -494,3 +494,23 @@ describe("the fake's token lifetime, as camis' expiresIn", () => {
     expect(lasting.body.expiresIn).toBeUndefined();
   });
 });
+
+describe("the fake's profiles, as camis' content API", () => {
+  it("dates a profile's publication, as Strapi 5 answers every entry", async () => {
+    const { api, signIn } = fakeApi();
+    const jwt = await signIn("ada");
+    const created = await api.fetch(`${api.baseUrl}/api/profiles`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
+      body: JSON.stringify({ data: { displayName: "Ada" } }),
+    });
+    const body = (await created.json()) as { data: Record<string, unknown> };
+    expect(created.status).toBe(201);
+    expect(typeof body.data.publishedAt).toBe("string");
+    const listed = await api.fetch(`${api.baseUrl}/api/profiles`, {
+      headers: { Authorization: `Bearer ${jwt}` },
+    });
+    const list = (await listed.json()) as { data: Record<string, unknown>[] };
+    expect(typeof list.data[0]?.publishedAt).toBe("string");
+  });
+});
