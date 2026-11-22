@@ -12,6 +12,7 @@ describe("the public API", () => {
         "FONT_PAIRINGS",
         "NAME_MAX_LENGTH",
         "RESERVED_BRAND_IDS",
+        "STATUS_NEAR_ACCENT",
         "TAGLINE_MAX_LENGTH",
         "TONES",
         "TYPOGRAPHY_IDS",

@@ -19,7 +19,7 @@ type Linear = readonly [number, number, number];
 const ACHROMATIC = 1e-6;
 // How far outside [0, 1] a linear channel may be and still count as in gamut: float error only.
 const GAMUT_EPSILON = 1e-9;
-const GAMUT_STEPS = 32;
+const GAMUT_STEPS = 24;
 
 function toLinear(channel: number): number {
   const srgb = channel / 255;
@@ -44,9 +44,12 @@ function linearToOklab([red, green, blue]: Linear): Oklab {
 }
 
 function oklabToLinear({ lightness, a, b }: Oklab): Linear {
-  const l = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3;
-  const m = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3;
-  const s = (lightness - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  const l_ = lightness + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = lightness - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = lightness - 0.0894841775 * a - 1.291485548 * b;
+  const l = l_ * l_ * l_;
+  const m = m_ * m_ * m_;
+  const s = s_ * s_ * s_;
   return [
     4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
     -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,

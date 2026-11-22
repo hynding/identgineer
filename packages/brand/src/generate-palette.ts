@@ -3,7 +3,7 @@ import { CONTRAST_PAIRS } from "@identgineer/tokens/theme-pipeline";
 import { adjustLightness } from "./adjust-lightness.ts";
 import type { BrandKit } from "./brand-kit.ts";
 import { contrastBetween } from "./contrast.ts";
-import { fromOklch, toOklch, type Oklch } from "./oklch.ts";
+import { fromOklch, toOklab, toOklch, type Oklch } from "./oklch.ts";
 import { formatHexColor, type Rgb } from "./srgb.ts";
 import { TONE_SETTINGS, type ToneSettings } from "./tone-settings.ts";
 
@@ -22,11 +22,28 @@ export interface BrandAdjustment {
   readonly contrastAfter: number;
 }
 
+/**
+ * Something the generator could not or should not change but a brand guide should show. Today one
+ * kind: a status colour so close to the accent (OKLab distance below `STATUS_NEAR_ACCENT`) that,
+ * for example, a primary and a danger button look alike.
+ */
+export interface BrandNote {
+  readonly scheme: Scheme;
+  readonly kind: "status-near-accent";
+  readonly token: string;
+  readonly against: string;
+  /** Euclidean distance in OKLab; 0.02 is about the smallest visible difference. */
+  readonly distance: number;
+}
+
+export const STATUS_NEAR_ACCENT = 0.08;
+
 export interface SchemePalette {
   /** Colours by role, without the `color.` prefix. */
   readonly colors: ReadonlyMap<string, Rgb>;
   readonly gradient: readonly [Rgb, Rgb];
   readonly adjustments: readonly BrandAdjustment[];
+  readonly notes: readonly BrandNote[];
 }
 
 interface Requirement {
@@ -36,18 +53,28 @@ interface Requirement {
 
 type Origin = BrandAdjustment["origin"];
 
-// Checks beyond the tokens suite, which only judges links and the focus ring on the page
-// background: both also sit on cards, which in a dark scheme are lighter than the page.
+const PAGE = ["bg", "bg-subtle", "surface", "surface-raised"] as const;
+
+const onPage = (minimum: number, backgrounds: readonly string[]): Requirement[] =>
+  backgrounds.map((background) => ({ background, minimum }));
+
+// Checks beyond the tokens suite: every pairing the components draw that all built-in themes meet,
+// at its WCAG level (text 4.5, indicators 3), so a generated theme is never weaker than they are.
 const EXTRA_REQUIREMENTS: Readonly<Record<string, readonly Requirement[]>> = {
-  link: [
-    { background: "surface", minimum: 4.5 },
-    { background: "surface-raised", minimum: 4.5 },
-  ],
-  "focus-ring": [
-    { background: "surface", minimum: 3 },
-    { background: "surface-raised", minimum: 3 },
-  ],
+  text: onPage(4.5, ["bg-subtle", "accent-subtle"]),
+  "text-muted": onPage(4.5, ["bg-subtle", "surface-raised", "accent-subtle"]),
+  link: onPage(4.5, ["bg-subtle", "surface", "surface-raised", "accent-subtle"]),
+  "on-accent-subtle": onPage(4.5, PAGE),
+  "focus-ring": onPage(3, ["bg-subtle", "surface", "surface-raised", "accent-subtle"]),
+  "border-strong": onPage(3, ["surface", "surface-raised"]),
 };
+
+/**
+ * Fills that also mark state on the page (a primary button, a checked control, progress, an error
+ * border) must stand out from every background at the non-text level, 3:1. Warning is left out:
+ * the built-in themes do not give amber 3:1 on a light page either.
+ */
+const FILLS_ON_PAGE: readonly string[] = ["accent", "danger", "success", "info"];
 
 /** Body text is held to AAA (7:1) on every surface, whatever the tone. */
 const TEXT_FLOOR = 7;
@@ -117,7 +144,10 @@ class Builder {
     }));
     const passes = (rgb: Rgb) =>
       requirements.every((entry) => contrastBetween(rgb, entry.rgb) >= entry.minimum);
-    const used = passes(requested) ? requested : adjustLightness(start, this.away, passes);
+    const used = passes(requested)
+      ? requested
+      : (adjustLightness(start, this.away, passes) ??
+        fromOklch({ ...start, lightness: this.away === "darker" ? 0 : 1 }));
     if (!sameColor(used, requested)) {
       const binding = requirements.reduce((worst, entry) =>
         contrastBetween(requested, entry.rgb) / entry.minimum <
@@ -131,9 +161,10 @@ class Builder {
   }
 
   /**
-   * A fill with text on it (the accent, a status colour): the text is near-white or near-black,
-   * whichever the fill already carries best. Only when it carries neither is the fill moved, the
-   * shorter way in lightness.
+   * A fill with text on it (the accent, a status colour). The text is near-white or near-black,
+   * whichever the fill already carries best; a fill that also marks state must stand out from the
+   * page as well. Only when no text colour works is the fill moved: the shortest way in lightness
+   * that satisfies both, with either text colour.
    */
   fill(role: string, onRole: string, requested: Rgb, origin: Origin): { fill: Rgb; on: Rgb } {
     const start = toOklch(requested);
@@ -144,28 +175,47 @@ class Builder {
       chroma: Math.min(0.03, start.chroma),
       hue: start.hue,
     });
-    const light = contrastBetween(requested, onLight);
-    const dark = contrastBetween(requested, onDark);
-    if (Math.max(light, dark) >= minimum) {
-      this.set(onRole, light >= dark ? onLight : onDark);
-      return { fill: this.set(role, requested), on: this.color(onRole) };
+    const page = FILLS_ON_PAGE.includes(role)
+      ? PAGE.map((background) => ({ background, minimum: 3, rgb: this.color(background) }))
+      : [];
+    const passesWith = (on: Rgb) => (rgb: Rgb) =>
+      contrastBetween(rgb, on) >= minimum &&
+      page.every((entry) => contrastBetween(rgb, entry.rgb) >= entry.minimum);
+    const keep = [onLight, onDark]
+      .filter((on) => passesWith(on)(requested))
+      .sort((a, b) => contrastBetween(requested, b) - contrastBetween(requested, a));
+    if (keep[0]) {
+      this.set(onRole, keep[0]);
+      return { fill: this.set(role, requested), on: keep[0] };
     }
-    const darker = adjustLightness(
-      start,
-      "darker",
-      (rgb) => contrastBetween(rgb, onLight) >= minimum,
+    const options = [
+      [onLight, "darker"],
+      [onDark, "lighter"],
+      [onDark, "darker"],
+      [onLight, "lighter"],
+    ] as const;
+    let best: { fill: Rgb; on: Rgb; move: number } | undefined;
+    for (const [on, direction] of options) {
+      const found = adjustLightness(start, direction, passesWith(on), best?.move ?? 1);
+      const move = found && Math.abs(toOklch(found).lightness - start.lightness);
+      if (found && move !== undefined && (!best || move < best.move))
+        best = { fill: found, on, move };
+    }
+    // Black under white text, or white under dark text, always passes, so `best` is always set.
+    const chosen = best ?? {
+      fill: this.scheme === "light" ? ([0, 0, 0] as Rgb) : onLight,
+      on: this.scheme === "light" ? onLight : onDark,
+    };
+    this.set(onRole, chosen.on);
+    const binding = [{ background: onRole, minimum, rgb: chosen.on }, ...page].reduce(
+      (worst, entry) =>
+        contrastBetween(requested, entry.rgb) / entry.minimum <
+        contrastBetween(requested, worst.rgb) / worst.minimum
+          ? entry
+          : worst,
     );
-    const lighter = adjustLightness(
-      start,
-      "lighter",
-      (rgb) => contrastBetween(rgb, onDark) >= minimum,
-    );
-    const darkerMove = start.lightness - toOklch(darker).lightness;
-    const lighterMove = toOklch(lighter).lightness - start.lightness;
-    const [fill, on] = darkerMove <= lighterMove ? [darker, onLight] : [lighter, onDark];
-    this.set(onRole, on);
-    this.report(role, origin, requested, fill, onRole, minimum);
-    return { fill: this.set(role, fill), on };
+    this.report(role, origin, requested, chosen.fill, binding.background, binding.minimum);
+    return { fill: this.set(role, chosen.fill), on: chosen.on };
   }
 
   /** The hover state of a fill, further from its text so it keeps passing. */
@@ -177,7 +227,9 @@ class Builder {
     const step = direction === "darker" ? -this.tone.hoverStep : this.tone.hoverStep;
     const start = { ...fill, lightness: fill.lightness + step };
     const requested = fromOklch(start);
-    const used = adjustLightness(start, direction, (rgb) => contrastBetween(rgb, on) >= minimum);
+    const used =
+      adjustLightness(start, direction, (rgb) => contrastBetween(rgb, on) >= minimum) ??
+      fromOklch({ ...start, lightness: direction === "darker" ? 0 : 1 });
     if (!sameColor(used, requested))
       this.report(role, "generated", requested, used, onRole, minimum);
     this.set(role, used);
@@ -253,22 +305,42 @@ function text(builder: Builder, neutral: Oklch): void {
   );
 }
 
-function subtlePair(builder: Builder, role: string, hue: number, chroma: number): void {
-  const light = builder.scheme === "light";
+/** Tinted backgrounds first: text, links and the focus ring are checked on them too. */
+function subtleBackgrounds(builder: Builder, kit: BrandKit): void {
   const lightness = builder.tone.subtle[builder.scheme];
-  builder.set(`${role}-subtle`, fromOklch({ lightness, chroma, hue }));
-  builder.foreground(
-    `on-${role}-subtle`,
-    { lightness: light ? 0.38 : 0.88, chroma: chroma * 2, hue },
-    "generated",
-  );
+  for (const { role, hue, chroma } of subtleTints(builder, kit)) {
+    builder.set(`${role}-subtle`, fromOklch({ lightness, chroma, hue }));
+  }
+}
+
+function subtleTints(builder: Builder, kit: BrandKit) {
+  const primary = toOklch(kit.colors.primary);
+  const statusChroma = (builder.scheme === "light" ? 0.045 : 0.06) * builder.tone.chroma;
+  return [
+    {
+      role: "accent",
+      hue: primary.hue,
+      chroma: Math.min(primary.chroma, 0.05) * builder.tone.chroma,
+    },
+    ...STATUSES.map((status) => ({ role: status.name, hue: status.hue, chroma: statusChroma })),
+  ];
+}
+
+function onSubtle(builder: Builder, kit: BrandKit): void {
+  const light = builder.scheme === "light";
+  for (const { role, hue, chroma } of subtleTints(builder, kit)) {
+    builder.foreground(
+      `on-${role}-subtle`,
+      { lightness: light ? 0.38 : 0.88, chroma: chroma * 2, hue },
+      "generated",
+    );
+  }
 }
 
 function accent(builder: Builder, kit: BrandKit): void {
   const primary = toOklch(kit.colors.primary);
   builder.fill("accent", "on-accent", kit.colors.primary, "primary");
   builder.hover("accent-hover", "accent", "on-accent");
-  subtlePair(builder, "accent", primary.hue, Math.min(primary.chroma, 0.05) * builder.tone.chroma);
   builder.foreground("link", primary, "primary", kit.colors.primary);
   const ring = kit.colors.secondary ?? kit.colors.primary;
   builder.foreground(
@@ -288,8 +360,31 @@ function statuses(builder: Builder): void {
       hue: status.hue,
     });
     builder.fill(status.name, `on-${status.name}`, requested, "generated");
-    subtlePair(builder, status.name, status.hue, (scheme === "light" ? 0.045 : 0.06) * tone.chroma);
   }
+}
+
+function oklabDistance(first: Rgb, second: Rgb): number {
+  const a = toOklab(first);
+  const b = toOklab(second);
+  return Math.hypot(a.lightness - b.lightness, a.a - b.a, a.b - b.b);
+}
+
+function notes(builder: Builder): BrandNote[] {
+  const accent = builder.color("accent");
+  return STATUSES.flatMap((status): BrandNote[] => {
+    const distance = oklabDistance(builder.color(status.name), accent);
+    return distance < STATUS_NEAR_ACCENT
+      ? [
+          {
+            scheme: builder.scheme,
+            kind: "status-near-accent",
+            token: `color.${status.name}`,
+            against: "color.accent",
+            distance,
+          },
+        ]
+      : [];
+  });
 }
 
 function gradient(builder: Builder, kit: BrandKit): readonly [Rgb, Rgb] {
@@ -302,12 +397,15 @@ function gradient(builder: Builder, kit: BrandKit): readonly [Rgb, Rgb] {
 export function generatePalette(kit: BrandKit, scheme: Scheme): SchemePalette {
   const builder = new Builder(scheme, TONE_SETTINGS[kit.tone]);
   const neutral = neutrals(builder, kit);
+  subtleBackgrounds(builder, kit);
   text(builder, neutral);
   accent(builder, kit);
   statuses(builder);
+  onSubtle(builder, kit);
   return {
     colors: builder.colors,
     gradient: gradient(builder, kit),
     adjustments: builder.adjustments,
+    notes: notes(builder),
   };
 }

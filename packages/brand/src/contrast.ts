@@ -7,13 +7,16 @@ function linearizeChannel(channel: number): number {
   return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
 }
 
+// The same function tabulated for the 256 bytes, since the generator asks it millions of times.
+const LINEAR = Array.from({ length: 256 }, (_, channel) => linearizeChannel(channel));
+
+function linear(channel: number): number {
+  return LINEAR[channel] ?? linearizeChannel(channel);
+}
+
 /** WCAG 2.2 relative luminance of an 8-bit sRGB colour. */
 export function luminanceOf([red, green, blue]: Rgb): number {
-  return (
-    0.2126 * linearizeChannel(red) +
-    0.7152 * linearizeChannel(green) +
-    0.0722 * linearizeChannel(blue)
-  );
+  return 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue);
 }
 
 /** WCAG 2.2 contrast ratio, between 1 and 21, independent of argument order. */

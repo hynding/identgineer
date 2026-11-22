@@ -25,6 +25,8 @@ const RANDOM_CASES = 2_700;
 
 /** An adjusted brand colour keeps its hue within this many degrees while it still has colour. */
 const MAX_HUE_SHIFT = 3;
+/** A moved accent's tightest requirement is met within this factor of its threshold. */
+const MAX_SLACK = 1.12;
 /** Below this chroma a colour is close enough to grey that its hue is not what makes it the brand's. */
 const HUE_MATTERS = 0.04;
 
@@ -131,16 +133,23 @@ function checkCase(entry: Case): string[] {
       if (ratio < 3) problems.push(`${scheme} accent on ${background} is ${ratio.toFixed(2)}:1`);
     }
   }
-  for (const adjustment of theme.adjustments) {
-    // The accent moves only as far as its text needs: it lands just past the threshold.
+  for (const scheme of ["light", "dark"] as const) {
+    // A moved accent goes only as far as it must: some requirement ends up nearly tight.
     if (
-      adjustment.token === "color.accent" &&
-      adjustment.contrastAfter > adjustment.minimum + 0.5
+      !theme.adjustments.some((entry) => entry.scheme === scheme && entry.token === "color.accent")
     ) {
-      problems.push(
-        `${adjustment.scheme} accent overshot to ${adjustment.contrastAfter.toFixed(2)}:1`,
-      );
+      continue;
     }
+    const colors = resolvedColors(theme, scheme);
+    const accent = colors.get("accent") ?? "";
+    const slack = Math.min(
+      contrastRatio(accent, colors.get("on-accent") ?? "") / 4.5,
+      ...["bg", "bg-subtle", "surface", "surface-raised"].map(
+        (background) => contrastRatio(accent, colors.get(background) ?? "") / 3,
+      ),
+    );
+    if (slack > MAX_SLACK)
+      problems.push(`${scheme} accent moved further than needed (${slack.toFixed(2)})`);
   }
   for (const scheme of ["light", "dark"] as const) {
     const accentMoved = theme.adjustments.some(

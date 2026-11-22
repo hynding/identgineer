@@ -18,6 +18,7 @@ describe("adjustLightness", () => {
     const start = toOklch([249, 115, 22]);
     const passes = (rgb: Rgb) => contrastBetween(rgb, WHITE) >= 4.5;
     const found = adjustLightness(start, "darker", passes);
+    if (!found) throw new Error("expected a colour");
     expect(passes(found)).toBe(true);
     const moved = toOklch(found);
     expect(moved.lightness).toBeLessThan(start.lightness);

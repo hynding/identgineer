@@ -120,10 +120,10 @@
         "$value": "#5b6e96"
       },
       "accent": {
-        "$value": "#f4c430"
+        "$value": "#aa8600"
       },
       "accent-hover": {
-        "$value": "#ffe297"
+        "$value": "#c39f31"
       },
       "on-accent": {
         "$value": "#1b1505"
@@ -135,10 +135,10 @@
         "$value": "#534000"
       },
       "link": {
-        "$value": "#8f6f00"
+        "$value": "#7e6200"
       },
       "focus-ring": {
-        "$value": "#b38c00"
+        "$value": "#a07d00"
       },
       "success": {
         "$value": "#007835"
@@ -194,7 +194,7 @@
         "$type": "gradient",
         "$value": [
           {
-            "color": "#f4c430",
+            "color": "#aa8600",
             "position": 0
           },
           {

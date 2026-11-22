@@ -12,13 +12,13 @@
     --idg-color-text-muted: #444d60;
     --idg-color-border: #d5def0;
     --idg-color-border-strong: #5b6e96;
-    --idg-color-accent: #f4c430;
-    --idg-color-accent-hover: #ffe297;
+    --idg-color-accent: #aa8600;
+    --idg-color-accent-hover: #c39f31;
     --idg-color-on-accent: #1b1505;
     --idg-color-accent-subtle: #f4e2b2;
     --idg-color-on-accent-subtle: #534000;
-    --idg-color-link: #8f6f00;
-    --idg-color-focus-ring: #b38c00;
+    --idg-color-link: #7e6200;
+    --idg-color-focus-ring: #a07d00;
     --idg-color-success: #007835;
     --idg-color-on-success: #ffffff;
     --idg-color-success-subtle: #c8efcf;
@@ -35,7 +35,7 @@
     --idg-color-on-info: #ffffff;
     --idg-color-info-subtle: #d1e5ff;
     --idg-color-on-info-subtle: #09417e;
-    --idg-gradient-brand: linear-gradient(135deg, #f4c430 0%, #a9de67 100%);
+    --idg-gradient-brand: linear-gradient(135deg, #aa8600 0%, #a9de67 100%);
     --idg-font-family-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
     --idg-font-family-body: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --idg-font-family-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace;
