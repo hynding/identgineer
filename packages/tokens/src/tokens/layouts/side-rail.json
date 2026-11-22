@@ -31,7 +31,17 @@
         "$value": "16rem"
       },
       "nav-size": {
+        "$value": "4rem"
+      },
+      "rail-width": {
         "$value": "15rem"
+      },
+      "sticky-inset": {
+        "$value": "0"
+      },
+      "shell": {
+        "$type": "string",
+        "$value": "side-rail"
       }
     }
   }

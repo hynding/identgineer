@@ -7,6 +7,8 @@ export interface FakeRecord {
 
 export interface FakeObserver {
   target?: Node;
+  /** Every node it was asked to observe, in order; `target` is the last. */
+  targets: Node[];
   options?: MutationObserverInit;
   observing: boolean;
 }
@@ -24,6 +26,7 @@ export function stubMutationObserver() {
   class RecordingObserver implements FakeObserver {
     observing = false;
     target?: Node;
+    targets: Node[] = [];
     options?: MutationObserverInit;
 
     constructor(callback: (records: FakeRecord[]) => void) {
@@ -33,12 +36,14 @@ export function stubMutationObserver() {
 
     observe(target: Node, options?: MutationObserverInit): void {
       this.target = target;
+      this.targets.push(target);
       this.options = options;
       this.observing = true;
     }
 
     disconnect(): void {
       this.observing = false;
+      this.targets = [];
     }
 
     takeRecords(): FakeRecord[] {

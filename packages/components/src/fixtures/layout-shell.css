@@ -1,0 +1,140 @@
+/* The page of the layout shell fixture. Only content: the shell draws every region around it. */
+body {
+  margin: 0;
+  background: var(--idg-color-bg);
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+}
+
+idg-layout:not(.hydrated) {
+  visibility: hidden;
+}
+
+idg-layout > section.plain {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--idg-space-m);
+  align-items: start;
+  margin-block-end: var(--idg-layout-section-gap);
+}
+
+idg-layout h1,
+idg-layout h2 {
+  margin: 0;
+  font-family: var(--idg-font-family-display);
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+  text-transform: var(--idg-ornament-heading-transform);
+}
+
+idg-layout h1 {
+  font-size: calc(var(--idg-font-size-step-4) * var(--idg-ux-type-scale));
+}
+
+idg-layout h2 {
+  font-size: calc(var(--idg-font-size-step-2) * var(--idg-ux-type-scale));
+}
+
+idg-layout p {
+  margin: 0;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--idg-space-2xs);
+  color: inherit;
+  font-family: var(--idg-font-family-display);
+  font-weight: var(--idg-font-display-weight);
+  text-decoration: none;
+}
+
+idg-layout a:not(.brand, .hero-link) {
+  color: var(--idg-color-link);
+}
+
+[data-layout="centered"] .hero-content {
+  justify-items: center;
+}
+
+.eyebrow {
+  color: inherit;
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-content {
+  display: grid;
+  gap: var(--idg-space-s);
+  justify-items: start;
+}
+
+.lede {
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+}
+
+.hero-link {
+  padding: var(--idg-space-2xs) var(--idg-space-s);
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--idg-color-accent);
+  color: var(--idg-color-on-accent);
+  font-weight: var(--idg-font-weight-semibold);
+  text-decoration: none;
+}
+
+.layout-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--idg-space-xs);
+}
+
+.layout-buttons button {
+  min-block-size: var(--idg-density-target-size);
+  padding-inline: var(--idg-space-s);
+  border: var(--idg-border-control-width) var(--idg-border-control-style)
+    var(--idg-border-control-color);
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--idg-color-surface);
+  color: var(--idg-color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.layout-buttons button[aria-pressed="true"] {
+  background: var(--idg-color-accent);
+  color: var(--idg-color-on-accent);
+}
+
+.aside-content,
+.footer-content {
+  display: grid;
+  gap: var(--idg-space-xs);
+}
+
+.aside-title {
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+}
+
+.aside-list,
+.footer-list {
+  display: grid;
+  gap: var(--idg-space-2xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footer-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--idg-space-m);
+}
+
+.footer-text {
+  color: var(--idg-color-text-muted);
+}

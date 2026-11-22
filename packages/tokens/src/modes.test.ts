@@ -248,6 +248,31 @@ describe("distinctness", () => {
     },
   );
 
+  it("each layout names its own page shell arrangement, so the shell can tell them apart with a style query", () => {
+    for (const layout of layouts) {
+      const resolved = resolveMode(shared, layout.tokens);
+      expect(valueOf(resolved, "layout.shell"), layout.id).toBe(layout.id);
+    }
+  });
+
+  it.each(["layout.rail-width", "layout.sticky-inset"])(
+    "the eight layouts give %s at least three different values",
+    (path) => {
+      const values = layouts.map((layout) => valueOf(resolveMode(shared, layout.tokens), path));
+      expect(new Set(values).size).toBeGreaterThanOrEqual(3);
+    },
+  );
+
+  it("pins the top of the page only where the layout's bar stays in view", () => {
+    const pinned = layouts
+      .filter(
+        (layout) => valueOf(resolveMode(shared, layout.tokens), "layout.sticky-inset") !== "0",
+      )
+      .map((layout) => layout.id)
+      .sort();
+    expect(pinned).toEqual(["dashboard", "top-bar"]);
+  });
+
   it("no layout sets a column count below one or above twelve", () => {
     for (const layout of layouts) {
       const columns = Number(valueOf(resolveMode(shared, layout.tokens), "layout.columns"));

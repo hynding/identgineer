@@ -32,6 +32,16 @@
       },
       "nav-size": {
         "$value": "4rem"
+      },
+      "rail-width": {
+        "$value": "16rem"
+      },
+      "sticky-inset": {
+        "$value": "0"
+      },
+      "shell": {
+        "$type": "string",
+        "$value": "bento"
       }
     }
   }

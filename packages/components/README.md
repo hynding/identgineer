@@ -762,10 +762,10 @@ Their defaults come from the layout axis (`data-layout`, see the
 different measure, gap and column count under each of the eight layouts. A prop overrides the
 layout with a **step** of a token scale; it never takes a length.
 
-| Step set                                               | Values                                                                           | Used by                                        |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Gap steps, from the space scale (`--idg-space-<step>`) | `none`, `3xs`, `2xs`, `xs`, `s`, `m`, `l`, `xl`, `2xl`, `3xl`                    | `gap` on every primitive                       |
-| Size steps, from the size scale (`--idg-size-<step>`)  | `xs` (10rem), `s` (14rem), `m` (20rem), `l` (28rem), `xl` (40rem), `2xl` (56rem) | `min`, `side-width`, `threshold`, `min-height` |
+| Step set                                               | Values                                                                                          | Used by                                        |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Gap steps, from the space scale (`--idg-space-<step>`) | `none`, `3xs`, `2xs`, `xs`, `s`, `m`, `l`, `xl`, `2xl`, `3xl`                                   | `gap` on every primitive                       |
+| Size steps, from the size scale (`--idg-size-<step>`)  | `xs` (10rem), `s` (14rem), `m` (20rem), `l` (28rem), `xl` (40rem), `2xl` (56rem), `3xl` (72rem) | `min`, `side-width`, `threshold`, `min-height` |
 
 `gap="none"` is a gap of zero. Every other gap, a step or the layout's `--idg-layout-gap` by default, is multiplied by `--idg-density-gap-scale`, so a compact UX mode tightens every layout. A
 value that is not a step (`"12px"`, `"var(--x)"`, a typo) is ignored and the layout's own value
@@ -865,6 +865,135 @@ A block at least as tall as `min-height` (`screen` is the height of the viewport
 content. It grows when the content needs more room. **Slots:** `top` (pinned to the top), default
 (centred in the space the others leave) and `bottom`. **Parts:** `cover`, `center`.
 
+### `idg-layout`
+
+The page shell. One page, written once, is housed by whichever of the eight layouts `data-layout`
+names, on the root or on any ancestor, with no change of markup. Its shadow tree is always the same:
+a skip link, a `header` (brand, menu button, navigation, actions), the hero, `main`, `aside` and
+`footer`. No layout reorders it, so the order a reader and the Tab key meet things in is the order of
+the markup, and the shell adds no heading of its own. A region with nothing slotted into it is not
+drawn and is not announced.
+
+| Slot         | Region                                                   |
+| ------------ | -------------------------------------------------------- |
+| `brand`      | The name or logo, usually a link                         |
+| `navigation` | The navigation items, as direct children (links)         |
+| `actions`    | Buttons and links of the header, such as a sign-in       |
+| `hero`       | An introduction above or beside the content              |
+| default      | The content, inside `main` (the target of the skip link) |
+| `aside`      | Related content, a `complementary` landmark              |
+| `footer`     | The footer, a `contentinfo` landmark                     |
+
+| Prop                      | Attribute                   | Default             |
+| ------------------------- | --------------------------- | ------------------- |
+| `navigationLabel`         | `navigation-label`          | `Main navigation`   |
+| `asideLabel`              | `aside-label`               | `Related content`   |
+| `skipLabel`               | `skip-label`                | `Skip to content`   |
+| `menuLabel`, `closeLabel` | `menu-label`, `close-label` | `Menu`, `Close`     |
+| `navigationOpen`          | `navigation-open`           | `false` (reflected) |
+| `embedded`                | `embedded`                  | `false` (reflected) |
+
+**Event:** `idgNavigationToggle`, with `{ open }`. **Parts:** `shell`, `skip`, `header`, `brand`,
+`toggle`, `drawer`, `close`, `navigation`, `actions`, `hero`, `main`, `aside`, `footer`.
+
+The host is a size container: each layout picks its small (below 40rem), medium (from 40rem) and
+large (from 72rem) arrangement from the width of the shell, not of the viewport. The thresholds are
+the `xl` and `3xl` steps of the size scale (`--idg-size-3xl` is 72rem, added for this). The bar of
+`top-bar`, `split-hero` and `bento` joins the actions to the brand and the menu button on one row from
+the `2xl` step (56rem), not from 40rem.
+
+| Layout       | Arrangement                                                                       | Navigation small / medium / large |
+| ------------ | --------------------------------------------------------------------------------- | --------------------------------- |
+| `top-bar`    | A bar across the top, pinned at large; the aside beside the content               | panel / panel / inline            |
+| `side-rail`  | A rail for the full height with the brand on top; actions in a strip; aside below | drawer / inline / inline          |
+| `split-hero` | The hero keeps the start half in view while the content scrolls beside it         | panel / panel / panel             |
+| `magazine`   | A centred masthead, a ruled strip of navigation, a narrow column of related items | panel / inline / inline           |
+| `dashboard`  | A slim rail, a pinned strip of actions, the aside as an inspector at the end      | drawer / inline / inline          |
+| `centered`   | One narrow column; brand and navigation above, aside and footer below             | panel / inline / inline           |
+| `bento`      | Every region a tile on one grid of one, two, then four columns                    | panel / panel / inline            |
+| `immersive`  | A full-bleed hero under a transparent header; the aside a band, then a tile       | drawer / drawer / drawer          |
+
+"Multi-column" in `magazine` is the layout's column count, read by `idg-grid` in the content, not CSS
+columns. A **panel** is the navigation opened under the menu button, without trapping focus or making the page
+inert; a **drawer** is a modal dialog (`showModal`): focus moves in, the page behind is inert and
+scroll-locked, Escape or the close button or a press on the backdrop closes it and focus returns to
+the menu button. Following a link closes either. If the container grows until the navigation is drawn
+inline, an open panel or drawer is reset without moving focus. The drawer slides in but does not
+animate out.
+
+Changing `data-layout` while the page is open keeps the scroll position and keeps focus on the same
+element; focus that was in a navigation the new layout collapses goes to the menu button. Where a
+layout pins its chrome (`top-bar` at large, `dashboard`), `scroll-padding-block-start` is set on the
+document from `--idg-layout-sticky-inset`, so a focused or targeted element is never left under it.
+
+While a panel is open in `top-bar`, `bento` and `split-hero`, the actions move below it, so Tab goes
+from the menu button through the navigation to the actions without jumping back up the page. In
+`top-bar` at 72rem and wider the navigation is one row that scrolls along itself when it is longer
+than the bar (a focused item is scrolled into view, and the scrollbar fits in the bar); in `side-rail` and `dashboard` the rail is a column of the brand, which takes the height it needs,
+and the navigation under it, which scrolls. The menu button does not move when the panel opens: the first row of the header is held at the height it had while the panel is open.
+
+**Missing regions.** A layout that has no hero arranges itself without one: the `immersive` header
+becomes a bar of the page on a surface of its own instead of being laid over the hero, and
+`split-hero` stays one column instead of leaving half of the page empty. A split hero is pinned
+only while it fits in the window: one taller than the window (a short window, larger text, a long
+hero) scrolls with the page, and the content still scrolls beside it, so nothing of it is hidden. A region with nothing slotted
+into it is not drawn, and the layouts leave no gap for it.
+
+**Escape and focus.** Escape closes an open panel only when it happens in the menu button or the
+navigation and nothing has already used it. Closing the navigation from the page (setting
+`navigationOpen` to `false`) does not move focus the page has put elsewhere. If the container grows
+while a drawer is open and the navigation is now drawn on the page, a focused navigation item that is
+still visible keeps focus; focus that was on the Close button, which is gone, moves to the first
+navigation item (or to the menu button if that is shown). A click on a link with a modifier key,
+or with a button other than the primary one, does not close the navigation.
+
+**Embedded.** A shell is the page and claims at least the height of the window. Set `embedded` on one
+that sits inside a page, or inside another shell, and in all eight layouts it takes the height its
+content needs: a rail, a sticky hero, an inspector or a hero that is as tall as the window stops
+being. An aside that is a card stays a card; only the dashboard's inspector, a column the height of
+the page, is stretched.
+
+**Scroll padding.** `scroll-padding-block-start` is set on the root element from
+`--idg-layout-sticky-inset`, so it applies at every width and to every scroller that is the page, not
+only while a layout pins its chrome. The inset is `0` in the layouts that pin nothing. The browser
+would otherwise treat the pinned bar's own controls as too near the top and scroll the page up
+whenever one was focused, so the brand, navigation and actions the page slots in cancel the padding
+for themselves: each sets `--_idg-chrome-scroll-margin` to the negative inset, and their `idg-`
+controls (buttons, links, inputs, checkboxes and the rest) read it in their own shadow roots as
+`scroll-margin-block-start`. The padding stays on for everything else, so a script that scrolls a
+target into view while the bar has focus still lands it under the bar, not behind it (but see the
+text field exception below). A control from
+outside this library that has its own shadow root and a focusable element in the bar must read the
+same property (`scroll-margin-block-start: var(--_idg-chrome-scroll-margin, 0px)`), or focusing it
+can scroll the page. The exception is a text field: the browser's reveal of an editable element
+ignores `scroll-margin` and uses the root padding, so while a text-entry element in the bar has focus
+(a native `input` other than a checkbox, radio or button, a `textarea`, a `contenteditable`, or an
+`idg-input` or `idg-textarea` with focus inside) the root padding is `0`, and the page stays put. While such a field has focus the page padding is off, so a script scroll at
+that moment can land its target under the bar. A
+text-entry component from outside this library is not recognised unless it is a native element or
+reports focus on its host. The drawer that holds a long navigation is padded by the same inset, so a
+focused item stays inside its top edge. A navigation that scrolls along the top bar scrolls only itself to bring a
+focused item into view, never the page.
+
+**Open from the start.** `navigation-open` in the markup opens the navigation once the shell has
+loaded, if the layout collapses it at that width.
+
+**Without container style queries.** A browser that cannot read a style query draws every layout as
+its small arrangement: a bar of brand, menu button and actions above one column, with the navigation
+as a panel under the menu button. It is plain and fully usable, and the eight layouts differ again
+once the browser supports them.
+
+**Text wider than its column.** The hero and the brand let a word they cannot fit break anywhere
+(`overflow-wrap: anywhere`; in the hero it is inherited by what the page puts there). Where the brand
+shares a bar with the menu button and the actions (top-bar, split-hero and bento, from 56rem), the
+button and the actions take their width first, never less than the widest action, and the brand keeps
+at least `--idg-size-s` or two fifths of the bar. A longer name wraps between words, and breaks inside
+a word only when that word is wider than the brand's share. Below 56rem those three layouts keep the
+stacked header, with the actions on a row of their own, because brand, button and actions do not all
+fit on one row in the larger type scales or a wider font. Nothing is clipped and the page does not
+scroll sideways; ordinary words elsewhere never break, because a word only breaks where it is wider
+than the line.
+
 ## Strict CSP and Trusted Types
 
 Every component is verified in Chromium against
@@ -934,7 +1063,7 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   viewport and forced colours for every overlay (axe runs with each one open), boundary contrast, text contrast of badges, alerts,
   avatars and changes in all 8 themes in light and dark, and axe (wcag2a, wcag2aa, wcag21aa, wcag22aa) across the 8 designs in light and dark and
   the 8 UX modes, no sideways page scroll at 320, 768, 1280 and 2560px under all 8 layouts, and the
-  layout primitives' wrapping, column counts and right-to-left placement, on pages in `src/fixtures/` (`button.html`, `forms.html`, `surfaces.html`, `overlays.html`, `navigation.html`, `layout-primitives.html`; copied to `www/fixtures/`; static HTML, no inline
+  layout primitives' wrapping, column counts and right-to-left placement, on pages in `src/fixtures/` (`button.html`, `forms.html`, `surfaces.html`, `overlays.html`, `navigation.html`, `layout-primitives.html`, `layout-shell.html`; copied to `www/fixtures/`; static HTML, no inline
   script or style). Build first. Playwright's own Chromium is installed with
   `pnpm --filter @identgineer/components exec playwright install --with-deps chromium`; where that is
   not possible, set `IDG_CHROMIUM_PATH` to a Chromium binary (`/opt/pw-browsers/chromium` is used if it

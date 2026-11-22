@@ -332,6 +332,51 @@ describe("findLayoutCssViolations", () => {
   });
 });
 
+describe("container query thresholds", () => {
+  // A container query cannot take a custom property, so a page shell that changes arrangement with
+  // its container must write the threshold out. The checker takes the sizes of the token scale and
+  // lets a threshold be exactly one of them, so it cannot drift to an arbitrary length.
+  const options = { containerSizes: ["40rem", "56rem"] };
+
+  it.each([
+    "@container (min-inline-size: 40rem) { .a { gap: 0; } }",
+    "@container idg-shell (inline-size >= 56rem) { .a { gap: 0; } }",
+    "@container (40rem <= inline-size < 56rem) { .a { gap: 0; } }",
+    "@container style(--idg-layout-shell: top-bar) and (min-inline-size: 40rem) { .a { gap: 0; } }",
+  ])("accepts a threshold that is a size of the scale in %s", (css) => {
+    expect(findLayoutCssViolations(css, options)).toEqual([]);
+  });
+
+  it.each([
+    ["a length that is not on the scale", "@container (min-inline-size: 41rem) { .a { gap: 0; } }"],
+    ["the same size in pixels", "@container (min-inline-size: 640px) { .a { gap: 0; } }"],
+    [
+      "the same size written differently",
+      "@container (min-inline-size: 40.0rem) { .a { gap: 0; } }",
+    ],
+    ["one end of a range", "@container (40rem <= inline-size < 57rem) { .a { gap: 0; } }"],
+  ])("refuses %s", (_name, css) => {
+    const rules = findLayoutCssViolations(css, options).map((violation) => violation.rule);
+    expect(rules).toEqual(["hard-coded length"]);
+  });
+
+  it("refuses every threshold when no sizes are given", () => {
+    const css = "@container (min-inline-size: 40rem) { .a { gap: 0; } }";
+    expect(findLayoutCssViolations(css, { containerSizes: [] })).toHaveLength(1);
+    expect(findLayoutCssViolations(css)).toHaveLength(1);
+  });
+
+  it("allows the sizes only in a container query, not in a media query or a declaration", () => {
+    const rules = (css: string) =>
+      findLayoutCssViolations(css, options).map((violation) => violation.rule);
+    expect(rules("@media (min-width: 40rem) { .a { gap: 0; } }")).toEqual([
+      "viewport media query",
+      "hard-coded length",
+    ]);
+    expect(rules(".a { min-inline-size: 40rem; }")).toEqual(["hard-coded length"]);
+  });
+});
+
 const PRIMITIVES = ["stack", "cluster", "grid", "sidebar", "switcher", "cover"];
 const STYLESHEETS = [
   ...PRIMITIVES.map((name) => `../src/components/${name}/${name}.css`),
@@ -343,5 +388,53 @@ describe("the layout primitives' stylesheets", () => {
   it.each(STYLESHEETS)("%s takes every length from tokens and uses logical properties", (file) => {
     const css = readFileSync(fileURLToPath(new URL(file, import.meta.url)), "utf8");
     expect(findLayoutCssViolations(css)).toEqual([]);
+  });
+});
+
+type TokenGroup = Record<string, { $value?: string } | string | undefined>;
+
+/** The sizes of the token scale as written, such as `40rem`, by step name. */
+function sizeScale(): Map<string, string> {
+  const source = readFileSync(
+    fileURLToPath(new URL("../../tokens/src/tokens/primitive.json", import.meta.url)),
+    "utf8",
+  );
+  const { size } = JSON.parse(source) as { size: TokenGroup };
+  const scale = new Map<string, string>();
+  for (const [step, token] of Object.entries(size)) {
+    if (typeof token === "object" && /^\d+(?:\.\d+)?rem$/.test(token.$value ?? "")) {
+      scale.set(step, token.$value ?? "");
+    }
+  }
+  return scale;
+}
+
+describe("the page shell's stylesheet", () => {
+  const css = readFileSync(
+    fileURLToPath(new URL("../src/components/layout/layout.css", import.meta.url)),
+    "utf8",
+  );
+  const scale = sizeScale();
+
+  it("takes every length from tokens, and compares its container only against a size of the scale", () => {
+    expect(findLayoutCssViolations(css, { containerSizes: [...scale.values()] })).toEqual([]);
+  });
+
+  it("changes arrangement at the xl and 3xl steps, which are 40rem and 72rem", () => {
+    expect(scale.get("xl")).toBe("40rem");
+    expect(scale.get("3xl")).toBe("72rem");
+    const thresholds = new Set(
+      [...css.matchAll(/@container[^{]*?\b(\d+(?:\.\d+)?rem)\b/g)].map((match) => match[1]),
+    );
+    expect(thresholds.has("40rem")).toBe(true);
+    expect(thresholds.has("72rem")).toBe(true);
+    for (const threshold of thresholds) {
+      expect([...scale.values()], `${threshold ?? ""} is on the scale`).toContain(threshold);
+    }
+  });
+
+  it("reads the layout and the container, never the viewport", () => {
+    expect(css).toMatch(/@container[^{]*style\(--idg-layout-shell: top-bar\)/);
+    expect(css).not.toMatch(/@media[^{]*\b(?:width|height)\b/);
   });
 });

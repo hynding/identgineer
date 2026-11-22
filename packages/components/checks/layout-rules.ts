@@ -83,7 +83,7 @@ function isPhysicalInset(value: string): boolean {
 
 const VIEWPORT_QUERY =
   /@media[^{]*\b(?:(?:(?:min|max)-)?(?:width|height|aspect-ratio)|orientation)\b/gi;
-const PRELUDE = /@(?:media|container)\b([^{}]*)\{/gi;
+const PRELUDE = /@(media|container)\b([^{}]*)\{/gi;
 const DECLARATION = /([\w-]+)\s*:\s*([^;{}]+)(?=[;}])/g;
 
 // Comments and the inside of strings are not css, so `content: "@media (min-width: 0) {"` is not
@@ -102,6 +102,15 @@ function lineAt(css: string, index: number): number {
   return css.slice(0, index).split("\n").length;
 }
 
+export interface LayoutCssOptions {
+  /**
+   * Lengths a container query may be written at, exactly as written. A container query cannot read
+   * a custom property, so the sizes of the token scale are the only lengths a shell that changes
+   * arrangement with its container can compare against. They are allowed in `@container` only.
+   */
+  containerSizes?: readonly string[];
+}
+
 /**
  * The layout primitives arrange content in a container of unknown size, so they take every length
  * from a token (a zero is allowed), address the axes logically so they mirror in right-to-left,
@@ -118,9 +127,14 @@ function lineAt(css: string, index: number): number {
  * ordered x then y; and a viewport media query, which includes `orientation` (a container query
  * may use it). One and two values are allowed, `!important` is not counted as a value, an
  * exponent in a length is refused whatever it works out to, and strings and comments are not read.
+ * With `containerSizes`, an `@container` prelude may name exactly those lengths, and no others.
  * Not checked: keywords in other properties such as `background-position`.
  */
-export function findLayoutCssViolations(source: string): LayoutCssViolation[] {
+export function findLayoutCssViolations(
+  source: string,
+  options: LayoutCssOptions = {},
+): LayoutCssViolation[] {
+  const allowedSizes = new Set(options.containerSizes);
   const css = blankCommentsAndStrings(source);
   const violations: LayoutCssViolation[] = [];
 
@@ -132,7 +146,9 @@ export function findLayoutCssViolations(source: string): LayoutCssViolation[] {
     });
   }
   for (const prelude of css.matchAll(PRELUDE)) {
-    for (const length of (prelude[1] ?? "").matchAll(LENGTH)) {
+    const isContainerQuery = prelude[1]?.toLowerCase() === "container";
+    for (const length of (prelude[2] ?? "").matchAll(LENGTH)) {
+      if (isContainerQuery && allowedSizes.has(length[0])) continue;
       violations.push({
         line: lineAt(css, prelude.index),
         text: length[0],

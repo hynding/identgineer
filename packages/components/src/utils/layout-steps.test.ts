@@ -44,7 +44,7 @@ describe("layout steps", () => {
     expect(GAP_STEPS[0]).toBe("none");
     expect(GAP_STEPS.at(-1)).toBe("3xl");
     expect(SIZE_STEPS[0]).toBe("xs");
-    expect(SIZE_STEPS.at(-1)).toBe("2xl");
+    expect(SIZE_STEPS.at(-1)).toBe("3xl");
   });
 });
 

@@ -21,6 +21,7 @@ import { DividerOrientation } from "./components/divider/divider-options";
 import { IconName } from "./components/icon/icon-paths";
 import { IconSize } from "./components/icon/icon-options";
 import { InputSize, InputType } from "./components/input/input-options";
+import { NavigationToggleDetail } from "./components/layout/layout-options";
 import { Placement } from "./utils/position";
 import { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 import { PageChangeDetail } from "./components/pagination/pagination-options";
@@ -51,6 +52,7 @@ export { DividerOrientation } from "./components/divider/divider-options";
 export { IconName } from "./components/icon/icon-paths";
 export { IconSize } from "./components/icon/icon-options";
 export { InputSize, InputType } from "./components/input/input-options";
+export { NavigationToggleDetail } from "./components/layout/layout-options";
 export { Placement } from "./utils/position";
 export { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 export { PageChangeDetail } from "./components/pagination/pagination-options";
@@ -693,6 +695,52 @@ export namespace Components {
           * @default ""
          */
         "value": string;
+    }
+    /**
+     * The page shell. One page, written once, is housed in the structure the `data-layout` attribute of
+     * the root (or of an ancestor) names: the same landmarks in the same reading order in all eight, and
+     * only a stylesheet that places them differently. The shell never reorders its own tree, so the
+     * order a reader and the Tab key meet things is the order of the markup in every layout.
+     * It is a size container, and every layout decides its small, medium and large arrangement from its
+     * own width, never the viewport's. Where a layout collapses the navigation behind a toggle, the
+     * stylesheet decides that too, and the script only reads what it decided (`--_nav`).
+     */
+    interface IdgLayout {
+        /**
+          * The accessible name of the aside landmark.
+          * @default "Related content"
+         */
+        "asideLabel": string;
+        /**
+          * The accessible name of the button that closes the navigation drawer.
+          * @default "Close"
+         */
+        "closeLabel": string;
+        /**
+          * Whether the shell sits inside a page rather than being the page. An embedded shell does not claim the height of the window, which a shell that is the page does.
+          * @default false
+         */
+        "embedded": boolean;
+        /**
+          * The text of the button that opens the collapsed navigation.
+          * @default "Menu"
+         */
+        "menuLabel": string;
+        /**
+          * The accessible name of the navigation landmark.
+          * @default "Main navigation"
+         */
+        "navigationLabel": string;
+        /**
+          * Whether the collapsed navigation is open. It can only be open while the layout collapses the navigation: it goes back to false when the container grows and the navigation is drawn inline.
+          * @default false
+         */
+        "navigationOpen": boolean;
+        /**
+          * The text of the skip link, the first control on the page.
+          * @default "Skip to content"
+         */
+        "skipLabel": string;
     }
     /**
      * An inline text link. It takes the same hardening as the button's link mode: the url goes
@@ -1616,6 +1664,10 @@ export interface IdgInputCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgInputElement;
 }
+export interface IdgLayoutCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgLayoutElement;
+}
 export interface IdgMenuCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgMenuElement;
@@ -1907,6 +1959,32 @@ declare global {
     var HTMLIdgInputElement: {
         prototype: HTMLIdgInputElement;
         new (): HTMLIdgInputElement;
+    };
+    interface HTMLIdgLayoutElementEventMap {
+        "idgNavigationToggle": NavigationToggleDetail;
+    }
+    /**
+     * The page shell. One page, written once, is housed in the structure the `data-layout` attribute of
+     * the root (or of an ancestor) names: the same landmarks in the same reading order in all eight, and
+     * only a stylesheet that places them differently. The shell never reorders its own tree, so the
+     * order a reader and the Tab key meet things is the order of the markup in every layout.
+     * It is a size container, and every layout decides its small, medium and large arrangement from its
+     * own width, never the viewport's. Where a layout collapses the navigation behind a toggle, the
+     * stylesheet decides that too, and the script only reads what it decided (`--_nav`).
+     */
+    interface HTMLIdgLayoutElement extends Components.IdgLayout, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgLayoutElementEventMap>(type: K, listener: (this: HTMLIdgLayoutElement, ev: IdgLayoutCustomEvent<HTMLIdgLayoutElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgLayoutElementEventMap>(type: K, listener: (this: HTMLIdgLayoutElement, ev: IdgLayoutCustomEvent<HTMLIdgLayoutElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgLayoutElement: {
+        prototype: HTMLIdgLayoutElement;
+        new (): HTMLIdgLayoutElement;
     };
     /**
      * An inline text link. It takes the same hardening as the button's link mode: the url goes
@@ -2344,6 +2422,7 @@ declare global {
         "idg-grid": HTMLIdgGridElement;
         "idg-icon": HTMLIdgIconElement;
         "idg-input": HTMLIdgInputElement;
+        "idg-layout": HTMLIdgLayoutElement;
         "idg-link": HTMLIdgLinkElement;
         "idg-menu": HTMLIdgMenuElement;
         "idg-menu-group": HTMLIdgMenuGroupElement;
@@ -3007,6 +3086,56 @@ declare namespace LocalJSX {
           * @default ""
          */
         "value"?: string;
+    }
+    /**
+     * The page shell. One page, written once, is housed in the structure the `data-layout` attribute of
+     * the root (or of an ancestor) names: the same landmarks in the same reading order in all eight, and
+     * only a stylesheet that places them differently. The shell never reorders its own tree, so the
+     * order a reader and the Tab key meet things is the order of the markup in every layout.
+     * It is a size container, and every layout decides its small, medium and large arrangement from its
+     * own width, never the viewport's. Where a layout collapses the navigation behind a toggle, the
+     * stylesheet decides that too, and the script only reads what it decided (`--_nav`).
+     */
+    interface IdgLayout {
+        /**
+          * The accessible name of the aside landmark.
+          * @default "Related content"
+         */
+        "asideLabel"?: string;
+        /**
+          * The accessible name of the button that closes the navigation drawer.
+          * @default "Close"
+         */
+        "closeLabel"?: string;
+        /**
+          * Whether the shell sits inside a page rather than being the page. An embedded shell does not claim the height of the window, which a shell that is the page does.
+          * @default false
+         */
+        "embedded"?: boolean;
+        /**
+          * The text of the button that opens the collapsed navigation.
+          * @default "Menu"
+         */
+        "menuLabel"?: string;
+        /**
+          * The accessible name of the navigation landmark.
+          * @default "Main navigation"
+         */
+        "navigationLabel"?: string;
+        /**
+          * Whether the collapsed navigation is open. It can only be open while the layout collapses the navigation: it goes back to false when the container grows and the navigation is drawn inline.
+          * @default false
+         */
+        "navigationOpen"?: boolean;
+        /**
+          * Fires when the collapsed navigation opens or closes.
+         */
+        "onIdgNavigationToggle"?: (event: IdgLayoutCustomEvent<NavigationToggleDetail>) => void;
+        /**
+          * The text of the skip link, the first control on the page.
+          * @default "Skip to content"
+         */
+        "skipLabel"?: string;
     }
     /**
      * An inline text link. It takes the same hardening as the button's link mode: the url goes
@@ -4057,6 +4186,15 @@ declare namespace LocalJSX {
         "accessibleDescription": string;
         "invalid": boolean;
     }
+    interface IdgLayoutAttributes {
+        "navigationLabel": string;
+        "asideLabel": string;
+        "skipLabel": string;
+        "menuLabel": string;
+        "closeLabel": string;
+        "navigationOpen": boolean;
+        "embedded": boolean;
+    }
     interface IdgLinkAttributes {
         "href": string;
         "target": string;
@@ -4270,6 +4408,7 @@ declare namespace LocalJSX {
         "idg-grid": Omit<IdgGrid, keyof IdgGridAttributes> & { [K in keyof IdgGrid & keyof IdgGridAttributes]?: IdgGrid[K] } & { [K in keyof IdgGrid & keyof IdgGridAttributes as `attr:${K}`]?: IdgGridAttributes[K] } & { [K in keyof IdgGrid & keyof IdgGridAttributes as `prop:${K}`]?: IdgGrid[K] };
         "idg-icon": Omit<IdgIcon, keyof IdgIconAttributes> & { [K in keyof IdgIcon & keyof IdgIconAttributes]?: IdgIcon[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `attr:${K}`]?: IdgIconAttributes[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `prop:${K}`]?: IdgIcon[K] };
         "idg-input": Omit<IdgInput, keyof IdgInputAttributes> & { [K in keyof IdgInput & keyof IdgInputAttributes]?: IdgInput[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `attr:${K}`]?: IdgInputAttributes[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `prop:${K}`]?: IdgInput[K] };
+        "idg-layout": Omit<IdgLayout, keyof IdgLayoutAttributes> & { [K in keyof IdgLayout & keyof IdgLayoutAttributes]?: IdgLayout[K] } & { [K in keyof IdgLayout & keyof IdgLayoutAttributes as `attr:${K}`]?: IdgLayoutAttributes[K] } & { [K in keyof IdgLayout & keyof IdgLayoutAttributes as `prop:${K}`]?: IdgLayout[K] };
         "idg-link": Omit<IdgLink, keyof IdgLinkAttributes> & { [K in keyof IdgLink & keyof IdgLinkAttributes]?: IdgLink[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `attr:${K}`]?: IdgLinkAttributes[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `prop:${K}`]?: IdgLink[K] };
         "idg-menu": Omit<IdgMenu, keyof IdgMenuAttributes> & { [K in keyof IdgMenu & keyof IdgMenuAttributes]?: IdgMenu[K] } & { [K in keyof IdgMenu & keyof IdgMenuAttributes as `attr:${K}`]?: IdgMenuAttributes[K] } & { [K in keyof IdgMenu & keyof IdgMenuAttributes as `prop:${K}`]?: IdgMenu[K] };
         "idg-menu-group": Omit<IdgMenuGroup, keyof IdgMenuGroupAttributes> & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes]?: IdgMenuGroup[K] } & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes as `attr:${K}`]?: IdgMenuGroupAttributes[K] } & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes as `prop:${K}`]?: IdgMenuGroup[K] };
@@ -4395,6 +4534,16 @@ declare module "@stencil/core" {
              */
             "idg-icon": LocalJSX.IntrinsicElements["idg-icon"] & JSXBase.HTMLAttributes<HTMLIdgIconElement>;
             "idg-input": LocalJSX.IntrinsicElements["idg-input"] & JSXBase.HTMLAttributes<HTMLIdgInputElement>;
+            /**
+             * The page shell. One page, written once, is housed in the structure the `data-layout` attribute of
+             * the root (or of an ancestor) names: the same landmarks in the same reading order in all eight, and
+             * only a stylesheet that places them differently. The shell never reorders its own tree, so the
+             * order a reader and the Tab key meet things is the order of the markup in every layout.
+             * It is a size container, and every layout decides its small, medium and large arrangement from its
+             * own width, never the viewport's. Where a layout collapses the navigation behind a toggle, the
+             * stylesheet decides that too, and the script only reads what it decided (`--_nav`).
+             */
+            "idg-layout": LocalJSX.IntrinsicElements["idg-layout"] & JSXBase.HTMLAttributes<HTMLIdgLayoutElement>;
             /**
              * An inline text link. It takes the same hardening as the button's link mode: the url goes
              * through `safeUrl` and a link that opens another browsing context always gets `noopener
