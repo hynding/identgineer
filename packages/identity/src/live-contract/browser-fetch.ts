@@ -73,8 +73,18 @@ const FORBIDDEN_REQUEST_HEADERS = new Set([
   "upgrade",
   "via",
 ]);
-const isForbidden = (name: string): boolean =>
-  FORBIDDEN_REQUEST_HEADERS.has(name) || name.startsWith("proxy-") || name.startsWith("sec-");
+const METHOD_OVERRIDE_HEADERS = new Set([
+  "x-http-method",
+  "x-http-method-override",
+  "x-method-override",
+]);
+const FORBIDDEN_METHODS = new Set(["connect", "trace", "track"]);
+const isForbidden = (name: string, value: string): boolean =>
+  FORBIDDEN_REQUEST_HEADERS.has(name) ||
+  name.startsWith("proxy-") ||
+  name.startsWith("sec-") ||
+  (METHOD_OVERRIDE_HEADERS.has(name) &&
+    list(value).some((method) => FORBIDDEN_METHODS.has(method)));
 
 /** What a browser hands page script for a redirect it was told not to follow. */
 const opaqueRedirect = (): Response =>
@@ -179,7 +189,7 @@ export const createBrowserFetch = (options: BrowserFetchOptions) => {
     const url = new URL(String(input));
     const method = (init.method ?? "GET").toUpperCase();
     const headers = new Headers(init.headers);
-    for (const name of [...headers.keys()]) if (isForbidden(name)) headers.delete(name);
+    for (const [name, value] of [...headers]) if (isForbidden(name, value)) headers.delete(name);
     const crossOrigin = url.origin !== page.origin;
     const credentials =
       init.credentials === "include" || (!crossOrigin && init.credentials !== "omit");
@@ -204,14 +214,15 @@ export const createBrowserFetch = (options: BrowserFetchOptions) => {
     if (credentials) {
       for (const header of response.headers.getSetCookie()) options.jar.store(url, header, page);
     }
+    // The CORS check comes first, unfollowed redirects included (Fetch's HTTP fetch, step 4.5).
+    if (cors && crossOrigin && !allowsOrigin(response, page.origin, credentials)) {
+      await response.body?.cancel();
+      throw failed();
+    }
     // A redirect left unfollowed is opaque to page script: status 0, no headers or body.
     if (manual && response.status >= 300 && response.status < 400) {
       await response.body?.cancel();
       return opaqueRedirect();
-    }
-    if (cors && crossOrigin && !allowsOrigin(response, page.origin, credentials)) {
-      await response.body?.cancel();
-      throw failed();
     }
     return cors && crossOrigin ? exposed(response, credentials) : response;
   };
