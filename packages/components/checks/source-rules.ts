@@ -9,6 +9,8 @@ const RULES = [
   { rule: "outerHTML", pattern: /\bouterHTML\b/g },
   { rule: "insertAdjacentHTML", pattern: /\binsertAdjacentHTML\b/g },
   { rule: "document.write", pattern: /\bdocument\s*\.\s*write(?:ln)?\b/g },
+  // Deprecated, and clipboard access goes through navigator.clipboard with a visible fallback.
+  { rule: "execCommand", pattern: /\bexecCommand\b/g },
   { rule: "srcdoc", pattern: /\bsrcdoc\b/gi },
   { rule: "eval", pattern: /(?<![\w$])eval\s*\(/g },
   { rule: "Function constructor", pattern: /(?<![\w$.])(?:new\s+)?Function\s*\(/g },
