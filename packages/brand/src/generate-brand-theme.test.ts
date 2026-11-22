@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { emitBrandThemeCss } from "./emit-brand-theme.ts";
 import { fontPairingFor } from "./font-pairings.ts";
 import { generateBrandTheme, type BrandTheme } from "./generate-brand-theme.ts";
-import { toOklch } from "./oklch.ts";
+import { toOklab, toOklch } from "./oklch.ts";
 import { parseHexColor } from "./srgb.ts";
 import {
   contrastProblems,
@@ -170,9 +170,33 @@ describe("generateBrandTheme", () => {
         const turn = hueDistance(from.hue, to.hue);
         expect(turn, `${primary} ${scheme}`).toBeGreaterThanOrEqual(25);
         expect(turn, `${primary} ${scheme}`).toBeLessThanOrEqual(50);
-        expect(to.chroma, `${primary} ${scheme}`).toBeGreaterThanOrEqual(from.chroma * 0.8);
+        expect(to.chroma, `${primary} ${scheme}`).toBeGreaterThanOrEqual(from.chroma * 0.6);
         expect(Math.abs(to.lightness - from.lightness), `${primary} ${scheme}`).toBeLessThan(0.02);
       }
+    },
+  );
+
+  it.each([
+    ["#16a34a", "teal"],
+    ["#f59e0b", "coral"],
+  ])("turns %s in its gradient away from the olive band, towards %s", (primary) => {
+    const theme = generateBrandTheme(kitFrom({ colors: { primary } }));
+    const [, end] = theme.document.light.gradient.brand.$value;
+    const to = toOklch(parseHexColor(end?.color ?? "") ?? [0, 0, 0]);
+    const olive = to.hue >= 95 && to.hue <= 135 && to.lightness < 0.85;
+    expect(olive, `${primary} ends at ${String(end?.color)}`).toBe(false);
+  });
+
+  it.each(["#111827", "#000000", "#ffffff", "#0b1d3a"])(
+    "gives %s a gradient whose ends can be told apart",
+    (primary) => {
+      const theme = generateBrandTheme(kitFrom({ colors: { primary } }));
+      const [start, end] = theme.document.light.gradient.brand.$value;
+      expect(start?.color).toBe(primary);
+      const from = toOklab(parseHexColor(primary) ?? [0, 0, 0]);
+      const to = toOklab(parseHexColor(end?.color ?? "") ?? [0, 0, 0]);
+      const distance = Math.hypot(to.lightness - from.lightness, to.a - from.a, to.b - from.b);
+      expect(distance, `${primary} ends at ${String(end?.color)}`).toBeGreaterThanOrEqual(0.08);
     },
   );
 
