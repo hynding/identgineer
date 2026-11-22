@@ -40,6 +40,9 @@ importers:
 
   packages/components:
     dependencies:
+      '@identgineer/variations':
+        specifier: workspace:*
+        version: link:../variations
       '@stencil/core':
         specifier: 4.45.5
         version: 4.45.5

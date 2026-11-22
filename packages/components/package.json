@@ -29,6 +29,7 @@
     "test:browser": "playwright test --trace off"
   },
   "dependencies": {
+    "@identgineer/variations": "workspace:*",
     "@stencil/core": "4.45.5"
   },
   "devDependencies": {
