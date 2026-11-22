@@ -242,6 +242,35 @@ const SCAFFOLDED = join(LIVE_DIR, "strapi-php.scaffolded");
 
 const scaffolded = () => existsSync(SCAFFOLDED);
 
+// The line camis' scaffold adds to bootstrap/providers.php (generated DEPLOY.md), and the admin
+// panel's entry it follows.
+const AUTH_PROVIDER_LINE =
+  "...(class_exists(\\App\\Providers\\CamisAuthServiceProvider::class) ? [\\App\\Providers\\CamisAuthServiceProvider::class] : []),";
+const PANEL_ENTRY = /^([ \t]*)\\?App\\Providers\\Filament\\AdminPanelProvider::class,?[ \t]*\r?$/m;
+
+/**
+ * Adds camis' auth provider to an app scaffolded before the scaffold registered it (the admin
+ * panel's sign-in; nothing the SDK uses), after the panel's entry, as a fresh scaffold has it, so
+ * the build stops warning. Once there, or without the panel's entry, the file is left alone.
+ */
+const registerAuthProvider = () => {
+  const path = join(APP_DIR, "bootstrap", "providers.php");
+  if (!existsSync(path)) return;
+  const text = readFileSync(path, "utf8");
+  if (text.includes("CamisAuthServiceProvider")) return;
+  const panel = PANEL_ENTRY.exec(text);
+  if (panel === null) return;
+  const entry = panel[0].replace(/\r$/, "");
+  const eol = panel[0].endsWith("\r") ? "\r\n" : "\n";
+  const listed = entry.trimEnd().endsWith(",") ? entry : `${entry.trimEnd()},`;
+  const at = panel.index;
+  const after = at + panel[0].length + (text.slice(at + panel[0].length).startsWith("\n") ? 1 : 0);
+  writeFileSync(
+    path,
+    `${text.slice(0, at)}${listed}${eol}${panel[1]}${AUTH_PROVIDER_LINE}${eol}${text.slice(after)}`,
+  );
+};
+
 /** Scaffolds the Laravel host app once (Composer, network) and regenerates camis' files on it. */
 const generate = async () => {
   mkdirSync(LIVE_DIR, { recursive: true });
@@ -256,6 +285,7 @@ const generate = async () => {
     stripVendorVcs();
     writeFileSync(SCAFFOLDED, "");
   }
+  registerAuthProvider();
   const fromLive = (file) => relative(LIVE_DIR, join(CMS_DIR, file));
   const config = {
     ir: fromLive("camis.json"),

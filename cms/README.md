@@ -216,7 +216,10 @@ between runs, so a rerun within a minute may wait out the throttled server's reg
 The app scaffolded before camis added the middleware-priority line to `bootstrap/app.php`
 (`prependToPriorityList(ThrottleRequests, StrapiJsonBody)`, generated DEPLOY.md) does not have it,
 and the live run does not add it: the users-permissions routes count with camis' own throttle, not
-Laravel's `ThrottleRequests`, so the line changes nothing they do. A fresh scaffold has it.
+Laravel's `ThrottleRequests`, so the line changes nothing they do. A fresh scaffold has it. Such an app
+also lacks the `CamisAuthServiceProvider` line in `bootstrap/providers.php` (the admin panel's
+sign-in, nothing the SDK uses); the live script adds that documented line after the panel's entry
+when it is missing, so the app matches a fresh scaffold and the build no longer warns.
 Everything it writes is under the git-ignored `generated/live`, one scaffold only; delete that
 directory to scaffold again. A scaffold counts as done only once `generated/live/strapi-php.scaffolded`
 is written, after it has finished, so one interrupted is started again from nothing. After
