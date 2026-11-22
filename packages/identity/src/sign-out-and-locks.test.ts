@@ -91,3 +91,57 @@ describe("cookie refreshes from several tabs", () => {
     expect(client.getState().status).toBe("signed-in");
   });
 });
+
+describe("a lock manager that fails", () => {
+  const refusing = {
+    request: (): Promise<never> => Promise.reject(new DOMException("denied", "SecurityError")),
+  };
+  const throwing = {
+    request: (): Promise<never> => {
+      throw new DOMException("denied", "SecurityError");
+    },
+  };
+
+  it.each([
+    ["rejects", refusing],
+    ["throws", throwing],
+  ])("restores without the lock when the lock manager %s", async (_name, locks) => {
+    const { makeClient, signIn } = setup({}, { locks });
+    await signIn();
+    const tab = makeClient();
+    expect(await tab.restore()).toMatchObject({ status: "signed-in" });
+    expect(await makeClient().restore()).toMatchObject({ status: "signed-in" });
+  });
+
+  it("reports no session, not the lock's error, when there is no cookie", async () => {
+    const { client } = setup({}, { locks: refusing });
+    expect(await client.restore()).toEqual({ status: "signed-out", reason: "no-session" });
+  });
+
+  it("stops waiting for a lock that is never granted after the request timeout", async () => {
+    const never = { request: (): Promise<never> => new Promise<never>(() => undefined) };
+    const { api, clock, makeClient, signIn } = setup({}, { locks: never, requestTimeoutMs: 5_000 });
+    await signIn();
+    const tab = makeClient();
+    let restored: unknown;
+    void tab.restore().then((state) => {
+      restored = state;
+    });
+    await settle();
+    expect(restored).toBeUndefined();
+    clock.advance(5_000);
+    await settle();
+    await settle();
+    expect(restored).toMatchObject({ status: "signed-in" });
+    let signedOut = false;
+    void tab.signOut().then(() => {
+      signedOut = true;
+    });
+    for (let round = 0; round < 3; round += 1) {
+      clock.advance(5_000);
+      await settle();
+    }
+    expect(signedOut).toBe(true);
+    expect(api.activeSessionCount("ada@example.com")).toBe(0);
+  });
+});
