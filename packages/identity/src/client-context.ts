@@ -99,9 +99,9 @@ export interface ClientContext {
   readonly accessToken: (ticket: Ticket) => Promise<string>;
   /**
    * A credential request: held back while throttled, and a 429 starts the hold. A cookie request
-   * waits for the cookie lock and is sent only if `wanted` still says so once it is granted
-   * (otherwise it rejects `unauthorized`, or `unknown` once disposed): a sign-in cancelled while
-   * it waited never sends the credentials.
+   * with a `wanted` check (a sign-in) is sent only if it still holds once the lock is granted,
+   * and otherwise rejects `unauthorized`; its wait ends with `unknown` at dispose. So a sign-in
+   * cancelled while it waited never sends the credentials.
    */
   readonly credentialRequest: (request: ApiRequest, wanted?: () => boolean) => Promise<ApiResponse>;
   /**
@@ -206,12 +206,13 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
   const lifetime = new AbortController();
   const sectionBounds = {
     clock,
-    disposed: lifetime.signal,
     holdMs: COOKIE_SECTION_TIMEOUTS * timeoutMs,
     waitMs: (COOKIE_SECTION_TIMEOUTS + 1) * timeoutMs,
   };
-  const cookieLock = <T>(task: (section: CookieSection) => Promise<T>): Promise<T> =>
-    withLock(locks, COOKIE_LOCK, sectionBounds, task);
+  const cookieLock = <T>(
+    task: (section: CookieSection) => Promise<T>,
+    cancel?: AbortSignal,
+  ): Promise<T> => withLock(locks, COOKIE_LOCK, sectionBounds, task, cancel);
   const session = createSession();
   const throttle = createThrottle(clock);
   let disposed = false;
@@ -297,14 +298,18 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
 
   const credentialRequest = async (
     request: ApiRequest,
-    wanted: () => boolean = () => true,
+    wanted?: () => boolean,
   ): Promise<ApiResponse> => {
     throttle.check();
+    const send = (section: CookieSection): Promise<ApiResponse> => {
+      // Granted after a sign-out cancelled it (a dispose ends the wait itself, with `unknown`).
+      if (wanted?.() === false) throw new IdentityError("unauthorized");
+      return transport.send(request, section.signal);
+    };
+    // Only a wait for a request that may no longer be wanted ends at dispose: a sign-out's or an
+    // abandoned sign-in's logout still ends its session once the lock comes.
     const response = await (request.cookie === true
-      ? cookieLock((section) => {
-          if (!wanted()) throw new IdentityError(disposed ? "unknown" : "unauthorized");
-          return transport.send(request, section.signal);
-        })
+      ? cookieLock(send, wanted === undefined ? undefined : lifetime.signal)
       : transport.send(request));
     if (response.status === THROTTLED_STATUS) {
       const error = throttledError(response, clock.now());

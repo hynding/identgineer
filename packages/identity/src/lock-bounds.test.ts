@@ -169,7 +169,6 @@ describe("withLock", () => {
     clock,
     holdMs: 3 * TIMEOUT,
     waitMs: 4 * TIMEOUT,
-    disposed: new AbortController().signal,
   });
 
   it("aborts a section at its deadline, rejects network and lets the next holder in", async () => {
@@ -282,5 +281,62 @@ describe("a sign-in waiting for the cookie lock", () => {
     release();
     await settle();
     expect(api.requests).toHaveLength(0);
+  });
+});
+
+describe("a lock wait pending at dispose that is not a sign-in", () => {
+  it("still ends a sign-out's session once the other tab lets the lock go", async () => {
+    const locks = createMemoryLocks();
+    const { api, client, signIn } = setup({}, { locks, requestTimeoutMs: TIMEOUT });
+    await signIn();
+    await settle();
+    const release = await holdLock(locks);
+    const signingOut = client.signOut();
+    await settle();
+    client.dispose();
+    release();
+    // Its own logout is sent; the cookie lookup after it is skipped once disposed, as documented.
+    await expect(signingOut).resolves.toEqual({ outcome: "server-unreachable" });
+    expect(api.activeSessionCount("ada@example.com")).toBe(0);
+  });
+
+  it("still ends the session a cancelled sign-in opened", async () => {
+    const locks = createMemoryLocks();
+    const { api, client } = setup({}, { locks, requestTimeoutMs: TIMEOUT });
+    const releaseSignIn = api.holdNext("POST", "/api/auth/local");
+    const signingIn = rejection(client.signIn({ identifier: "ada", password: PASSWORD }));
+    await settle();
+    const release = await holdLock(locks);
+    // The sign-out's lookup finds nothing, so only the cancelled sign-in's logout can end it.
+    api.respondNext("POST", "/api/auth/refresh", { status: 401, body: {} });
+    api.respondNext("POST", "/api/auth/refresh", { status: 401, body: {} });
+    const signingOut = client.signOut();
+    await settle();
+    releaseSignIn();
+    await settle();
+    expect(api.activeSessionCount("ada@example.com")).toBe(1);
+    client.dispose();
+    release();
+    await signingOut;
+    await signingIn;
+    await settle();
+    expect(api.activeSessionCount("ada@example.com")).toBe(0);
+  });
+});
+
+describe("a provider sign-in waiting for the cookie lock", () => {
+  it("is never sent once a sign-out in this tab cancelled it: it rejects unauthorized", async () => {
+    const locks = createMemoryLocks();
+    const { api, client } = setup({}, { locks, requestTimeoutMs: TIMEOUT });
+    api.completeProviderRoundTrip("github", "lin@example.com");
+    const release = await holdLock(locks);
+    const signingIn = rejection(client.completeProviderSignIn("github", { search: "" }));
+    await settle();
+    const signingOut = client.signOut();
+    await settle();
+    release();
+    await signingOut;
+    expect(await signingIn).toMatchObject({ code: "unauthorized" });
+    expect(api.requests.some((request) => request.path.includes("/callback"))).toBe(false);
   });
 });
