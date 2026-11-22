@@ -48,6 +48,8 @@ export const MAX_REPORTED_ERRORS = 50;
 // markup, CSS or an escape anywhere (< > { } ; : \ " / ( ) @ and every control or format
 // character) is refused rather than escaped.
 const TEXT = /^[\p{L}\p{M}\p{N} .,'’&!?-]+$/u;
+// Scripts need a few combining marks on one letter; a long stack only smears over the text around it.
+const MARK_STACK = /\p{M}{5}/u;
 const SHOWABLE_KEY = /^[A-Za-z0-9_$-]{1,40}$/;
 
 const KIT_KEYS = ["id", "name", "tagline", "colors", "typography", "corners", "tone"] as const;
@@ -150,11 +152,11 @@ function readText(value: unknown, path: string, max: number, errors: Errors): st
     errors.add(path, "too-long", `takes at most ${String(max)} characters`);
     return undefined;
   }
-  if (!TEXT.test(text) || text.trim() !== text || text.includes("  ")) {
+  if (!TEXT.test(text) || MARK_STACK.test(text) || text.trim() !== text || text.includes("  ")) {
     errors.add(
       path,
       "invalid-text",
-      "takes letters, digits, single inner spaces and . , ' ’ & ! ? - only",
+      "takes letters, digits, at most four combining marks in a row, single inner spaces and . , ' ’ & ! ? - only",
     );
     return undefined;
   }
