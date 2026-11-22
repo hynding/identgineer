@@ -8,7 +8,9 @@
 //
 // The command gets IDENTITY_LIVE_BACKEND, the path of a JSON file describing the servers. Each
 // server logs its requests to <live dir>/<name>.server.log. A server that exits stops the run at
-// once; SIGINT, SIGTERM and SIGHUP are passed on to the command, and the script exits as it did.
+// once; SIGINT, SIGTERM and SIGHUP are passed on to the command (or to camis or artisan while
+// they set up), and the script exits with 128 and the signal's number. After scaffolding it strips
+// the VCS checkouts Composer may leave in vendor.
 import { spawn, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { constants } from "node:os";
@@ -17,6 +19,7 @@ import {
   existsSync,
   mkdirSync,
   openSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -134,19 +137,56 @@ const phpEnvironment = (settings) => ({
   ...settings,
 });
 
-const run = (command, args, options = {}) => {
-  const result = spawnSync(command, args, { stdio: "inherit", ...options });
-  if (result.error !== undefined) fail(`could not run ${command}: ${result.error.message}`);
-  if (result.status !== 0)
-    fail(`${command} ${args.join(" ")} failed (exit ${String(result.status)})`);
-};
+let signalled = false;
 
-const camis = (...args) => {
+/** The setup step running now (camis, artisan), so a signal can stop it and what it started. */
+let current;
+
+/**
+ * Runs a setup step in a process group of its own and waits for it. A signal stops the whole group:
+ * camis.js runs the CLI as a child of its own, which a signal to camis.js alone would leave running.
+ */
+const run = (command, args, options = {}) =>
+  new Promise((done) => {
+    const child = spawn(command, args, { stdio: "inherit", ...options, detached: true });
+    current = child;
+    child.on("error", (error) => {
+      fail(`could not run ${command}: ${error.message}`);
+    });
+    child.on("exit", (code, signal) => {
+      current = undefined;
+      if (signalled) return; // onSignal exits once the step has
+      if (code !== 0) {
+        const how = signal === null ? `exit ${String(code)}` : signal;
+        fail(`${command} ${args.join(" ")} failed (${how})`);
+      }
+      done();
+    });
+  });
+
+const camis = (...args) =>
   run(process.execPath, [join(CMS_DIR, "scripts", "camis.js"), ...args], {
     cwd: CMS_DIR,
     // Absolute: camis.js resolves it against its own working directory, cms/ here.
     env: phpEnvironment({ CAMIS_DIR: resolve(process.env.CAMIS_DIR ?? "") }),
   });
+
+/**
+ * Removes the VCS checkouts Composer leaves in vendor when it clones a package rather than
+ * downloading its archive (as it does where GitHub's archives are out of reach): gigabytes the
+ * app never reads.
+ */
+const stripVendorVcs = () => {
+  const vendor = join(APP_DIR, "vendor");
+  for (const owner of readdirSync(vendor, { withFileTypes: true })) {
+    if (!owner.isDirectory()) continue;
+    for (const pkg of readdirSync(join(vendor, owner.name), { withFileTypes: true })) {
+      if (!pkg.isDirectory()) continue;
+      for (const vcs of [".git", ".hg", ".svn"]) {
+        rmSync(join(vendor, owner.name, pkg.name, vcs), { recursive: true, force: true });
+      }
+    }
+  }
 };
 
 const freePort = () =>
@@ -190,7 +230,7 @@ const checkPrerequisites = () => {
 const scaffolded = () => existsSync(join(APP_DIR, "vendor", "autoload.php"));
 
 /** Scaffolds the Laravel host app once (Composer, network) and regenerates camis' files on it. */
-const generate = () => {
+const generate = async () => {
   mkdirSync(LIVE_DIR, { recursive: true });
   if (!scaffolded()) {
     if (!onPath("composer")) {
@@ -198,7 +238,8 @@ const generate = () => {
     }
     step("scaffolding the Laravel app (once; needs Composer and Packagist)");
     rmSync(APP_DIR, { recursive: true, force: true });
-    camis("scaffold", "filament", APP_DIR);
+    await camis("scaffold", "filament", APP_DIR);
+    stripVendorVcs();
   }
   const fromLive = (file) => relative(LIVE_DIR, join(CMS_DIR, file));
   const config = {
@@ -216,7 +257,7 @@ const generate = () => {
   };
   writeFileSync(join(LIVE_DIR, "camis.config.json"), `${JSON.stringify(config, null, 2)}\n`);
   step("generating the backend from cms/camis.json");
-  camis("build", "--config", join(LIVE_DIR, "camis.config.json"));
+  await camis("build", "--config", join(LIVE_DIR, "camis.config.json"));
 };
 
 /** The rates a server runs with: camis' defaults for the ceiling and refresh unless relaxed. */
@@ -240,12 +281,12 @@ const serverEnvironment = (server, port) => {
 };
 
 /** A fresh database for the server, migrated and seeded with the roles. */
-const prepareDatabase = (env) => {
+const prepareDatabase = async (env) => {
   rmSync(env.DB_DATABASE, { force: true });
   writeFileSync(env.DB_DATABASE, "");
   const options = { cwd: APP_DIR, env, stdio: ["ignore", "ignore", "inherit"] };
-  run("php", ["artisan", "migrate", "--force", "--no-interaction"], options);
-  run(
+  await run("php", ["artisan", "migrate", "--force", "--no-interaction"], options);
+  await run(
     "php",
     ["artisan", "db:seed", "--class=RolePermissionSeeder", "--force", "--no-interaction"],
     options,
@@ -297,7 +338,7 @@ const serverExited = (name, code, signal, log) => {
 const startServer = async (server, shared) => {
   const port = await freePort();
   const env = phpEnvironment({ ...shared, ...serverEnvironment(server, port) });
-  prepareDatabase(env);
+  await prepareDatabase(env);
   // PHP's built-in server with Laravel's router script, as `php artisan serve` runs it, but with
   // this process's environment passed through so each server gets its own settings.
   const router = join(
@@ -337,31 +378,42 @@ const startServer = async (server, shared) => {
   };
 };
 
-/** Passes a signal on to the command and exits as it did, or at once without one. */
-let signalled = false;
-
+/**
+ * Passes a signal on to the command, or to the setup step's process group, and exits with 128 and
+ * the signal's number once it has stopped; at once when neither is running.
+ */
 const onSignal = (signal) => {
   signalled = true;
   const status = 128 + constants.signals[signal];
-  if (runner === undefined || runner.exitCode !== null) {
+  const stopped = () => {
     stopServers();
     process.exit(status);
+  };
+  if (current !== undefined && current.exitCode === null) {
+    current.once("exit", stopped);
+    try {
+      process.kill(-current.pid, signal);
+    } catch {
+      current.kill(signal);
+    }
+    return;
+  }
+  if (runner === undefined || runner.exitCode !== null) {
+    stopped();
+    return;
   }
   runner.kill(signal);
-  runner.once("exit", () => {
-    stopServers();
-    process.exit(status);
-  });
+  runner.once("exit", stopped);
 };
 
 const main = async () => {
+  process.on("exit", stopServers);
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) process.on(signal, onSignal);
   checkPrerequisites();
-  generate();
+  await generate();
   const shared = sharedEnvironment();
   writeFileSync(join(APP_DIR, ".env"), dotenv(shared));
   rmSync(MAIL_LOG, { force: true });
-  process.on("exit", stopServers);
-  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) process.on(signal, onSignal);
   const servers = [];
   for (const server of SERVERS) servers.push(await startServer(server, shared));
   const description = join(LIVE_DIR, "backend.json");
