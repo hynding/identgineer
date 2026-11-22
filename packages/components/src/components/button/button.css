@@ -104,12 +104,30 @@
   box-shadow: none;
 }
 
-/* Designs without control borders (soft, elevated) would leave a quiet variant with no edge. */
+/* Designs without control borders (soft, elevated) would leave a quiet variant with no edge, and
+   a light accent fill with none the page can tell apart. accent-border is the accent itself where
+   the accent already stands out, so there the ring disappears into the fill. */
 @container style(--idg-border-control-style: none) {
   .variant-secondary {
     box-shadow:
       inset 0 0 0 1px var(--idg-color-border-strong),
       var(--idg-elevation-sm);
+  }
+
+  .variant-primary {
+    box-shadow:
+      inset 0 0 0 1px var(--idg-color-accent-border),
+      var(--idg-elevation-sm);
+  }
+
+  .variant-primary:not(:disabled):not([aria-disabled="true"]):hover {
+    box-shadow:
+      inset 0 0 0 1px var(--idg-color-accent-border),
+      var(--idg-elevation-md);
+  }
+
+  .variant-primary:not(:disabled):not([aria-disabled="true"]):active {
+    box-shadow: inset 0 0 0 1px var(--idg-color-accent-border);
   }
 }
 

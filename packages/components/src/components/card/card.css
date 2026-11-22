@@ -128,7 +128,7 @@
 }
 
 .variant-outlined.interactive:hover {
-  --_ring: inset 0 0 0 2px var(--idg-color-accent);
+  --_ring: inset 0 0 0 2px var(--idg-color-accent-indicator);
 }
 
 /* The link covers the card, so its own focus ring would only outline the heading text. Where

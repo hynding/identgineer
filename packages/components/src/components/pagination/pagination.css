@@ -49,8 +49,8 @@
 }
 
 .control[aria-current="page"] {
-  background: var(--idg-color-accent);
-  color: var(--idg-color-on-accent);
+  background: var(--idg-color-accent-indicator);
+  color: var(--idg-color-on-accent-indicator);
   cursor: default;
 }
 
