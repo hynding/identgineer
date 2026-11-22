@@ -220,6 +220,17 @@ describe("idg-user-menu state", () => {
     expect(shadowOf(root).querySelector('slot[name="signed-out"]')).not.toBeNull();
   });
 
+  it("tries a restore that could not reach the server again when the browser is back online", async () => {
+    const { client, api } = identitySetup();
+    api.respondNext("POST", "/api/auth/refresh", "network-error");
+    const { root, waitForChanges } = await mount(client);
+    await settle(waitForChanges);
+    expect(shadowOf(root).querySelector('slot[name="signed-out"]')).toBeNull();
+    window.dispatchEvent(new Event("online"));
+    await settle(waitForChanges);
+    expect(shadowOf(root).querySelector('slot[name="signed-out"]')).not.toBeNull();
+  });
+
   it("draws nothing without a client", async () => {
     const { root } = await mount();
     expect(menu(root)).toBeNull();
