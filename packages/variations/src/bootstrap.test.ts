@@ -2,7 +2,9 @@ import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DESIGN_IDS, LAYOUT_IDS, SCHEMES, THEME_IDS, UX_MODE_IDS } from "@identgineer/tokens";
 import { Window } from "happy-dom";
+import { attributes, execute, NONE, run, SCRIPT } from "./bootstrap-harness.ts";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   buildBootstrapFiles,
@@ -14,45 +16,6 @@ import { CHANGE_EVENT, MAX_STORED_LENGTH, STORAGE_KEY, URL_PARAM_PREFIX } from "
 import { REGISTRY, STATE_KEYS } from "./registry.ts";
 import { loadVariations, saveVariations } from "./storage.ts";
 import { encodeVariations } from "./url.ts";
-
-const SCRIPT = buildBootstrapFiles()["bootstrap.js"] ?? "";
-
-function execute(window: Window): void {
-  window.eval(SCRIPT);
-}
-
-interface Run {
-  readonly root: HTMLElement;
-  readonly window: Window;
-}
-
-/** Runs the built script in a fresh page, the way a browser would in `<head>`. */
-function run(
-  options: { search?: string; stored?: string; storage?: "throws" | "absent" } = {},
-): Run {
-  const window = new Window({ url: `https://example.test/${options.search ?? ""}` });
-  if (options.stored !== undefined) window.localStorage.setItem(STORAGE_KEY, options.stored);
-  if (options.storage === "throws") {
-    Object.defineProperty(window, "localStorage", {
-      get() {
-        throw new DOMException("blocked", "SecurityError");
-      },
-    });
-  }
-  if (options.storage === "absent") {
-    Object.defineProperty(window, "localStorage", { value: undefined });
-  }
-  execute(window);
-  return { root: window.document.documentElement as unknown as HTMLElement, window };
-}
-
-function attributes(root: HTMLElement): Record<string, string | null> {
-  return Object.fromEntries(
-    STATE_KEYS.map((key) => [key, root.getAttribute(REGISTRY[key].attribute)]),
-  );
-}
-
-const NONE = { theme: null, design: null, layout: null, ux: null, scheme: null };
 
 describe("the bootstrap script", () => {
   it("sets nothing when there is neither a URL choice nor a stored one", () => {
@@ -117,6 +80,19 @@ describe("the bootstrap script", () => {
     expect(loadVariations({ getItem: () => store.get(STORAGE_KEY) ?? null } as never)).toEqual(
       state,
     );
+  });
+
+  it("removes a server-rendered data-scheme for a stored system scheme", () => {
+    const { root } = run({ stored: '{"scheme":"system"}', rendered: { "data-scheme": "dark" } });
+    expect(root.hasAttribute("data-scheme")).toBe(false);
+  });
+
+  it("lets a stored choice replace a server-rendered one, and keeps it where nothing is stored", () => {
+    const { root } = run({
+      stored: '{"theme":"tidal"}',
+      rendered: { "data-theme": "ember", "data-design": "glass" },
+    });
+    expect(attributes(root)).toEqual({ ...NONE, theme: "tidal", design: "glass" });
   });
 
   it("removes data-scheme for an explicit system scheme in the URL", () => {
@@ -229,7 +205,7 @@ describe("the bootstrap source", () => {
     expect(SCRIPT).not.toMatch(/[\n\r]|\/\*|\/\/|\s{2,}/);
   });
 
-  it("embeds exactly the registry's id lists, so it cannot drift from the tokens", () => {
+  it("embeds exactly the token package's ids, so it cannot drift from the tokens", () => {
     const literal = /var c=(\{.*?\});/.exec(SCRIPT)?.[1];
     const config = JSON.parse(literal ?? "null") as {
       k: string;
@@ -240,15 +216,13 @@ describe("the bootstrap source", () => {
     expect(config.k).toBe(STORAGE_KEY);
     expect(config.m).toBe(MAX_STORED_LENGTH);
     expect(config.p).toBe(URL_PARAM_PREFIX);
-    expect(config.a).toEqual(
-      STATE_KEYS.map((key) => [
-        key,
-        REGISTRY[key].attribute,
-        key === "scheme"
-          ? [...REGISTRY.scheme.ids]
-          : REGISTRY[key].variations.map((variation) => variation.id),
-      ]),
-    );
+    expect(config.a).toEqual([
+      ["theme", "data-theme", [...THEME_IDS]],
+      ["design", "data-design", [...DESIGN_IDS]],
+      ["layout", "data-layout", [...LAYOUT_IDS]],
+      ["ux", "data-ux", [...UX_MODE_IDS]],
+      ["scheme", "data-scheme", [...SCHEMES, "system"]],
+    ]);
   });
 
   it("builds to identical bytes every time", () => {
