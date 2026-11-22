@@ -15,6 +15,7 @@ import { FormFeedback } from "../../identity/form-feedback";
 import { readIdentityError } from "../../identity/identity-error";
 import type { RegisterClient } from "../../identity/identity-types";
 import { mergeLabels } from "../../identity/labels";
+import { markPasswordLength } from "../../identity/new-password";
 import { MAX_PASSWORD_BYTES, utf8ByteLength } from "../../identity/password-bytes";
 import { systemTimers, type CountdownClock } from "../../identity/throttle-countdown";
 import type { ValueDetail } from "../../utils/event-details";
@@ -114,13 +115,7 @@ export class IdgRegister {
 
   private handlePasswordInput = (event: CustomEvent<ValueDetail>): void => {
     this.passwordBytes = utf8ByteLength(event.detail.value);
-    const { passwordTooLong } = this.text();
-    const current = this.feedback.fieldErrors.password;
-    if (this.passwordBytes > MAX_PASSWORD_BYTES) {
-      this.feedback.setFieldError("password", passwordTooLong);
-    } else if (current === passwordTooLong) {
-      this.feedback.setFieldError("password", undefined);
-    }
+    markPasswordLength(this.feedback, "password", this.passwordBytes, this.text().passwordTooLong);
   };
 
   private handleSubmit = (event: globalThis.Event): void => {

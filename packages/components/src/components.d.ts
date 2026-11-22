@@ -25,16 +25,18 @@ import { NavigationToggleDetail } from "./components/layout/layout-options";
 import { Placement } from "./utils/position";
 import { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 import { PageChangeDetail } from "./components/pagination/pagination-options";
+import { PasswordResetClient, RegisterClient, SignInClient } from "./identity/identity-types";
+import { PasswordResetMode } from "./components/password-reset/password-reset-options";
+import { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
+import { CountdownClock } from "./identity/throttle-countdown";
+import { SignedInDetail } from "./identity/event-details";
 import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
-import { RegisterClient, SignInClient } from "./identity/identity-types";
 import { RegisterLabels } from "./components/register/register-labels";
-import { CountdownClock } from "./identity/throttle-countdown";
 import { RegisteredDetail } from "./components/register/register-types";
 import { SidebarSide } from "./components/sidebar/sidebar-options";
 import { SignInLabels } from "./components/sign-in/sign-in-labels";
 import { ProviderSignInDetail, SignInProvider } from "./components/sign-in/sign-in-types";
-import { SignedInDetail } from "./identity/event-details";
 import { SkeletonVariant } from "./components/skeleton/skeleton-options";
 import { StackAlignment } from "./components/stack/stack-options";
 import { StatDirection, StatSentiment } from "./components/stat/stat-options";
@@ -65,16 +67,18 @@ export { NavigationToggleDetail } from "./components/layout/layout-options";
 export { Placement } from "./utils/position";
 export { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 export { PageChangeDetail } from "./components/pagination/pagination-options";
+export { PasswordResetClient, RegisterClient, SignInClient } from "./identity/identity-types";
+export { PasswordResetMode } from "./components/password-reset/password-reset-options";
+export { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
+export { CountdownClock } from "./identity/throttle-countdown";
+export { SignedInDetail } from "./identity/event-details";
 export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
-export { RegisterClient, SignInClient } from "./identity/identity-types";
 export { RegisterLabels } from "./components/register/register-labels";
-export { CountdownClock } from "./identity/throttle-countdown";
 export { RegisteredDetail } from "./components/register/register-types";
 export { SidebarSide } from "./components/sidebar/sidebar-options";
 export { SignInLabels } from "./components/sign-in/sign-in-labels";
 export { ProviderSignInDetail, SignInProvider } from "./components/sign-in/sign-in-types";
-export { SignedInDetail } from "./identity/event-details";
 export { SkeletonVariant } from "./components/skeleton/skeleton-options";
 export { StackAlignment } from "./components/stack/stack-options";
 export { StatDirection, StatSentiment } from "./components/stat/stat-options";
@@ -957,6 +961,36 @@ export namespace Components {
         "siblings": number;
     }
     /**
+     * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
+     * for the address and always answers the same, whether or not an account uses it. `complete`
+     * sets the new password with the emailed code, which the page reads from the link and passes in
+     * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
+     * inputs are emptied after every attempt.
+     */
+    interface IdgPasswordReset {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: PasswordResetClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The code from the reset email, which the page reads from the link it was sent. Without one, `complete` mode asks for it.
+         */
+        "code"?: string;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<PasswordResetLabels>;
+        /**
+          * Which step to show. Unknown values fall back to `request`.
+          * @default "request"
+         */
+        "mode": PasswordResetMode;
+    }
+    /**
      * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
      * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
      * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
@@ -1776,6 +1810,10 @@ export interface IdgPaginationCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgPaginationElement;
 }
+export interface IdgPasswordResetCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgPasswordResetElement;
+}
 export interface IdgPopoverCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgPopoverElement;
@@ -2187,6 +2225,31 @@ declare global {
     var HTMLIdgPaginationElement: {
         prototype: HTMLIdgPaginationElement;
         new (): HTMLIdgPaginationElement;
+    };
+    interface HTMLIdgPasswordResetElementEventMap {
+        "idgResetRequested": void;
+        "idgPasswordReset": SignedInDetail;
+    }
+    /**
+     * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
+     * for the address and always answers the same, whether or not an account uses it. `complete`
+     * sets the new password with the emailed code, which the page reads from the link and passes in
+     * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
+     * inputs are emptied after every attempt.
+     */
+    interface HTMLIdgPasswordResetElement extends Components.IdgPasswordReset, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgPasswordResetElementEventMap>(type: K, listener: (this: HTMLIdgPasswordResetElement, ev: IdgPasswordResetCustomEvent<HTMLIdgPasswordResetElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgPasswordResetElementEventMap>(type: K, listener: (this: HTMLIdgPasswordResetElement, ev: IdgPasswordResetCustomEvent<HTMLIdgPasswordResetElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgPasswordResetElement: {
+        prototype: HTMLIdgPasswordResetElement;
+        new (): HTMLIdgPasswordResetElement;
     };
     interface HTMLIdgPopoverElementEventMap {
         "idgOpen": void;
@@ -2610,6 +2673,7 @@ declare global {
         "idg-menu-item": HTMLIdgMenuItemElement;
         "idg-menu-separator": HTMLIdgMenuSeparatorElement;
         "idg-pagination": HTMLIdgPaginationElement;
+        "idg-password-reset": HTMLIdgPasswordResetElement;
         "idg-popover": HTMLIdgPopoverElement;
         "idg-progress": HTMLIdgProgressElement;
         "idg-radio": HTMLIdgRadioElement;
@@ -3512,6 +3576,44 @@ declare namespace LocalJSX {
           * @default 1
          */
         "siblings"?: number;
+    }
+    /**
+     * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
+     * for the address and always answers the same, whether or not an account uses it. `complete`
+     * sets the new password with the emailed code, which the page reads from the link and passes in
+     * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
+     * inputs are emptied after every attempt.
+     */
+    interface IdgPasswordReset {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: PasswordResetClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The code from the reset email, which the page reads from the link it was sent. Without one, `complete` mode asks for it.
+         */
+        "code"?: string;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<PasswordResetLabels>;
+        /**
+          * Which step to show. Unknown values fall back to `request`.
+          * @default "request"
+         */
+        "mode"?: PasswordResetMode;
+        /**
+          * Fires once the new password is set and the user signed in, with their id and username.
+         */
+        "onIdgPasswordReset"?: (event: IdgPasswordResetCustomEvent<SignedInDetail>) => void;
+        /**
+          * Fires once a reset email is asked for. It carries nothing: the answer is the same for all.
+         */
+        "onIdgResetRequested"?: (event: IdgPasswordResetCustomEvent<void>) => void;
     }
     /**
      * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
@@ -4512,6 +4614,10 @@ declare namespace LocalJSX {
         "nextLabel": string;
         "pageLabel": string;
     }
+    interface IdgPasswordResetAttributes {
+        "mode": PasswordResetMode;
+        "code": string;
+    }
     interface IdgPopoverAttributes {
         "placement": Placement;
         "offset": number;
@@ -4703,6 +4809,7 @@ declare namespace LocalJSX {
         "idg-menu-item": Omit<IdgMenuItem, keyof IdgMenuItemAttributes> & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes]?: IdgMenuItem[K] } & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `attr:${K}`]?: IdgMenuItemAttributes[K] } & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `prop:${K}`]?: IdgMenuItem[K] };
         "idg-menu-separator": IdgMenuSeparator;
         "idg-pagination": Omit<IdgPagination, keyof IdgPaginationAttributes> & { [K in keyof IdgPagination & keyof IdgPaginationAttributes]?: IdgPagination[K] } & { [K in keyof IdgPagination & keyof IdgPaginationAttributes as `attr:${K}`]?: IdgPaginationAttributes[K] } & { [K in keyof IdgPagination & keyof IdgPaginationAttributes as `prop:${K}`]?: IdgPagination[K] };
+        "idg-password-reset": Omit<IdgPasswordReset, keyof IdgPasswordResetAttributes> & { [K in keyof IdgPasswordReset & keyof IdgPasswordResetAttributes]?: IdgPasswordReset[K] } & { [K in keyof IdgPasswordReset & keyof IdgPasswordResetAttributes as `attr:${K}`]?: IdgPasswordResetAttributes[K] } & { [K in keyof IdgPasswordReset & keyof IdgPasswordResetAttributes as `prop:${K}`]?: IdgPasswordReset[K] };
         "idg-popover": Omit<IdgPopover, keyof IdgPopoverAttributes> & { [K in keyof IdgPopover & keyof IdgPopoverAttributes]?: IdgPopover[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `attr:${K}`]?: IdgPopoverAttributes[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `prop:${K}`]?: IdgPopover[K] };
         "idg-progress": Omit<IdgProgress, keyof IdgProgressAttributes> & { [K in keyof IdgProgress & keyof IdgProgressAttributes]?: IdgProgress[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `attr:${K}`]?: IdgProgressAttributes[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `prop:${K}`]?: IdgProgress[K] };
         "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
@@ -4871,6 +4978,14 @@ declare module "@stencil/core" {
              * buttons that fire `idgPageChange` otherwise.
              */
             "idg-pagination": LocalJSX.IntrinsicElements["idg-pagination"] & JSXBase.HTMLAttributes<HTMLIdgPaginationElement>;
+            /**
+             * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
+             * for the address and always answers the same, whether or not an account uses it. `complete`
+             * sets the new password with the emailed code, which the page reads from the link and passes in
+             * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
+             * inputs are emptied after every attempt.
+             */
+            "idg-password-reset": LocalJSX.IntrinsicElements["idg-password-reset"] & JSXBase.HTMLAttributes<HTMLIdgPasswordResetElement>;
             /**
              * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
              * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The

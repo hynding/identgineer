@@ -86,9 +86,10 @@ describe("idg-password-reset request", () => {
     expect(textOf(known.root, '[part="confirmation"]')).toBe(
       "If an account uses this address, we have sent it a link to reset the password. Check your email.",
     );
-    expect(events.seen).toEqual([
-      { type: "idgResetRequested", detail: null },
-      { type: "idgResetRequested", detail: null },
+    // No detail at all: the mock DOM leaves it undefined where a browser has null.
+    expect(events.seen.map(({ type, detail }) => [type, detail ?? null])).toEqual([
+      ["idgResetRequested", null],
+      ["idgResetRequested", null],
     ]);
   });
 
