@@ -197,6 +197,11 @@ describe("generateBrandTheme", () => {
       const to = toOklab(parseHexColor(end?.color ?? "") ?? [0, 0, 0]);
       const distance = Math.hypot(to.lightness - from.lightness, to.a - from.a, to.b - from.b);
       expect(distance, `${primary} ends at ${String(end?.color)}`).toBeGreaterThanOrEqual(0.08);
+      // OKLab overstates differences next to black, so the ends must also differ in luminance.
+      expect(
+        contrastRatio(primary, end?.color ?? ""),
+        `${primary} ends at ${String(end?.color)}`,
+      ).toBeGreaterThanOrEqual(1.5);
     },
   );
 
