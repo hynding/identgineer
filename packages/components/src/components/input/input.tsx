@@ -12,7 +12,7 @@ import {
   type EventEmitter,
 } from "@stencil/core";
 import { oneOf } from "../../utils/choice";
-import { submitImplicitly } from "../../utils/implicit-submission";
+import { asksForImplicitSubmission, submitImplicitly } from "../../utils/implicit-submission";
 import type { ValueDetail } from "../../utils/event-details";
 import { validityFlags } from "../../utils/validity";
 import { INPUT_SIZES, INPUT_TYPES, type InputSize, type InputType } from "./input-options";
@@ -186,11 +186,10 @@ export class IdgInput {
   // submission never happens: it is done here instead, on the keypress, as the browser does it. A
   // keydown cancelled anywhere has no keypress, and the decision waits until the keypress has
   // reached every listener on its path, so a listener further out (a combobox that takes Enter for
-  // itself) can cancel either. Enter with Control, Alt or Meta held submits nothing, as in Chromium.
+  // itself) can cancel either. See `asksForImplicitSubmission` for which keypresses count.
   @Listen("keypress")
   handleKeypress(event: KeyboardEvent): void {
-    if (event.key !== "Enter" || event.isComposing || event.defaultPrevented) return;
-    if (event.ctrlKey || event.altKey || event.metaKey) return;
+    if (!asksForImplicitSubmission(event)) return;
     if (event.composedPath()[0] !== this.native) return;
     const form = this.internals.form;
     if (!form) return;

@@ -187,7 +187,8 @@ boundary and the browser would not do it. It is done on the keypress, as the bro
 keydown cancelled with `preventDefault()` has no keypress, and the decision is made once the
 keypress has reached every listener, so any listener on its path (a combobox around the field) can
 cancel either. It never happens while an input method is composing, nor with Control, Alt or Meta
-held (Shift+Enter submits). The default button (the first submit button among the form's elements:
+held (Shift+Enter submits), nor for a key event a script dispatches (`isTrusted` false), which a
+native input ignores too. The default button (the first submit button among the form's elements:
 a native submit button or an `idg-button type="submit"` without an `href`, which is a link and is
 never followed) is clicked, so its click listeners run; a disabled or `loading` default button stops
 the submission. Without a submit button, the form is submitted only when it has no other text field;

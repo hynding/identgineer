@@ -48,6 +48,30 @@ function activate(button: HTMLElement): void {
   button.shadowRoot?.querySelector<HTMLElement>('[part="control"]')?.click();
 }
 
+/** The parts of a keypress the decision reads. */
+export type ImplicitSubmissionKey = Pick<
+  KeyboardEvent,
+  "key" | "isTrusted" | "isComposing" | "defaultPrevented" | "ctrlKey" | "altKey" | "metaKey"
+>;
+
+/**
+ * Whether a keypress in a single-line field asks for implicit submission, as the browser decides
+ * for a native input: Enter the user pressed (a script's synthetic event never submits), not while
+ * an input method is composing, not cancelled, and without Control, Alt or Meta (Shift+Enter
+ * submits, as in Chromium).
+ */
+export function asksForImplicitSubmission(event: ImplicitSubmissionKey): boolean {
+  return (
+    event.key === "Enter" &&
+    event.isTrusted &&
+    !event.isComposing &&
+    !event.defaultPrevented &&
+    !event.ctrlKey &&
+    !event.altKey &&
+    !event.metaKey
+  );
+}
+
 /**
  * What Enter in a single-line field does to its form: the default button (the first submit
  * button) is clicked unless it is disabled or busy; without one, the form is submitted only when

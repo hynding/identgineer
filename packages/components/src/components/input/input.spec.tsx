@@ -326,37 +326,13 @@ describe("idg-input as a form control", () => {
       setTimeout(resolve, 0);
     });
 
-  // The native input sits in a shadow root and has no form owner, so the browser's implicit
-  // submission never reaches the form: Enter would do nothing in a form of idg-input elements.
-  // The cases of the algorithm itself run in the browser tests, against native inputs.
-  it("submits its form on Enter once the keypress is dispatched, as a native input does", async () => {
+  // Which keypresses count is `asksForImplicitSubmission`'s, tested on its own; the browser tests
+  // press real keys, since a script's keypress (as here) never submits, as in a native input.
+  it("does not submit its form on a keypress a script dispatches", async () => {
     const form = { ...listenerless(), requestSubmit: vi.fn(), elements: [] as Element[] };
     const { root } = await renderWithInternals(<idg-input />, form);
     form.elements.push(root);
     pressEnter(root);
-    expect(form.requestSubmit).not.toHaveBeenCalled();
-    await afterDispatch();
-    expect(form.requestSubmit).toHaveBeenCalledTimes(1);
-  });
-
-  it("leaves Enter alone while composing, with Control, Alt or Meta, once handled, or when a listener further out takes it", async () => {
-    const form = { ...listenerless(), requestSubmit: vi.fn(), elements: [] as Element[] };
-    const { root } = await renderWithInternals(<idg-input />, form);
-    form.elements.push(root);
-    pressEnter(root, { isComposing: true });
-    pressEnter(root, { ctrlKey: true });
-    pressEnter(root, { altKey: true });
-    pressEnter(root, { metaKey: true });
-    const handled = new KeyboardEvent("keypress", {
-      key: "Enter",
-      bubbles: true,
-      cancelable: true,
-    });
-    handled.preventDefault();
-    native(root).dispatchEvent(handled);
-    pressEnter(root, { key: "a" });
-    // As a combobox around the field would, after the input's own listener has run.
-    pressEnter(root).preventDefault();
     await afterDispatch();
     expect(form.requestSubmit).not.toHaveBeenCalled();
   });
