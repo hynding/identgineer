@@ -18,6 +18,8 @@ export const createAlarm = (clock: Clock): Alarm => {
   };
   const set = (due: number, callback: () => void): void => {
     clear();
+    // A NaN or infinite due time would fire at once and re-arm forever; there is nothing to wait for.
+    if (!Number.isFinite(due)) return;
     const wait = due - clock.now();
     timer = clock.setTimeout(
       () => {

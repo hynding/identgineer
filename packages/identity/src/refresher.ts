@@ -9,7 +9,10 @@ import type { ApiRequest, Transport } from "./transport.ts";
 
 /** How long before the access token's expiry the scheduled refresh runs (at most half its life). */
 export const REFRESH_MARGIN_MS = 30_000;
-/** The shortest wait between scheduled refreshes; doubled while tokens stay that short. */
+/**
+ * The shortest wait between scheduled refreshes. Tokens that live less than this are refreshed
+ * with a doubling wait instead, for as long as the server keeps issuing them.
+ */
 export const MIN_REFRESH_DELAY_MS = 5_000;
 const MAX_REFRESH_BACKOFF_MS = 300_000;
 /** How soon a scheduled refresh that could not reach the server tries again. */
@@ -156,6 +159,7 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
         if (outcome === "unavailable" && expiryKnown) alarm.set(expiresAt, options.onExpired);
       },
       () => {
+        if (!options.isActive()) return;
         if (expiryKnown && clock.now() >= expiresAt) options.onExpired();
         else alarm.set(clock.now() + REFRESH_RETRY_MS, runScheduled);
       },
@@ -172,10 +176,11 @@ export const createRefresher = (options: RefresherOptions): Refresher => {
     expiryKnown = lifetime.known;
     let delay = lifetime.ms - Math.min(REFRESH_MARGIN_MS, lifetime.ms / 2);
     // A token too short to wait for never makes the refreshes run back to back.
-    if (delay < MIN_REFRESH_DELAY_MS) {
+    if (lifetime.ms < MIN_REFRESH_DELAY_MS) {
       delay = Math.min(MAX_REFRESH_BACKOFF_MS, MIN_REFRESH_DELAY_MS * 2 ** shortStreak);
       shortStreak += 1;
     } else {
+      delay = Math.max(delay, MIN_REFRESH_DELAY_MS);
       shortStreak = 0;
     }
     alarm.set(now + delay, runScheduled);

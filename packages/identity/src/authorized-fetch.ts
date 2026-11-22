@@ -2,12 +2,16 @@ import { endpointUrl } from "./base-url.ts";
 import type { ClientContext } from "./client-context.ts";
 import { IdentityError } from "./identity-error.ts";
 
+const ENCODED_SEPARATOR = /%(?:2f|5c|2e)/i;
+
 /**
  * The request URL for a path under the base URL, or an absolute URL under it, checked after it is
  * resolved (so `..`, encoded dots and backslashes cannot climb out of the base path). Anything
  * else is refused, so the bearer token never reaches another origin or path.
  */
-const resolveTarget = (base: URL, input: string): string => {
+const resolveTarget = (base: URL, target: unknown): string => {
+  const input = target instanceof URL ? target.href : target;
+  if (typeof input !== "string") throw new IdentityError("validation");
   // Browsers read a backslash as a slash; refusing them keeps the input meaning what it says.
   if (input.startsWith("//") || input.includes("\\")) throw new IdentityError("validation");
   let url: URL;
@@ -17,7 +21,12 @@ const resolveTarget = (base: URL, input: string): string => {
     throw new IdentityError("validation");
   }
   const prefix = base.pathname === "/" ? "/" : `${base.pathname}/`;
-  if (url.origin !== base.origin || !url.pathname.startsWith(prefix)) {
+  // An encoded slash, backslash or dot may be decoded again by a server or proxy into a separator.
+  if (
+    url.origin !== base.origin ||
+    !url.pathname.startsWith(prefix) ||
+    ENCODED_SEPARATOR.test(url.pathname)
+  ) {
     throw new IdentityError("validation");
   }
   return url.href;
@@ -50,7 +59,7 @@ const timeoutSignal = (
  */
 export const authorizedFetch =
   (context: ClientContext) =>
-  async (input: string, init: RequestInit = {}): Promise<Response> => {
+  async (input: string | URL, init: RequestInit = {}): Promise<Response> => {
     const url = resolveTarget(context.base, input);
     const attempt = async (): Promise<Response> => {
       const accessToken = context.session.accessToken();

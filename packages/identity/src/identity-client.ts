@@ -79,7 +79,7 @@ export interface IdentityClient {
    * `fetch` for requests to the CMS under the base URL: adds the bearer token and refreshes once
    * on a 401. Refuses any other origin, so the token never leaves the CMS.
    */
-  readonly authorizedFetch: (input: string, init?: RequestInit) => Promise<Response>;
+  readonly authorizedFetch: (input: string | URL, init?: RequestInit) => Promise<Response>;
   readonly getState: () => IdentityState;
   /** Calls the listener on every change of state; returns the function that stops it. */
   readonly subscribe: (listener: IdentityStateListener) => () => void;

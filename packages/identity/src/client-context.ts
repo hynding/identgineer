@@ -77,13 +77,30 @@ export interface ClientContext {
   readonly dispose: () => void;
 }
 
+/** A numeric option, refused at creation unless it is a positive finite number. */
+const positiveOption = (name: string, value: number | undefined, fallback: number): number => {
+  const chosen = value ?? fallback;
+  if (!Number.isFinite(chosen) || chosen <= 0) {
+    throw new TypeError(`${name} must be a positive finite number`);
+  }
+  return chosen;
+};
+
 export const createClientContext = (options: IdentityClientOptions): ClientContext => {
   const base = parseBaseUrl(options.baseUrl);
   const clock = options.clock ?? systemClock;
   const fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
-  const timeoutMs = options.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const timeoutMs = positiveOption(
+    "requestTimeoutMs",
+    options.requestTimeoutMs,
+    DEFAULT_TIMEOUT_MS,
+  );
   const tokenLifetimeMs =
-    (options.accessTokenLifetimeSeconds ?? DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS) * 1000;
+    positiveOption(
+      "accessTokenLifetimeSeconds",
+      options.accessTokenLifetimeSeconds,
+      DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS,
+    ) * 1000;
   const transport = createTransport({ base, fetch, clock, timeoutMs });
   const session = createSession();
   const throttle = createThrottle(clock);
