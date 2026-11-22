@@ -1,9 +1,11 @@
 import { clearStoredVariations, loadVariations, saveVariations } from "./storage.ts";
 import type { StorageLike } from "./storage.ts";
+import { changedKeys, defaultVariations, getVariations } from "./read-variations.ts";
 import { REGISTRY, STATE_KEYS } from "./registry.ts";
 import { resolveRoot } from "./root.ts";
 import type { VariationsRoot } from "./root.ts";
-import { isVariationId, validateVariations } from "./validate.ts";
+import { validateVariations } from "./validate.ts";
+import { announceChange } from "./variations-events.ts";
 import type { RejectedVariation } from "./validate.ts";
 import type { StateKey, VariationState } from "./variation-state.ts";
 
@@ -26,42 +28,10 @@ export interface ApplyResult extends VariationsResult {
   readonly rejected: readonly RejectedVariation[];
 }
 
-function defaultState(): VariationState {
-  return {
-    theme: REGISTRY.theme.defaultId,
-    design: REGISTRY.design.defaultId,
-    layout: REGISTRY.layout.defaultId,
-    ux: REGISTRY.ux.defaultId,
-    scheme: REGISTRY.scheme.defaultId,
-  };
-}
-
-function readKey<Key extends StateKey>(root: Element, key: Key): VariationState[Key] {
-  const value = root.getAttribute(REGISTRY[key].attribute);
-  return isVariationId(key, value) ? value : (REGISTRY[key].defaultId as VariationState[Key]);
-}
-
-/** Whatever the attributes hold is untrusted: anything outside the registry reads as the default. */
-export function getVariations(root?: VariationsRoot): VariationState {
-  const target = resolveRoot(root);
-  if (!target) return defaultState();
-  return {
-    theme: readKey(target, "theme"),
-    design: readKey(target, "design"),
-    layout: readKey(target, "layout"),
-    ux: readKey(target, "ux"),
-    scheme: readKey(target, "scheme"),
-  };
-}
-
 function writeKey(root: Element, key: StateKey, value: string): void {
   const attribute = REGISTRY[key].attribute;
   if (key === "scheme" && value === "system") root.removeAttribute(attribute);
   else root.setAttribute(attribute, value);
-}
-
-function changedKeys(before: VariationState, after: VariationState): StateKey[] {
-  return STATE_KEYS.filter((key) => before[key] !== after[key]);
 }
 
 function persistChoice(valid: Partial<VariationState>, storage: StorageLike | undefined): void {
@@ -88,7 +58,9 @@ export function applyVariations(
   }
   const state = target ? getVariations(target) : { ...before, ...valid };
   if (options.persist === true) persistChoice(valid, options.storage);
-  return { state, rejected, changed: changedKeys(before, state) };
+  const changed = changedKeys(before, state);
+  if (target && changed.length > 0) announceChange(target, { state, changed });
+  return { state, rejected, changed };
 }
 
 /** Removes every attribute, so the stylesheet defaults apply again. */
@@ -96,7 +68,9 @@ export function resetVariations(options: RootOptions = {}): VariationsResult {
   const target = resolveRoot(options.root);
   const before = getVariations(target);
   if (target) for (const key of STATE_KEYS) target.removeAttribute(REGISTRY[key].attribute);
-  const state = defaultState();
+  const state = defaultVariations();
   if (options.persist === true) clearStoredVariations(options.storage);
-  return { state, changed: changedKeys(before, state) };
+  const changed = changedKeys(before, state);
+  if (target && changed.length > 0) announceChange(target, { state, changed });
+  return { state, changed };
 }

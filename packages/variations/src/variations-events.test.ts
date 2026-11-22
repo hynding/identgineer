@@ -196,7 +196,7 @@ describe("onVariationsChange", () => {
 
   it("is a harmless no-op where there is no DOM", () => {
     const unsubscribe = onVariationsChange(vi.fn());
-    expect(() => unsubscribe()).not.toThrow();
+    expect(unsubscribe).not.toThrow();
     expect(() => applyVariations({ theme: "ember" })).not.toThrow();
   });
 });
