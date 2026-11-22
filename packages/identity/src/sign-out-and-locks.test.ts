@@ -186,7 +186,10 @@ describe("a lock manager that fails", () => {
     await settle();
     await settle();
     expect(restored).toMatchObject({ status: "signed-in" });
-    await tab.signOut();
+    const signingOutTab = tab.signOut();
+    await settle();
+    clock.advance(5_000);
+    await signingOutTab;
     const unknownTab = makeClient();
     let signedOut = false;
     void unknownTab.signOut().then(() => {

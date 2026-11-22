@@ -172,7 +172,7 @@ describe("signOut", () => {
     const { api, client, states, signIn } = setup();
     await signIn();
     await client.signOut();
-    const request = api.requests.at(-1);
+    const request = api.requests.find((sent) => sent.path === "/api/auth/logout");
     expect(request?.path).toBe("/api/auth/logout");
     expect(request?.method).toBe("POST");
     expect(request?.credentials).toBe("include");
@@ -190,7 +190,9 @@ describe("signOut", () => {
     await signIn();
     expect(api.activeSessionCount("ada@example.com")).toBe(2);
     await client.signOut({ everywhere: true });
-    expect(api.requests.at(-1)?.body).toMatchObject({ scope: "all" });
+    expect(api.requests.find((sent) => sent.path === "/api/auth/logout")?.body).toMatchObject({
+      scope: "all",
+    });
     expect(api.activeSessionCount("ada@example.com")).toBe(0);
   });
 
@@ -221,10 +223,12 @@ describe("signOut", () => {
     await signIn();
     api.expireAccessTokens();
     await client.signOut();
-    expect(api.requests.map((request) => request.path).slice(-3)).toEqual([
+    // The last refresh is the check that the cookie names nothing more.
+    expect(api.requests.map((request) => request.path).slice(-4)).toEqual([
       "/api/auth/logout",
       "/api/auth/refresh",
       "/api/auth/logout",
+      "/api/auth/refresh",
     ]);
     expect(api.activeSessionCount("ada@example.com")).toBe(0);
   });

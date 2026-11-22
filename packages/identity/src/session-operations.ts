@@ -19,22 +19,33 @@ export interface SignOutResult {
   readonly outcome: "signed-out" | "server-unreachable";
 }
 
+/** Ends whatever session the shared refresh cookie names, once any refresh under way has rotated it. */
+const endCookieSession = async (
+  context: ClientContext,
+  everywhere: boolean,
+): Promise<ServerSignOut> => {
+  await context.refresher.settled();
+  const found = await context.refresher.detached(undefined);
+  if (found === "refused") return "ended";
+  if (found === "unreachable") return "unreachable";
+  return context.endServerSession(found, everywhere);
+};
+
 /**
- * Ends the server session: this tab's own, or else whatever session the shared refresh cookie
- * names (looked up once any refresh under way has rotated it), so that a tab that knew it was
- * signed out still leaves nothing to resume.
+ * Ends this tab's own server session, then whatever session the cookie still names: another
+ * tab's sign-in this tab never heard of leaves the cookie on its session, and the logout clears
+ * the cookie only with the session it names. Page script cannot see whether it did, so the cookie
+ * is looked up once more (one refresh request, refused when nothing is left), which is what keeps
+ * "nothing to resume in this browser" true. A tab without a token of its own starts there.
  */
 const endSessions = async (
   context: ClientContext,
   own: Tokens | undefined,
   everywhere: boolean,
 ): Promise<ServerSignOut> => {
-  if (own !== undefined) return context.endServerSession(own, everywhere);
-  await context.refresher.settled();
-  const found = await context.refresher.detached(undefined);
-  if (found === "refused") return "ended";
-  if (found === "unreachable") return "unreachable";
-  return context.endServerSession(found, everywhere);
+  if (own === undefined) return endCookieSession(context, everywhere);
+  const ended = await context.endServerSession(own, everywhere);
+  return ended === "ended" ? endCookieSession(context, everywhere) : ended;
 };
 
 /**

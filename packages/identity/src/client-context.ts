@@ -49,8 +49,11 @@ export interface IdentityClientOptions {
   readonly onOnline?: OnlineSubscription | null;
 }
 
-/** Whether the server session a sign-out tried to end is gone, or may live on. */
-export type ServerSignOut = "ended" | "unreachable";
+/**
+ * Whether the server session a sign-out tried to end is gone, may live on, or was never one
+ * (a backend without sessions, whose tokens cannot be revoked).
+ */
+export type ServerSignOut = "ended" | "unreachable" | "no-sessions";
 
 /** What every operation of the client shares. Internal: never handed to callers. */
 export interface ClientContext {
@@ -270,10 +273,11 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
           ...(tokens.refreshToken === undefined ? {} : { refreshToken: tokens.refreshToken }),
         },
       });
-    // A server error may have left the session in place; any other answer means it is gone
-    // (404: a backend without sessions, whose tokens cannot be revoked).
-    const outcomeOf = (response: ApiResponse): ServerSignOut =>
-      response.status >= 500 ? "unreachable" : "ended";
+    // A server error may have left the session in place; any other answer means it is gone.
+    const outcomeOf = (response: ApiResponse): ServerSignOut => {
+      if (response.status === 404) return "no-sessions";
+      return response.status >= 500 ? "unreachable" : "ended";
+    };
     try {
       const response = await logout(tokens.accessToken);
       if (response.status !== 401) return outcomeOf(response);
