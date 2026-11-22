@@ -35,9 +35,13 @@ const response = await identity.authorizedFetch("/api/brand-kits");
 `127.0.0.1` or `[::1]` for development; no credentials, query or fragment), and optionally `fetch`,
 `clock` (`now`, `setTimeout`, `clearTimeout`), `requestTimeoutMs` (default 15000),
 `channelName` (the BroadcastChannel name, default `identgineer-identity`),
-`accessTokenLifetimeSeconds` (default 600, camis' `CAMIS_ACCESS_TOKEN_LIFESPAN`; see Refresh) and
+`accessTokenLifetimeSeconds` (default 600, camis' `CAMIS_ACCESS_TOKEN_LIFESPAN`; see Refresh),
 `locks` (an object with `request(name, callback)` as `navigator.locks`; by default
-`navigator.locks` where the browser has it, and `null` turns locking off).
+`navigator.locks` where the browser has it, and `null` turns locking off) and `onOnline` (a
+function that subscribes a listener to the browser coming back online and returns the function
+that unsubscribes it; by default the window's `online` event, and `null` turns it off).
+`requestTimeoutMs` and `accessTokenLifetimeSeconds` must be positive finite numbers; anything
+else throws a `TypeError` at creation, as an invalid `baseUrl` does.
 
 ## API
 
@@ -48,7 +52,7 @@ code `unknown` without sending anything, and `providerSignInUrl` throws it.
 | --------------------------------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------- |
 | `signIn({ identifier, password })`                                    | `POST /api/auth/local`                                     | the user                                              |
 | `register({ username, email, password })`                             | `POST /api/auth/local/register`                            | `{ outcome: "check-email" }` or `signed-in` with user |
-| `signOut({ everywhere? })`                                            | `POST /api/auth/logout`                                    | nothing; always signs out locally                     |
+| `signOut({ everywhere? })`                                            | `POST /api/auth/logout`                                    | `{ outcome }`; always signs out locally (see below)   |
 | `currentUser()`                                                       | `GET /api/users/me`                                        | the user (also updates the state)                     |
 | `requestPasswordReset({ email })`                                     | `POST /api/auth/forgot-password`                           | `{ outcome: "accepted" }`                             |
 | `resetPassword({ code, password, passwordConfirmation })`             | `POST /api/auth/reset-password`                            | the user, signed in                                   |
@@ -62,16 +66,18 @@ code `unknown` without sending anything, and `providerSignInUrl` throws it.
 | `providerSignInUrl(provider, { callback? })`                          | builds `GET /api/connect/{provider}`                       | the URL to send the browser to                        |
 | `completeProviderSignIn(provider, { search?, returnTo? })`            | `GET /api/auth/{provider}/callback`                        | `{ user, redirectTo }`                                |
 | `restore()`                                                           | `POST /api/auth/refresh`, then `GET /api/users/me`         | the state                                             |
-| `authorizedFetch(input, init?)`                                       | any path under `baseUrl`                                   | the `Response`                                        |
+| `authorizedFetch(input, init?)`                                       | any path or `URL` under `baseUrl`                          | the `Response`                                        |
 | `getState()`, `subscribe(listener)`                                   | none                                                       | the state; an unsubscribe function                    |
 | `retryAfterSeconds()`                                                 | none                                                       | seconds until credential requests are accepted again  |
 | `dispose()`                                                           | none                                                       | stops timers and the cross-tab channel; see below     |
 
-Sign-ins (`signIn`, `completeProviderSignIn`) run one after another, so with two calls the later
-one decides who is signed in. An answer that arrives after `signOut`, a later sign-in or `dispose()`
-is dropped: its call rejects (`unauthorized`, or `unknown` once disposed), no token is kept, and
-a session it opened on the server is ended. `dispose()` ends nothing on the server and announces
-nothing to other tabs.
+Sign-ins (`signIn`, `completeProviderSignIn`) and `restore()` run one after another, so with two
+sign-ins the later one decides who is signed in, and a restore (or the re-check another tab's
+sign-in triggers) waits for a sign-in under way instead of replacing it. Only a sign-out, here or in
+another tab, or `dispose()` cancels a sign-in: its answer is then dropped, its call rejects
+(`unauthorized`, or `unknown` once disposed), no token is kept, and the session it opened on the
+server is ended. A restore queued before a sign-out does nothing. `dispose()` ends nothing on the
+server and announces nothing to other tabs.
 
 `saveProfile` takes `displayName` (required, up to 80 characters), `bio` (up to 500, or `null`),
 `locale` (BCP 47), `timezone` (IANA) and `marketingOptIn`, checked against the limits in
@@ -124,16 +130,24 @@ arrived, so a wrong client clock does not matter (except for an `expiresAt`, or 
 (seconds) in the answer, an `expiresAt` (an ISO date or epoch milliseconds) less the client's
 time, a JWT's `exp` less its `iat` (or less the client's time without `iat`), or `accessTokenLifetimeSeconds` (default 600) for strapi-php's opaque Sanctum
 tokens, which say nothing about their life. The refresh runs 30 seconds before the end of that
-lifetime, or halfway through a lifetime under a minute. If that would be under 5 seconds it waits
-5 seconds, doubling up to 5 minutes for as long as tokens stay that short. Long waits (a 30-day
+lifetime, or halfway through a lifetime under a minute, and never sooner than 5 seconds after the
+token arrived (so a token living 5 to 10 seconds is refreshed every 5 seconds). Only
+tokens living less than 5 seconds are refreshed with a wait that doubles, from 5 seconds up to 5
+minutes, for as long as the server keeps issuing them. Long waits (a 30-day
 legacy JWT) are armed in one-day steps, below `setTimeout`'s limit. A JWT is read defensively and
 never trusted for anything else.
 
 A refused refresh (400, 401 or 403) signs out with `reason: "expired"`. A backend without sessions
 (the refresh route answers 404) keeps the token: if its lifetime was known, the client signs out at
 its end; if the lifetime was only the configured guess, the session lasts until the server refuses
-the token. A refresh that cannot reach the server is tried again after 30 seconds, until a known
-expiry passes. Concurrent 401s share one refresh, and a request that gets a 401 is retried once on
+the token.
+
+A refresh that cannot reach the server (a laptop waking before its network) never signs out, even
+past a known expiry: the refresh cookie may well still be valid. It is tried again after 30
+seconds, then with a wait that doubles up to 5 minutes, and at once when the browser comes back
+online (`onOnline`). Meanwhile the state stays `signed-in`, but a token past its known expiry is
+never sent: a request first tries the refresh itself and rejects with `network` while the server
+stays out of reach. Only a refused refresh signs out. Concurrent 401s share one refresh, and a request that gets a 401 is retried once on
 the refreshed token, but only if the same session is still current: a request sent before a
 sign-out or a sign-in as someone else is never retried with the new user's token (`authorizedFetch`
 returns the 401, other methods reject with `unauthorized`).
@@ -141,7 +155,9 @@ returns the 401, other methods reject with `unauthorized`).
 The refresh cookie is shared by every tab. A cookie refresh runs under the Web Lock
 `identgineer-identity-refresh` (where `locks` is available), so tabs do not present the same
 single-use refresh token at once, and a cookie refresh refused with 401 is retried once, in case
-another tab rotated the cookie in between. After every cookie refresh the client reads
+another tab rotated the cookie in between. When the lock manager fails (a sandboxed frame's
+`SecurityError`) or does not grant the lock within `requestTimeoutMs`, the refresh runs without
+it, relying on that retry; the lock manager's own error never reaches the caller. After every cookie refresh the client reads
 `GET /api/users/me` with the new token: if the cookie now belongs to another user (another tab
 signed in as them), this tab drops the tokens and signs out with `reason: "user-changed"`.
 
@@ -171,17 +187,24 @@ cookie, and a signed-in tab holding no refresh token of its own refreshes from t
 which signs it out with `user-changed` if the other tab signed in as someone else. No token or user
 is sent, and any other message is ignored.
 
-**Sign-out.** `signOut` signs out locally and tells other tabs at once, then ends the session on
-the server. When the tab holds no access token (the state is still `unknown`, or a `restore()` is
-in flight) it waits for that refresh, or refreshes from the cookie itself, so that the cookie
-session is ended too and a reload does not sign back in. It sends nothing when the tab already
-knew it was signed out.
+**Sign-out.** `signOut` signs out locally at once and cancels any sign-in under way, then ends the
+session on the server, and only then tells the other tabs, so no tab is told of a sign-out that a
+reload would undo. When the tab holds no token (the state is `unknown`, a `restore()` is in
+flight, or it was already signed out, say with `user-changed` because another tab signed in as
+someone else) it waits for any refresh under way and then refreshes from the shared cookie itself,
+so that a cookie session, whoever opened it, is ended too: on a shared device, "Sign out" leaves no
+session to resume. It resolves to `{ outcome: "signed-out" }` when no server session is left, and
+to `{ outcome: "server-unreachable" }` when the server could not be reached (or answered with a
+server error): the other tabs are still told, but the server session may live on until it expires,
+and a reload may resume it.
 
 **Input.** Provider names and session and document ids are checked against strict patterns and
 URL-encoded. `authorizedFetch` resolves its target first (a path beginning with `/` is joined to
 `baseUrl`'s path), then refuses it unless it has `baseUrl`'s origin and lies under its path; `//`
-and backslashes are refused outright, so `/../admin` cannot climb out of a base path and the token
-never reaches another origin. Every bearer request, `authorizedFetch` included, is sent with
+and backslashes are refused outright, and so is an encoded slash, backslash or dot (`%2f`, `%5c`,
+`%2e`, in any case) left in the resolved path, which a server or proxy could decode again. So
+`/../admin` cannot climb out of a base path and the token never reaches another origin. The input
+may be a string or a `URL`; anything else is a `validation` error. Every bearer request, `authorizedFetch` included, is sent with
 `redirect: "error"`, so a redirect cannot carry the token elsewhere. `completeProviderSignIn` returns `returnTo` only if it is a same-origin relative
 path (no `//host`, backslashes, schemes, control or separator characters, or encoded slashes).
 Answers are size-limited, parsed with keys like `__proto__` refused, and shape-checked. Every
@@ -240,8 +263,9 @@ sign in from the token answer); see `src/passkeys.ts`.
 - Profile avatars are not handled: upload and link them through `authorizedFetch`.
 - `restore()` on a network failure leaves the state `unknown` and rejects, so the caller can retry.
 - Each cookie refresh costs one extra `GET /api/users/me` (the user check under Refresh).
-- Without Web Locks (older browsers) two tabs can still present the same refresh cookie at once;
-  the one retry covers the usual case.
+- Without Web Locks (older browsers, sandboxed frames) two tabs can still present the same refresh
+  cookie at once; the one retry covers the usual case.
+- `signOut` in a tab that holds no token costs one refresh, to find the cookie session to end.
 
 ## Testing
 
