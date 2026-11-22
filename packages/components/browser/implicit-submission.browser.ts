@@ -182,4 +182,36 @@ test.describe("Enter in an idg-input submits as Enter in a native input does", (
     expect(native.submits).toBe(1);
     expect(await pressEnter(page, "idg-date-mixed")).toEqual(native);
   });
+
+  test("a keypress a script dispatches submits nothing, as in a native input", async ({ page }) => {
+    await open(page);
+    const dispatchEnter = (id: string, selector: string) =>
+      page
+        .locator(`#${id}`)
+        .locator(selector)
+        .first()
+        .evaluate((input) => {
+          for (const type of ["keydown", "keypress", "keyup"]) {
+            input.dispatchEvent(
+              new KeyboardEvent(type, {
+                key: "Enter",
+                bubbles: true,
+                cancelable: true,
+                composed: true,
+              }),
+            );
+          }
+        });
+    const outcome = (id: string) =>
+      page.evaluate(
+        (form) => (window as unknown as { outcomes: Record<string, Outcome> }).outcomes[form],
+        id,
+      );
+    await dispatchEnter("native-button", "input");
+    await dispatchEnter("idg-button", "idg-input input");
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    const native = await outcome("native-button");
+    expect(native?.submits).toBe(0);
+    expect(await outcome("idg-button")).toEqual(native);
+  });
 });
