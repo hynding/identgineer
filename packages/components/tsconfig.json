@@ -10,6 +10,6 @@
     "allowImportingTsExtensions": true,
     "exactOptionalPropertyTypes": false
   },
-  "include": ["src", "checks", "browser", "*.config.ts"],
+  "include": ["src", "checks", "browser", "scripts", "*.config.ts"],
   "exclude": ["node_modules", "dist", "www", "loader"]
 }
