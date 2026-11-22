@@ -25,11 +25,11 @@ import { NavigationToggleDetail } from "./components/layout/layout-options";
 import { Placement } from "./utils/position";
 import { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 import { PageChangeDetail } from "./components/pagination/pagination-options";
-import { PasswordResetClient, RegisterClient, SessionGuardClient, SignInClient } from "./identity/identity-types";
+import { PasswordResetClient, RegisterClient, SessionGuardClient, SignInClient, UserMenuClient } from "./identity/identity-types";
 import { PasswordResetMode } from "./components/password-reset/password-reset-options";
 import { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
 import { CountdownClock } from "./identity/throttle-countdown";
-import { SignedInDetail } from "./identity/event-details";
+import { SignedInDetail, SignedOutDetail } from "./identity/event-details";
 import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
 import { RegisterLabels } from "./components/register/register-labels";
@@ -46,6 +46,7 @@ import { SortDirection } from "./utils/sort-rows";
 import { TableSortDetail } from "./components/table/table-options";
 import { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 import { ToastPosition } from "./components/toast-region/toast-region-options";
+import { UserMenuLabels } from "./components/user-menu/user-menu-labels";
 import { SwitcherOrientation } from "./components/variation-switcher/variation-switcher-options";
 import { VariationsChangeDetail } from "./components/variation-switcher/variation-switcher-types";
 export { AccordionToggleDetail } from "./components/accordion/accordion-options";
@@ -68,11 +69,11 @@ export { NavigationToggleDetail } from "./components/layout/layout-options";
 export { Placement } from "./utils/position";
 export { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 export { PageChangeDetail } from "./components/pagination/pagination-options";
-export { PasswordResetClient, RegisterClient, SessionGuardClient, SignInClient } from "./identity/identity-types";
+export { PasswordResetClient, RegisterClient, SessionGuardClient, SignInClient, UserMenuClient } from "./identity/identity-types";
 export { PasswordResetMode } from "./components/password-reset/password-reset-options";
 export { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
 export { CountdownClock } from "./identity/throttle-countdown";
-export { SignedInDetail } from "./identity/event-details";
+export { SignedInDetail, SignedOutDetail } from "./identity/event-details";
 export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
 export { RegisterLabels } from "./components/register/register-labels";
@@ -89,6 +90,7 @@ export { SortDirection } from "./utils/sort-rows";
 export { TableSortDetail } from "./components/table/table-options";
 export { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 export { ToastPosition } from "./components/toast-region/toast-region-options";
+export { UserMenuLabels } from "./components/user-menu/user-menu-labels";
 export { SwitcherOrientation } from "./components/variation-switcher/variation-switcher-options";
 export { VariationsChangeDetail } from "./components/variation-switcher/variation-switcher-types";
 export namespace Components {
@@ -1769,6 +1771,31 @@ export namespace Components {
         "text"?: string;
     }
     /**
+     * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
+     * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
+     * user how the sign-out went: a server that could not be reached is said plainly, since the
+     * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
+     * It goes away when the client hears that another tab signed out.
+     */
+    interface IdgUserMenu {
+        /**
+          * A picture of the user for the avatar, such as their profile's; initials without one.
+         */
+        "avatarSrc"?: string;
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: UserMenuClient;
+        /**
+          * The name to show; the username by default.
+         */
+        "displayName"?: string;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<UserMenuLabels>;
+    }
+    /**
      * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
      * always acts on the document's root element, through `@identgineer/variations`, so the page's own
      * attributes stay the single truth: a change made anywhere else (markup, a script, another
@@ -1878,6 +1905,10 @@ export interface IdgTextareaCustomEvent<T> extends CustomEvent<T> {
 export interface IdgToastCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgToastElement;
+}
+export interface IdgUserMenuCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgUserMenuElement;
 }
 export interface IdgVariationSwitcherCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -2670,6 +2701,30 @@ declare global {
         prototype: HTMLIdgTooltipElement;
         new (): HTMLIdgTooltipElement;
     };
+    interface HTMLIdgUserMenuElementEventMap {
+        "idgSignedOut": SignedOutDetail;
+    }
+    /**
+     * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
+     * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
+     * user how the sign-out went: a server that could not be reached is said plainly, since the
+     * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
+     * It goes away when the client hears that another tab signed out.
+     */
+    interface HTMLIdgUserMenuElement extends Components.IdgUserMenu, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgUserMenuElementEventMap>(type: K, listener: (this: HTMLIdgUserMenuElement, ev: IdgUserMenuCustomEvent<HTMLIdgUserMenuElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgUserMenuElementEventMap>(type: K, listener: (this: HTMLIdgUserMenuElement, ev: IdgUserMenuCustomEvent<HTMLIdgUserMenuElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgUserMenuElement: {
+        prototype: HTMLIdgUserMenuElement;
+        new (): HTMLIdgUserMenuElement;
+    };
     interface HTMLIdgVariationSwitcherElementEventMap {
         "idgVariationsChange": VariationsChangeDetail;
     }
@@ -2743,6 +2798,7 @@ declare global {
         "idg-toast": HTMLIdgToastElement;
         "idg-toast-region": HTMLIdgToastRegionElement;
         "idg-tooltip": HTMLIdgTooltipElement;
+        "idg-user-menu": HTMLIdgUserMenuElement;
         "idg-variation-switcher": HTMLIdgVariationSwitcherElement;
     }
 }
@@ -4452,6 +4508,35 @@ declare namespace LocalJSX {
         "text"?: string;
     }
     /**
+     * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
+     * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
+     * user how the sign-out went: a server that could not be reached is said plainly, since the
+     * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
+     * It goes away when the client hears that another tab signed out.
+     */
+    interface IdgUserMenu {
+        /**
+          * A picture of the user for the avatar, such as their profile's; initials without one.
+         */
+        "avatarSrc"?: string;
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: UserMenuClient;
+        /**
+          * The name to show; the username by default.
+         */
+        "displayName"?: string;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<UserMenuLabels>;
+        /**
+          * Fires after "Sign out", with how it went. Navigating on is the page's job.
+         */
+        "onIdgSignedOut"?: (event: IdgUserMenuCustomEvent<SignedOutDetail>) => void;
+    }
+    /**
      * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
      * always acts on the document's root element, through `@identgineer/variations`, so the page's own
      * attributes stay the single truth: a change made anywhere else (markup, a script, another
@@ -4842,6 +4927,10 @@ declare namespace LocalJSX {
         "offset": number;
         "for": string;
     }
+    interface IdgUserMenuAttributes {
+        "displayName": string;
+        "avatarSrc": string;
+    }
     interface IdgVariationSwitcherAttributes {
         "persist": boolean;
         "axes": string;
@@ -4899,6 +4988,7 @@ declare namespace LocalJSX {
         "idg-toast": Omit<IdgToast, keyof IdgToastAttributes> & { [K in keyof IdgToast & keyof IdgToastAttributes]?: IdgToast[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `attr:${K}`]?: IdgToastAttributes[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `prop:${K}`]?: IdgToast[K] };
         "idg-toast-region": Omit<IdgToastRegion, keyof IdgToastRegionAttributes> & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes]?: IdgToastRegion[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `attr:${K}`]?: IdgToastRegionAttributes[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `prop:${K}`]?: IdgToastRegion[K] };
         "idg-tooltip": Omit<IdgTooltip, keyof IdgTooltipAttributes> & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes]?: IdgTooltip[K] } & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `attr:${K}`]?: IdgTooltipAttributes[K] } & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `prop:${K}`]?: IdgTooltip[K] };
+        "idg-user-menu": Omit<IdgUserMenu, keyof IdgUserMenuAttributes> & { [K in keyof IdgUserMenu & keyof IdgUserMenuAttributes]?: IdgUserMenu[K] } & { [K in keyof IdgUserMenu & keyof IdgUserMenuAttributes as `attr:${K}`]?: IdgUserMenuAttributes[K] } & { [K in keyof IdgUserMenu & keyof IdgUserMenuAttributes as `prop:${K}`]?: IdgUserMenu[K] };
         "idg-variation-switcher": Omit<IdgVariationSwitcher, keyof IdgVariationSwitcherAttributes> & { [K in keyof IdgVariationSwitcher & keyof IdgVariationSwitcherAttributes]?: IdgVariationSwitcher[K] } & { [K in keyof IdgVariationSwitcher & keyof IdgVariationSwitcherAttributes as `attr:${K}`]?: IdgVariationSwitcherAttributes[K] } & { [K in keyof IdgVariationSwitcher & keyof IdgVariationSwitcherAttributes as `prop:${K}`]?: IdgVariationSwitcher[K] };
     }
 }
@@ -5205,6 +5295,14 @@ declare module "@stencil/core" {
              * technology so it is not read twice.
              */
             "idg-tooltip": LocalJSX.IntrinsicElements["idg-tooltip"] & JSXBase.HTMLAttributes<HTMLIdgTooltipElement>;
+            /**
+             * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
+             * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
+             * user how the sign-out went: a server that could not be reached is said plainly, since the
+             * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
+             * It goes away when the client hears that another tab signed out.
+             */
+            "idg-user-menu": LocalJSX.IntrinsicElements["idg-user-menu"] & JSXBase.HTMLAttributes<HTMLIdgUserMenuElement>;
             /**
              * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
              * always acts on the document's root element, through `@identgineer/variations`, so the page's own

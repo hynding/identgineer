@@ -1,0 +1,22 @@
+:host {
+  display: inline-block;
+  max-inline-size: 100%;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.user-menu {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
+  max-inline-size: 100%;
+}
+
+.outcome {
+  max-inline-size: min(var(--idg-size-l), 100%);
+}

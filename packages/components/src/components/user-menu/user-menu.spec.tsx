@@ -3,7 +3,14 @@ import { h, render } from "@stencil/vitest";
 import type { IdentityClient, IdentityState } from "@identgineer/identity";
 import { recordEvents, shadowOf, textOf } from "../../testing/identity-form";
 import { identitySetup, settle } from "../../testing/identity-harness";
+import { installPopoverElement } from "../../testing/popover-element";
 import { removeHost } from "../../testing/remove-host";
+import "../avatar/avatar";
+import "../button/button";
+import "../menu/menu";
+import "../menu-group/menu-group";
+import "../menu-item/menu-item";
+import "../menu-separator/menu-separator";
 import "./user-menu";
 
 interface UserMenuElement extends HTMLElement {
@@ -60,6 +67,7 @@ function steerable(client: IdentityClient) {
 let events: ReturnType<typeof recordEvents>;
 
 beforeEach(() => {
+  installPopoverElement();
   events = recordEvents(["idgSignedOut", "idgSelect"]);
 });
 
@@ -74,7 +82,7 @@ describe("idg-user-menu signed in", () => {
     const { root } = await mount(client);
     const trigger = shadowOf(root).querySelector('idg-menu > idg-button[slot="trigger"]');
     expect(trigger).not.toBeNull();
-    expect(trigger?.querySelector("idg-avatar")?.getAttribute("alt")).toBe("");
+    expect((trigger?.querySelector("idg-avatar") as { alt?: string } | null)?.alt).toBe("");
     expect((trigger?.querySelector("idg-avatar") as { name?: string } | null)?.name).toBe("ada");
     expect(textOf(root, 'idg-button[slot="trigger"] .visually-hidden')).toBe(
       "Account menu for ada",
