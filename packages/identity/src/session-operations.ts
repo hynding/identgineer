@@ -21,19 +21,25 @@ export interface SignOutResult {
 
 /**
  * Ends whatever session the shared refresh cookie names, unless a newer sign-in is known by
- * then: the cookie may be that sign-in's, and it stands.
+ * then: the cookie may be that sign-in's, and it stands. A found token the logout refuses (it
+ * expired or was revoked on the way) leaves the session alive, so it is looked up once more.
  */
 const endCookieSession = async (
   context: ClientContext,
   everywhere: boolean,
   newer: () => boolean,
+  lookups = 2,
 ): Promise<ServerSignOut> => {
   if (newer()) return "ended";
   const found = await context.refresher.detached(undefined);
   if (found === "refused") return "ended";
   if (found === "unreachable") return "unreachable";
   if (newer()) return "ended";
-  return context.endServerSession(found, everywhere);
+  return context.endServerSession(found, everywhere, () =>
+    lookups > 1
+      ? endCookieSession(context, everywhere, newer, lookups - 1)
+      : Promise.resolve("unreachable"),
+  );
 };
 
 /**

@@ -93,8 +93,16 @@ export interface ClientContext {
    * of the sign-in.
    */
   readonly acceptSignIn: (tokens: Tokens, user: IdentityUser, ticket: Ticket) => Promise<void>;
-  /** Ends the server session these tokens belong to (and its cookie); never rejects. */
-  readonly endServerSession: (tokens: Tokens, everywhere: boolean) => Promise<ServerSignOut>;
+  /**
+   * Ends the server session these tokens belong to (and its cookie); never rejects. When the
+   * logout refuses the access token of a cookie session, `deadCookieToken` decides (by default
+   * "ended": the cookie lookup that follows every sign-out finds the session if it lives on).
+   */
+  readonly endServerSession: (
+    tokens: Tokens,
+    everywhere: boolean,
+    deadCookieToken?: () => Promise<ServerSignOut>,
+  ) => Promise<ServerSignOut>;
   /**
    * Runs sign-ins, restores and re-checks one at a time, in call order, behind any sign-out
    * under way. Each takes its ticket before it is queued and checks it when its turn comes.
@@ -288,7 +296,11 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
     return send();
   };
 
-  const endServerSession = async (tokens: Tokens, everywhere: boolean): Promise<ServerSignOut> => {
+  const endServerSession = async (
+    tokens: Tokens,
+    everywhere: boolean,
+    deadCookieToken: () => Promise<ServerSignOut> = () => Promise.resolve("ended"),
+  ): Promise<ServerSignOut> => {
     const logout = (accessToken: string): Promise<ApiResponse> =>
       transport.send({
         method: "POST",
@@ -310,9 +322,9 @@ export const createClientContext = (options: IdentityClientOptions): ClientConte
       const response = await logout(tokens.accessToken);
       if (response.status !== 401) return outcomeOf(response);
       // The access token was already dead, so its session is over or only the refresh token can
-      // still reach it: a cookie one is found by the cookie lookup that follows every logout, a
-      // body one is refreshed outside the session to log out.
-      if (tokens.refreshToken === undefined) return "ended";
+      // still reach it: a cookie one is left to `deadCookieToken`, a body one is refreshed
+      // outside the session to log out.
+      if (tokens.refreshToken === undefined) return await deadCookieToken();
       const fresh = await refresher.detached(tokens.refreshToken);
       if (fresh === "refused") return "ended";
       if (fresh === "unreachable") return "unreachable";
