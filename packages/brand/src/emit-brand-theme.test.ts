@@ -5,6 +5,7 @@ import {
   findThemeProblems,
   parseTheme,
   resolveThemeScheme,
+  withAccentEdge,
 } from "@identgineer/tokens/theme-pipeline";
 import { brandRadiusVariableName, TOKEN_NAMES } from "@identgineer/tokens";
 import { describe, expect, it } from "vitest";
@@ -58,8 +59,8 @@ describe("emitBrandThemeCss", () => {
       emitThemeCss({
         id: "acme",
         isDefault: false,
-        light: resolveThemeScheme(SHARED, parsed, "light"),
-        dark: resolveThemeScheme(SHARED, parsed, "dark"),
+        light: withAccentEdge(resolveThemeScheme(SHARED, parsed, "light")),
+        dark: withAccentEdge(resolveThemeScheme(SHARED, parsed, "dark")),
       }),
     );
   });
@@ -82,7 +83,7 @@ describe("emitBrandThemeCss", () => {
       "--idg-font-body-letter-spacing",
       "--idg-font-body-line-height",
     ];
-    const dark = ["color-scheme", ...colors, "--idg-gradient-brand"];
+    const dark = ["color-scheme", ...colors, "--idg-gradient-brand", "--idg-color-accent-edge"];
     expect(
       blocks.map((block) => ({
         context: block.context,
@@ -93,7 +94,13 @@ describe("emitBrandThemeCss", () => {
       {
         context: ["@layer idg.theme"],
         selectors: [themed],
-        names: ["color-scheme", ...colors, "--idg-gradient-brand", ...typography],
+        names: [
+          "color-scheme",
+          ...colors,
+          "--idg-gradient-brand",
+          ...typography,
+          "--idg-color-accent-edge",
+        ],
       },
       { context: ["@layer idg.theme"], selectors: [`${themed}[data-scheme="dark"]`], names: dark },
       {
@@ -130,6 +137,18 @@ describe("emitBrandThemeCss", () => {
     const named = generateBrandTheme(kitFrom({ name: "Zyxwv Qjxk", tagline: "Vbnmq plokij" }));
     const output = emitBrandThemeCss(named);
     expect(output).not.toMatch(/Zyxwv|Qjxk|Vbnmq|plokij/);
+  });
+
+  it("draws an edge over the accent fill only where the accent does not stand out on the page", () => {
+    const yellow = emitBrandThemeCss(
+      generateBrandTheme(kitFrom({ colors: { primary: "#facc15" } })),
+    );
+    const edges = yellow.match(/--idg-color-accent-edge: [^;]+;/g);
+    expect(edges?.[0]).toMatch(/^--idg-color-accent-edge: #[0-9a-f]{6};$/);
+    expect(edges?.slice(1)).toEqual([
+      "--idg-color-accent-edge: transparent;",
+      "--idg-color-accent-edge: transparent;",
+    ]);
   });
 
   it("refuses a theme altered after generation", () => {
