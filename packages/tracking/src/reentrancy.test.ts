@@ -9,12 +9,13 @@ const HOUR = 3_600_000;
 describe("a callback that calls the tracker back", () => {
   it("cannot get an event enqueued after onDrop revoked consent in the middle of track()", async () => {
     const world = createWorld();
-    let tab: Tab | undefined;
-    tab = grantedTab(world, {
+    const holder: { tab?: Tab } = {};
+    const tab = grantedTab(world, {
       onDrop: () => {
-        tab?.tracker.consent.deny();
+        holder.tab?.tracker.consent.deny();
       },
     });
+    holder.tab = tab;
     // The undeclared property is dropped (and reported) while the event itself is built.
     tab.tracker.track("clicked", { target: "a", unexpected: "b" });
     await settle();
@@ -27,12 +28,13 @@ describe("a callback that calls the tracker back", () => {
 
   it("cannot get a page view enqueued after onDrop revoked consent", async () => {
     const world = createWorld();
-    let tab: Tab | undefined;
-    tab = grantedTab(world, {
+    const holder: { tab?: Tab } = {};
+    const tab = grantedTab(world, {
       onDrop: () => {
-        tab?.tracker.consent.reset();
+        holder.tab?.tracker.consent.reset();
       },
     });
+    holder.tab = tab;
     tab.tracker.page({ path: "javascript:alert(1)" });
     tab.tracker.track("clicked", { target: "a", unexpected: "b" });
     await settle();
@@ -43,13 +45,14 @@ describe("a callback that calls the tracker back", () => {
 
   it("leaves no timer or request behind when onDrop disposes the tracker during an overflow", async () => {
     const world = createWorld();
-    let tab: Tab | undefined;
-    tab = grantedTab(world, {
+    const holder: { tab?: Tab } = {};
+    const tab = grantedTab(world, {
       maxQueueEvents: 1,
       onDrop: () => {
-        tab?.tracker.dispose();
+        holder.tab?.tracker.dispose();
       },
     });
+    holder.tab = tab;
     tab.tracker.track("clicked", { target: "a" });
     tab.tracker.track("clicked", { target: "b" });
     await settle();

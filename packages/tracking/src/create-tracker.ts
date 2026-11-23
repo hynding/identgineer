@@ -58,13 +58,26 @@ export const createTracker = (trackerOptions: TrackerOptions): Tracker => {
 
   const delivery = createDelivery({ options, allowed: () => granted(), report });
 
+  // A listener may call the tracker back and so cause another change. Changes are announced one
+  // at a time and in order, so no listener hears a later status before an earlier one.
+  const unannounced: ConsentStatus[] = [];
+  let announcing = false;
   const notify = (next: ConsentStatus): void => {
-    for (const listener of [...listeners]) {
-      try {
-        listener(next);
-      } catch {
-        // One listener's failure is not another's.
+    unannounced.push(next);
+    if (announcing) return;
+    announcing = true;
+    try {
+      for (let change = unannounced.shift(); change !== undefined; change = unannounced.shift()) {
+        for (const listener of [...listeners]) {
+          try {
+            listener(change);
+          } catch {
+            // One listener's failure is not another's.
+          }
+        }
       }
+    } finally {
+      announcing = false;
     }
   };
 
@@ -117,7 +130,8 @@ export const createTracker = (trackerOptions: TrackerOptions): Tracker => {
 
   const record = (built: BuildResult): void => {
     for (const drop of built.drops) report(drop);
-    if (built.event !== undefined) delivery.enqueue(built.event);
+    // The reports ran the page's code, which may have revoked consent or disposed the tracker.
+    if (built.event !== undefined && granted()) delivery.enqueue(built.event);
   };
 
   const recordPageView = (overrides: unknown): void => {

@@ -62,6 +62,7 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
 
   // The earlier of the pending timer and this one wins; the loop re-arms what is still due.
   const armTimer = (delay: number): void => {
+    if (disposed) return;
     const due = clock.now() + delay;
     if (timer !== undefined && timerDue <= due) return;
     clearTimer();
@@ -79,6 +80,8 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
   const overhead = (withKey: boolean): number =>
     utf8Length(serialiseBatch([], clock.now(), withKey ? options.writeKey : undefined));
 
+  // A report goes to the page's own code, which may call the tracker back: it comes last, once
+  // the state it describes is settled.
   const reportOverflow = (dropped: number): void => {
     if (dropped > 0) {
       report(
@@ -95,8 +98,8 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
     const stale = queue.entries().filter((entry) => entry.event.at < cutoff);
     if (stale.length === 0) return;
     queue.remove(new Set(stale.map((entry) => entry.event.id)));
-    report(dropReason("expired", `${String(stale.length)} queued events were older than 24 hours`));
     persist();
+    report(dropReason("expired", `${String(stale.length)} queued events were older than 24 hours`));
   };
 
   // As many events as fit the batch size and the payload cap, always at least the first.
@@ -163,6 +166,7 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
       }
       attempts = 0;
       queue.remove(ids);
+      persist();
       if (outcome.kind === "rejected") {
         report(
           dropReason(
@@ -171,7 +175,6 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
           ),
         );
       }
-      persist();
     }
   };
 
@@ -206,6 +209,7 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
     const cutoff = clock.now() - MAX_EVENT_AGE_MS;
     const seen = new Set<string>();
     const entries: QueueEntry[] = [];
+    const drops: DropReason[] = [];
     let expired = 0;
     for (const event of stored.events) {
       if (event.at < cutoff) expired += 1;
@@ -213,17 +217,22 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
         seen.add(event.id);
         const bytes = utf8Length(JSON.stringify(event));
         if (overhead(true) + bytes > options.maxPayloadBytes) {
-          report(
+          drops.push(
             dropReason("event-too-large", `stored event "${event.name}" is over the payload cap`),
           );
         } else entries.push({ event, bytes });
       }
     }
-    if (expired > 0)
-      report(dropReason("expired", `${String(expired)} stored events were older than 24 hours`));
-    reportOverflow(queue.prepend(entries));
+    if (expired > 0) {
+      drops.push(
+        dropReason("expired", `${String(expired)} stored events were older than 24 hours`),
+      );
+    }
+    const overflow = queue.prepend(entries);
     persist();
     if (queue.size() > 0) armTimer(options.flushInterval);
+    for (const drop of drops) report(drop);
+    reportOverflow(overflow);
   };
 
   return {
@@ -239,10 +248,11 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
         );
         return;
       }
-      reportOverflow(queue.push({ event, bytes }));
+      const overflow = queue.push({ event, bytes });
       persist();
       armTimer(options.flushInterval);
       if (queue.size() >= options.maxBatchSize) void flush();
+      reportOverflow(overflow);
     },
     loadStored: takeStored,
     flush,
