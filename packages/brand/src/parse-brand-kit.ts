@@ -55,7 +55,13 @@ const LOOSE_JOINER = /(?<![\p{L}\p{M}])(?:\u200C|\u200D)|(?:\u200C|\u200D)(?![\p
 // Scripts need a few combining marks on one letter; a long stack only smears over the text around it.
 // Spacing marks (Burmese and Indic vowel signs) take their own room, so only marks drawn over or
 // around the letter count.
-const MARK_STACK = /[\p{Mn}\p{Me}]{5}/u;
+// A joiner between marks does not break the stack.
+const MARK_STACK = /(?:[\p{Mn}\p{Me}][\u200C\u200D]?){5}/u;
+// The geresh, gershayim and both middle dots follow a letter or mark, which also refuses a run of
+// them; the middle dots join two letters (Col·lecció, タワー・カフェ), while a geresh or gershayim
+// may end a word (ג׳ורג׳).
+const LOOSE_PUNCTUATION =
+  /(?<![\p{L}\p{M}])[\u05F3\u05F4\u30FB\u00B7]|[\u30FB\u00B7](?![\p{L}\p{M}])/u;
 const SHOWABLE_KEY = /^[A-Za-z0-9_$-]{1,40}$/;
 
 const KIT_KEYS = ["id", "name", "tagline", "colors", "typography", "corners", "tone"] as const;
@@ -162,6 +168,7 @@ function readText(value: unknown, path: string, max: number, errors: Errors): st
     !TEXT.test(text) ||
     MARK_STACK.test(text) ||
     LOOSE_JOINER.test(text) ||
+    LOOSE_PUNCTUATION.test(text) ||
     text.trim() !== text ||
     text.includes("  ")
   ) {
