@@ -45,14 +45,18 @@ function thousandCopies(definition: string, roots: number): string {
   );
 }
 
-/** `depth` masks, each but the first masking its own rectangle with the one before. */
-function nestedMasks(depth: number, uses: number): string {
+/**
+ * `depth` masks, each but the first masking its own rectangle with the one before, over squares of
+ * `size` in a 1000 by 1000 view box.
+ */
+function nestedMasks(depth: number, uses: number, size = 1000): string {
+  const square = `width="${String(size)}" height="${String(size)}"`;
   let body = "<defs>";
   for (let index = 0; index < depth; index += 1) {
     const inner = index === 0 ? "" : ` mask="url(#m${String(index - 1)})"`;
-    body += `<mask id="m${String(index)}"><rect width="1000" height="1000" fill="#fff"${inner}/></mask>`;
+    body += `<mask id="m${String(index)}"><rect ${square} fill="#fff"${inner}/></mask>`;
   }
-  body += `<rect id="r" width="1000" height="1000" mask="url(#m${String(depth - 1)})"/></defs>`;
+  body += `<rect id="r" ${square} mask="url(#m${String(depth - 1)})"/></defs>`;
   return svg(body + '<use href="#r"/>'.repeat(uses), "0 0 1000 1000");
 }
 
@@ -245,7 +249,10 @@ describe("the drawing cost limit", () => {
   });
 
   it("accepts masks applied up to the limit and refuses one more", () => {
-    expect(accepted(nestedMasks(1, SVG_LOGO_LIMITS.maskApplications)).ok).toBe(true);
-    expect(refusal(nestedMasks(1, SVG_LOGO_LIMITS.maskApplications + 1))).toBe("too-many-masks");
+    // Small ones, so what they paint stays well within the overdraw limit.
+    expect(accepted(nestedMasks(1, SVG_LOGO_LIMITS.maskApplications, 10)).ok).toBe(true);
+    expect(refusal(nestedMasks(1, SVG_LOGO_LIMITS.maskApplications + 1, 10))).toBe(
+      "too-many-masks",
+    );
   });
 });

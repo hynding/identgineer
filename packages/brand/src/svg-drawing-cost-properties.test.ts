@@ -3,10 +3,62 @@ import { sanitiseSvgLogo } from "./sanitise-svg-logo.ts";
 import { seeded } from "./seeded-random.ts";
 import { SVG_DRAWING_WEIGHTS as WEIGHT } from "./svg-drawing-cost.ts";
 import { SVG_LOGO_LIMITS } from "./svg-logo-limits.ts";
+import { SVG_OVERDRAW_WEIGHTS as PAINT } from "./svg-overdraw.ts";
 
 // Random logos built as a graph of definitions (shapes, groups of uses, masks) whose drawing cost
-// is worked out here from the graph itself, by a model written apart from the sanitiser's, and
-// compared with what the sanitiser measured or why it refused.
+// and overdraw are worked out here from the graph itself, by a model written apart from the
+// sanitiser's, and compared with what the sanitiser measured or why it refused. Nothing is
+// transformed and every paint is the default solid black, so each definition paints the same
+// wherever it is used: its overdraw is its own, drawn as itself or as part of a clip path.
+
+/** The view box is 100 by 100: one unit of overdraw is 10,000 square user units. */
+const SIDE = 100;
+
+interface Box {
+  readonly minX: number;
+  readonly minY: number;
+  readonly maxX: number;
+  readonly maxY: number;
+}
+
+const NO_BOX: Box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+
+function joined(left: Box, right: Box): Box {
+  return {
+    minX: Math.min(left.minX, right.minX),
+    minY: Math.min(left.minY, right.minY),
+    maxX: Math.max(left.maxX, right.maxX),
+    maxY: Math.max(left.maxY, right.maxY),
+  };
+}
+
+/** The share of the image a box covers, at most all of it. */
+function share(box: Box): number {
+  if (box.minX > box.maxX) return 0;
+  return Math.min(1, ((box.maxX - box.minX) * (box.maxY - box.minY)) / (SIDE * SIDE));
+}
+
+interface Paint {
+  readonly overdraw: number;
+  readonly box: Box;
+}
+
+/** What a shape paints: its fill, at most the whole image, and its edges. */
+function filled(area: number, segments: number, length: number, box: Box): Paint {
+  return {
+    overdraw:
+      Math.min(1, area / (SIDE * SIDE)) * PAINT.solid +
+      Math.min(Math.SQRT2 * segments, length / SIDE) * PAINT.edge,
+    box,
+  };
+}
+
+function triangle(a: readonly number[], b: readonly number[], c: readonly number[]): number {
+  const [ax = 0, ay = 0] = a;
+  const [bx = 0, by = 0] = b;
+  const [cx = 0, cy = 0] = c;
+  return Math.abs((bx - ax) * (cy - ay) - (cx - ax) * (by - ay)) / 2;
+}
 
 interface Measure {
   readonly cost: number;
@@ -18,6 +70,8 @@ interface Item {
   readonly id: string;
   readonly markup: string;
   readonly measure: (period: number) => Measure;
+  /** What it paints, drawn as itself or (`clipping`) as coverage inside a clip path. */
+  readonly paint: (clipping: boolean) => Paint;
 }
 
 const NONE: Measure = { cost: 0, masks: 0, depth: 0 };
@@ -68,6 +122,13 @@ class LogoGraph {
     let x = 0;
     let y = 0;
     let length = 0;
+    // The area bound: triangles fanned from the start over the control polygon, and each curve's
+    // hull; the box holds every point.
+    let area = 0;
+    let box: Box = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    const reach = (px: number, py: number): void => {
+      box = joined(box, { minX: px, minY: py, maxX: px, maxY: py });
+    };
     for (let index = 0; index < count; index += 1) {
       const nextX = this.integer(100);
       const nextY = this.integer(100);
@@ -83,18 +144,39 @@ class LogoGraph {
           Math.hypot(x1 - x, y1 - y) +
           Math.hypot(x2 - x1, y2 - y1) +
           Math.hypot(nextX - x2, nextY - y2);
+        const [p0, p1, p2, p3] = [
+          [x, y],
+          [x1, y1],
+          [x2, y2],
+          [nextX, nextY],
+        ];
+        area +=
+          triangle([0, 0], p0, p1) +
+          triangle([0, 0], p1, p2) +
+          triangle([0, 0], p2, p3) +
+          triangle(p0, p1, p2) +
+          triangle(p0, p2, p3) +
+          triangle(p0, p1, p3) +
+          triangle(p1, p2, p3);
+        reach(x1, y1);
+        reach(x2, y2);
       } else {
         data += `L${String(nextX)} ${String(nextY)}`;
         length += Math.hypot(nextX - x, nextY - y);
+        area += triangle([0, 0], [x, y], [nextX, nextY]);
       }
+      reach(nextX, nextY);
       x = nextX;
       y = nextY;
     }
     const geometry = count * (curves ? WEIGHT.cubic : WEIGHT.line);
+    const boxArea = (box.maxX - box.minX) * (box.maxY - box.minY);
+    const painted = filled(Math.min(area, boxArea), count, length, box);
     return {
       id,
       markup: `<path id="${id}" d="${data}"${this.dash()}/>`,
       measure: (period) => shape(geometry, length, period),
+      paint: () => painted,
     };
   }
 
@@ -105,6 +187,13 @@ class LogoGraph {
         id,
         markup: `<rect id="${id}" width="${String(width)}" height="${String(height)}"${this.dash()}/>`,
         measure: (period) => shape(4 * WEIGHT.line, 2 * (width + height), period),
+        paint: () =>
+          filled(width * height, 4, 2 * (width + height), {
+            minX: 0,
+            minY: 0,
+            maxX: width,
+            maxY: height,
+          }),
       };
     }
     const radius = 1 + this.integer(50);
@@ -112,25 +201,35 @@ class LogoGraph {
       id,
       markup: `<circle id="${id}" r="${String(radius)}"${this.dash()}/>`,
       measure: (period) => shape(4 * WEIGHT.cubic, 2 * Math.PI * radius, period),
+      paint: () =>
+        filled(Math.PI * radius * radius, 4, 2 * Math.PI * radius, {
+          minX: -radius,
+          minY: -radius,
+          maxX: radius,
+          maxY: radius,
+        }),
     };
   }
 
-  private use(target: Item): { markup: string; measure: (period: number) => Measure } {
+  private use(target: Item): Omit<Item, "id"> {
     return {
       markup: `<use href="#${target.id}"/>`,
       measure: (period) =>
         add({ cost: WEIGHT.element, masks: 0, depth: 0 }, target.measure(period)),
+      paint: (clipping) => target.paint(clipping),
     };
   }
 
   private applied(mask: Item | undefined): {
     markup: string;
     measure: (period: number) => Measure;
+    /** What applying it to a box paints; a mask inside a clip path is not applied. */
+    paint: (box: Box, clipping: boolean) => number;
   } {
-    if (mask === undefined) return { markup: "", measure: () => NONE };
-    const attribute = mask.id.startsWith("c") ? "clip-path" : "mask";
+    if (mask === undefined) return { markup: "", measure: () => NONE, paint: () => 0 };
+    const clip = mask.id.startsWith("c");
     return {
-      markup: ` ${attribute}="url(#${mask.id})"`,
+      markup: ` ${clip ? "clip-path" : "mask"}="url(#${mask.id})"`,
       measure: (period) => {
         const inside = mask.measure(period);
         return {
@@ -138,6 +237,10 @@ class LogoGraph {
           masks: 1 + inside.masks,
           depth: 1 + inside.depth,
         };
+      },
+      paint: (box, clipping) => {
+        if (clipping && !clip) return 0;
+        return share(box) * (clip ? PAINT.clip : PAINT.mask) + mask.paint(clip).overdraw;
       },
     };
   }
@@ -163,6 +266,13 @@ class LogoGraph {
           masks: 0,
           depth: 0,
         }),
+      paint: (clipping) => {
+        const painted = uses.map((use) => use.paint(clipping));
+        const box = painted.map((part) => part.box).reduce(joined, NO_BOX);
+        const own = painted.reduce((total, part) => total + part.overdraw, 0);
+        const opacity = layer && !clipping ? share(box) * PAINT.layer : 0;
+        return { overdraw: own + opacity + applied.paint(box, clipping), box };
+      },
     };
   }
 
@@ -182,10 +292,15 @@ class LogoGraph {
           { cost: 2 * WEIGHT.element, masks: 0, depth: 0 },
           add(applied.measure(period), content.measure(period)),
         ),
+      // What its content paints each time it is applied (as coverage, for a clip path).
+      paint: (clipping) => {
+        const inside = content.paint(clipping);
+        return { overdraw: inside.overdraw + applied.paint(inside.box, clipping), box: inside.box };
+      },
     };
   }
 
-  build(): { svg: string; expected: Measure } {
+  build(): { svg: string; expected: Measure; overdraw: number } {
     let definitions = "";
     for (let index = 0; index < 2 + this.integer(4); index += 1) {
       const item =
@@ -218,6 +333,7 @@ class LogoGraph {
         `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs>${definitions}</defs>` +
         `${roots.map((root) => root.markup).join("")}</svg>`,
       expected,
+      overdraw: roots.reduce((total, root) => total + root.paint(false).overdraw, 0),
     };
   }
 }
@@ -229,28 +345,37 @@ describe("the drawing cost, over random graphs of definitions", () => {
     const outcomes = new Map<string, number>();
     for (let run = 0; run < 3_000; run += 1) {
       const where = `seed ${String(seed)}, run ${String(run)}`;
-      const { svg, expected } = new LogoGraph(random).build();
+      const { svg, expected, overdraw } = new LogoGraph(random).build();
       const result = sanitiseSvgLogo(svg);
       const over = {
         "masks-too-deep": expected.depth > SVG_LOGO_LIMITS.maskDepth,
         "too-many-masks": expected.masks > SVG_LOGO_LIMITS.maskApplications,
         "drawing-too-costly": expected.cost > SVG_LOGO_LIMITS.drawingCost,
+        "overdraw-too-large": overdraw > SVG_LOGO_LIMITS.overdraw,
       };
       const outcome = result.ok ? "accepted" : (result.errors[0]?.code ?? "none");
       outcomes.set(outcome, (outcomes.get(outcome) ?? 0) + 1);
       if (result.ok) {
         expect(result.drawingCost, where).toBe(expected.cost);
+        expect(result.overdraw, where).toBeCloseTo(overdraw, 6);
         expect(Object.values(over).some(Boolean), where).toBe(false);
         continue;
       }
       expect(["expansion-too-large", "reference-too-deep", ...Object.keys(over)], where).toContain(
         outcome,
       );
-      // Refused for its element count or reference depth, it may be over the others too.
+      // Refused for its element count or reference depth, it may be over the others too; refused
+      // for one limit, it may be over those checked after it.
       if (outcome in over) expect(over[outcome as keyof typeof over], where).toBe(true);
     }
     // Every outcome turns up often enough to mean something.
-    for (const outcome of ["accepted", "drawing-too-costly", "too-many-masks", "masks-too-deep"]) {
+    for (const outcome of [
+      "accepted",
+      "drawing-too-costly",
+      "too-many-masks",
+      "masks-too-deep",
+      "overdraw-too-large",
+    ]) {
       expect(outcomes.get(outcome) ?? 0, outcome).toBeGreaterThan(50);
     }
   }, 120_000);

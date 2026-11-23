@@ -17,6 +17,7 @@ describe("the public API", () => {
         "STATUS_NEAR_ACCENT",
         "SVG_DRAWING_WEIGHTS",
         "SVG_LOGO_LIMITS",
+        "SVG_OVERDRAW_WEIGHTS",
         "TAGLINE_MAX_LENGTH",
         "TONES",
         "TYPOGRAPHY_IDS",

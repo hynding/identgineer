@@ -177,7 +177,7 @@ describe("the overdraw of a logo", () => {
       9,
     );
     // A shape with both a fill and a stroke under opacity is drawn into a layer as well.
-    const both = `<rect ${SQUARE} stroke="#000" stroke-width="0.001"`;
+    const both = `<rect ${SQUARE} stroke="#000" stroke-width="0.0001"`;
     expect(overdraw(`${both} opacity="0.5"/>`) - overdraw(`${both}/>`)).toBeCloseTo(
       QUARTER * W.layer,
       4,
