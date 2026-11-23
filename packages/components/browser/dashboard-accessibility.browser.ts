@@ -198,12 +198,15 @@ test.describe("dashboard components right to left", () => {
   test("an isolated value keeps its own direction beside text of the other", async ({ page }) => {
     await openDashboard(page, { query: "?hostile" });
     await pickerSelect(page).selectOption("p-evil");
-    const isolates = await table(page)
+    // The rows of the property just chosen replace the first ones; a value read while they are
+    // being swapped is no longer in the page and has no style to report.
+    await expect(rows(page)).toHaveCount(4);
+    await settle(page);
+    const values = await table(page)
       .locator("tbody bdi")
-      .evaluateAll((nodes) =>
-        nodes.every((node) => getComputedStyle(node).unicodeBidi === "isolate"),
-      );
-    expect(isolates).toBe(true);
+      .evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).unicodeBidi));
+    expect(values.length).toBeGreaterThan(0);
+    expect(values.every((value) => value === "isolate")).toBe(true);
   });
 });
 
