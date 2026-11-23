@@ -195,6 +195,37 @@ describe("parseBrandKit, text", () => {
     expect(pathsOf({ ...VALID, name: stack })).toEqual(["name"]);
   });
 
+  it.each([
+    [
+      "Persian with a zero-width non-joiner",
+      String.fromCodePoint(0x645, 0x6cc, 0x200c, 0x62e, 0x648, 0x627, 0x647, 0x645),
+    ],
+    ["Sinhala with a zero-width joiner", String.fromCodePoint(0xdc1, 0xdca, 0x200d, 0xdbb, 0xdd3)],
+    ["Hebrew with a geresh", String.fromCodePoint(0x5e6, 0x5f3, 0x5d9, 0x5e4, 0x5e1)],
+    ["Hebrew with gershayim", String.fromCodePoint(0x5e6, 0x5d4, 0x5f4, 0x5dc)],
+    [
+      "a katakana middle dot",
+      String.fromCodePoint(0x30b8, 0x30e7, 0x30f3, 0x30fb, 0x30b9, 0x30df, 0x30b9),
+    ],
+    ["a middle dot", `Col${String.fromCodePoint(0xb7)}legi`],
+  ])("accepts characters real names need: %s", (_label, name) => {
+    expect(errorsOf({ ...VALID, name })).toEqual([]);
+  });
+
+  it.each([
+    ["a run of joiners", `a${String.fromCodePoint(0x200d, 0x200d)}b`],
+    ["a joiner and a non-joiner together", `a${String.fromCodePoint(0x200c, 0x200d)}b`],
+    ["a leading non-joiner", `${String.fromCodePoint(0x200c)}ab`],
+    ["a trailing joiner", `ab${String.fromCodePoint(0x200d)}`],
+    ["a joiner beside a space", `a ${String.fromCodePoint(0x200d)}b`],
+    ["a joiner beside a digit", `a${String.fromCodePoint(0x200d)}1`],
+    ["a right-to-left override", `a${String.fromCodePoint(0x202e)}b`],
+    ["a first-strong isolate", `a${String.fromCodePoint(0x2068)}b`],
+    ["a zero-width space", `a${String.fromCodePoint(0x200b)}b`],
+  ])("refuses %s", (_label, name) => {
+    expect(pathsOf({ ...VALID, name })).toEqual(["name"]);
+  });
+
   it("counts length in code points, so letters outside the BMP count once", () => {
     const letter = String.fromCodePoint(0x1d49c);
     expect(errorsOf({ ...VALID, name: letter.repeat(NAME_MAX_LENGTH) })).toEqual([]);
