@@ -1,6 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { MAX_INPUT_VALUES, downsample, parseValues, summarise } from "./sparkline-values";
 
+describe("parseValues on hostile text", () => {
+  it("reads a long run of digits that ends in a letter in linear time", () => {
+    const start = performance.now();
+    expect(parseValues(`${"1".repeat(100_000)}x`)).toEqual([]);
+    expect(parseValues(`${"1".repeat(100_000)}.${"1".repeat(1000)}x,1`)).toEqual([]);
+    expect(performance.now() - start).toBeLessThan(200);
+  });
+
+  it("drops a token longer than a number needs to be", () => {
+    expect(parseValues(`${"1".repeat(65)},2`)).toEqual([2]);
+    expect(parseValues(`${"1".repeat(64)},2`)).toEqual([Number("1".repeat(64)), 2]);
+  });
+});
+
 describe("parseValues", () => {
   it("takes an array of numbers as it is", () => {
     expect(parseValues([1, 2.5, -3])).toEqual([1, 2.5, -3]);
