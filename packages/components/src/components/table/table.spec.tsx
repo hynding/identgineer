@@ -342,6 +342,33 @@ describe("idg-table sortable headers", () => {
     );
   });
 
+  it("with manual-sort stops announcing a sort when the owner clears it", async () => {
+    const { root, waitForChanges } = await render(
+      <idg-table manualSort>
+        <table>
+          <thead>
+            <tr>
+              <th data-sortable="name">Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>a</td>
+            </tr>
+          </tbody>
+        </table>
+      </idg-table>,
+    );
+    (root as TableElement).sortKey = "name";
+    await waitForChanges();
+    const region = () => root.shadowRoot?.querySelector('[role="status"]')?.textContent;
+    expect(region()).toBe("Sorted by Name, ascending");
+    (root as TableElement).sortKey = "";
+    await waitForChanges();
+    expect(region()).toBe("");
+    expect(header(root, 0).hasAttribute("aria-sort")).toBe(false);
+  });
+
   it("with manual-sort proposes the opposite direction on the next press, from what the owner set", async () => {
     const { root, spyOnEvent, waitForChanges } = await render(
       <idg-table manualSort sortKey="name" sortDirection="ascending">
