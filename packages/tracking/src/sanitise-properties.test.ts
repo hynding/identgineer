@@ -68,14 +68,16 @@ describe("sanitiseProperties", () => {
     expect(run({ seats: 0 }).properties).toEqual({ seats: 0 });
   });
 
-  it.each([["null", null], ["an array", ["plan"]], ["a string", "plan"], ["a number", 1]])(
-    "drops properties given as %s",
-    (_label, input) => {
-      const { properties, drops } = run(input);
-      expect(properties).toEqual({});
-      expect(drops.map((drop) => drop.code)).toEqual(["invalid-properties"]);
-    },
-  );
+  it.each([
+    ["null", null],
+    ["an array", ["plan"]],
+    ["a string", "plan"],
+    ["a number", 1],
+  ])("drops properties given as %s", (_label, input) => {
+    const { properties, drops } = run(input);
+    expect(properties).toEqual({});
+    expect(drops.map((drop) => drop.code)).toEqual(["invalid-properties"]);
+  });
 
   it("refuses __proto__ as an undeclared key and pollutes nothing", () => {
     const input = JSON.parse('{"__proto__":{"polluted":true},"plan":"pro"}') as unknown;
@@ -89,7 +91,7 @@ describe("sanitiseProperties", () => {
   it("treats a declared constructor property as an ordinary key", () => {
     const { properties } = run({ constructor: "x" });
     expect(Object.hasOwn(properties, "constructor")).toBe(true);
-    expect(properties["constructor"]).toBe("x");
+    expect(properties.constructor).toBe("x");
   });
 
   it("ignores inherited properties", () => {
@@ -112,17 +114,17 @@ describe("sanitiseProperties", () => {
   describe("strings", () => {
     it("cuts a huge string to the limit", () => {
       const { properties } = run({ plan: "x".repeat(1_000_000) }, 256);
-      expect(properties["plan"]).toBe("x".repeat(256));
+      expect(properties.plan).toBe("x".repeat(256));
     });
 
     it("cuts on a code point boundary, never inside a surrogate pair", () => {
       const { properties } = run({ plan: `${"x".repeat(255)}\u{1f600}tail` }, 256);
-      expect(properties["plan"]).toBe("x".repeat(255));
+      expect(properties.plan).toBe("x".repeat(255));
     });
 
     it("keeps a pair that fits exactly", () => {
       const { properties } = run({ plan: `${"x".repeat(254)}\u{1f600}tail` }, 256);
-      expect(properties["plan"]).toBe(`${"x".repeat(254)}\u{1f600}`);
+      expect(properties.plan).toBe(`${"x".repeat(254)}\u{1f600}`);
     });
 
     it.each([
@@ -131,12 +133,12 @@ describe("sanitiseProperties", () => {
       ["a reversed pair", "\udc00\ud800", "��"],
       ["a trailing high surrogate", "ab\ud83d", "ab�"],
     ])("replaces %s", (_label, input, expected) => {
-      expect(run({ plan: input }).properties["plan"]).toBe(expected);
+      expect(run({ plan: input }).properties.plan).toBe(expected);
     });
 
     it("leaves the empty string and a string at exactly the limit alone", () => {
-      expect(run({ plan: "" }).properties["plan"]).toBe("");
-      expect(run({ plan: "y".repeat(256) }).properties["plan"]).toBe("y".repeat(256));
+      expect(run({ plan: "" }).properties.plan).toBe("");
+      expect(run({ plan: "y".repeat(256) }).properties.plan).toBe("y".repeat(256));
     });
   });
 });

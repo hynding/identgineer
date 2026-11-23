@@ -29,17 +29,37 @@ describe("parseEventDeclarations", () => {
     ["an array of events", [], /options\.events/],
     ["an upper-case event name", { Signup: { properties: {} } }, /"Signup"/],
     ["an event name with a dash", { "sign-up": { properties: {} } }, /"sign-up"/],
-    ["an event name over 64 characters", { [`a${"b".repeat(64)}`]: { properties: {} } }, /event name/],
+    [
+      "an event name over 64 characters",
+      { [`a${"b".repeat(64)}`]: { properties: {} } },
+      /event name/,
+    ],
     ["a declaration that is not an object", { a: "x" }, /"a"/],
     ["a declaration without properties", { a: {} }, /"a".*properties/],
     ["properties that are an array", { a: { properties: [] } }, /"a".*properties/],
     ["a property key in upper case", { a: { properties: { Plan: "string" } } }, /"a".*"Plan"/],
-    ["a property type that does not exist", { a: { properties: { p: "date" } } }, /"a".*"p".*"date"/],
-    ["more than 32 properties", {
-      a: { properties: Object.fromEntries(Array.from({ length: 33 }, (_v, i) => [`p${String(i)}`, "string"])) },
-    }, /"a".*32/],
+    [
+      "a property type that does not exist",
+      { a: { properties: { p: "date" } } },
+      /"a".*"p".*"date"/,
+    ],
+    [
+      "more than 32 properties",
+      {
+        a: {
+          properties: Object.fromEntries(
+            Array.from({ length: 33 }, (_v, i) => [`p${String(i)}`, "string"]),
+          ),
+        },
+      },
+      /"a".*32/,
+    ],
     ["the built-in page view name", { page_view: { properties: {} } }, /page_view/],
-    ["an own __proto__ name", JSON.parse('{"__proto__":{"properties":{}}}') as unknown, /__proto__/],
+    [
+      "an own __proto__ name",
+      JSON.parse('{"__proto__":{"properties":{}}}') as unknown,
+      /__proto__/,
+    ],
   ])("throws a located TypeError for %s", (_label, events, message) => {
     expect(() => parseEventDeclarations(events)).toThrow(TypeError);
     expect(() => parseEventDeclarations(events)).toThrow(message);

@@ -3,8 +3,11 @@ import { minimisePath, minimiseReferrer } from "./minimise-url.ts";
 
 const PAGE = "https://shop.example.com/cart?step=2#pay";
 
-const path = (input: string, allowed: readonly string[] = [], base: string | undefined = PAGE) =>
-  minimisePath(input, base, { allowedQueryParameters: new Set(allowed), maxValueLength: 32 });
+const path = (input: string, allowed: readonly string[] = [], base: string | null = PAGE) =>
+  minimisePath(input, base ?? undefined, {
+    allowedQueryParameters: new Set(allowed),
+    maxValueLength: 32,
+  });
 
 describe("minimisePath", () => {
   it.each([
@@ -42,8 +45,8 @@ describe("minimisePath", () => {
   });
 
   it("refuses a relative reference when there is no page to resolve it against", () => {
-    expect(path("/a", [], undefined)).toBeUndefined();
-    expect(path("https://example.com/a", [], undefined)).toBe("/a");
+    expect(path("/a", [], null)).toBeUndefined();
+    expect(path("https://example.com/a", [], null)).toBe("/a");
   });
 
   it("refuses a page that is not http or https", () => {
