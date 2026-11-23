@@ -18,7 +18,12 @@ idg-layout > section.plain {
   gap: var(--idg-space-m);
   align-items: start;
   margin-block-end: var(--idg-layout-section-gap);
-  /* A word the window cannot hold at a large text size breaks, so the page never scrolls sideways. */
+}
+
+/* A word the window cannot hold at a large text size breaks, so the page never scrolls sideways.
+   Only the text of the section itself: what a component holds inside it decides for itself. */
+idg-layout > section.plain > h2,
+idg-layout > section.plain > p {
   overflow-wrap: break-word;
 }
 
