@@ -4,7 +4,18 @@ body {
   margin: 0;
 }
 
+/* A header the page keeps in view, as a layout's chrome is: a banner that stuck to the top would
+   sit over it, and focus scrolled under either would be hidden. The root's scroll padding keeps
+   what is focused clear of the header, as a real page sets it. */
+html {
+  scroll-padding-block-start: 5rem;
+}
+
 .consent-header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 5;
+  background: var(--idg-surface-background);
   display: flex;
   flex-wrap: wrap;
   align-items: center;

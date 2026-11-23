@@ -366,12 +366,18 @@ test.describe("a banner never covers what has focus", () => {
         await applyAxes(page, { layout });
         await page.locator("#before").focus();
         const seen: string[] = [];
-        for (let press = 0; press < 14; press += 1) {
-          await page.keyboard.press("Tab");
-          await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
-          const result = await coverage(page);
-          seen.push(result);
-          expect(result, `after ${String(press + 1)} Tabs`).not.toMatch(/^covered|^off screen/);
+        // Down through the page and then back up: a bar stuck to the top is clear of what is tabbed
+        // to downwards, and covers what scrolling back up brings to the top edge.
+        for (const key of ["Tab", "Shift+Tab"]) {
+          for (let press = 0; press < 14; press += 1) {
+            await page.keyboard.press(key);
+            await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+            const result = await coverage(page);
+            seen.push(result);
+            expect(result, `after ${String(press + 1)} presses of ${key}`).not.toMatch(
+              /^covered|^off screen/,
+            );
+          }
         }
         expect(seen).toContain("clear");
       });
