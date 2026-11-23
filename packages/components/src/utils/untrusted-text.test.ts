@@ -61,8 +61,8 @@ describe("neutraliseText", () => {
 
   it("never throws for text that is not text", () => {
     expect(neutraliseText(undefined as unknown as string)).toBe("");
-    expect(neutraliseText(null as unknown as string)).toBe("");
-    expect(neutraliseText(12 as unknown as string)).toBe("12");
+    expect(neutraliseText(null)).toBe("");
+    expect(neutraliseText(12)).toBe("12");
   });
 });
 

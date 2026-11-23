@@ -293,7 +293,7 @@ describe("idg-property-picker in a form", () => {
   it("moves focus to the select", async () => {
     const { root } = await mount({ properties: PROPERTIES, value: "p1" });
     let focused = false;
-    (select(root) as HTMLElement & { setFocus: () => Promise<void> }).setFocus = () => {
+    (select(root) as unknown as { setFocus: () => Promise<void> }).setFocus = () => {
       focused = true;
       return Promise.resolve();
     };

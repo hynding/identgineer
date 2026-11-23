@@ -30,8 +30,12 @@ const shadow = (root: HTMLElement) => {
   return root.shadowRoot;
 };
 const rows = (root: HTMLElement) => Array.from(shadow(root).querySelectorAll("tbody tr"));
-const cells = (row: Element) =>
-  Array.from(row.children).map((cell) => (cell.textContent ?? "").trim());
+const firstRow = (root: HTMLElement): Element => {
+  const row = rows(root)[0];
+  if (!row) throw new Error("no rows");
+  return row;
+};
+const cells = (row: Element) => Array.from(row.children).map((cell) => cell.textContent.trim());
 const nameOf = (row: Element) => (row.querySelector("th")?.textContent ?? "").trim();
 const names = (root: HTMLElement) => rows(root).map(nameOf);
 const status = (root: HTMLElement) => shadow(root).querySelector("[role='status']");
@@ -77,11 +81,11 @@ describe("idg-event-table rendering", () => {
       ],
     });
     const headers = Array.from(shadow(root).querySelectorAll("thead th")).map((th) =>
-      th.textContent?.trim(),
+      th.textContent.trim(),
     );
     expect(headers).toEqual(["Event", "Time", "Path", "Properties"]);
     expect(rows(root)[0]?.querySelector("th")?.getAttribute("scope")).toBe("row");
-    const [name, time, path, properties] = cells(rows(root)[0] as Element);
+    const [name, time, path, properties] = cells(firstRow(root));
     expect(name).toBe("signup");
     expect(time).toContain("2026");
     expect(path).toBe("/pricing");
@@ -107,7 +111,7 @@ describe("idg-event-table rendering", () => {
 
   it("says in words, and not by an empty cell, that an event has no path and no properties", async () => {
     const { root } = await mount({ events: events(1) });
-    const [, , path, properties] = Array.from((rows(root)[0] as Element).children);
+    const [, , path, properties] = Array.from(firstRow(root).children);
     expect(path?.textContent).toContain("No path");
     expect(properties?.textContent).toContain("No properties");
   });
@@ -131,10 +135,10 @@ describe("idg-event-table rendering", () => {
       labels: { columnName: "Ereignis", columnTime: "Zeit", noPath: "Kein Pfad" },
     });
     const headers = Array.from(shadow(root).querySelectorAll("thead th")).map((th) =>
-      th.textContent?.trim(),
+      th.textContent.trim(),
     );
     expect(headers.slice(0, 2)).toEqual(["Ereignis", "Zeit"]);
-    expect((rows(root)[0] as Element).textContent).toContain("Kein Pfad");
+    expect(firstRow(root).textContent).toContain("Kein Pfad");
   });
 });
 
@@ -422,13 +426,13 @@ describe("idg-event-table untrusted text", () => {
     const text = shadow(root).querySelector("tbody")?.textContent ?? "";
     expect(text).toContain(`pay${MARK}fdp.exe`);
     expect(text).toContain(`a${MARK}b`);
-    expect(text).not.toMatch(/[‪-‮⁦-⁩\u0000]/);
+    expect(text).not.toMatch(/[\p{Cc}\p{Cf}]/u);
     expect(text).toContain("line break");
   });
 
   it("isolates each value's direction, so right to left text cannot reorder what is beside it", async () => {
     const { root } = await mount({ events: [hostile] });
-    const row = rows(root)[0] as Element;
+    const row = firstRow(root);
     expect(row.querySelector("th bdi")).not.toBeNull();
     expect(row.querySelector("td.path bdi")).not.toBeNull();
     expect(row.querySelectorAll("td.properties bdi").length).toBeGreaterThanOrEqual(4);
@@ -439,7 +443,7 @@ describe("idg-event-table untrusted text", () => {
     const { root } = await mount({
       events: [{ id: "x", name: long, occurredAt: at(1), path: long, properties: { k: long } }],
     });
-    const row = rows(root)[0] as Element;
+    const row = firstRow(root);
     expect((row.querySelector("th")?.textContent ?? "").length).toBeLessThanOrEqual(121);
     expect((row.querySelector("td.path")?.textContent ?? "").length).toBeLessThanOrEqual(201);
     expect((row.querySelector("td.properties")?.textContent ?? "").length).toBeLessThanOrEqual(200);
@@ -452,7 +456,7 @@ describe("idg-event-table untrusted text", () => {
     const { root } = await mount({
       events: [{ id: "x", name: "n", occurredAt: at(1), properties }],
     });
-    const cell = (rows(root)[0] as Element).querySelector("td.properties");
+    const cell = firstRow(root).querySelector("td.properties");
     expect(cell?.querySelectorAll("li:not(.more)")).toHaveLength(10);
     expect(cell?.querySelector("li.more")?.textContent).toBe("+15 more");
   });
@@ -462,9 +466,7 @@ describe("idg-event-table untrusted text", () => {
     const { root } = await mount({
       events: [{ id: "x", name: "n", occurredAt: at(1), properties }],
     });
-    expect((rows(root)[0] as Element).querySelector("td.properties")?.textContent).toContain(
-      "__proto__: x",
-    );
+    expect(firstRow(root).querySelector("td.properties")?.textContent).toContain("__proto__: x");
   });
 
   it("shows a time that is not a time as no event at all, not as Invalid Date", async () => {

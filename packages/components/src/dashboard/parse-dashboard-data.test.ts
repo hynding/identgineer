@@ -45,7 +45,7 @@ describe("parseTrackedProperty", () => {
     ["an id that is only white space", { id: "  ", name: "Docs" }],
     ["no name", { id: "p1" }],
     ["an empty name", { id: "p1", name: "" }],
-    ["a name that is not text", { id: "p1", name: { toString: () => "x" } }],
+    ["a name that is not text", { id: "p1", name: { toString: (): string => "x" } }],
     ["an id that is too long", { id: "x".repeat(DASHBOARD_LIMITS.idLength + 1), name: "Docs" }],
     ["a name that is too long", { id: "p1", name: "x".repeat(DASHBOARD_LIMITS.textLength + 1) }],
   ])("refuses %s", (_label, value) => {

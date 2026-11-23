@@ -74,9 +74,9 @@ describe("summarise", () => {
   });
 
   it("says falling when the last is below the first, and steady when they are equal", () => {
-    expect(summarise([5, 9, 2]).trend).toBe("falling");
-    expect(summarise([5, 9, 5]).trend).toBe("steady");
-    expect(summarise([2, 2, 2]).trend).toBe("steady");
+    expect(summarise([5, 9, 2])?.trend).toBe("falling");
+    expect(summarise([5, 9, 5])?.trend).toBe("steady");
+    expect(summarise([2, 2, 2])?.trend).toBe("steady");
   });
 
   it("calls one value steady, and has nothing to say about no values", () => {
@@ -92,8 +92,8 @@ describe("summarise", () => {
   });
 
   it("handles negative values and extremes without overflow", () => {
-    expect(summarise([-5, -1]).trend).toBe("rising");
-    expect(summarise([Number.MAX_VALUE, -Number.MAX_VALUE]).trend).toBe("falling");
+    expect(summarise([-5, -1])?.trend).toBe("rising");
+    expect(summarise([Number.MAX_VALUE, -Number.MAX_VALUE])?.trend).toBe("falling");
   });
 });
 

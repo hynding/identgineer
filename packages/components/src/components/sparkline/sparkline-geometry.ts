@@ -48,8 +48,9 @@ export function sparklineShape(values: readonly number[]): SparklineShape {
   const line = points
     .map(({ x, y }, index) => `${index === 0 ? "M" : "L"}${String(x)} ${String(y)}`)
     .join(" ");
-  const first = points[0] as SparklinePoint;
-  const last = points[points.length - 1] as SparklinePoint;
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (!first || !last) return { line: "", area: "", end: undefined };
   return {
     line,
     area: `${line} L${String(last.x)} ${String(baseline)} L${String(first.x)} ${String(baseline)} Z`,

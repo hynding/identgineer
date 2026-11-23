@@ -134,8 +134,9 @@ export class IdgEventTable {
   private view(): View {
     const size = normalisePageSize(this.pageSize);
     const all = this.list();
-    const served = typeof this.total === "number" && Number.isFinite(this.total) && this.total >= 0;
-    const total = served ? Math.max(Math.trunc(this.total as number), all.length) : all.length;
+    const stated = this.total;
+    const served = typeof stated === "number" && Number.isFinite(stated) && stated >= 0;
+    const total = served ? Math.max(Math.trunc(stated), all.length) : all.length;
     const pageCount = pageCountOf(total, size);
     const page = normalisePage(this.page, pageCount);
     const first = (page - 1) * size;
@@ -209,7 +210,7 @@ export class IdgEventTable {
           <bdi>{displayText(event.name, EVENT_TABLE_LIMITS.name)}</bdi>
         </th>
         <td class="time">
-          <time datetime={event.occurredAt}>
+          <time dateTime={event.occurredAt}>
             {formatDateTime(event.occurredAt, language, this.timeZone)}
           </time>
         </td>
