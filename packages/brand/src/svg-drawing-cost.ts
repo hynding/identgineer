@@ -1,4 +1,5 @@
 import type { CleanElement } from "./filter-svg-tree.ts";
+import type { SvgLengthUnit } from "./svg-values.ts";
 
 /**
  * What drawing each part of a logo costs, in units of about one stroked straight segment, measured
@@ -159,25 +160,59 @@ export function measurePathData(data: string): Geometry {
   return { weight: pen.weight, length: pen.length };
 }
 
-/** User units in one of each absolute unit a kept length may carry (a pixel is written bare). */
-const ABSOLUTE_UNITS: Readonly<Record<string, number>> = {
-  "": 1,
-  mm: 96 / 25.4,
-  cm: 96 / 2.54,
-  in: 96,
-  pt: 4 / 3,
-  pc: 16,
-};
-const LENGTH = /^(-?[0-9.]+)([a-z%]*)$/;
+const KEPT_LENGTH = /^(-?[0-9.]+)([a-z%]*)$/;
+const KEPT_UNITS: ReadonlySet<string> = new Set<SvgLengthUnit>([
+  "",
+  "%",
+  "mm",
+  "cm",
+  "in",
+  "pt",
+  "pc",
+]);
 
-/** A kept length in user units, a percentage taken of `percentBase`. */
+function isKeptUnit(unit: string): unit is SvgLengthUnit {
+  return KEPT_UNITS.has(unit);
+}
+
+/** User units in one of `unit`, a percentage taken of `percentBase`; a pixel is written bare. */
+function unitSize(unit: SvgLengthUnit, percentBase: number): number {
+  switch (unit) {
+    case "":
+      return 1;
+    case "%":
+      return percentBase / 100;
+    case "mm":
+      return 96 / 25.4;
+    case "cm":
+      return 96 / 2.54;
+    case "in":
+      return 96;
+    case "pt":
+      return 4 / 3;
+    case "pc":
+      return 16;
+  }
+}
+
+/**
+ * A kept length read back. Anything a grammar would not have kept is a defect upstream, and is
+ * refused rather than read as zero: a length that cost nothing would let its drawing cost nothing.
+ */
+function readKeptLength(text: string, what: string): { amount: number; unit: SvgLengthUnit } {
+  const match = KEPT_LENGTH.exec(text);
+  const unit = match?.[2] ?? "";
+  if (match === null || !isKeptUnit(unit)) {
+    throw new Error(`a kept ${what} "${text}" is not in a form any grammar keeps`);
+  }
+  return { amount: Number(match[1]), unit };
+}
+
+/** A kept length in user units, a percentage taken of `percentBase`; 0 when there is none. */
 function userUnits(text: string | undefined, percentBase: number): number {
-  const match = LENGTH.exec(text ?? "");
-  if (!match) return 0;
-  const amount = Number(match[1]);
-  const unit = match[2] ?? "";
-  if (unit === "%") return (amount / 100) * percentBase;
-  return amount * (ABSOLUTE_UNITS[unit] ?? 0);
+  if (text === undefined) return 0;
+  const { amount, unit } = readKeptLength(text, "length");
+  return amount * unitSize(unit, percentBase);
 }
 
 /**
@@ -186,7 +221,11 @@ function userUnits(text: string | undefined, percentBase: number): number {
  */
 export function dashPeriod(value: string): number {
   if (value === "none") return 0;
-  const lengths = value.split(" ").map((part) => userUnits(part, 0));
+  const lengths = value.split(" ").map((part) => {
+    const { amount, unit } = readKeptLength(part, "dash length");
+    if (unit === "%") throw new Error(`a kept dash length "${part}" is a percentage`);
+    return amount * unitSize(unit, 0);
+  });
   const sum = lengths.reduce((total, length) => total + length, 0);
   return lengths.length % 2 === 1 ? 2 * sum : sum;
 }

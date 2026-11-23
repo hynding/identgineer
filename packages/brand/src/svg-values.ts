@@ -22,11 +22,33 @@ const URL_REFERENCE = new RegExp(
 );
 const LIST_SEPARATOR = new RegExp(`(?:${XML_WHITESPACE}|,)+`);
 const WHITESPACE_RUN = new RegExp(`${XML_WHITESPACE}+`);
-// No em or ex: inline, they would take the page's font size, so neither the drawing nor its cost
-// would be the logo's own.
-const LENGTH_UNITS = new Set(["", "px", "%", "mm", "cm", "in", "pt", "pc"]);
-// A dash takes no percentage either, so its length, and so the dash count, is known.
-const DASH_UNITS = new Set(["", "px", "mm", "cm", "in", "pt", "pc"]);
+/**
+ * The units a kept length may carry, a pixel being written bare. No em or ex: inline, they would
+ * take the page's font size, so neither the drawing nor its cost would be the logo's own. The cost
+ * model is total over exactly these, so a unit added here must be added there.
+ */
+export type SvgLengthUnit = "" | "%" | "mm" | "cm" | "in" | "pt" | "pc";
+/** A dash takes no percentage, so its length, and so the dash count, is known. */
+type SvgDashUnit = Exclude<SvgLengthUnit, "%">;
+const LENGTH_UNITS: ReadonlySet<SvgLengthUnit | "px"> = new Set<SvgLengthUnit | "px">([
+  "",
+  "px",
+  "%",
+  "mm",
+  "cm",
+  "in",
+  "pt",
+  "pc",
+]);
+const DASH_UNITS: ReadonlySet<SvgDashUnit | "px"> = new Set<SvgDashUnit | "px">([
+  "",
+  "px",
+  "mm",
+  "cm",
+  "in",
+  "pt",
+  "pc",
+]);
 const ABSOLUTE_UNITS: Readonly<Record<string, number>> = {
   "": 1,
   px: 1,
@@ -57,10 +79,10 @@ function length(
   input: string,
   limits: SvgLogoLimits,
   allowNegative: boolean,
-  units: ReadonlySet<string> = LENGTH_UNITS,
+  units: ReadonlySet<SvgLengthUnit | "px"> = LENGTH_UNITS,
 ): string | undefined {
   const { amount, unit } = splitUnit(input);
-  if (!units.has(unit)) return undefined;
+  if (!(units as ReadonlySet<string>).has(unit)) return undefined;
   const normalised = normaliseNumber(amount, limits);
   if (normalised === undefined || (!allowNegative && normalised.startsWith("-"))) return undefined;
   return normalised + (unit === "px" ? "" : unit);
