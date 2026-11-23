@@ -135,3 +135,20 @@ describe("paginationRange", () => {
     }
   });
 });
+
+describe("paginationRange with numbers no pager could draw", () => {
+  it("returns a short list, quickly, for a page count too large to count in", () => {
+    const start = performance.now();
+    for (const pageCount of [1e300, Number.MAX_VALUE, Number.MAX_SAFE_INTEGER, 2 ** 60]) {
+      const tokens = paginationRange({ page: 5, pageCount });
+      expect(tokens.length).toBeLessThanOrEqual(7);
+      expect(tokens[0]).toBe(1);
+    }
+    expect(performance.now() - start).toBeLessThan(200);
+  });
+
+  it("holds siblings and boundaries to a number of slots a row can hold", () => {
+    const tokens = paginationRange({ page: 500, pageCount: 1000, siblings: 1e9, boundaries: 1e9 });
+    expect(tokens.length).toBeLessThanOrEqual(2 * 10 + 2 * 10 + 3);
+  });
+});

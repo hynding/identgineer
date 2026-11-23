@@ -218,6 +218,15 @@ describe("idg-event-table paging in the browser's own list", () => {
 });
 
 describe("idg-event-table with a page of events from a server", () => {
+  it.each([1e300, Number.MAX_SAFE_INTEGER, Number.MAX_VALUE])(
+    "draws a pager for a total of %s without throwing",
+    async (total) => {
+      const { root } = await mount({ events: events(10), total, pageSize: 10 });
+      expect(shadow(root).querySelector("idg-pagination")).not.toBeNull();
+      expect(rows(root)).toHaveLength(10);
+    },
+  );
+
   it("draws the events it is given as they are, and pages by the total", async () => {
     const { root } = await mount({ events: events(10, 20), total: 45, pageSize: 10, page: 3 });
     expect(names(root)[0]).toBe("event_20");
