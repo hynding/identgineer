@@ -103,7 +103,7 @@ test.describe("the property picker", () => {
       form.append(control);
       return new Promise<string>((resolve) => {
         requestAnimationFrame(() => {
-          resolve(String(new FormData(form).get("property")));
+          resolve((new FormData(form).get("property") as string | null) ?? "");
         });
       });
     });
@@ -144,14 +144,7 @@ test.describe("the event table", () => {
     await pagination(page).getByRole("button", { name: "Next page" }).focus();
     await page.keyboard.press("Enter");
     await expect(status(page)).toHaveText("Showing 11–20 of 95 events");
-    const inside = await page.evaluate(() => {
-      let element: Element | null = document.activeElement;
-      while (element?.shadowRoot?.activeElement) element = element.shadowRoot.activeElement;
-      return (
-        element?.closest("idg-pagination") !== null || element?.getRootNode() instanceof ShadowRoot
-      );
-    });
-    expect(inside).toBe(true);
+    await expect(pagination(page).locator("button:focus")).toHaveCount(1);
   });
 
   test("sorts by a header: aria-sort, a request in that order, and idgSort once", async ({
@@ -248,7 +241,7 @@ test.describe("untrusted text", () => {
     expect(found.handlers).toEqual([]);
     expect(found.text).toContain('<img src=x onerror="alert(1)">');
     expect(found.text).toContain("javascript:alert(document.cookie)");
-    expect(found.text).not.toMatch(/[‪-‮⁦-⁩\u0000]/);
+    expect(found.text).not.toMatch(/[\p{Cc}\p{Cf}]/u);
     expect(found.text).toContain("pay�fdp.exe");
     expect(dialogs).toEqual([]);
   });

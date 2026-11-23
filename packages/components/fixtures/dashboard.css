@@ -33,7 +33,7 @@ body {
   gap: var(--idg-space-l);
   max-inline-size: var(--idg-size-2xl);
   margin-inline: auto;
-  padding: var(--idg-space-m);
+  padding: var(--idg-space-m) var(--idg-space-2xs);
   box-sizing: border-box;
 }
 
