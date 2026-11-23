@@ -1,6 +1,61 @@
 import { describe, expect, it } from "vitest";
 import { MARK, displayText, neutraliseText, truncateText } from "./untrusted-text";
 
+describe("neutraliseText: characters that draw nothing", () => {
+  it.each([
+    ["Hangul filler U+3164", "\u3164"],
+    ["halfwidth Hangul filler U+FFA0", "\uFFA0"],
+    ["Hangul choseong filler U+115F", "\u115F"],
+    ["Hangul jungseong filler U+1160", "\u1160"],
+    ["braille blank U+2800", "\u2800"],
+    ["combining grapheme joiner U+034F", "\u034F"],
+    ["Mongolian free variation selector U+180B", "\u180B"],
+    ["variation selector U+FE00", "\uFE00"],
+    ["variation selector supplement U+E0100", "\u{E0100}"],
+    ["tag character U+E0041", "\u{E0041}"],
+  ])("shows %s as a mark between two letters", (_name, character) => {
+    expect(neutraliseText(`a${character}b`)).toBe(`a${MARK}b`);
+  });
+
+  it("shows text that would draw as nothing as a single mark", () => {
+    expect(neutraliseText("\u3164")).toBe(MARK);
+    expect(neutraliseText("\u2800\u2800")).toBe(`${MARK}${MARK}`);
+    expect(neutraliseText("   ")).toBe(MARK);
+    expect(neutraliseText(" \u00A0\u2003 ")).toBe(MARK);
+    expect(neutraliseText("\n\t")).toBe(MARK);
+    expect(neutraliseText("\u0301")).toBe(MARK);
+  });
+
+  it("leaves nothing as nothing: an empty string is not blank text", () => {
+    expect(neutraliseText("")).toBe("");
+  });
+
+  it("keeps the emoji presentation selector after an emoji and the keycap sequence", () => {
+    for (const text of ["\u2764\uFE0F", "\u263A\uFE0F ok", "1\uFE0F\u20E3", "\u2764\uFE0E"]) {
+      expect(neutraliseText(text)).toBe(text);
+    }
+    expect(neutraliseText("a\uFE0Fb")).toBe(`a${MARK}b`);
+    expect(neutraliseText("\uFE0F\u2764")).toBe(`${MARK}\u2764`);
+  });
+
+  it("keeps joined emoji sequences whole", () => {
+    for (const text of ["\u{1F469}\u200D\u{1F4BB}", "\u{1F468}\u200D\u2764\uFE0F\u200D\u{1F468}"]) {
+      expect(neutraliseText(text)).toBe(text);
+    }
+  });
+
+  it("keeps at most three combining marks on a character and shows that more were cut", () => {
+    expect(neutraliseText("e\u0301\u0302\u0303")).toBe("e\u0301\u0302\u0303");
+    expect(neutraliseText("e\u0301\u0302\u0303\u0304")).toBe(`e\u0301\u0302\u0303${MARK}`);
+    expect(neutraliseText(`e${"\u0301".repeat(500)}x`)).toBe(`e\u0301\u0301\u0301${MARK}x`);
+  });
+
+  it("is idempotent for all of it", () => {
+    const once = neutraliseText(`a\u3164b${"\u0301".repeat(9)}\u2764\uFE0F\uFE0Fc\u2800`);
+    expect(neutraliseText(once)).toBe(once);
+  });
+});
+
 describe("neutraliseText", () => {
   it("leaves ordinary text as it is, in any script, with emoji and joined emoji", () => {
     for (const text of [
