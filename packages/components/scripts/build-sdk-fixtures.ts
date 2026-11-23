@@ -1,7 +1,13 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { outputName, readModule, sdkModules, transpileSdkModule } from "./sdk-fixture-modules.ts";
+import {
+  DASHBOARD_FIXTURE_ONLY,
+  outputName,
+  readModule,
+  sdkModules,
+  transpileSdkModule,
+} from "./sdk-fixture-modules.ts";
 
 // Runs after `stencil build`, which empties www: each fixture's SDK and fakes go to their own folder
 // of www, served only by the browser tests' static server. Never part of dist.
@@ -20,12 +26,19 @@ const FIXTURES = [
     target: "../www/tracking-sdk",
     leftOut: [],
   },
+  {
+    name: "dashboard",
+    source: "../src",
+    target: "../www/dashboard-sdk",
+    leftOut: [],
+    only: DASHBOARD_FIXTURE_ONLY,
+  },
 ] as const;
 
 for (const fixture of FIXTURES) {
   const source = fileURLToPath(new URL(fixture.source, import.meta.url));
   const target = fileURLToPath(new URL(fixture.target, import.meta.url));
-  const modules = sdkModules(source, fixture.leftOut);
+  const modules = sdkModules(source, fixture.leftOut, "only" in fixture ? fixture.only : undefined);
   for (const path of modules) {
     const file = join(target, outputName(source, path));
     mkdirSync(dirname(file), { recursive: true });
