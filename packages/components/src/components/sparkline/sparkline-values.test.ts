@@ -5,7 +5,7 @@ describe("parseValues on hostile text", () => {
   it("reads a long run of digits that ends in a letter in linear time", () => {
     const start = performance.now();
     expect(parseValues(`${"1".repeat(100_000)}x`)).toEqual([]);
-    expect(parseValues(`${"1".repeat(100_000)}.${"1".repeat(1000)}x,1`)).toEqual([]);
+    expect(parseValues(`${"1".repeat(100_000)}.${"1".repeat(1000)}x,1`)).toEqual([1]);
     expect(performance.now() - start).toBeLessThan(200);
   });
 
