@@ -52,10 +52,10 @@ describe("parseValues", () => {
     expect(performance.now() - start).toBeLessThan(500);
   });
 
-  it("keeps the first and the last of an array that is longer than it reads", () => {
+  it("keeps the first, the last, the lowest and the highest of an array that is longer than it reads", () => {
     const long = Array.from({ length: MAX_INPUT_VALUES * 3 }, (_, index) => index);
     const values = parseValues(long);
-    expect(values).toHaveLength(MAX_INPUT_VALUES);
+    expect(values.length).toBeLessThanOrEqual(MAX_INPUT_VALUES);
     expect(values[0]).toBe(0);
     expect(values[values.length - 1]).toBe(MAX_INPUT_VALUES * 3 - 1);
   });

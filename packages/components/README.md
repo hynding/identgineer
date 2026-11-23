@@ -34,6 +34,7 @@ to be classified:
 | `idg-radio`      | checked dot                                      | `accent-indicator`                        | indicator  |
 | `idg-switch`     | track and thumb when on                          | `accent-indicator`, `on-accent-indicator` | indicator  |
 | `idg-progress`   | fill and indeterminate band                      | `accent-indicator`                        | indicator  |
+| `idg-sparkline`  | line, end mark and fill                          | `accent-indicator`                        | indicator  |
 | `idg-pagination` | current page and its number                      | `accent-indicator`, `on-accent-indicator` | indicator  |
 | `idg-tab`        | selected tab marker                              | `accent-indicator`                        | indicator  |
 | `idg-card`       | outlined interactive card, hovered ring          | `accent-indicator`                        | indicator  |

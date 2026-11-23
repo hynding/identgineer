@@ -1,4 +1,4 @@
-/** The most values read from one `values`; more are thinned to this many, first and last kept. */
+/** The most values read from one `values`; more are thinned to this many, keeping the first, last, lowest and highest. */
 export const MAX_INPUT_VALUES = 10_000;
 
 /** Text longer than this is read as far as here: use the property for a series that is longer. */
@@ -23,13 +23,6 @@ function finiteNumbers(values: readonly unknown[]): number[] {
     if (typeof value === "number" && Number.isFinite(value)) kept.push(value);
   }
   return kept;
-}
-
-// Evenly spaced and exactly `limit` long, including the first and the last.
-function thin(values: readonly number[], limit: number): number[] {
-  if (values.length <= limit) return [...values];
-  const step = (values.length - 1) / (limit - 1);
-  return Array.from({ length: limit }, (_, index) => values[Math.round(index * step)] ?? 0);
 }
 
 function fromText(text: string): number[] {
@@ -67,7 +60,7 @@ export function parseValues(input: unknown): number[] {
   if (Array.isArray(input)) numbers = finiteNumbers(input);
   else if (typeof input === "string") numbers = fromText(input);
   else numbers = [];
-  return thin(numbers, MAX_INPUT_VALUES);
+  return downsample(numbers, MAX_INPUT_VALUES);
 }
 
 /** What the series says in words: where it began and ended, its range and which way it went. */

@@ -181,6 +181,14 @@ export const ACCENT_ROLE_USES: readonly AccentRoleEntry[] = [
     what: "progress fill and indeterminate band",
   },
   {
+    file: "components/sparkline/sparkline.css",
+    selector: ":host",
+    property: "color",
+    token: "accent-indicator",
+    use: "indicator",
+    what: "sparkline line, end mark and fill",
+  },
+  {
     file: "components/tab/tab.css",
     selector: ".tab::after",
     property: "background",
