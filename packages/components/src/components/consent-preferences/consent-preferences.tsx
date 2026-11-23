@@ -19,8 +19,10 @@ import type {
   ConsentStatusView,
 } from "../../consent/consent-types";
 import { formatDecidedAt } from "../../consent/format-decided";
+import { returnFocus } from "../../consent/focus-return";
+import { languageOf } from "../../consent/language";
 import { fillTemplate, mergeLabels } from "../../identity/labels";
-import { focusInto } from "../../utils/focus";
+import { deepActiveElement, focusInto, isWithin } from "../../utils/focus";
 import { headingLevel } from "../../utils/heading-level";
 import type { CheckedDetail } from "../../utils/event-details";
 import {
@@ -34,7 +36,7 @@ type Failure = "save" | "erase";
 
 /**
  * The visitor's choices about analytics, for the consent object it is given in `consent` (the
- * tracker's `tracker.consent`): "Necessary", always on and not tracked, and "Analytics", a switch
+ * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
  * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
  * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
  * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
@@ -93,7 +95,9 @@ export class IdgConsentPreferences {
   @State() private status?: ConsentStatusView;
   /** The Analytics switch as the user has set it, saved or not. */
   @State() private draft = false;
-  @State() private decidedAt?: number;
+  @State() private decidedAt: number | null = null;
+  /** Counts the actions, so that each one is followed by a render that ends it. */
+  @State() private acted = 0;
   @State() private unavailable = false;
   @State() private changedElsewhere = false;
   @State() private confirming = false;
@@ -105,6 +109,11 @@ export class IdgConsentPreferences {
   /** Set while this panel's own save or erase runs, so its change is not "elsewhere". */
   private acting = false;
   private focusNext?: "confirm-no" | "erase";
+  /** True from a save or erase until the render that follows it: a repeated press is ignored. */
+  private busy = false;
+  /** What had focus when the dialog was opened, for the dialog to give it back to. */
+  private opener?: Element;
+  private returnAfterClose = false;
   private analyticsSwitch?: HTMLIdgSwitchElement;
   private readonly binding = new ConsentBinding(
     (status) => {
@@ -129,10 +138,15 @@ export class IdgConsentPreferences {
     this.bind();
   }
 
-  /** Opens the dialog when `modal`; otherwise moves focus to the panel's heading. */
+  /**
+   * Opens the dialog when `modal`; otherwise moves focus to the panel's heading. Without a consent
+   * object there is nothing to choose, so it does nothing and says `false`.
+   */
   @Method()
-  open(): Promise<void> {
+  open(): Promise<boolean> {
+    if (this.binding.current() === undefined) return Promise.resolve(false);
     if (this.modal) {
+      this.opener = deepActiveElement(this.host.ownerDocument) ?? undefined;
       this.isOpen = true;
     } else {
       const heading = this.host.shadowRoot?.querySelector<HTMLElement>(".heading");
@@ -140,7 +154,7 @@ export class IdgConsentPreferences {
       if (typeof heading?.scrollIntoView === "function")
         heading.scrollIntoView({ block: "nearest" });
     }
-    return Promise.resolve();
+    return Promise.resolve(true);
   }
 
   /** Closes the dialog when `modal`, dropping an unsaved edit; does nothing otherwise. */
@@ -174,24 +188,29 @@ export class IdgConsentPreferences {
     this.status = status;
     this.unavailable = false;
     this.reported = status.state;
-    this.readDecidedAt();
+    this.decidedAt = status.decidedAt;
     if (this.acting) {
       // This panel's own action: its outcome is settled when the action ends.
     } else if (previous === undefined || previous !== status.state) {
       this.changedElsewhere = lost && this.draft !== stored;
       this.draft = stored;
-      this.confirming = false;
+      this.dismissConfirmation(previous !== undefined);
     } else if (status.reason !== undefined) {
       this.draft = false;
     }
   }
 
-  private readDecidedAt(): void {
-    try {
-      this.decidedAt = this.binding.current()?.decidedAt?.();
-    } catch {
-      this.decidedAt = undefined;
-    }
+  // The question goes away when the choice it is about has changed under it. Focus that was on one
+  // of its buttons goes to the button that asked it, and the live region says what happened.
+  private dismissConfirmation(announceIt: boolean): void {
+    if (!this.confirming) return;
+    this.confirming = false;
+    if (!announceIt) return;
+    const active = deepActiveElement(this.host.ownerDocument);
+    const confirm = this.host.shadowRoot?.querySelector(".confirm");
+    if (confirm && isWithin(active, confirm)) this.focusNext = "erase";
+    const labels = mergeLabels(CONSENT_PREFERENCES_LABELS, this.labels);
+    this.announcement = announce(this.announcement, labels.eraseDismissed);
   }
 
   private handleSwitch = (event: CustomEvent<CheckedDetail>): void => {
@@ -204,7 +223,8 @@ export class IdgConsentPreferences {
 
   private save = (): void => {
     const consent = this.binding.current();
-    if (consent === undefined) return;
+    if (consent === undefined || this.busy) return;
+    this.begin();
     this.failure = undefined;
     this.changedElsewhere = false;
     const grant = this.draft && this.status?.reason === undefined;
@@ -218,8 +238,19 @@ export class IdgConsentPreferences {
     this.idgConsentChange.emit({ state: this.reported ?? "unknown" });
     this.draft = on;
     this.announcement = announce(this.announcement, on ? labels.savedOn : labels.savedOff);
-    this.isOpen = false;
+    this.closeAfterAction();
   };
+
+  private begin(): void {
+    this.busy = true;
+    this.acted += 1;
+  }
+
+  // Closes the dialog of an action that succeeded, and has focus put back once it has closed.
+  private closeAfterAction(): void {
+    this.returnAfterClose = this.isOpen;
+    this.isOpen = false;
+  }
 
   private askToErase = (): void => {
     this.failure = undefined;
@@ -234,7 +265,8 @@ export class IdgConsentPreferences {
 
   private erase = (): void => {
     const consent = this.binding.current();
-    if (consent === undefined) return;
+    if (consent === undefined || this.busy || !this.confirming) return;
+    this.begin();
     this.confirming = false;
     const reset = this.act(() => consent.reset());
     if (!reset) {
@@ -247,7 +279,7 @@ export class IdgConsentPreferences {
     this.changedElsewhere = false;
     this.idgConsentChange.emit({ state: this.reported ?? "unknown" });
     this.announcement = announce(this.announcement, labels.erased);
-    this.isOpen = false;
+    this.closeAfterAction();
     this.focusNext = "erase";
   };
 
@@ -261,7 +293,16 @@ export class IdgConsentPreferences {
   }
 
   private dialogClosed = (): void => {
+    const dropped = this.isDirty();
     this.isOpen = false;
+    if (this.returnAfterClose) {
+      this.returnAfterClose = false;
+      returnFocus(this.opener, this.host.ownerDocument);
+    }
+    if (dropped) {
+      const labels = mergeLabels(CONSENT_PREFERENCES_LABELS, this.labels);
+      this.announcement = announce(this.announcement, labels.discarded);
+    }
     this.draft = this.reported === "granted";
     this.confirming = false;
     this.failure = undefined;
@@ -269,6 +310,7 @@ export class IdgConsentPreferences {
   };
 
   componentDidRender(): void {
+    this.busy = false;
     this.syncSwitch();
     const target = this.focusNext;
     if (target === undefined) return;
@@ -286,11 +328,6 @@ export class IdgConsentPreferences {
     if (element && element.checked !== shown) element.checked = shown;
   }
 
-  private locale(): string | undefined {
-    const lang = this.host.closest("[lang]")?.getAttribute("lang") ?? "";
-    return lang === "" ? undefined : lang;
-  }
-
   private renderCategories(labels: ConsentPreferencesLabels, reason: ConsentStatusView["reason"]) {
     const signalText = reason === "gpc" ? labels.signalGpc : labels.signalDnt;
     const analyticsDescription =
@@ -300,9 +337,10 @@ export class IdgConsentPreferences {
     return (
       <ul class="categories" part="categories">
         <li class="category" part="necessary">
-          <idg-switch class="necessary" checked disabled>
-            {labels.necessaryTitle}
-          </idg-switch>
+          <p class="necessary-row">
+            <span class="necessary-title">{labels.necessaryTitle}</span>
+            <span class="necessary-state">{labels.necessaryState}</span>
+          </p>
           <p class="description necessary-description">{labels.necessaryDescription}</p>
         </li>
         <li class="category" part="analytics">
@@ -316,9 +354,7 @@ export class IdgConsentPreferences {
           >
             {labels.analyticsTitle}
           </idg-switch>
-          <p class="description analytics-description" aria-hidden="true">
-            {labels.analyticsDescription}
-          </p>
+          <p class="description analytics-description">{labels.analyticsDescription}</p>
           {reason === undefined ? null : (
             <idg-alert class="signal" part="signal" variant="info">
               {signalText}
@@ -331,7 +367,7 @@ export class IdgConsentPreferences {
 
   private renderBody(labels: ConsentPreferencesLabels) {
     const reason = this.status?.reason;
-    const decided = formatDecidedAt(this.decidedAt, this.locale());
+    const decided = formatDecidedAt(this.decidedAt, languageOf(this.host));
     return [
       <p class="intro">{labels.intro}</p>,
       this.renderCategories(labels, reason),

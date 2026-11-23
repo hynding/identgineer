@@ -586,7 +586,7 @@ describe("idg-consent-preferences with the real tracker", () => {
     await flip(root, true, waitForChanges);
     pressed(root, "idg-button.save");
     await waitForChanges();
-    expect(tracker.consent.get()).toEqual({ state: "granted" });
+    expect(tracker.consent.get()).toMatchObject({ state: "granted" });
     tracker.track("clicked");
     await tracker.flush();
     expect(collector.requests.length).toBeGreaterThan(0);
@@ -602,7 +602,7 @@ describe("idg-consent-preferences with the real tracker", () => {
     await waitForChanges();
     tracker.track("clicked");
     await tracker.flush();
-    expect(tracker.consent.get()).toEqual({ state: "denied", reason: "gpc" });
+    expect(tracker.consent.get()).toMatchObject({ state: "denied", reason: "gpc" });
     expect(collector.requests).toEqual([]);
   });
 

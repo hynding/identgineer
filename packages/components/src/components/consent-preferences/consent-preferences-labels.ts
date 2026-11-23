@@ -7,6 +7,8 @@ export interface ConsentPreferencesLabels {
   readonly title: string;
   readonly intro: string;
   readonly necessaryTitle: string;
+  /** Next to the title: the row has no switch, since it cannot be turned off. */
+  readonly necessaryState: string;
   /** Says why the row is on and cannot be changed, and that it is not tracked. */
   readonly necessaryDescription: string;
   readonly analyticsTitle: string;
@@ -24,6 +26,10 @@ export interface ConsentPreferencesLabels {
   readonly eraseCancel: string;
   /** The stored choice changed somewhere else while there was an unsaved edit. */
   readonly changedElsewhere: string;
+  /** Said politely when the dialog is closed without saving and an edit is dropped. */
+  readonly discarded: string;
+  /** Said politely when the choice changes elsewhere while the erase question is open. */
+  readonly eraseDismissed: string;
   readonly savedOn: string;
   readonly savedOff: string;
   readonly erased: string;
@@ -39,6 +45,7 @@ export const CONSENT_PREFERENCES_LABELS: ConsentPreferencesLabels = {
   title: "Privacy preferences",
   intro: "Choose what this site may record about your visit. Nothing changes until you save.",
   necessaryTitle: "Necessary",
+  necessaryState: "Always on",
   necessaryDescription:
     "Always on. This is what the site needs to work, and it is not tracked or measured.",
   analyticsTitle: "Analytics",
@@ -57,6 +64,8 @@ export const CONSENT_PREFERENCES_LABELS: ConsentPreferencesLabels = {
   eraseCancel: "Keep my choice",
   changedElsewhere:
     "Your choice changed in another tab or place, so your unsaved change was discarded.",
+  discarded: "Changes were not saved.",
+  eraseDismissed: "Your choice was changed elsewhere, so the question about erasing was closed.",
   savedOn: "Preferences saved. Analytics are on.",
   savedOff: "Preferences saved. Analytics are off.",
   erased: "Your consent is withdrawn and what analytics stored in this browser is erased.",

@@ -517,10 +517,12 @@ export namespace Components {
      * signal is respected. "Decline" comes first and has the same variant and size as "Accept
      * analytics". After a choice, focus goes back to what had it before the banner, else to the main
      * landmark, and a polite live region confirms it.
-     * `placement` `bottom` or `top` makes the host stick to that edge of the window while its natural
-     * place is further on, so it keeps its space in the page's flow and never covers the end of the
-     * page, and the banner keeps the page's scroll padding as tall as itself, so a focused element is
-     * scrolled clear of it.
+     * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
+     * natural place is further on, so it keeps its space in the page's flow and never covers the end
+     * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
+     * element is scrolled clear of it. In a window too short for both, it joins the page's flow
+     * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
+     * is: a bar at the top scrolls away with the page and never covers a header that sticks.
      */
     interface IdgConsentBanner {
         /**
@@ -537,7 +539,7 @@ export namespace Components {
          */
         "labels"?: Partial<ConsentBannerLabels>;
         /**
-          * `bottom` (the default) or `top`: a bar that stays in view; `inline`: in the page's flow.
+          * `bottom` (the default): a bar that stays in view; `top` and `inline`: in the page's flow.
           * @default "bottom"
          */
         "placement": ConsentPlacement;
@@ -548,7 +550,7 @@ export namespace Components {
     }
     /**
      * The visitor's choices about analytics, for the consent object it is given in `consent` (the
-     * tracker's `tracker.consent`): "Necessary", always on and not tracked, and "Analytics", a switch
+     * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
      * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
      * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
      * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
@@ -581,9 +583,9 @@ export namespace Components {
          */
         "modal": boolean;
         /**
-          * Opens the dialog when `modal`; otherwise moves focus to the panel's heading.
+          * Opens the dialog when `modal`; otherwise moves focus to the panel's heading. Without a consent object there is nothing to choose, so it does nothing and says `false`.
          */
-        "open": () => Promise<void>;
+        "open": () => Promise<boolean>;
     }
     /**
      * A block at least as tall as `min-height` that centres its content, with optional regions pinned
@@ -2226,10 +2228,12 @@ declare global {
      * signal is respected. "Decline" comes first and has the same variant and size as "Accept
      * analytics". After a choice, focus goes back to what had it before the banner, else to the main
      * landmark, and a polite live region confirms it.
-     * `placement` `bottom` or `top` makes the host stick to that edge of the window while its natural
-     * place is further on, so it keeps its space in the page's flow and never covers the end of the
-     * page, and the banner keeps the page's scroll padding as tall as itself, so a focused element is
-     * scrolled clear of it.
+     * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
+     * natural place is further on, so it keeps its space in the page's flow and never covers the end
+     * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
+     * element is scrolled clear of it. In a window too short for both, it joins the page's flow
+     * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
+     * is: a bar at the top scrolls away with the page and never covers a header that sticks.
      */
     interface HTMLIdgConsentBannerElement extends Components.IdgConsentBanner, HTMLStencilElement {
         addEventListener<K extends keyof HTMLIdgConsentBannerElementEventMap>(type: K, listener: (this: HTMLIdgConsentBannerElement, ev: IdgConsentBannerCustomEvent<HTMLIdgConsentBannerElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
@@ -2250,7 +2254,7 @@ declare global {
     }
     /**
      * The visitor's choices about analytics, for the consent object it is given in `consent` (the
-     * tracker's `tracker.consent`): "Necessary", always on and not tracked, and "Analytics", a switch
+     * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
      * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
      * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
      * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
@@ -3467,10 +3471,12 @@ declare namespace LocalJSX {
      * signal is respected. "Decline" comes first and has the same variant and size as "Accept
      * analytics". After a choice, focus goes back to what had it before the banner, else to the main
      * landmark, and a polite live region confirms it.
-     * `placement` `bottom` or `top` makes the host stick to that edge of the window while its natural
-     * place is further on, so it keeps its space in the page's flow and never covers the end of the
-     * page, and the banner keeps the page's scroll padding as tall as itself, so a focused element is
-     * scrolled clear of it.
+     * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
+     * natural place is further on, so it keeps its space in the page's flow and never covers the end
+     * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
+     * element is scrolled clear of it. In a window too short for both, it joins the page's flow
+     * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
+     * is: a bar at the top scrolls away with the page and never covers a header that sticks.
      */
     interface IdgConsentBanner {
         /**
@@ -3495,7 +3501,7 @@ declare namespace LocalJSX {
          */
         "onIdgConsentChoose"?: (event: IdgConsentBannerCustomEvent<void>) => void;
         /**
-          * `bottom` (the default) or `top`: a bar that stays in view; `inline`: in the page's flow.
+          * `bottom` (the default): a bar that stays in view; `top` and `inline`: in the page's flow.
           * @default "bottom"
          */
         "placement"?: ConsentPlacement;
@@ -3506,7 +3512,7 @@ declare namespace LocalJSX {
     }
     /**
      * The visitor's choices about analytics, for the consent object it is given in `consent` (the
-     * tracker's `tracker.consent`): "Necessary", always on and not tracked, and "Analytics", a switch
+     * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
      * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
      * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
      * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
@@ -5467,15 +5473,17 @@ declare module "@stencil/core" {
              * signal is respected. "Decline" comes first and has the same variant and size as "Accept
              * analytics". After a choice, focus goes back to what had it before the banner, else to the main
              * landmark, and a polite live region confirms it.
-             * `placement` `bottom` or `top` makes the host stick to that edge of the window while its natural
-             * place is further on, so it keeps its space in the page's flow and never covers the end of the
-             * page, and the banner keeps the page's scroll padding as tall as itself, so a focused element is
-             * scrolled clear of it.
+             * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
+             * natural place is further on, so it keeps its space in the page's flow and never covers the end
+             * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
+             * element is scrolled clear of it. In a window too short for both, it joins the page's flow
+             * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
+             * is: a bar at the top scrolls away with the page and never covers a header that sticks.
              */
             "idg-consent-banner": LocalJSX.IntrinsicElements["idg-consent-banner"] & JSXBase.HTMLAttributes<HTMLIdgConsentBannerElement>;
             /**
              * The visitor's choices about analytics, for the consent object it is given in `consent` (the
-             * tracker's `tracker.consent`): "Necessary", always on and not tracked, and "Analytics", a switch
+             * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
              * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
              * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
              * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and

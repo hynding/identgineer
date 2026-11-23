@@ -1,7 +1,8 @@
-/* The host is what sticks to the edge of the window for `bottom` and `top`: a sticky element
-   moves within the box of its parent, and the banner inside the shadow root would be the only
-   thing in the host's box. It keeps its place in the page's flow, so it never covers the end of
-   the page (or the start, for the top). With nothing drawn the host is a box with no height. */
+/* The host is what sticks to the bottom edge of the window for `bottom`: a sticky element moves
+   within the box of its parent, and the banner inside the shadow root would be the only thing in
+   the host's box. It keeps its place in the page's flow, so it never covers the end of the page.
+   A bar at the top is not sticky: it scrolls away with the page, so it can never sit over a header
+   the layout keeps in view or over what has focus. With nothing drawn the host has no height. */
 :host {
   display: block;
   min-inline-size: 0;
@@ -20,12 +21,6 @@
 :host(:not([placement="top"]):not([placement="inline"])) {
   position: sticky;
   inset-block-end: 0;
-  z-index: 10;
-}
-
-:host([placement="top"]) {
-  position: sticky;
-  inset-block-start: 0;
   z-index: 10;
 }
 
@@ -53,10 +48,22 @@
 
 /* A bar that fills the window (large text on a small screen) would hide the page it asks about,
    so it is held to half the window and scrolls within itself. */
-.placement-bottom,
-.placement-top {
+.placement-bottom {
   max-block-size: calc(var(--idg-size-screen) / 2);
   overflow-y: auto;
+}
+
+/* A window this short has no room for a bar that stays in view and the page behind it: half of it
+   would scroll inside itself. The bar joins the page's flow, and the page scrolls to everything. */
+@media (max-height: 32rem) {
+  :host(:not([placement="top"]):not([placement="inline"])) {
+    position: static;
+  }
+
+  .placement-bottom {
+    max-block-size: none;
+    overflow-y: visible;
+  }
 }
 
 /* The words, and what goes wrong with them, take the line; the buttons take what is left of it, or

@@ -42,10 +42,12 @@ interface PreferencesPanel extends HTMLElement {
  * analytics". After a choice, focus goes back to what had it before the banner, else to the main
  * landmark, and a polite live region confirms it.
  *
- * `placement` `bottom` or `top` makes the host stick to that edge of the window while its natural
- * place is further on, so it keeps its space in the page's flow and never covers the end of the
- * page, and the banner keeps the page's scroll padding as tall as itself, so a focused element is
- * scrolled clear of it.
+ * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
+ * natural place is further on, so it keeps its space in the page's flow and never covers the end
+ * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
+ * element is scrolled clear of it. In a window too short for both, it joins the page's flow
+ * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
+ * is: a bar at the top scrolls away with the page and never covers a header that sticks.
  *
  * @slot message - The question, in place of the default words.
  * @slot policy - A link to the privacy policy, after the message.
@@ -75,7 +77,7 @@ export class IdgConsentBanner {
   /** The text, merged over the English defaults. Assign a new object to change it. */
   @Prop() labels?: Partial<ConsentBannerLabels>;
 
-  /** `bottom` (the default) or `top`: a bar that stays in view; `inline`: in the page's flow. */
+  /** `bottom` (the default): a bar that stays in view; `top` and `inline`: in the page's flow. */
   @Prop({ reflect: true }) placement: ConsentPlacement = "bottom";
 
   /** Under a browser privacy signal, say in one line that it is respected, instead of nothing. */
@@ -101,6 +103,7 @@ export class IdgConsentBanner {
 
   private focusInside = false;
   private returnTarget?: EventTarget;
+  private wasAsking = false;
   private openAfterRender?: PreferencesPanel;
   private readonly reserve = new ReserveSpace();
   private readonly binding = new ConsentBinding(
@@ -157,20 +160,42 @@ export class IdgConsentBanner {
 
   componentDidRender(): void {
     this.syncReservedSpace();
+    this.keepFocusThroughChange();
     const panel = this.openAfterRender;
     if (panel === undefined) return;
     this.openAfterRender = undefined;
     this.openPanel(panel);
   }
 
+  // A change made elsewhere (the preferences inside the banner or opened from it, another tab)
+  // takes the question away, and with it every control inside the banner, including a panel in its
+  // slot. A browser lets go of focus on a hidden element only at its next frame, and fires no
+  // event for one removed, so focus that was inside is put back, as after a choice made here.
+  private keepFocusThroughChange(): void {
+    const asking = this.isAsking();
+    const removed = this.wasAsking && !asking;
+    this.wasAsking = asking;
+    if (!removed || !this.focusInside) return;
+    returnFocus(this.returnTarget, this.host.ownerDocument);
+    this.focusInside = false;
+  }
+
+  private isAsking(): boolean {
+    return (
+      this.status !== undefined &&
+      this.status.reason === undefined &&
+      this.status.state === "unknown"
+    );
+  }
+
   private syncReservedSpace(): void {
     const bar = this.host.shadowRoot?.querySelector<HTMLElement>(".banner");
     const placement = oneOf(CONSENT_PLACEMENTS, this.placement, "bottom");
-    if (bar === null || bar === undefined || placement === "inline") {
+    if (bar === null || bar === undefined || placement !== "bottom") {
       this.reserve.stop();
       return;
     }
-    this.reserve.start(this.host, placement === "top" ? "start" : "end");
+    this.reserve.start(this.host);
   }
 
   private accept = (): void => {
@@ -183,7 +208,7 @@ export class IdgConsentBanner {
 
   private choose(choice: "accept" | "decline"): void {
     const consent = this.binding.current();
-    if (consent === undefined) return;
+    if (consent === undefined || !this.stillAsking(consent)) return;
     this.saveFailed = false;
     const stored = attempt(() => (choice === "accept" ? consent.grant() : consent.deny()));
     // Read afresh: an object that does not announce its own changes is still seen to have changed.
@@ -200,6 +225,16 @@ export class IdgConsentBanner {
     );
     returnFocus(this.returnTarget, this.host.ownerDocument);
     this.focusInside = false;
+  }
+
+  // A second press of a button that is still drawn, a frame before it goes, finds the choice made.
+  private stillAsking(consent: ConsentClient): boolean {
+    try {
+      const status = consent.get();
+      return status.state === "unknown" && status.reason === undefined;
+    } catch {
+      return false;
+    }
   }
 
   private slottedPanel(): PreferencesPanel | undefined {

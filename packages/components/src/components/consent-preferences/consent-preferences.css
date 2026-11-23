@@ -100,3 +100,20 @@
 .confirm-question {
   margin: 0;
 }
+
+/* A row with nothing to operate: the name, and what it is, at the text's own full contrast. */
+.necessary-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+  min-block-size: var(--idg-density-target-size);
+  margin: 0;
+  font-weight: var(--idg-font-weight-bold);
+}
+
+.necessary-state {
+  color: var(--idg-color-text);
+  font-weight: var(--idg-font-weight-regular);
+}

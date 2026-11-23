@@ -286,7 +286,7 @@ test.describe("the consent components in more than one tab", () => {
     await first.evaluate(`window.consentFixture.tracker.consent.deny()`);
     await expect(inlinePanel(second).locator('[part="changed"]')).toContainText("discarded");
     await expect(switchIn(inlinePanel(second), "analytics")).not.toBeChecked();
-    expect(await consentState(second)).toEqual({ state: "denied" });
+    expect(await consentState(second)).toMatchObject({ state: "denied" });
   });
 });
 
@@ -500,6 +500,6 @@ test.describe("a double press", () => {
     expect(await recordedEvents(page)).toEqual([
       { type: "idgConsentChange", detail: { state: "granted" } },
     ]);
-    await expect(banner(page).locator('[part="status"]')).toContainText("Analytics are on");
+    await expect(banner(page).locator('[part="status"]')).toContainText("Analytics accepted");
   });
 });

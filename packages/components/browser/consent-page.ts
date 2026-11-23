@@ -53,10 +53,9 @@ export interface ConsentSnapshot {
  * `?announce` is set, and otherwise a frame in which nothing is drawn.
  */
 async function expectRendered(page: Page, options: OpenOptions): Promise<void> {
-  const state = (await page.evaluate(`window.consentFixture.tracker.consent.get()`)) as {
-    state: string;
-    reason?: string;
-  };
+  const state = await page.evaluate<{ state: string; reason?: string }>(
+    `window.consentFixture.tracker.consent.get()`,
+  );
   const banner = page.locator("#banner");
   if (state.reason === undefined && state.state === "unknown") {
     await expect(banner.locator('[part="banner"]')).toBeVisible();
