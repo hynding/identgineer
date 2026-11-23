@@ -147,9 +147,11 @@
   font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
 }
 
-/* Last resort for large wide text in a narrow container: break inside a name, not the page. The
-   property is inherited, so it reaches the label inside each radio's own shadow root. */
-idg-radio {
+/* Last resort for large wide text in a narrow container: break inside a name, not the page. A
+   choice control breaks only a word that does not fit (so its label keeps the width of its longest
+   word where it is sized by its content); here the options sit in tracks that must be able to
+   shrink below that, so the label of each radio, and the name slotted into it, break anywhere. */
+idg-radio::part(label) {
   overflow-wrap: anywhere;
 }
 
