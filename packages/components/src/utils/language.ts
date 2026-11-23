@@ -1,4 +1,4 @@
-import { shadowIncludingParent } from "../utils/focus";
+import { shadowIncludingParent } from "./focus";
 
 /**
  * The language to format for people in: the nearest `lang` going outwards from the element, through

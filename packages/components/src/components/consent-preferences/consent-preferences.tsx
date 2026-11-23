@@ -20,7 +20,7 @@ import type {
 } from "../../consent/consent-types";
 import { formatDecidedAt } from "../../consent/format-decided";
 import { returnFocus } from "../../consent/focus-return";
-import { languageOf } from "../../consent/language";
+import { languageOf } from "../../utils/language";
 import { fillTemplate, mergeLabels } from "../../identity/labels";
 import { deepActiveElement, focusInto, isWithin } from "../../utils/focus";
 import { headingLevel } from "../../utils/heading-level";
