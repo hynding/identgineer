@@ -11,14 +11,19 @@ import { STORAGE_KEYS } from "./storage-keys.ts";
 import { utf8Length } from "./utf8-length.ts";
 import { WIRE_VERSION, type TrackingEvent } from "./wire-format.ts";
 
-const MAX_STORED_CHARACTERS = 8 * 1024 * 1024;
+/** Characters of stored text allowed per byte of `maxQueueBytes`: JSON escapes can widen text. */
+const CHARACTERS_PER_QUEUE_BYTE = 4;
 
 export type StoredQueue =
   | { readonly kind: "none" }
   | { readonly kind: "events"; readonly events: readonly TrackingEvent[] };
 
-const parseStored = (text: string): readonly TrackingEvent[] | undefined => {
-  if (text.length > MAX_STORED_CHARACTERS) return undefined;
+const parseStored = (
+  text: string,
+  limits: StoredQueueLimits,
+): readonly TrackingEvent[] | undefined => {
+  // Refused by length before it is parsed: a value no tab could have written under these caps.
+  if (text.length > limits.maxBytes * CHARACTERS_PER_QUEUE_BYTE) return undefined;
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -30,7 +35,8 @@ const parseStored = (text: string): readonly TrackingEvent[] | undefined => {
   const { v, events } = parsed as Record<string, unknown>;
   if (v !== WIRE_VERSION || !Array.isArray(events)) return undefined;
   const checked: TrackingEvent[] = [];
-  for (const item of events as unknown[]) {
+  // Only the newest events that fit the cap are looked at; the rest would be dropped anyway.
+  for (const item of (events as unknown[]).slice(-limits.maxEvents)) {
     const result = parseTrackingEvent(item);
     if (!result.ok) return undefined;
     checked.push(result.value);
@@ -42,10 +48,13 @@ const parseStored = (text: string): readonly TrackingEvent[] | undefined => {
  * What the offline queue holds. Anything malformed discards the whole stored queue, which is
  * removed: a queue that cannot be trusted in part cannot be trusted at all.
  */
-export const readStoredQueue = (storage: StorageLike | undefined): StoredQueue => {
+export const readStoredQueue = (
+  storage: StorageLike | undefined,
+  limits: StoredQueueLimits,
+): StoredQueue => {
   const text = readItem(storage, STORAGE_KEYS.queue);
   if (text === undefined) return { kind: "none" };
-  const events = parseStored(text);
+  const events = parseStored(text, limits);
   if (events === undefined) {
     removeItem(storage, STORAGE_KEYS.queue);
     return { kind: "none" };
@@ -79,15 +88,18 @@ const holdLimits = (
   events: readonly TrackingEvent[],
   limits: StoredQueueLimits,
 ): readonly TrackingEvent[] => {
-  let held = events;
-  let bytes = held.reduce((sum, event) => sum + sizeOf(event), 0);
-  while (held.length > limits.maxEvents || bytes > limits.maxBytes) {
-    const [oldest, ...rest] = held;
-    if (oldest === undefined) break;
-    bytes -= sizeOf(oldest);
-    held = rest;
+  const sizes = events.map(sizeOf);
+  let bytes = sizes.reduce((sum, size) => sum + size, 0);
+  // One pass from the oldest end: the first event that can stay marks where the kept ones begin.
+  let dropped = 0;
+  while (
+    dropped < events.length &&
+    (events.length - dropped > limits.maxEvents || bytes > limits.maxBytes)
+  ) {
+    bytes -= sizes[dropped] ?? 0;
+    dropped += 1;
   }
-  return held;
+  return dropped === 0 ? events : events.slice(dropped);
 };
 
 /**
@@ -103,7 +115,7 @@ export const writeStoredQueue = (
   gone: ReadonlySet<string>,
   limits: StoredQueueLimits,
 ): boolean => {
-  const stored = readStoredQueue(storage);
+  const stored = readStoredQueue(storage, limits);
   const merged = new Map<string, TrackingEvent>();
   if (stored.kind === "events") {
     for (const event of stored.events) if (!gone.has(event.id)) merged.set(event.id, event);

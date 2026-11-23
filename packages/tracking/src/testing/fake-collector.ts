@@ -210,8 +210,16 @@ export const createFakeCollector = (options: FakeCollectorOptions): FakeCollecto
           );
         });
       }
-      request.status = answer.status;
-      return Promise.resolve().then(() => settle(() => toResponse(answer)));
+      return Promise.resolve().then(() =>
+        settle(() => {
+          // A request whose caller gave up (its signal aborted) is not answered.
+          if (init.signal?.aborted === true) {
+            throw new DOMException("The operation was aborted.", "AbortError");
+          }
+          request.status = answer.status;
+          return toResponse(answer);
+        }),
+      );
     },
     sendBeacon: (url, data) => {
       if (!collector.beaconAccepts) return false;

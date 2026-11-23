@@ -1,5 +1,6 @@
 import { retryDelay } from "./backoff.ts";
 import { dropReason, type DropReason } from "./drop-reason.ts";
+import { readDeliveredIds, recordDeliveredIds } from "./delivered-marker.ts";
 import { createEventQueue, type QueueEntry } from "./event-queue.ts";
 import { readStoredQueue, writeStoredQueue } from "./queue-persistence.ts";
 import type { ResolvedOptions } from "./resolve-options.ts";
@@ -87,8 +88,21 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
     for (const id of ids) gone.add(id);
   };
 
+  // Another tab may have delivered what this one also loaded: those are not sent again.
+  const dropDelivered = (): void => {
+    const delivered = readDeliveredIds(options.localStorage, clock.now());
+    if (delivered.size === 0) return;
+    const held = queue.entries().filter((entry) => delivered.has(entry.event.id));
+    if (held.length > 0) queue.remove(new Set(held.map((entry) => entry.event.id)));
+  };
+
+  const markDelivered = (ids: Iterable<string>): void => {
+    if (allowed()) recordDeliveredIds(options.localStorage, [...ids], clock.now());
+  };
+
   const persist = (): void => {
     if (!allowed()) return;
+    dropDelivered();
     const written = writeStoredQueue(options.localStorage, queue.entries(), gone, {
       maxEvents: options.maxQueueEvents,
       maxBytes: options.maxQueueBytes,
@@ -171,6 +185,7 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
     for (;;) {
       if (!ready()) return;
       dropExpired();
+      dropDelivered();
       const batch = planBatch(false);
       if (batch.length === 0) return;
       const ids = new Set(batch.map((entry) => entry.event.id));
@@ -208,6 +223,7 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
       attempts = 0;
       queue.remove(ids);
       settleIds(ids);
+      if (outcome.kind === "delivered") markDelivered(ids);
       persist();
       if (outcome.kind === "rejected") {
         report(
@@ -246,11 +262,15 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
   }
 
   const takeStored = (): void => {
-    const stored = readStoredQueue(options.localStorage);
+    const stored = readStoredQueue(options.localStorage, {
+      maxEvents: options.maxQueueEvents,
+      maxBytes: options.maxQueueBytes,
+    });
     if (stored.kind === "none") return;
     const cutoff = clock.now() - MAX_EVENT_AGE_MS;
     const latest = clock.now() + MAX_FUTURE_SKEW_MS;
-    const seen = new Set<string>();
+    const delivered = readDeliveredIds(options.localStorage, clock.now());
+    const seen = new Set<string>(delivered);
     const entries: QueueEntry[] = [];
     const drops: DropReason[] = [];
     let expired = 0;
@@ -305,6 +325,7 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
     flushOnHide: () => {
       if (disposed || !allowed() || !isOnline() || backoffRemaining() > 0) return;
       dropExpired();
+      dropDelivered();
       // A beacon is fire-and-forget and does not count as a request in flight, so what is not in
       // the request on the wire may still leave with the page.
       const exclude = inFlight ?? new Set<string>();
@@ -323,6 +344,7 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
         const ids = batch.map((entry) => entry.event.id);
         queue.remove(new Set(ids));
         settleIds(ids);
+        markDelivered(ids);
       }
       persist();
       if (loop === undefined && queue.size() > 0 && options.fetch !== undefined) {

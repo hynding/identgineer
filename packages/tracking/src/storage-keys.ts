@@ -4,6 +4,8 @@ export const STORAGE_KEYS = {
   consent: "idg.tracking.consent.v1",
   /** `localStorage`: events not yet delivered. Written only while consent is granted. */
   queue: "idg.tracking.queue.v1",
+  /** `localStorage`: ids of events some tab delivered, so another tab holding them does not resend. */
+  delivered: "idg.tracking.delivered.v1",
   /** `sessionStorage`: the session id and the time of its last event. Only while granted. */
   session: "idg.tracking.session.v1",
 } as const;

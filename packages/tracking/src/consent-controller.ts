@@ -5,6 +5,7 @@ import {
 } from "./consent-record.ts";
 import type { NavigatorSignals } from "./page-environment.ts";
 import { readItem, removeItem, writeItem, type StorageLike } from "./storage.ts";
+import { MAX_TIMESTAMP } from "./wire-format.ts";
 import { STORAGE_KEYS } from "./storage-keys.ts";
 import type { ConsentState, ConsentStatus } from "./tracker-types.ts";
 
@@ -60,9 +61,10 @@ export const createConsentController = (deps: ConsentControllerDeps): ConsentCon
   };
 
   const store = (choice: ConsentChoice): boolean => {
-    // Strictly after the decision it replaces, so that two decisions in one millisecond differ.
+    // Strictly after the decision it replaces, so that two decisions in one millisecond differ,
+    // except at the largest timestamp, which the parser accepts and nothing can follow.
     const previous = readStored()?.decidedAt ?? -1;
-    const decidedAt = Math.max(deps.now(), previous + 1);
+    const decidedAt = Math.min(MAX_TIMESTAMP, Math.max(deps.now(), previous + 1));
     const stored = writeItem(
       deps.storage,
       STORAGE_KEYS.consent,

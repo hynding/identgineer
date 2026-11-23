@@ -7,6 +7,7 @@ import {
 import { createConsentController } from "./consent-controller.ts";
 import { CONSENT_CHANGED, isConsentNotice } from "./cross-tab.ts";
 import { createDelivery } from "./delivery.ts";
+import { removeDeliveredIds } from "./delivered-marker.ts";
 import { dropReason, type DropReason } from "./drop-reason.ts";
 import { minimisePath } from "./minimise-url.ts";
 import { resolveOptions, type ResolvedOptions } from "./resolve-options.ts";
@@ -64,6 +65,7 @@ const buildTracker = (options: ResolvedOptions): Tracker => {
     try {
       for (let change = unannounced.shift(); change !== undefined; change = unannounced.shift()) {
         for (const listener of [...listeners]) {
+          if (disposed) break;
           try {
             listener(change);
           } catch {
@@ -83,6 +85,7 @@ const buildTracker = (options: ResolvedOptions): Tracker => {
     userId = undefined;
     lastAutoPath = undefined;
     removeItemIfPresent(localStorage, STORAGE_KEYS.queue);
+    removeDeliveredIds(localStorage);
   };
 
   // Reads consent afresh, so a change made in another tab, or a browser signal that appeared,
@@ -237,13 +240,33 @@ const buildTracker = (options: ResolvedOptions): Tracker => {
   };
 };
 
+// Key order must not matter: two declarations of the same events are the same.
+const canonical = (value: unknown): unknown =>
+  Array.isArray(value)
+    ? value.map(canonical)
+    : typeof value === "object" && value !== null
+      ? Object.fromEntries(
+          Object.entries(value)
+            .sort(([first], [second]) => (first < second ? -1 : 1))
+            .map(([key, item]) => [key, canonical(item)]),
+        )
+      : value;
+
+const signatureOf = (consentVersion: number, events: unknown): string => {
+  try {
+    return JSON.stringify([consentVersion, canonical(events)]);
+  } catch {
+    return String(consentVersion);
+  }
+};
+
 /**
  * Creates a tracker. Consent comes first: until the visitor grants it (and no browser signal says
  * otherwise) nothing is sent, queued, or written to any storage but the consent record itself.
  * Throws a `TypeError` for an invalid option; after that no method ever throws.
  *
  * A page has one tracker per endpoint and write key: a second call that finds the first still
- * undisposed (same storages) returns that tracker and ignores its other options, because two
+ * undisposed (same storages) returns that tracker and ignores its other options (`consentVersion` and `events` included, which `onDrop` is told once), because two
  * trackers on the same storage keys would each hold a queue, a session and a timer for them.
  */
 export const createTracker = (trackerOptions: TrackerOptions): Tracker => {
@@ -254,6 +277,19 @@ export const createTracker = (trackerOptions: TrackerOptions): Tracker => {
       sessionStorage: options.sessionStorage,
       key: `${options.endpoint}\n${options.writeKey}`,
     },
+    signatureOf(options.consentVersion, trackerOptions.events),
     () => buildTracker(options),
+    () => {
+      try {
+        options.onDrop(
+          dropReason(
+            "tracker-options-ignored",
+            "a tracker for this endpoint and write key already exists: it is returned, and the consentVersion and events given here are ignored",
+          ),
+        );
+      } catch {
+        // A page's reporter must never break the page.
+      }
+    },
   );
 };

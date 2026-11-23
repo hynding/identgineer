@@ -275,9 +275,13 @@ describe("sessions", () => {
     const world = createWorld();
     const tab = grantedTab(world);
     tab.tracker.track("logout");
-    world.clock.advance(29 * MINUTE);
+    world.clock.advance(5000);
+    await settle();
+    world.clock.advance(29 * MINUTE - 5000);
     tab.tracker.track("logout");
-    world.clock.advance(29 * MINUTE);
+    world.clock.advance(5000);
+    await settle();
+    world.clock.advance(29 * MINUTE - 5000);
     tab.tracker.track("logout");
     await tab.tracker.flush();
     expect(sessionIdsSent(world)).toHaveLength(1);

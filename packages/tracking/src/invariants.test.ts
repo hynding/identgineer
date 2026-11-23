@@ -17,6 +17,7 @@ import {
   type CollectorAnswer,
   type FakeCollector,
 } from "./testing/fake-collector.ts";
+import { STORAGE_KEYS } from "./storage-keys.ts";
 import { utf8Length } from "./utf8-length.ts";
 
 /** A small seeded generator, so every interleaving can be replayed from its seed. */
@@ -67,6 +68,8 @@ interface Scenario {
   readonly violations: string[];
   /** Every collector ever opened: a reloaded tab leaves its collector behind. */
   readonly collectors: FakeCollector[];
+  /** Set once storage has failed: a delivered id may then be unrecorded, and a resend is legitimate. */
+  storageDegraded: boolean;
   /** Every session id that any tab ever held or sent. */
   readonly sessionIds: Set<string>;
   failingLocal: boolean;
@@ -134,6 +137,29 @@ const open = (
         scenario.violations.push("a batch over maxBatchSize");
       for (const event of parsed.value.events) {
         if (event.session !== undefined) scenario.sessionIds.add(event.session);
+      }
+      // An event a live tab's fetch had answered 2xx is not sent by fetch again by any tab, unless
+      // storage failed meanwhile and the delivery could not be recorded.
+      if (parsed.value.transport === "fetch" && !scenario.storageDegraded) {
+        const answered = new Set(
+          scenario.tabs.flatMap(({ collector: other }) =>
+            other.requests
+              .filter(
+                (earlier) =>
+                  earlier.via === "fetch" &&
+                  earlier !== request &&
+                  earlier.status !== undefined &&
+                  earlier.status >= 200 &&
+                  earlier.status < 300,
+              )
+              .flatMap((earlier) => {
+                const batch = parseTrackingBatch(JSON.parse(earlier.body));
+                return batch.ok ? batch.value.events.map((event) => event.id) : [];
+              }),
+          ),
+        );
+        if (parsed.value.events.some((event) => answered.has(event.id)))
+          scenario.violations.push("an event delivered by fetch was sent by fetch again");
       }
       // A beacon is fire-and-forget and does not count as a request in flight, but it must never
       // repeat what a fetch of the same tab is still waiting on.
@@ -322,13 +348,16 @@ const STEPS: readonly (readonly [number, Step])[] = [
     2,
     (s, r) => {
       s.failingLocal = r() < 0.5;
+      if (s.failingLocal) s.storageDegraded = true;
       s.world.local.failAll(s.failingLocal);
     },
   ],
   [
     1,
     (s, r) => {
-      s.world.local.failWrites(r() < 0.5);
+      const failing = r() < 0.5;
+      if (failing) s.storageDegraded = true;
+      s.world.local.failWrites(failing);
     },
   ],
   [
@@ -424,7 +453,7 @@ const queueInvariants = (scenario: Scenario): string[] => {
       if (value.includes(id)) found.push(`localStorage ${key} holds a session id`);
     }
   }
-  const allowed = new Set<string>([CONSENT_KEY, QUEUE_KEY]);
+  const allowed = new Set<string>([CONSENT_KEY, QUEUE_KEY, STORAGE_KEYS.delivered]);
   for (const key of world.local.keys())
     if (!allowed.has(key)) found.push(`unexpected localStorage key ${key}`);
   for (const { tab } of scenario.tabs) {
@@ -444,6 +473,7 @@ const run = async (seed: number, steps: number): Promise<void> => {
     violations: [],
     collectors: [],
     sessionIds: new Set(),
+    storageDegraded: false,
     failingLocal: false,
     gpc: false,
     dnt: false,
@@ -484,6 +514,7 @@ describe("invariants over random interleavings", () => {
         violations: [],
         collectors: [],
         sessionIds: new Set(),
+        storageDegraded: false,
         failingLocal: false,
         gpc: false,
         dnt: false,

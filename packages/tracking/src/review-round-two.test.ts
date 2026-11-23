@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createEventQueue } from "./event-queue.ts";
 import { writeStoredQueue } from "./queue-persistence.ts";
 import { createMemoryStorage } from "./testing/memory-storage.ts";
@@ -76,7 +76,7 @@ describe("a huge stored queue", () => {
     const parse = JSON.parse;
     const lengths: number[] = [];
     JSON.parse = (...args: Parameters<typeof JSON.parse>) => {
-      lengths.push(String(args[0]).length);
+      lengths.push(args[0].length);
       return parse(...args) as unknown;
     };
     try {

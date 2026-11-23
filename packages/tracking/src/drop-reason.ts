@@ -10,7 +10,8 @@ export type DropCode =
   | "queue-overflow"
   | "expired"
   | "rejected-by-server"
-  | "no-random-source";
+  | "no-random-source"
+  | "tracker-options-ignored";
 
 /**
  * Why something was dropped instead of sent. The message names the event, the property key or the

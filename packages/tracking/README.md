@@ -72,11 +72,12 @@ page view with `page({ path })` and a path you chose.
 
 Only while consent is granted, except the first row:
 
-| Key                       | Storage          | Holds                                                              |
-| ------------------------- | ---------------- | ------------------------------------------------------------------ |
-| `idg.tracking.consent.v1` | `localStorage`   | `{ state, version, decidedAt }`: written once the visitor chooses  |
-| `idg.tracking.queue.v1`   | `localStorage`   | Events not yet delivered (the offline queue), without a session id |
-| `idg.tracking.session.v1` | `sessionStorage` | The session id and the time of its last event                      |
+| Key                         | Storage          | Holds                                                                |
+| --------------------------- | ---------------- | -------------------------------------------------------------------- |
+| `idg.tracking.consent.v1`   | `localStorage`   | `{ state, version, decidedAt }`: written once the visitor chooses    |
+| `idg.tracking.queue.v1`     | `localStorage`   | Events not yet delivered (the offline queue), without a session id   |
+| `idg.tracking.delivered.v1` | `localStorage`   | Up to 200 ids of events a tab delivered, with the time, for 24 hours |
+| `idg.tracking.session.v1`   | `sessionStorage` | The session id and the time of its last event                        |
 
 In `unknown` and `denied` the SDK writes nothing else. A cookie is never set and `localStorage`
 never holds a session id: the offline queue is stored without it, and an event restored in a later
@@ -152,7 +153,9 @@ the same and is treated the same way: its queued events are discarded, which is 
 and timers for them, which is unsupported. `createTracker` therefore keeps a registry per page,
 keyed by the endpoint, the write key and the pair of storage objects, and a second call that finds
 the first undisposed returns **the same instance** (and ignores its other options) until
-`dispose()` has been called on it. Without both storages there is nothing to share and every call
+`dispose()` has been called on it. The second call's `consentVersion` and `events` are ignored as
+well; when they differ from the first call's, `onDrop` is told once, with the code
+`tracker-options-ignored`. Without both storages there is nothing to share and every call
 makes its own tracker.
 
 Event names match `^[a-z][a-z0-9_]{0,63}$` and must be declared in `options.events`, with each
@@ -163,7 +166,7 @@ only recorded by `page()`.
 `onDrop` receives `{ code, message }`; the message names an event or a property key, never a
 value. Codes: `invalid-event-name`, `undeclared-event`, `undeclared-property`, `invalid-property`,
 `invalid-properties`, `invalid-identifier`, `invalid-url`, `event-too-large`, `queue-overflow`,
-`expired`, `rejected-by-server`, `no-random-source`. Nothing is reported for an event that is
+`expired`, `rejected-by-server`, `no-random-source`, `tracker-options-ignored`. Nothing is reported for an event that is
 not tracked because consent is missing.
 
 **Automatic page views** (`autoPageViews: true`) record the page when consent is granted and each
@@ -240,13 +243,19 @@ The numeric options are checked at creation and throw a `TypeError` naming the o
   `rejected-by-server`.
 - **Offline queue.** While consent is granted, events not yet delivered are kept in
   `localStorage`, at most `maxQueueEvents` and `maxQueueBytes` (the oldest dropped first). On load
-  the whole stored queue is discarded if any part is malformed, events older than 24 hours, or stamped more than five minutes
+  a stored value longer than four characters per byte of `maxQueueBytes` is discarded without
+  being parsed, only the newest `maxQueueEvents` events are looked at, the whole stored queue is
+  discarded if any part of that is malformed, events older than 24 hours, or stamped more than five minutes
   ahead of the clock, are discarded, and an event over the payload cap is dropped. Delivery waits while
   `navigator.onLine` is `false` and resumes on the `online` event. With several tabs open the
   stored queue is shared: a tab writes its own queue **merged by event id with what is stored**
   (date order, the caps applied over the whole, the oldest dropped first) and removes only the ids
   it delivered or dropped, so it never erases what another tab queued. A tab that starts reads the
-  queue: an event can be sent twice, which the server de-duplicates by id. The read and the write
+  queue, so two tabs can both hold an event; the one that delivers it records its id in
+  `idg.tracking.delivered.v1` (at most 200 ids, none older than 24 hours, written only while
+  consent is granted and removed on revocation), and a tab drops any id it finds there from its
+  queue and from what it writes, so the event is not sent twice. The server still de-duplicates
+  by id. The read and the write
   are not atomic across tabs, so two tabs writing in the same instant can still lose an event.
 
 ## Wire format
@@ -342,6 +351,8 @@ event ids are unique within a batch: the validator refuses a duplicate id, a sch
   took the beacon.
 - Without readable and writable `localStorage` the choice cannot be recorded, so nothing is
   tracked. Without `BroadcastChannel` other tabs learn of a change at their next call.
+- A decision made at the largest timestamp the parser accepts is written at that same timestamp,
+  so a later decision there cannot be told from it by its time alone.
 - Two trackers for the same endpoint, key and storages on one page are unsupported; the second
   call returns the first (see the API section). Trackers in two tabs are supported.
 - The SDK reads the clock it is given. A stored event stamped more than five minutes ahead is
