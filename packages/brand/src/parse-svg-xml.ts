@@ -224,7 +224,7 @@ class Reader {
     if (!this.skipWhitespace()) refuse();
     const nameStart = this.position;
     while (
-      this.position - nameStart <= this.limits.nameLength &&
+      this.position - nameStart < this.limits.nameLength &&
       isNameUnit(this.text.charCodeAt(this.position))
     ) {
       this.position += 1;
