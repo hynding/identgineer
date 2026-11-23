@@ -287,6 +287,51 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
     expect(dropped[0]).toEqual(expect.objectContaining({ reason }));
   });
 
+  // XML's white space is space, tab, line feed and carriage return; a no-break space or a line
+  // separator is not white space to an SVG reader, so a value that leans on one is not valid.
+  it.each([
+    ["a no-break space", " "],
+    ["a line separator", " "],
+  ])("drops a value with %s where white space would go", (_label, space) => {
+    const values = [
+      `stroke-dasharray="1${space}2"`,
+      `fill="rgb(1,${space}2, 3)"`,
+      `stroke="rgb(1%${space}2% 3%)"`,
+      `clip-path="url(${space}#c)"`,
+    ];
+    const dropped = removals(
+      `<clipPath id="c"/><rect height="1" ${values.join(" ")}/>` +
+        `<rect height="1" stroke-dasharray="1,${space}2"/>`,
+    );
+    expect(dropped.map((removal) => removal.attribute)).toEqual([
+      "stroke-dasharray",
+      "fill",
+      "stroke",
+      "clip-path",
+      "stroke-dasharray",
+    ]);
+    const root = accepted(
+      `<svg ${NS} viewBox="0 0 10 10" preserveAspectRatio="xMidYMid${space}meet"/>`,
+    );
+    expect(root.removed).toEqual([
+      expect.objectContaining({ element: "svg", attribute: "preserveAspectRatio" }),
+    ]);
+  });
+
+  it("still reads XML white space inside those values", () => {
+    expect(
+      output(
+        '<clipPath id="c"/><rect height="1" stroke-dasharray="1\t,\n2" fill="rgb(1,\t2 ,3)" clip-path="url( #c )"/>',
+      ),
+    ).toContain('fill="#010203" stroke-dasharray="1 2" clip-path="url(#logo-0)"');
+  });
+
+  it("refuses a form feed anywhere, inside a value included", () => {
+    expect(refused(svg('<rect height="1" stroke-dasharray="1\f2"/>')).code).toBe(
+      "invalid-character",
+    );
+  });
+
   it("paints nothing for a paint reference that cannot be found, rather than black", () => {
     expect(
       output('<rect width="1" height="1" fill="url(#nowhere)" stroke="url(#nowhere)"/>'),
