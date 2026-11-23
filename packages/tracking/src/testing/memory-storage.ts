@@ -67,9 +67,10 @@ export const createMemoryStorage = (options: MemoryStorageOptions = {}): MemoryS
     },
     setItem: (key, value) => {
       record("setItem", key);
-      const text = String(value);
-      const after =
-        characters() - key.length - (values.get(key)?.length ?? 0) + key.length + text.length;
+      // Web Storage turns whatever it is given into text.
+      const text = typeof value === "string" ? value : String(value);
+      const replaced = values.has(key) ? key.length + (values.get(key)?.length ?? 0) : 0;
+      const after = characters() - replaced + key.length + text.length;
       if (
         writesFail ||
         (options.quotaCharacters !== undefined && after > options.quotaCharacters)
