@@ -250,7 +250,7 @@ class OverdrawWalk {
   ): SvgBox {
     const scale = determinant(matrix);
     const edges = Math.min(
-      Math.SQRT2 * geometry.segments,
+      geometry.visibleOutline,
       (stretch(matrix) * geometry.length) / this.side,
     );
     const fillArea = (): number =>

@@ -25,8 +25,14 @@ export interface Geometry {
   readonly weight: number;
   /** An upper bound of the outline's length in its own user units, which is what dashes follow. */
   readonly length: number;
-  /** Segments drawn: each an edge to fill and to stroke. */
+  /** Segments drawn: each a join or a cap to stroke. */
   readonly segments: number;
+  /**
+   * The most of the outline a square image can show, in sides of the square: a straight segment
+   * at most its diagonal; a convex curve (a quadratic, an arc, a whole rectangle or ellipse) at most
+   * its perimeter; a cubic, which bends at most twice, three convex pieces.
+   */
+  readonly visibleOutline: number;
   /** The box of every point, control points included; an arc's box holds its whole ellipse. */
   readonly box: SvgBox;
   /** An upper bound of the area a fill covers, in square user units, never more than the box. */
@@ -76,6 +82,9 @@ const ARITY: Readonly<Record<string, number>> = {
   Z: 0,
 };
 const SEGMENT = /([A-Za-z])([^A-Za-z]*)/g;
+/** In sides of a square image: its diagonal, and its perimeter (see `Geometry.visibleOutline`). */
+const STRAIGHT = Math.SQRT2;
+const CONVEX = 4;
 
 /**
  * The current point and what the next smooth curve reflects, with what has been drawn so far. The
@@ -93,6 +102,7 @@ class Pen {
   weight = 0;
   length = 0;
   segments = 0;
+  visibleOutline = 0;
   /** The letter, in upper case, of the segment just drawn. */
   previous = "";
   box: SvgBox = EMPTY_BOX;
@@ -119,10 +129,18 @@ class Pen {
 
   /**
    * Draws a segment from the current point through `points` (its control points, then its end).
-   * `hull` bounds the area between the segment and its control polygon; `reach` grows the box
-   * around the current point by that much, for an arc, which may bulge anywhere within it.
+   * `visible` is the most of it a square image can show, in sides; `hull` bounds the area between
+   * the segment and its control polygon; `reach` grows the box around the current point by that
+   * much, for an arc, which may bulge anywhere within it.
    */
-  to(points: readonly number[], weight: number, length: number, hull = 0, reach = 0): void {
+  to(
+    points: readonly number[],
+    weight: number,
+    length: number,
+    visible: number,
+    hull = 0,
+    reach = 0,
+  ): void {
     let fromX = this.x;
     let fromY = this.y;
     this.include(fromX, fromY, reach);
@@ -138,6 +156,7 @@ class Pen {
     this.weight += weight;
     this.length += length;
     this.segments += 1;
+    this.visibleOutline += visible;
     this.x = fromX;
     this.y = fromY;
   }
@@ -164,6 +183,7 @@ class Pen {
       weight: this.weight,
       length: this.length,
       segments: this.segments,
+      visibleOutline: this.visibleOutline,
       box: this.box,
       area: Math.min(this.area, boxArea(this.box)),
     };
@@ -210,13 +230,18 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
     pen.y = at(1, y);
     pen.begin();
   } else if (upper === "M" || upper === "L") {
-    pen.to([at(0, x), at(1, y)], weights.line, Math.hypot(at(0, x) - x, at(1, y) - y));
+    pen.to([at(0, x), at(1, y)], weights.line, Math.hypot(at(0, x) - x, at(1, y) - y), STRAIGHT);
   } else if (upper === "H") {
-    pen.to([at(0, x), y], weights.line, Math.abs(at(0, x) - x));
+    pen.to([at(0, x), y], weights.line, Math.abs(at(0, x) - x), STRAIGHT);
   } else if (upper === "V") {
-    pen.to([x, at(0, y)], weights.line, Math.abs(at(0, y) - y));
+    pen.to([x, at(0, y)], weights.line, Math.abs(at(0, y) - y), STRAIGHT);
   } else if (upper === "Z") {
-    pen.to([pen.startX, pen.startY], weights.line, Math.hypot(pen.startX - x, pen.startY - y));
+    pen.to(
+      [pen.startX, pen.startY],
+      weights.line,
+      Math.hypot(pen.startX - x, pen.startY - y),
+      STRAIGHT,
+    );
   } else if (upper === "C" || upper === "S") {
     const [x1, y1] = upper === "C" ? [at(0, x), at(1, y)] : pen.reflected("C");
     const offset = upper === "C" ? 2 : 0;
@@ -235,7 +260,7 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
       triangleArea(x, y, x2, y2, endX, endY) +
       triangleArea(x, y, x1, y1, endX, endY) +
       triangleArea(x1, y1, x2, y2, endX, endY);
-    pen.to([x1, y1, x2, y2, endX, endY], weights.cubic, length, hull);
+    pen.to([x1, y1, x2, y2, endX, endY], weights.cubic, length, 3 * CONVEX, hull);
     pen.controlX = x2;
     pen.controlY = y2;
   } else if (upper === "Q" || upper === "T") {
@@ -246,6 +271,7 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
       [x1, y1, endX, endY],
       weights.quadratic,
       Math.hypot(x1 - x, y1 - y) + Math.hypot(endX - x1, endY - y1),
+      CONVEX,
       triangleArea(x, y, x1, y1, endX, endY),
     );
     pen.controlX = x1;
@@ -256,12 +282,13 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
     const [endX, endY] = [at(5, x), at(6, y)];
     const radius = arcRadius(pen, values, endX, endY);
     if (radius === 0) {
-      pen.to([endX, endY], weights.arc, Math.hypot(endX - x, endY - y));
+      pen.to([endX, endY], weights.arc, Math.hypot(endX - x, endY - y), STRAIGHT);
     } else {
       pen.to(
         [endX, endY],
         weights.arc,
         2 * Math.PI * radius,
+        CONVEX,
         Math.PI * radius * radius,
         2 * radius,
       );
@@ -367,7 +394,7 @@ function polyline(text: string, closed: boolean): Geometry {
       pen.y = y;
       pen.begin();
     } else {
-      pen.to([x, y], SVG_DRAWING_WEIGHTS.line, Math.hypot(x - pen.x, y - pen.y));
+      pen.to([x, y], SVG_DRAWING_WEIGHTS.line, Math.hypot(x - pen.x, y - pen.y), STRAIGHT);
     }
   }
   if (closed) {
@@ -375,6 +402,7 @@ function polyline(text: string, closed: boolean): Geometry {
       [pen.startX, pen.startY],
       SVG_DRAWING_WEIGHTS.line,
       Math.hypot(pen.startX - pen.x, pen.startY - pen.y),
+      STRAIGHT,
     );
   }
   return pen.geometry();
@@ -405,6 +433,7 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
         weight: 4 * line + (rounded ? 4 * cubic : 0),
         length: 2 * (width + height),
         segments: rounded ? 8 : 4,
+        visibleOutline: CONVEX,
         box: boxOf(length("x"), length("y"), width, height),
         area: width * height,
       };
@@ -417,6 +446,7 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
         weight: 4 * cubic,
         length: 2 * Math.PI * Math.max(rx, ry),
         segments: 4,
+        visibleOutline: CONVEX,
         box: boxOf(length("cx") - rx, length("cy") - ry, 2 * rx, 2 * ry),
         area: Math.PI * rx * ry,
       };
@@ -427,6 +457,7 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
         weight: line,
         length: Math.hypot(x2 - x1, y2 - y1),
         segments: 1,
+        visibleOutline: STRAIGHT,
         box: {
           minX: Math.min(x1, x2),
           minY: Math.min(y1, y2),

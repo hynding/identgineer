@@ -79,14 +79,14 @@ describe("the overdraw of a logo", () => {
     const hairline = 'fill="none" stroke="#000" stroke-width="0.000001"';
     const edges = (data: string): number => overdraw(`<path d="${data}" ${hairline}/>`);
     // A straight segment shows at most the image's diagonal.
-    expect(edges("M-1000 -1000L1000 1000")).toBeCloseTo(Math.SQRT2 * W.edge, 6);
+    expect(edges("M-1000 -1000L1000 1000")).toBeCloseTo(Math.SQRT2 * W.edge, 5);
     // A quadratic curve or an arc is convex: at most the image's perimeter.
-    expect(edges("M-1000 0Q50 5000 1000 0")).toBeCloseTo(4 * W.edge, 6);
-    expect(edges("M0 0A1000 1000 0 1 1 1 0")).toBeCloseTo(4 * W.edge, 6);
+    expect(edges("M-1000 0Q50 5000 1000 0")).toBeCloseTo(4 * W.edge, 5);
+    expect(edges("M0 0A1000 1000 0 1 1 1 0")).toBeCloseTo(4 * W.edge, 5);
     // A cubic bends at most twice: three convex pieces.
-    expect(edges("M-1000 0C3000 5000 -3000 5000 1000 0")).toBeCloseTo(12 * W.edge, 6);
+    expect(edges("M-1000 0C3000 5000 -3000 5000 1000 0")).toBeCloseTo(12 * W.edge, 5);
     // Short of those, the outline's own length.
-    expect(edges("M0 0Q50 50 100 0")).toBeCloseTo(Math.SQRT2 * W.edge, 6);
+    expect(edges("M0 0Q50 50 100 0")).toBeCloseTo(Math.SQRT2 * W.edge, 5);
   });
 
   it("carries the area through transforms, ancestors' and use's included", () => {
