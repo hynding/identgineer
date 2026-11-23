@@ -248,13 +248,20 @@ base.describe("the checks themselves", () => {
 });
 
 // The costliest logos the sanitiser still accepts, one for each kind of work a renderer does: long
-// paths, curves, copies through use, masks inside masks, and dashes. Each is the largest of its
-// family that is accepted (the next one up is refused for its cost), and must be drawn, as an image
-// and inline, within the budget. On a loaded four-core machine each took under 2 seconds at this
-// size, while the 120 KB path drawn a thousand times that the sanitiser once accepted took 20
-// seconds as an image alone, so the budget leaves room for a slow runner and still catches that.
+// edges, crowded on every row; arcs; dashes; solid paint over and over; gradients at the stop
+// limit, opaque and translucent; a fill under a very wide stroke; group opacity layers; masks
+// inside masks; and a clip path of crowded edges with the even-odd rule. Each is the largest of its
+// family that is accepted (the next one up is refused, for the drawing cost or the overdraw), and
+// must be drawn as an image and inline, and rasterised in full at 600 CSS pixels and at 2000 with
+// a device scale factor of 2, each within its budget. On a loaded four-core machine the slowest
+// took about 0.6 seconds at 600 and 1.6 at 2000 (see the brand README), so the budgets leave room
+// for a slow runner, yet a limit raised tenfold would blow through them: the drawing cost at 600,
+// the overdraw at 2000.
 const SIZE = 600;
+const LARGE_SIZE = 2000;
 const RENDER_BUDGET_MS = 15_000;
+const RASTER_BUDGET_MS = 3_000;
+const LARGE_RASTER_BUDGET_MS = 6_000;
 
 function costlyLogo(body: string): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="${String(SIZE)}" height="${String(SIZE)}">${body}</svg>`;
@@ -273,44 +280,34 @@ const point = (index: number): string =>
 const copies = (definitions: string) => (count: number) =>
   costlyLogo(`<defs>${definitions}</defs>${'<use href="#p"/>'.repeat(count)}`);
 
+/** `count` stops of varied colour, translucent when asked. */
+function stops(count: number, translucent: boolean): string {
+  return Array.from({ length: count }, (_, index) => {
+    const colour = ((index * 0x9e3779 + 0x203040) & 0xffffff).toString(16).padStart(6, "0");
+    const opacity = translucent ? ` stop-opacity="${(0.1 + (index % 9) / 10).toFixed(1)}"` : "";
+    return `<stop offset="${(index / (count - 1)).toFixed(3)}" stop-color="#${colour}"${opacity}/>`;
+  }).join("");
+}
+
+const FULL = 'width="1000" height="1000"';
+const STOPS = SVG_LOGO_LIMITS.gradientStops;
+
 const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoErrorCode])[] = [
   [
-    "a stroked path of 15,000 lines",
-    copies(
-      `<path id="p" d="${zigzag(15_000, (index) => `L${point(index)}`)}" fill="#0f766e" stroke="#000" stroke-width="3" stroke-linejoin="round"/>`,
-    ),
-    "drawing-too-costly",
-  ],
-  [
-    "a stroked path of 4,000 arcs",
-    copies(
-      `<path id="p" d="${zigzag(4_000, (index) => `A400 300 ${String(index % 90)} 1 ${String(index % 2)} ${point(index)}`)}" fill="none" stroke="#000" stroke-width="30"/>`,
-    ),
-    "drawing-too-costly",
-  ],
-  [
-    "a hundred gradient circles in each of many copies",
+    "a path of long stroked lines",
     (count) =>
       costlyLogo(
-        '<defs><radialGradient id="r"><stop offset="0" stop-color="#f00"/><stop offset="1" stop-color="#00f"/></radialGradient>' +
-          '<circle id="c" cx="500" cy="500" r="500" fill="url(#r)" stroke="#000" stroke-width="20"/>' +
-          `<g id="g1">${'<use href="#c"/>'.repeat(10)}</g><g id="p">${'<use href="#g1"/>'.repeat(10)}</g></defs>` +
-          '<use href="#p"/>'.repeat(count),
+        `<path d="${zigzag(count, (index) => `L${point(index)}`)}" fill="#0f766e" stroke="#000" stroke-width="3" stroke-linejoin="round"/>`,
       ),
-    "drawing-too-costly",
+    "overdraw-too-large",
   ],
   [
-    `masks nested ${String(SVG_LOGO_LIMITS.maskDepth)} deep`,
-    (count) => {
-      let body = "<defs>";
-      for (let index = 0; index < SVG_LOGO_LIMITS.maskDepth; index += 1) {
-        const inner = index === 0 ? "" : ` mask="url(#m${String(index - 1)})"`;
-        body += `<mask id="m${String(index)}"><rect width="1000" height="1000" fill="#fff"${inner}/></mask>`;
-      }
-      body += `<rect id="p" width="1000" height="1000" mask="url(#m${String(SVG_LOGO_LIMITS.maskDepth - 1)})"/></defs>`;
-      return costlyLogo(body + '<use href="#p"/>'.repeat(count));
-    },
-    "too-many-masks",
+    "a path of wide stroked arcs",
+    (count) =>
+      costlyLogo(
+        `<path d="${zigzag(count, (index) => `A400 300 ${String(index % 90)} 1 ${String(index % 2)} ${point(index)}`)}" fill="none" stroke="#000" stroke-width="30"/>`,
+      ),
+    "overdraw-too-large",
   ],
   [
     "dashes a tenth of a unit long, round-capped",
@@ -318,6 +315,55 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
       '<path id="p" d="M0 0L1000 1000L0 1000L1000 0" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-dasharray="0.1"/>',
     ),
     "drawing-too-costly",
+  ],
+  ["full-size solid fills", copies(`<rect id="p" ${FULL} fill="#0f766e"/>`), "overdraw-too-large"],
+  [
+    `full-size linear gradients of ${String(STOPS)} stops`,
+    copies(
+      `<linearGradient id="g" x1="0" y1="0" x2="1" y2="1">${stops(STOPS, false)}</linearGradient><rect id="p" ${FULL} fill="url(#g)"/>`,
+    ),
+    "overdraw-too-large",
+  ],
+  [
+    `full-size radial gradients of ${String(STOPS)} translucent stops`,
+    copies(
+      `<radialGradient id="g">${stops(STOPS, true)}</radialGradient><rect id="p" ${FULL} fill="url(#g)"/>`,
+    ),
+    "overdraw-too-large",
+  ],
+  [
+    "a gradient fill under a gradient stroke twice as wide as the image",
+    copies(
+      `<radialGradient id="g">${stops(STOPS, true)}</radialGradient><rect id="p" ${FULL} fill="url(#g)" stroke="url(#g)" stroke-width="2000"/>`,
+    ),
+    "overdraw-too-large",
+  ],
+  [
+    "full-size group opacity layers",
+    copies(
+      `<g id="p" opacity="0.5"><rect ${FULL} fill="#0f766e"/><rect width="10" height="10"/></g>`,
+    ),
+    "overdraw-too-large",
+  ],
+  [
+    `full-size masks nested ${String(SVG_LOGO_LIMITS.maskDepth)} deep`,
+    (count) => {
+      let body = "<defs>";
+      for (let index = 0; index < SVG_LOGO_LIMITS.maskDepth; index += 1) {
+        const inner = index === 0 ? "" : ` mask="url(#m${String(index - 1)})"`;
+        body += `<mask id="m${String(index)}"><rect ${FULL} fill="#fff"${inner}/></mask>`;
+      }
+      body += `<rect id="p" ${FULL} mask="url(#m${String(SVG_LOGO_LIMITS.maskDepth - 1)})"/></defs>`;
+      return costlyLogo(body + '<use href="#p"/>'.repeat(count));
+    },
+    "overdraw-too-large",
+  ],
+  [
+    "a clip path of 1,500 crowded edges, even-odd",
+    copies(
+      `<clipPath id="c"><path d="${zigzag(1500, (index) => `L${(index * 0.666).toFixed(3)} ${index % 2 === 0 ? "0" : "1000"}`)}Z" clip-rule="evenodd"/></clipPath><rect id="p" ${FULL} fill="#0f766e" clip-path="url(#c)"/>`,
+    ),
+    "overdraw-too-large",
   ],
 ];
 
@@ -345,7 +391,34 @@ function costliest(family: (count: number) => string, code: SvgLogoErrorCode): L
   }
   const result = sanitiseSvgLogo(family(low));
   if (!result.ok) throw new Error("the costliest member was refused");
-  return { name: `${String(low)} copies`, svg: result.svg, dataUrl: logoDataUrl(result.svg) };
+  return { name: `${String(low)} of them`, svg: result.svg, dataUrl: logoDataUrl(result.svg) };
+}
+
+/**
+ * Draws a logo's data URL onto a canvas `size` CSS pixels square at the page's device scale
+ * factor, and reads a pixel back: the whole raster, on the main thread, as the page pays for it.
+ * Returns the milliseconds that took.
+ */
+async function rasterise(page: Page, logo: Logo, size: number): Promise<number> {
+  await render(page, [], LOGO_POLICY);
+  return page.evaluate(
+    async ({ dataUrl, size }) => {
+      const image = new Image();
+      image.src = dataUrl;
+      await image.decode();
+      const pixels = size * window.devicePixelRatio;
+      const canvas = document.createElement("canvas");
+      canvas.width = pixels;
+      canvas.height = pixels;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (context === null) throw new Error("no 2D context");
+      const started = performance.now();
+      context.drawImage(image, 0, 0, pixels, pixels);
+      context.getImageData(0, 0, 1, 1);
+      return performance.now() - started;
+    },
+    { dataUrl: logo.dataUrl ?? "", size },
+  );
 }
 
 test.describe("the costliest logos the sanitiser accepts", () => {
@@ -360,6 +433,26 @@ test.describe("the costliest logos the sanitiser accepts", () => {
       await page.screenshot({ timeout: RENDER_BUDGET_MS });
       expect(Date.now() - started, logo.name).toBeLessThan(RENDER_BUDGET_MS);
       expect(await report(page)).toEqual({ violations: [], broken: [] });
+    });
+
+    test(`rasterises ${label} at ${String(SIZE)} pixels within the budget`, async ({ page }) => {
+      const logo = costliest(family, code);
+      expect(await rasterise(page, logo, SIZE), logo.name).toBeLessThan(RASTER_BUDGET_MS);
+    });
+  }
+});
+
+test.describe(`the costliest logos the sanitiser accepts, at ${String(LARGE_SIZE)} pixels and twice the density`, () => {
+  test.describe.configure({ timeout: 120_000 });
+  test.use({ deviceScaleFactor: 2 });
+
+  for (const [label, family, code] of FAMILIES) {
+    test(`rasterises ${label} within the budget`, async ({ page }) => {
+      const logo = costliest(family, code);
+      expect(await page.evaluate(() => window.devicePixelRatio)).toBe(2);
+      expect(await rasterise(page, logo, LARGE_SIZE), logo.name).toBeLessThan(
+        LARGE_RASTER_BUDGET_MS,
+      );
     });
   }
 });
