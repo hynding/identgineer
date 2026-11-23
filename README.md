@@ -44,6 +44,14 @@ checks as the built-in themes, and emits it as CSS scoped to `data-theme="<your 
 tokens. Its corners are a preference that designs may decline: the square designs (brutalist,
 editorial, pixel) keep their own. See [packages/brand/README.md](packages/brand/README.md).
 
+## Tracking
+
+`packages/tracking` is a consent-first, privacy-first event tracker: nothing is sent or stored
+until the visitor grants consent, Global Privacy Control and Do Not Track are honoured, only the
+events the page declares are collected, and URLs are reduced to a path. See
+[packages/tracking/README.md](packages/tracking/README.md) for what is collected, the consent
+model, the options, the wire format and what the collecting server must enforce.
+
 ## Repository layout
 
 ```

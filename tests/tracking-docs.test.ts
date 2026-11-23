@@ -45,7 +45,10 @@ describe("the tracking README", () => {
       ).toBe(true);
     }
     for (const [option, value] of Object.entries(tracking.TRACKER_DEFAULTS)) {
-      const shown = Array.isArray(value) ? "[]" : String(value);
+      const shown = (Array.isArray(value) ? "[]" : String(value)).replace(
+        /[[\]]/g,
+        String.raw`\$&`,
+      );
       const row = rows.find((line) => line.startsWith(`| \`${option}\``));
       expect(row, `default of ${option}`).toMatch(new RegExp(String.raw`\|\s*\`${shown}\`\s*\|`));
     }
@@ -101,7 +104,7 @@ describe("the tracking README", () => {
     "Global Privacy Control",
     "Do Not Track",
     "never in the URL",
-    "reason: \"gpc\"",
+    'reason: "gpc"',
     "TRACKING_BATCH_JSON_SCHEMA",
   ])("covers %s", (topic) => {
     expect(README).toContain(topic);
