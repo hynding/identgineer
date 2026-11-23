@@ -131,7 +131,10 @@ are announced one at a time and in order, so no listener hears a later status be
 one; and a report is made only after the state it describes is settled.
 
 **Cross-tab.** A change in one tab is announced to the others over a `BroadcastChannel`
-(injectable as `crossTab`); they re-read the record and apply the same effects. Because consent is
+(injectable as `crossTab`); they re-read the record and apply the same effects. The `storage` event of the record's key (a
+write, a removal or a `clear()`) makes them read it again, since a notice on the channel can come
+before the write it announces is visible to the tab; a listener is also told when the decision time
+changes under the same state. Because consent is
 also re-read from storage at every send, a tab without a channel, or with a notice still on its
 way, cannot send after another tab revoked. A tab that missed a `deny()` and sees only the grant after
 it (the channel's notices were lost, or it has no channel) notices that the decision time of the
@@ -206,7 +209,7 @@ given an id and `no-random-source` is reported: ids never come from `Math.random
 | `clock`                  | `Date.now` and `setTimeout`               | `{ now, setTimeout, clearTimeout }`                                                                                |
 | `crypto`                 | `globalThis.crypto`                       | `getRandomValues` for ids                                                                                          |
 | `random`                 | `Math.random`                             | Retry jitter only                                                                                                  |
-| `page`                   | the browser's `window` and `document`     | Location, referrer, signals, and the hidden, online and navigation events                                          |
+| `page`                   | the browser's `window` and `document`     | Location, referrer, signals, and the hidden, online, navigation and storage events                                 |
 | `crossTab`               | a `BroadcastChannel` where there is a DOM | `{ post, subscribe }`; `null` turns it off                                                                         |
 
 The numeric options are checked at creation and throw a `TypeError` naming the option.

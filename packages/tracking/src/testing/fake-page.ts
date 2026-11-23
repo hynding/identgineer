@@ -13,6 +13,8 @@ export interface FakePage extends PageEnvironment {
   readonly hide: () => void;
   readonly goOffline: () => void;
   readonly goOnline: () => void;
+  /** Tells the storage listeners that another tab changed `key`, or cleared the storage (`null`). */
+  readonly changeStorage: (key: string | null) => void;
   readonly setGpc: (value: boolean | undefined) => void;
   readonly setDnt: (value: string | undefined) => void;
   /** How many listeners are subscribed and not yet unsubscribed. */
@@ -28,6 +30,7 @@ export const createFakePage = (options: FakePageOptions = {}): FakePage => {
   const hidden = new Set<() => void>();
   const online = new Set<() => void>();
   const navigation = new Set<() => void>();
+  const storage = new Set<{ key: string; listener: () => void }>();
 
   const subscribe = (set: Set<() => void>, listener: () => void): Unsubscribe => {
     set.add(listener);
@@ -50,6 +53,18 @@ export const createFakePage = (options: FakePageOptions = {}): FakePage => {
     onHidden: (listener) => subscribe(hidden, listener),
     onOnline: (listener) => subscribe(online, listener),
     onNavigate: (listener) => subscribe(navigation, listener),
+    onStorage: (key, listener) => {
+      const entry = { key, listener };
+      storage.add(entry);
+      return () => {
+        storage.delete(entry);
+      };
+    },
+    changeStorage: (key) => {
+      for (const entry of [...storage]) {
+        if (key === null || entry.key === key) entry.listener();
+      }
+    },
     setReferrer: (value) => {
       referrer = value;
     },
@@ -73,6 +88,6 @@ export const createFakePage = (options: FakePageOptions = {}): FakePage => {
     setDnt: (value) => {
       dnt = value;
     },
-    listenerCount: () => hidden.size + online.size + navigation.size,
+    listenerCount: () => hidden.size + online.size + navigation.size + storage.size,
   };
 };

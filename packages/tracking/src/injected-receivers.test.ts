@@ -25,6 +25,9 @@ class ClassPage implements PageEnvironment {
   onNavigate(): Unsubscribe {
     return () => undefined;
   }
+  onStorage(): Unsubscribe {
+    return () => undefined;
+  }
 }
 
 describe("injected environments", () => {

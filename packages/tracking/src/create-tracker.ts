@@ -109,7 +109,10 @@ const buildTracker = (options: ResolvedOptions): Tracker => {
       !ownDecision &&
       reading.decidedAt !== seen;
     if ((previous.state === "granted" && next.state !== "granted") || reGranted) discard();
-    if (previous.state !== next.state || previous.reason !== next.reason) notify(next);
+    const decidedAgain = !ownDecision && next.decidedAt !== previous.decidedAt;
+    if (previous.state !== next.state || previous.reason !== next.reason || decidedAgain) {
+      notify(next);
+    }
     return next;
   };
 
@@ -166,6 +169,12 @@ const buildTracker = (options: ResolvedOptions): Tracker => {
       delivery.resume();
     }),
     ...(options.autoPageViews ? [page.onNavigate(automaticPageView)] : []),
+    // The notice on the channel and the storage write reach this tab by different paths, in no
+    // fixed order: a read at the notice can still see the old record. The storage event is the
+    // write itself, so it is read again then, and storage stays the truth.
+    page.onStorage(STORAGE_KEYS.consent, () => {
+      refresh();
+    }),
     ...(crossTab === undefined
       ? []
       : [

@@ -78,6 +78,9 @@ describe("createBrowserPage", () => {
         subscribe(() => undefined)();
       }).not.toThrow();
     }
+    expect(() => {
+      page.onStorage("key", () => undefined)();
+    }).not.toThrow();
   });
 
   it("attaches nothing until a listener subscribes", () => {
@@ -143,6 +146,21 @@ describe("createBrowserPage", () => {
     stop();
     dom.win.dispatchEvent(new Event("online"));
     expect(calls).toBe(1);
+    expect(dom.listeners()).toBe(0);
+  });
+
+  it("tells a listener of a storage change to its key, or to a clear, and no other", () => {
+    const dom = stubDom();
+    let calls = 0;
+    const stop = createBrowserPage().onStorage("mine", () => calls++);
+    dom.win.dispatchEvent(Object.assign(new Event("storage"), { key: "mine" }));
+    dom.win.dispatchEvent(Object.assign(new Event("storage"), { key: "other" }));
+    expect(calls).toBe(1);
+    dom.win.dispatchEvent(Object.assign(new Event("storage"), { key: null }));
+    expect(calls).toBe(2);
+    stop();
+    dom.win.dispatchEvent(Object.assign(new Event("storage"), { key: "mine" }));
+    expect(calls).toBe(2);
     expect(dom.listeners()).toBe(0);
   });
 

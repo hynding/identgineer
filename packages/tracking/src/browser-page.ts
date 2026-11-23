@@ -38,6 +38,22 @@ const listenOnWindow = (type: string, listener: () => void): Unsubscribe => {
   };
 };
 
+const listenForStorage = (key: string, listener: () => void): Unsubscribe => {
+  const { addEventListener, removeEventListener } = globalThis as unknown as Partial<Window>;
+  if (typeof addEventListener !== "function" || typeof removeEventListener !== "function") {
+    return NOTHING;
+  }
+  const handler = (event: Event): void => {
+    const changed = (event as Partial<StorageEvent>).key;
+    // `clear()` names no key, and a removal of every key does not either.
+    if (changed === null || changed === key) listener();
+  };
+  addEventListener.call(globalThis, "storage", handler);
+  return () => {
+    removeEventListener.call(globalThis, "storage", handler);
+  };
+};
+
 const listenOnDocument = (type: string, listener: () => void): Unsubscribe => {
   const target = read(() => globalThis.document) as Partial<Document> | undefined;
   if (typeof target?.addEventListener !== "function") return NOTHING;
@@ -127,4 +143,5 @@ export const createBrowserPage = (): PageEnvironment => ({
   onHidden: hidden,
   onOnline: (listener) => listenOnWindow("online", listener),
   onNavigate: watchHistory,
+  onStorage: listenForStorage,
 });
