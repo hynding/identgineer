@@ -180,6 +180,21 @@ describe("parseBrandKit, text", () => {
     expect(pathsOf({ ...VALID, tagline: name })).toEqual(["tagline"]);
   });
 
+  it.each([
+    [
+      "Burmese with three spacing marks",
+      String.fromCodePoint(0x101c, 0x103b, 0x103e, 0x1031, 0x102c, 0x1037),
+    ],
+    ["Burmese, another word", String.fromCodePoint(0x1019, 0x103b, 0x103e, 0x1031, 0x102c, 0x103a)],
+  ])("counts only non-spacing and enclosing marks towards a stack: %s", (_label, name) => {
+    expect(errorsOf({ ...VALID, name })).toEqual([]);
+  });
+
+  it("still refuses five non-spacing or enclosing marks in a row", () => {
+    const stack = `a${String.fromCodePoint(0x301, 0x302, 0x303, 0x20dd, 0x304)}`;
+    expect(pathsOf({ ...VALID, name: stack })).toEqual(["name"]);
+  });
+
   it("counts length in code points, so letters outside the BMP count once", () => {
     const letter = String.fromCodePoint(0x1d49c);
     expect(errorsOf({ ...VALID, name: letter.repeat(NAME_MAX_LENGTH) })).toEqual([]);
