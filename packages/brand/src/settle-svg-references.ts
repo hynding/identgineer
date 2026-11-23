@@ -311,6 +311,50 @@ function checkExpansion(
 }
 
 /**
+ * Refuses clip paths whose shapes could cross more than `limits.clipCrossings` times in all: within
+ * each clip path, for each pair of shapes (what a use draws counted as drawn), the product of their
+ * degrees (see `Geometry.degree`). Run after the expansion limits, so no use comes back on itself.
+ */
+function checkClipCrossings(
+  elements: readonly CleanElement[],
+  ids: ReadonlyMap<string, CleanElement>,
+  base: number,
+  limits: SvgLogoLimits,
+): void {
+  const degrees = new Map<CleanElement, number>();
+  const degree = (element: CleanElement): number => {
+    const known = degrees.get(element);
+    if (known !== undefined) return known;
+    let found = measureShape(element, base)?.degree ?? 0;
+    if (element.name === "use") {
+      const reference = referenceOf(element, "href");
+      const target = reference === undefined ? undefined : ids.get(reference);
+      found = target === undefined ? 0 : degree(target);
+    } else if (element.name === "g") {
+      found = element.children.reduce((total, child) => total + degree(child), 0);
+    }
+    degrees.set(element, found);
+    return found;
+  };
+  let crossings = 0;
+  for (const clip of elements) {
+    if (clip.name !== "clipPath") continue;
+    let before = 0;
+    for (const shape of clip.children) {
+      const own = degree(shape);
+      crossings += before * own;
+      before += own;
+    }
+  }
+  if (!(crossings <= limits.clipCrossings)) {
+    throw new SvgLogoRejection(
+      "drawing-too-costly",
+      `has clip paths whose shapes could cross more than ${String(limits.clipCrossings)} times`,
+    );
+  }
+}
+
+/**
  * Settles every same-document reference: a reference to an id that does not exist, or to the
  * wrong kind of element, is dropped (a `use` with it); duplicate ids, cycles and expansions beyond
  * the limits refuse the document. Returns the drawing cost, and the new name of each id still
@@ -332,6 +376,7 @@ export function settleSvgReferences(
   const elements = dropped.size === 0 ? all : all.filter((element) => !dropped.has(element));
   const ids = collectIds(elements, limits);
   const drawingCost = checkExpansion(root, elements, ids, limits);
+  checkClipCrossings(elements, ids, percentBase(root), limits);
   const overdraw = measureOverdraw(root, ids, limits);
   const referenced = new Set<string>();
   for (const element of elements) {

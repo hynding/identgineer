@@ -264,7 +264,7 @@ describe("the drawing cost limit", () => {
     expect(accepted(pair(100)).ok).toBe(true);
     expect(refusal(pair(101))).toBe("drawing-too-costly");
     // One shape alone is not combined with anything, however many segments it has.
-    expect(accepted(clipped(`<path d="${lines(5000)}"/>`)).ok).toBe(true);
+    expect(accepted(clipped(`<path d="M0 0${" l0.001 0.001".repeat(5000)}"/>`)).ok).toBe(true);
     // A cubic crosses a line up to three times, a quadratic or an arc twice; a circle or ellipse
     // is four arcs, a rounded rectangle four lines and four arcs.
     const cubics = `M0 0${" C1 1 2 2 3 3".repeat(34)}`;
