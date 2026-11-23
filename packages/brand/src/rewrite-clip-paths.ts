@@ -350,9 +350,13 @@ class ClipPathRewriter {
       }
       const parent = this.parents.get(node);
       if (parent === undefined) {
-        // The root keeps its place: what it draws moves into a group under the new mask.
-        node.children = [element("g", new Map([["mask", clip]]), node.children, node.offset)];
-        continue;
+        // The root's clip path and mask work in the space around it, in CSS pixels, which no
+        // group inside it stands for at every size the logo is drawn.
+        throw new SvgLogoRejection(
+          "drawing-too-costly",
+          "has a clip path of more than one shape on a root with a mask of its own, which cannot be written as a mask",
+          node.offset,
+        );
       }
       const moved = new Map<string, SvgValue>();
       for (const name of ["id", "transform"]) {
