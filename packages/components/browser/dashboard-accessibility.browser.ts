@@ -76,11 +76,6 @@ test.describe("dashboard components with large text on a narrow screen", () => {
       await applyAxes(page, { ux, design, layout });
       await page.locator("html").evaluate((element) => {
         element.style.fontSize = "200%";
-        // The variation switcher is the page's own furniture, and has its own narrow-screen tests:
-        // its buttons are wider than 320px allows in some designs, which says nothing of the
-        // dashboard components this test is about.
-        const appearance = document.getElementById("appearance");
-        if (appearance) appearance.style.display = "none";
       });
       await page.evaluate(() => document.fonts.ready);
       await settle(page);
