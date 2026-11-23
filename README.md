@@ -23,6 +23,10 @@ element and takes one of eight values, so any combination can be mixed freely.
 | `data-layout` | Page layout     |
 | `data-ux`     | UX mode         |
 
+Adopting them in a page or an app: [plain HTML](docs/variations/plain-html.md),
+[React](docs/variations/react.md), [Vue](docs/variations/vue.md) and
+[Angular](docs/variations/angular.md).
+
 ## Repository layout
 
 ```

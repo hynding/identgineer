@@ -18,6 +18,7 @@ describe("findSourceViolations", () => {
     ["outerHTML", "el.outerHTML = value;", "outerHTML"],
     ["insertAdjacentHTML", 'el.insertAdjacentHTML("beforeend", html);', "insertAdjacentHTML"],
     ["document.write", "document.write(html);", "document.write"],
+    ["execCommand", 'document.execCommand("copy");', "execCommand"],
     ["document.writeln", "document.writeln(html);", "document.write"],
     ["a Stencil innerHTML attribute", "<div innerHTML={html} />", "innerHTML"],
     ["srcdoc", "<iframe srcdoc={html} />", "srcdoc"],

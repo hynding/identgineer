@@ -24,6 +24,17 @@ export type {
   ToastDismissReason,
   ToastVariant,
 } from "./components/toast/toast-options";
+export type { SwitcherOrientation } from "./components/variation-switcher/variation-switcher-options";
+export type {
+  DesignId,
+  LayoutId,
+  SchemeChoice,
+  StateKey,
+  ThemeId,
+  UxModeId,
+  VariationState,
+  VariationsChangeDetail,
+} from "./components/variation-switcher/variation-switcher-types";
 export type { ValueDetail } from "./utils/event-details";
 export type { Placement } from "./utils/position";
 export type { SortDirection } from "./utils/sort-rows";

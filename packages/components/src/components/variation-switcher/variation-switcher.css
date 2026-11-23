@@ -1,0 +1,182 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  container-type: inline-size;
+  container-name: idg-variation-switcher;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.panel {
+  --_gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  --_pad: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--_gap);
+  padding: var(--_pad);
+  border-width: var(--idg-surface-border-width);
+  border-style: var(--idg-surface-border-style);
+  border-color: var(--idg-surface-border-color);
+  border-radius: var(--idg-shape-radius-lg);
+  background: var(--idg-surface-background);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: var(--idg-elevation-sm);
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+  letter-spacing: var(--idg-font-body-letter-spacing);
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--idg-font-family-display);
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+  text-transform: var(--idg-ornament-heading-transform);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--_gap);
+  min-inline-size: 0;
+}
+
+/* Each control is a size container, so how its options are arranged follows the room the control
+   has, not the viewport and not the panel. */
+.control {
+  min-inline-size: 0;
+  /* Inherited into the field's own shadow root, so a label wider than a very narrow control breaks
+     inside its word rather than leave the panel. */
+  overflow-wrap: anywhere;
+  container-type: inline-size;
+  container-name: idg-control;
+}
+
+/* The options of a radio group are laid out here, on the group's own box (its group part), as
+   aligned tracks. The theme is two columns, one where the control is narrow and four where wide. The
+   scheme is three options in one row where they fit and one column where they do not, never two and
+   one over. The widths leave room for the larger type of some UX modes, which a rem does not
+   follow: 24rem and 32rem lie between --idg-size-m and --idg-size-xl, and 44rem is four themes. */
+.control[data-control="theme"] idg-radio-group::part(group),
+.control[data-control="scheme"] idg-radio-group::part(group) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: calc(var(--idg-space-3xs) * var(--idg-density-gap-scale));
+  column-gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+}
+
+@container idg-control (min-inline-size: 24rem) {
+  .control[data-control="theme"] idg-radio-group::part(group) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container idg-control (min-inline-size: 44rem) {
+  .control[data-control="theme"] idg-radio-group::part(group) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@container idg-control (min-inline-size: 32rem) {
+  .control[data-control="scheme"] idg-radio-group::part(group) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Inline: the controls sit side by side and wrap by what fits. A control cannot be narrower than
+   its basis, so each takes a row of its own where the container is narrow. */
+.orientation-inline .controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.orientation-inline .control {
+  flex: 1 1 var(--idg-size-s);
+}
+
+.orientation-inline .control[data-control="theme"] {
+  flex-basis: var(--idg-size-l);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
+}
+
+/* A button may be narrower than its text on one line, so a long label wraps rather than push the
+   panel wider than its container. */
+.actions idg-button {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+/* A narrow container (or large text, which makes the same container narrow in rem) gives the
+   panel's padding back to its controls. 20rem is --idg-size-m. */
+@container idg-variation-switcher (max-inline-size: 20rem) {
+  .panel {
+    --_pad: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
+  }
+}
+
+/* The container's own width decides, never the viewport's. 40rem is --idg-size-xl. A stacked
+   panel gets a second column once there is room, and the theme, which needs the width, spans it. */
+@container idg-variation-switcher (min-inline-size: 40rem) {
+  .orientation-stacked .controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .orientation-stacked .control[data-control="theme"] {
+    grid-column: 1 / -1;
+  }
+}
+
+.status {
+  margin: 0;
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+}
+
+/* Last resort for large wide text in a narrow container: break inside a name, not the page. The
+   property is inherited, so it reaches the label inside each radio's own shadow root. */
+idg-radio {
+  overflow-wrap: anywhere;
+}
+
+/* The name drops under the swatch when the text is large or the container narrow. */
+.theme-option {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-inline-size: 0;
+  gap: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
+}
+
+/* A drawn colour sample must keep its own colours, also where forced colours would repaint it, so
+   it gets an edge in a system colour there. */
+.swatch {
+  flex: none;
+  /* The percentage lets the swatch shrink with a very narrow option instead of pushing it wider than
+     its track; the picture keeps its proportions. */
+  inline-size: min(2em, 100%);
+  block-size: 1em;
+  border-radius: var(--idg-shape-radius-sm);
+  box-shadow: 0 0 0 1px var(--idg-color-border-strong);
+  forced-color-adjust: none;
+}
+
+@media (forced-colors: active) {
+  .swatch {
+    box-shadow: 0 0 0 1px CanvasText;
+  }
+}

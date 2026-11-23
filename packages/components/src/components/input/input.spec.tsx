@@ -144,6 +144,15 @@ describe("idg-input accessibility protocol", () => {
     await (root as unknown as { setFocus: () => Promise<void> }).setFocus();
     expect(focus).toHaveBeenCalledTimes(1);
   });
+
+  it("selects the text of the native input, for a value that is meant to be copied", async () => {
+    const { root } = await render(<idg-input value="https://example.com" readonly />);
+    // The mock input has no select(); a browser's has.
+    const select = vi.fn();
+    Object.assign(native(root), { select });
+    await (root as unknown as { selectText: () => Promise<void> }).selectText();
+    expect(select).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("idg-input password reveal", () => {

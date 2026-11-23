@@ -29,12 +29,14 @@
     "test:browser": "playwright test --trace off"
   },
   "dependencies": {
+    "@identgineer/variations": "workspace:*",
     "@stencil/core": "4.45.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
     "@identgineer/tokens": "workspace:*",
     "@playwright/test": "1.63.0",
-    "@stencil/vitest": "1.16.2"
+    "@stencil/vitest": "1.16.2",
+    "typescript": "6.0.3"
   }
 }

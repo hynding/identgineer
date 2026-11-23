@@ -24,6 +24,7 @@ const REQUIRED_MESSAGE = "Please select one of these options.";
  * its radios, is the form control.
  *
  * @slot - `idg-radio` elements.
+ * @part group - The box that arranges the radios, for a page that lays them out itself.
  */
 @Component({
   tag: "idg-radio-group",
@@ -176,6 +177,7 @@ export class IdgRadioGroup {
     return (
       <div
         class="group"
+        part="group"
         role="radiogroup"
         aria-label={this.accessibleLabel}
         aria-describedby={description ? "description" : undefined}

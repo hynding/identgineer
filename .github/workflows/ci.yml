@@ -29,8 +29,8 @@ jobs:
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm test
       - run: pnpm build
+      - run: pnpm test
       - run: pnpm audit --audit-level=high
 
   browser:

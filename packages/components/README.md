@@ -173,6 +173,9 @@ inferred from attributes. For example the email input is a `textbox` named "Emai
 | `size`                                                                      | `sm`, `md` (default), `lg`                                                                |
 | `reveal`, `revealLabel`                                                     | Password reveal button; label default "Show password"                                     |
 
+`selectText()` (a method of `idg-input` only) selects the text of the native input, for a read-only
+value that is meant to be copied, such as a link; it does not focus it, so call `setFocus()` too.
+
 Slots `start` and `end` sit inside the box. The reveal control is a real `<button type="button">`
 with `aria-pressed`; it changes only the native input's `type`, never the value.
 
@@ -236,6 +239,9 @@ native radio group, so the group does what the native group would:
   WAI-ARIA radio group pattern;
 - each radio is told its `position` and `setSize` (`aria-posinset` and `aria-setsize`), which separate
   roots cannot work out for themselves.
+
+Part `group` is the box that arranges the radios (a flex column or row). A page can lay them out
+itself with `idg-radio-group::part(group)`, for example as a grid; the switcher does.
 
 `idg-radio` has `value` and `disabled` and the label as its slot. `checked`, `groupDisabled`,
 `tabbable`, `position`, `setSize` and `invalid` are set by the group; use `idg-radio` inside a group
@@ -994,6 +1000,88 @@ fit on one row in the larger type scales or a wider font. Nothing is clipped and
 scroll sideways; ordinary words elsewhere never break, because a word only breaks where it is wider
 than the line.
 
+## Variation switcher
+
+### `idg-variation-switcher`
+
+A control panel with which a visitor changes the four variation axes and the colour scheme of the
+page. It is built on [`@identgineer/variations`](../variations/README.md), which this package
+depends on, and it always acts on the document's root element: the page's attributes stay the
+single truth. Put the bootstrap script of that package in the `<head>` so a remembered or shared
+choice is applied before first paint.
+
+```html
+<idg-variation-switcher heading="Appearance" persist></idg-variation-switcher>
+<idg-variation-switcher axes="theme,scheme" orientation="inline"></idg-variation-switcher>
+```
+
+| Prop          | Attribute     | Values                                                      | Default   |
+| ------------- | ------------- | ----------------------------------------------------------- | --------- |
+| `persist`     | `persist`     | boolean: save each change with the runtime's persistence    | `false`   |
+| `axes`        | `axes`        | comma separated `theme`, `design`, `layout`, `ux`, `scheme` | all five  |
+| `orientation` | `orientation` | `stacked`, `inline`                                         | `stacked` |
+| `heading`     | `heading`     | visible heading, which also names the panel                 |           |
+
+- **Controls.** Theme is a radio group of the eight themes, each with a swatch of its colours in both
+  schemes. Design, Layout and UX are selects of the eight registry options (label from `REGISTRY`),
+  and Scheme is a radio group of System, Light and Dark. Each is an `idg-field`, so it has a visible
+  label, an accessible name, and the chosen option's description as its hint (shown in the `guided`
+  mode and always part of the accessible description). `axes` shows a subset in the panel's own order;
+  unknown names are ignored, and a list with no known name shows every control.
+- **Actions.** "Surprise me" applies `shuffleVariations()` (the scheme is left alone), "Reset"
+  removes every attribute (and the stored choice, with `persist`), and "Copy link" writes
+  `variationsUrl(state, location.href)` with `navigator.clipboard.writeText`. If the clipboard is
+  missing, blocked or refuses, the link is shown in a read-only field, focused, to be copied by hand;
+  `document.execCommand` is never used. Every result is announced in a polite live region. The copy
+  result is also shown as text; the other messages are for assistive technology only.
+- **Persist.** With `persist` the panel passes `{ persist: true }` to `applyVariations` and
+  `resetVariations`. The panel itself never reads storage: the bootstrap script applies the stored
+  choice before paint. Without the bootstrap script the choice is saved but only restored by your
+  own code (`loadVariations()`).
+- **Sync.** The panel subscribes with `onVariationsChange` when it is connected and unsubscribes when
+  it is disconnected, so it shows a change made by markup, a script or another switcher. Several
+  switchers on a page stay in step without feedback loops: only the panel the visitor used emits.
+- **Event.** `idgVariationsChange`, detail `{ state, changed }` (type `VariationsChangeDetail`), when
+  the visitor changes something through the panel and something actually changed. A change made
+  elsewhere does not fire it; listen to `onVariationsChange` for that. The inner controls' own
+  `idgChange` does not leave the panel.
+- **Parts:** `panel`, `heading`, `controls`, `actions`, `status`.
+- **Layout.** The host is a size container: `stacked` is one column, and two from 40rem
+  (`--idg-size-xl`) with the theme across both; `inline` puts controls side by side as far as they
+  fit. Below 20rem (`--idg-size-m`, which is wider in pixels at large text sizes) the padding is
+  reduced. Each control is a size container of its own: the theme options are one column, two from
+  24rem and four from 44rem, and the scheme is one column or, from 32rem, one row of three, always
+  on aligned tracks (laid out through `idg-radio-group::part(group)`). The host needs a width of its own (it is a block, so it fills its parent; in a flex or
+  grid parent give it `min-inline-size: 0` and a width). Verified at 320px to 1920px, at 200% text
+  with a wider face, in right-to-left text, and in every layout.
+- **Accessibility.** The panel is a `role="group"` named by `heading`, or "Appearance". Everything is
+  keyboard operable: the theme and scheme groups have one tab stop and arrows choose (the horizontal
+  arrows swap in right-to-left text), the selects change with the arrow keys, and the buttons take
+  Enter and Space. Targets follow `--idg-density-target-size`. axe reports nothing in any UX mode or
+  design, in both schemes. In `forced-colors` the swatches keep their colours (`forced-color-adjust:
+none`) and get an edge in `CanvasText`. The panel has no motion of its own.
+- **CSP.** A swatch is an inline `svg` whose `fill` attributes are set from the registry. SVG
+  presentation attributes are not inline styles, so `style-src 'self'` does not govern them, and
+  nothing writes a `style` attribute or property. Each colour is checked to be a hex colour before it
+  reaches an attribute. Everything that comes from the URL or storage goes through
+  `@identgineer/variations`, which accepts only registry ids. There is no `innerHTML`, `eval` or
+  `execCommand`.
+- **Server rendering.** Nothing touches the DOM when the module is loaded. The state is read when the
+  element connects.
+- **Bundle.** The Stencil build compiles the variations source into the components' own chunks
+  (about 5 KB gzipped); `@identgineer/tokens` is not part of it. This holds for the lazy loader
+  (`dist/identgineer`), the custom-elements build (`dist/components`) and `www`. The `dist/collection`
+  output is different: it is not bundled, so its switcher files keep a bare
+  `import … from "@identgineer/variations"`, and that package is TypeScript source until it is
+  published with built output (planned with the publishing feature). Until then the collection
+  output is not a supported entry for this component. Consume the loader or the custom-elements
+  build.
+- **Types.** The switcher's public types (`VariationsChangeDetail`, `VariationState`, `StateKey`,
+  `ThemeId`, `DesignId`, `LayoutId`, `UxModeId`, `SchemeChoice`, `SwitcherOrientation`) are declared in
+  this package, so `dist/types` never refers to the variations source. A compile-time test holds them
+  identical to the variations package's own, and a check over the built declarations fails if any of
+  them imports from `@identgineer/variations`.
+
 ## Strict CSP and Trusted Types
 
 Every component is verified in Chromium against
@@ -1063,11 +1151,20 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   viewport and forced colours for every overlay (axe runs with each one open), boundary contrast, text contrast of badges, alerts,
   avatars and changes in all 8 themes in light and dark, and axe (wcag2a, wcag2aa, wcag21aa, wcag22aa) across the 8 designs in light and dark and
   the 8 UX modes, no sideways page scroll at 320, 768, 1280 and 2560px under all 8 layouts, and the
-  layout primitives' wrapping, column counts and right-to-left placement, on pages in `src/fixtures/` (`button.html`, `forms.html`, `surfaces.html`, `overlays.html`, `navigation.html`, `layout-primitives.html`, `layout-shell.html`; copied to `www/fixtures/`; static HTML, no inline
+  layout primitives' wrapping, column counts and right-to-left placement, on pages in `src/fixtures/` (`button.html`, `forms.html`, `surfaces.html`, `overlays.html`, `navigation.html`, `layout-primitives.html`, `layout-shell.html`, `variation-switcher.html`; copied to `www/fixtures/`; static HTML, no inline
   script or style). Build first. Playwright's own Chromium is installed with
   `pnpm --filter @identgineer/components exec playwright install --with-deps chromium`; where that is
   not possible, set `IDG_CHROMIUM_PATH` to a Chromium binary (`/opt/pw-browsers/chromium` is used if it
   exists). `IDG_BROWSER_PORT` changes the port (4173). Only Chromium is run.
+- **Variations in the build.** `@identgineer/variations` is TypeScript source with `.ts` import
+  specifiers. Stencil only compiles its own `src`, so `stencil.config.ts` carries a small rollup
+  plugin that transpiles that package's files (and nothing else), and `tsconfig.json` allows `.ts`
+  import specifiers for the type check while `tsconfig.build.json` turns that off again, which
+  emit requires. The `variation-switcher.html` fixture loads the bootstrap script from
+  `/variations/bootstrap.js`, which the www build copies from `packages/variations/dist` (that
+  package builds first, since this one depends on it). The fixture's `integrity` attribute is
+  written out, and `checks/fixture-bootstrap.test.ts` fails when it no longer matches what the
+  package builds: copy the new value from `dist/bootstrap.sri.json`.
 - `src/testing/` holds spec helpers (a recording `ElementInternals`, since the mock DOM has none) and
   is excluded from the Stencil build.
 - `tsconfig.json` is the strict config for tooling and editors. `tsconfig.build.json` is the one
