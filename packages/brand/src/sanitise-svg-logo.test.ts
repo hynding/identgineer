@@ -377,6 +377,17 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
     ).toContain('fill="#010203" stroke-dasharray="1 2" clip-path="url(#logo-0)"');
   });
 
+  it.each(["0.001em", "1ex", "1%", "1rem", "1vw", "1vh", "1ch", "1q", "1zz", "1 0.001em"])(
+    "drops a dash array of %s, a unit a dash may not take",
+    (value) => {
+      const result = accepted(svg(`<path d="M0 0H9" stroke="red" stroke-dasharray="${value}"/>`));
+      expect(result.svg).not.toContain("stroke-dasharray");
+      expect(result.removed).toEqual([
+        expect.objectContaining({ attribute: "stroke-dasharray", reason: "invalid-value" }),
+      ]);
+    },
+  );
+
   it("refuses a form feed anywhere, inside a value included", () => {
     expect(refused(svg('<rect height="1" stroke-dasharray="1\f2"/>')).code).toBe(
       "invalid-character",

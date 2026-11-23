@@ -95,6 +95,15 @@ describe("dashPeriod", () => {
   ])("reads %s as a period of %d user units", (value, period) => {
     expect(dashPeriod(value)).toBeCloseTo(period, 9);
   });
+
+  // A kept dash array holds only the units its grammar keeps (px written as none); anything else
+  // reaching the cost model is a defect upstream, and must not cost nothing.
+  it.each(["1em", "1ex", "1rem", "1vw", "1%", "1px", "1q", "1 2em", "1zz", "x", ""])(
+    "refuses %j, which no grammar keeps in a dash array",
+    (value) => {
+      expect(() => dashPeriod(value)).toThrow(/dash/);
+    },
+  );
 });
 
 describe("the drawing cost of a logo", () => {
