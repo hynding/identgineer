@@ -244,6 +244,32 @@ test.describe("primary button boundary", () => {
   }
 });
 
+test.describe("primary button where the accent stands out", () => {
+  for (const theme of THEMES) {
+    for (const scheme of SCHEMES) {
+      test(`draws no edge outline in ${theme} ${scheme} unless the theme needs one`, async ({
+        page,
+      }) => {
+        await page.goto("/fixtures/button.html");
+        await hydrated(page);
+        await applyAxes(page, { theme, scheme });
+        const { edge, outline } = await page.evaluate(() => {
+          const control = document.querySelector("idg-button")?.shadowRoot?.querySelector("button");
+          if (!control) throw new Error("missing the primary button");
+          return {
+            edge: getComputedStyle(document.documentElement)
+              .getPropertyValue("--idg-color-accent-edge")
+              .trim(),
+            outline: getComputedStyle(control).outlineStyle,
+          };
+        });
+        // Even a transparent outline shifts the anti-aliasing of a faded button.
+        expect(outline).toBe(edge === "transparent" ? "none" : "solid");
+      });
+    }
+  }
+});
+
 /** A theme generated from a one-colour kit, adopted as a constructable stylesheet under the policy. */
 async function adoptBrandTheme(page: Page, id: string, primary: string): Promise<void> {
   const result = parseBrandKit({
