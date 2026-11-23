@@ -142,7 +142,7 @@ describe("generateBrandTheme", () => {
   });
 
   it("does not note an accent that stands apart from the page, even below 3:1", () => {
-    for (const primary of ["#4f46e5", "#facc15", "#0ea5e9"]) {
+    for (const primary of ["#4f46e5", "#f59e0b", "#0ea5e9"]) {
       const theme = generateBrandTheme(kitFrom({ colors: { primary } }));
       expect(
         theme.notes.filter((note) => note.kind === "accent-blends-with-page"),

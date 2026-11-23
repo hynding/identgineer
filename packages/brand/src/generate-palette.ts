@@ -23,11 +23,11 @@ export interface BrandAdjustment {
 }
 
 /**
- * Something the generator could not or should not change but a brand guide should show. Today one
- * kind: a status colour so close to the accent (OKLab distance below `STATUS_NEAR_ACCENT`) that,
- * for example, a primary and a danger button look alike.
+ * Something the generator could not or should not change but a brand guide should show: a status
+ * colour so close to the accent (OKLab distance below `STATUS_NEAR_ACCENT`) that, for example, a
+ * primary and a danger button look alike.
  */
-export interface BrandNote {
+export interface StatusNearAccentNote {
   readonly scheme: Scheme;
   readonly kind: "status-near-accent";
   readonly token: string;
@@ -35,6 +35,23 @@ export interface BrandNote {
   /** Euclidean distance in OKLab; 0.02 is about the smallest visible difference. */
   readonly distance: number;
 }
+
+/**
+ * An accent fill that all but disappears into the page (below `ACCENT_BLENDS_WITH_PAGE` against
+ * `bg`), such as white in light or near-black in dark: the fill is kept, and components draw its
+ * edge, but a primary action then reads by its edge alone.
+ */
+export interface AccentBlendsWithPageNote {
+  readonly scheme: Scheme;
+  readonly kind: "accent-blends-with-page";
+  readonly token: "color.accent";
+  readonly against: "color.bg";
+  readonly contrast: number;
+}
+
+export type BrandNote = StatusNearAccentNote | AccentBlendsWithPageNote;
+
+export const ACCENT_BLENDS_WITH_PAGE = 1.5;
 
 export const STATUS_NEAR_ACCENT = 0.08;
 
@@ -405,7 +422,7 @@ function oklabDistance(first: Rgb, second: Rgb): number {
 
 function notes(builder: Builder): BrandNote[] {
   const accent = builder.color("accent");
-  return STATUSES.flatMap((status): BrandNote[] => {
+  const statuses = STATUSES.flatMap((status): BrandNote[] => {
     const distance = oklabDistance(builder.color(status.name), accent);
     return distance < STATUS_NEAR_ACCENT
       ? [
@@ -419,6 +436,20 @@ function notes(builder: Builder): BrandNote[] {
         ]
       : [];
   });
+  const contrast = contrastBetween(accent, builder.color("bg"));
+  const blends: BrandNote[] =
+    contrast < ACCENT_BLENDS_WITH_PAGE
+      ? [
+          {
+            scheme: builder.scheme,
+            kind: "accent-blends-with-page",
+            token: "color.accent",
+            against: "color.bg",
+            contrast,
+          },
+        ]
+      : [];
+  return [...blends, ...statuses];
 }
 
 // Analogous turns tried for the gradient's far end, nearest first.

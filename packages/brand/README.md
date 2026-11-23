@@ -146,12 +146,18 @@ Every move is reported in `theme.adjustments`: scheme, token, origin (`primary`,
 `generated`), requested and used colour, the background that bound the move, the threshold, and
 the contrast before and after.
 
-`theme.notes` lists what passes but a brand guide should know about. Today there is one kind,
+`theme.notes` lists what passes but a brand guide should know about. There are two kinds.
 `status-near-accent`: a status colour whose OKLab distance from the accent is below
 `STATUS_NEAR_ACCENT` (0.08), so that a red brand's danger, or a green brand's success, reads like
 the accent. The status keeps its fixed hue (moving it would make it a worse status colour); the
 note names the scheme, the status token, the accent and the distance, so you can pair the status
-with an icon or label, or choose a primary further from it. About one kit in five gets a note.
+with an icon or label, or choose a primary further from it.
+
+`accent-blends-with-page`: the accent is below `ACCENT_BLENDS_WITH_PAGE` (1.5:1) against `bg` in
+a scheme, as white is in light, near-black in dark and a pale yellow such as `#facc15` in light.
+The fill is kept, and the components give a primary button a 2px edge in the theme's
+`accent-edge`, but the button then reads as primary by its edge alone; the note gives the scheme
+and the contrast, so the brand guide can say so or pick a primary for that scheme's buttons.
 
 The theme comes back as `theme.document`, a DTCG theme source in exactly the shape of the
 built-in ones (`common` typography, `light` and `dark` colour and gradient, label and
