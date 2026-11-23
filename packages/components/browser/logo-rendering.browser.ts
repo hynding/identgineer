@@ -318,6 +318,21 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
     ),
     "drawing-too-costly",
   ],
+  ...(
+    [
+      ["of 64 lengths", Array.from({ length: 64 }, () => "1").join(" ")],
+      ["of two lengths", "1 1"],
+    ] as const
+  ).map(
+    ([lengths, dasharray]) =>
+      [
+        `hairline dashes ${lengths} along a zigzag`,
+        copies(
+          `<path id="p" d="M50 50${Array.from({ length: 100 }, (_, index) => `L${index % 2 === 0 ? "950" : "50"} ${String(50 + index * 9)}`).join("")}" fill="none" stroke="#000" stroke-width="0.1" stroke-dasharray="${dasharray}"/>`,
+        ),
+        "drawing-too-costly",
+      ] as const,
+  ),
   ["full-size solid fills", copies(`<rect id="p" ${FULL} fill="#0f766e"/>`), "overdraw-too-large"],
   [
     `full-size linear gradients of ${String(STOPS)} stops`,
@@ -433,6 +448,43 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
     "drawing-too-costly",
   ],
   [
+    "a clip path of one shape crossing itself, beside a square",
+    (count) => {
+      const zigzagAt = (across: boolean): string =>
+        Array.from({ length: count - 2 }, (_, index) => {
+          const at = (100000 + index * 0.01).toFixed(2);
+          const far = index % 2 === 0 ? "100100" : "100000";
+          return across ? `L${far} ${at}` : `L${at} ${far}`;
+        }).join("");
+      return costlyLogo(
+        `<defs><clipPath id="c"><path d="M100000 100000${zigzagAt(true)}ZM100000 100000${zigzagAt(false)}Z"/><rect width="1" height="1"/></clipPath></defs><rect width="200000" height="200000" fill="#0f766e" clip-path="url(#c)"/>`,
+        'viewBox="0 0 200000 200000"',
+      );
+    },
+    "drawing-too-costly",
+  ],
+  [
+    "a clip path of five zigzags crossing one another",
+    (count) => {
+      const zigzagAt = (across: boolean, offset: number): string =>
+        `M${(100000 + offset).toFixed(3)} 100000` +
+        Array.from({ length: count - 2 }, (_, index) => {
+          const at = (100000 + index * 0.01).toFixed(2);
+          const far = index % 2 === 0 ? "100100" : "100000";
+          return across ? `L${far} ${at}` : `L${at} ${far}`;
+        }).join("") +
+        "Z";
+      const shapes = [0, 1, 2, 3, 4]
+        .map((index) => `<path d="${zigzagAt(index % 2 === 0, index * 0.003)}"/>`)
+        .join("");
+      return costlyLogo(
+        `<defs><clipPath id="c">${shapes}</clipPath></defs><rect width="200000" height="200000" fill="#0f766e" clip-path="url(#c)"/>`,
+        'viewBox="0 0 200000 200000"',
+      );
+    },
+    "drawing-too-costly",
+  ],
+  [
     "a clip path of two cubic waves crossing each other",
     (count) => {
       const wave = (down: boolean): string =>
@@ -542,6 +594,27 @@ async function rasterise(page: Page, logo: Logo, size: number): Promise<number> 
   );
 }
 
+/**
+ * Puts a logo inline in a box `SIZE` CSS pixels square, at the page's device scale factor, and
+ * returns the milliseconds until a screenshot shows it: inline, a large logo is drawn tile by tile,
+ * each tile walking every path it touches again, so this is timed apart from the image.
+ */
+async function drawInline(page: Page, logo: Logo): Promise<number> {
+  await page.setViewportSize({ width: SIZE + 50, height: SIZE + 50 });
+  await page.setContent(
+    `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>body{margin:0}div{width:${String(SIZE)}px;height:${String(SIZE)}px}svg{width:100%;height:100%}</style><div></div>`,
+  );
+  await page.screenshot();
+  const started = Date.now();
+  await page.evaluate((svg) => {
+    const box = document.querySelector("div");
+    if (box === null) throw new Error("no box");
+    box.innerHTML = svg;
+  }, logo.svg ?? "");
+  await page.screenshot({ timeout: RENDER_BUDGET_MS });
+  return Date.now() - started;
+}
+
 // A kept logo is always drawn to fit: the sanitiser drops a preserveAspectRatio that would stretch
 // or crop it. The overdraw counts on that, so a page must not stretch it either; sizing an image or
 // an inline logo with CSS does not, while object-fit: cover, or drawing it on a canvas of another
@@ -617,6 +690,11 @@ test.describe("the costliest logos the sanitiser accepts", () => {
     test(`rasterises ${label} at ${String(SIZE)} pixels within the budget`, async ({ page }) => {
       const logo = costliest(family, code);
       expect(await rasterise(page, logo, SIZE), logo.name).toBeLessThan(RASTER_BUDGET_MS);
+    });
+
+    test(`draws ${label} inline at ${String(SIZE)} pixels within the budget`, async ({ page }) => {
+      const logo = costliest(family, code);
+      expect(await drawInline(page, logo), logo.name).toBeLessThan(RASTER_BUDGET_MS);
     });
   }
 });
