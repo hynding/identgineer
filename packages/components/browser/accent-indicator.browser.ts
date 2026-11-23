@@ -432,6 +432,26 @@ test.describe("current navigation item in generated brand themes", () => {
   }
 });
 
+test.describe("primary button in forced colours", () => {
+  for (const design of DESIGNS) {
+    test(`keeps a boundary in a system colour in ${design}`, async ({ page }) => {
+      await page.emulateMedia({ forcedColors: "active" });
+      await page.goto("/fixtures/forms.html");
+      await hydrated(page);
+      await applyAxes(page, { design });
+      const control = await readControl(page, PRIMARY);
+      const drawn = control.edges.filter((edge) => edge.width > 0);
+      expect(drawn.length, describe(control)).toBeGreaterThan(0);
+      for (const edge of drawn) {
+        expect(
+          contrastRatio(edge.color, control.behind),
+          `${edge.kind}: ${describe(control)}`,
+        ).toBeGreaterThanOrEqual(3);
+      }
+    });
+  }
+});
+
 /** Accents that blend with the page: the primary must still read as primary next to the secondary. */
 const BLENDING = [
   { theme: "citrus", scheme: "light", primary: undefined },

@@ -15,7 +15,8 @@ The accent appears in three ways, and each reads its own colour role:
   look like the secondary one, so it gets a 2px outline of `accent-edge`, outside whatever border
   the design gives every control: the theme's `accent-border` where the accent does not stand
   out, and `transparent`, so nothing is drawn, where it does. Focus replaces the outline with the
-  focus ring, and forced colours drop it.
+  focus ring, and forced colours drop it: there the preferences layer gives every control a solid
+  system-colour border, even in designs that draw none.
 - An **indicator** identifies state or selection on the page, so it needs 3:1 against what it sits
   on (WCAG 1.4.11): `accent-indicator`, with `on-accent-indicator` for a glyph or number on it.
 - A **tint** is the faint `accent-subtle` wash of hover feedback, with `on-accent-subtle` for its
