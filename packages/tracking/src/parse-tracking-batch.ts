@@ -5,6 +5,7 @@ import {
   MAX_PATH_LENGTH,
   MAX_PROPERTIES_PER_EVENT,
   MAX_TIMESTAMP,
+  MAX_TRACKING_BATCH_BYTES,
   MAX_WIRE_STRING_LENGTH,
   PATH_PATTERN,
   PROPERTY_KEY_PATTERN,
@@ -16,8 +17,13 @@ import {
   type PropertyValue,
   type TrackingBatch,
   type TrackingEvent,
+  type TrackingTransport,
 } from "./wire-format.ts";
+import { codePointLength } from "./code-point-length.ts";
 import { isWellFormed } from "./well-formed.ts";
+import { utf8Length } from "./utf8-length.ts";
+
+export { MAX_TRACKING_BATCH_BYTES };
 
 class Rejection extends Error {}
 
@@ -58,7 +64,7 @@ const text = (
   rule: string,
 ): string =>
   typeof value === "string" &&
-  value.length <= maxLength &&
+  codePointLength(value) <= maxLength &&
   pattern.test(value) &&
   isWellFormed(value)
     ? value
@@ -66,11 +72,11 @@ const text = (
 
 const propertyValue = (value: unknown, where: string): PropertyValue => {
   if (typeof value === "string") {
-    return value.length <= MAX_WIRE_STRING_LENGTH && isWellFormed(value)
+    return codePointLength(value) <= MAX_WIRE_STRING_LENGTH && isWellFormed(value)
       ? value
       : reject(
           where,
-          `must be a well-formed string of at most ${String(MAX_WIRE_STRING_LENGTH)} units`,
+          `must be a well-formed string of at most ${String(MAX_WIRE_STRING_LENGTH)} code points`,
         );
   }
   if (typeof value === "number") {
@@ -118,6 +124,9 @@ const event = (value: unknown, where: string): TrackingEvent => {
   const referrer = optional("referrer", (item, at) =>
     text(item, at, REFERRER_PATTERN, 260, "must be an origin and nothing else"),
   );
+  const session = optional("session", (item, at) =>
+    text(item, at, TOKEN_PATTERN, 64, "must be 16 to 64 base64url characters"),
+  );
   const props = optional("properties", properties);
   return {
     id: text(source.id, `${where}.id`, TOKEN_PATTERN, 64, "must be 16 to 64 base64url characters"),
@@ -129,13 +138,7 @@ const event = (value: unknown, where: string): TrackingEvent => {
       "must match [a-z][a-z0-9_]{0,63}",
     ),
     at: timestamp(source.at, `${where}.at`),
-    session: text(
-      source.session,
-      `${where}.session`,
-      TOKEN_PATTERN,
-      64,
-      "must be 16 to 64 base64url characters",
-    ),
+    ...(session === undefined ? {} : { session }),
     ...(user === undefined ? {} : { user }),
     ...(path === undefined ? {} : { path }),
     ...(referrer === undefined ? {} : { referrer }),
@@ -156,16 +159,32 @@ const attempt = <T>(parse: () => T): ParseResult<T> => {
 export const parseTrackingEvent = (input: unknown): ParseResult<TrackingEvent> =>
   attempt(() => event(input, "event"));
 
+const transportOf = (value: unknown): TrackingTransport =>
+  value === "fetch" || value === "beacon"
+    ? value
+    : reject("batch.transport", "must be fetch or beacon");
+
 const batch = (input: unknown): TrackingBatch => {
   const source = record(input, "batch");
-  checkKeys(source, ["v", "sentAt", "writeKey", "events"], "batch");
+  checkKeys(source, ["v", "sentAt", "transport", "writeKey", "events"], "batch");
   if (source.v !== WIRE_VERSION) reject("batch.v", `must be ${String(WIRE_VERSION)}`);
   const sentAt = timestamp(source.sentAt, "batch.sentAt");
+  const transport = transportOf(source.transport);
   const list = source.events;
   if (!Array.isArray(list) || list.length < 1 || list.length > MAX_EVENTS_PER_BATCH) {
     reject("batch.events", `must be a list of 1 to ${String(MAX_EVENTS_PER_BATCH)} events`);
   }
-  const events = (list as unknown[]).map((item, index) => event(item, `events[${String(index)}]`));
+  // A sparse list has holes that map() would skip, so every index is looked at.
+  const items = list as unknown[];
+  for (let index = 0; index < items.length; index += 1) {
+    if (!Object.hasOwn(items, index)) reject(`events[${String(index)}]`, "is missing");
+  }
+  const events = items.map((item, index) => event(item, `events[${String(index)}]`));
+  const seen = new Set<string>();
+  events.forEach((item, index) => {
+    if (seen.has(item.id)) reject(`events[${String(index)}].id`, "is a duplicate in the batch");
+    seen.add(item.id);
+  });
   const writeKey = Object.hasOwn(source, "writeKey")
     ? text(
         source.writeKey,
@@ -175,9 +194,13 @@ const batch = (input: unknown): TrackingBatch => {
         "must match [A-Za-z0-9_-]{16,128}",
       )
     : undefined;
+  if ((transport === "beacon") !== (writeKey !== undefined)) {
+    reject("batch.writeKey", "must be present in a beacon and absent in a fetch batch");
+  }
   return {
     v: WIRE_VERSION,
     sentAt,
+    transport,
     ...(writeKey === undefined ? {} : { writeKey }),
     events,
   };
@@ -190,3 +213,25 @@ const batch = (input: unknown): TrackingBatch => {
  */
 export const parseTrackingBatch = (input: unknown): ParseResult<TrackingBatch> =>
   attempt(() => batch(input));
+
+/**
+ * Reads a request body as text: refuses one above `MAX_TRACKING_BATCH_BYTES` before parsing it,
+ * so a server need not hold a large JSON tree to find out it is too big. A server must still cap
+ * the body as it reads it from the socket, as this only sees what was already buffered.
+ */
+export const parseTrackingBatchText = (text: string): ParseResult<TrackingBatch> => {
+  const bytes = utf8Length(text);
+  if (bytes > MAX_TRACKING_BATCH_BYTES) {
+    return {
+      ok: false,
+      error: `body: ${String(bytes)} bytes exceed the cap of ${String(MAX_TRACKING_BATCH_BYTES)} bytes`,
+    };
+  }
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(text);
+  } catch {
+    return { ok: false, error: "body: is not JSON" };
+  }
+  return parseTrackingBatch(decoded);
+};

@@ -48,11 +48,13 @@ describe("importing the package", () => {
   it("exports the documented surface and no more", async () => {
     const index = await import("./index.ts");
     expect(Object.keys(index).sort()).toEqual([
+      "MAX_TRACKING_BATCH_BYTES",
       "TRACKER_DEFAULTS",
       "TRACKING_BATCH_JSON_SCHEMA",
       "WIRE_VERSION",
       "createTracker",
       "parseTrackingBatch",
+      "parseTrackingBatchText",
       "parseTrackingEvent",
     ]);
     const testing = await import("./testing/index.ts");
@@ -73,11 +75,13 @@ describe("importing the package", () => {
       "parse-tracking-batch.ts",
       "tracking-batch-schema.ts",
       "well-formed.ts",
+      "code-point-length.ts",
+      "utf8-length.ts",
       "wire.ts",
     ]) {
       const source = readFileSync(new URL(`./${file}`, import.meta.url), "utf8");
       expect(source, file).not.toMatch(
-        /\b(window|document|navigator|localStorage|sessionStorage|globalThis|location|fetch)\b/,
+        /\b(window|document|navigator|localStorage|sessionStorage|globalThis|location)\b|\bfetch\(/,
       );
     }
   });

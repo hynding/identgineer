@@ -15,6 +15,8 @@ export interface RecordedRequest {
   readonly body: string;
   readonly bytes: number;
   readonly keepalive: boolean;
+  /** True while a fetch is unanswered; false once it is answered, aborted or failed. */
+  pending: boolean;
   /** The status it was answered with; `undefined` while it hangs or when the network failed. */
   status?: number;
 }
@@ -91,7 +93,18 @@ export const createFakeCollector = (options: FakeCollectorOptions): FakeCollecto
     }
     const parsed = parseTrackingBatch(decoded);
     if (!parsed.ok) flag(`batch: ${parsed.error}`);
-    const bodyKey = parsed.ok ? parsed.value.writeKey : undefined;
+    // Read from the raw body, so a contract break is named even when the batch is also invalid.
+    const raw = (typeof decoded === "object" && decoded !== null ? decoded : {}) as Record<
+      string,
+      unknown
+    >;
+    const bodyKey = raw.writeKey;
+    const sentAs = init === undefined ? "beacon" : "fetch";
+    if (raw.transport !== sentAs) {
+      flag(
+        `transport: a ${sentAs} must say so, and this one says ${JSON.stringify(raw.transport)}`,
+      );
+    }
     if (init === undefined) {
       if (bodyKey !== writeKey) flag("write key: a beacon must carry it in its body");
       return;
@@ -123,6 +136,7 @@ export const createFakeCollector = (options: FakeCollectorOptions): FakeCollecto
       body,
       bytes: utf8Length(body),
       keepalive,
+      pending: false,
     };
     requests.push(request);
     check(request, init);
@@ -160,7 +174,9 @@ export const createFakeCollector = (options: FakeCollectorOptions): FakeCollecto
       maxInFlight = Math.max(maxInFlight, inFlight);
       if (inFlight > 1) violations.push(`in flight: ${String(inFlight)} requests at once`);
       const answer = next();
+      request.pending = answer === "hang";
       const settle = <T>(finish: () => T): T => {
+        request.pending = false;
         inFlight -= 1;
         return finish();
       };
@@ -170,13 +186,28 @@ export const createFakeCollector = (options: FakeCollectorOptions): FakeCollecto
         );
       }
       if (answer === "hang") {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
+          let open = true;
+          const finish = (act: () => void): void => {
+            if (!open) return;
+            open = false;
+            settle(act);
+          };
           hanging.push((released) => {
             request.status = released.status;
-            settle(() => {
+            finish(() => {
               resolve(toResponse(released));
             });
           });
+          init.signal?.addEventListener(
+            "abort",
+            () => {
+              finish(() => {
+                reject(new DOMException("The operation was aborted.", "AbortError"));
+              });
+            },
+            { once: true },
+          );
         });
       }
       request.status = answer.status;

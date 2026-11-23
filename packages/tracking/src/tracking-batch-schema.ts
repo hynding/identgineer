@@ -19,17 +19,19 @@ const token = { type: "string", pattern: TOKEN_PATTERN.source } as const;
 /**
  * The batch as JSON Schema (draft 2020-12), for servers that validate with a schema. A test holds
  * it to `parseTrackingBatch`; the validator is the reference where the two could differ (a JSON
- * Schema cannot say that a string has no lone surrogate beyond what its own parser enforces).
+ * Schema cannot say that a string has no lone surrogate beyond what its own parser enforces, nor
+ * that event ids are unique within a batch: the validator refuses a duplicate id).
  */
 export const TRACKING_BATCH_JSON_SCHEMA = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   title: "Identgineer tracking batch",
   type: "object",
   additionalProperties: false,
-  required: ["v", "sentAt", "events"],
+  required: ["v", "sentAt", "transport", "events"],
   properties: {
     v: { const: WIRE_VERSION },
     sentAt: timestamp,
+    transport: { type: "string", pattern: "^(fetch|beacon)$" },
     writeKey: { type: "string", pattern: WRITE_KEY_PATTERN.source },
     events: {
       type: "array",
@@ -38,11 +40,16 @@ export const TRACKING_BATCH_JSON_SCHEMA = {
       items: { $ref: "#/$defs/event" },
     },
   },
+  // The key travels in a beacon's body and in a fetch's header, so exactly one batch kind has it.
+  oneOf: [
+    { properties: { transport: { const: "beacon" } }, required: ["writeKey"] },
+    { properties: { transport: { const: "fetch" } }, not: { required: ["writeKey"] } },
+  ],
   $defs: {
     event: {
       type: "object",
       additionalProperties: false,
-      required: ["id", "name", "at", "session"],
+      required: ["id", "name", "at"],
       properties: {
         id: token,
         name: { type: "string", pattern: EVENT_NAME_PATTERN.source },

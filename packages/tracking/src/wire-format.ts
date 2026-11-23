@@ -3,8 +3,13 @@
 export const WIRE_VERSION = 1;
 
 export const MAX_EVENTS_PER_BATCH = 500;
+/**
+ * The largest request body a client may send (its `maxPayloadBytes` cannot be set above it). A
+ * server must refuse a larger body before it parses it.
+ */
+export const MAX_TRACKING_BATCH_BYTES = 65_536;
 export const MAX_PROPERTIES_PER_EVENT = 32;
-/** What the wire format accepts; the client's own cap (`maxStringLength`) is lower by default. */
+/** In code points; the client's own cap (`maxStringLength`) is lower by default. */
 export const MAX_WIRE_STRING_LENGTH = 1024;
 export const MAX_PATH_LENGTH = 2048;
 /** The latest instant a `Date` can hold, which bounds every timestamp. */
@@ -29,7 +34,11 @@ export interface TrackingEvent {
   readonly name: string;
   /** Epoch milliseconds on the client's clock. */
   readonly at: number;
-  readonly session: string;
+  /**
+   * The session of the page load that recorded it. Absent on an event restored from the offline
+   * queue in a later page load: the queue is stored without it.
+   */
+  readonly session?: string;
   /** Only when the page called `identify` with an opaque id. */
   readonly user?: string;
   /** Origin-relative path, plus the query parameters the page allowed. */
@@ -39,11 +48,15 @@ export interface TrackingEvent {
   readonly properties?: Readonly<Record<string, PropertyValue>>;
 }
 
+export type TrackingTransport = "fetch" | "beacon";
+
 export interface TrackingBatch {
   readonly v: typeof WIRE_VERSION;
   /** Epoch milliseconds on the client's clock at sending, so the server can correct skew. */
   readonly sentAt: number;
-  /** Only in a beacon, which cannot set a header. */
+  /** `beacon` when the page unloads: it cannot set a header, so it carries the write key. */
+  readonly transport: TrackingTransport;
+  /** Exactly when `transport` is `beacon`. */
   readonly writeKey?: string;
   readonly events: readonly TrackingEvent[];
 }

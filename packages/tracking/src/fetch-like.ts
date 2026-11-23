@@ -8,6 +8,8 @@ export interface FetchInit {
   readonly cache: "no-store";
   readonly redirect: "error";
   readonly keepalive?: true;
+  /** Aborted when the request timeout passes. */
+  readonly signal?: AbortSignal;
 }
 
 export interface FetchResponseLike {

@@ -121,5 +121,9 @@ export const changesSince = (storage: MemoryStorage, from: number) =>
     .map((call) => `${call.method} ${call.key}`);
 
 export const sessionIdsSent = (world: World): string[] => [
-  ...new Set(world.collector.deliveredEvents().map((event) => event.session)),
+  ...new Set(
+    world.collector
+      .deliveredEvents()
+      .flatMap((event) => (event.session === undefined ? [] : [event.session])),
+  ),
 ];

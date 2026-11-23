@@ -62,9 +62,9 @@ const conforms = (value: unknown, raw: Schema): boolean => {
   }
   if ("const" in schema && schema.const !== value) return false;
   if (typeof value === "string") {
-    if (schema.minLength !== undefined && [...value].length < schema.minLength) return false;
+    if (schema.minLength !== undefined && Array.from(value).length < schema.minLength) return false;
     // JSON Schema counts code points, and the validator counts them the same way.
-    if (schema.maxLength !== undefined && [...value].length > schema.maxLength) return false;
+    if (schema.maxLength !== undefined && Array.from(value).length > schema.maxLength) return false;
     if (schema.pattern !== undefined && !new RegExp(schema.pattern, "u").test(value)) return false;
     // JSON Schema strings are Unicode: a lone surrogate is not a valid one.
     if (/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/.test(value)) {
@@ -145,7 +145,14 @@ const CORPUS: readonly [string, unknown][] = [
   ["a version as a string", batch({ v: "1" })],
   ["no events", batch({ events: [] })],
   ["too many events", batch({ events: Array.from({ length: 501 }, () => event()) })],
-  ["500 events", batch({ events: Array.from({ length: 500 }, () => event()) })],
+  [
+    "500 events",
+    batch({
+      events: Array.from({ length: 500 }, (_v, index) =>
+        event({ id: `${String(index).padStart(3, "0")}${"A".repeat(19)}` }),
+      ),
+    }),
+  ],
   ["an unknown batch key", batch({ extra: true })],
   ["a fractional sentAt", batch({ sentAt: 0.5 })],
   ["a negative at", batch({ events: [event({ at: -1 })] })],

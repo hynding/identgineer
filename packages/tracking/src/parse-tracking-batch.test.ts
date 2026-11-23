@@ -154,7 +154,9 @@ describe("parseTrackingEvent", () => {
   });
 
   it("accepts an event with no session, as one restored from an earlier page load is sent", () => {
-    const { session: _session, ...restored } = event();
+    const restored = Object.fromEntries(
+      Object.entries(event()).filter(([key]) => key !== "session"),
+    );
     expect(parseTrackingEvent(restored)).toEqual({ ok: true, value: restored });
   });
 
@@ -231,7 +233,7 @@ describe("parseTrackingBatchText", () => {
     let parsed = 0;
     JSON.parse = (...args: Parameters<typeof JSON.parse>) => {
       parsed += 1;
-      return parse(...args);
+      return parse(...args) as unknown;
     };
     try {
       const result = parseTrackingBatchText(" ".repeat(MAX_TRACKING_BATCH_BYTES + 1));
