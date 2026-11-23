@@ -202,7 +202,9 @@ export const ACCENT_ROLE_USES: readonly AccentRoleEntry[] = [
   },
 ];
 
-const ACCENT_TOKEN = /var\(--idg-color-((?:on-)?accent(?:-hover|-indicator|-border|-edge)?)\)/g;
+// Whitespace may surround the name, and a fallback may follow it.
+const ACCENT_TOKEN =
+  /var\(\s*--idg-color-((?:on-)?accent(?:-hover|-indicator|-border|-edge)?)\s*[,)]/g;
 const DECLARATION = /([\w-]+)\s*:\s*([^;{}]+)(?=[;}])/g;
 
 /** Every accent role a stylesheet reads, as `property token` pairs in source order. */
