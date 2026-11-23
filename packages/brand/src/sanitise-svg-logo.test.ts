@@ -413,6 +413,78 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
   });
 });
 
+const SVG_11 =
+  '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">';
+
+describe("sanitiseSvgLogo, document type declarations", () => {
+  it.each([
+    ["the public SVG 1.1 one", SVG_11],
+    ["a name alone", "<!DOCTYPE svg>"],
+    ["a name and white space", "<!DOCTYPE\n  svg\t>"],
+    ["a system identifier", '<!DOCTYPE svg SYSTEM "svg11.dtd">'],
+    ["single quotes", "<!DOCTYPE svg PUBLIC '-//W3C//DTD SVG 1.1//EN' 'svg11.dtd'>"],
+    ["a prefixed name", "<!DOCTYPE s:svg>"],
+  ])("skips one without an internal subset: %s", (_label, doctype) => {
+    const result = accepted(`<?xml version="1.0"?>\n<!-- a -->\n${doctype}\n<!-- b -->\n${EMPTY}`);
+    expect(result.svg).toBe(EMPTY);
+    expect(result.removed).toEqual([
+      { element: "!DOCTYPE", reason: "document-type", line: 3, column: 1 },
+    ]);
+  });
+
+  it("honours no entity a skipped document type would declare", () => {
+    const xhtml =
+      '<!DOCTYPE svg PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">';
+    expect(refused(`${xhtml}${svg("<title>a&nbsp;b</title>")}`).code).toBe("invalid-entity");
+    expect(refused(`${SVG_11}${svg("<title>&svg;</title>")}`).code).toBe("invalid-entity");
+  });
+
+  it.each([
+    ["an empty internal subset", "<!DOCTYPE svg []>"],
+    ["an internal subset after the identifiers", `${SVG_11.slice(0, -1)} [<!ENTITY a "b">]>`],
+    ["nested brackets", "<!DOCTYPE svg [ <!ELEMENT a [ ]> ]>"],
+    ["a > inside a literal", '<!DOCTYPE svg SYSTEM "a>b">'],
+    ["a [ inside a literal", '<!DOCTYPE svg PUBLIC "-//A//EN" "x[y">'],
+    ["a ] inside a literal", "<!DOCTYPE svg SYSTEM 'x]y'>"],
+    ["a < inside a literal", '<!DOCTYPE svg SYSTEM "a<b">'],
+    [
+      "a public identifier with no system identifier",
+      '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN">',
+    ],
+    [
+      "a character a public identifier may not hold",
+      '<!DOCTYPE svg PUBLIC "-//W3C//DTD{SVG//EN" "a">',
+    ],
+    ["an unquoted identifier", "<!DOCTYPE svg SYSTEM svg11.dtd>"],
+    ["an unclosed literal", '<!DOCTYPE svg SYSTEM "svg11.dtd>'],
+    ["a keyword in lower case", '<!DOCTYPE svg system "a">'],
+    ["the declaration in lower case", "<!doctype svg>"],
+    ["no name", "<!DOCTYPE>"],
+    ["no space before the name", "<!DOCTYPEsvg>"],
+    ["no space between the identifiers", `<!DOCTYPE svg PUBLIC "-//A//EN""a">`],
+    ["something after the identifiers", '<!DOCTYPE svg SYSTEM "a" junk>'],
+    ["a comment inside", "<!DOCTYPE svg <!-- x -->>"],
+    ["no closing >", '<!DOCTYPE svg SYSTEM "a"'],
+    ["two of them", "<!DOCTYPE svg><!DOCTYPE svg>"],
+  ])("refuses one with %s", (_label, doctype) => {
+    expect(refused(`${doctype}${EMPTY}`).code).toBe("doctype");
+  });
+
+  it("refuses one after the root or inside it, and one before the XML declaration", () => {
+    expect(refused(`${EMPTY}<!DOCTYPE svg>`).code).toBe("doctype");
+    expect(refused(svg("<!DOCTYPE svg>")).code).toBe("doctype");
+    expect(refused(`<!DOCTYPE svg><?xml version="1.0"?>${EMPTY}`).code).toBe(
+      "processing-instruction",
+    );
+  });
+
+  it("refuses one that never ends, at the declaration", () => {
+    expect(refused(`\n<!DOCTYPE svg PUBLIC "-//A//EN" "a" ${EMPTY}`)).toEqual(
+      expect.objectContaining({ code: "doctype", line: 2, column: 1 }),
+    );
+  });
+});
+
 describe("sanitiseSvgLogo, refusals", () => {
   it.each([
     ["a number", 42],

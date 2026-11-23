@@ -37,6 +37,7 @@ describe("the clean SVG corpus", () => {
       "figma-export.svg",
       "illustrator-internal-css.svg",
       "illustrator-presentation-attributes.svg",
+      "illustrator-svg11-doctype.svg",
       "inkscape-export.svg",
       "mask-and-use.svg",
       "simple-mark.svg",
@@ -71,7 +72,9 @@ describe("the clean SVG corpus", () => {
       /inkscape|sodipodi|sketch|rdf|<!--|xml:space|enable-background|Layer_1|SVGID/,
     );
     for (const removal of result.removed) {
-      expect(["editor-metadata", "unsupported-attribute", "styling"]).toContain(removal.reason);
+      expect(["editor-metadata", "unsupported-attribute", "styling", "document-type"]).toContain(
+        removal.reason,
+      );
     }
     const again = sanitiseSvgLogo(result.svg);
     expect(again.ok && again.svg).toBe(result.svg);
@@ -91,6 +94,17 @@ describe("the clean SVG corpus", () => {
       '<mask id="logo-0" x="0" y="0" width="64" height="64" maskUnits="userSpaceOnUse" mask-type="alpha">',
     );
     expect(result.removed).toEqual([]);
+  });
+
+  it("skips the SVG 1.1 document type older Illustrator versions write, and says so", () => {
+    const result = sanitised("illustrator-svg11-doctype.svg");
+    expect(result.removed[0]).toEqual({
+      element: "!DOCTYPE",
+      reason: "document-type",
+      line: 3,
+      column: 1,
+    });
+    expect([result.width, result.height]).toEqual([120, 40]);
   });
 
   it("drops a stylesheet and its classes, so a logo coloured only by CSS loses its colours", () => {
