@@ -78,7 +78,11 @@ describe("the tracking README", () => {
   it("imports only names the package exports, from entry points it has", () => {
     const imports = importsOf(README, ["tracking"]);
     expect(imports.map(({ name }) => name)).toEqual(
-      expect.arrayContaining(["createTracker", "parseTrackingBatch"]),
+      expect.arrayContaining([
+        "createTracker",
+        "parseTrackingBatchText",
+        "MAX_TRACKING_BATCH_BYTES",
+      ]),
     );
     const missing = imports
       .filter(({ source, name, typeOnly }) => !isExported(source, name, typeOnly))
@@ -106,6 +110,11 @@ describe("the tracking README", () => {
     "never in the URL",
     'reason: "gpc"',
     "TRACKING_BATCH_JSON_SCHEMA",
+    "Other identifiers in a path segment",
+    "the server must cap the body while",
+    "returns **the same instance**",
+    "`transport`",
+    "merged by event id",
   ])("covers %s", (topic) => {
     expect(README).toContain(topic);
   });
