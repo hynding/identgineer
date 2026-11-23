@@ -561,6 +561,12 @@ describe("parseBrandKit, logo and mark", () => {
       "a file straight from an editor",
       '<?xml version="1.0"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>',
     ],
+    [
+      "a clip path of two shapes",
+      sanitisedLogo(
+        '<clipPath id="c"><circle r="5"/></clipPath><rect width="9" height="9" clip-path="url(#c)"/>',
+      ).replace('<circle r="5"/>', '<circle r="5"/><circle cx="9" r="5"/>'),
+    ],
   ])("refuses a logo with %s until it is sanitised", (_label, logo) => {
     for (const field of ["logo", "mark"]) {
       expect(errorsOf({ ...VALID, [field]: logo })).toEqual([

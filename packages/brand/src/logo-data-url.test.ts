@@ -33,6 +33,12 @@ describe("isSanitisedSvgLogo", () => {
     ["an output with white space added", LOGO.replace("><path", ">\n<path")],
     ["an output with its ids renamed", LOGO.replaceAll("logo-0", "logo-7")],
     ["an output with a comment", LOGO.replace("<title>", "<!-- x --><title>")],
+    [
+      "an output with a clip path of two shapes put back",
+      sanitised(
+        '<clipPath id="c"><circle r="5"/></clipPath><rect width="9" height="9" clip-path="url(#c)"/>',
+      ).replace('<circle r="5"/>', '<circle r="5"/><circle cx="9" r="5"/>'),
+    ],
     ["an empty string", ""],
   ])("refuses %s", (_label, value) => {
     expect(isSanitisedSvgLogo(value)).toBe(false);
