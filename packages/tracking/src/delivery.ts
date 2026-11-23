@@ -10,6 +10,8 @@ import type { TrackingEvent } from "./wire-format.ts";
 
 /** Events older than this are never sent: what they describe is too stale to be worth the data. */
 const MAX_EVENT_AGE_MS = 24 * 60 * 60 * 1000;
+/** A stored event stamped further ahead than this came from a wrong clock, and is not trusted. */
+const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 
 export interface DeliveryDeps {
   readonly options: ResolvedOptions;
@@ -73,8 +75,21 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
     }, delay);
   };
 
+  // Ids this tab delivered or dropped since the stored queue last reflected that: the only ones
+  // it may remove from storage, where another tab's events may also wait.
+  const gone = new Set<string>();
+
+  const settleIds = (ids: Iterable<string>): void => {
+    for (const id of ids) gone.add(id);
+  };
+
   const persist = (): void => {
-    if (allowed()) writeStoredQueue(options.localStorage, queue.entries());
+    if (!allowed()) return;
+    const written = writeStoredQueue(options.localStorage, queue.entries(), gone, {
+      maxEvents: options.maxQueueEvents,
+      maxBytes: options.maxQueueBytes,
+    });
+    if (written) gone.clear();
   };
 
   const overhead = (withKey: boolean): number =>
@@ -97,7 +112,9 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
     const cutoff = clock.now() - MAX_EVENT_AGE_MS;
     const stale = queue.entries().filter((entry) => entry.event.at < cutoff);
     if (stale.length === 0) return;
-    queue.remove(new Set(stale.map((entry) => entry.event.id)));
+    const ids = stale.map((entry) => entry.event.id);
+    queue.remove(new Set(ids));
+    settleIds(ids);
     persist();
     report(dropReason("expired", `${String(stale.length)} queued events were older than 24 hours`));
   };
@@ -166,6 +183,7 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
       }
       attempts = 0;
       queue.remove(ids);
+      settleIds(ids);
       persist();
       if (outcome.kind === "rejected") {
         report(
@@ -207,16 +225,20 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
     const stored = readStoredQueue(options.localStorage);
     if (stored.kind === "none") return;
     const cutoff = clock.now() - MAX_EVENT_AGE_MS;
+    const latest = clock.now() + MAX_FUTURE_SKEW_MS;
     const seen = new Set<string>();
     const entries: QueueEntry[] = [];
     const drops: DropReason[] = [];
     let expired = 0;
     for (const event of stored.events) {
-      if (event.at < cutoff) expired += 1;
-      else if (!seen.has(event.id)) {
+      if (event.at < cutoff || event.at > latest) {
+        expired += 1;
+        settleIds([event.id]);
+      } else if (!seen.has(event.id)) {
         seen.add(event.id);
         const bytes = utf8Length(JSON.stringify(event));
         if (overhead(true) + bytes > options.maxPayloadBytes) {
+          settleIds([event.id]);
           drops.push(
             dropReason("event-too-large", `stored event "${event.name}" is over the payload cap`),
           );
@@ -268,7 +290,9 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
           options.writeKey,
         );
         if (sendBeacon === undefined || !sendByBeacon(sendBeacon, options.endpoint, body)) break;
-        queue.remove(new Set(batch.map((entry) => entry.event.id)));
+        const ids = batch.map((entry) => entry.event.id);
+        queue.remove(new Set(ids));
+        settleIds(ids);
       }
       persist();
       if (queue.size() > 0 && options.fetch !== undefined) void startLoop(true);
@@ -279,6 +303,7 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
     revoke: () => {
       epoch += 1;
       queue.clear();
+      gone.clear();
       clearTimer();
       attempts = 0;
       nextAttemptAt = 0;
