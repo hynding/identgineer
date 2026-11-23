@@ -254,8 +254,8 @@ if (result.ok && result.kit.logo) image.src = logoDataUrl(result.kit.logo);
 ```
 
 `sanitiseSvgLogo(input, { idPrefix })` never throws. It returns `{ ok: true, svg, width, height,
-viewBox, removed, removedCount }` or `{ ok: false, errors }`, with one located error whose message
-never repeats the input. `svg` is a `SanitisedSvg`, a string branded for the type checker, so a
+viewBox, drawingCost, removed, removedCount }` or `{ ok: false, errors }`, with one located error
+whose message never repeats the input. `svg` is a `SanitisedSvg`, a string branded for the type checker, so a
 plain string cannot reach `logoDataUrl` or a kit by accident; `isSanitisedSvgLogo(value)` checks
 any value at run time (it is a fixed point of the sanitiser), and `logoDataUrl` and `parseBrandKit`
 both do.
@@ -279,10 +279,13 @@ allowed is dropped and reported.**
 
 Refused, as the whole document (each with its own `code`):
 
-- anything the strict reader does not understand: a `DOCTYPE` of any kind (so no entity
-  expansion, no billion laughs, no external entities), a processing instruction (an
-  `xml-stylesheet` included) other than a leading XML declaration, which must say version 1.0 and,
-  if it names one, encoding UTF-8; an entity other than `&lt; &gt; &amp; &quot; &apos;`; a
+- anything the strict reader does not understand: a `DOCTYPE` with an internal subset (so no
+  entity declarations, no billion laughs, no external entities), and any `DOCTYPE` that is not
+  exactly `<!DOCTYPE name>` with an optional `SYSTEM "…"` or `PUBLIC "…" "…"` before the root (one
+  after the root, a second one, one in lower case, or an identifier holding `<`, `>`, `[` or `]`);
+  a processing instruction (an `xml-stylesheet` included) other than a leading XML declaration,
+  which must say version 1.0 and, if it names one, encoding UTF-8; an entity other than
+  `&lt; &gt; &amp; &quot; &apos;` (with or without a `DOCTYPE`, which is never read); a
   character reference that is malformed, longer than 7 decimal or 6 hex digits, or names a
   character not allowed; a bare `&` or `<`; `]]>` in text; CDATA outside the root; an unclosed,
   mismatched or second root element; an unquoted, valueless or repeated attribute (also the same
@@ -306,10 +309,13 @@ line and column): an element not on the allowlist, together with everything insi
 are never lifted out of a dropped element); an attribute not on the element's list; a value that
 fails its grammar; a `use` or a reference whose target is missing or the wrong kind (a missing
 paint server becomes `none`, which is what a browser draws, rather than black); character data
-outside `title` and `desc`. The reasons are `active-content`, `event-handler`,
-`external-reference`, `styling`, `editor-metadata`, `text`, `filter`, `foreign-namespace`,
-`unsupported-element`, `unsupported-attribute`, `invalid-value`, `misplaced`, `dangling-reference`
-and `character-data`. Script, handlers and external references can be dropped rather than refused
+outside `title` and `desc`; a `DOCTYPE` with no internal subset, such as the public SVG 1.1 one
+older Illustrator versions write (it is read only to find its end: no DTD is fetched and nothing it
+would declare is honoured, so `&nbsp;` is refused with or without it). The reasons are
+`active-content`, `event-handler`, `external-reference` (only on an attribute that takes a
+reference: a `url(` in path data is just an `invalid-value`), `styling`, `editor-metadata`, `text`,
+`filter`, `foreign-namespace`, `unsupported-element`, `unsupported-attribute`, `invalid-value`,
+`misplaced`, `dangling-reference`, `character-data` and `document-type`. Script, handlers and external references can be dropped rather than refused
 because the output is built only from what passed, so it is inert whatever the input tried. The
 first 100 removals are listed and `removedCount` counts them all.
 
@@ -329,22 +335,25 @@ is dropped), and the attributes each keeps besides `id`:
 | `use`                              | `href` (or `xlink:href`) to `#id` in the same document, `x`, `y`, `width`, `height`, `transform`, presentation                               |
 | `linearGradient`, `radialGradient` | `href` to another gradient, `x1`, `y1`, `x2`, `y2` / `cx`, `cy`, `r`, `fx`, `fy`, `fr`, `gradientUnits`, `gradientTransform`, `spreadMethod` |
 | `stop` (in a gradient only)        | `offset`, `stop-color`, `stop-opacity`                                                                                                       |
-| `clipPath`, `mask`                 | `clipPathUnits` / `x`, `y`, `width`, `height`, `maskUnits`, `maskContentUnits`, `transform`, presentation                                    |
+| `clipPath`, `mask`                 | `clipPathUnits` / `x`, `y`, `width`, `height`, `maskUnits`, `maskContentUnits`, `mask-type`, `transform`, presentation                       |
 | `title`, `desc`                    | none; their text is kept and escaped                                                                                                         |
 
 Presentation attributes: `fill`, `fill-opacity`, `fill-rule`, `stroke`, `stroke-width`,
 `stroke-opacity`, `stroke-linecap`, `stroke-linejoin`, `stroke-miterlimit`, `stroke-dasharray`,
 `stroke-dashoffset`, `opacity`, `color`, `clip-path`, `clip-rule`, `mask`, `display`,
-`visibility`, `vector-effect`, `shape-rendering`.
+`visibility`, `shape-rendering`; and, on a `mask`, `mask-type` (`luminance` or `alpha`), which a
+`style` attribute may also set, as Figma writes it.
 
-Each value has a grammar: numbers and lengths (`px`, `%`, `em`, `ex`, `mm`, `cm`, `in`, `pt`, `pc`);
+Each value has a grammar: numbers and lengths (`px`, `%`, `mm`, `cm`, `in`, `pt`, `pc`);
 colours (`#rgb`, `#rrggbb`, `rgb()`, the CSS named colours, `currentColor`, written back as
 `#rrggbb` or the keyword); paint (`none`, a colour or `url(#id)` to a gradient); `clip-path` and
 `mask` (`none` or `url(#id)` to a clip path or mask); transform lists (`matrix`, `translate`,
 `scale`, `rotate`, `skewX`, `skewY`, at most 16); path data (every command, arc flags included);
 points, `viewBox` (positive width and height), `preserveAspectRatio`, dash arrays (at most 64
-lengths) and the enumerations. A reference is only ever to an id in the same document, which must
-match `[A-Za-z_][A-Za-z0-9_-]{0,63}` and exist: no URL scheme, no other file, no `data:` URL.
+lengths, in absolute units only) and the enumerations. White space inside a value is XML's: space,
+tab, line feed and carriage return; a no-break space or a line separator is not white space, and a
+value that leans on one is dropped. A reference is only ever to an id in the same document, which
+must match `[A-Za-z_][A-Za-z0-9_-]{0,63}` and exist: no URL scheme, no other file, no `data:` URL.
 
 Decisions, with the reason for each:
 
@@ -367,8 +376,12 @@ Decisions, with the reason for each:
   attribute; the output never holds a style attribute. Inkscape writes colours this way, so they
   survive; a logo coloured only by a stylesheet (Illustrator's default "Internal CSS") comes out
   black: export with "Presentation Attributes" instead.
-- **No DOCTYPE, even the public SVG 1.1 one.** Older Illustrator files carry it; save again
-  without it ("SVG 1.1" profile off, or File > Export As > SVG).
+- **A DOCTYPE is skipped only when it has no internal subset.** Older Illustrator files carry the
+  public SVG 1.1 one, which declares nothing the reader would use; an internal subset is where
+  entities are declared, so a document with one is refused.
+- **No `em` or `ex` lengths, no percentage dashes, no `vector-effect`.** Inline, an `em` takes the
+  page's font size, and a non-scaling stroke is dashed after the page's transforms, so neither the
+  drawing nor what it costs would be the logo's own (see the drawing cost below).
 - **Editor metadata goes.** Inkscape, Sodipodi, RDF, Creative Commons, Dublin Core, Adobe, Sketch
   and Serif namespaces, `metadata`, `xml:space`, `version`, the root's `x` and `y`.
 - **`xml:base` goes**, so it cannot redirect a fragment reference to another document.
@@ -383,28 +396,85 @@ Decisions, with the reason for each:
 
 Each is in `SVG_LOGO_LIMITS`; going over one refuses the document.
 
-| Limit                  | Value         | Why                                                                                      |
-| ---------------------- | ------------- | ---------------------------------------------------------------------------------------- |
-| `inputBytes`           | 512 KiB UTF-8 | Larger than any reasonable logo; checked before anything is read                         |
-| `elements`             | 4,096         | Start tags in the input, dropped ones included                                           |
-| `depth`                | 32            | Elements open at once; also bounds every walk of the tree                                |
-| `attributesPerElement` | 64            | Editors write about 20 on a busy element                                                 |
-| `attributeValueLength` | 4,096         | One value as written, other than path data                                               |
-| `pathDataLength`       | 128 KiB       | One `d` or `points`; traced artwork is long, but not unbounded                           |
-| `textLength`           | 2,048         | One run of text, and a whole `title` or `desc`                                           |
-| `nameLength`           | 64            | An element or attribute name                                                             |
-| `numberLength`         | 32            | One number as written; exponents take at most 3 digits                                   |
-| `integerDigits`        | 6             | Every number is below 1,000,000 in magnitude                                             |
-| `fractionDigits`       | 6             | Kept after the point, rounded half away from zero (exact, in decimal, never a float)     |
-| `gradientStops`        | 64            | Stops in one gradient                                                                    |
-| `referenceDepth`       | 8             | References followed in a row (`use`, gradient `href`, `clip-path`, `mask`)               |
-| `renderedElements`     | 20,000        | Elements drawn once every `use`, clip path and mask is expanded: billion laughs by `use` |
-| `ids`                  | 1,024         | Elements with an id                                                                      |
+| Limit                  | Value         | Why                                                                                     |
+| ---------------------- | ------------- | --------------------------------------------------------------------------------------- |
+| `inputBytes`           | 512 KiB UTF-8 | Larger than any reasonable logo; checked before anything is read                        |
+| `elements`             | 4,096         | Start tags in the input, dropped ones included                                          |
+| `depth`                | 32            | Elements open at once; also bounds every walk of the tree                               |
+| `attributesPerElement` | 64            | Editors write about 20 on a busy element                                                |
+| `attributeValueLength` | 4,096         | One value as written, other than path data                                              |
+| `pathDataLength`       | 128 KiB       | One `d` or `points`; traced artwork is long, but not unbounded                          |
+| `textLength`           | 2,048         | One run of text, and a whole `title` or `desc`                                          |
+| `nameLength`           | 64            | An element or attribute name                                                            |
+| `numberLength`         | 32            | One number as written; exponents take at most 3 digits                                  |
+| `integerDigits`        | 6             | Every number is below 1,000,000 in magnitude                                            |
+| `fractionDigits`       | 6             | Kept after the point, rounded half away from zero (exact, in decimal, never a float)    |
+| `gradientStops`        | 64            | Stops in one gradient                                                                   |
+| `referenceDepth`       | 8             | References followed in a row (`use`, gradient `href`, `clip-path`, `mask`)              |
+| `renderedElements`     | 20,000        | Elements once every `use`, clip path and mask is expanded: the copies a renderer builds |
+| `drawingCost`          | 200,000       | What drawing it costs once every reference is expanded; see below                       |
+| `maskApplications`     | 128           | Masks and clip paths applied once every reference is expanded                           |
+| `maskDepth`            | 4             | Masks and clip paths applied inside one another, in a row                               |
+| `ids`                  | 1,024         | Elements with an id                                                                     |
+
+"Billion laughs" by `use` (a definition used ten times, each of those ten times, and so on) is
+stopped twice over: by `renderedElements`, for the copies a renderer builds, and by `drawingCost`,
+for what drawing them takes, which a count of elements cannot bound: a single 120 KB path drawn a
+thousand times is only a few thousand elements.
 
 The reader works in one pass, in time linear in the input, with no recursion over the input and no
 regular expression with nested quantifiers on it; the tests read a megabyte of each adversarial
 shape (bare ampersands, unclosed comments and attributes, a megabyte of path data, sixty
-thousand uses of one group) with the limits raised, each in under a second on a laptop.
+thousand uses of one group or of one masked, dashed path) with the limits raised, each in under a
+second on a laptop. The drawing cost is measured in the same pass over the expanded references,
+each element once, so it is linear too.
+
+### Drawing cost
+
+A logo inside every structural limit could still hang the tab that draws it: the 120 KB path drawn
+a thousand times took from 20 to over 40 seconds to its first frame as an image, inline and opened
+as a document, and seven nested full-size masks applied 1,200 times from 9 seconds to over a
+minute. So every accepted logo has a `drawingCost`, the sum of the weights below over everything it
+draws once every `use`, mask and clip path is expanded (`SVG_DRAWING_WEIGHTS`), and a logo over
+200,000 is refused with `drawing-too-costly`. The unit is about one stroked straight segment.
+
+| What is drawn                                         | Weight                             |
+| ----------------------------------------------------- | ---------------------------------- |
+| A line segment (`L`, `H`, `V`, `Z`, a polyline point) | 1                                  |
+| A quadratic curve, a cubic curve, an arc              | 6, 10, 14                          |
+| A `rect`, a rounded `rect`, a `circle` or `ellipse`   | 4, 44, 40, as their outlines       |
+| Any shape, on top of its outline                      | 32                                 |
+| Any other element (`g`, `use`, `title`, …)            | 1                                  |
+| `opacity` below 1, on any element                     | 50, a layer                        |
+| Each application of a mask or clip path               | 200, plus what it holds, each time |
+| Each dash                                             | 1                                  |
+
+Definitions (`defs`, gradients, masks and clip paths where they stand) cost nothing until they are
+used, and then cost again for every use; a mask inside a mask is applied each time the outer one
+is. Masks and clip paths also have limits of their own: 128 applications in all and 4 inside one
+another (`too-many-masks`, `masks-too-deep`).
+
+Dashes are counted from geometry: an upper bound of each shape's length in its own user units (a
+curve is no longer than the lines through its control points, an arc than its whole ellipse with
+its radii scaled up as SVG scales them), divided by the shortest dash period anywhere in the logo,
+since a dash array inherits, through `use` too. Dashing happens in the shape's own user space, so
+no transform changes the count; that is why `vector-effect` (whose non-scaling stroke is dashed
+after the transforms), percentage dashes and `em` and `ex` lengths, all of which depend on the page,
+are not kept.
+
+The weights were measured in Chromium, drawing at 600 CSS pixels on a loaded four-core machine:
+about 10 µs a unit for stroked lines, and the same per unit for curves (a stroked cubic took about
+ten times a stroked line, an arc about fourteen), a dash about one stroked line, a full-size
+gradient fill about 460 µs (hence 32 for any shape), a full-size mask 1.3 to 1.6 ms (hence 200), a
+group layer about 0.5 ms. A very wide stroke, a huge miter limit, extreme coordinates and large
+transforms changed nothing measurable, and filling is about a fifth the cost of stroking, so
+filled art is weighed as if stroked. The costliest logos the sanitiser accepts of each kind (15,000
+stroked lines drawn 13 times, 4,000 stroked arcs drawn 3 times, 2,700 full-size gradient circles,
+masks four deep applied 128 times, 190,000 round-capped dashes) each took under 2 seconds to draw,
+as an image, inline or as a document, on that machine; the browser test draws them under a 15
+second budget that the 120 KB path above would fail. A real logo is far below the limit: the
+logos in the clean corpus cost from 109 to 1,045, under 1% of it. A larger display costs more in
+proportion to its area, so show a logo at a logo's size.
 
 ### Rendering: `<img>` first, sanitising always
 
@@ -418,7 +488,9 @@ percent-encoding or base64 makes no difference to the policy, which matches the 
 policy may not allow `data:`, serve the sanitised SVG as a file from your own origin instead, with
 `Content-Type: image/svg+xml`, `X-Content-Type-Options: nosniff` and
 `Content-Security-Policy: default-src 'none'` on that response (so it is inert even when opened
-directly), and `img-src 'self'` is enough.
+directly), and `img-src 'self'` is enough. A `blob:` URL made in the page from the sanitised string
+(`URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }))`) also works, with `img-src blob:`
+in the policy; it is no safer than a data URL, and must be revoked when the image is gone.
 
 An SVG drawn as an image is the second layer: browsers run no script in it, fire no events, follow
 no links and load nothing external, whatever it holds. Sanitising is still required, because the
@@ -429,7 +501,8 @@ read by an older or unusual renderer. The sanitised output is inert in all of th
 test renders every accepted output of the hostile corpus and every clean logo both through `<img>`
 and inline through `innerHTML`, with no policy at all and under the strict one, and checks that no
 script ran, nothing was fetched and no policy violation fired (and, as a control, that the same
-checks catch the unsanitised corpus).
+checks catch the unsanitised corpus inline; drawn as images, even the unsanitised files run and
+load nothing, which is the second layer at work, and why only inline can be the control).
 
 ### Threat model
 
@@ -440,7 +513,8 @@ space used to hide them); external loads and references of every kind (`href`, `
 encoding confusion); parser differentials (namespace tricks, comments and CDATA HTML reads
 differently, markup that changes meaning when re-parsed as HTML, since the output holds nothing but
 allowlisted markup and escaped text); DOM clobbering through ids; and denial of service through
-size, nesting, numbers, `use` expansion and reference cycles.
+size, nesting, numbers, `use` expansion, reference cycles and the cost of drawing (long paths,
+curves, dashes, masks and layers, multiplied through `use`).
 
 It does not judge what a logo shows: trademark, offensive or misleading content, a logo that
 imitates another brand, or visual spoofing inside the logo's box (a drawn "verified" badge, a fake
@@ -449,13 +523,17 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. The geometry is kept to six
 decimals; colours set only by CSS are lost (see above).
 
-The tests hold it to that: a hostile corpus of 166 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`) and generated oversized inputs,
-each refused or accepted with an output an independent checker (its own tokeniser and its own copy
-of the allowlist) finds inert; a clean corpus of logos as Inkscape, Illustrator, Figma and Sketch
-export them, with golden outputs and geometry compared number by number; and 35,000 seeded random
-documents, strings, byte arrays and mutated logos, checking that it never throws and that every
-output is valid, idempotent and deterministic.
+The tests hold it to that: a hostile corpus of 179 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 97
+refused, and every removal, by element, attribute and reason, for each of the 82 accepted) and
+generated oversized inputs, each refused or accepted with an output an independent checker finds
+inert (its own tokeniser, its own copy of the allowlist, its own grammar for every value and its
+own rules for where each element may stand); a clean corpus of logos as Inkscape, Illustrator,
+Figma and Sketch export them, with golden outputs and geometry compared number by number; 35,000
+seeded random documents, strings, byte arrays and mutated logos, checking that it never throws and
+that every output is valid, idempotent, deterministic and within the drawing cost limit; and 3,000
+random graphs of definitions, uses, masks, layers and dashes whose cost a separate model works out,
+checking the sanitiser measures the same cost and refuses exactly what goes over a limit.
 
 ## Commands
 
