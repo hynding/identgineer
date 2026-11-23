@@ -50,16 +50,32 @@ people typed or that a page on the public internet sent. The elements:
 - replace, one for one, with a visible mark (U+FFFD): control characters, bidirectional controls,
   zero width and other invisible format characters, every character Unicode says is ignored when
   drawn (the Hangul fillers U+115F, U+1160, U+3164 and U+FFA0, variation selectors, U+034F, the
-  Mongolian selectors, tag characters), the braille blank U+2800, line and paragraph separators and
-  lone surrogates, so that an event named `pay<RLO>fdp.exe` does not draw as `payexe.pdf` and a
-  reader can see that something was there. Two things stay where they mean something: a zero width
-  joiner between two plain characters, and an emoji presentation selector (U+FE0E, U+FE0F) after
-  an emoji, so joined emoji and keycaps draw as they should. A variation selector after an
-  ideograph is replaced too: it is rare, and it is how a blank hides in a name;
-- show text that would draw as nothing (only white space, or only combining marks) as one mark,
-  and cut a run of combining marks after the third on one character, with a mark where the rest
-  was, so that no name draws as an empty cell and no stack of marks draws over the lines around it.
+  Mongolian selectors, tag characters), the braille blank U+2800, the musical symbol beginning of
+  beam U+1D159, line and paragraph separators and lone surrogates, so that an event named
+  `pay<RLO>fdp.exe` does not draw as `payexe.pdf` and a reader can see that something was there.
   Line breaks and tabs become a space;
+- keep an invisible character only where it means something, and mark it everywhere else:
+  - a zero width joiner or non-joiner (U+200D, U+200C) with a letter or combining mark of a script
+    that joins on both sides: Arabic, Syriac, N'Ko, Mongolian, Phags-pa, Mandaic, Adlam, Thaana,
+    Tibetan, Myanmar, Khmer, Sinhala and the Indic scripts (Devanagari, Bengali, Gurmukhi,
+    Gujarati, Oriya, Tamil, Telugu, Kannada, Malayalam). Persian "ثبت‌نام" is kept. Between Latin
+    letters, or Hebrew, or at an edge, a joiner is marked: it draws nothing there, and only makes
+    two names that look alike differ;
+  - a zero width joiner in an emoji sequence (after an emoji, an emoji's skin tone or its
+    presentation selector, and before an emoji), so families and "technologist" emoji stay whole;
+  - an ideographic variation selector (U+E0100 to U+E01EF) directly after a Han ideograph, as in
+    Japanese names such as 葛󠄀 and 辻󠄁;
+  - a Mongolian free variation selector (U+180B to U+180D, U+180F) directly after a Mongolian
+    letter;
+  - an emoji presentation selector (U+FE0E, U+FE0F) directly after an emoji, so keycaps and hearts
+    draw as they should. Any other variation selector (U+FE00 to U+FE0D) is marked;
+  - a well-formed flag tag sequence: the black flag U+1F3F4, one to ten tag letters or digits and
+    the cancel tag U+E007F (the flags of England, Scotland and Wales). Any other tag character is
+    marked;
+- show text that would draw as nothing (only white space, or only combining marks) as one mark,
+  and cut a run of combining marks after the eighth on one character, with a mark where the rest
+  was: real text stacks several (Hebrew with points and a cantillation mark, Vietnamese, Thai,
+  Tibetan), a flood of them draws over the lines around it, and no name draws as an empty cell;
 - isolate each value in a `<bdi>`, so right to left text cannot reorder what is next to it;
 - cut a value at a fixed length, by code point, with an ellipsis, and count the properties beyond
   the first ten as "+N more", so no record makes a row taller or wider than a page can hold;
