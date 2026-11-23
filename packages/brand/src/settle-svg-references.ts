@@ -1,6 +1,12 @@
 import type { CleanElement } from "./filter-svg-tree.ts";
 import { GRADIENTS, USABLE } from "./svg-allowlist.ts";
-import { dashPeriod, measureShape, SVG_DRAWING_WEIGHTS } from "./svg-drawing-cost.ts";
+import {
+  dashCount,
+  dashingOf,
+  measureShape,
+  SVG_DRAWING_WEIGHTS,
+  type Dashing,
+} from "./svg-drawing-cost.ts";
 import { measureOverdraw } from "./svg-overdraw.ts";
 import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
@@ -172,16 +178,23 @@ interface Expansion {
   readonly maskDepth: number;
 }
 
-/** The smallest dash period anywhere in the logo, 0 for none: dash arrays inherit, through use too. */
-function shortestDashPeriod(elements: readonly CleanElement[]): number {
-  let shortest = 0;
+/**
+ * The shortest dash period anywhere in the logo, 0 for none, and the most dashes in one repeat of
+ * any dash array, which together bound the dashes of every shape: dash arrays inherit, through use
+ * too.
+ */
+function densestDashing(elements: readonly CleanElement[]): Dashing {
+  let period = 0;
+  let perPeriod = 0;
   for (const element of elements) {
     const value = element.attributes.get("stroke-dasharray");
     if (value === undefined || !("text" in value)) continue;
-    const period = dashPeriod(value.text);
-    if (period > 0 && (shortest === 0 || period < shortest)) shortest = period;
+    const dashing = dashingOf(value.text);
+    if (dashing.period === 0) continue;
+    if (period === 0 || dashing.period < period) period = dashing.period;
+    perPeriod = Math.max(perPeriod, dashing.perPeriod);
   }
-  return shortest;
+  return { period, perPeriod };
 }
 
 /** The larger side of the root's view box (at least 1), which bounds a percentage from above. */
@@ -194,18 +207,16 @@ function percentBase(root: CleanElement): number {
 
 /**
  * What drawing one element costs on its own: a shape its geometry and, wherever a dash array might
- * reach it, its dashes at the shortest period in the logo; anything else a little; group opacity a
+ * reach it, its dashes at the densest dashing in the logo; anything else a little; group opacity a
  * layer.
  */
-function ownCost(element: CleanElement, period: number, base: number): number {
+function ownCost(element: CleanElement, dashing: Dashing, base: number): number {
   const weights = SVG_DRAWING_WEIGHTS;
   const geometry = measureShape(element, base);
   let cost =
     geometry === undefined
       ? weights.element
-      : weights.shape +
-        geometry.weight +
-        (period > 0 ? Math.ceil(geometry.length / period) * weights.dash : 0);
+      : weights.shape + geometry.weight + dashCount(geometry, dashing) * weights.dash;
   const opacity = element.attributes.get("opacity");
   if (opacity !== undefined && "text" in opacity && Number(opacity.text) < 1) cost += weights.layer;
   return cost;
@@ -225,7 +236,7 @@ function checkExpansion(
 ): number {
   const done = new Map<CleanElement, Expansion>();
   const visiting = new Set<CleanElement>();
-  const period = shortestDashPeriod(elements);
+  const dashing = densestDashing(elements);
   const base = percentBase(root);
   // Totals stop just over their limit, so no sum grows without bound; each limit below is checked
   // so that a total that is not a number is refused too.
@@ -253,7 +264,7 @@ function checkExpansion(
     visiting.add(element);
     let size = 1;
     let height = 0;
-    let cost = ownCost(element, period, base);
+    let cost = ownCost(element, dashing, base);
     let masks = 0;
     let maskDepth = 0;
     const draw = (measured: Expansion, extraCost: number, extraMasks: number): void => {

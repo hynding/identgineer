@@ -2,8 +2,8 @@ import type { CleanElement } from "./filter-svg-tree.ts";
 import { GRADIENTS } from "./svg-allowlist.ts";
 import {
   boxArea,
-  dashesPerPeriod,
-  dashPeriod,
+  dashCount,
+  dashingOf,
   EMPTY_BOX,
   type Geometry,
   measureShape,
@@ -383,14 +383,15 @@ class OverdrawWalk {
     geometry: Geometry,
     dasharray: string,
   ): { readonly count: number; readonly dashed: boolean; readonly spacing: number } {
-    const period = dashPeriod(dasharray);
-    if (period === 0) return { count: geometry.subpaths, dashed: false, spacing: Infinity };
-    const perPeriod = dashesPerPeriod(dasharray);
+    const dashing = dashingOf(dasharray);
+    if (dashing.period === 0) {
+      return { count: geometry.subpaths, dashed: false, spacing: Infinity };
+    }
     return {
-      count: (Math.ceil(geometry.length / period) + geometry.subpaths) * perPeriod,
+      count: dashCount(geometry, dashing),
       dashed: true,
       // How far apart the dashes start, on average.
-      spacing: period / perPeriod,
+      spacing: dashing.period / dashing.perPeriod,
     };
   }
 

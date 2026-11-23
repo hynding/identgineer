@@ -418,6 +418,30 @@ export function dashesPerPeriod(value: string): number {
   return count % 2 === 1 ? count : count / 2;
 }
 
+/** How a stroke is dashed: the length of one repeat (0 for solid) and the dashes in it. */
+export interface Dashing {
+  readonly period: number;
+  readonly perPeriod: number;
+}
+
+/** The dashing of a kept dash array. */
+export function dashingOf(value: string): Dashing {
+  return { period: dashPeriod(value), perPeriod: dashesPerPeriod(value) };
+}
+
+/**
+ * The most dashes a shape's stroke can be drawn in: every dash of every repeat along its length,
+ * and a repeat more for each subpath, which starts the pattern afresh. None when solid. The drawing
+ * cost and the overdraw both count dashes with this, so the two cannot disagree.
+ */
+export function dashCount(
+  geometry: Pick<Geometry, "length" | "subpaths">,
+  dashing: Dashing,
+): number {
+  if (dashing.period === 0) return 0;
+  return (Math.ceil(geometry.length / dashing.period) + geometry.subpaths) * dashing.perPeriod;
+}
+
 function polyline(text: string, closed: boolean): Geometry {
   const pen = new Pen();
   const pairs = text.split(" ");
