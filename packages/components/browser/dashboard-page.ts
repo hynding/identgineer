@@ -86,3 +86,21 @@ export function overflow(page: Page): Promise<number> {
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
 }
+
+/** The accessible name or text of the control that has focus, through every shadow root. */
+export function focusedControl(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    let active: Element | null = document.activeElement;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    if (!active || active === document.body) return "none";
+    return active.getAttribute("aria-label") ?? (active.textContent ?? "").trim();
+  });
+}
+
+/** Holds every answer of the fixture's source back, and returns what lets them through. */
+export async function holdAnswers(page: Page): Promise<() => Promise<void>> {
+  await page.evaluate(`window.__release = window.dashboardFixture.fake.hold()`);
+  return async () => {
+    await page.evaluate(`window.__release()`);
+  };
+}

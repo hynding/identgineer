@@ -2,7 +2,9 @@ import { expect, test } from "./fixtures";
 import {
   calls,
   eventNames,
+  focusedControl,
   heard,
+  holdAnswers,
   openDashboard,
   pagination,
   picker,
@@ -145,6 +147,54 @@ test.describe("the event table", () => {
     await page.keyboard.press("Enter");
     await expect(status(page)).toHaveText("Showing 11–20 of 95 events");
     await expect(pagination(page).locator("button:focus")).toHaveCount(1);
+  });
+
+  test("keeps focus on the Next page button while the next page is on its way and after it arrives", async ({
+    page,
+  }) => {
+    await openDashboard(page);
+    const release = await holdAnswers(page);
+    await pagination(page).getByRole("button", { name: "Next page" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(status(page)).toHaveText("Loading events");
+    // The rows and the pager stay, so the focused control is still there, and says it is busy.
+    expect(await focusedControl(page)).toBe("Next page");
+    await expect(rows(page)).toHaveCount(10);
+    await expect(table(page).locator("[aria-busy='true']")).toHaveCount(1);
+    await expect(table(page).locator("idg-skeleton")).toHaveCount(0);
+    // A second press while it loads asks for nothing more.
+    await page.keyboard.press("Enter");
+    await release();
+    await expect(status(page)).toHaveText("Showing 11–20 of 95 events");
+    expect(await focusedControl(page)).toBe("Next page");
+    const asked = (await calls(page)).filter((call) => call.method === "listEvents");
+    expect(asked.filter((call) => (call.args[1] as { page: number }).page === 2)).toHaveLength(1);
+  });
+
+  test("keeps focus on a sort button while the sorted page is on its way and after it arrives", async ({
+    page,
+  }) => {
+    await openDashboard(page);
+    const release = await holdAnswers(page);
+    const button = table(page).getByRole("button", { name: "Event" });
+    await button.focus();
+    await page.keyboard.press("Enter");
+    await expect(status(page)).toHaveText("Loading events");
+    expect(await focusedControl(page)).toContain("Event");
+    await expect(rows(page)).toHaveCount(10);
+    await release();
+    await expect(status(page)).toHaveText("Showing 1–10 of 95 events");
+    expect(await focusedControl(page)).toContain("Event");
+  });
+
+  test("puts focus on the message when the page that was asked for fails", async ({ page }) => {
+    await openDashboard(page);
+    await page.evaluate(`window.dashboardFixture.fake.failNext("listEvents", new Error("down"))`);
+    await pagination(page).getByRole("button", { name: "Next page" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(table(page).locator("idg-alert")).toBeVisible();
+    // The pager went with the rows, and focus does not fall to the top of the page.
+    expect(await focusedControl(page)).toContain("Events could not be loaded");
   });
 
   test("sorts by a header: aria-sort, a request in that order, and idgSort once", async ({
