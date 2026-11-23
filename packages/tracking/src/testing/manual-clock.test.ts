@@ -47,4 +47,20 @@ describe("createManualClock", () => {
     expect(ran).toBe(false);
     expect(clock.pendingTimers()).toBe(0);
   });
+
+  it("jumps without running timers, in either direction, as a clock that was set does", () => {
+    const clock = createManualClock(1000);
+    let ran = false;
+    clock.setTimeout(() => {
+      ran = true;
+    }, 100);
+    clock.jump(-500);
+    expect(clock.now()).toBe(500);
+    clock.jump(10_000);
+    expect(clock.now()).toBe(10_500);
+    expect(ran).toBe(false);
+    expect(clock.pendingTimers()).toBe(1);
+    clock.advance(0);
+    expect(ran).toBe(true);
+  });
 });

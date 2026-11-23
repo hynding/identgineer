@@ -89,4 +89,16 @@ describe("createMemoryStorage", () => {
     storage.setItem("k", "12345678");
     expect(storage.getItem("k")).toBe("12345678");
   });
+
+  it("can fail reads alone, as a storage that only throws on getItem does", () => {
+    const storage = createMemoryStorage();
+    storage.seed("a", "1");
+    storage.failReads(true);
+    expect(() => storage.getItem("a")).toThrow();
+    storage.setItem("b", "2");
+    storage.removeItem("a");
+    storage.failReads(false);
+    expect(storage.getItem("a")).toBeNull();
+    expect(storage.getItem("b")).toBe("2");
+  });
 });

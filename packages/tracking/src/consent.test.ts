@@ -126,17 +126,41 @@ describe("consent state machine", () => {
       expect(openTab(world, signal).tracker.consent.get()).toEqual({ state: "granted" });
     });
 
-    it("do not let grant() enable sending, but the choice is recorded", async () => {
+    it("refuse grant(): nothing is stored, so lifting the signal does not turn tracking on", async () => {
       const world = createWorld();
       const tab = openTab(world, { gpc: true });
-      expect(tab.tracker.consent.grant()).toBe(true);
-      expect(world.local.peek(CONSENT_KEY)).toBe(consentRecord("granted"));
+      expect(tab.tracker.consent.grant()).toBe(false);
+      expect(world.local.keys()).toEqual([]);
       expect(tab.tracker.consent.get()).toEqual({ state: "denied", reason: "gpc" });
       tab.tracker.track("clicked", { target: "x" });
       await tab.tracker.flush();
       world.clock.advance(60_000);
       await settle();
       expect(world.collector.requests).toEqual([]);
+      tab.page.setGpc(undefined);
+      expect(tab.tracker.consent.get()).toEqual({ state: "unknown" });
+    });
+
+    it("leave a stored decision as it was when grant() is refused", () => {
+      const world = createWorld();
+      world.local.seed(CONSENT_KEY, consentRecord("denied"));
+      const tab = openTab(world, { dnt: "1" });
+      expect(tab.tracker.consent.grant()).toBe(false);
+      expect(world.local.peek(CONSENT_KEY)).toBe(consentRecord("denied"));
+      tab.page.setDnt(undefined);
+      expect(tab.tracker.consent.get()).toEqual({ state: "denied" });
+    });
+
+    it("still store deny() and reset()", () => {
+      const world = createWorld();
+      world.local.seed(CONSENT_KEY, consentRecord("granted"));
+      const tab = openTab(world, { gpc: true });
+      expect(tab.tracker.consent.deny()).toBe(true);
+      expect(JSON.parse(world.local.peek(CONSENT_KEY) ?? "null")).toMatchObject({
+        state: "denied",
+      });
+      expect(tab.tracker.consent.reset()).toBe(true);
+      expect(world.local.peek(CONSENT_KEY)).toBeNull();
     });
 
     it("are read at every use, so a signal that appears later counts at once", () => {
