@@ -134,18 +134,14 @@ describe("generateBrandTheme", () => {
     expect(indigo.notes.filter((note) => note.token === "color.danger")).toEqual([]);
   });
 
-  it("adjusts a primary that cannot carry text either way, and reports it", () => {
+  it("keeps a mid grey that neither white nor near-black text passes on, with black text", () => {
     const theme = generateBrandTheme(kitFrom({ colors: { primary: "#777777" } }));
-    const accent = theme.adjustments.find(
-      (entry) => entry.token === "color.accent" && entry.scheme === "light",
-    );
-    expect(accent).toMatchObject({
-      origin: "primary",
-      requested: "#777777",
-      against: "color.on-accent",
-      minimum: 4.5,
-    });
-    expect(accent?.contrastBefore).toBeLessThan(4.5);
+    for (const scheme of ["light", "dark"] as const) {
+      const colors = resolvedColors(theme, scheme);
+      expect(colors.get("accent")).toBe("#777777");
+      expect(colors.get("on-accent")).toBe("#000000");
+    }
+    expect(theme.adjustments.filter((entry) => entry.token === "color.accent")).toEqual([]);
   });
 
   it("moves an adjusted accent in lightness only, keeping its hue", () => {

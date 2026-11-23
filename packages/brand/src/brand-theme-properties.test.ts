@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { CORNERS, TONES } from "./brand-kit.ts";
 import { TYPOGRAPHY_IDS } from "./font-pairings.ts";
 import { generateBrandTheme } from "./generate-brand-theme.ts";
-import { fromOklch, toOklch } from "./oklch.ts";
+import { toOklch } from "./oklch.ts";
 import { formatHexColor, parseHexColor, type Rgb } from "./srgb.ts";
 import { seeded } from "./seeded-random.ts";
 import { BUILT_IN_PAIRS, failingUsedPairs } from "./used-pairs.ts";
@@ -25,8 +25,6 @@ const RANDOM_CASES = 2_700;
 
 /** An adjusted brand colour keeps its hue within this many degrees while it still has colour. */
 const MAX_HUE_SHIFT = 3;
-/** A moved accent's tightest requirement is met within this factor of its threshold. */
-const MAX_SLACK = 1.12;
 /** Below this chroma a colour is close enough to grey that its hue is not what makes it the brand's. */
 const HUE_MATTERS = 0.04;
 
@@ -118,13 +116,6 @@ function weakestOnPage(colors: ReadonlyMap<string, string>, role: string): numbe
   );
 }
 
-/** White, or the darkest text the generator would pair with the colour, reaches 4.5:1 on it. */
-function carriesText(primary: string): boolean {
-  const { hue, chroma } = toOklch(rgbOf(primary));
-  const dark = formatHexColor(fromOklch({ lightness: 0.2, chroma: Math.min(0.03, chroma), hue }));
-  return contrastRatio(primary, "#ffffff") >= 4.5 || contrastRatio(primary, dark) >= 4.5;
-}
-
 /**
  * The indicator and the fill's edge reach 3:1 on every page background (the suite checks that
  * too) and are the accent's own colours wherever the accent already does; the hover differs.
@@ -174,30 +165,11 @@ function checkCase(entry: Case): string[] {
     problems.push(...accentRoleProblems(colors).map((problem) => `${scheme} ${problem}`));
   }
   for (const scheme of ["light", "dark"] as const) {
-    // A moved accent goes only as far as it must: some requirement ends up nearly tight.
-    if (
-      !theme.adjustments.some((entry) => entry.scheme === scheme && entry.token === "color.accent")
-    ) {
-      continue;
-    }
-    const colors = resolvedColors(theme, scheme);
-    const accent = colors.get("accent") ?? "";
-    const slack = contrastRatio(accent, colors.get("on-accent") ?? "") / 4.5;
-    if (slack > MAX_SLACK)
-      problems.push(`${scheme} accent moved further than needed (${slack.toFixed(2)})`);
-  }
-  for (const scheme of ["light", "dark"] as const) {
-    const accentMoved = theme.adjustments.some(
-      (adjustment) => adjustment.scheme === scheme && adjustment.token === "color.accent",
-    );
+    // White, black or the near-black text the generator prefers reaches 4.5:1 on any colour, so the
+    // fill is always the brand's own; the page is the indicator's business.
     const accent = resolvedColors(theme, scheme).get("accent");
-    if (!accentMoved && accent !== entry.colors.primary) {
-      problems.push(`${scheme} accent ${String(accent)} differs from the primary without a reason`);
-    }
-    // The fill is the brand's own colour whenever white text, or the near-black text the
-    // generator pairs with it, reaches 4.5:1 on it; the page is the indicator's business.
-    if (accentMoved && carriesText(entry.colors.primary ?? "")) {
-      problems.push(`${scheme} accent moved although the primary carries text`);
+    if (accent !== entry.colors.primary) {
+      problems.push(`${scheme} accent ${String(accent)} is not the primary`);
     }
   }
   return problems.map((problem) => `${where}: ${problem}`);
