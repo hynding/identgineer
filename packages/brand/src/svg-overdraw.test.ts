@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { sanitiseSvgLogo } from "./sanitise-svg-logo.ts";
+import { seeded } from "./seeded-random.ts";
 import { SVG_LOGO_LIMITS } from "./svg-logo-limits.ts";
 import type { SvgLogoAccepted, SvgLogoErrorCode } from "./svg-logo-result.ts";
 import { SVG_OVERDRAW_WEIGHTS } from "./svg-overdraw.ts";
@@ -288,6 +289,89 @@ describe("the overdraw limit", () => {
     const most = Math.floor(SVG_LOGO_LIMITS.overdraw / each);
     expect(accepted(solid(most)).overdraw).toBeCloseTo(most * each, 6);
     expect(refusal(solid(most + 1))).toBe("overdraw-too-large");
+  });
+
+  it("refuses transforms composed past a million times a million, so no number overflows", () => {
+    const nest = (transforms: readonly string[]): string =>
+      svg(
+        transforms.map((transform) => `<g transform="${transform}">`).join("") +
+          '<rect width="1" height="1"/>' +
+          "</g>".repeat(transforms.length),
+      );
+    const scale = "scale(999999)";
+    expect(refusal(nest([Array(16).fill(scale).join(" ")]))).toBe("number-out-of-range");
+    expect(refusal(nest([scale, scale, "scale(2)"]))).toBe("number-out-of-range");
+    expect(refusal(nest([scale, scale, "translate(2)"]))).toBe("number-out-of-range");
+    expect(refusal(nest(["skewX(90)"]))).toBe("number-out-of-range");
+    // Up to the bound, and anything that shrinks, is drawn.
+    expect(accepted(nest([scale, scale])).overdraw).toBeCloseTo(W.solid + edges(4), 9);
+    expect(accepted(nest(Array(30).fill("scale(0.000001)"))).overdraw).toBe(0);
+    // A matrix that flattens the square to a line paints no area, only an edge.
+    expect(accepted(nest(["scale(0 1)", "matrix(1 1 1 1 0 0)"])).overdraw).toBeCloseTo(
+      edges((Math.SQRT2 * 4) / 100),
+      9,
+    );
+    // A use's offset and a clip path's or a mask's bounding box compose too.
+    expect(
+      refusal(
+        svg(
+          `<defs><rect id="r" width="1" height="1"/></defs><g transform="${scale} ${scale}"><use href="#r" x="999999"/></g>`,
+        ),
+      ),
+    ).toBe("number-out-of-range");
+  });
+
+  it("refuses the reviewer's transforms that overflowed to a budget that was not a number", () => {
+    expect(refusal(payload("transform-overflow-nan.svg"))).toBe("number-out-of-range");
+  });
+
+  it("reports only finite numbers, however transforms are nested", () => {
+    const random = seeded(15_005);
+    const pick = <T>(values: readonly T[]): T => values[Math.floor(random() * values.length)] as T;
+    const magnitudes = ["999999", "123456.5", "1000", "1", "0.5", "0.000001", "0"];
+    const number = (): string => `${random() < 0.5 ? "-" : ""}${pick(magnitudes)}`;
+    const functions = [
+      (): string => `scale(${number()} ${number()})`,
+      (): string => `translate(${number()} ${number()})`,
+      (): string => `rotate(${number()})`,
+      (): string => `skewX(${pick(["89.999999", "-89.999999", "45", "90"])})`,
+      (): string => `matrix(${Array.from({ length: 6 }, number).join(" ")})`,
+      // A run that overflows within a few levels, or underflows to nothing.
+      (): string =>
+        Array(8)
+          .fill(`scale(${pick(["999999", "-999999", "0.000001"])})`)
+          .join(" "),
+    ];
+    const transform = (): string =>
+      Array.from({ length: 1 + Math.floor(random() * 4) }, () => pick(functions)()).join(" ");
+    for (let index = 0; index < 400; index += 1) {
+      const depth = 1 + Math.floor(random() * 6);
+      const body =
+        Array.from({ length: depth }, () => `<g transform="${transform()}">`).join("") +
+        pick([
+          '<rect width="10" height="10" stroke="#000"/>',
+          '<path d="M0 0C10 0 10 10 0 10Z" fill="url(#g)"/>',
+          '<use href="#r" x="999999"/>',
+          '<rect width="10" height="10" clip-path="url(#c)" mask="url(#m)"/>',
+        ]) +
+        "</g>".repeat(depth);
+      const defs =
+        '<defs><linearGradient id="g"><stop/></linearGradient><rect id="r" width="5" height="5"/>' +
+        `<clipPath id="c" clipPathUnits="objectBoundingBox"><rect width="1" height="1" transform="${transform()}"/></clipPath>` +
+        `<mask id="m" maskContentUnits="objectBoundingBox"><rect width="1" height="1" fill="#fff" transform="${transform()}"/></mask></defs>`;
+      const result = sanitiseSvgLogo(svg(defs + body));
+      if (result.ok) {
+        for (const value of [result.width, result.height, ...result.viewBox]) {
+          expect(Number.isFinite(value)).toBe(true);
+        }
+        expect(result.drawingCost).toBeGreaterThanOrEqual(0);
+        expect(result.drawingCost).toBeLessThanOrEqual(SVG_LOGO_LIMITS.drawingCost);
+        expect(result.overdraw).toBeGreaterThanOrEqual(0);
+        expect(result.overdraw).toBeLessThanOrEqual(SVG_LOGO_LIMITS.overdraw);
+      } else {
+        expect(["number-out-of-range", "overdraw-too-large"]).toContain(result.errors[0]?.code);
+      }
+    }
   });
 
   it("checks the overdraw only after the other limits on what drawing takes", () => {

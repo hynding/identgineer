@@ -1271,6 +1271,9 @@
   "too-many-stops.svg": {
     "outcome": "reject:too-many-stops"
   },
+  "transform-overflow-nan.svg": {
+    "outcome": "reject:number-out-of-range"
+  },
   "unbalanced-tags.svg": {
     "outcome": "reject:mismatched-tag"
   },
