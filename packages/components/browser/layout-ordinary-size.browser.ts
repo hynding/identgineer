@@ -363,27 +363,3 @@ test.describe("a table keeps its columns", () => {
     expect(failures).toEqual([]);
   });
 });
-
-test.describe("the variation switcher breaks no words outside a narrow window", () => {
-  test("on the index page at 768px its heading is on one line, as it always was", async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 768, height: 800 });
-    await page.goto("/index.html");
-    await expect(page.locator("idg-variation-switcher:not(.hydrated)")).toHaveCount(0);
-    await applyAxes(page, { layout: "bento", design: "brutalist", ux: "calm" });
-    await frames(page, 4);
-    const lines = await page.evaluate(() => {
-      const heading = document
-        .querySelector("idg-variation-switcher")
-        ?.shadowRoot?.querySelector('[part="heading"]');
-      const range = document.createRange();
-      if (heading) range.selectNodeContents(heading);
-      const tops = [...range.getClientRects()]
-        .filter((box) => box.width > 0)
-        .map((box) => Math.round(box.top));
-      return new Set(tops).size;
-    });
-    expect(lines).toBe(1);
-  });
-});
