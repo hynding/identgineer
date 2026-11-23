@@ -3,13 +3,25 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { sanitiseSvgLogo } from "./sanitise-svg-logo.ts";
 import { SVG_LOGO_LIMITS } from "./svg-logo-limits.ts";
-import type { SvgLogoResult } from "./svg-logo-result.ts";
+import type { SvgLogoRemoval, SvgLogoResult } from "./svg-logo-result.ts";
 import { findSanitisedSvgProblems } from "./svg-output-check.ts";
 
 const CORPUS = new URL("./__fixtures__/hostile-svg/", import.meta.url);
+/** What one file removes, without where: the element, attribute or property, and why. */
+type ExpectedRemoval = Omit<SvgLogoRemoval, "line" | "column">;
+
+/**
+ * For each file, `accept` with every removal it must make, in order, or `reject:` and the code it
+ * must be refused with.
+ */
+interface Expectation {
+  readonly outcome: string;
+  readonly removed?: readonly ExpectedRemoval[];
+}
+
 const EXPECTATIONS = JSON.parse(
   readFileSync(new URL("expectations.json", CORPUS), "utf8"),
-) as Record<string, string>;
+) as Record<string, Expectation>;
 const FILES = readdirSync(fileURLToPath(CORPUS))
   .filter((name) => name.endsWith(".svg"))
   .sort();
@@ -72,6 +84,15 @@ const KEPT_AS_TEXT_OR_RENAMED = new Set([
   "utf8-bom.svg",
 ]);
 
+function withoutPlace(removal: SvgLogoRemoval): ExpectedRemoval {
+  const names: ExpectedRemoval = { element: removal.element, reason: removal.reason };
+  return {
+    ...names,
+    ...(removal.attribute === undefined ? {} : { attribute: removal.attribute }),
+    ...(removal.property === undefined ? {} : { property: removal.property }),
+  };
+}
+
 function outcome(result: SvgLogoResult): string {
   return result.ok ? "accept" : `reject:${result.errors[0]?.code ?? "none"}`;
 }
@@ -85,8 +106,11 @@ describe("the hostile SVG corpus", () => {
   it.each(FILES)("renders %s inert or refuses it", (file) => {
     const bytes = new Uint8Array(readFileSync(new URL(file, CORPUS)));
     const result = sanitiseSvgLogo(bytes);
-    expect(outcome(result)).toBe(EXPECTATIONS[file]);
+    const expectation = EXPECTATIONS[file];
+    expect(outcome(result)).toBe(expectation?.outcome);
     if (result.ok) {
+      expect(result.removed.map(withoutPlace)).toEqual(expectation?.removed);
+      expect(result.removedCount).toBe(result.removed.length);
       expectInert(result.svg);
       const again = sanitiseSvgLogo(result.svg);
       expect(again.ok && again.svg).toBe(result.svg);
@@ -98,18 +122,20 @@ describe("the hostile SVG corpus", () => {
     const text = new TextDecoder("utf-8", { fatal: false, ignoreBOM: true }).decode(bytes);
     // Bytes that are not UTF-8, or UTF-16 with its mark, have no faithful string; the rest must agree.
     if (text.includes("�") || bytes[0] === 0xff || bytes[0] === 0xfe) return;
-    expect(outcome(sanitiseSvgLogo(text))).toBe(EXPECTATIONS[file]);
+    expect(outcome(sanitiseSvgLogo(text))).toBe(EXPECTATIONS[file]?.outcome);
   });
 
   it.each(GENERATED)("refuses %s", (_label, input, code) => {
     expect(outcome(sanitiseSvgLogo(input))).toBe(`reject:${code}`);
   });
 
-  it("drops the payload of every accepted file and says so", () => {
-    for (const file of FILES.filter((name) => EXPECTATIONS[name] === "accept")) {
-      const result = sanitiseSvgLogo(new Uint8Array(readFileSync(new URL(file, CORPUS))));
-      if (!result.ok) throw new Error(file);
-      if (!KEPT_AS_TEXT_OR_RENAMED.has(file)) expect(result.removedCount, file).toBeGreaterThan(0);
+  it("names a removal for every accepted file but those whose payload is only text or ids", () => {
+    for (const [file, expectation] of Object.entries(EXPECTATIONS)) {
+      if (expectation.outcome !== "accept") {
+        expect(expectation.removed, file).toBeUndefined();
+        continue;
+      }
+      expect(expectation.removed?.length === 0, file).toBe(KEPT_AS_TEXT_OR_RENAMED.has(file));
     }
   });
 });

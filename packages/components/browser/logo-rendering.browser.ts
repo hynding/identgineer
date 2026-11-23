@@ -209,9 +209,9 @@ base.describe("the checks themselves", () => {
   // the resource attacks (billions of drawn copies), which would only hang the page.
   const expectations = JSON.parse(
     readFileSync(new URL("hostile-svg/expectations.json", BRAND_FIXTURES), "utf8"),
-  ) as Record<string, string>;
+  ) as Record<string, { outcome: string }>;
   const raw = corpus("hostile-svg")
-    .filter(({ name }) => expectations[name.replace("hostile-svg/", "")] === "accept")
+    .filter(({ name }) => expectations[name.replace("hostile-svg/", "")]?.outcome === "accept")
     .map(({ name, bytes }) => ({ name, svg: new TextDecoder().decode(bytes) }));
 
   base("catch a script and an external load in the unsanitised corpus", async ({ page }) => {
