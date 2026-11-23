@@ -172,7 +172,11 @@ export class IdgTable {
   @Watch("sortKey")
   @Watch("sortDirection")
   ownerSorted(): void {
-    if (!this.manualSort || this.sortKey === "") return;
+    if (!this.manualSort) return;
+    if (this.sortKey === "") {
+      this.status = "";
+      return;
+    }
     this.status = this.statusFor(
       this.sortKey,
       oneOf(SORT_DIRECTIONS, this.sortDirection, "ascending"),
