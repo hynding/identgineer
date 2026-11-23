@@ -116,6 +116,16 @@
   "clip-path-of-43-shapes.svg": {
     "outcome": "reject:drawing-too-costly"
   },
+  "clip-path-of-crossing-subpaths.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "clip-path-of-one-self-crossing-path.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "clip-path-self-crossing-beside-a-square.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
   "comment-double-hyphen.svg": {
     "outcome": "reject:invalid-comment"
   },

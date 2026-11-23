@@ -83,6 +83,9 @@ const KEPT_AS_TEXT_OR_RENAMED = new Set([
   "utf7-payload-undeclared.svg",
 ]);
 
+// Files whose payload is work a renderer does cheaply, so they are accepted as they are.
+const WITHIN_BUDGET = new Set(["clip-path-of-one-self-crossing-path.svg"]);
+
 function withoutPlace(removal: SvgLogoRemoval): ExpectedRemoval {
   const names: ExpectedRemoval = { element: removal.element, reason: removal.reason };
   return {
@@ -128,13 +131,15 @@ describe("the hostile SVG corpus", () => {
     expect(outcome(sanitiseSvgLogo(input))).toBe(`reject:${code}`);
   });
 
-  it("names a removal for every accepted file but those whose payload is only text or ids", () => {
+  it("names a removal for every accepted file but those whose payload is text, ids or cheap", () => {
     for (const [file, expectation] of Object.entries(EXPECTATIONS)) {
       if (expectation.outcome !== "accept") {
         expect(expectation.removed, file).toBeUndefined();
         continue;
       }
-      expect(expectation.removed?.length === 0, file).toBe(KEPT_AS_TEXT_OR_RENAMED.has(file));
+      expect(expectation.removed?.length === 0, file).toBe(
+        KEPT_AS_TEXT_OR_RENAMED.has(file) || WITHIN_BUDGET.has(file),
+      );
     }
   });
 });
