@@ -294,32 +294,17 @@ class OverdrawWalk {
   }
 
   /**
-   * A clip path applied to `box`: its area, and its content drawn as coverage each time. One shape
-   * clips by its outline; more than one, or a shape that is clipped or masked in turn, is drawn
-   * into a mask layer by some browser (WebKit past one shape, Chromium past 42 or when a shape is
-   * clipped), which costs what an alpha mask does.
+   * A clip path applied to `box`: its area, and its content drawn as coverage each time. Every
+   * clip path kept holds one shape, which clips by its outline: the sanitiser writes any other as
+   * an alpha mask, charged as a mask.
    */
   private applyClip(element: CleanElement, matrix: Matrix, box: SvgBox): void {
     const clip = this.target(element, "clip-path");
     if (clip === undefined) return;
-    const shapes = clip.children.filter((child) => child.name !== "title" && child.name !== "desc");
-    const asMask = shapes.length > 1 || shapes.some((shape) => this.clippedInTurn(shape));
-    this.charge(
-      this.share(box) * (asMask ? SVG_OVERDRAW_WEIGHTS.alphaMask : SVG_OVERDRAW_WEIGHTS.clip),
-    );
+    this.charge(this.share(box) * SVG_OVERDRAW_WEIGHTS.clip);
     const content = this.contentMatrix(clip, "clipPathUnits", matrix, box);
     for (const child of clip.children) this.draw(child, content, ROOT_INHERITED, true);
     this.applyClip(clip, content, box);
-  }
-
-  /** Whether a shape in a clip path, or what a use there draws, has a clip path or mask of its own. */
-  private clippedInTurn(shape: CleanElement): boolean {
-    let at: CleanElement | undefined = shape;
-    for (let step = 0; at !== undefined && step <= this.ids.size; step += 1) {
-      if (at.attributes.has("clip-path") || at.attributes.has("mask")) return true;
-      at = at.name === "use" ? this.target(at, "href") : undefined;
-    }
-    return false;
   }
 
   /** A mask applied to `box`: its area, and its content painted each time. */

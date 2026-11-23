@@ -43,13 +43,6 @@ export interface SvgLogoLimits {
    * which bounds the geometry whatever the size.
    */
   readonly overdraw: number;
-  /**
-   * How often the edges of the logo's clip paths could cross, every use expanded: a browser
-   * combines the shapes of a clip path of more than one into one outline, each shape's own crossings
-   * included, work that grows faster than the crossings, once for each clip path. Each such clip
-   * path counts half the square of its shapes' degrees added up; one of a single shape counts none.
-   */
-  readonly clipCrossings: number;
   /** Masks and clip paths applied once every reference is expanded. */
   readonly maskApplications: number;
   /** Masks and clip paths applied inside one another, in a row. */
@@ -75,7 +68,6 @@ export const SVG_LOGO_LIMITS: SvgLogoLimits = Object.freeze({
   renderedElements: 20_000,
   drawingCost: 200_000,
   overdraw: 500,
-  clipCrossings: 10_000,
   maskApplications: 128,
   maskDepth: 4,
   ids: 1024,
