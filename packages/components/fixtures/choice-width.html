@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Choice control widths fixture</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/fixtures/choice-width.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Choice control widths</h1>
+
+      <div class="row" data-case="flex-checkbox">
+        <idg-checkbox>Receive the weekly newsletter</idg-checkbox>
+        <span class="fixed">Beside it</span>
+      </div>
+      <div class="row" data-case="flex-radio">
+        <idg-radio name="size" value="a">Receive the weekly newsletter</idg-radio>
+        <span class="fixed">Beside it</span>
+      </div>
+      <div class="row" data-case="flex-switch">
+        <idg-switch>Receive the weekly newsletter</idg-switch>
+        <span class="fixed">Beside it</span>
+      </div>
+
+      <table class="cell-table">
+        <tbody>
+          <tr data-case="table-checkbox">
+            <td><idg-checkbox>Receive the weekly newsletter</idg-checkbox></td>
+            <td>Beside it</td>
+          </tr>
+          <tr data-case="table-radio">
+            <td><idg-radio name="size" value="b">Receive the weekly newsletter</idg-radio></td>
+            <td>Beside it</td>
+          </tr>
+          <tr data-case="table-switch">
+            <td><idg-switch>Receive the weekly newsletter</idg-switch></td>
+            <td>Beside it</td>
+          </tr>
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

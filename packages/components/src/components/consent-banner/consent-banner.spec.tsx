@@ -424,7 +424,7 @@ describe("idg-consent-banner with the real tracker", () => {
     const { root, waitForChanges } = await mount(tracker.consent);
     pressed(root, "idg-button.accept");
     await waitForChanges();
-    expect(tracker.consent.get()).toEqual({ state: "granted" });
+    expect(tracker.consent.get()).toMatchObject({ state: "granted" });
     expect(local.getItem("idg.tracking.consent.v1")).toContain('"granted"');
     expect(banner(root)).toBeNull();
     expect(events.seen).toEqual([{ type: "idgConsentChange", detail: { state: "granted" } }]);
@@ -437,7 +437,7 @@ describe("idg-consent-banner with the real tracker", () => {
     await waitForChanges();
     tracker.track("clicked");
     await tracker.flush();
-    expect(tracker.consent.get()).toEqual({ state: "denied" });
+    expect(tracker.consent.get()).toMatchObject({ state: "denied" });
     expect(collector.requests).toEqual([]);
   });
 
@@ -473,5 +473,61 @@ describe("idg-consent-banner with the real tracker", () => {
     tracker.consent.reset();
     await waitForChanges();
     expect(banner(root)).not.toBeNull();
+  });
+});
+
+describe("idg-consent-banner and repeated presses", () => {
+  it.each(["accept", "decline"] as const)(
+    "chooses once, tells the page once and announces once for a double press of %s",
+    async (name) => {
+      const fake = createFakeConsent();
+      const { root } = await mount(fake.consent);
+      pressed(root, `idg-button.${name}`);
+      pressed(root, `idg-button.${name}`);
+      pressed(root, `idg-button.${name === "accept" ? "decline" : "accept"}`);
+      expect(fake.calls.filter((call) => call === "grant" || call === "deny")).toHaveLength(1);
+      expect(events.seen).toHaveLength(1);
+    },
+  );
+
+  it("does not choose when the state has already been decided elsewhere", async () => {
+    const fake = createFakeConsent();
+    const { root } = await mount(fake.consent);
+    fake.setQuietly({ state: "denied" });
+    pressed(root, "idg-button.accept");
+    expect(fake.calls).not.toContain("grant");
+    expect(events.seen).toEqual([]);
+  });
+
+  it("still lets a refused choice be tried again", async () => {
+    const fake = createFakeConsent();
+    fake.refuseToStore();
+    const { root, waitForChanges } = await mount(fake.consent);
+    pressed(root, "idg-button.accept");
+    await waitForChanges();
+    pressed(root, "idg-button.accept");
+    expect(fake.calls.filter((call) => call === "grant")).toHaveLength(2);
+  });
+});
+
+describe("idg-consent-banner and the page's scroll padding", () => {
+  const padding = (side: "end" | "start") =>
+    document.documentElement.style.getPropertyValue(`scroll-padding-block-${side}`);
+
+  it("reserves nothing for a bar at the top, which scrolls away with the page", async () => {
+    await mount(createFakeConsent().consent, { placement: "top" });
+    expect(padding("start")).toBe("");
+    expect(padding("end")).toBe("");
+  });
+
+  it("reserves nothing for an inline bar, and gives the bottom bar's space back when it goes", async () => {
+    const fake = createFakeConsent();
+    const { root, waitForChanges } = await mount(fake.consent, { placement: "inline" });
+    expect(padding("end")).toBe("");
+    root.placement = "bottom";
+    await waitForChanges();
+    root.placement = "inline";
+    await waitForChanges();
+    expect(padding("end")).toBe("");
   });
 });

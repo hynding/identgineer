@@ -37,12 +37,42 @@ export async function openConsent(page: Page, options: OpenOptions = {}): Promis
   await page.goto(`${CONSENT_PAGE}${options.query ?? ""}`);
   await expect(page.locator("html[data-consent-ready]")).toHaveCount(1);
   await expect(page.locator(TAGS.map((tag) => `${tag}:not(.hydrated)`).join(", "))).toHaveCount(0);
+  await expectRendered(page, options);
   return { collected };
+}
+
+export interface ConsentSnapshot {
+  state: string;
+  reason?: string;
+  decidedAt: number | null;
+}
+
+/**
+ * Waits until the banner has drawn what the state calls for, so a test never starts from a page
+ * that is about to change: the question while it is asked, the one-line note under a signal when
+ * `?announce` is set, and otherwise a frame in which nothing is drawn.
+ */
+async function expectRendered(page: Page, options: OpenOptions): Promise<void> {
+  const state = (await page.evaluate(`window.consentFixture.tracker.consent.get()`)) as {
+    state: string;
+    reason?: string;
+  };
+  const banner = page.locator("#banner");
+  if (state.reason === undefined && state.state === "unknown") {
+    await expect(banner.locator('[part="banner"]')).toBeVisible();
+  } else if (state.reason !== undefined && (options.query ?? "").includes("announce")) {
+    await expect(banner.locator('[part="signal-note"]')).toBeVisible();
+  } else {
+    await expect(banner.locator('[part="banner"], [part="signal-note"]')).toHaveCount(0);
+  }
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
 }
 
 interface Fixture {
   tracker: {
-    consent: { get: () => { state: string; reason?: string }; reset: () => boolean };
+    consent: { get: () => ConsentSnapshot; reset: () => boolean };
     track: (name: string) => void;
     page: () => void;
     flush: () => Promise<void>;
@@ -67,7 +97,7 @@ export async function trackAndFlush(page: Page): Promise<void> {
   })()`);
 }
 
-export function consentState(page: Page): Promise<{ state: string; reason?: string }> {
+export function consentState(page: Page): Promise<ConsentSnapshot> {
   return withFixture(page, (fixture) => fixture.tracker.consent.get());
 }
 

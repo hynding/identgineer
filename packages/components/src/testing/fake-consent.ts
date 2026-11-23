@@ -1,14 +1,25 @@
 import type { ConsentStatusView } from "../consent/consent-types";
 
-type Method = "get" | "grant" | "deny" | "reset" | "onChange" | "decidedAt";
+type Method = "get" | "grant" | "deny" | "reset" | "onChange";
+
+/** A status as a test writes it: the time of the decision may be left out. */
+export interface FakeStatus {
+  readonly state: ConsentStatusView["state"];
+  readonly reason?: "gpc" | "dnt";
+  readonly decidedAt?: number | null;
+}
+
+const complete = (status: FakeStatus): ConsentStatusView => ({
+  ...status,
+  decidedAt: status.decidedAt ?? null,
+});
 
 /**
  * A hand-written consent object for the unit tests: it holds a status the test sets, records what
  * the component called, and can be told to throw from, or refuse, any method.
  */
-export function createFakeConsent(initial: ConsentStatusView = { state: "unknown" }) {
-  let status = initial;
-  let decided: number | undefined;
+export function createFakeConsent(initial: FakeStatus = { state: "unknown" }) {
+  let status = complete(initial);
   const listeners = new Set<(next: ConsentStatusView) => void>();
   const throwing = new Set<Method>();
   const calls: string[] = [];
@@ -23,7 +34,7 @@ export function createFakeConsent(initial: ConsentStatusView = { state: "unknown
   };
   const decide = (state: "granted" | "denied" | "unknown") => {
     if (!storable) return false;
-    status = { state };
+    status = { state, decidedAt: state === "unknown" ? null : Date.now() };
     tell();
     return true;
   };
@@ -53,23 +64,19 @@ export function createFakeConsent(initial: ConsentStatusView = { state: "unknown
           listeners.delete(listener);
         };
       },
-      decidedAt: () => {
-        guard("decidedAt");
-        return decided;
-      },
     },
     calls,
     /** Changes the status as another tab or another component would, and tells the listeners. */
-    set(next: ConsentStatusView) {
-      status = next;
+    set(next: FakeStatus) {
+      status = complete(next);
       tell();
     },
     /** Changes the status without telling anyone, as a change in storage nobody heard of. */
-    setQuietly(next: ConsentStatusView) {
-      status = next;
+    setQuietly(next: FakeStatus) {
+      status = complete(next);
     },
-    setDecidedAt(value: number | undefined) {
-      decided = value;
+    setDecidedAt(value: number | null) {
+      status = { ...status, decidedAt: value };
     },
     /** From now on `method` throws. */
     throwFrom(method: Method) {

@@ -25,6 +25,15 @@ if (seed !== undefined && localStorage.getItem("idg.tracking.consent.v1") === nu
   );
 }
 
+// `?stylesheet-padding` and `?inline-padding` stand for a page that keeps its own scroll padding at
+// the bottom, in a stylesheet or on the root element, which a bar at the bottom must add to.
+if (params.has("stylesheet-padding")) {
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync("html { scroll-padding-block-end: 30px; }");
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+}
+if (params.has("inline-padding")) document.documentElement.style.scrollPaddingBlockEnd = "12px";
+
 const tracker = createTracker({
   endpoint,
   writeKey: WRITE_KEY,

@@ -115,7 +115,12 @@ test.describe("consent components meet WCAG 2.2 AA", () => {
     await openConsent(page);
     await page.evaluate(`(() => {
       const consent = window.consentFixture.tracker.consent;
-      const broken = { ...consent, deny() { return false; }, grant() { return false; } };
+      const broken = {
+        ...consent,
+        deny() { return false; },
+        grant() { return false; },
+        reset() { return false; },
+      };
       document.getElementById("banner").consent = broken;
       document.getElementById("prefs").consent = broken;
     })()`);
@@ -125,10 +130,15 @@ test.describe("consent components meet WCAG 2.2 AA", () => {
     await expect(switchIn(inlinePanel(page), "analytics")).toBeChecked();
     await inlinePanel(page).locator("idg-button.save button").click();
     await expect(inlinePanel(page).locator('[part="error"]')).toBeVisible();
+    await settle(page);
+    await expectNoAxeViolations(page);
     await inlinePanel(page).locator("idg-button.erase button").click();
-    await expect(banner(page).locator('[part="error"]')).toBeVisible();
-    await expect(inlinePanel(page).locator('[part="error"]')).toBeVisible();
     await expect(inlinePanel(page).locator('[part="confirm"]')).toBeVisible();
+    await expect(inlinePanel(page).locator('[part="error"]')).toHaveCount(0);
+    await settle(page);
+    await expectNoAxeViolations(page);
+    await inlinePanel(page).locator("idg-button.confirm-yes button").click();
+    await expect(inlinePanel(page).locator('[part="error"]')).toContainText("could not be erased");
     await settle(page);
     await expectNoAxeViolations(page);
   });
@@ -254,24 +264,40 @@ test.describe("consent components in forced colours and with reduced motion", ()
     await expectNoAxeViolations(page);
   });
 
-  test("nothing in the banner or the panel animates with reduced motion", async ({ page }) => {
+  test("nothing in the banner or the panel animates or transitions for long with reduced motion", async ({
+    page,
+  }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await openConsent(page);
     await bannerButton(page, "accept").hover();
-    const running = await page.evaluate(() => {
+    const longest = await page.evaluate(() => {
+      const seconds = (value: string) =>
+        Math.max(
+          ...value.split(",").map((part) => {
+            const text = part.trim();
+            return text.endsWith("ms") ? Number.parseFloat(text) / 1000 : Number.parseFloat(text);
+          }),
+        );
       const roots: (Document | ShadowRoot)[] = [document];
+      let transition = 0;
+      let animation = 0;
       for (const root of roots) {
         for (const element of root.querySelectorAll("*")) {
           if (element.shadowRoot) roots.push(element.shadowRoot);
+          const style = getComputedStyle(element);
+          transition = Math.max(
+            transition,
+            seconds(style.transitionDuration) + seconds(style.transitionDelay),
+          );
+          if (style.animationName !== "none") {
+            animation = Math.max(animation, seconds(style.animationDuration));
+          }
         }
       }
-      return roots
-        .flatMap((root) => root.getAnimations())
-        .filter(
-          (animation) => animation instanceof CSSAnimation && animation.playState === "running",
-        ).length;
+      return { transition, animation };
     });
-    expect(running).toBe(0);
+    expect(longest.transition * 1000).toBeLessThanOrEqual(1);
+    expect(longest.animation * 1000).toBeLessThanOrEqual(1);
   });
 });
 
@@ -292,5 +318,94 @@ test.describe("the target size", () => {
       expect(box?.width ?? 0).toBeGreaterThanOrEqual(24);
       expect(box?.height ?? 0).toBeGreaterThanOrEqual(24);
     }
+  });
+});
+
+test.describe("a banner never covers what has focus", () => {
+  // Whether the element that has focus can be seen and reached at its centre: nothing sticky, from
+  // the banner or the layout, is drawn over it.
+  const coverage = (page: Page) =>
+    page.evaluate(() => {
+      let focused: Element | null = document.activeElement;
+      while (focused?.shadowRoot?.activeElement) focused = focused.shadowRoot.activeElement;
+      if (!focused || focused === document.body) return "none";
+      const box = focused.getBoundingClientRect();
+      const x = box.left + box.width / 2;
+      const y = box.top + box.height / 2;
+      if (y < 0 || y > innerHeight) return `off screen at ${String(Math.round(y))}`;
+      let hit: Element | null = document.elementFromPoint(x, y);
+      while (hit?.shadowRoot) {
+        const inner = hit.shadowRoot.elementFromPoint(x, y);
+        if (!inner || inner === hit) break;
+        hit = inner;
+      }
+      const within = (inside: Element | null, outside: Element) => {
+        for (
+          let node: Node | null = inside;
+          node;
+          node = node.parentNode ?? (node as ShadowRoot).host
+        ) {
+          if (node === outside) return true;
+        }
+        return false;
+      };
+      if (hit && (within(hit, focused) || within(focused, hit))) return "clear";
+      return `covered by ${hit?.localName ?? "nothing"}`;
+    });
+
+  for (const placement of ["top", "bottom"] as const) {
+    for (const layout of LAYOUTS) {
+      test(`tabbing through a page with a ${placement} banner in the ${layout} layout`, async ({
+        page,
+      }) => {
+        await openConsent(page);
+        await banner(page).evaluate((element, where) => {
+          element.setAttribute("placement", where);
+          if (where === "top") document.body.prepend(element);
+        }, placement);
+        await applyAxes(page, { layout });
+        await page.locator("#before").focus();
+        const seen: string[] = [];
+        for (let press = 0; press < 14; press += 1) {
+          await page.keyboard.press("Tab");
+          await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+          const result = await coverage(page);
+          seen.push(result);
+          expect(result, `after ${String(press + 1)} Tabs`).not.toMatch(/^covered|^off screen/);
+        }
+        expect(seen).toContain("clear");
+      });
+    }
+  }
+});
+
+test.describe("a short window", () => {
+  test("a bottom bar leaves its place on the screen and joins the page when there is no room for both", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 256 });
+    await openConsent(page);
+    await page.locator("html").evaluate((element) => {
+      element.style.fontSize = "200%";
+    });
+    await settle(page);
+    const position = await banner(page).evaluate((element) => getComputedStyle(element).position);
+    expect(position).toBe("static");
+    const bar = await bannerRegion(page).evaluate((element) => ({
+      scrolls: element.scrollHeight > element.clientHeight + 1,
+      height: element.getBoundingClientRect().height,
+    }));
+    expect(bar.scrolls).toBe(false);
+    // The page scrolls to every choice; nothing is held back inside a box of its own.
+    for (const name of ["decline", "accept", "choose"] as const) {
+      await bannerButton(page, name).scrollIntoViewIfNeeded();
+      await expect(bannerButton(page, name)).toBeInViewport();
+    }
+    expect(
+      await page.evaluate(
+        () =>
+          Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingBlockEnd) || 0,
+      ),
+    ).toBe(0);
   });
 });

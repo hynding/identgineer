@@ -1,0 +1,20 @@
+/* Where a checkbox, a radio or a switch is sized by its content: a flex row beside a sibling that
+   does not shrink, and an auto-width table cell. */
+.row {
+  display: flex;
+  align-items: flex-start;
+  inline-size: 220px;
+  gap: 8px;
+  margin-block-end: 16px;
+}
+
+.fixed {
+  flex: none;
+  inline-size: 96px;
+}
+
+.cell-table {
+  table-layout: auto;
+  inline-size: 220px;
+  margin-block-end: 16px;
+}

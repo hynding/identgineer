@@ -5,6 +5,7 @@ import { createFakeConsent, type FakeConsent } from "../../testing/fake-consent"
 import { trackerSetup } from "../../testing/consent-harness";
 import { installDialogElement } from "../../testing/dialog-element";
 import { button, recordEvents, shadowOf, textOf } from "../../testing/identity-form";
+import { languageOf } from "../../consent/language";
 import { removeHost } from "../../testing/remove-host";
 import "../alert/alert";
 import "../button/button";
@@ -17,7 +18,7 @@ interface PreferencesElement extends HTMLElement {
   labels?: Record<string, string>;
   modal?: boolean;
   headingLevel?: number;
-  open: () => Promise<void>;
+  open: () => Promise<boolean>;
   close: () => Promise<void>;
 }
 
@@ -38,8 +39,7 @@ interface SwitchElement extends HTMLElement {
 
 const analytics = (root: HTMLElement) =>
   shadowOf(root).querySelector<SwitchElement>("idg-switch.analytics");
-const necessary = (root: HTMLElement) =>
-  shadowOf(root).querySelector<SwitchElement>("idg-switch.necessary");
+const necessary = (root: HTMLElement) => shadowOf(root).querySelector("idg-switch.necessary");
 const panel = (root: HTMLElement) => shadowOf(root).querySelector(".panel");
 const status = (root: HTMLElement) => textOf(root, '[role="status"].status');
 const alert = (root: HTMLElement, name: string) =>
@@ -106,13 +106,20 @@ describe("idg-consent-preferences as a panel", () => {
     expect(shadowOf(root).querySelector(".heading")?.localName).toBe("h2");
   });
 
-  it("lists Necessary as an always-on, disabled row with its explanation, never tracked", async () => {
+  it("lists Necessary as a plain, always-on row with its explanation: no control to operate", async () => {
     const { root } = await mount(createFakeConsent().consent);
-    const row = necessary(root);
-    expect(row?.checked).toBe(true);
-    expect(row?.disabled).toBe(true);
-    expect(row?.textContent).toContain("Necessary");
+    expect(necessary(root)).toBeNull();
+    expect(shadowOf(root).querySelector(".necessary input, .necessary [disabled]")).toBeNull();
+    expect(textOf(root, ".necessary-title")).toBe("Necessary");
+    expect(textOf(root, ".necessary-state")).toBe("Always on");
     expect(textOf(root, ".necessary-description")).toContain("not tracked");
+  });
+
+  it("keeps the Analytics explanation visible to everyone, and gives it to the switch as well", async () => {
+    const { root } = await mount(createFakeConsent().consent);
+    const description = shadowOf(root).querySelector(".analytics-description");
+    expect(description?.getAttribute("aria-hidden")).toBeNull();
+    expect(analytics(root)?.accessibleDescription).toContain("Counts page views");
   });
 
   it.each([
@@ -336,12 +343,10 @@ describe("idg-consent-preferences reflecting changes made elsewhere", () => {
 });
 
 describe("idg-consent-preferences and the time of the choice", () => {
-  it("shows it, formatted in the document language, when the consent object has it", async () => {
+  it("shows it, formatted in the document language, from the status the consent object gives", async () => {
     document.documentElement.setAttribute("lang", "de");
     const when = Date.UTC(2026, 2, 1, 12, 30, 0);
-    const fake = createFakeConsent({ state: "granted" });
-    fake.setDecidedAt(when);
-    const { root } = await mount(fake.consent);
+    const { root } = await mount(createFakeConsent({ state: "granted", decidedAt: when }).consent);
     const shown = new Intl.DateTimeFormat("de", { dateStyle: "medium", timeStyle: "short" }).format(
       when,
     );
@@ -349,22 +354,47 @@ describe("idg-consent-preferences and the time of the choice", () => {
     document.documentElement.removeAttribute("lang");
   });
 
-  it("shows nothing when there is none, or it throws", async () => {
-    const none = await mount(createFakeConsent({ state: "granted" }).consent);
+  it("shows nothing when there is none", async () => {
+    const none = await mount(createFakeConsent({ state: "unknown" }).consent);
     expect(shadowOf(none.root).querySelector(".decided")).toBeNull();
-    const fake = createFakeConsent({ state: "granted" });
-    fake.setDecidedAt(Date.now());
-    fake.throwFrom("decidedAt");
-    const throwing = await mount(fake.consent);
-    expect(shadowOf(throwing.root).querySelector(".decided")).toBeNull();
-    expect(panel(throwing.root)).not.toBeNull();
   });
 
-  it("shows nothing for the real tracker, which does not expose it", async () => {
+  it("follows the time when a new choice is made", async () => {
+    const fake = createFakeConsent({ state: "granted", decidedAt: Date.UTC(2026, 0, 1) });
+    const { root, waitForChanges } = await mount(fake.consent);
+    fake.set({ state: "denied", decidedAt: Date.UTC(2026, 5, 1) });
+    await waitForChanges();
+    const shown = new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(Date.UTC(2026, 5, 1));
+    expect(textOf(root, ".decided")).toContain(shown);
+  });
+
+  it("shows the time the real tracker stored", async () => {
     const { tracker } = trackerSetup();
     tracker.consent.grant();
     const { root } = await mount(tracker.consent);
-    expect(shadowOf(root).querySelector(".decided")).toBeNull();
+    expect(textOf(root, ".decided")).toContain("Your choice was made on");
+  });
+
+  it("uses the language of the nearest element that has one, through shadow hosts, then the document's", () => {
+    const outer = document.createElement("div");
+    outer.setAttribute("lang", "fr");
+    const host = document.createElement("div");
+    outer.append(host);
+    document.body.append(outer);
+    const root = host.attachShadow({ mode: "open" });
+    const inner = document.createElement("span");
+    root.append(inner);
+    expect(languageOf(inner)).toBe("fr");
+    inner.setAttribute("lang", "ja");
+    expect(languageOf(inner)).toBe("ja");
+    outer.remove();
+    document.documentElement.setAttribute("lang", "es");
+    expect(languageOf(document.createElement("span"))).toBe("es");
+    document.documentElement.removeAttribute("lang");
+    expect(languageOf(document.createElement("span"))).toBeUndefined();
   });
 });
 
@@ -430,7 +460,7 @@ describe("idg-consent-preferences withdrawing and erasing", () => {
     await waitForChanges();
     pressed(root, "idg-button.confirm-yes");
     await waitForChanges();
-    expect(tracker.consent.get()).toEqual({ state: "unknown" });
+    expect(tracker.consent.get()).toEqual({ state: "unknown", decidedAt: null });
     expect(local.getItem("idg.tracking.consent.v1")).toBeNull();
   });
 });
@@ -582,5 +612,122 @@ describe("idg-consent-preferences with the real tracker", () => {
     tracker.consent.grant();
     await waitForChanges();
     expect(analytics(root)?.checked).toBe(true);
+  });
+});
+
+describe("idg-consent-preferences and repeated presses", () => {
+  it("saves once for a double press of Save", async () => {
+    const fake = createFakeConsent();
+    const { root, waitForChanges } = await mount(fake.consent);
+    await flip(root, true, waitForChanges);
+    pressed(root, "idg-button.save");
+    pressed(root, "idg-button.save");
+    await waitForChanges();
+    expect(fake.calls.filter((call) => call === "grant")).toHaveLength(1);
+    expect(events.seen).toHaveLength(1);
+  });
+
+  it("erases once for a double press of the confirmation, and can save again after", async () => {
+    const fake = createFakeConsent({ state: "granted" });
+    const { root, waitForChanges } = await mount(fake.consent);
+    pressed(root, "idg-button.erase");
+    await waitForChanges();
+    pressed(root, "idg-button.confirm-yes");
+    pressed(root, "idg-button.confirm-yes");
+    await waitForChanges();
+    expect(fake.calls.filter((call) => call === "reset")).toHaveLength(1);
+    expect(events.seen).toHaveLength(1);
+    pressed(root, "idg-button.save");
+    await waitForChanges();
+    expect(fake.calls).toContain("deny");
+  });
+
+  it("lets a failed save be tried again", async () => {
+    const fake = createFakeConsent();
+    fake.refuseToStore();
+    const { root, waitForChanges } = await mount(fake.consent);
+    pressed(root, "idg-button.save");
+    await waitForChanges();
+    pressed(root, "idg-button.save");
+    await waitForChanges();
+    expect(fake.calls.filter((call) => call === "deny")).toHaveLength(2);
+  });
+});
+
+describe("idg-consent-preferences open() without a consent object", () => {
+  it("does nothing, says false, and does not open later when the object arrives", async () => {
+    const { root, waitForChanges } = await mount(undefined, { modal: true });
+    expect(await root.open()).toBe(false);
+    root.consent = createFakeConsent().consent;
+    await waitForChanges();
+    expect(shadowOf(root).querySelector<HTMLElement & { open: boolean }>("idg-dialog")?.open).toBe(
+      false,
+    );
+  });
+
+  it("says true when it opens", async () => {
+    const { root } = await mount(createFakeConsent().consent, { modal: true });
+    expect(await root.open()).toBe(true);
+  });
+});
+
+describe("idg-consent-preferences closing without saving", () => {
+  const dismiss = async (root: HTMLElement, waitForChanges: () => Promise<void>) => {
+    shadowOf(root)
+      .querySelector("idg-dialog")
+      ?.dispatchEvent(
+        new CustomEvent("idgClose", { detail: { returnValue: "", reason: "escape" } }),
+      );
+    await waitForChanges();
+  };
+
+  it("says politely that the changes were not saved when an edit is dropped", async () => {
+    const fake = createFakeConsent();
+    const { root, waitForChanges } = await mount(fake.consent, { modal: true });
+    await root.open();
+    await waitForChanges();
+    await flip(root, true, waitForChanges);
+    await dismiss(root, waitForChanges);
+    expect(status(root)).toContain("not saved");
+  });
+
+  it("says nothing when there was no edit", async () => {
+    const { root, waitForChanges } = await mount(createFakeConsent().consent, { modal: true });
+    await root.open();
+    await waitForChanges();
+    await dismiss(root, waitForChanges);
+    expect(status(root)).toBe("");
+  });
+
+  it("says nothing after a save closed it", async () => {
+    const { root, waitForChanges } = await mount(createFakeConsent().consent, { modal: true });
+    await root.open();
+    await waitForChanges();
+    await flip(root, true, waitForChanges);
+    pressed(root, "idg-button.save");
+    await waitForChanges();
+    await dismiss(root, waitForChanges);
+    expect(status(root)).not.toContain("not saved");
+  });
+});
+
+describe("idg-consent-preferences when the choice changes under an open confirmation", () => {
+  it("dismisses the confirmation and says so in the live region", async () => {
+    const fake = createFakeConsent({ state: "granted" });
+    const { root, waitForChanges } = await mount(fake.consent);
+    pressed(root, "idg-button.erase");
+    await waitForChanges();
+    fake.set({ state: "denied" });
+    await waitForChanges();
+    expect(shadowOf(root).querySelector(".confirm")).toBeNull();
+    expect(status(root)).toContain("changed elsewhere");
+  });
+
+  it("says nothing of a confirmation that was not showing", async () => {
+    const fake = createFakeConsent({ state: "granted" });
+    const { root, waitForChanges } = await mount(fake.consent);
+    fake.set({ state: "denied" });
+    await waitForChanges();
+    expect(status(root)).toBe("");
   });
 });

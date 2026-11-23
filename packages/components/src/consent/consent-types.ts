@@ -10,6 +10,8 @@ export type ConsentStateView = "unknown" | "granted" | "denied";
 export interface ConsentStatusView {
   readonly state: ConsentStateView;
   readonly reason?: "gpc" | "dnt";
+  /** When the stored choice was made, as milliseconds since 1970; `null` while none is stored. */
+  readonly decidedAt: number | null;
 }
 
 /** The browser signals that deny consent whatever was stored. */
@@ -23,11 +25,6 @@ export interface ConsentClient {
   /** Forgets the choice, and everything stored for it: the visitor is asked again. */
   readonly reset: () => boolean;
   readonly onChange: (listener: (status: ConsentStatusView) => void) => () => void;
-  /**
-   * When the stored choice was made, as milliseconds since 1970, for a consent object that knows.
-   * The tracker's does not; a page may wrap it with one that reads its own record.
-   */
-  readonly decidedAt?: () => number | undefined;
 }
 
 /** Detail of `idgConsentChange`: the state the consent is in now. */

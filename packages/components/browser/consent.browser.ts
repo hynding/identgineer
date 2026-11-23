@@ -30,7 +30,7 @@ test.describe("the consent banner asks, and sends nothing until it is told to", 
     expect(await activeName(page)).toBe("body");
     await trackAndFlush(page);
     expect(collected).toHaveLength(0);
-    expect(await consentState(page)).toEqual({ state: "unknown" });
+    expect(await consentState(page)).toMatchObject({ state: "unknown" });
     expect(await storedConsent(page)).toBeNull();
     // Not a modal: the page behind it is not inert and still takes clicks.
     await expect(page.locator("main")).not.toHaveAttribute("inert", /.*/);
@@ -45,7 +45,7 @@ test.describe("the consent banner asks, and sends nothing until it is told to", 
     await bannerButton(page, "accept").click();
     await expect(bannerRegion(page)).toHaveCount(0);
     await expect(bannerStatus(page)).toHaveText("Analytics accepted.");
-    expect(await consentState(page)).toEqual({ state: "granted" });
+    expect(await consentState(page)).toMatchObject({ state: "granted" });
     await trackAndFlush(page);
     expect(collected.length).toBeGreaterThan(0);
     expect(await recordedEvents(page)).toEqual([
@@ -60,7 +60,7 @@ test.describe("the consent banner asks, and sends nothing until it is told to", 
     await bannerButton(page, "decline").click();
     await expect(bannerRegion(page)).toHaveCount(0);
     await expect(bannerStatus(page)).toHaveText("Analytics declined.");
-    expect(await consentState(page)).toEqual({ state: "denied" });
+    expect(await consentState(page)).toMatchObject({ state: "denied" });
     await trackAndFlush(page);
     await page.reload();
     await expect(page.locator("html[data-consent-ready]")).toHaveCount(1);
@@ -82,7 +82,7 @@ test.describe("the consent banner asks, and sends nothing until it is told to", 
     await bannerButton(page, "accept").focus();
     await page.keyboard.press("Escape");
     await expect(bannerRegion(page)).toBeVisible();
-    expect(await consentState(page)).toEqual({ state: "unknown" });
+    expect(await consentState(page)).toMatchObject({ state: "unknown" });
     expect(await storedConsent(page)).toBeNull();
     await trackAndFlush(page);
     expect(collected).toHaveLength(0);
@@ -96,7 +96,7 @@ test.describe("the consent banner and browser privacy signals", () => {
     await expect(banner(page).locator("idg-button")).toHaveCount(0);
     await trackAndFlush(page);
     expect(collected).toHaveLength(0);
-    expect(await consentState(page)).toEqual({ state: "denied", reason: "gpc" });
+    expect(await consentState(page)).toMatchObject({ state: "denied", reason: "gpc" });
   });
 
   test("says in one polite line that the signal is respected when asked to", async ({ page }) => {
@@ -115,7 +115,7 @@ test.describe("the consent banner and browser privacy signals", () => {
     await expect(banner(page).locator('[part="signal-note"]')).toContainText("Do Not Track");
     await trackAndFlush(page);
     expect(collected).toHaveLength(0);
-    expect(await consentState(page)).toEqual({ state: "denied", reason: "dnt" });
+    expect(await consentState(page)).toMatchObject({ state: "denied", reason: "dnt" });
   });
 
   test("the preferences name the signal, keep analytics off and cannot grant", async ({ page }) => {
@@ -127,7 +127,7 @@ test.describe("the consent banner and browser privacy signals", () => {
       "Global Privacy Control",
     );
     await inlinePanel(page).locator("idg-button.save button").click();
-    expect(await consentState(page)).toEqual({ state: "denied", reason: "gpc" });
+    expect(await consentState(page)).toMatchObject({ state: "denied", reason: "gpc" });
     await trackAndFlush(page);
     expect(collected).toHaveLength(0);
   });
@@ -158,7 +158,7 @@ test.describe("the consent banner by keyboard", () => {
     await page.keyboard.press("Enter");
     await expect(bannerRegion(page)).toHaveCount(0);
     expect(await activeName(page)).toBe("Open menu");
-    expect(await consentState(page)).toEqual({ state: "denied" });
+    expect(await consentState(page)).toMatchObject({ state: "denied" });
   });
 
   test("focus goes to the main landmark when nothing had it before, and stays on the page", async ({
@@ -196,7 +196,7 @@ test.describe("the consent banner and the preferences", () => {
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     expect(await activeName(page)).toBe("Choose");
-    expect(await consentState(page)).toEqual({ state: "unknown" });
+    expect(await consentState(page)).toMatchObject({ state: "unknown" });
   });
 
   test("nothing changes until Save, and Save grants what the switch says", async ({ page }) => {
@@ -204,23 +204,30 @@ test.describe("the consent banner and the preferences", () => {
     const analytics = switchIn(inlinePanel(page), "analytics");
     await expect(analytics).not.toBeChecked();
     await analytics.check();
-    expect(await consentState(page)).toEqual({ state: "unknown" });
+    expect(await consentState(page)).toMatchObject({ state: "unknown" });
     await trackAndFlush(page);
     expect(collected).toHaveLength(0);
     await inlinePanel(page).locator("idg-button.save button").click();
-    expect(await consentState(page)).toEqual({ state: "granted" });
+    expect(await consentState(page)).toMatchObject({ state: "granted" });
     await expect(bannerRegion(page)).toHaveCount(0);
     await expect(inlinePanel(page).locator('[part="status"]')).toHaveText(
       "Preferences saved. Analytics are on.",
     );
   });
 
-  test("Necessary is always on and disabled, with its explanation shown", async ({ page }) => {
+  test("Necessary is a plain always-on row, with no control, and its explanation shown", async ({
+    page,
+  }) => {
     await openConsent(page);
-    const necessary = switchIn(inlinePanel(page), "necessary");
-    await expect(necessary).toBeChecked();
-    await expect(necessary).toBeDisabled();
-    await expect(inlinePanel(page).locator(".necessary-description")).toContainText("not tracked");
+    const panel = inlinePanel(page);
+    await expect(panel.locator(".necessary-state")).toHaveText("Always on");
+    await expect(panel.locator(".necessary-description")).toContainText("not tracked");
+    await expect(panel.locator("idg-switch.necessary")).toHaveCount(0);
+    const colours = await panel.locator(".necessary-state").evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { opacity: style.opacity, colour: style.color };
+    });
+    expect(colours.opacity).toBe("1");
   });
 
   test("Withdraw consent and erase asks inline first, then forgets everything", async ({
@@ -235,9 +242,9 @@ test.describe("the consent banner and the preferences", () => {
     await inlinePanel(page).locator("idg-button.erase button").click();
     await expect(inlinePanel(page).locator('[part="confirm"]')).toBeVisible();
     expect(await activeName(page)).toBe("Keep my choice");
-    expect(await consentState(page)).toEqual({ state: "granted" });
+    expect(await consentState(page)).toMatchObject({ state: "granted" });
     await inlinePanel(page).locator("idg-button.confirm-yes button").click();
-    expect(await consentState(page)).toEqual({ state: "unknown" });
+    expect(await consentState(page)).toMatchObject({ state: "unknown" });
     expect(await storedConsent(page)).toBeNull();
     await expect(bannerRegion(page)).toBeVisible();
     expect(nativeDialogs).toBe(0);
@@ -325,23 +332,65 @@ test.describe("the consent banner stays out of the way", () => {
     expect(padding).toBe("");
   });
 
-  test("a top bar sticks to the top and reserves scroll padding there", async ({ page }) => {
+  test("a top bar sits in the page's flow at the top, scrolls away and reserves nothing", async ({
+    page,
+  }) => {
     await openConsent(page);
-    // A bar at the top sticks there from the start of the body, as one at the bottom does from the end.
     await banner(page).evaluate((element) => {
       document.body.prepend(element);
       element.setAttribute("placement", "top");
     });
+    await expect
+      .poll(() => banner(page).evaluate((e) => getComputedStyle(e).position))
+      .toBe("static");
     await page.evaluate(() => {
-      window.scrollTo(0, 300);
+      window.scrollTo(0, 400);
     });
     const box = await bannerRegion(page).boundingBox();
     if (!box) throw new Error("the banner is not laid out");
-    expect(Math.abs(box.y)).toBeLessThan(1.5);
-    const padding = await page.evaluate(
-      () => getComputedStyle(document.documentElement).scrollPaddingBlockStart,
+    expect(box.y + box.height).toBeLessThan(0);
+    const padding = await page.evaluate(() => {
+      const style = getComputedStyle(document.documentElement);
+      return [style.scrollPaddingBlockStart, style.scrollPaddingBlockEnd];
+    });
+    expect(padding.map((value) => Number.parseFloat(value) || 0)).toEqual([0, 0]);
+  });
+
+  test("a bottom bar adds to the scroll padding a stylesheet gives the page, and gives it back", async ({
+    page,
+  }) => {
+    await openConsent(page, { query: "?stylesheet-padding" });
+    const bar = (await bannerRegion(page).boundingBox())?.height ?? 0;
+    const padding = () =>
+      page.evaluate(() =>
+        Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingBlockEnd),
+      );
+    expect(Math.abs((await padding()) - (30 + bar))).toBeLessThan(1.5);
+    await page.setViewportSize({ width: 500, height: 700 });
+    await expect
+      .poll(async () =>
+        Math.abs(
+          (await padding()) - (30 + ((await bannerRegion(page).boundingBox())?.height ?? 0)),
+        ),
+      )
+      .toBeLessThan(1.5);
+    await bannerButton(page, "decline").click();
+    await expect(bannerRegion(page)).toHaveCount(0);
+    expect(await padding()).toBe(30);
+  });
+
+  test("a bottom bar adds to an inline scroll padding too", async ({ page }) => {
+    await openConsent(page, { query: "?inline-padding" });
+    const bar = (await bannerRegion(page).boundingBox())?.height ?? 0;
+    const padding = await page.evaluate(() =>
+      Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingBlockEnd),
     );
-    expect(Number.parseFloat(padding)).toBeGreaterThan(0);
+    expect(Math.abs(padding - (12 + bar))).toBeLessThan(1.5);
+    await bannerButton(page, "decline").click();
+    await expect(bannerRegion(page)).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.style.scrollPaddingBlockEnd)).toBe(
+      "12px",
+    );
   });
 
   test("an inline banner is in the page's flow and reserves nothing", async ({ page }) => {
@@ -380,5 +429,77 @@ test.describe("the consent banner stays out of the way", () => {
     await expect(bannerRegion(page)).toHaveCount(0);
     const padding = await page.evaluate(() => document.documentElement.style.scrollPaddingBlockEnd);
     expect(padding).toBe("");
+  });
+});
+
+test.describe("focus is never dropped on the body", () => {
+  const onPage = (page: import("@playwright/test").Page) =>
+    page.evaluate(() => {
+      let element: Element | null = document.activeElement;
+      while (element?.shadowRoot?.activeElement) element = element.shadowRoot.activeElement;
+      return element !== null && element !== document.body && element !== document.documentElement;
+    });
+
+  test("Save in the modal preferences opened from Choose, whose opener goes with the banner", async ({
+    page,
+  }) => {
+    await openConsent(page);
+    await page.locator("#before").focus();
+    await bannerButton(page, "choose").focus();
+    await page.keyboard.press("Enter");
+    await expect(modalPanel(page).locator("idg-dialog dialog")).toBeVisible();
+    await switchIn(modalPanel(page), "analytics").check();
+    await modalPanel(page).locator("idg-button.save button").click();
+    await expect(modalPanel(page).locator("idg-dialog dialog")).toBeHidden();
+    await expect(bannerRegion(page)).toHaveCount(0);
+    await expect.poll(() => onPage(page)).toBe(true);
+    expect(await consentState(page)).toMatchObject({ state: "granted" });
+  });
+
+  test("Save in a panel that sits in the banner's own slot", async ({ page }) => {
+    await openConsent(page);
+    await page.evaluate(() => {
+      const panel = document.createElement("idg-consent-preferences");
+      panel.setAttribute("slot", "preferences");
+      (panel as unknown as { consent: unknown }).consent = (
+        window as unknown as { consentFixture: { tracker: { consent: unknown } } }
+      ).consentFixture.tracker.consent;
+      document.getElementById("banner")?.append(panel);
+    });
+    await page.locator("#before").focus();
+    await bannerButton(page, "choose").click();
+    const slotted = banner(page).locator("idg-consent-preferences");
+    await expect(slotted.locator("idg-button.save button")).toBeVisible();
+    await slotted.locator("idg-button.save button").click();
+    await expect(bannerRegion(page)).toHaveCount(0);
+    await expect.poll(() => onPage(page)).toBe(true);
+  });
+
+  test("the choice changes elsewhere while the erase confirmation has focus", async ({ page }) => {
+    await openConsent(page, { query: "?granted" });
+    await inlinePanel(page).locator("idg-button.erase button").click();
+    await expect(inlinePanel(page).locator("idg-button.confirm-no button")).toBeFocused();
+    await page.evaluate(() => {
+      (
+        window as unknown as { consentFixture: { tracker: { consent: { deny: () => boolean } } } }
+      ).consentFixture.tracker.consent.deny();
+    });
+    await expect(inlinePanel(page).locator('[part="confirm"]')).toHaveCount(0);
+    await expect.poll(() => activeName(page)).toBe("Withdraw consent and erase");
+    await expect(inlinePanel(page).locator('[part="status"]')).toContainText("changed elsewhere");
+  });
+});
+
+test.describe("a double press", () => {
+  test("on Accept analytics grants once, tells the page once and announces once", async ({
+    page,
+  }) => {
+    await openConsent(page);
+    await bannerButton(page, "accept").dblclick();
+    await expect(bannerRegion(page)).toHaveCount(0);
+    expect(await recordedEvents(page)).toEqual([
+      { type: "idgConsentChange", detail: { state: "granted" } },
+    ]);
+    await expect(banner(page).locator('[part="status"]')).toContainText("Analytics are on");
   });
 });
