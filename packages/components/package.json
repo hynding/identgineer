@@ -37,6 +37,7 @@
     "@identgineer/brand": "workspace:*",
     "@identgineer/identity": "workspace:*",
     "@identgineer/tokens": "workspace:*",
+    "@identgineer/tracking": "workspace:*",
     "@playwright/test": "1.63.0",
     "@stencil/vitest": "1.16.2",
     "typescript": "6.0.3"
