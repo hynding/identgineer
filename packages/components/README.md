@@ -34,6 +34,7 @@ to be classified:
 | `idg-radio`      | checked dot                                      | `accent-indicator`                        | indicator  |
 | `idg-switch`     | track and thumb when on                          | `accent-indicator`, `on-accent-indicator` | indicator  |
 | `idg-progress`   | fill and indeterminate band                      | `accent-indicator`                        | indicator  |
+| `idg-sparkline`  | line, end mark and fill                          | `accent-indicator`                        | indicator  |
 | `idg-pagination` | current page and its number                      | `accent-indicator`, `on-accent-indicator` | indicator  |
 | `idg-tab`        | selected tab marker                              | `accent-indicator`                        | indicator  |
 | `idg-card`       | outlined interactive card, hovered ring          | `accent-indicator`                        | indicator  |
@@ -290,6 +291,15 @@ same as native HTML, works in plain HTML and in any framework, and needs no data
 attribute. Anything that is not an option or optgroup is ignored. The trigger is styled and the popup
 is the browser's native one. A placeholder is an `<option value="">`.
 
+The options are copied only when the slotted ones differ from the last copy (compared as text), so
+a render for another reason, such as `invalid` or `disabled` changing or a new value, leaves the
+native options, and a choice being made among them, alone. A `value` that matches no option is kept
+only while there are no options at all (a list that arrives later, which the mirror applies when its
+option arrives). Once there are options, a value that matches none gives way to the option shown,
+so the value, the submitted form value and the option shown always agree. The validity follows the
+value that is chosen after the options are copied, including when it was set from script; a
+disabled select is not validated, as a native one is not.
+
 ### `idg-checkbox` and `idg-switch`
 
 Props `name`, `value` (submitted while on, default `on`), `checked`, `required`, `disabled`,
@@ -493,7 +503,9 @@ is a pill with an arrow or minus icon. Direction is what the figure did and sent
 good, so a rising churn rate is `direction="up" sentiment="negative"`; sentiment defaults from the
 direction. The visible change is hidden from assistive technology and replaced by spoken text such as
 "Increased by 12.4%"; `up-label`, `down-label` and `flat-label` change the words. Slot `chart`
-holds something like a sparkline beside the figures. Parts: `label`, `value`, `delta`. Labels sit
+holds something like a sparkline beside the figures. `period` (text such as `vs the 7 days before`)
+is shown beside the change, and spoken with it ("Increased by 12.4%, vs the 7 days before"); it is
+drawn only with a change. Parts: `label`, `value`, `delta`, `period`. Labels sit
 on the surface's normal text colour, so use `idg-stat` on `plain`, `raised` or `outlined` cards.
 
 ### `idg-divider`
@@ -794,7 +806,7 @@ stylesheet in the `idg.components` layer, built from the `--idg-*` tokens, is ad
 document or shadow root the table is in; no inline styles are used, so the strict CSP holds.
 
 Props: `label`, `stickyHeader` (`sticky-header`), `striped`, `maxHeight` (`max-height`), `minWidth`
-(`min-width`), `sortKey`, `sortDirection`, `manualSort`, `sortStatus` (the live-region text pattern, with `{column}` and `{direction}`), `sortAscendingLabel`
+(`min-width`), `sortKey`, `sortDirection`, `manualSort`, `busy`, `sortStatus` (the live-region text pattern, with `{column}` and `{direction}`), `sortAscendingLabel`
 and `sortDescendingLabel` (the words for `{direction}`, default "ascending" and "descending"; set
 them with `sortStatus` to translate the announcement).
 Event `idgSort` (`{ key, direction }`); parts `scroller`, `status`.
@@ -806,7 +818,10 @@ Event `idgSort` (`{ key, direction }`); parts `scroller`, `status`.
   unless it reads as a plain number) or dates written as words.
 - **Spanning cells.** A table whose body has a cell with `rowspan` or `colspan` is not sortable: no
   sort buttons are drawn and `sortKey` does nothing, since moving its rows would break it. With
-  `manual-sort` the table moves no rows, only reports `idgSort` and marks the column, so the buttons
+  `manual-sort` the table moves no rows and a press only reports `idgSort` with the sort it asks for:
+  the column marked and the sort announced are the ones the owner sets in `sortKey` and
+  `sortDirection`, so a header never shows an order the rows are not in. `busy` marks the buttons
+  `aria-disabled` and swallows presses while the owner loads. The buttons
   stay and the page may swap the body, for a loading row for instance. Focus on a button that is
   taken away goes to its header cell.
 - **Nested tables.** A table nested in a cell, whether another `idg-table` or a plain `<table>`, is
@@ -820,6 +835,9 @@ Page navigation. Props: `page` (1-based, mutable), `pageCount`, `siblings` (defa
 `boundaries` (default 1), `hrefTemplate` (`href-template`, with `{page}`), `label`, `previousLabel`,
 `nextLabel`, `pageLabel`. Event `idgPageChange` (`{ page }`, cancelable); parts `nav`, `list`, `page`,
 `previous`, `next`.
+
+A `pageCount` above ten million is held to it, and `siblings` and `boundaries` to ten, so the
+list never has more slots or longer numbers than a narrow page holds.
 
 The list keeps a constant number of slots so it does not jump as the page changes. Without
 `hrefTemplate` the controls are buttons; with it they are links, through `safeUrl`, and a template
@@ -1385,6 +1403,61 @@ and is said politely (part `status`). Props `consent`, `labels` (`ConsentPrefere
 here). Parts `panel`, `heading`, `categories`, `necessary`, `analytics`, `signal`, `decided`,
 `changed`, `error`, `actions`, `save`, `erase`, `confirm`, `status`.
 
+## Dashboard
+
+Four elements draw a dashboard of tracked events: `idg-property-picker`, `idg-stat` (above) with
+`idg-sparkline` in its `chart` slot, and `idg-event-table`. They are presentational: they take
+their data as properties, never fetch and store nothing. The page asks a `DashboardSource`
+(`src/dashboard/dashboard-types.ts`: `listProperties()`, `listEvents(propertyId, { page, pageSize,
+sort })` and `summary(propertyId, range)`) and hands the answers over. That interface is the typed
+seam the server task implements over the authenticated API; **ownership is the source's to
+enforce**, and a property the user does not own is answered exactly as one that does not exist
+(`DashboardError` `not-found`). `validatedSource(source)` wraps any source so that every request
+and answer is checked against the contract (`parseTrackedProperties`, `parseTrackedEvents`,
+`parseEventPage`, `parseStatSummary` are exported) and a failure that is not a `DashboardError` becomes one (`unavailable`, without its message).
+`src/testing/fake-dashboard-source.ts` is a fake that enforces the same ownership rule; it is not
+part of `dist`.
+
+Everything in an event or property is untrusted text. The elements draw it as text only (no
+`innerHTML`, no value ever becomes a link or style), replace control, bidirectional, invisible and
+lone-surrogate characters with a visible mark, isolate it in `<bdi>`, and cut it to a fixed length.
+
+Guides: [plain HTML](../../docs/dashboard/plain-html.md), [React](../../docs/dashboard/react.md),
+[Vue](../../docs/dashboard/vue.md), [Angular](../../docs/dashboard/angular.md), and
+[what the source must enforce and how text is treated](../../docs/dashboard/rules.md).
+
+### `idg-property-picker`
+
+A form-associated select of the user's properties, in an `idg-field`. Props `name`, `properties`
+(`TrackedProperty[]`; malformed or repeated records are dropped), `value` (the chosen id; an id
+that is not in the list selects nothing), `label`, `labels` (`PropertyPickerLabels`: `label`,
+`placeholder`, `loading`, `empty`), `loading`, `disabled`. A disabled prompt option is always first.
+Each option reads `name · host`. Event `idgChange` (`{ value }`). Method `setFocus()`. Parts
+`field`, `select`, `status`.
+
+### `idg-sparkline`
+
+A small line of a series, as one image. Props `values` (numbers, or a string of comma-separated
+numbers; non-finite values are dropped and a long series is thinned to at most 120 points that
+keep its extremes), `label`, `area` (fill under the line) and `labels` (`SparklineLabels`). Its
+accessible name is the label and a sentence: first, last, lowest, highest and the trend. It draws
+with the `accent-indicator` role, never animates and is `--idg-size-xs` wide by default (never wider than its container). Parts `chart`, `area`, `line`, `end`.
+
+### `idg-event-table`
+
+A table of events in an `idg-table`, with a status region and an `idg-pagination`. Props `events`
+(`TrackedEvent[]`), `caption`, `loading`, `error`, `page` (from 1), `pageSize` (default 10, at most
+100), `total` (server mode: events are drawn as given, with no sorting or paging of their own),
+`sortable`, `sortKey` (`time` or `name`), `sortDirection`, `timeZone` (an IANA zone) and `labels`
+(`EventTableLabels`). Without `total` the table sorts and pages the events it has. The time is shown
+with its zone name. `page` follows the pages there are (a page past the last becomes the last, with
+no event; nothing changes while `loading`, on error or before events are given). While `loading`
+after rows were shown, the table and pager stay (dimmed, `aria-busy`, presses ignored) so focus
+stays; a first load is a skeleton, and an error replaces the rows and takes focus. Events
+`idgPageChange` (`{ page }`, cancelable) and `idgSort` (`{ key, direction }`). Columns are Event
+(the row header), Time (a `<time>`), Path and Properties (at most ten, then "+N more"). Parts
+`group`, `caption`, `table`, `status`, `pagination`.
+
 ## Strict CSP and Trusted Types
 
 Every component is verified in Chromium against
@@ -1493,6 +1566,15 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   scroll padding, axe across every axis, equal prominence of Accept and Decline as numbers (same
   variant, same computed look, size within a pixel) in every design, right to left, forced
   colours, reduced motion, and 200% text at 320px in every UX mode.
+- **The dashboard fixture.** `dashboard.html` wires the picker, stats, sparklines and event table to
+  the fake source, built into `www/dashboard-sdk/` by the same step as the other SDK fixtures
+  (never part of `dist`). `?hostile` adds a property whose strings are hostile, `?none` has no
+  properties, `?hold` keeps every answer back until the test releases it, `?fail-events` and
+  `?fail-properties` make the first call fail, `?events=N`, `?page-size=N`, `?property=ID`, `?lang=`
+  and `?dir=` set the data and the page. The dashboard browser tests (`dashboard*.browser.ts`)
+  cover ownership at the source, stale answers, hostile text, keyboard and focus,
+  axe across every axis, right to left, forced colours, reduced motion, and 200% text at 320px in
+  every UX mode.
 - `src/testing/` holds spec helpers (a recording `ElementInternals`, since the mock DOM has none) and
   is excluded from the Stencil build.
 - `tsconfig.json` is the strict config for tooling and editors. `tsconfig.build.json` is the one

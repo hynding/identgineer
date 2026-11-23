@@ -11,8 +11,10 @@
 }
 
 /* The scroll area is the table's surface, in the design's own border, radius, fill and elevation,
-   so a wide table scrolls inside its frame and never widens the page. */
+   so a wide table scrolls inside its frame and never widens the page. It is positioned so that
+   visually hidden text in a cell is held by this frame too, not by the host around it. */
 .scroller {
+  position: relative;
   box-sizing: border-box;
   max-inline-size: 100%;
   max-block-size: var(--_max-height, none);

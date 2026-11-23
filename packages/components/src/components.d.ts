@@ -22,13 +22,15 @@ import { ConsentPreferencesLabels } from "./components/consent-preferences/conse
 import { CoverHeight } from "./components/cover/cover-options";
 import { DialogCancelDetail, DialogCloseDetail, DialogOpenDetail, DialogSize } from "./components/dialog/dialog-options";
 import { DividerOrientation } from "./components/divider/divider-options";
+import { EventSort, EventSortDirection, EventSortKey, TrackedEvent, TrackedProperty } from "./dashboard/dashboard-types";
+import { EventTableLabels } from "./components/event-table/event-table-labels";
+import { PageChangeDetail } from "./components/pagination/pagination-options";
 import { IconName } from "./components/icon/icon-paths";
 import { IconSize } from "./components/icon/icon-options";
 import { InputSize, InputType } from "./components/input/input-options";
 import { NavigationToggleDetail } from "./components/layout/layout-options";
 import { Placement } from "./utils/position";
 import { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
-import { PageChangeDetail } from "./components/pagination/pagination-options";
 import { PasswordResetClient, ProfileClient, RegisterClient, SessionGuardClient, SignInClient, UserMenuClient } from "./identity/identity-types";
 import { PasswordResetMode } from "./components/password-reset/password-reset-options";
 import { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
@@ -37,6 +39,7 @@ import { SignedInDetail, SignedOutDetail } from "./identity/event-details";
 import { ProfileLabels } from "./components/profile/profile-labels";
 import { ProfileSavedDetail, SessionRevokedDetail } from "./components/profile/profile-types";
 import { ProgressSize } from "./components/progress/progress-options";
+import { PropertyPickerLabels } from "./components/property-picker/property-picker-labels";
 import { RadioSelectDetail } from "./components/radio/radio";
 import { RegisterLabels } from "./components/register/register-labels";
 import { RegisteredDetail } from "./components/register/register-types";
@@ -46,6 +49,7 @@ import { SidebarSide } from "./components/sidebar/sidebar-options";
 import { SignInLabels } from "./components/sign-in/sign-in-labels";
 import { ProviderSignInDetail, SignInProvider } from "./components/sign-in/sign-in-types";
 import { SkeletonVariant } from "./components/skeleton/skeleton-options";
+import { SparklineLabels } from "./components/sparkline/sparkline-labels";
 import { StackAlignment } from "./components/stack/stack-options";
 import { StatDirection, StatSentiment } from "./components/stat/stat-options";
 import { TabsActivation, TabsOrientation } from "./components/tabs/tabs-options";
@@ -73,13 +77,15 @@ export { ConsentPreferencesLabels } from "./components/consent-preferences/conse
 export { CoverHeight } from "./components/cover/cover-options";
 export { DialogCancelDetail, DialogCloseDetail, DialogOpenDetail, DialogSize } from "./components/dialog/dialog-options";
 export { DividerOrientation } from "./components/divider/divider-options";
+export { EventSort, EventSortDirection, EventSortKey, TrackedEvent, TrackedProperty } from "./dashboard/dashboard-types";
+export { EventTableLabels } from "./components/event-table/event-table-labels";
+export { PageChangeDetail } from "./components/pagination/pagination-options";
 export { IconName } from "./components/icon/icon-paths";
 export { IconSize } from "./components/icon/icon-options";
 export { InputSize, InputType } from "./components/input/input-options";
 export { NavigationToggleDetail } from "./components/layout/layout-options";
 export { Placement } from "./utils/position";
 export { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
-export { PageChangeDetail } from "./components/pagination/pagination-options";
 export { PasswordResetClient, ProfileClient, RegisterClient, SessionGuardClient, SignInClient, UserMenuClient } from "./identity/identity-types";
 export { PasswordResetMode } from "./components/password-reset/password-reset-options";
 export { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
@@ -88,6 +94,7 @@ export { SignedInDetail, SignedOutDetail } from "./identity/event-details";
 export { ProfileLabels } from "./components/profile/profile-labels";
 export { ProfileSavedDetail, SessionRevokedDetail } from "./components/profile/profile-types";
 export { ProgressSize } from "./components/progress/progress-options";
+export { PropertyPickerLabels } from "./components/property-picker/property-picker-labels";
 export { RadioSelectDetail } from "./components/radio/radio";
 export { RegisterLabels } from "./components/register/register-labels";
 export { RegisteredDetail } from "./components/register/register-types";
@@ -97,6 +104,7 @@ export { SidebarSide } from "./components/sidebar/sidebar-options";
 export { SignInLabels } from "./components/sign-in/sign-in-labels";
 export { ProviderSignInDetail, SignInProvider } from "./components/sign-in/sign-in-types";
 export { SkeletonVariant } from "./components/skeleton/skeleton-options";
+export { SparklineLabels } from "./components/sparkline/sparkline-labels";
 export { StackAlignment } from "./components/stack/stack-options";
 export { StatDirection, StatSentiment } from "./components/stat/stat-options";
 export { TabsActivation, TabsOrientation } from "./components/tabs/tabs-options";
@@ -680,6 +688,76 @@ export namespace Components {
         "orientation": DividerOrientation;
     }
     /**
+     * A table of tracked events: the event, when it happened, the path and its properties, with
+     * paging and optional sorting by time or name. It takes its data through properties and never
+     * fetches.
+     * Every value is untrusted text from the public internet. It is drawn as text and nothing else: no
+     * markup is read, no link or address is made from it, control and bidirectional characters are
+     * replaced by a visible mark, each value is isolated in a `<bdi>` so right to left text cannot
+     * reorder what is beside it, long values wrap and are cut to a limit, and an event shows at most
+     * ten properties. Records that are malformed are left out.
+     * With `events` as the whole list, the table sorts and pages it. With `total` set, `events` is the
+     * one page the server answered with: the table draws it as it is and only reports `idgPageChange`
+     * and `idgSort` for the page to fetch with. Either way it draws at most `pageSize` rows (to 100).
+     * The state that matters is said politely: loading, an error, no events, and which events are shown.
+     */
+    interface IdgEventTable {
+        /**
+          * The accessible name of the table, drawn as its caption. Required.
+         */
+        "caption"?: string;
+        /**
+          * The message of an error that stopped the events loading. Drawn in an alert, as text.
+         */
+        "error"?: string;
+        /**
+          * The events: `{ id, name, occurredAt, path?, properties? }`. Malformed records are left out.
+         */
+        "events"?: TrackedEvent[];
+        /**
+          * The words of the table, merged over the English defaults.
+         */
+        "labels"?: Partial<EventTableLabels>;
+        /**
+          * Draws a skeleton and says the events are loading.
+          * @default false
+         */
+        "loading": boolean;
+        /**
+          * The current page, from 1. A page beyond the last is drawn as the last.
+          * @default 1
+         */
+        "page": number;
+        /**
+          * Rows on a page, 1 to 100.
+          * @default 10
+         */
+        "pageSize": number;
+        /**
+          * The direction of the sort.
+          * @default "ascending"
+         */
+        "sortDirection": EventSortDirection;
+        /**
+          * The column the rows are sorted by: `time` or `name`. Empty leaves the order given.
+          * @default ""
+         */
+        "sortKey": EventSortKey | "";
+        /**
+          * Makes the Event and Time headers sort buttons.
+          * @default false
+         */
+        "sortable": boolean;
+        /**
+          * The IANA time zone times are shown in, such as `UTC`. The reader's own by default.
+         */
+        "timeZone"?: string;
+        /**
+          * How many events there are in all. Set it when `events` is one page the server answered with: the table then draws `events` as it is, and neither sorts nor pages it.
+         */
+        "total"?: number;
+    }
+    /**
      * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
      * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
      * reference cannot cross a shadow boundary, so their text is handed to the control as properties
@@ -1043,7 +1121,7 @@ export namespace Components {
          */
         "page": number;
         /**
-          * How many pages there are.
+          * How many pages there are, up to ten million: more is held to that.
           * @default 1
          */
         "pageCount": number;
@@ -1194,6 +1272,48 @@ export namespace Components {
           * How much is done. Without it the progress is indeterminate.
          */
         "value"?: number;
+    }
+    /**
+     * Lets a signed-in user choose which tracked property (site) the dashboard shows. It is a labelled
+     * `idg-select` that lists the `properties` it is given and reports the chosen id with `idgChange`.
+     * It is form associated: with a `name` it submits the chosen id.
+     * Property names are text the user typed: they are shown as text only, with control and
+     * bidirectional characters replaced and long names cut. A `value` that is not one of the
+     * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
+     * property appears in the list later, and is never replaced by the first property.
+     */
+    interface IdgPropertyPicker {
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * The visible label and the accessible name.
+         */
+        "label"?: string;
+        /**
+          * The words of the picker, merged over the English defaults.
+         */
+        "labels"?: Partial<PropertyPickerLabels>;
+        /**
+          * While the properties load: disabled, busy, and said politely.
+          * @default false
+         */
+        "loading": boolean;
+        "name"?: string;
+        /**
+          * The properties to choose from: `{ id, name, origin? }`. Records that are malformed or repeat an id are left out.
+         */
+        "properties"?: TrackedProperty[];
+        /**
+          * Focuses the select.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * The id of the chosen property. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value": string;
     }
     /**
      * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
@@ -1459,6 +1579,35 @@ export namespace Components {
         "variant": SkeletonVariant;
     }
     /**
+     * A small trend line drawn as SVG from a series of numbers, for beside a figure. It scales to the
+     * width of its container (set one with the page's own CSS, `idg-sparkline { inline-size: 8rem }`),
+     * keeps its proportions, and never animates. It is an image with a text alternative: the label
+     * you give it and a sentence with the first, last, lowest and highest value and which way the
+     * series went, formatted in the language of the page. Time runs left to right in every
+     * writing direction.
+     * Anything in `values` that is not a finite number is left out, never drawn as zero. A series
+     * longer than 120 points is thinned for drawing, keeping its first, last, lowest and highest.
+     */
+    interface IdgSparkline {
+        /**
+          * Fills the area under the line.
+          * @default false
+         */
+        "area": boolean;
+        /**
+          * What the series measures, such as `Visitors`. It is the accessible name, so give it one.
+         */
+        "label"?: string;
+        /**
+          * The words of the text alternative, merged over the English defaults.
+         */
+        "labels"?: Partial<SparklineLabels>;
+        /**
+          * The series: an array of numbers, or, from an attribute, a JSON array or numbers separated by commas. A text longer than 200,000 characters is read as far as there.
+         */
+        "values"?: number[] | string;
+    }
+    /**
      * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
      * and the source order stays the reading order.
      */
@@ -1500,6 +1649,10 @@ export namespace Components {
           * What the figure measures.
          */
         "label"?: string;
+        /**
+          * What the change is measured against, such as `vs previous 7 days`. It is seen beside the change and spoken with it, since a change with no basis is ambiguous. Without a change it is not shown.
+         */
+        "period"?: string;
         /**
           * Whether the change is good, for the colour. Defaults from the direction, so set it where a rise is bad, such as a churn rate.
          */
@@ -1644,11 +1797,16 @@ export namespace Components {
      */
     interface IdgTable {
         /**
+          * Whether the owner of the rows is busy, such as while it fetches a sorted page. The sort buttons are marked `aria-disabled` and presses on them do nothing and say nothing.
+          * @default false
+         */
+        "busy": boolean;
+        /**
           * The scroll region's accessible name, when the table is wider than the page. The caption is used without it.
          */
         "label"?: string;
         /**
-          * Only marks the sorted column and reports the sort. Use it when you sort the rows yourself, such as on a server.
+          * For when you sort the rows yourself, such as on a server. A press only reports `idgSort` with the sort it asks for; the sort that is marked and announced is the one you set in `sortKey` and `sortDirection`, so a header never shows an order the rows are not in.
           * @default false
          */
         "manualSort": boolean;
@@ -1983,6 +2141,10 @@ export interface IdgDialogCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgDialogElement;
 }
+export interface IdgEventTableCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgEventTableElement;
+}
 export interface IdgInputCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgInputElement;
@@ -2010,6 +2172,10 @@ export interface IdgPopoverCustomEvent<T> extends CustomEvent<T> {
 export interface IdgProfileCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgProfileElement;
+}
+export interface IdgPropertyPickerCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgPropertyPickerElement;
 }
 export interface IdgRadioCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -2324,6 +2490,38 @@ declare global {
         prototype: HTMLIdgDividerElement;
         new (): HTMLIdgDividerElement;
     };
+    interface HTMLIdgEventTableElementEventMap {
+        "idgPageChange": PageChangeDetail;
+        "idgSort": EventSort;
+    }
+    /**
+     * A table of tracked events: the event, when it happened, the path and its properties, with
+     * paging and optional sorting by time or name. It takes its data through properties and never
+     * fetches.
+     * Every value is untrusted text from the public internet. It is drawn as text and nothing else: no
+     * markup is read, no link or address is made from it, control and bidirectional characters are
+     * replaced by a visible mark, each value is isolated in a `<bdi>` so right to left text cannot
+     * reorder what is beside it, long values wrap and are cut to a limit, and an event shows at most
+     * ten properties. Records that are malformed are left out.
+     * With `events` as the whole list, the table sorts and pages it. With `total` set, `events` is the
+     * one page the server answered with: the table draws it as it is and only reports `idgPageChange`
+     * and `idgSort` for the page to fetch with. Either way it draws at most `pageSize` rows (to 100).
+     * The state that matters is said politely: loading, an error, no events, and which events are shown.
+     */
+    interface HTMLIdgEventTableElement extends Components.IdgEventTable, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgEventTableElementEventMap>(type: K, listener: (this: HTMLIdgEventTableElement, ev: IdgEventTableCustomEvent<HTMLIdgEventTableElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgEventTableElementEventMap>(type: K, listener: (this: HTMLIdgEventTableElement, ev: IdgEventTableCustomEvent<HTMLIdgEventTableElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgEventTableElement: {
+        prototype: HTMLIdgEventTableElement;
+        new (): HTMLIdgEventTableElement;
+    };
     /**
      * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
      * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
@@ -2580,6 +2778,32 @@ declare global {
         prototype: HTMLIdgProgressElement;
         new (): HTMLIdgProgressElement;
     };
+    interface HTMLIdgPropertyPickerElementEventMap {
+        "idgChange": ValueDetail;
+    }
+    /**
+     * Lets a signed-in user choose which tracked property (site) the dashboard shows. It is a labelled
+     * `idg-select` that lists the `properties` it is given and reports the chosen id with `idgChange`.
+     * It is form associated: with a `name` it submits the chosen id.
+     * Property names are text the user typed: they are shown as text only, with control and
+     * bidirectional characters replaced and long names cut. A `value` that is not one of the
+     * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
+     * property appears in the list later, and is never replaced by the first property.
+     */
+    interface HTMLIdgPropertyPickerElement extends Components.IdgPropertyPicker, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgPropertyPickerElementEventMap>(type: K, listener: (this: HTMLIdgPropertyPickerElement, ev: IdgPropertyPickerCustomEvent<HTMLIdgPropertyPickerElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgPropertyPickerElementEventMap>(type: K, listener: (this: HTMLIdgPropertyPickerElement, ev: IdgPropertyPickerCustomEvent<HTMLIdgPropertyPickerElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgPropertyPickerElement: {
+        prototype: HTMLIdgPropertyPickerElement;
+        new (): HTMLIdgPropertyPickerElement;
+    };
     interface HTMLIdgRadioElementEventMap {
         "idgSelect": RadioSelectDetail;
     }
@@ -2751,6 +2975,22 @@ declare global {
     var HTMLIdgSkeletonElement: {
         prototype: HTMLIdgSkeletonElement;
         new (): HTMLIdgSkeletonElement;
+    };
+    /**
+     * A small trend line drawn as SVG from a series of numbers, for beside a figure. It scales to the
+     * width of its container (set one with the page's own CSS, `idg-sparkline { inline-size: 8rem }`),
+     * keeps its proportions, and never animates. It is an image with a text alternative: the label
+     * you give it and a sentence with the first, last, lowest and highest value and which way the
+     * series went, formatted in the language of the page. Time runs left to right in every
+     * writing direction.
+     * Anything in `values` that is not a finite number is left out, never drawn as zero. A series
+     * longer than 120 points is thinned for drawing, keeping its first, last, lowest and highest.
+     */
+    interface HTMLIdgSparklineElement extends Components.IdgSparkline, HTMLStencilElement {
+    }
+    var HTMLIdgSparklineElement: {
+        prototype: HTMLIdgSparklineElement;
+        new (): HTMLIdgSparklineElement;
     };
     /**
      * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
@@ -3014,6 +3254,7 @@ declare global {
         "idg-cover": HTMLIdgCoverElement;
         "idg-dialog": HTMLIdgDialogElement;
         "idg-divider": HTMLIdgDividerElement;
+        "idg-event-table": HTMLIdgEventTableElement;
         "idg-field": HTMLIdgFieldElement;
         "idg-grid": HTMLIdgGridElement;
         "idg-icon": HTMLIdgIconElement;
@@ -3029,6 +3270,7 @@ declare global {
         "idg-popover": HTMLIdgPopoverElement;
         "idg-profile": HTMLIdgProfileElement;
         "idg-progress": HTMLIdgProgressElement;
+        "idg-property-picker": HTMLIdgPropertyPickerElement;
         "idg-radio": HTMLIdgRadioElement;
         "idg-radio-group": HTMLIdgRadioGroupElement;
         "idg-register": HTMLIdgRegisterElement;
@@ -3037,6 +3279,7 @@ declare global {
         "idg-sidebar": HTMLIdgSidebarElement;
         "idg-sign-in": HTMLIdgSignInElement;
         "idg-skeleton": HTMLIdgSkeletonElement;
+        "idg-sparkline": HTMLIdgSparklineElement;
         "idg-stack": HTMLIdgStackElement;
         "idg-stat": HTMLIdgStatElement;
         "idg-switch": HTMLIdgSwitchElement;
@@ -3638,6 +3881,84 @@ declare namespace LocalJSX {
         "orientation"?: DividerOrientation;
     }
     /**
+     * A table of tracked events: the event, when it happened, the path and its properties, with
+     * paging and optional sorting by time or name. It takes its data through properties and never
+     * fetches.
+     * Every value is untrusted text from the public internet. It is drawn as text and nothing else: no
+     * markup is read, no link or address is made from it, control and bidirectional characters are
+     * replaced by a visible mark, each value is isolated in a `<bdi>` so right to left text cannot
+     * reorder what is beside it, long values wrap and are cut to a limit, and an event shows at most
+     * ten properties. Records that are malformed are left out.
+     * With `events` as the whole list, the table sorts and pages it. With `total` set, `events` is the
+     * one page the server answered with: the table draws it as it is and only reports `idgPageChange`
+     * and `idgSort` for the page to fetch with. Either way it draws at most `pageSize` rows (to 100).
+     * The state that matters is said politely: loading, an error, no events, and which events are shown.
+     */
+    interface IdgEventTable {
+        /**
+          * The accessible name of the table, drawn as its caption. Required.
+         */
+        "caption"?: string;
+        /**
+          * The message of an error that stopped the events loading. Drawn in an alert, as text.
+         */
+        "error"?: string;
+        /**
+          * The events: `{ id, name, occurredAt, path?, properties? }`. Malformed records are left out.
+         */
+        "events"?: TrackedEvent[];
+        /**
+          * The words of the table, merged over the English defaults.
+         */
+        "labels"?: Partial<EventTableLabels>;
+        /**
+          * Draws a skeleton and says the events are loading.
+          * @default false
+         */
+        "loading"?: boolean;
+        /**
+          * Fires when the user chooses another page, with `{ page }`. Call `preventDefault()` to keep the page where it is, such as to fetch it first and set `page` yourself.
+         */
+        "onIdgPageChange"?: (event: IdgEventTableCustomEvent<PageChangeDetail>) => void;
+        /**
+          * Fires when the user sorts a column, with `{ key, direction }`.
+         */
+        "onIdgSort"?: (event: IdgEventTableCustomEvent<EventSort>) => void;
+        /**
+          * The current page, from 1. A page beyond the last is drawn as the last.
+          * @default 1
+         */
+        "page"?: number;
+        /**
+          * Rows on a page, 1 to 100.
+          * @default 10
+         */
+        "pageSize"?: number;
+        /**
+          * The direction of the sort.
+          * @default "ascending"
+         */
+        "sortDirection"?: EventSortDirection;
+        /**
+          * The column the rows are sorted by: `time` or `name`. Empty leaves the order given.
+          * @default ""
+         */
+        "sortKey"?: EventSortKey | "";
+        /**
+          * Makes the Event and Time headers sort buttons.
+          * @default false
+         */
+        "sortable"?: boolean;
+        /**
+          * The IANA time zone times are shown in, such as `UTC`. The reader's own by default.
+         */
+        "timeZone"?: string;
+        /**
+          * How many events there are in all. Set it when `events` is one page the server answered with: the table then draws `events` as it is, and neither sorts nor pages it.
+         */
+        "total"?: number;
+    }
+    /**
      * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
      * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
      * reference cannot cross a shadow boundary, so their text is handed to the control as properties
@@ -4001,7 +4322,7 @@ declare namespace LocalJSX {
          */
         "page"?: number;
         /**
-          * How many pages there are.
+          * How many pages there are, up to ten million: more is held to that.
           * @default 1
          */
         "pageCount"?: number;
@@ -4172,6 +4493,52 @@ declare namespace LocalJSX {
           * How much is done. Without it the progress is indeterminate.
          */
         "value"?: number;
+    }
+    /**
+     * Lets a signed-in user choose which tracked property (site) the dashboard shows. It is a labelled
+     * `idg-select` that lists the `properties` it is given and reports the chosen id with `idgChange`.
+     * It is form associated: with a `name` it submits the chosen id.
+     * Property names are text the user typed: they are shown as text only, with control and
+     * bidirectional characters replaced and long names cut. A `value` that is not one of the
+     * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
+     * property appears in the list later, and is never replaced by the first property.
+     */
+    interface IdgPropertyPicker {
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * The visible label and the accessible name.
+         */
+        "label"?: string;
+        /**
+          * The words of the picker, merged over the English defaults.
+         */
+        "labels"?: Partial<PropertyPickerLabels>;
+        /**
+          * While the properties load: disabled, busy, and said politely.
+          * @default false
+         */
+        "loading"?: boolean;
+        "name"?: string;
+        /**
+          * Fires when the user chooses a property, with its id as `{ value }`, and not when `value` is set from script.
+         */
+        "onIdgChange"?: (event: IdgPropertyPickerCustomEvent<ValueDetail>) => void;
+        /**
+          * The properties to choose from: `{ id, name, origin? }`. Records that are malformed or repeat an id are left out.
+         */
+        "properties"?: TrackedProperty[];
+        /**
+          * The id of the chosen property. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value"?: string;
     }
     /**
      * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
@@ -4449,6 +4816,35 @@ declare namespace LocalJSX {
         "variant"?: SkeletonVariant;
     }
     /**
+     * A small trend line drawn as SVG from a series of numbers, for beside a figure. It scales to the
+     * width of its container (set one with the page's own CSS, `idg-sparkline { inline-size: 8rem }`),
+     * keeps its proportions, and never animates. It is an image with a text alternative: the label
+     * you give it and a sentence with the first, last, lowest and highest value and which way the
+     * series went, formatted in the language of the page. Time runs left to right in every
+     * writing direction.
+     * Anything in `values` that is not a finite number is left out, never drawn as zero. A series
+     * longer than 120 points is thinned for drawing, keeping its first, last, lowest and highest.
+     */
+    interface IdgSparkline {
+        /**
+          * Fills the area under the line.
+          * @default false
+         */
+        "area"?: boolean;
+        /**
+          * What the series measures, such as `Visitors`. It is the accessible name, so give it one.
+         */
+        "label"?: string;
+        /**
+          * The words of the text alternative, merged over the English defaults.
+         */
+        "labels"?: Partial<SparklineLabels>;
+        /**
+          * The series: an array of numbers, or, from an attribute, a JSON array or numbers separated by commas. A text longer than 200,000 characters is read as far as there.
+         */
+        "values"?: number[] | string;
+    }
+    /**
      * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
      * and the source order stays the reading order.
      */
@@ -4490,6 +4886,10 @@ declare namespace LocalJSX {
           * What the figure measures.
          */
         "label"?: string;
+        /**
+          * What the change is measured against, such as `vs previous 7 days`. It is seen beside the change and spoken with it, since a change with no basis is ambiguous. Without a change it is not shown.
+         */
+        "period"?: string;
         /**
           * Whether the change is good, for the colour. Defaults from the direction, so set it where a rise is bad, such as a churn rate.
          */
@@ -4630,11 +5030,16 @@ declare namespace LocalJSX {
      */
     interface IdgTable {
         /**
+          * Whether the owner of the rows is busy, such as while it fetches a sorted page. The sort buttons are marked `aria-disabled` and presses on them do nothing and say nothing.
+          * @default false
+         */
+        "busy"?: boolean;
+        /**
           * The scroll region's accessible name, when the table is wider than the page. The caption is used without it.
          */
         "label"?: string;
         /**
-          * Only marks the sorted column and reports the sort. Use it when you sort the rows yourself, such as on a server.
+          * For when you sort the rows yourself, such as on a server. A press only reports `idgSort` with the sort it asks for; the sort that is marked and announced is the one you set in `sortKey` and `sortDirection`, so a header never shows an order the rows are not in.
           * @default false
          */
         "manualSort"?: boolean;
@@ -5080,6 +5485,18 @@ declare namespace LocalJSX {
         "orientation": DividerOrientation;
         "decorative": boolean;
     }
+    interface IdgEventTableAttributes {
+        "caption": string;
+        "loading": boolean;
+        "error": string;
+        "pageSize": number;
+        "page": number;
+        "total": number;
+        "sortable": boolean;
+        "sortKey": EventSortKey | "";
+        "sortDirection": EventSortDirection;
+        "timeZone": string;
+    }
     interface IdgFieldAttributes {
         "label": string;
         "hint": string;
@@ -5191,6 +5608,13 @@ declare namespace LocalJSX {
         "showValue": boolean;
         "size": ProgressSize;
     }
+    interface IdgPropertyPickerAttributes {
+        "name": string;
+        "value": string;
+        "label": string;
+        "loading": boolean;
+        "disabled": boolean;
+    }
     interface IdgRadioAttributes {
         "value": string;
         "checked": boolean;
@@ -5233,6 +5657,11 @@ declare namespace LocalJSX {
         "variant": SkeletonVariant;
         "lines": number;
     }
+    interface IdgSparklineAttributes {
+        "values": number[] | string;
+        "label": string;
+        "area": boolean;
+    }
     interface IdgStackAttributes {
         "gap": GapStep;
         "align": StackAlignment;
@@ -5243,6 +5672,7 @@ declare namespace LocalJSX {
         "delta": string;
         "direction": StatDirection;
         "sentiment": StatSentiment;
+        "period": string;
         "upLabel": string;
         "downLabel": string;
         "flatLabel": string;
@@ -5282,6 +5712,7 @@ declare namespace LocalJSX {
         "sortKey": string;
         "sortDirection": SortDirection;
         "manualSort": boolean;
+        "busy": boolean;
         "sortStatus": string;
         "sortAscendingLabel": string;
         "sortDescendingLabel": string;
@@ -5363,6 +5794,7 @@ declare namespace LocalJSX {
         "idg-cover": Omit<IdgCover, keyof IdgCoverAttributes> & { [K in keyof IdgCover & keyof IdgCoverAttributes]?: IdgCover[K] } & { [K in keyof IdgCover & keyof IdgCoverAttributes as `attr:${K}`]?: IdgCoverAttributes[K] } & { [K in keyof IdgCover & keyof IdgCoverAttributes as `prop:${K}`]?: IdgCover[K] };
         "idg-dialog": Omit<IdgDialog, keyof IdgDialogAttributes> & { [K in keyof IdgDialog & keyof IdgDialogAttributes]?: IdgDialog[K] } & { [K in keyof IdgDialog & keyof IdgDialogAttributes as `attr:${K}`]?: IdgDialogAttributes[K] } & { [K in keyof IdgDialog & keyof IdgDialogAttributes as `prop:${K}`]?: IdgDialog[K] };
         "idg-divider": Omit<IdgDivider, keyof IdgDividerAttributes> & { [K in keyof IdgDivider & keyof IdgDividerAttributes]?: IdgDivider[K] } & { [K in keyof IdgDivider & keyof IdgDividerAttributes as `attr:${K}`]?: IdgDividerAttributes[K] } & { [K in keyof IdgDivider & keyof IdgDividerAttributes as `prop:${K}`]?: IdgDivider[K] };
+        "idg-event-table": Omit<IdgEventTable, keyof IdgEventTableAttributes> & { [K in keyof IdgEventTable & keyof IdgEventTableAttributes]?: IdgEventTable[K] } & { [K in keyof IdgEventTable & keyof IdgEventTableAttributes as `attr:${K}`]?: IdgEventTableAttributes[K] } & { [K in keyof IdgEventTable & keyof IdgEventTableAttributes as `prop:${K}`]?: IdgEventTable[K] };
         "idg-field": Omit<IdgField, keyof IdgFieldAttributes> & { [K in keyof IdgField & keyof IdgFieldAttributes]?: IdgField[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `attr:${K}`]?: IdgFieldAttributes[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `prop:${K}`]?: IdgField[K] };
         "idg-grid": Omit<IdgGrid, keyof IdgGridAttributes> & { [K in keyof IdgGrid & keyof IdgGridAttributes]?: IdgGrid[K] } & { [K in keyof IdgGrid & keyof IdgGridAttributes as `attr:${K}`]?: IdgGridAttributes[K] } & { [K in keyof IdgGrid & keyof IdgGridAttributes as `prop:${K}`]?: IdgGrid[K] };
         "idg-icon": Omit<IdgIcon, keyof IdgIconAttributes> & { [K in keyof IdgIcon & keyof IdgIconAttributes]?: IdgIcon[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `attr:${K}`]?: IdgIconAttributes[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `prop:${K}`]?: IdgIcon[K] };
@@ -5378,6 +5810,7 @@ declare namespace LocalJSX {
         "idg-popover": Omit<IdgPopover, keyof IdgPopoverAttributes> & { [K in keyof IdgPopover & keyof IdgPopoverAttributes]?: IdgPopover[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `attr:${K}`]?: IdgPopoverAttributes[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `prop:${K}`]?: IdgPopover[K] };
         "idg-profile": Omit<IdgProfile, keyof IdgProfileAttributes> & { [K in keyof IdgProfile & keyof IdgProfileAttributes]?: IdgProfile[K] } & { [K in keyof IdgProfile & keyof IdgProfileAttributes as `attr:${K}`]?: IdgProfileAttributes[K] } & { [K in keyof IdgProfile & keyof IdgProfileAttributes as `prop:${K}`]?: IdgProfile[K] };
         "idg-progress": Omit<IdgProgress, keyof IdgProgressAttributes> & { [K in keyof IdgProgress & keyof IdgProgressAttributes]?: IdgProgress[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `attr:${K}`]?: IdgProgressAttributes[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `prop:${K}`]?: IdgProgress[K] };
+        "idg-property-picker": Omit<IdgPropertyPicker, keyof IdgPropertyPickerAttributes> & { [K in keyof IdgPropertyPicker & keyof IdgPropertyPickerAttributes]?: IdgPropertyPicker[K] } & { [K in keyof IdgPropertyPicker & keyof IdgPropertyPickerAttributes as `attr:${K}`]?: IdgPropertyPickerAttributes[K] } & { [K in keyof IdgPropertyPicker & keyof IdgPropertyPickerAttributes as `prop:${K}`]?: IdgPropertyPicker[K] };
         "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
         "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
         "idg-register": IdgRegister;
@@ -5386,6 +5819,7 @@ declare namespace LocalJSX {
         "idg-sidebar": Omit<IdgSidebar, keyof IdgSidebarAttributes> & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes]?: IdgSidebar[K] } & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `attr:${K}`]?: IdgSidebarAttributes[K] } & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `prop:${K}`]?: IdgSidebar[K] };
         "idg-sign-in": Omit<IdgSignIn, keyof IdgSignInAttributes> & { [K in keyof IdgSignIn & keyof IdgSignInAttributes]?: IdgSignIn[K] } & { [K in keyof IdgSignIn & keyof IdgSignInAttributes as `attr:${K}`]?: IdgSignInAttributes[K] } & { [K in keyof IdgSignIn & keyof IdgSignInAttributes as `prop:${K}`]?: IdgSignIn[K] };
         "idg-skeleton": Omit<IdgSkeleton, keyof IdgSkeletonAttributes> & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes]?: IdgSkeleton[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `attr:${K}`]?: IdgSkeletonAttributes[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `prop:${K}`]?: IdgSkeleton[K] };
+        "idg-sparkline": Omit<IdgSparkline, keyof IdgSparklineAttributes> & { [K in keyof IdgSparkline & keyof IdgSparklineAttributes]?: IdgSparkline[K] } & { [K in keyof IdgSparkline & keyof IdgSparklineAttributes as `attr:${K}`]?: IdgSparklineAttributes[K] } & { [K in keyof IdgSparkline & keyof IdgSparklineAttributes as `prop:${K}`]?: IdgSparkline[K] };
         "idg-stack": Omit<IdgStack, keyof IdgStackAttributes> & { [K in keyof IdgStack & keyof IdgStackAttributes]?: IdgStack[K] } & { [K in keyof IdgStack & keyof IdgStackAttributes as `attr:${K}`]?: IdgStackAttributes[K] } & { [K in keyof IdgStack & keyof IdgStackAttributes as `prop:${K}`]?: IdgStack[K] };
         "idg-stat": Omit<IdgStat, keyof IdgStatAttributes> & { [K in keyof IdgStat & keyof IdgStatAttributes]?: IdgStat[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `attr:${K}`]?: IdgStatAttributes[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `prop:${K}`]?: IdgStat[K] };
         "idg-switch": Omit<IdgSwitch, keyof IdgSwitchAttributes> & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes]?: IdgSwitch[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `attr:${K}`]?: IdgSwitchAttributes[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `prop:${K}`]?: IdgSwitch[K] };
@@ -5513,6 +5947,21 @@ declare module "@stencil/core" {
              */
             "idg-divider": LocalJSX.IntrinsicElements["idg-divider"] & JSXBase.HTMLAttributes<HTMLIdgDividerElement>;
             /**
+             * A table of tracked events: the event, when it happened, the path and its properties, with
+             * paging and optional sorting by time or name. It takes its data through properties and never
+             * fetches.
+             * Every value is untrusted text from the public internet. It is drawn as text and nothing else: no
+             * markup is read, no link or address is made from it, control and bidirectional characters are
+             * replaced by a visible mark, each value is isolated in a `<bdi>` so right to left text cannot
+             * reorder what is beside it, long values wrap and are cut to a limit, and an event shows at most
+             * ten properties. Records that are malformed are left out.
+             * With `events` as the whole list, the table sorts and pages it. With `total` set, `events` is the
+             * one page the server answered with: the table draws it as it is and only reports `idgPageChange`
+             * and `idgSort` for the page to fetch with. Either way it draws at most `pageSize` rows (to 100).
+             * The state that matters is said politely: loading, an error, no events, and which events are shown.
+             */
+            "idg-event-table": LocalJSX.IntrinsicElements["idg-event-table"] & JSXBase.HTMLAttributes<HTMLIdgEventTableElement>;
+            /**
              * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
              * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
              * reference cannot cross a shadow boundary, so their text is handed to the control as properties
@@ -5609,6 +6058,16 @@ declare module "@stencil/core" {
              */
             "idg-progress": LocalJSX.IntrinsicElements["idg-progress"] & JSXBase.HTMLAttributes<HTMLIdgProgressElement>;
             /**
+             * Lets a signed-in user choose which tracked property (site) the dashboard shows. It is a labelled
+             * `idg-select` that lists the `properties` it is given and reports the chosen id with `idgChange`.
+             * It is form associated: with a `name` it submits the chosen id.
+             * Property names are text the user typed: they are shown as text only, with control and
+             * bidirectional characters replaced and long names cut. A `value` that is not one of the
+             * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
+             * property appears in the list later, and is never replaced by the first property.
+             */
+            "idg-property-picker": LocalJSX.IntrinsicElements["idg-property-picker"] & JSXBase.HTMLAttributes<HTMLIdgPropertyPickerElement>;
+            /**
              * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
              * as set by the group are how it passes state down, because radios in separate shadow roots are
              * not a native radio group.
@@ -5672,6 +6131,17 @@ declare module "@stencil/core" {
              * Size it with the page's own CSS on the element, for example `idg-skeleton { inline-size: 12rem }`.
              */
             "idg-skeleton": LocalJSX.IntrinsicElements["idg-skeleton"] & JSXBase.HTMLAttributes<HTMLIdgSkeletonElement>;
+            /**
+             * A small trend line drawn as SVG from a series of numbers, for beside a figure. It scales to the
+             * width of its container (set one with the page's own CSS, `idg-sparkline { inline-size: 8rem }`),
+             * keeps its proportions, and never animates. It is an image with a text alternative: the label
+             * you give it and a sentence with the first, last, lowest and highest value and which way the
+             * series went, formatted in the language of the page. Time runs left to right in every
+             * writing direction.
+             * Anything in `values` that is not a finite number is left out, never drawn as zero. A series
+             * longer than 120 points is thinned for drawing, keeping its first, last, lowest and highest.
+             */
+            "idg-sparkline": LocalJSX.IntrinsicElements["idg-sparkline"] & JSXBase.HTMLAttributes<HTMLIdgSparklineElement>;
             /**
              * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
              * and the source order stays the reading order.

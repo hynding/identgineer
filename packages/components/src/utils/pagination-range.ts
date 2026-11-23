@@ -13,8 +13,18 @@ export interface PaginationRangeOptions {
 const DEFAULT_SIBLINGS = 1;
 const DEFAULT_BOUNDARIES = 1;
 
+// More slots than this do not fit a row.
+const MAX_SLOTS = 10;
+/**
+ * The most pages a pager counts: ten million, so no page number is longer than eight digits and a
+ * button always fits a narrow page. A count above it is held to it.
+ */
+export const MAX_PAGE_COUNT = 10_000_000;
+
 function wholeNumber(value: number | undefined, fallback: number, minimum: number): number {
-  return value !== undefined && Number.isInteger(value) && value >= minimum ? value : fallback;
+  return value !== undefined && Number.isInteger(value) && value >= minimum
+    ? Math.min(value, MAX_SLOTS)
+    : fallback;
 }
 
 function range(start: number, end: number): number[] {
@@ -30,7 +40,10 @@ function range(start: number, end: number): number[] {
  * shown instead.
  */
 export function paginationRange(options: PaginationRangeOptions): PaginationToken[] {
-  const count = Math.max(0, Math.trunc(Number.isFinite(options.pageCount) ? options.pageCount : 0));
+  const count = Math.min(
+    Math.max(0, Math.trunc(Number.isFinite(options.pageCount) ? options.pageCount : 0)),
+    MAX_PAGE_COUNT,
+  );
   const siblings = wholeNumber(options.siblings, DEFAULT_SIBLINGS, 0);
   const boundaries = wholeNumber(options.boundaries, DEFAULT_BOUNDARIES, 0);
   const current = Number.isFinite(options.page)

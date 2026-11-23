@@ -11,7 +11,7 @@ import {
 } from "@stencil/core";
 import { oneOf } from "../../utils/choice";
 import type { ValueDetail } from "../../utils/event-details";
-import { mirrorOptions, optionValue } from "../../utils/mirror-options";
+import { mirrorOptions, optionValue, optionsSignature } from "../../utils/mirror-options";
 import { validityFlags } from "../../utils/validity";
 import { INPUT_SIZES, type InputSize } from "../input/input-options";
 
@@ -123,27 +123,47 @@ export class IdgSelect {
     if (typeof state === "string") this.value = state;
   }
 
+  // What the native options were last copied from. The options are copied again only when the
+  // slotted ones are different, so a render for another reason (invalid, disabled, a new value)
+  // leaves the native options, and a choice the user is making among them, alone.
+  private copiedFrom?: string;
+
   private mirror(): void {
     const native = this.native;
     if (!native) return;
-    mirrorOptions(Array.from(this.host.children), native);
+    const sources = Array.from(this.host.children);
+    const signature = optionsSignature(sources);
+    if (signature !== this.copiedFrom) {
+      mirrorOptions(sources, native);
+      this.copiedFrom = signature;
+    }
     this.selectCurrentValue(native);
+    // The validity is that of the value that is now chosen, not of the one before it.
+    this.syncForm();
   }
 
-  // An option the author marked selected, or the first one, is the value when none is given; a
-  // value that matches no option is not forced onto the select, which would blank it.
+  // An option the author marked selected, or the first one, is the value when none is given. A
+  // value that matches no option while there are no options at all (a list that arrives later) is
+  // kept, and the mirror applies it when its option arrives. Once there are options, a value that
+  // matches none gives way to what the select shows, so the value, the form value and the option
+  // shown always agree.
   private selectCurrentValue(native: HTMLSelectElement): void {
-    const matches = Array.from(native.querySelectorAll("option")).some(
-      (option) => optionValue(option) === this.value,
-    );
-    if (matches) native.value = this.value;
-    else if (native.value !== this.value) this.value = native.value;
+    const options = Array.from(native.querySelectorAll("option"));
+    if (options.some((option) => optionValue(option) === this.value)) native.value = this.value;
+    else if (options.length > 0 && native.value !== this.value) this.value = native.value;
   }
 
   private syncForm(): void {
     this.internals.setFormValue(this.value);
     const native = this.native;
     if (!native) return;
+    // A disabled select is not validated, as a native one is not, and its native validity can say
+    // missing with no message, which setValidity refuses.
+    // (A test DOM may not have willValidate, and then there is nothing to ask.)
+    if ("willValidate" in native && !native.willValidate) {
+      this.internals.setValidity({});
+      return;
+    }
     this.internals.setValidity(validityFlags(native.validity), native.validationMessage, native);
   }
 
@@ -159,8 +179,10 @@ export class IdgSelect {
     this.idgChange.emit({ value: this.value });
   };
 
+  // The options are copied before the value is applied: a page that sets a value and its options in
+  // one go would otherwise have the value judged against the options of a moment ago.
   componentDidUpdate(): void {
-    if (this.native) this.selectCurrentValue(this.native);
+    this.mirror();
   }
 
   render() {

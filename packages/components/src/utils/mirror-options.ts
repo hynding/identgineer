@@ -45,3 +45,25 @@ function trimmedText(node: { textContent: string | null }): string {
 export function optionValue(option: Element): string {
   return option.getAttribute("value") ?? trimmedText(option);
 }
+
+/**
+ * What the copied options depend on, as text: two lists with the same signature copy to the same
+ * native options, so a select can tell whether it has to rebuild them without writing anything.
+ */
+export function optionsSignature(sources: readonly Element[]): string {
+  const describe = (source: Element): unknown[] => [
+    source.localName,
+    source.getAttribute("value"),
+    source.getAttribute("label"),
+    source.hasAttribute("disabled"),
+    source.hasAttribute("selected"),
+    source.localName === "optgroup"
+      ? Array.from(source.children).map(describe)
+      : source.textContent,
+  ];
+  return JSON.stringify(
+    sources
+      .filter((source) => source.localName === "option" || source.localName === "optgroup")
+      .map(describe),
+  );
+}

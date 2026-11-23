@@ -676,6 +676,57 @@ test.describe("layout holds up", () => {
     });
   }
 
+  /**
+   * No text of the switcher, in any shadow root, is drawn
+   * past the edge of the window. The text itself is measured with ranges: a word wider than its
+   * box spills out of it without making the box wider, so comparing boxes misses it.
+   */
+  async function expectTextInside(page: Page, label: string): Promise<void> {
+    const problems = await page.evaluate(() => {
+      const found: string[] = [];
+      const root = document.documentElement;
+      const limit = root.clientWidth + 0.5;
+      const range = document.createRange();
+      const walk = (scope: Document | ShadowRoot | Element, path: string): void => {
+        for (const element of scope.querySelectorAll("*")) {
+          // Text for assistive technology only is clipped to a pixel, and is not drawn.
+          const hidden = element.getBoundingClientRect().width <= 1;
+          for (const node of hidden ? [] : Array.from(element.childNodes)) {
+            if (node.nodeType !== Node.TEXT_NODE || (node.textContent ?? "").trim() === "")
+              continue;
+            range.selectNodeContents(node);
+            for (const box of Array.from(range.getClientRects())) {
+              if (box.right > limit || box.left < -0.5) {
+                found.push(`${path}${element.localName}: "${(node.textContent ?? "").trim()}"`);
+                break;
+              }
+            }
+          }
+          if (element.shadowRoot) walk(element.shadowRoot, `${path}${element.localName}>`);
+        }
+      };
+      for (const host of document.querySelectorAll("idg-variation-switcher")) {
+        if (host.shadowRoot) walk(host.shadowRoot, "");
+      }
+      return found;
+    });
+    expect(problems, label).toEqual([]);
+  }
+
+  for (const design of DESIGNS) {
+    for (const ux of UX_MODES) {
+      test(`nothing of the switcher is drawn past the window at 320px, 200% text, in the ${design} design and the ${ux} mode`, async ({
+        page,
+      }) => {
+        await open(page, 320);
+        await applyAxes(page, { ux, design });
+        await setTextSize(page, { label: "200%", fontSize: "200%", wide: false });
+        await frames(page);
+        await expectTextInside(page, `${design} ${ux}`);
+      });
+    }
+  }
+
   for (const width of [320, 390, 768, 1280, 1920]) {
     test(`no sideways scroll at ${String(width)}px, at every text size`, async ({ page }) => {
       await open(page, width);

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-layout="top-bar" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard components fixture</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/fixtures/dashboard.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+    <!-- Reads every figure from a source that stands in for the authenticated API, in this page. -->
+    <script type="module" src="/fixtures/dashboard.js"></script>
+  </head>
+  <body>
+    <header class="dashboard-header">
+      <p class="dashboard-brand">Identgineer</p>
+      <idg-property-picker id="picker" label="Site" loading></idg-property-picker>
+    </header>
+    <main class="dashboard-main">
+      <h1>Dashboard</h1>
+
+      <section id="overview" aria-labelledby="overview-title">
+        <h2 id="overview-title">Overview</h2>
+        <div class="dashboard-stats">
+          <idg-card variant="raised">
+            <idg-stat id="stat-visitors" label="Visitors" value="…">
+              <idg-sparkline
+                id="spark-visitors"
+                slot="chart"
+                label="Visitors per day"
+                area
+              ></idg-sparkline>
+            </idg-stat>
+          </idg-card>
+          <idg-card>
+            <idg-stat id="stat-pageviews" label="Page views" value="…">
+              <idg-sparkline
+                id="spark-pageviews"
+                slot="chart"
+                label="Page views per day"
+              ></idg-sparkline>
+            </idg-stat>
+          </idg-card>
+          <idg-card variant="outlined">
+            <idg-stat id="stat-events" label="Events" value="…">
+              <idg-sparkline
+                id="spark-events"
+                slot="chart"
+                label="Events per day"
+                area
+              ></idg-sparkline>
+            </idg-stat>
+          </idg-card>
+        </div>
+      </section>
+
+      <section id="events-section" aria-labelledby="events-title">
+        <h2 id="events-title">Events</h2>
+        <idg-event-table id="events" caption="Tracked events" sortable loading></idg-event-table>
+      </section>
+
+      <section id="appearance" aria-labelledby="appearance-title">
+        <h2 id="appearance-title">Appearance</h2>
+        <idg-variation-switcher
+          id="switcher"
+          heading="Customise this page"
+        ></idg-variation-switcher>
+      </section>
+    </main>
+  </body>
+</html>

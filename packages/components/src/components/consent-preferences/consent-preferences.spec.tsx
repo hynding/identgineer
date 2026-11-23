@@ -5,7 +5,7 @@ import { createFakeConsent, type FakeConsent } from "../../testing/fake-consent"
 import { trackerSetup } from "../../testing/consent-harness";
 import { installDialogElement } from "../../testing/dialog-element";
 import { button, recordEvents, shadowOf, textOf } from "../../testing/identity-form";
-import { languageOf } from "../../consent/language";
+import { languageOf } from "../../utils/language";
 import { removeHost } from "../../testing/remove-host";
 import "../alert/alert";
 import "../button/button";

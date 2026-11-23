@@ -367,3 +367,17 @@ describe("idg-pagination focus", () => {
     focus.mockRestore();
   });
 });
+
+describe("idg-pagination with a page count that is held to ten million", () => {
+  it("has no page after the ten millionth, whatever count it is given", async () => {
+    const { root } = await render(<idg-pagination pageCount={1e15} page={10_000_000} />);
+    expect(part(root, "next").hasAttribute("disabled")).toBe(true);
+    expect(shown(root).at(-2)).toBe("10000000");
+  });
+
+  it("moves a page beyond the ten millionth back to it", async () => {
+    const { root } = await render(<idg-pagination pageCount={1e15} page={5e14} />);
+    expect(pageControl(root, 10_000_000).getAttribute("aria-current")).toBe("page");
+    expect(part(root, "next").hasAttribute("disabled")).toBe(true);
+  });
+});

@@ -1,0 +1,108 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.events {
+  display: flex;
+  flex-direction: column;
+  gap: var(--idg-space-s);
+  min-inline-size: 0;
+}
+
+.caption {
+  margin: 0;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-display);
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+  overflow-wrap: anywhere;
+  text-transform: var(--idg-ornament-heading-transform);
+}
+
+/* What the data cells hold is text from anywhere, so a long word breaks where it has to, in the
+   cell, and a cell never widens the table past its container. */
+.name,
+.path,
+.properties {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+/* An isolated run of text, so right to left text cannot reorder what is beside it. */
+bdi {
+  unicode-bidi: isolate;
+}
+
+.props {
+  display: flex;
+  flex-direction: column;
+  gap: var(--idg-space-3xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.key,
+.more {
+  color: var(--idg-color-text-muted);
+}
+
+.more {
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+}
+
+.status {
+  min-block-size: 1lh;
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+  overflow-wrap: anywhere;
+}
+
+.skeleton {
+  min-inline-size: 0;
+}
+
+.pagination {
+  align-self: center;
+  max-inline-size: 100%;
+}
+
+/* Rows that stay while the next page loads: dimmed, and said to be loading in words in the status
+   region, so the state is not carried by the dimming alone. The controls keep their place, so
+   focus stays on them. */
+.busy idg-table,
+.busy .pagination {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* Focus lands here when the rows it was on made way for a message. */
+.status:focus {
+  outline-width: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
+  outline-style: var(--idg-focus-ring-style);
+  outline-color: var(--idg-color-focus-ring);
+  outline-offset: var(--idg-focus-ring-offset);
+}
+
+@media (forced-colors: active) {
+  .status:focus {
+    outline-color: Highlight;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .busy idg-table,
+  .busy .pagination {
+    transition: none;
+  }
+}
