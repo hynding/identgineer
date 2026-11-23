@@ -39,6 +39,9 @@
   font-weight: var(--idg-font-display-weight);
   letter-spacing: var(--idg-font-display-letter-spacing);
   line-height: var(--idg-font-display-line-height);
+  /* A word of a heading in a wide display face, uppercase and doubled, is wider than a narrow
+     panel: it breaks inside the box and never spills out of it. */
+  overflow-wrap: anywhere;
   text-transform: var(--idg-ornament-heading-transform);
 }
 
@@ -115,10 +118,16 @@
 }
 
 /* A button may be narrower than its text on one line, so a long label wraps rather than push the
-   panel wider than its container. */
+   panel wider than its container. A control's own padding and an icon can leave less room than a
+   single word needs (large text on a narrow screen), and then the word breaks in its box, as the
+   label's text cannot otherwise be kept inside it. */
 .actions idg-button {
   min-inline-size: 0;
   max-inline-size: 100%;
+}
+
+.actions idg-button::part(label) {
+  overflow-wrap: anywhere;
 }
 
 /* A narrow container (or large text, which makes the same container narrow in rem) gives the
