@@ -15,4 +15,6 @@ export const TRACKER_DEFAULTS = {
   maxQueueBytes: 102_400,
   /** Milliseconds without an event after which the session id rotates: 30 minutes. */
   sessionTimeout: 1_800_000,
+  /** Milliseconds a request may take before it is aborted and retried: 30 seconds. */
+  requestTimeout: 30_000,
 } as const;

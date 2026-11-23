@@ -25,6 +25,7 @@ export interface ResolvedOptions {
   readonly maxQueueEvents: number;
   readonly maxQueueBytes: number;
   readonly sessionTimeout: number;
+  readonly requestTimeout: number;
   readonly onDrop: (reason: DropReason) => void;
   readonly fetch: FetchLike | undefined;
   readonly sendBeacon: SendBeaconLike | undefined;
@@ -195,6 +196,13 @@ export const resolveOptions = (options: TrackerOptions): ResolvedOptions => {
       D.sessionTimeout,
       1000,
       86_400_000,
+    ),
+    requestTimeout: wholeNumber(
+      "requestTimeout",
+      options.requestTimeout,
+      D.requestTimeout,
+      1000,
+      600_000,
     ),
     onDrop: options.onDrop ?? (() => undefined),
     fetch: injected(options.fetch, defaultFetch),

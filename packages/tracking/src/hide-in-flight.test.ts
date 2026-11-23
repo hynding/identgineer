@@ -8,7 +8,7 @@ const idsOf = (body: string | undefined): string[] =>
 
 // One fetch is in flight, holding the first event; the page is hidden with more queued.
 const hiddenDuringRequest = async (options: { beaconAccepts?: boolean } = {}) => {
-  const tab = grantedTab(createWorld());
+  const tab = grantedTab(createWorld(), { random: () => 1 });
   const { collector } = tab.world;
   collector.beaconAccepts = options.beaconAccepts ?? true;
   collector.answer("hang");
@@ -43,7 +43,7 @@ describe("hiding the page while a request is in flight", () => {
     collector.releaseHanging({ status: 500 });
     await flushed;
     await settle();
-    tab.world.clock.advance(300_000);
+    tab.world.clock.advance(1000);
     await settle();
     const sent = collector.requests.flatMap((request) => idsOf(request.body));
     expect(new Set(sent).size).toBe(3);

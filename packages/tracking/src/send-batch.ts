@@ -1,3 +1,4 @@
+import type { Clock } from "./clock.ts";
 import type { FetchLike, SendBeaconLike } from "./fetch-like.ts";
 import { parseRetryAfter } from "./retry-after.ts";
 
@@ -11,6 +12,9 @@ export interface FetchSender {
   readonly endpoint: string;
   readonly writeKey: string;
   readonly now: () => number;
+  /** Times the request out; its timers are the injected clock's. */
+  readonly clock: Clock;
+  readonly requestTimeout: number;
 }
 
 const retryAfterOf = (headers: { get: (name: string) => string | null }, now: number) => {
@@ -33,18 +37,32 @@ export const sendByFetch = async (
 ): Promise<SendOutcome> => {
   // Called without a receiver, as `fetch` itself must be.
   const { fetch } = sender;
+  const controller = typeof AbortController === "function" ? new AbortController() : undefined;
+  let timer: unknown;
+  // A fetch that ignores its signal must not hold the loop for ever, so the timeout also wins a race.
+  const timedOut = new Promise<"timeout">((resolve) => {
+    timer = sender.clock.setTimeout(() => {
+      controller?.abort();
+      resolve("timeout");
+    }, sender.requestTimeout);
+  });
   try {
-    const response = await fetch(sender.endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Idg-Write-Key": sender.writeKey },
-      body,
-      credentials: "omit",
-      mode: "cors",
-      referrerPolicy: "no-referrer",
-      cache: "no-store",
-      redirect: "error",
-      ...(keepalive ? { keepalive: true as const } : {}),
-    });
+    const response = await Promise.race([
+      fetch(sender.endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Idg-Write-Key": sender.writeKey },
+        body,
+        credentials: "omit",
+        mode: "cors",
+        referrerPolicy: "no-referrer",
+        cache: "no-store",
+        redirect: "error",
+        ...(keepalive ? { keepalive: true as const } : {}),
+        ...(controller === undefined ? {} : { signal: controller.signal }),
+      }),
+      timedOut,
+    ]);
+    if (response === "timeout") return { kind: "retry" };
     const status: unknown = response.status;
     if (typeof status !== "number") return { kind: "retry" };
     if (status >= 200 && status < 300) return { kind: "delivered" };
@@ -57,6 +75,8 @@ export const sendByFetch = async (
     return { kind: "rejected", status };
   } catch {
     return { kind: "retry" };
+  } finally {
+    sender.clock.clearTimeout(timer);
   }
 };
 

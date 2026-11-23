@@ -52,6 +52,10 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
   let loop: Promise<void> | undefined;
   let attempts = 0;
   let nextAttemptAt = 0;
+  // How long the current wait was meant to be, so a clock set back cannot stretch it.
+  let backoffMs = 0;
+  // The ids in the request now on the wire, if there is one.
+  let inFlight: ReadonlySet<string> | undefined;
   // Bumped on revocation: a request answered under an older epoch is moot.
   let epoch = 0;
   let restartNeeded = false;
@@ -120,10 +124,11 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
   };
 
   // As many events as fit the batch size and the payload cap, always at least the first.
-  const planBatch = (withKey: boolean): QueueEntry[] => {
+  const planBatch = (withKey: boolean, exclude?: ReadonlySet<string>): QueueEntry[] => {
     let total = overhead(withKey);
     const picked: QueueEntry[] = [];
     for (const entry of queue.entries()) {
+      if (exclude?.has(entry.event.id) === true) continue;
       if (picked.length >= options.maxBatchSize) break;
       const added = entry.bytes + (picked.length > 0 ? 1 : 0);
       if (picked.length > 0 && total + added > options.maxPayloadBytes) break;
@@ -141,8 +146,17 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
     }
   };
 
-  const waitingForBackoff = (): boolean => {
+  const backoffRemaining = (): number => {
     const remaining = nextAttemptAt - clock.now();
+    if (remaining <= 0) return 0;
+    if (remaining <= backoffMs) return remaining;
+    // The clock was set back: the wait is what was chosen, from now.
+    nextAttemptAt = clock.now() + backoffMs;
+    return backoffMs;
+  };
+
+  const waitingForBackoff = (): boolean => {
+    const remaining = backoffRemaining();
     if (remaining <= 0) return false;
     armTimer(remaining);
     return true;
@@ -161,14 +175,23 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
       if (batch.length === 0) return;
       const ids = new Set(batch.map((entry) => entry.event.id));
       const startedIn = epoch;
+      inFlight = ids;
       const outcome = await sendByFetch(
-        { fetch, endpoint: options.endpoint, writeKey: options.writeKey, now: () => clock.now() },
+        {
+          fetch,
+          endpoint: options.endpoint,
+          writeKey: options.writeKey,
+          now: () => clock.now(),
+          clock,
+          requestTimeout: options.requestTimeout,
+        },
         serialiseBatch(
           batch.map((entry) => entry.event),
           clock.now(),
         ),
         keepalive,
       );
+      inFlight = undefined;
       if (disposed) return;
       if (epoch !== startedIn) {
         restartNeeded = true;
@@ -177,6 +200,7 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
       if (outcome.kind === "retry") {
         attempts += 1;
         const delay = retryDelay(attempts, outcome.retryAfterSeconds, options.random);
+        backoffMs = delay;
         nextAttemptAt = clock.now() + delay;
         armTimer(delay);
         return;
@@ -279,10 +303,16 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
     loadStored: takeStored,
     flush,
     flushOnHide: () => {
-      if (disposed || loop !== undefined || !allowed() || !isOnline()) return;
-      if (clock.now() < nextAttemptAt) return;
+      if (disposed || !allowed() || !isOnline() || backoffRemaining() > 0) return;
       dropExpired();
-      for (let batch = planBatch(true); batch.length > 0; batch = planBatch(true)) {
+      // A beacon is fire-and-forget and does not count as a request in flight, so what is not in
+      // the request on the wire may still leave with the page.
+      const exclude = inFlight ?? new Set<string>();
+      for (
+        let batch = planBatch(true, exclude);
+        batch.length > 0;
+        batch = planBatch(true, exclude)
+      ) {
         const { sendBeacon } = options;
         const body = serialiseBatch(
           batch.map((entry) => entry.event),
@@ -295,7 +325,9 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
         settleIds(ids);
       }
       persist();
-      if (queue.size() > 0 && options.fetch !== undefined) void startLoop(true);
+      if (loop === undefined && queue.size() > 0 && options.fetch !== undefined) {
+        void startLoop(true);
+      }
     },
     resume: () => {
       void flush();
@@ -307,6 +339,7 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
       clearTimer();
       attempts = 0;
       nextAttemptAt = 0;
+      backoffMs = 0;
       restartNeeded = false;
     },
     dispose: () => {

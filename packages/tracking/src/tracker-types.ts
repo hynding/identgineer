@@ -60,6 +60,8 @@ export interface TrackerOptions {
   readonly maxQueueEvents?: number;
   readonly maxQueueBytes?: number;
   readonly sessionTimeout?: number;
+  /** Milliseconds before a request that has no answer is aborted and retried. */
+  readonly requestTimeout?: number;
   /** Told why an event, a property or a batch was dropped. Never thrown to the page. */
   readonly onDrop?: (reason: DropReason) => void;
   /** The rest is what the SDK reads from its environment, injectable; `null` switches one off. */

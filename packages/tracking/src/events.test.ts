@@ -289,10 +289,16 @@ describe("sessions", () => {
   it("rotates after 30 minutes of inactivity, and not a moment before", async () => {
     const world = createWorld();
     const tab = grantedTab(world);
+    // Each jump lets the request that falls inside it be answered before the next one starts.
+    const wait = async (ms: number): Promise<void> => {
+      world.clock.advance(5000);
+      await settle();
+      world.clock.advance(ms - 5000);
+    };
     tab.tracker.track("logout");
-    world.clock.advance(30 * MINUTE);
+    await wait(30 * MINUTE);
     tab.tracker.track("logout");
-    world.clock.advance(30 * MINUTE + 1);
+    await wait(30 * MINUTE + 1);
     tab.tracker.track("logout");
     const events = await sent(tab);
     expect(events[0]?.session).toBe(events[1]?.session);
