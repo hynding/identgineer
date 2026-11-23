@@ -116,10 +116,18 @@
 /* An accent that does not stand out on the page would leave the primary looking like the
    secondary. accent-edge is the accent border there and transparent where the accent stands out,
    so this outline, drawn outside whatever border the design gives every control, adds 2px only
-   where it is needed and paints nothing otherwise. Focus replaces it with the focus ring. */
+   where it is needed. Focus replaces it with the focus ring. Even a transparent outline shifts the
+   anti-aliasing of a faded (disabled or busy) button by a step, so where the edge is transparent
+   it is not drawn at all. */
 .variant-primary {
   outline: 2px solid var(--idg-color-accent-edge);
   outline-offset: 0;
+}
+
+@container style(--idg-color-accent-edge: transparent) {
+  .variant-primary {
+    outline-style: none;
+  }
 }
 
 /* Forced colours draw every button's border in the system colour; the outline would add nothing
