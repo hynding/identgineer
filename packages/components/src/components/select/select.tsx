@@ -11,7 +11,7 @@ import {
 } from "@stencil/core";
 import { oneOf } from "../../utils/choice";
 import type { ValueDetail } from "../../utils/event-details";
-import { mirrorOptions, optionValue } from "../../utils/mirror-options";
+import { mirrorOptions, optionValue, optionsSignature } from "../../utils/mirror-options";
 import { validityFlags } from "../../utils/validity";
 import { INPUT_SIZES, type InputSize } from "../input/input-options";
 
@@ -123,11 +123,23 @@ export class IdgSelect {
     if (typeof state === "string") this.value = state;
   }
 
+  // What the native options were last copied from. The options are copied again only when the
+  // slotted ones are different, so a render for another reason (invalid, disabled, a new value)
+  // leaves the native options, and a choice the user is making among them, alone.
+  private copiedFrom?: string;
+
   private mirror(): void {
     const native = this.native;
     if (!native) return;
-    mirrorOptions(Array.from(this.host.children), native);
+    const sources = Array.from(this.host.children);
+    const signature = optionsSignature(sources);
+    if (signature !== this.copiedFrom) {
+      mirrorOptions(sources, native);
+      this.copiedFrom = signature;
+    }
     this.selectCurrentValue(native);
+    // The validity is that of the value that is now chosen, not of the one before it.
+    this.syncForm();
   }
 
   // An option the author marked selected, or the first one, is the value when none is given. A
@@ -145,6 +157,14 @@ export class IdgSelect {
     this.internals.setFormValue(this.value);
     const native = this.native;
     if (!native) return;
+    // A disabled select is not validated, as a native one is not, and its native validity can say
+    // missing with no message, which setValidity refuses.
+    // (Typed optional: a test DOM may not have it.)
+    const validates: boolean | undefined = native.willValidate;
+    if (validates === false) {
+      this.internals.setValidity({});
+      return;
+    }
     this.internals.setValidity(validityFlags(native.validity), native.validationMessage, native);
   }
 
