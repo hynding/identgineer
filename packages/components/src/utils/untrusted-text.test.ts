@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MARK, neutraliseText, truncateText } from "./untrusted-text";
+import { MARK, displayText, neutraliseText, truncateText } from "./untrusted-text";
 
 describe("neutraliseText", () => {
   it("leaves ordinary text as it is, in any script, with emoji and joined emoji", () => {
@@ -89,5 +89,16 @@ describe("truncateText", () => {
     const cut = truncateText("x".repeat(1_000_000), 10);
     expect(cut).toBe("xxxxxxxxx…");
     expect(performance.now() - start).toBeLessThan(200);
+  });
+});
+
+describe("displayText", () => {
+  it("cuts first and neutralises what is left, so a huge string costs only its limit", () => {
+    expect(displayText(`ab\u202e${"x".repeat(1_000_000)}`, 4)).toBe(`ab${MARK}…`);
+  });
+
+  it("shows a value that is not text as nothing, and a number as its digits", () => {
+    expect(displayText({ toString: () => "<b>" }, 10)).toBe("");
+    expect(displayText(42, 10)).toBe("42");
   });
 });
