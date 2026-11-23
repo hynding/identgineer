@@ -30,7 +30,7 @@ const track = (tab: Tab, target: string): void => {
 };
 
 describe("the stored queue and the session id", () => {
-  it("never holds the session id, nor does anything else in localStorage", async () => {
+  it("never holds the session id, nor does anything else in localStorage", () => {
     const tab = grantedTab(createWorld());
     tab.tracker.identify("user_1");
     track(tab, "a");
