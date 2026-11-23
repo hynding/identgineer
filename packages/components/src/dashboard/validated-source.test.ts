@@ -125,4 +125,19 @@ describe("validatedSource", () => {
     await expect(source.listEvents("", QUERY)).rejects.toMatchObject({ code: "invalid-request" });
     expect(calls).toBe(0);
   });
+
+  it.each([
+    ["no query", undefined],
+    ["a null query", null],
+    ["a query that is a string", "page=1"],
+    ["a null sort", { page: 1, pageSize: 10, sort: null }],
+    ["a sort that is a number", { page: 1, pageSize: 10, sort: 3 }],
+  ])("rejects %s with invalid-request, and does not throw", async (_label, query) => {
+    const source = validatedSource(sourceAnswering({ events: { events: [], total: 0 } }));
+    let call: Promise<unknown> | undefined;
+    expect(() => {
+      call = source.listEvents("p1", query as never);
+    }).not.toThrow();
+    await expect(call).rejects.toMatchObject({ code: "invalid-request" });
+  });
 });

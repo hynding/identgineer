@@ -3,11 +3,13 @@ import {
   DASHBOARD_LIMITS,
   parseEventPage,
   parseStatSummary,
-  parseTrackedEvent,
   parseTrackedEvents,
   parseTrackedProperties,
-  parseTrackedProperty,
 } from "./parse-dashboard-data";
+
+// The records are parsed through the lists, which are what the package exports.
+const parseTrackedEvent = (value: unknown) => parseTrackedEvents([value])[0];
+const parseTrackedProperty = (value: unknown) => parseTrackedProperties([value])[0];
 
 const METRIC = { value: 12, previous: 10, series: [1, 2, 3] };
 const SUMMARY = {
@@ -128,6 +130,13 @@ describe("parseTrackedEvent", () => {
     ["a date with no time", "2026-03-01"],
     ["a time with no zone", "2026-03-01T12:30:00"],
     ["a month that is not one", "2026-13-01T00:00:00Z"],
+    ["a day the month does not have", "2026-02-30T00:00:00Z"],
+    ["the 29th of February in a year that has none", "2027-02-29T00:00:00Z"],
+    ["hour 24", "2026-03-01T24:00:00Z"],
+    ["minute 60", "2026-03-01T12:60:00Z"],
+    ["second 60", "2026-03-01T12:00:60Z"],
+    ["day 00", "2026-03-00T12:00:00Z"],
+    ["an offset of 24 hours", "2026-03-01T12:00:00+24:00"],
     ["NaN", Number.NaN],
     ["Infinity", Number.POSITIVE_INFINITY],
     ["a time past what a date holds", 8.64e15 + 1],
@@ -287,5 +296,49 @@ describe("parseStatSummary", () => {
     ["a series that is not a list", { ...SUMMARY, events: { value: 1, series: "1,2" } }],
   ])("is undefined for %s", (_label, value) => {
     expect(parseStatSummary(value)).toBeUndefined();
+  });
+});
+
+describe("parseEventPage: the total", () => {
+  it("keeps a total up to the limit and clamps one beyond it", () => {
+    const events = [{ id: "e", name: "x", occurredAt: 0 }];
+    expect(parseEventPage({ events, total: 5_000 })?.total).toBe(5_000);
+    expect(parseEventPage({ events, total: 1e300 })?.total).toBe(DASHBOARD_LIMITS.total);
+    expect(parseEventPage({ events, total: Number.MAX_SAFE_INTEGER })?.total).toBe(
+      DASHBOARD_LIMITS.total,
+    );
+  });
+});
+
+describe("the limits are reached by stopping, not by cutting afterwards", () => {
+  it("reads no more events than it keeps", () => {
+    let read = 0;
+    const events = Array.from({ length: 5_000 }, (_, index) => ({
+      get id() {
+        read += 1;
+        return `e${String(index)}`;
+      },
+      name: "x",
+      occurredAt: 0,
+    }));
+    expect(parseTrackedEvents(events)).toHaveLength(DASHBOARD_LIMITS.events);
+    expect(read).toBeLessThanOrEqual(DASHBOARD_LIMITS.events);
+  });
+
+  it("reads no more property values than it keeps", () => {
+    let read = 0;
+    const properties: Record<string, string> = {};
+    for (let index = 0; index < 5_000; index += 1) {
+      Object.defineProperty(properties, `k${String(index)}`, {
+        enumerable: true,
+        get() {
+          read += 1;
+          return "v";
+        },
+      });
+    }
+    const parsed = parseTrackedEvents([{ id: "e", name: "x", occurredAt: 0, properties }]);
+    expect(Object.keys(parsed[0]?.properties ?? {})).toHaveLength(DASHBOARD_LIMITS.eventProperties);
+    expect(read).toBeLessThanOrEqual(DASHBOARD_LIMITS.eventProperties);
   });
 });
