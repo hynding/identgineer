@@ -226,6 +226,41 @@ describe("parseBrandKit, text", () => {
     expect(pathsOf({ ...VALID, name })).toEqual(["name"]);
   });
 
+  it("counts combining marks across joiners, so joiners cannot reset a stack", () => {
+    const joined = `a${`${String.fromCodePoint(0x301)}${String.fromCodePoint(0x200d)}`.repeat(10)}b`;
+    expect(pathsOf({ ...VALID, name: joined })).toEqual(["name"]);
+    const joinedFour = `a${`${String.fromCodePoint(0x301)}${String.fromCodePoint(0x200d)}`.repeat(4)}b`;
+    expect(errorsOf({ ...VALID, name: joinedFour })).toEqual([]);
+  });
+
+  it.each([
+    ["Persian", "می‌خواهم"],
+    ["Sinhala", "ශ්‍රී"],
+    ["Hebrew geresh at the end of a word", "ג׳ורג׳"],
+    ["Hebrew gershayim", "צה״ל"],
+    ["a katakana middle dot", "東京タワー・カフェ"],
+    ["a Catalan middle dot", "Col·lecció"],
+  ])("accepts the real name %s", (_label, name) => {
+    expect(errorsOf({ ...VALID, name })).toEqual([]);
+    expect(errorsOf({ ...VALID, tagline: name })).toEqual([]);
+  });
+
+  it.each([
+    ["a run of katakana middle dots after a space", "Acme ・・・・・・"],
+    ["a middle dot between a space and a letter", "Acme ·a·"],
+    ["a trailing middle dot", "Acme·"],
+    ["a leading middle dot", "·Acme"],
+    ["a doubled middle dot", "Ac··me"],
+    ["a katakana middle dot ending a word", "カフェ・"],
+    ["a run of gereshim after a letter", "Acme א׳׳׳"],
+    ["a geresh after a space", "Acme ׳"],
+    ["a leading gershayim", "״Acme"],
+    ["a doubled gershayim", "צה״״ל"],
+    ["a geresh after a digit", "A1׳"],
+  ])("refuses %s", (_label, name) => {
+    expect(pathsOf({ ...VALID, name })).toEqual(["name"]);
+  });
+
   it("counts length in code points, so letters outside the BMP count once", () => {
     const letter = String.fromCodePoint(0x1d49c);
     expect(errorsOf({ ...VALID, name: letter.repeat(NAME_MAX_LENGTH) })).toEqual([]);
