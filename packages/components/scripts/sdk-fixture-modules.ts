@@ -47,12 +47,16 @@ export function sdkModules(
   return walk(source).sort();
 }
 
+// The components' own source imports without an extension (Bundler resolution), which a browser
+// cannot resolve. Only an import or export of a relative path with no extension is rewritten.
+const EXTENSIONLESS_IMPORT = /(\bfrom\s+["'])(\.{1,2}\/[^"'.]*(?:\.[^"'./]+)*?)(["'])/g;
+
 /**
  * One SDK module as browser JavaScript: types erased and `./x.ts` specifiers rewritten to
- * `./x.js`. Transpilation only; `pnpm typecheck` checks the types.
+ * `./x.js`, as are extensionless ones. Transpilation only; `pnpm typecheck` checks the types.
  */
 export function transpileSdkModule(code: string, fileName: string): string {
-  return ts.transpileModule(code, {
+  const output = ts.transpileModule(code, {
     fileName,
     compilerOptions: {
       target: ts.ScriptTarget.ES2022,
@@ -62,6 +66,11 @@ export function transpileSdkModule(code: string, fileName: string): string {
       rewriteRelativeImportExtensions: true,
     },
   }).outputText;
+  return output.replace(
+    EXTENSIONLESS_IMPORT,
+    (match, before: string, path: string, after: string) =>
+      /\.(?:js|mjs|json)$/.test(path) ? match : `${before}${path}.js${after}`,
+  );
 }
 
 /** The output path of a module, `.ts` replaced by `.js`, with forward slashes. */
