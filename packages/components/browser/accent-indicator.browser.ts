@@ -1,6 +1,6 @@
 import { emitBrandThemeCss, generateBrandTheme, parseBrandKit } from "@identgineer/brand";
 import type { Page } from "@playwright/test";
-import { DESIGNS, SCHEMES, THEMES, applyAxes } from "./axes";
+import { DESIGNS, LAYOUTS, SCHEMES, THEMES, applyAxes } from "./axes";
 import { contrastRatio } from "./contrast";
 import { expect, test } from "./fixtures";
 
@@ -225,6 +225,78 @@ test.describe("accent state indicators", () => {
           }
         });
       }
+    }
+  }
+});
+
+interface NavigationMarker {
+  readonly name: string;
+  readonly color: string;
+  readonly tint: string;
+  readonly behind: string;
+}
+
+/** What marks the current navigation item beyond its tint: an inline-start bar or an underline. */
+async function readNavigationMarkers(page: Page): Promise<NavigationMarker[]> {
+  return page.evaluate(() => {
+    const item = document.querySelector('[slot="navigation"][aria-current]');
+    if (!item) throw new Error("missing the current navigation item");
+    let node: Node | null = item.assignedSlot ?? item.parentNode;
+    let behind = getComputedStyle(document.documentElement).backgroundColor;
+    while (node) {
+      if (node instanceof Element) {
+        const color = getComputedStyle(node).backgroundColor;
+        if (color !== "rgba(0, 0, 0, 0)") {
+          behind = color;
+          break;
+        }
+      }
+      node = node.parentNode instanceof ShadowRoot ? node.parentNode.host : node.parentNode;
+    }
+    const style = getComputedStyle(item);
+    const tint = style.backgroundColor;
+    const markers = [];
+    const bar = Number.parseFloat(style.getPropertyValue("border-inline-start-width"));
+    if (bar >= 2 && style.getPropertyValue("border-inline-start-style") === "solid") {
+      markers.push({
+        name: "inline-start bar",
+        color: style.getPropertyValue("border-inline-start-color"),
+        tint,
+        behind,
+      });
+    }
+    if (
+      style.textDecorationLine.includes("underline") &&
+      Number.parseFloat(style.textDecorationThickness) >= 2
+    ) {
+      markers.push({ name: "underline", color: style.textDecorationColor, tint, behind });
+    }
+    return markers;
+  });
+}
+
+test.describe("current navigation item", () => {
+  for (const layout of LAYOUTS) {
+    for (const scheme of SCHEMES) {
+      test(`is marked at 3:1 or more beyond its tint in ${layout}, ${scheme}`, async ({ page }) => {
+        await page.goto("/fixtures/layout-shell.html");
+        await hydrated(page);
+        for (const theme of THEMES) {
+          await applyAxes(page, { layout, theme, scheme });
+          const markers = await readNavigationMarkers(page);
+          expect(markers.length, `${theme}: a bar or underline`).toBeGreaterThan(0);
+          for (const { name, color, tint, behind } of markers) {
+            expect(
+              contrastRatio(color, tint),
+              `${theme} ${name}: ${color} on the tint ${tint}`,
+            ).toBeGreaterThanOrEqual(3);
+            expect(
+              contrastRatio(color, behind),
+              `${theme} ${name}: ${color} on ${behind}`,
+            ).toBeGreaterThanOrEqual(3);
+          }
+        }
+      });
     }
   }
 });
