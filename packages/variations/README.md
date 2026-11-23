@@ -22,13 +22,13 @@ Set the attributes on the root element. Each axis defaults when its attribute is
 </html>
 ```
 
-| Attribute     | Values                                          | Default       |
-| ------------- | ----------------------------------------------- | ------------- |
-| `data-theme`  | `THEME_IDS` of `@identgineer/tokens`            | `aurora`      |
-| `data-design` | `DESIGN_IDS`                                    | `flat`        |
-| `data-layout` | `LAYOUT_IDS`                                    | `top-bar`     |
-| `data-ux`     | `UX_MODE_IDS`                                   | `comfortable` |
-| `data-scheme` | `light`, `dark`; absent means follow the system | system        |
+| Attribute     | Values                                                                | Default       |
+| ------------- | --------------------------------------------------------------------- | ------------- |
+| `data-theme`  | `THEME_IDS` of `@identgineer/tokens`, or a registered generated theme | `aurora`      |
+| `data-design` | `DESIGN_IDS`                                                          | `flat`        |
+| `data-layout` | `LAYOUT_IDS`                                                          | `top-bar`     |
+| `data-ux`     | `UX_MODE_IDS`                                                         | `comfortable` |
+| `data-scheme` | `light`, `dark`; absent means follow the system                       | system        |
 
 See [`@identgineer/tokens`](../tokens/README.md) for what each value looks like.
 
@@ -90,6 +90,46 @@ shuffleVariations(() => 0.5); // inject the random source for deterministic test
   `detail: { state, changed }`. Listeners are given what this package computed, not the event's
   `detail`, because any script can dispatch a forged event; treat the event's
   `detail` as a hint if you listen to it directly.
+
+## Generated themes
+
+Themes generated from a brand kit by [`@identgineer/brand`](../brand/README.md) are extra
+`data-theme` values. The theme check refuses any id it does not know, so register a generated
+theme's id before applying it:
+
+```ts
+import { applyVariations, isVariationId, registerThemeIds } from "@identgineer/variations";
+
+const { registered, rejected, unregister } = registerThemeIds(["acme"]);
+const theme = "acme";
+if (isVariationId("theme", theme)) applyVariations({ theme });
+unregister(); // later, if the theme goes away: an id another registration holds stays
+```
+
+- Only the theme axis changes, and only for ids that pass the added theme id rule of
+  `@identgineer/tokens` (`ADDED_THEME_ID_RULE`, the same rule brand ids follow): two to 32
+  lower-case letters and digits in words joined by single hyphens, starting with a letter, and not
+  in `RESERVED_THEME_IDS` (every built-in id of every axis, CSS-wide keywords, `default`, `none`,
+  `auto`, `system`, `light`, `dark`, `brand`, `theme`, `custom`, `constructor`, `prototype`). The
+  rule is embedded in the generated registry data, so the browser entry still imports no package.
+  Anything else is returned in `rejected`, unchanged; it never throws and never loosens the check
+  for other values.
+- A registered id is accepted everywhere the check is used: `applyVariations`, `getVariations`
+  reading the attribute back, `decodeVariations` and `loadVariations`. Unregistered again, an id
+  left on the page reads as the default.
+- `applyVariations(partial, { persist: true })` on a page that has not registered a stored
+  generated theme keeps it in storage: if the stored theme passes the added theme id rule, choosing
+  another axis there leaves it as it is, so the next page that registers it applies it. It is
+  never applied while unregistered, and nothing else unknown is kept: one theme slug at most,
+  checked by the same rule. Choosing a theme replaces it. `saveVariations` and `loadVariations`
+  still write and read only what the page can validate.
+- `REGISTRY`, its previews and `shuffleVariations` keep to the built-in themes: a generated theme
+  has no entry there.
+- The bootstrap script embeds the built-in ids when it is built and does not know registered ones,
+  so a stored or linked generated theme is applied once the page's script registers it, not
+  before first paint. Render `data-theme` on the server to avoid that flash.
+- `VariationState["theme"]` is `ThemeId | RegisteredThemeId`. `RegisteredThemeId` is a branded
+  string: only `isVariationId` and `registerThemeIds` produce one.
 
 ## Persistence
 
@@ -182,7 +222,8 @@ string-based timers. The integrity attribute means a tampered file is not run.
 ## Security model
 
 - Everything that can come from outside (the URL, storage, existing attributes, arguments) is
-  untrusted and is accepted only on an exact string match with a registry id. There is no trimming,
+  untrusted and is accepted only on an exact string match with a registry id (or a theme id
+  registered with `registerThemeIds`, which takes only short slugs). There is no trimming,
   case folding or coercion, so wrong case, whitespace, non-strings, `__proto__` and `constructor`
   and long input are all rejected. What reaches an attribute is always one of the registry's own
   strings.

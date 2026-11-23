@@ -19,6 +19,7 @@ describe("the public API", () => {
         "loadVariations",
         "onVariationsChange",
         "parseVariations",
+        "registerThemeIds",
         "resetVariations",
         "saveVariations",
         "shuffleVariations",

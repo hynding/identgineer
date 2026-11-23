@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { StateKey, VariationState, VariationsChange } from "@identgineer/variations";
+import type {
+  RegisteredThemeId,
+  StateKey,
+  VariationState,
+  VariationsChange,
+} from "@identgineer/variations";
 import type * as Local from "./variation-switcher-types";
 
 // The public types are declared in this package, because the variations package is TypeScript
@@ -13,7 +18,8 @@ type Equal<A, B> =
 /* eslint-enable @typescript-eslint/no-unnecessary-type-parameters */
 
 const identical: {
-  theme: Equal<Local.ThemeId, VariationState["theme"]>;
+  theme: Equal<Local.ThemeId | Local.RegisteredThemeId, VariationState["theme"]>;
+  registered: Equal<Local.RegisteredThemeId, RegisteredThemeId>;
   design: Equal<Local.DesignId, VariationState["design"]>;
   layout: Equal<Local.LayoutId, VariationState["layout"]>;
   ux: Equal<Local.UxModeId, VariationState["ux"]>;
@@ -23,6 +29,7 @@ const identical: {
   detail: Equal<Local.VariationsChangeDetail, VariationsChange>;
 } = {
   theme: true,
+  registered: true,
   design: true,
   layout: true,
   ux: true,

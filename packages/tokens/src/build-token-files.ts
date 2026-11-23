@@ -1,3 +1,4 @@
+import { followBrandCorners } from "./brand-corners.ts";
 import { emitBaseCss, emitStylesheet, emitThemeCss } from "./emit-css.ts";
 import { emitDesignCss, emitLayoutCss, emitPreferencesCss, emitUxCss } from "./emit-mode-css.ts";
 import { flattenTokens } from "./flatten-tokens.ts";
@@ -62,12 +63,13 @@ function themeBodies(sources: TokenSources, shared: readonly FlatToken[]): Body[
 function designBodies(sources: TokenSources, shared: readonly FlatToken[]): Body[] {
   return sources.designs.map((source) => {
     const design = parseMode(source, "design");
+    const tokens = resolveMode(shared, design.tokens);
     return {
       id: design.id,
       body: emitDesignCss({
         id: design.id,
         isDefault: design.id === sources.defaultDesignId,
-        tokens: resolveMode(shared, design.tokens),
+        tokens: design.followsBrandCorners ? followBrandCorners(tokens) : tokens,
         opaque: resolveMode(shared, design.opaque),
       }),
     };

@@ -58,6 +58,7 @@ export type { SwitcherOrientation } from "./components/variation-switcher/variat
 export type {
   DesignId,
   LayoutId,
+  RegisteredThemeId,
   SchemeChoice,
   StateKey,
   ThemeId,

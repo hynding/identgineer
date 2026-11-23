@@ -17,6 +17,12 @@ export default defineConfig({
       },
       {
         test: {
+          name: "brand",
+          include: ["packages/brand/src/**/*.test.ts"],
+        },
+      },
+      {
+        test: {
           name: "variations",
           include: ["packages/variations/src/**/*.test.ts"],
         },

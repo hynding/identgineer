@@ -6,6 +6,12 @@
 export type ThemeId =
   "aurora" | "ember" | "tidal" | "graphite" | "citrus" | "orchid" | "terminal" | "paper";
 
+/**
+ * A theme id added at run time with the variations package's registerThemeIds (a theme generated
+ * from a brand kit). Branded, so only the variations package produces one.
+ */
+export type RegisteredThemeId = string & { readonly __registeredThemeId: true };
+
 export type DesignId =
   "flat" | "soft" | "glass" | "brutalist" | "outline" | "elevated" | "pixel" | "editorial";
 
@@ -26,7 +32,7 @@ export type UxModeId =
 export type SchemeChoice = "light" | "dark" | "system";
 
 export interface VariationState {
-  readonly theme: ThemeId;
+  readonly theme: ThemeId | RegisteredThemeId;
   readonly design: DesignId;
   readonly layout: LayoutId;
   readonly ux: UxModeId;

@@ -11,13 +11,19 @@ export type UxModeId = Data["ux"]["variations"][number]["id"];
 export type SchemeChoice = Data["scheme"]["ids"][number];
 export type Scheme = Exclude<SchemeChoice, "system">;
 
+/**
+ * A theme id added at run time with registerThemeIds (a theme generated from a brand kit). Branded,
+ * so only isVariationId and registerThemeIds produce one, never a bare string.
+ */
+export type RegisteredThemeId = string & { readonly __registeredThemeId: true };
+
 /** The four independent variation axes. Each is an attribute on the root element. */
 export type VariationAxis = "theme" | "design" | "layout" | "ux";
 
 /** `system` is the absence of `data-scheme`: the theme follows the system preference. */
 
 export interface VariationState {
-  readonly theme: ThemeId;
+  readonly theme: ThemeId | RegisteredThemeId;
   readonly design: DesignId;
   readonly layout: LayoutId;
   readonly ux: UxModeId;

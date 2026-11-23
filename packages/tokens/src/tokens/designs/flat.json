@@ -2,7 +2,8 @@
   "$description": "Flat and quiet: no shadows, hairline borders and a medium radius. The default.",
   "$extensions": {
     "identgineer": {
-      "label": "Flat"
+      "label": "Flat",
+      "followsBrandCorners": true
     }
   },
   "tokens": {

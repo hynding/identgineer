@@ -2,7 +2,8 @@
   "$description": "Print-like: square corners, no shadow, surfaces divided only by rules above and below, underlined headings.",
   "$extensions": {
     "identgineer": {
-      "label": "Editorial"
+      "label": "Editorial",
+      "followsBrandCorners": false
     }
   },
   "tokens": {

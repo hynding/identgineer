@@ -1,4 +1,4 @@
-import { clearStoredVariations, loadVariations, saveVariations } from "./storage.ts";
+import { clearStoredVariations, mergeStoredVariations } from "./storage.ts";
 import type { StorageLike } from "./storage.ts";
 import { changedKeys, defaultVariations, getVariations } from "./read-variations.ts";
 import { REGISTRY, STATE_KEYS } from "./registry.ts";
@@ -36,7 +36,7 @@ function writeKey(root: Element, key: StateKey, value: string): void {
 
 function persistChoice(valid: Partial<VariationState>, storage: StorageLike | undefined): void {
   if (Object.keys(valid).length === 0) return;
-  saveVariations({ ...loadVariations(storage), ...valid }, storage);
+  mergeStoredVariations(valid, storage);
 }
 
 /**

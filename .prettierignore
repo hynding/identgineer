@@ -10,3 +10,5 @@ packages/components/src/components.d.ts
 .claude
 test-results
 playwright-report
+# Byte-exact emitter output, compared by tests
+packages/brand/src/__golden__

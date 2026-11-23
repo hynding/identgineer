@@ -17,9 +17,17 @@ export { shuffleVariations } from "./shuffle-variations.ts";
 export type { RandomSource } from "./shuffle-variations.ts";
 export { decodeVariations, encodeVariations, variationsUrl } from "./url.ts";
 export type { EncodeOptions } from "./url.ts";
+export { registerThemeIds } from "./theme-registration.ts";
+export type { ThemeRegistration } from "./theme-registration.ts";
 export { isVariationId, parseVariations, validateVariations } from "./validate.ts";
 export type { RejectedVariation, ValidatedVariations } from "./validate.ts";
-export type { SchemeChoice, StateKey, VariationAxis, VariationState } from "./variation-state.ts";
+export type {
+  RegisteredThemeId,
+  SchemeChoice,
+  StateKey,
+  VariationAxis,
+  VariationState,
+} from "./variation-state.ts";
 export { onVariationsChange } from "./variations-events.ts";
 export type { VariationsChange, VariationsListener } from "./variations-events.ts";
 export { applyVariations, resetVariations } from "./variations-state.ts";
