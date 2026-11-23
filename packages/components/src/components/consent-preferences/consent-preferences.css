@@ -1,5 +1,8 @@
 :host {
   display: block;
+  /* The panel is a size container, which has no width of its own to offer a flex row or a shrink-to-fit
+     box: asked for the width of the line, it takes it, and in a block it is no change. */
+  inline-size: 100%;
   min-inline-size: 0;
   color: var(--idg-color-text);
   font-family: var(--idg-font-family-body);

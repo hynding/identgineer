@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { DESIGNS, LAYOUTS, SCHEMES, THEMES, UX_MODES, applyAxes, settle, type Axes } from "./axes";
 import { expectNoAxeViolations } from "./accessibility";
 import {
@@ -16,18 +16,21 @@ import { expect, test } from "./fixtures";
 interface Look {
   width: number;
   height: number;
+  top: number;
   variant: string | null;
   size: string | null;
   style: string;
 }
 
-async function lookOf(button: Locator): Promise<Look> {
-  const host = button.locator("xpath=ancestor::idg-button[1]");
+async function lookOf(page: Page, name: "decline" | "accept"): Promise<Look> {
+  const host = banner(page).locator(`idg-button.${name}`);
+  const button = bannerButton(page, name);
   const box = await button.boundingBox();
   if (!box) throw new Error("the button is not laid out");
   return {
     width: box.width,
     height: box.height,
+    top: box.y,
     variant: await host.getAttribute("variant"),
     size: await host.getAttribute("size"),
     style: await button.evaluate((element) => {
@@ -49,13 +52,17 @@ async function lookOf(button: Locator): Promise<Look> {
 
 /** Accept and Decline, as numbers: one variant, one size, one look, within a pixel. */
 async function expectEqualProminence(page: Page, context: string): Promise<void> {
-  const decline = await lookOf(bannerButton(page, "decline"));
-  const accept = await lookOf(bannerButton(page, "accept"));
+  const decline = await lookOf(page, "decline");
+  const accept = await lookOf(page, "accept");
   expect(accept.variant, `${context}: variant`).toBe(decline.variant);
   expect(accept.size, `${context}: size`).toBe(decline.size);
   expect(accept.style, `${context}: computed style`).toBe(decline.style);
   expect(Math.abs(accept.width - decline.width), `${context}: width`).toBeLessThanOrEqual(1);
-  expect(Math.abs(accept.height - decline.height), `${context}: height`).toBeLessThanOrEqual(1);
+  // Side by side they are one height; stacked, each fits its own words, which wrap differently.
+  const sameRow = Math.abs(accept.top - decline.top) <= 1;
+  if (sameRow) {
+    expect(Math.abs(accept.height - decline.height), `${context}: height`).toBeLessThanOrEqual(1);
+  }
 }
 
 async function expectAccessibleUnder(page: Page, axes: Axes): Promise<void> {
@@ -107,11 +114,13 @@ test.describe("consent components meet WCAG 2.2 AA", () => {
   test("with the error alerts and the erase confirmation showing", async ({ page }) => {
     await openConsent(page);
     await page.evaluate(`(() => {
-      const broken = { ...window.consentFixture.tracker.consent, deny() { return false; } };
+      const consent = window.consentFixture.tracker.consent;
+      const broken = { ...consent, deny() { return false; }, grant() { return false; } };
       document.getElementById("banner").consent = broken;
       document.getElementById("prefs").consent = broken;
     })()`);
     await bannerButton(page, "decline").click();
+    await switchIn(inlinePanel(page), "analytics").check();
     await inlinePanel(page).locator("idg-button.save button").click();
     await inlinePanel(page).locator("idg-button.erase button").click();
     await expect(banner(page).locator('[part="error"]')).toBeVisible();
@@ -132,10 +141,10 @@ test.describe("the choices are equally prominent", () => {
       await expectEqualProminence(page, design);
       await bannerButton(page, "accept").hover();
       await settle(page);
-      const hovered = await lookOf(bannerButton(page, "accept"));
+      const hovered = await lookOf(page, "accept");
       await bannerButton(page, "decline").hover();
       await settle(page);
-      const other = await lookOf(bannerButton(page, "decline"));
+      const other = await lookOf(page, "decline");
       expect(hovered.style).toBe(other.style);
     });
   }
@@ -255,7 +264,8 @@ test.describe("consent components in forced colours and with reduced motion", ()
       }
       return roots
         .flatMap((root) => root.getAnimations())
-        .filter((animation) => animation.playState === "running").length;
+        .filter((animation) => animation instanceof CSSAnimation && animation.playState === "running")
+        .length;
     });
     expect(running).toBe(0);
   });
@@ -270,7 +280,7 @@ test.describe("the target size", () => {
       expect(box?.height ?? 0, name).toBeGreaterThanOrEqual(24);
     }
     for (const control of [
-      switchIn(inlinePanel(page), "analytics"),
+      inlinePanel(page).locator("idg-switch.analytics"),
       inlinePanel(page).locator("idg-button.save button"),
       inlinePanel(page).locator("idg-button.erase button"),
     ]) {
