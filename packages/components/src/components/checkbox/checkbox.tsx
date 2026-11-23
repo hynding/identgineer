@@ -123,7 +123,7 @@ export class IdgCheckbox {
     const description = this.accessibleDescription;
     const disabled = this.disabled || this.formDisabled;
 
-    return (
+    return [
       <label class={{ choice: true, invalid: this.invalid, disabled }}>
         <input
           class="native"
@@ -143,12 +143,14 @@ export class IdgCheckbox {
           <slot />
         </span>
         {this.invalid ? <idg-icon class="invalid-mark" name="warning" aria-hidden="true" /> : null}
-        {description ? (
-          <span id="description" class="visually-hidden">
-            {description}
-          </span>
-        ) : null}
-      </label>
-    );
+      </label>,
+      // Outside the label, whose text names the control: inside it the description would be part of
+      // the name as well, and be read twice.
+      description ? (
+        <span id="description" class="visually-hidden">
+          {description}
+        </span>
+      ) : null,
+    ];
   }
 }
