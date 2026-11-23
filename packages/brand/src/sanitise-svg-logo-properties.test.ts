@@ -313,6 +313,12 @@ function checkAccepted(result: SvgLogoResult, input: string | Uint8Array, where:
   expect(again.ok && again.drawingCost, `${where}: the same cost read again`).toBe(
     result.drawingCost,
   );
+  expect(result.overdraw, `${where}: within the overdraw limit`).toBeLessThanOrEqual(
+    SVG_LOGO_LIMITS.overdraw,
+  );
+  expect(again.ok && again.overdraw, `${where}: the same overdraw read again`).toBe(
+    result.overdraw,
+  );
   const repeat = sanitiseSvgLogo(input);
   expect(repeat.ok && repeat.svg, `${where}: determinism`).toBe(result.svg);
   return true;
