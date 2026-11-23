@@ -11,6 +11,39 @@ import {
 } from "./test-harness.ts";
 import { createMemoryStorage } from "./testing/memory-storage.ts";
 
+describe("the time of the decision", () => {
+  it("is null until the visitor chooses, and after reset", () => {
+    const tab = openTab(createWorld());
+    expect(tab.tracker.consent.get().decidedAt).toBeNull();
+    tab.tracker.consent.grant();
+    tab.tracker.consent.reset();
+    expect(tab.tracker.consent.get().decidedAt).toBeNull();
+  });
+
+  it("is the time of the stored decision, and moves with a new one", () => {
+    const world = createWorld();
+    const tab = openTab(world);
+    tab.tracker.consent.deny();
+    expect(tab.tracker.consent.get().decidedAt).toBe(START);
+    tab.tracker.consent.grant();
+    expect(tab.tracker.consent.get().decidedAt).toBeGreaterThan(START);
+  });
+
+  it("is what a listener is told with the status", () => {
+    const tab = openTab(createWorld());
+    const heard: (number | null)[] = [];
+    tab.tracker.consent.onChange((status) => heard.push(status.decidedAt));
+    tab.tracker.consent.grant();
+    expect(heard).toEqual([START]);
+  });
+
+  it("is read from the record an earlier visit stored", () => {
+    const world = createWorld();
+    world.local.seed(CONSENT_KEY, consentRecord("granted"));
+    expect(openTab(world).tracker.consent.get().decidedAt).toBe(START);
+  });
+});
+
 describe("consent state machine", () => {
   it("starts unknown and writes nothing", () => {
     const world = createWorld();
