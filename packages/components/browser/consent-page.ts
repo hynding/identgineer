@@ -50,7 +50,9 @@ export interface ConsentSnapshot {
 /**
  * Waits until the banner has drawn what the state calls for, so a test never starts from a page
  * that is about to change: the question while it is asked, the one-line note under a signal when
- * `?announce` is set, and otherwise a frame in which nothing is drawn.
+ * `?announce` is set, and otherwise a frame in which nothing is drawn. The controls they draw
+ * (buttons, switches, alerts, the dialog) are lazy components of their own, so they must have
+ * hydrated too: a press or a Tab before that reaches an element that is not yet a control.
  */
 async function expectRendered(page: Page, options: OpenOptions): Promise<void> {
   const state = await page.evaluate<{ state: string; reason?: string }>(
@@ -64,6 +66,11 @@ async function expectRendered(page: Page, options: OpenOptions): Promise<void> {
   } else {
     await expect(banner.locator('[part="banner"], [part="signal-note"]')).toHaveCount(0);
   }
+  await expect(
+    page.locator(
+      "idg-button:not(.hydrated), idg-switch:not(.hydrated), idg-alert:not(.hydrated), idg-dialog:not(.hydrated)",
+    ),
+  ).toHaveCount(0);
   await page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );

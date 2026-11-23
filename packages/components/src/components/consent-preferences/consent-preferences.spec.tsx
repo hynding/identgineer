@@ -371,6 +371,18 @@ describe("idg-consent-preferences and the time of the choice", () => {
     expect(textOf(root, ".decided")).toContain(shown);
   });
 
+  it("follows the time when the same choice is made again elsewhere", async () => {
+    const fake = createFakeConsent({ state: "granted", decidedAt: Date.UTC(2026, 0, 1) });
+    const { root, waitForChanges } = await mount(fake.consent);
+    fake.set({ state: "granted", decidedAt: Date.UTC(2026, 5, 1) });
+    await waitForChanges();
+    const shown = new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(Date.UTC(2026, 5, 1));
+    expect(textOf(root, ".decided")).toContain(shown);
+  });
+
   it("shows the time the real tracker stored", async () => {
     const { tracker } = trackerSetup();
     tracker.consent.grant();

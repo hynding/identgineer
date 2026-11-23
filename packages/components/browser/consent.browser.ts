@@ -271,14 +271,6 @@ test.describe("the consent banner and the preferences", () => {
 });
 
 test.describe("the consent components in more than one tab", () => {
-  // The tracker is told of another tab's change by a message, and otherwise reads storage afresh at
-  // its next use. Chrome can show a tab's write to another a moment after the message that
-  // announced it, so a test that waits for the page to change reads the consent too, as any later
-  // use of the tracker does, instead of relying on the message alone.
-  const reads = (page: import("@playwright/test").Page) => async () => {
-    await page.evaluate(`window.consentFixture.tracker.consent.get()`);
-  };
-
   test("a choice in one tab hides the banner in the other, and its preferences follow", async ({
     context,
   }) => {
@@ -287,10 +279,7 @@ test.describe("the consent components in more than one tab", () => {
     await openConsent(first);
     await openConsent(second);
     await bannerButton(first, "accept").click();
-    await expect(async () => {
-      await reads(second)();
-      await expect(bannerRegion(second)).toHaveCount(0, { timeout: 500 });
-    }).toPass();
+    await expect(bannerRegion(second)).toHaveCount(0);
     await expect(switchIn(inlinePanel(second), "analytics")).toBeChecked();
   });
 
@@ -301,12 +290,7 @@ test.describe("the consent components in more than one tab", () => {
     await openConsent(second);
     await switchIn(inlinePanel(second), "analytics").check();
     await first.evaluate(`window.consentFixture.tracker.consent.deny()`);
-    await expect(async () => {
-      await reads(second)();
-      await expect(inlinePanel(second).locator('[part="changed"]')).toContainText("discarded", {
-        timeout: 500,
-      });
-    }).toPass();
+    await expect(inlinePanel(second).locator('[part="changed"]')).toContainText("discarded");
     await expect(switchIn(inlinePanel(second), "analytics")).not.toBeChecked();
     expect(await consentState(second)).toMatchObject({ state: "denied" });
   });
