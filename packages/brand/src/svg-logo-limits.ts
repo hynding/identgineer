@@ -44,9 +44,10 @@ export interface SvgLogoLimits {
    */
   readonly overdraw: number;
   /**
-   * How often the shapes of the logo's clip paths could cross one another, pair by pair within each
-   * clip path, every use expanded: a browser combines a clip path's shapes into one outline, work
-   * that grows faster than the crossings, once for each clip path.
+   * How often the edges of the logo's clip paths could cross, every use expanded: a browser
+   * combines the shapes of a clip path of more than one into one outline, each shape's own crossings
+   * included, work that grows faster than the crossings, once for each clip path. Each such clip
+   * path counts half the square of its shapes' degrees added up; one of a single shape counts none.
    */
   readonly clipCrossings: number;
   /** Masks and clip paths applied once every reference is expanded. */

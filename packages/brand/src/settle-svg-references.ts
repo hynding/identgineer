@@ -310,10 +310,18 @@ function checkExpansion(
   return total.cost;
 }
 
+/** What a clip path draws, once every use is expanded: how many shapes, and their degrees added up. */
+interface ClipShapes {
+  readonly count: number;
+  readonly degree: number;
+}
+
 /**
- * Refuses clip paths whose shapes could cross more than `limits.clipCrossings` times in all: within
- * each clip path, for each pair of shapes (what a use draws counted as drawn), the product of their
- * degrees (see `Geometry.degree`). Run after the expansion limits, so no use comes back on itself.
+ * Refuses clip paths whose shapes could cross more than `limits.clipCrossings` times in all. A clip
+ * path of more than one shape is combined into one outline, and its edges, each shape's own among
+ * them, could cross up to half the square of their degrees added up (see `Geometry.degree`); one
+ * shape alone clips by its outline and crosses nothing. Run after the expansion limits, so no use
+ * comes back on itself.
  */
 function checkClipCrossings(
   elements: readonly CleanElement[],
@@ -321,30 +329,34 @@ function checkClipCrossings(
   base: number,
   limits: SvgLogoLimits,
 ): void {
-  const degrees = new Map<CleanElement, number>();
-  const degree = (element: CleanElement): number => {
-    const known = degrees.get(element);
-    if (known !== undefined) return known;
-    let found = measureShape(element, base)?.degree ?? 0;
+  const known = new Map<CleanElement, ClipShapes>();
+  const add = (left: ClipShapes, right: ClipShapes): ClipShapes => ({
+    count: left.count + right.count,
+    degree: left.degree + right.degree,
+  });
+  const none: ClipShapes = { count: 0, degree: 0 };
+  const shapes = (element: CleanElement): ClipShapes => {
+    const found = known.get(element);
+    if (found !== undefined) return found;
+    let drawn = none;
     if (element.name === "use") {
       const reference = referenceOf(element, "href");
       const target = reference === undefined ? undefined : ids.get(reference);
-      found = target === undefined ? 0 : degree(target);
+      if (target !== undefined) drawn = shapes(target);
     } else if (element.name === "g") {
-      found = element.children.reduce((total, child) => total + degree(child), 0);
+      drawn = element.children.reduce((total, child) => add(total, shapes(child)), none);
+    } else {
+      const geometry = measureShape(element, base);
+      if (geometry !== undefined) drawn = { count: 1, degree: geometry.degree };
     }
-    degrees.set(element, found);
-    return found;
+    known.set(element, drawn);
+    return drawn;
   };
   let crossings = 0;
   for (const clip of elements) {
     if (clip.name !== "clipPath") continue;
-    let before = 0;
-    for (const shape of clip.children) {
-      const own = degree(shape);
-      crossings += before * own;
-      before += own;
-    }
+    const drawn = clip.children.reduce((total, child) => add(total, shapes(child)), none);
+    if (drawn.count > 1) crossings += (drawn.degree * drawn.degree) / 2;
   }
   if (!(crossings <= limits.clipCrossings)) {
     throw new SvgLogoRejection(
