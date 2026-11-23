@@ -1,0 +1,41 @@
+/* Shrink-to-fit parents an identity form may be put in, each of which sizes it by its content. */
+body {
+  margin: 0;
+  padding: var(--idg-space-s);
+}
+
+.case {
+  margin-block: var(--idg-space-s);
+}
+
+.fit-content {
+  inline-size: fit-content;
+}
+
+.flex-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--idg-space-s);
+}
+
+.grid-auto {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--idg-space-s);
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--idg-space-s);
+}
+
+.cards.flex-row > .card,
+.cards.flex-row idg-session-guard > .card {
+  flex: 1 1 0;
+}
+
+.card {
+  padding: var(--idg-space-s);
+  border: var(--idg-border-width) solid var(--idg-border-color);
+}

@@ -25,9 +25,22 @@ import { NavigationToggleDetail } from "./components/layout/layout-options";
 import { Placement } from "./utils/position";
 import { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 import { PageChangeDetail } from "./components/pagination/pagination-options";
+import { PasswordResetClient, ProfileClient, RegisterClient, SessionGuardClient, SignInClient, UserMenuClient } from "./identity/identity-types";
+import { PasswordResetMode } from "./components/password-reset/password-reset-options";
+import { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
+import { CountdownClock } from "./identity/throttle-countdown";
+import { SignedInDetail, SignedOutDetail } from "./identity/event-details";
+import { ProfileLabels } from "./components/profile/profile-labels";
+import { ProfileSavedDetail, SessionRevokedDetail } from "./components/profile/profile-types";
 import { ProgressSize } from "./components/progress/progress-options";
 import { RadioSelectDetail } from "./components/radio/radio";
+import { RegisterLabels } from "./components/register/register-labels";
+import { RegisteredDetail } from "./components/register/register-types";
+import { SessionGuardLabels } from "./components/session-guard/session-guard-labels";
+import { SessionChangeDetail } from "./components/session-guard/session-guard-types";
 import { SidebarSide } from "./components/sidebar/sidebar-options";
+import { SignInLabels } from "./components/sign-in/sign-in-labels";
+import { ProviderSignInDetail, SignInProvider } from "./components/sign-in/sign-in-types";
 import { SkeletonVariant } from "./components/skeleton/skeleton-options";
 import { StackAlignment } from "./components/stack/stack-options";
 import { StatDirection, StatSentiment } from "./components/stat/stat-options";
@@ -36,6 +49,7 @@ import { SortDirection } from "./utils/sort-rows";
 import { TableSortDetail } from "./components/table/table-options";
 import { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 import { ToastPosition } from "./components/toast-region/toast-region-options";
+import { UserMenuLabels } from "./components/user-menu/user-menu-labels";
 import { SwitcherOrientation } from "./components/variation-switcher/variation-switcher-options";
 import { VariationsChangeDetail } from "./components/variation-switcher/variation-switcher-types";
 export { AccordionToggleDetail } from "./components/accordion/accordion-options";
@@ -58,9 +72,22 @@ export { NavigationToggleDetail } from "./components/layout/layout-options";
 export { Placement } from "./utils/position";
 export { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
 export { PageChangeDetail } from "./components/pagination/pagination-options";
+export { PasswordResetClient, ProfileClient, RegisterClient, SessionGuardClient, SignInClient, UserMenuClient } from "./identity/identity-types";
+export { PasswordResetMode } from "./components/password-reset/password-reset-options";
+export { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
+export { CountdownClock } from "./identity/throttle-countdown";
+export { SignedInDetail, SignedOutDetail } from "./identity/event-details";
+export { ProfileLabels } from "./components/profile/profile-labels";
+export { ProfileSavedDetail, SessionRevokedDetail } from "./components/profile/profile-types";
 export { ProgressSize } from "./components/progress/progress-options";
 export { RadioSelectDetail } from "./components/radio/radio";
+export { RegisterLabels } from "./components/register/register-labels";
+export { RegisteredDetail } from "./components/register/register-types";
+export { SessionGuardLabels } from "./components/session-guard/session-guard-labels";
+export { SessionChangeDetail } from "./components/session-guard/session-guard-types";
 export { SidebarSide } from "./components/sidebar/sidebar-options";
+export { SignInLabels } from "./components/sign-in/sign-in-labels";
+export { ProviderSignInDetail, SignInProvider } from "./components/sign-in/sign-in-types";
 export { SkeletonVariant } from "./components/skeleton/skeleton-options";
 export { StackAlignment } from "./components/stack/stack-options";
 export { StatDirection, StatSentiment } from "./components/stat/stat-options";
@@ -69,6 +96,7 @@ export { SortDirection } from "./utils/sort-rows";
 export { TableSortDetail } from "./components/table/table-options";
 export { ToastDismissDetail, ToastVariant } from "./components/toast/toast-options";
 export { ToastPosition } from "./components/toast-region/toast-region-options";
+export { UserMenuLabels } from "./components/user-menu/user-menu-labels";
 export { SwitcherOrientation } from "./components/variation-switcher/variation-switcher-options";
 export { VariationsChangeDetail } from "./components/variation-switcher/variation-switcher-types";
 export namespace Components {
@@ -159,6 +187,11 @@ export namespace Components {
           * @default false
          */
         "dismissible": boolean;
+        /**
+          * Leaves out the live role, for a message that changes while it is shown (a countdown, say), which a live role would announce on every change. Announce it some other way.
+          * @default false
+         */
+        "quiet": boolean;
         /**
           * Meaning and urgency. Warning and danger interrupt assistive technology; info and success do not.
           * @default "info"
@@ -620,6 +653,11 @@ export namespace Components {
          */
         "size": IconSize;
     }
+    /**
+     * A form-associated text field. Enter submits its form as a native input does (see the README):
+     * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
+     * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
+     */
     interface IdgInput {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -938,6 +976,36 @@ export namespace Components {
         "siblings": number;
     }
     /**
+     * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
+     * for the address and always answers the same, whether or not an account uses it. `complete`
+     * sets the new password with the emailed code, which the page reads from the link and passes in
+     * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
+     * inputs are emptied after every attempt.
+     */
+    interface IdgPasswordReset {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: PasswordResetClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The code from the reset email, which the page reads from the link it was sent. Without one, `complete` mode asks for it.
+         */
+        "code"?: string;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<PasswordResetLabels>;
+        /**
+          * Which step to show. Unknown values fall back to `request`.
+          * @default "request"
+         */
+        "mode": PasswordResetMode;
+    }
+    /**
      * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
      * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
      * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
@@ -975,6 +1043,35 @@ export namespace Components {
           * Opens the popover when closed and closes it when open.
          */
         "toggle": () => Promise<void>;
+    }
+    /**
+     * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
+     * (display name, about, language, time zone and email preference), a password change, and the
+     * sessions of the account with a button to sign each other one out and one to sign out everywhere.
+     * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
+     */
+    interface IdgProfile {
+        /**
+          * A picture of the owner for the avatar, such as the one their profile links to.
+         */
+        "avatarSrc"?: string;
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: ProfileClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The level of the section headings, 2 to 6, to fit the page's outline: below a page title (`h1`), 2.
+          * @default 2
+         */
+        "headingLevel": number;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<ProfileLabels>;
     }
     /**
      * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
@@ -1110,6 +1207,26 @@ export namespace Components {
         "value": string;
     }
     /**
+     * A registration form for the identity client it is given in `client`. With email confirmation on,
+     * a new address and one already registered get the same answer, so the form never tells whether
+     * an account exists. The password is read from its input when the form is sent and the input is
+     * emptied after every attempt.
+     */
+    interface IdgRegister {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: RegisterClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<RegisterLabels>;
+    }
+    /**
      * Options are written as children, exactly as for a native select, and copied into the native
      * select inside the component: the same markup works with or without a framework, and no option
      * data has to be serialised into an attribute.
@@ -1160,6 +1277,30 @@ export namespace Components {
         "value": string;
     }
     /**
+     * Shows its content only while someone is signed in, through the identity client it is given in
+     * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
+     * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
+     * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
+     * at once.
+     * The guard adds no box around what it shows: the host is `display: contents` and the slots are
+     * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
+     * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
+     * before the content and out of the page's layout, whose text says the change; Tab goes on into
+     * the content. A notice, when the guard shows one, is one block before the content.
+     * This is a convenience for the interface, not access control: the content is still in the page
+     * for anyone who reads its markup, and only the API decides what a request may read or change.
+     */
+    interface IdgSessionGuard {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: SessionGuardClient;
+        /**
+          * The text of the guard's own notices, merged over the English defaults.
+         */
+        "labels"?: Partial<SessionGuardLabels>;
+    }
+    /**
      * Two regions side by side: a side region of a set width and the content, which takes the rest.
      * When the content would get less than half of the width, the regions stack instead, with no
      * breakpoint and no script, so it follows the width of its container rather than the viewport.
@@ -1182,6 +1323,33 @@ export namespace Components {
           * Width of the side region, a step of the size scale. Without it the layout's aside width is used.
          */
         "sideWidth"?: SizeStep;
+    }
+    /**
+     * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
+     * password: the password is read from its input when the form is sent and the input is emptied
+     * after a sign-in, a refused one, or when the element leaves the page.
+     */
+    interface IdgSignIn {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: SignInClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<SignInLabels>;
+        /**
+          * The page the CMS sends the browser back to after a provider sign-in.
+         */
+        "providerCallback"?: string;
+        /**
+          * Provider buttons, in order. Each starts the provider's sign-in through the client.
+         */
+        "providers"?: readonly SignInProvider[];
     }
     /**
      * A placeholder shaped like content that is still loading. It is always hidden from assistive
@@ -1652,6 +1820,31 @@ export namespace Components {
         "text"?: string;
     }
     /**
+     * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
+     * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
+     * user how the sign-out went: a server that could not be reached is said plainly, since the
+     * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
+     * It goes away when the client hears that another tab signed out.
+     */
+    interface IdgUserMenu {
+        /**
+          * A picture of the user for the avatar, such as their profile's; initials without one.
+         */
+        "avatarSrc"?: string;
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: UserMenuClient;
+        /**
+          * The name to show; the username by default.
+         */
+        "displayName"?: string;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<UserMenuLabels>;
+    }
+    /**
      * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
      * always acts on the document's root element, through `@identgineer/variations`, so the page's own
      * attributes stay the single truth: a change made anywhere else (markup, a script, another
@@ -1710,9 +1903,17 @@ export interface IdgPaginationCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgPaginationElement;
 }
+export interface IdgPasswordResetCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgPasswordResetElement;
+}
 export interface IdgPopoverCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgPopoverElement;
+}
+export interface IdgProfileCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgProfileElement;
 }
 export interface IdgRadioCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -1722,9 +1923,21 @@ export interface IdgRadioGroupCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgRadioGroupElement;
 }
+export interface IdgRegisterCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgRegisterElement;
+}
 export interface IdgSelectCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgSelectElement;
+}
+export interface IdgSessionGuardCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgSessionGuardElement;
+}
+export interface IdgSignInCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgSignInElement;
 }
 export interface IdgSwitchCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -1745,6 +1958,10 @@ export interface IdgTextareaCustomEvent<T> extends CustomEvent<T> {
 export interface IdgToastCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgToastElement;
+}
+export interface IdgUserMenuCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgUserMenuElement;
 }
 export interface IdgVariationSwitcherCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -1984,6 +2201,11 @@ declare global {
         "idgInput": ValueDetail;
         "idgChange": ValueDetail;
     }
+    /**
+     * A form-associated text field. Enter submits its form as a native input does (see the README):
+     * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
+     * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
+     */
     interface HTMLIdgInputElement extends Components.IdgInput, HTMLStencilElement {
         addEventListener<K extends keyof HTMLIdgInputElementEventMap>(type: K, listener: (this: HTMLIdgInputElement, ev: IdgInputCustomEvent<HTMLIdgInputElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
         addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
@@ -2114,6 +2336,31 @@ declare global {
         prototype: HTMLIdgPaginationElement;
         new (): HTMLIdgPaginationElement;
     };
+    interface HTMLIdgPasswordResetElementEventMap {
+        "idgResetRequested": void;
+        "idgPasswordReset": SignedInDetail;
+    }
+    /**
+     * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
+     * for the address and always answers the same, whether or not an account uses it. `complete`
+     * sets the new password with the emailed code, which the page reads from the link and passes in
+     * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
+     * inputs are emptied after every attempt.
+     */
+    interface HTMLIdgPasswordResetElement extends Components.IdgPasswordReset, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgPasswordResetElementEventMap>(type: K, listener: (this: HTMLIdgPasswordResetElement, ev: IdgPasswordResetCustomEvent<HTMLIdgPasswordResetElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgPasswordResetElementEventMap>(type: K, listener: (this: HTMLIdgPasswordResetElement, ev: IdgPasswordResetCustomEvent<HTMLIdgPasswordResetElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgPasswordResetElement: {
+        prototype: HTMLIdgPasswordResetElement;
+        new (): HTMLIdgPasswordResetElement;
+    };
     interface HTMLIdgPopoverElementEventMap {
         "idgOpen": void;
         "idgClose": void;
@@ -2137,6 +2384,32 @@ declare global {
     var HTMLIdgPopoverElement: {
         prototype: HTMLIdgPopoverElement;
         new (): HTMLIdgPopoverElement;
+    };
+    interface HTMLIdgProfileElementEventMap {
+        "idgProfileSaved": ProfileSavedDetail;
+        "idgPasswordChanged": void;
+        "idgSessionRevoked": SessionRevokedDetail;
+        "idgSignedOut": SignedOutDetail;
+    }
+    /**
+     * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
+     * (display name, about, language, time zone and email preference), a password change, and the
+     * sessions of the account with a button to sign each other one out and one to sign out everywhere.
+     * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
+     */
+    interface HTMLIdgProfileElement extends Components.IdgProfile, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgProfileElementEventMap>(type: K, listener: (this: HTMLIdgProfileElement, ev: IdgProfileCustomEvent<HTMLIdgProfileElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgProfileElementEventMap>(type: K, listener: (this: HTMLIdgProfileElement, ev: IdgProfileCustomEvent<HTMLIdgProfileElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgProfileElement: {
+        prototype: HTMLIdgProfileElement;
+        new (): HTMLIdgProfileElement;
     };
     /**
      * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
@@ -2192,6 +2465,29 @@ declare global {
         prototype: HTMLIdgRadioGroupElement;
         new (): HTMLIdgRadioGroupElement;
     };
+    interface HTMLIdgRegisterElementEventMap {
+        "idgRegistered": RegisteredDetail;
+    }
+    /**
+     * A registration form for the identity client it is given in `client`. With email confirmation on,
+     * a new address and one already registered get the same answer, so the form never tells whether
+     * an account exists. The password is read from its input when the form is sent and the input is
+     * emptied after every attempt.
+     */
+    interface HTMLIdgRegisterElement extends Components.IdgRegister, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgRegisterElementEventMap>(type: K, listener: (this: HTMLIdgRegisterElement, ev: IdgRegisterCustomEvent<HTMLIdgRegisterElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgRegisterElementEventMap>(type: K, listener: (this: HTMLIdgRegisterElement, ev: IdgRegisterCustomEvent<HTMLIdgRegisterElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgRegisterElement: {
+        prototype: HTMLIdgRegisterElement;
+        new (): HTMLIdgRegisterElement;
+    };
     interface HTMLIdgSelectElementEventMap {
         "idgInput": ValueDetail;
         "idgChange": ValueDetail;
@@ -2215,6 +2511,37 @@ declare global {
         prototype: HTMLIdgSelectElement;
         new (): HTMLIdgSelectElement;
     };
+    interface HTMLIdgSessionGuardElementEventMap {
+        "idgSessionChange": SessionChangeDetail;
+    }
+    /**
+     * Shows its content only while someone is signed in, through the identity client it is given in
+     * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
+     * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
+     * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
+     * at once.
+     * The guard adds no box around what it shows: the host is `display: contents` and the slots are
+     * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
+     * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
+     * before the content and out of the page's layout, whose text says the change; Tab goes on into
+     * the content. A notice, when the guard shows one, is one block before the content.
+     * This is a convenience for the interface, not access control: the content is still in the page
+     * for anyone who reads its markup, and only the API decides what a request may read or change.
+     */
+    interface HTMLIdgSessionGuardElement extends Components.IdgSessionGuard, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgSessionGuardElementEventMap>(type: K, listener: (this: HTMLIdgSessionGuardElement, ev: IdgSessionGuardCustomEvent<HTMLIdgSessionGuardElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgSessionGuardElementEventMap>(type: K, listener: (this: HTMLIdgSessionGuardElement, ev: IdgSessionGuardCustomEvent<HTMLIdgSessionGuardElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgSessionGuardElement: {
+        prototype: HTMLIdgSessionGuardElement;
+        new (): HTMLIdgSessionGuardElement;
+    };
     /**
      * Two regions side by side: a side region of a set width and the content, which takes the rest.
      * When the content would get less than half of the width, the regions stack instead, with no
@@ -2229,6 +2556,29 @@ declare global {
     var HTMLIdgSidebarElement: {
         prototype: HTMLIdgSidebarElement;
         new (): HTMLIdgSidebarElement;
+    };
+    interface HTMLIdgSignInElementEventMap {
+        "idgSignedIn": SignedInDetail;
+        "idgProviderSignIn": ProviderSignInDetail;
+    }
+    /**
+     * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
+     * password: the password is read from its input when the form is sent and the input is emptied
+     * after a sign-in, a refused one, or when the element leaves the page.
+     */
+    interface HTMLIdgSignInElement extends Components.IdgSignIn, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgSignInElementEventMap>(type: K, listener: (this: HTMLIdgSignInElement, ev: IdgSignInCustomEvent<HTMLIdgSignInElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgSignInElementEventMap>(type: K, listener: (this: HTMLIdgSignInElement, ev: IdgSignInCustomEvent<HTMLIdgSignInElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgSignInElement: {
+        prototype: HTMLIdgSignInElement;
+        new (): HTMLIdgSignInElement;
     };
     /**
      * A placeholder shaped like content that is still loading. It is always hidden from assistive
@@ -2440,6 +2790,30 @@ declare global {
         prototype: HTMLIdgTooltipElement;
         new (): HTMLIdgTooltipElement;
     };
+    interface HTMLIdgUserMenuElementEventMap {
+        "idgSignedOut": SignedOutDetail;
+    }
+    /**
+     * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
+     * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
+     * user how the sign-out went: a server that could not be reached is said plainly, since the
+     * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
+     * It goes away when the client hears that another tab signed out.
+     */
+    interface HTMLIdgUserMenuElement extends Components.IdgUserMenu, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgUserMenuElementEventMap>(type: K, listener: (this: HTMLIdgUserMenuElement, ev: IdgUserMenuCustomEvent<HTMLIdgUserMenuElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgUserMenuElementEventMap>(type: K, listener: (this: HTMLIdgUserMenuElement, ev: IdgUserMenuCustomEvent<HTMLIdgUserMenuElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgUserMenuElement: {
+        prototype: HTMLIdgUserMenuElement;
+        new (): HTMLIdgUserMenuElement;
+    };
     interface HTMLIdgVariationSwitcherElementEventMap {
         "idgVariationsChange": VariationsChangeDetail;
     }
@@ -2490,12 +2864,17 @@ declare global {
         "idg-menu-item": HTMLIdgMenuItemElement;
         "idg-menu-separator": HTMLIdgMenuSeparatorElement;
         "idg-pagination": HTMLIdgPaginationElement;
+        "idg-password-reset": HTMLIdgPasswordResetElement;
         "idg-popover": HTMLIdgPopoverElement;
+        "idg-profile": HTMLIdgProfileElement;
         "idg-progress": HTMLIdgProgressElement;
         "idg-radio": HTMLIdgRadioElement;
         "idg-radio-group": HTMLIdgRadioGroupElement;
+        "idg-register": HTMLIdgRegisterElement;
         "idg-select": HTMLIdgSelectElement;
+        "idg-session-guard": HTMLIdgSessionGuardElement;
         "idg-sidebar": HTMLIdgSidebarElement;
+        "idg-sign-in": HTMLIdgSignInElement;
         "idg-skeleton": HTMLIdgSkeletonElement;
         "idg-stack": HTMLIdgStackElement;
         "idg-stat": HTMLIdgStatElement;
@@ -2509,6 +2888,7 @@ declare global {
         "idg-toast": HTMLIdgToastElement;
         "idg-toast-region": HTMLIdgToastRegionElement;
         "idg-tooltip": HTMLIdgTooltipElement;
+        "idg-user-menu": HTMLIdgUserMenuElement;
         "idg-variation-switcher": HTMLIdgVariationSwitcherElement;
     }
 }
@@ -2604,6 +2984,11 @@ declare namespace LocalJSX {
           * Fires when the dismiss button is activated. The alert then hides itself, unless a listener calls `preventDefault()` to remove or keep it some other way.
          */
         "onIdgDismiss"?: (event: IdgAlertCustomEvent<void>) => void;
+        /**
+          * Leaves out the live role, for a message that changes while it is shown (a countdown, say), which a live role would announce on every change. Announce it some other way.
+          * @default false
+         */
+        "quiet"?: boolean;
         /**
           * Meaning and urgency. Warning and danger interrupt assistive technology; info and success do not.
           * @default "info"
@@ -3069,6 +3454,11 @@ declare namespace LocalJSX {
          */
         "size"?: IconSize;
     }
+    /**
+     * A form-associated text field. Enter submits its form as a native input does (see the README):
+     * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
+     * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
+     */
     interface IdgInput {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -3387,6 +3777,44 @@ declare namespace LocalJSX {
         "siblings"?: number;
     }
     /**
+     * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
+     * for the address and always answers the same, whether or not an account uses it. `complete`
+     * sets the new password with the emailed code, which the page reads from the link and passes in
+     * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
+     * inputs are emptied after every attempt.
+     */
+    interface IdgPasswordReset {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: PasswordResetClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The code from the reset email, which the page reads from the link it was sent. Without one, `complete` mode asks for it.
+         */
+        "code"?: string;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<PasswordResetLabels>;
+        /**
+          * Which step to show. Unknown values fall back to `request`.
+          * @default "request"
+         */
+        "mode"?: PasswordResetMode;
+        /**
+          * Fires once the new password is set and the user signed in, with their id and username.
+         */
+        "onIdgPasswordReset"?: (event: IdgPasswordResetCustomEvent<SignedInDetail>) => void;
+        /**
+          * Fires once a reset email is asked for. It carries nothing: the answer is the same for all.
+         */
+        "onIdgResetRequested"?: (event: IdgPasswordResetCustomEvent<void>) => void;
+    }
+    /**
      * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
      * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
      * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
@@ -3420,6 +3848,51 @@ declare namespace LocalJSX {
           * @default "bottom-start"
          */
         "placement"?: Placement;
+    }
+    /**
+     * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
+     * (display name, about, language, time zone and email preference), a password change, and the
+     * sessions of the account with a button to sign each other one out and one to sign out everywhere.
+     * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
+     */
+    interface IdgProfile {
+        /**
+          * A picture of the owner for the avatar, such as the one their profile links to.
+         */
+        "avatarSrc"?: string;
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: ProfileClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The level of the section headings, 2 to 6, to fit the page's outline: below a page title (`h1`), 2.
+          * @default 2
+         */
+        "headingLevel"?: number;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<ProfileLabels>;
+        /**
+          * Fires after the password is changed. It carries nothing.
+         */
+        "onIdgPasswordChanged"?: (event: IdgProfileCustomEvent<void>) => void;
+        /**
+          * Fires after the profile is saved, with the saved fields.
+         */
+        "onIdgProfileSaved"?: (event: IdgProfileCustomEvent<ProfileSavedDetail>) => void;
+        /**
+          * Fires after another session is signed out, with its id.
+         */
+        "onIdgSessionRevoked"?: (event: IdgProfileCustomEvent<SessionRevokedDetail>) => void;
+        /**
+          * Fires after "Sign out everywhere", with how it went. Navigating on is the page's job.
+         */
+        "onIdgSignedOut"?: (event: IdgProfileCustomEvent<SignedOutDetail>) => void;
     }
     /**
      * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
@@ -3551,6 +4024,30 @@ declare namespace LocalJSX {
         "value"?: string;
     }
     /**
+     * A registration form for the identity client it is given in `client`. With email confirmation on,
+     * a new address and one already registered get the same answer, so the form never tells whether
+     * an account exists. The password is read from its input when the form is sent and the input is
+     * emptied after every attempt.
+     */
+    interface IdgRegister {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: RegisterClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<RegisterLabels>;
+        /**
+          * Fires once the account is asked for. Navigating on is the page's job.
+         */
+        "onIdgRegistered"?: (event: IdgRegisterCustomEvent<RegisteredDetail>) => void;
+    }
+    /**
      * Options are written as children, exactly as for a native select, and copied into the native
      * select inside the component: the same markup works with or without a framework, and no option
      * data has to be serialised into an attribute.
@@ -3601,6 +4098,34 @@ declare namespace LocalJSX {
         "value"?: string;
     }
     /**
+     * Shows its content only while someone is signed in, through the identity client it is given in
+     * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
+     * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
+     * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
+     * at once.
+     * The guard adds no box around what it shows: the host is `display: contents` and the slots are
+     * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
+     * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
+     * before the content and out of the page's layout, whose text says the change; Tab goes on into
+     * the content. A notice, when the guard shows one, is one block before the content.
+     * This is a convenience for the interface, not access control: the content is still in the page
+     * for anyone who reads its markup, and only the API decides what a request may read or change.
+     */
+    interface IdgSessionGuard {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: SessionGuardClient;
+        /**
+          * The text of the guard's own notices, merged over the English defaults.
+         */
+        "labels"?: Partial<SessionGuardLabels>;
+        /**
+          * Fires when what the guard shows changes, and with the first state each client reports.
+         */
+        "onIdgSessionChange"?: (event: IdgSessionGuardCustomEvent<SessionChangeDetail>) => void;
+    }
+    /**
      * Two regions side by side: a side region of a set width and the content, which takes the rest.
      * When the content would get less than half of the width, the regions stack instead, with no
      * breakpoint and no script, so it follows the width of its container rather than the viewport.
@@ -3623,6 +4148,41 @@ declare namespace LocalJSX {
           * Width of the side region, a step of the size scale. Without it the layout's aside width is used.
          */
         "sideWidth"?: SizeStep;
+    }
+    /**
+     * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
+     * password: the password is read from its input when the form is sent and the input is emptied
+     * after a sign-in, a refused one, or when the element leaves the page.
+     */
+    interface IdgSignIn {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: SignInClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<SignInLabels>;
+        /**
+          * Fires before going to a provider's sign-in. Cancel it to navigate yourself; otherwise the browser goes to `detail.url` with `location.assign`.
+         */
+        "onIdgProviderSignIn"?: (event: IdgSignInCustomEvent<ProviderSignInDetail>) => void;
+        /**
+          * Fires after a sign-in, with the user's id and username. Navigating on is the page's job.
+         */
+        "onIdgSignedIn"?: (event: IdgSignInCustomEvent<SignedInDetail>) => void;
+        /**
+          * The page the CMS sends the browser back to after a provider sign-in.
+         */
+        "providerCallback"?: string;
+        /**
+          * Provider buttons, in order. Each starts the provider's sign-in through the client.
+         */
+        "providers"?: readonly SignInProvider[];
     }
     /**
      * A placeholder shaped like content that is still loading. It is always hidden from assistive
@@ -4097,6 +4657,35 @@ declare namespace LocalJSX {
         "text"?: string;
     }
     /**
+     * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
+     * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
+     * user how the sign-out went: a server that could not be reached is said plainly, since the
+     * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
+     * It goes away when the client hears that another tab signed out.
+     */
+    interface IdgUserMenu {
+        /**
+          * A picture of the user for the avatar, such as their profile's; initials without one.
+         */
+        "avatarSrc"?: string;
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: UserMenuClient;
+        /**
+          * The name to show; the username by default.
+         */
+        "displayName"?: string;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<UserMenuLabels>;
+        /**
+          * Fires after "Sign out", with how it went. Navigating on is the page's job.
+         */
+        "onIdgSignedOut"?: (event: IdgUserMenuCustomEvent<SignedOutDetail>) => void;
+    }
+    /**
      * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
      * always acts on the document's root element, through `@identgineer/variations`, so the page's own
      * attributes stay the single truth: a change made anywhere else (markup, a script, another
@@ -4144,6 +4733,7 @@ declare namespace LocalJSX {
     }
     interface IdgAlertAttributes {
         "variant": AlertVariant;
+        "quiet": boolean;
         "dismissible": boolean;
         "dismissLabel": string;
     }
@@ -4325,11 +4915,19 @@ declare namespace LocalJSX {
         "nextLabel": string;
         "pageLabel": string;
     }
+    interface IdgPasswordResetAttributes {
+        "mode": PasswordResetMode;
+        "code": string;
+    }
     interface IdgPopoverAttributes {
         "placement": Placement;
         "offset": number;
         "open": boolean;
         "for": string;
+    }
+    interface IdgProfileAttributes {
+        "avatarSrc": string;
+        "headingLevel": number;
     }
     interface IdgProgressAttributes {
         "label": string;
@@ -4373,6 +4971,9 @@ declare namespace LocalJSX {
         "side": SidebarSide;
         "sideWidth": SizeStep;
         "gap": GapStep;
+    }
+    interface IdgSignInAttributes {
+        "providerCallback": string;
     }
     interface IdgSkeletonAttributes {
         "variant": SkeletonVariant;
@@ -4479,6 +5080,10 @@ declare namespace LocalJSX {
         "offset": number;
         "for": string;
     }
+    interface IdgUserMenuAttributes {
+        "displayName": string;
+        "avatarSrc": string;
+    }
     interface IdgVariationSwitcherAttributes {
         "persist": boolean;
         "axes": string;
@@ -4513,12 +5118,17 @@ declare namespace LocalJSX {
         "idg-menu-item": Omit<IdgMenuItem, keyof IdgMenuItemAttributes> & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes]?: IdgMenuItem[K] } & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `attr:${K}`]?: IdgMenuItemAttributes[K] } & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `prop:${K}`]?: IdgMenuItem[K] };
         "idg-menu-separator": IdgMenuSeparator;
         "idg-pagination": Omit<IdgPagination, keyof IdgPaginationAttributes> & { [K in keyof IdgPagination & keyof IdgPaginationAttributes]?: IdgPagination[K] } & { [K in keyof IdgPagination & keyof IdgPaginationAttributes as `attr:${K}`]?: IdgPaginationAttributes[K] } & { [K in keyof IdgPagination & keyof IdgPaginationAttributes as `prop:${K}`]?: IdgPagination[K] };
+        "idg-password-reset": Omit<IdgPasswordReset, keyof IdgPasswordResetAttributes> & { [K in keyof IdgPasswordReset & keyof IdgPasswordResetAttributes]?: IdgPasswordReset[K] } & { [K in keyof IdgPasswordReset & keyof IdgPasswordResetAttributes as `attr:${K}`]?: IdgPasswordResetAttributes[K] } & { [K in keyof IdgPasswordReset & keyof IdgPasswordResetAttributes as `prop:${K}`]?: IdgPasswordReset[K] };
         "idg-popover": Omit<IdgPopover, keyof IdgPopoverAttributes> & { [K in keyof IdgPopover & keyof IdgPopoverAttributes]?: IdgPopover[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `attr:${K}`]?: IdgPopoverAttributes[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `prop:${K}`]?: IdgPopover[K] };
+        "idg-profile": Omit<IdgProfile, keyof IdgProfileAttributes> & { [K in keyof IdgProfile & keyof IdgProfileAttributes]?: IdgProfile[K] } & { [K in keyof IdgProfile & keyof IdgProfileAttributes as `attr:${K}`]?: IdgProfileAttributes[K] } & { [K in keyof IdgProfile & keyof IdgProfileAttributes as `prop:${K}`]?: IdgProfile[K] };
         "idg-progress": Omit<IdgProgress, keyof IdgProgressAttributes> & { [K in keyof IdgProgress & keyof IdgProgressAttributes]?: IdgProgress[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `attr:${K}`]?: IdgProgressAttributes[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `prop:${K}`]?: IdgProgress[K] };
         "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
         "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
+        "idg-register": IdgRegister;
         "idg-select": Omit<IdgSelect, keyof IdgSelectAttributes> & { [K in keyof IdgSelect & keyof IdgSelectAttributes]?: IdgSelect[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `attr:${K}`]?: IdgSelectAttributes[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `prop:${K}`]?: IdgSelect[K] };
+        "idg-session-guard": IdgSessionGuard;
         "idg-sidebar": Omit<IdgSidebar, keyof IdgSidebarAttributes> & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes]?: IdgSidebar[K] } & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `attr:${K}`]?: IdgSidebarAttributes[K] } & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `prop:${K}`]?: IdgSidebar[K] };
+        "idg-sign-in": Omit<IdgSignIn, keyof IdgSignInAttributes> & { [K in keyof IdgSignIn & keyof IdgSignInAttributes]?: IdgSignIn[K] } & { [K in keyof IdgSignIn & keyof IdgSignInAttributes as `attr:${K}`]?: IdgSignInAttributes[K] } & { [K in keyof IdgSignIn & keyof IdgSignInAttributes as `prop:${K}`]?: IdgSignIn[K] };
         "idg-skeleton": Omit<IdgSkeleton, keyof IdgSkeletonAttributes> & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes]?: IdgSkeleton[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `attr:${K}`]?: IdgSkeletonAttributes[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `prop:${K}`]?: IdgSkeleton[K] };
         "idg-stack": Omit<IdgStack, keyof IdgStackAttributes> & { [K in keyof IdgStack & keyof IdgStackAttributes]?: IdgStack[K] } & { [K in keyof IdgStack & keyof IdgStackAttributes as `attr:${K}`]?: IdgStackAttributes[K] } & { [K in keyof IdgStack & keyof IdgStackAttributes as `prop:${K}`]?: IdgStack[K] };
         "idg-stat": Omit<IdgStat, keyof IdgStatAttributes> & { [K in keyof IdgStat & keyof IdgStatAttributes]?: IdgStat[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `attr:${K}`]?: IdgStatAttributes[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `prop:${K}`]?: IdgStat[K] };
@@ -4532,6 +5142,7 @@ declare namespace LocalJSX {
         "idg-toast": Omit<IdgToast, keyof IdgToastAttributes> & { [K in keyof IdgToast & keyof IdgToastAttributes]?: IdgToast[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `attr:${K}`]?: IdgToastAttributes[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `prop:${K}`]?: IdgToast[K] };
         "idg-toast-region": Omit<IdgToastRegion, keyof IdgToastRegionAttributes> & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes]?: IdgToastRegion[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `attr:${K}`]?: IdgToastRegionAttributes[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `prop:${K}`]?: IdgToastRegion[K] };
         "idg-tooltip": Omit<IdgTooltip, keyof IdgTooltipAttributes> & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes]?: IdgTooltip[K] } & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `attr:${K}`]?: IdgTooltipAttributes[K] } & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `prop:${K}`]?: IdgTooltip[K] };
+        "idg-user-menu": Omit<IdgUserMenu, keyof IdgUserMenuAttributes> & { [K in keyof IdgUserMenu & keyof IdgUserMenuAttributes]?: IdgUserMenu[K] } & { [K in keyof IdgUserMenu & keyof IdgUserMenuAttributes as `attr:${K}`]?: IdgUserMenuAttributes[K] } & { [K in keyof IdgUserMenu & keyof IdgUserMenuAttributes as `prop:${K}`]?: IdgUserMenu[K] };
         "idg-variation-switcher": Omit<IdgVariationSwitcher, keyof IdgVariationSwitcherAttributes> & { [K in keyof IdgVariationSwitcher & keyof IdgVariationSwitcherAttributes]?: IdgVariationSwitcher[K] } & { [K in keyof IdgVariationSwitcher & keyof IdgVariationSwitcherAttributes as `attr:${K}`]?: IdgVariationSwitcherAttributes[K] } & { [K in keyof IdgVariationSwitcher & keyof IdgVariationSwitcherAttributes as `prop:${K}`]?: IdgVariationSwitcher[K] };
     }
 }
@@ -4632,6 +5243,11 @@ declare module "@stencil/core" {
              * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
              */
             "idg-icon": LocalJSX.IntrinsicElements["idg-icon"] & JSXBase.HTMLAttributes<HTMLIdgIconElement>;
+            /**
+             * A form-associated text field. Enter submits its form as a native input does (see the README):
+             * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
+             * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
+             */
             "idg-input": LocalJSX.IntrinsicElements["idg-input"] & JSXBase.HTMLAttributes<HTMLIdgInputElement>;
             /**
              * The page shell. One page, written once, is housed in the structure the `data-layout` attribute of
@@ -4680,12 +5296,27 @@ declare module "@stencil/core" {
              */
             "idg-pagination": LocalJSX.IntrinsicElements["idg-pagination"] & JSXBase.HTMLAttributes<HTMLIdgPaginationElement>;
             /**
+             * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
+             * for the address and always answers the same, whether or not an account uses it. `complete`
+             * sets the new password with the emailed code, which the page reads from the link and passes in
+             * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
+             * inputs are emptied after every attempt.
+             */
+            "idg-password-reset": LocalJSX.IntrinsicElements["idg-password-reset"] & JSXBase.HTMLAttributes<HTMLIdgPasswordResetElement>;
+            /**
              * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
              * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
              * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
              * not contained, and Tab moves on from the content.
              */
             "idg-popover": LocalJSX.IntrinsicElements["idg-popover"] & JSXBase.HTMLAttributes<HTMLIdgPopoverElement>;
+            /**
+             * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
+             * (display name, about, language, time zone and email preference), a password change, and the
+             * sessions of the account with a button to sign each other one out and one to sign out everywhere.
+             * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
+             */
+            "idg-profile": LocalJSX.IntrinsicElements["idg-profile"] & JSXBase.HTMLAttributes<HTMLIdgProfileElement>;
             /**
              * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
              * the browser's own. Without a value it is indeterminate.
@@ -4704,11 +5335,33 @@ declare module "@stencil/core" {
              */
             "idg-radio-group": LocalJSX.IntrinsicElements["idg-radio-group"] & JSXBase.HTMLAttributes<HTMLIdgRadioGroupElement>;
             /**
+             * A registration form for the identity client it is given in `client`. With email confirmation on,
+             * a new address and one already registered get the same answer, so the form never tells whether
+             * an account exists. The password is read from its input when the form is sent and the input is
+             * emptied after every attempt.
+             */
+            "idg-register": LocalJSX.IntrinsicElements["idg-register"] & JSXBase.HTMLAttributes<HTMLIdgRegisterElement>;
+            /**
              * Options are written as children, exactly as for a native select, and copied into the native
              * select inside the component: the same markup works with or without a framework, and no option
              * data has to be serialised into an attribute.
              */
             "idg-select": LocalJSX.IntrinsicElements["idg-select"] & JSXBase.HTMLAttributes<HTMLIdgSelectElement>;
+            /**
+             * Shows its content only while someone is signed in, through the identity client it is given in
+             * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
+             * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
+             * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
+             * at once.
+             * The guard adds no box around what it shows: the host is `display: contents` and the slots are
+             * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
+             * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
+             * before the content and out of the page's layout, whose text says the change; Tab goes on into
+             * the content. A notice, when the guard shows one, is one block before the content.
+             * This is a convenience for the interface, not access control: the content is still in the page
+             * for anyone who reads its markup, and only the API decides what a request may read or change.
+             */
+            "idg-session-guard": LocalJSX.IntrinsicElements["idg-session-guard"] & JSXBase.HTMLAttributes<HTMLIdgSessionGuardElement>;
             /**
              * Two regions side by side: a side region of a set width and the content, which takes the rest.
              * When the content would get less than half of the width, the regions stack instead, with no
@@ -4719,6 +5372,12 @@ declare module "@stencil/core" {
              * when it is at the end.
              */
             "idg-sidebar": LocalJSX.IntrinsicElements["idg-sidebar"] & JSXBase.HTMLAttributes<HTMLIdgSidebarElement>;
+            /**
+             * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
+             * password: the password is read from its input when the form is sent and the input is emptied
+             * after a sign-in, a refused one, or when the element leaves the page.
+             */
+            "idg-sign-in": LocalJSX.IntrinsicElements["idg-sign-in"] & JSXBase.HTMLAttributes<HTMLIdgSignInElement>;
             /**
              * A placeholder shaped like content that is still loading. It is always hidden from assistive
              * technology, so it announces nothing by itself. Mark the region being loaded with
@@ -4807,6 +5466,14 @@ declare module "@stencil/core" {
              * technology so it is not read twice.
              */
             "idg-tooltip": LocalJSX.IntrinsicElements["idg-tooltip"] & JSXBase.HTMLAttributes<HTMLIdgTooltipElement>;
+            /**
+             * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
+             * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
+             * user how the sign-out went: a server that could not be reached is said plainly, since the
+             * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
+             * It goes away when the client hears that another tab signed out.
+             */
+            "idg-user-menu": LocalJSX.IntrinsicElements["idg-user-menu"] & JSXBase.HTMLAttributes<HTMLIdgUserMenuElement>;
             /**
              * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
              * always acts on the document's root element, through `@identgineer/variations`, so the page's own

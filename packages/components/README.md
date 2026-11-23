@@ -177,7 +177,30 @@ inferred from attributes. For example the email input is a `textbox` named "Emai
 value that is meant to be copied, such as a link; it does not focus it, so call `setFocus()` too.
 
 Slots `start` and `end` sit inside the box. The reveal control is a real `<button type="button">`
-with `aria-pressed`; it changes only the native input's `type`, never the value.
+with `aria-pressed`; it changes only the native input's `type`, never the value. A shown password is
+hidden again when its form is submitted (before the submit event's listeners run), when the form
+is reset and when the value is set from outside, such as a form clearing it.
+
+**Enter submits the form** as Enter in a native input does in Chromium, following the HTML implicit
+submission algorithm, since the native input has no form owner across the shadow boundary and the
+browser would not do it. It is done on the keypress, as the browser does: a keydown cancelled with
+`preventDefault()` has no keypress, and the decision is made once the keypress has reached every
+listener, so any listener on its path (a combobox around the field) can cancel either. It never
+happens while an input method is composing, nor with Control, Alt or Meta held (Shift+Enter
+submits), nor for a key event a script dispatches (`isTrusted` false), which a native input ignores
+too. The default button (the first submit button among the form's elements: a native submit button
+or an `idg-button type="submit"` without an `href`, which is a link and is never followed) is
+clicked, so its click listeners run; a disabled or `loading` default button stops the submission.
+Without a submit button, the form is submitted only when it has no other text field; as in Chromium,
+a date or time field does not count. Two differences from a native input remain. A listener that
+stops the keypress from reaching the element (`stopPropagation()` in the capture phase at `window`
+or `document`) prevents it, since the element hears the keypress on its way out of the shadow root.
+And with an `idg-button` as the default button, `SubmitEvent.submitter` is `null`: the button's
+native control is inside its own shadow root, so it cannot be the form's submitter; read the
+button's value some other way. A native submit button is the submitter as usual.
+
+`spellcheck` is given to the native input as an attribute, so `spellcheck="false"` turns spell
+checking off.
 
 **Autofill and password managers.** Everything a password manager reads is on the native input:
 `type`, `name`, `autocomplete` (use `username` and `current-password` or `new-password`) and
@@ -376,13 +399,16 @@ variant is the theme's subtle background with its on-subtle text, which the toke
 | `variant`      | `variant`       | `info`, `success`, `warning`, `danger` | `info`    |
 | `dismissible`  | `dismissible`   | boolean                                | `false`   |
 | `dismissLabel` | `dismiss-label` | the dismiss button's name              | `Dismiss` |
+| `quiet`        | `quiet`         | boolean                                | `false`   |
 
 - **Slots:** `title` and the default slot (the message). **Parts:** `alert`, `icon`, `title`, `body`,
   `dismiss`. Each variant has its own icon.
 - **Announcement.** `warning` and `danger` are `role="alert"` (assertive); `info` and `success` are
   `role="status"` (polite). The role carries the live behaviour, and no `aria-live` is added beside
   it, which would announce a message twice. A live region announces what is inserted, not what was
-  on the page already, so render an alert at the moment it applies.
+  on the page already, so render an alert at the moment it applies. `quiet` drops the role and keeps
+  the look, for a message that changes while it is shown (such as a countdown), which would
+  otherwise be announced at every change; announce it some other way.
 - **Dismiss** is a real button. It emits `idgDismiss`, a cancelable event, and the alert then
   hides itself (sets `hidden`) unless a listener calls `preventDefault()`.
 - The alert is a surface of the design language (surface border, radius and first elevation) filled
@@ -588,6 +614,12 @@ Radio items are exclusive within their `idg-menu-group`, or the menu. Parts `ite
 `label`, `shortcut`.
 
 `idg-menu-group`: `label`, drawn and naming the `group`. `idg-menu-separator`: a `separator`.
+
+**Forwarded items.** The menu finds its items through slots: in its default slot's flattened
+assignment, inside any `idg-menu-group` there, and through a `<slot>` in such a group. A component
+that wraps `idg-menu` in its own shadow root can therefore forward the page's items into a group of
+its own, as `idg-user-menu` does. The menu's width is at least 12rem but never more than the
+viewport, so it fits a 320px screen at 200% text.
 
 ### `idg-toast` and `idg-toast-region`
 
@@ -1082,6 +1114,153 @@ none`) and get an edge in `CanvasText`. The panel has no motion of its own.
   identical to the variations package's own, and a check over the built declarations fails if any of
   them imports from `@identgineer/variations`.
 
+## Identity
+
+Six elements put the identity client of `@identgineer/identity` on a page. Each takes the client
+as a JavaScript property, `client`, typed by a local structural interface (`SignInClient`,
+`RegisterClient`, `PasswordResetClient`, `ProfileClient`, `SessionGuardClient`,
+`UserMenuClient`, exported as types). The elements never create a client, never import the
+identity package (it is a devDependency, for tests and the type check only; `checks/` holds that
+no shipped source, declaration or bundle carries it) and store nothing in the browser. A client
+assigned late or swapped is followed, and the old one is unsubscribed; so is every client when
+the element leaves the page.
+
+Guides: [plain HTML](../../docs/identity/plain-html.md), [React](../../docs/identity/react.md),
+[Vue](../../docs/identity/vue.md), [Angular](../../docs/identity/angular.md), and the
+[security notes](../../docs/identity/security.md), which say what the elements do not do:
+`idg-session-guard` is not access control.
+
+What the forms share:
+
+- **Password managers.** Real `autocomplete` values on the native inputs, `autocapitalize="none"`
+  and `spellcheck="false"`; Enter submits; the submit button is disabled only while a request is
+  pending (as `loading`). See the autofill notes under `idg-input` for what shadow DOM means for
+  managers.
+- **Errors.** One fixed message per error code (`invalid-credentials` is one message for every
+  cause); the server's own text is never shown. Missing or invalid fields get `aria-invalid` and
+  their message as the description through `idg-field`; focus moves to the first of them, and a
+  summary `idg-alert` (`role="alert"`, part `error`) is drawn afresh for every attempt.
+  `throttled` shows a live countdown in a `quiet` alert (part `throttle`), announced through a
+  polite status once when it starts and once when it ends. `network` adds "Try again".
+- **Passwords** are read from the input at submit and never kept in the element's state. The input
+  is emptied once the server has accepted or refused it and when the element is removed. A
+  password never reaches an attribute, a text node or an event.
+- **Enumeration parity.** Registration (with email confirmation on) and the reset request render
+  the same markup and accessibility tree for an existing and a missing account.
+- **Events** bubble and are composed; no detail carries a password, a token or an email address.
+  Inner controls' `idgInput` and `idgChange` stay inside the form.
+- **`labels`**: a partial object of strings merged over the English defaults (`SignInLabels` and
+  the others are exported). Assign a new object to change it. `{name}`, `{time}`, `{used}` and
+  `{max}` are filled in.
+- **`clock`** (forms with a countdown): `{ setTimeout, clearTimeout }` for the countdown's ticks,
+  for tests; the browser's timers by default.
+- **Width.** The forms and `idg-profile` fill their container. In a parent that sizes them by
+  their content (a flex row, an auto grid track, `fit-content`, `idg-cluster`, a `<dialog>` or a
+  popover) they take the identity measure, `--idg-identity-measure` (`var(--idg-size-m)`, 20rem, by
+  default; set it on any ancestor), and shrink below it on a narrow screen. The measure is a
+  length, in any unit, and `em` or `ch` is the element's own. A percentage is not a valid measure:
+  it is ignored, and in such a parent the element is then as wide as the page's tab size
+  (`tab-size`, eight spaces by default). Leave the element's own `display` as it is: as a flex or
+  grid container it would lay its measure out as an item of its own, with the gap after it. Each
+  is an inline-size container, so with large text on a narrow screen (narrower than nine of its own
+  ems) the controls' inline padding and the gaps shrink; at normal text size every UX mode keeps
+  its own.
+
+### `idg-sign-in`
+
+Identifier (`autocomplete="username webauthn"`, `inputmode="email"`) and password
+(`current-password`, with a reveal toggle). Props `client`, `labels`, `providers` (`{ name, label
+}[]`, one button each) and `providerCallback` (passed to `providerSignInUrl` as `callback`).
+Events `idgSignedIn` (`{ user: { id, username } }`) and `idgProviderSignIn` (`{ provider, url }`,
+cancelable; by default the element then calls `location.assign(url)`). Slots `reset` and
+`register`; parts `form`, `error`, `throttle`, `providers`.
+
+### `idg-register`
+
+Username, email and a new password with a reveal toggle and a byte count against bcrypt's 72-byte
+limit (part `byte-count`; "73 of 72 bytes used" marks the field, each number in a `<bdi>`, and the
+`passwordBytes` label is one sentence with `{used}` and `{max}`, so a translation sets their
+order). Props `client`, `labels`. Event
+`idgRegistered`: `{ outcome: "check-email" }` (a neutral confirmation, the same for an address
+already taken) or `{ outcome: "signed-in", user }`. The confirmation (part `confirmation`) replaces
+the form and takes focus. Slot `sign-in`; parts `form`, `error`, `throttle`, `byte-count`,
+`confirmation`.
+
+### `idg-password-reset`
+
+`mode` (reflected): `request` asks for the address and always shows the same confirmation, with
+`idgResetRequested`; `complete` sets a new password and its confirmation (both `new-password`,
+checked for length and match) with the code from the `code` prop, or from a `one-time-code` field
+when there is none, and signs in, with `idgPasswordReset` (`{ user }`). Props `client`, `labels`.
+Slots `request` (in `complete` mode, a link to ask again) and `sign-in`; parts `form`, `error`,
+`throttle`, `byte-count`, `confirmation`.
+
+### `idg-profile`
+
+The signed-in owner's page, in three sections: the profile (`displayName`, `bio`, `locale`,
+`timezone`, `marketingOptIn`, read with `getProfile` and saved with `saveProfile`, beside an
+`idg-avatar` from `avatarSrc`), a password change (current, new and confirmation, with a read-only
+`username` idg-input laid out out of sight and out of the tab order, so a manager can tell the
+account, and the same said in visible text above the fields, part `password-account`: "Changing the
+password for {name}") and the sessions, each with "Sign out", plus "Sign out everywhere". Props
+`client`, `avatarSrc`, `headingLevel` (`heading-level`, 2 to 6, default 2, for the three section
+headings), `labels`, `clock`. Events `idgProfileSaved` (`{ profile }`), `idgPasswordChanged`,
+`idgSessionRevoked` (`{ id }`), `idgSignedOut` (`{ outcome, everywhere: true }`). Parts `details`,
+`details-saved`, `password`, `password-account`, `password-saved`, `byte-count`, `sessions`,
+`session`, `error`, `throttle`, `outcome`, `signed-out`. It reloads when another user signs in, and
+shows only a note while nobody is.
+
+### `idg-session-guard`
+
+The default slot only while signed in, `fallback` while signed out, `pending` while the state is
+unknown; nothing is drawn as protected before the client knows. It calls `restore()` once while
+the state is unknown (once per client, across all elements). When that restore cannot reach the
+server it shows a notice (part `unreachable`) with "Try again" (part `retry`) in place of `pending`,
+and tries again when the browser is back online. A `server-unreachable` sign-out from its content
+(`idgSignedOut` from inside, such as `idg-profile`'s "Sign out everywhere") is kept in view above
+the fallback (part `sign-out-outcome`, dismissible; slot `sign-out-outcome` replaces the text),
+since the content that would have said so is gone. Prop `labels`. Event `idgSessionChange` on each
+transition: `{ status: "signed-in" }`, `{ status: "unknown" }`, `{ status: "unreachable" }` or
+`{ status: "signed-out", reason }`.
+
+**Layout.** The guard adds no box: the host is `display: contents` and its slots are its shadow
+root's own children, so what it shows is laid out as the parent's own children (a flex row's or a
+grid's items), and it adds no group or landmark to the accessibility tree. A notice, when one is
+shown, is one extra block before the content (part `notice`, holding part `unreachable` or
+`sign-out-outcome`); it takes the identity measure as the forms do.
+
+**Focus.** When a transition takes away what had focus (a sign-in from the fallback, a sign-out
+from the content or by the page's own `signOut()`, "Try again", dismissing the warning), focus goes
+at once to a hidden anchor of the guard's own: absolutely positioned and clipped, so it is no item
+of the parent's layout, placed before the content, so Tab goes on into the content and Shift+Tab
+back before the guard. Its text is the change ("You are signed in." or "You are signed out.", in
+`labels`), in place before it takes focus and read once as focus lands; no live region says it
+again. While a retry waits for the server, whether from "Try again" or from the browser coming
+back online, its notice stays, the button busy (`loading`) and focus where it was; the answer then
+moves focus once, if focus is in the guard: to the anchor with the outcome as its text, or, when
+the server still cannot be reached, to the notice. Pressing "Try again" during a retry asks the
+server nothing more. A warning that appears while focus is still on the anchor takes focus and is
+read then (its live role left out); one that appears after the user has moved on is announced by
+its `role="alert"` and leaves focus where it is. The guard writes no `tabindex` on
+anything it does not own: on a custom element host it would take the host's whole shadow tree
+out of the Tab order. **Not access control**: its children are in the DOM all along; see the
+security notes, and hide it until hydrated with `idg-session-guard:not(.hydrated)`.
+
+### `idg-user-menu`
+
+An avatar button (part `trigger`, an `idg-button` holding an `idg-avatar`, named "Account menu
+for {name}") that opens an `idg-menu` with a group "Signed in as {name}", the page's items (slot
+`items`, whose choices reach the page as `idgSelect`) and "Sign out". Props `client`,
+`displayName` (the username by default), `avatarSrc`, `labels`. Event `idgSignedOut` with the
+outcome: `signed-out` and `superseded` (another tab's newer sign-in stands; not an error) are
+announced politely, and `server-unreachable` is shown as a warning (part `outcome`) that says the
+session may stay active on the server. Slot `signed-out` while nobody is signed in. It goes when
+another tab signs out. After its own sign-out, focus moves to the warning (read as it takes focus,
+not said again by a live role); or else to the first element of the `signed-out` slot when that
+takes focus as it is, with the outcome said politely; or else to a hidden anchor of the menu's own,
+whose text says the outcome as it takes focus. It writes no `tabindex` on the page's elements and
+adds no group to the accessibility tree.
+
 ## Strict CSP and Trusted Types
 
 Every component is verified in Chromium against
@@ -1151,7 +1330,7 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   viewport and forced colours for every overlay (axe runs with each one open), boundary contrast, text contrast of badges, alerts,
   avatars and changes in all 8 themes in light and dark, and axe (wcag2a, wcag2aa, wcag21aa, wcag22aa) across the 8 designs in light and dark and
   the 8 UX modes, no sideways page scroll at 320, 768, 1280 and 2560px under all 8 layouts, and the
-  layout primitives' wrapping, column counts and right-to-left placement, on pages in `src/fixtures/` (`button.html`, `forms.html`, `surfaces.html`, `overlays.html`, `navigation.html`, `layout-primitives.html`, `layout-shell.html`, `variation-switcher.html`; copied to `www/fixtures/`; static HTML, no inline
+  layout primitives' wrapping, column counts and right-to-left placement, on pages in `fixtures/` (outside `src`, so they never reach the dist collection; `button.html`, `forms.html`, `surfaces.html`, `overlays.html`, `navigation.html`, `layout-primitives.html`, `layout-shell.html`, `variation-switcher.html`, `identity.html`; copied to `www/fixtures/`; static HTML, no inline
   script or style). Build first. Playwright's own Chromium is installed with
   `pnpm --filter @identgineer/components exec playwright install --with-deps chromium`; where that is
   not possible, set `IDG_CHROMIUM_PATH` to a Chromium binary (`/opt/pw-browsers/chromium` is used if it
@@ -1165,6 +1344,20 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   package builds first, since this one depends on it). The fixture's `integrity` attribute is
   written out, and `checks/fixture-bootstrap.test.ts` fails when it no longer matches what the
   package builds: copy the new value from `dist/bootstrap.sri.json`.
+- **The identity fixture.** `identity.html` wires every identity element to one real client on the
+  identity package's fake API (`createFakeIdentityApi`), in the page. The build's second step,
+  `scripts/build-identity-fixture.ts`, transpiles that package's source and its fake into
+  same-origin modules in `www/identity-sdk/`, so the fixture runs under the strict policy; they are
+  never part of `dist`, which `checks/shipped-bundle.test.ts` holds. `?confirm` turns email
+  confirmation on and `?hold-restore` keeps the first restore unanswered until the test lets it go.
+  The identity browser tests (`identity*.browser.ts`) cover autofill hints on the real inputs,
+  keyboard and focus, enumeration parity, the throttle countdown, cross-tab sign-out, no browser
+  storage writes, axe across every axis, right to left, and 200% text at 320px in every UX mode
+  (no sideways scroll, no reveal button past its field, no word broken in a squeezed line), and
+  each UX mode's own inline padding at 320 to 1280px with normal text. Each identity element is an
+  inline-size container; only when it is narrower than nine of its own ems (large text on a narrow
+  screen) do its controls' inline padding (at most `4cqi`) and its gaps shrink. The primitives'
+  own padding is never capped.
 - `src/testing/` holds spec helpers (a recording `ElementInternals`, since the mock DOM has none) and
   is excluded from the Stencil build.
 - `tsconfig.json` is the strict config for tooling and editors. `tsconfig.build.json` is the one

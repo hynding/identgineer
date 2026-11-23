@@ -187,6 +187,25 @@ describe("idg-input password reveal", () => {
     expect(native(root).value).toBe("hunter2");
   });
 
+  it("hides the password again when the value is set from outside or the form is reset", async () => {
+    const { root, waitForChanges } = await renderWithInternals(
+      <idg-input type="password" reveal value="hunter2" />,
+    );
+    const button = () => root.shadowRoot?.querySelector("button");
+    const host = root as unknown as { value: string; formResetCallback: () => void };
+    button()?.click();
+    await waitForChanges();
+    host.value = "";
+    expect(native(root).getAttribute("type")).toBe("password");
+    await waitForChanges();
+    expect(button()?.getAttribute("aria-pressed")).toBe("false");
+    button()?.click();
+    await waitForChanges();
+    host.formResetCallback();
+    await waitForChanges();
+    expect(native(root).getAttribute("type")).toBe("password");
+  });
+
   it("takes the label for the toggle from revealLabel", async () => {
     const { root } = await render(<idg-input type="password" reveal revealLabel="Mostrar" />);
     expect(root.shadowRoot?.querySelector("button")?.getAttribute("aria-label")).toBe("Mostrar");
@@ -284,6 +303,43 @@ describe("idg-input as a form control", () => {
     (root as unknown as { formDisabledCallback: (d: boolean) => void }).formDisabledCallback(false);
     await waitForChanges();
     expect(native(root).hasAttribute("disabled")).toBe(false);
+  });
+
+  function pressEnter(root: HTMLElement, init: KeyboardEventInit = {}): KeyboardEvent {
+    const event = new KeyboardEvent("keypress", {
+      key: "Enter",
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      ...init,
+    });
+    native(root).dispatchEvent(event);
+    return event;
+  }
+
+  /** What a form needs for the input to watch its submit, here without listeners. */
+  const listenerless = () => ({ addEventListener: vi.fn(), removeEventListener: vi.fn() });
+
+  /** Lets the keypress finish its dispatch: implicit submission is decided after it. */
+  const afterDispatch = () =>
+    new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+
+  // Which keypresses count is `asksForImplicitSubmission`'s, tested on its own; the browser tests
+  // press real keys, since a script's keypress (as here) never submits, as in a native input.
+  it("does not submit its form on a keypress a script dispatches", async () => {
+    const form = { ...listenerless(), requestSubmit: vi.fn(), elements: [] as Element[] };
+    const { root } = await renderWithInternals(<idg-input />, form);
+    form.elements.push(root);
+    pressEnter(root);
+    await afterDispatch();
+    expect(form.requestSubmit).not.toHaveBeenCalled();
+  });
+
+  it("does nothing on Enter outside a form", async () => {
+    const { root } = await renderWithInternals(<idg-input />);
+    expect(pressEnter(root).defaultPrevented).toBe(false);
   });
 
   it("restores a value the browser saved", async () => {

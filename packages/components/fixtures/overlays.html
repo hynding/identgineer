@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/tokens/index.css" />
     <link rel="stylesheet" href="/demo.css" />
     <script type="module" src="/build/identgineer.esm.js"></script>
+    <script type="module" src="/fixtures/forward-menu-items.js"></script>
   </head>
   <body>
     <main>
@@ -109,6 +110,12 @@
           <idg-menu-item value="one">One</idg-menu-item>
           <idg-menu-item value="two">Two</idg-menu-item>
         </idg-menu>
+        <forward-menu id="forward-menu">
+          <idg-menu-item value="profile">Profile</idg-menu-item>
+          <idg-menu-group label="Help">
+            <idg-menu-item value="docs">Docs</idg-menu-item>
+          </idg-menu-group>
+        </forward-menu>
       </section>
 
       <div class="spacer" aria-hidden="true"></div>

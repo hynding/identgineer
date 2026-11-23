@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-layout="top-bar" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Identity components fixture</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/fixtures/identity.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+    <!-- Wires every identity component to one real client on the SDK's fake API, in this page. -->
+    <script type="module" src="/fixtures/identity.js"></script>
+  </head>
+  <body>
+    <header class="identity-header">
+      <p class="identity-brand">Identgineer</p>
+      <idg-user-menu id="menu">
+        <idg-menu-item slot="items" value="profile">Your profile</idg-menu-item>
+        <idg-menu-item slot="items" value="help">Help</idg-menu-item>
+        <a slot="signed-out" href="#sign-in-section">Sign in</a>
+      </idg-user-menu>
+    </header>
+    <main class="identity-main">
+      <h1>Identity</h1>
+
+      <section id="sign-in-section" aria-labelledby="sign-in-title">
+        <h2 id="sign-in-title">Sign in</h2>
+        <idg-sign-in id="sign-in">
+          <a slot="reset" href="#reset-section">Forgot your password?</a>
+          <p slot="register">New here? <a href="#register-section">Create an account</a></p>
+        </idg-sign-in>
+      </section>
+
+      <section id="register-section" aria-labelledby="register-title">
+        <h2 id="register-title">Create an account</h2>
+        <idg-register id="register"></idg-register>
+      </section>
+
+      <section id="reset-section" aria-labelledby="reset-title">
+        <h2 id="reset-title">Reset your password</h2>
+        <idg-password-reset id="reset-request" mode="request"></idg-password-reset>
+      </section>
+
+      <section id="reset-complete-section" aria-labelledby="reset-complete-title">
+        <h2 id="reset-complete-title">Choose a new password</h2>
+        <idg-password-reset id="reset-complete" mode="complete" code="no-code-yet">
+          <a slot="request" href="#reset-section">Ask for a new link</a>
+        </idg-password-reset>
+      </section>
+
+      <section id="account-section" aria-labelledby="account-title">
+        <h2 id="account-title">Your account</h2>
+        <idg-session-guard id="guard">
+          <idg-profile id="profile"></idg-profile>
+          <p slot="fallback" id="guard-fallback">Sign in to see your account.</p>
+          <idg-skeleton slot="pending" id="guard-pending" lines="3"></idg-skeleton>
+        </idg-session-guard>
+      </section>
+    </main>
+  </body>
+</html>

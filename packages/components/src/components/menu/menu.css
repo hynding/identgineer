@@ -11,7 +11,7 @@
 }
 
 .surface {
-  min-inline-size: 12rem;
+  min-inline-size: min(12rem, 100vw - 16px);
   max-inline-size: min(20rem, 100vw - 16px);
   padding: var(--idg-space-3xs);
 }

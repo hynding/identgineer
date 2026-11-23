@@ -26,6 +26,12 @@ export class IdgAlert {
   /** Meaning and urgency. Warning and danger interrupt assistive technology; info and success do not. */
   @Prop({ reflect: true }) variant: AlertVariant = "info";
 
+  /**
+   * Leaves out the live role, for a message that changes while it is shown (a countdown, say),
+   * which a live role would announce on every change. Announce it some other way.
+   */
+  @Prop({ reflect: true }) quiet = false;
+
   /** Adds a button that dismisses the alert. */
   @Prop() dismissible = false;
 
@@ -65,7 +71,7 @@ export class IdgAlert {
       <div
         class={{ alert: true, [`variant-${variant}`]: true }}
         part="alert"
-        role={ALERT_ROLES[variant]}
+        role={this.quiet ? undefined : ALERT_ROLES[variant]}
       >
         <idg-icon
           class="icon"

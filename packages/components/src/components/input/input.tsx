@@ -4,17 +4,24 @@ import {
   Element,
   Event,
   h,
+  Listen,
   Method,
   Prop,
   State,
+  Watch,
   type EventEmitter,
 } from "@stencil/core";
 import { oneOf } from "../../utils/choice";
+import { asksForImplicitSubmission, submitImplicitly } from "../../utils/implicit-submission";
 import type { ValueDetail } from "../../utils/event-details";
 import { validityFlags } from "../../utils/validity";
 import { INPUT_SIZES, INPUT_TYPES, type InputSize, type InputType } from "./input-options";
 
 /**
+ * A form-associated text field. Enter submits its form as a native input does (see the README):
+ * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
+ * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
+ *
  * @slot start - Content inside the box before the text, such as an icon.
  * @slot end - Content inside the box after the text.
  * @part control - The native input.
@@ -83,9 +90,29 @@ export class IdgInput {
 
   private initialValue = "";
   private native?: HTMLInputElement;
+  private watchedForm: HTMLFormElement | null = null;
 
   componentWillLoad(): void {
     this.initialValue = this.value;
+  }
+
+  connectedCallback(): void {
+    this.watchForm(this.internals.form);
+  }
+
+  disconnectedCallback(): void {
+    this.watchForm(null);
+  }
+
+  formAssociatedCallback(form: HTMLFormElement | null): void {
+    this.watchForm(form);
+  }
+
+  // A value set from outside, such as a form clearing its password, hides a shown password: the
+  // user typed none of what is there now.
+  @Watch("value")
+  valueChanged(value: string): void {
+    if (this.native && this.native.value !== value) this.hidePassword();
   }
 
   componentDidRender(): void {
@@ -119,6 +146,7 @@ export class IdgInput {
   }
 
   formResetCallback(): void {
+    this.hidePassword();
     this.value = this.initialValue;
   }
 
@@ -152,6 +180,38 @@ export class IdgInput {
     this.value = (event.target as HTMLInputElement).value;
     this.syncForm();
     this.idgChange.emit({ value: this.value });
+  };
+
+  // The native input has no form owner across the shadow boundary, so the browser's implicit
+  // submission never happens: it is done here instead, on the keypress, as the browser does it. A
+  // keydown cancelled anywhere has no keypress, and the decision waits until the keypress has
+  // reached every listener on its path, so a listener further out (a combobox that takes Enter for
+  // itself) can cancel either. See `asksForImplicitSubmission` for which keypresses count.
+  @Listen("keypress")
+  handleKeypress(event: KeyboardEvent): void {
+    if (!asksForImplicitSubmission(event)) return;
+    if (event.composedPath()[0] !== this.native) return;
+    const form = this.internals.form;
+    if (!form) return;
+    setTimeout(() => {
+      if (!event.defaultPrevented && this.internals.form === form) submitImplicitly(form);
+    });
+  }
+
+  // A shown password is hidden again when its form is sent, before any listener reads the form,
+  // so it is never left on screen as text after a submit, whatever the outcome.
+  private watchForm(form: HTMLFormElement | null): void {
+    if (form === this.watchedForm) return;
+    this.watchedForm?.removeEventListener("submit", this.hidePassword, true);
+    this.watchedForm = form;
+    form?.addEventListener("submit", this.hidePassword, true);
+  }
+
+  // At once, not at the next render, so the type is right while the submit event still runs.
+  private hidePassword = (): void => {
+    if (!this.revealed) return;
+    this.revealed = false;
+    if (this.native) this.native.type = oneOf(INPUT_TYPES, this.type, "text");
   };
 
   private toggleReveal = (): void => {
@@ -196,7 +256,8 @@ export class IdgInput {
           autocomplete={this.autocomplete}
           inputMode={this.inputmode}
           enterKeyHint={this.enterkeyhint}
-          spellcheck={this.spellcheck}
+          // As an attribute: the renderer would set the boolean property, and "false" would be true.
+          {...{ "attr:spellcheck": this.spellcheck }}
           autocapitalize={this.autocapitalize}
           aria-label={this.accessibleLabel}
           aria-describedby={description ? "description" : undefined}

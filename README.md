@@ -27,6 +27,14 @@ Adopting them in a page or an app: [plain HTML](docs/variations/plain-html.md),
 [React](docs/variations/react.md), [Vue](docs/variations/vue.md) and
 [Angular](docs/variations/angular.md).
 
+## Identity components
+
+Sign-in, registration, password reset, the profile, a session guard and a user menu are web
+components that take the identity client of `packages/identity`. Guides:
+[plain HTML](docs/identity/plain-html.md), [React](docs/identity/react.md),
+[Vue](docs/identity/vue.md) and [Angular](docs/identity/angular.md), and the
+[security notes](docs/identity/security.md).
+
 ## Repository layout
 
 ```

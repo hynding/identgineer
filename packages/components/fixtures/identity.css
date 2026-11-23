@@ -1,0 +1,56 @@
+/* The identity fixture: a column of sections that fills a phone and centres on a wide screen. */
+body {
+  margin: 0;
+}
+
+.identity-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--idg-space-s);
+  padding: var(--idg-space-s) var(--idg-space-m);
+  border-block-end: var(--idg-border-width) var(--idg-border-style) var(--idg-border-color);
+}
+
+.identity-brand {
+  margin: 0;
+  font-weight: var(--idg-font-weight-bold);
+}
+
+/* One column no wider than the page: a heading's long word wraps and never widens the track,
+   whatever font the system falls back to. */
+.identity-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--idg-space-l);
+  max-inline-size: var(--idg-size-xl);
+  margin-inline: auto;
+  padding: var(--idg-space-m);
+  box-sizing: border-box;
+}
+
+.identity-main section {
+  display: block;
+  min-inline-size: 0;
+}
+
+.identity-main h2 {
+  margin-block: 0 var(--idg-space-s);
+}
+
+.identity-main h1,
+.identity-main h2 {
+  overflow-wrap: anywhere;
+}
+
+/* Nothing of an identity component shows before it hydrates: the guard's protected content most
+   of all, which would otherwise be drawn as plain children until the guard takes over. */
+idg-sign-in:not(.hydrated),
+idg-register:not(.hydrated),
+idg-password-reset:not(.hydrated),
+idg-profile:not(.hydrated),
+idg-user-menu:not(.hydrated),
+idg-session-guard:not(.hydrated) {
+  display: none;
+}

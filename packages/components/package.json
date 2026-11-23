@@ -23,7 +23,7 @@
     "./docs.json": "./dist/docs.json"
   },
   "scripts": {
-    "build": "stencil build --prod",
+    "build": "stencil build --prod && node scripts/build-identity-fixture.ts",
     "dev": "stencil build --dev --watch --serve",
     "typecheck": "tsc -p tsconfig.json",
     "test:browser": "playwright test --trace off"
@@ -34,6 +34,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
+    "@identgineer/identity": "workspace:*",
     "@identgineer/tokens": "workspace:*",
     "@playwright/test": "1.63.0",
     "@stencil/vitest": "1.16.2",

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { bootstrapScriptAttributes } from "@identgineer/variations/bootstrap-tag";
 
 const FIXTURE = readFileSync(
-  fileURLToPath(new URL("../src/fixtures/variation-switcher.html", import.meta.url)),
+  fileURLToPath(new URL("../fixtures/variation-switcher.html", import.meta.url)),
   "utf8",
 );
 

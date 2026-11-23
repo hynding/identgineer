@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-layout="top-bar" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Identity forms in shrink-to-fit parents</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/fixtures/identity-layout.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+    <script type="module" src="/fixtures/identity.js"></script>
+  </head>
+  <body>
+    <!-- Each form in a parent that sizes it by its content: it must keep a usable width. -->
+    <div class="case fit-content" data-case="fit-content">
+      <idg-sign-in id="sign-in"></idg-sign-in>
+    </div>
+    <div class="case flex-row" data-case="flex-row">
+      <idg-register></idg-register>
+      <p>Beside the form</p>
+    </div>
+    <div class="case grid-auto" data-case="grid-auto">
+      <idg-password-reset mode="request"></idg-password-reset>
+      <p>Beside the form</p>
+    </div>
+    <idg-cluster class="case" data-case="cluster">
+      <idg-sign-in></idg-sign-in>
+      <p>Beside the form</p>
+    </idg-cluster>
+    <!-- A guard in a flex row and in a grid, each beside a twin without one: what the guard
+         shows must be laid out exactly as the twin's children are. -->
+    <div class="case cards flex-row" data-case="twin-flex">
+      <div class="card">One</div>
+      <div class="card">Two</div>
+      <div class="card">Three</div>
+    </div>
+    <div class="case cards flex-row" data-case="guard-flex">
+      <idg-session-guard>
+        <div class="card">One</div>
+        <div class="card">Two</div>
+        <div class="card">Three</div>
+        <p slot="fallback">Sign in to see the cards.</p>
+      </idg-session-guard>
+    </div>
+    <div class="case cards grid-3" data-case="twin-grid">
+      <div class="card">One</div>
+      <div class="card">Two</div>
+      <div class="card">Three</div>
+    </div>
+    <div class="case cards grid-3" data-case="guard-grid">
+      <idg-session-guard>
+        <div class="card">One</div>
+        <div class="card">Two</div>
+        <div class="card">Three</div>
+        <p slot="fallback">Sign in to see the cards.</p>
+      </idg-session-guard>
+    </div>
+    <dialog id="dialog" data-case="dialog">
+      <idg-register></idg-register>
+    </dialog>
+    <div id="popover" popover data-case="popover">
+      <idg-password-reset mode="complete" code="no-code-yet"></idg-password-reset>
+    </div>
+  </body>
+</html>

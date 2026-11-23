@@ -42,6 +42,20 @@ function isPrintable(event: KeyboardEvent): boolean {
   );
 }
 
+/** The visible items in an element of the menu, through any slot that forwards items into it. */
+function itemsWithin(element: Element): HTMLIdgMenuItemElement[] {
+  if (element.localName === "idg-menu-item") {
+    return (element as HTMLIdgMenuItemElement).hidden ? [] : [element as HTMLIdgMenuItemElement];
+  }
+  if (element.localName === "idg-menu") return [];
+  const slot = element as HTMLSlotElement;
+  const children =
+    element.localName === "slot" && typeof slot.assignedElements === "function"
+      ? slot.assignedElements({ flatten: true })
+      : Array.from(element.children);
+  return children.flatMap(itemsWithin);
+}
+
 /**
  * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
  * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
@@ -189,8 +203,7 @@ export class IdgMenu {
   @Listen("click")
   handleClick(event: MouseEvent): void {
     const item = (event.target as Element).closest("idg-menu-item");
-    if (!this.shown || !item) return;
-    if (item.closest("idg-menu") !== this.host) return;
+    if (!this.shown || !item || !this.items().includes(item)) return;
     if (item.disabled) {
       event.preventDefault();
       return;
@@ -238,10 +251,19 @@ export class IdgMenu {
     );
   }
 
+  // The items drawn in the menu: its own children and those another component forwards to it
+  // through a slot of its own, in a group or not (a slot's assignment, flattened). An item of a
+  // menu nested in one of them belongs to that menu.
   private items(): HTMLIdgMenuItemElement[] {
-    return Array.from(this.host.querySelectorAll("idg-menu-item")).filter(
-      (item) => !item.hidden && item.closest("idg-menu") === this.host,
-    );
+    return this.slottedElements().flatMap(itemsWithin);
+  }
+
+  // The mock DOM of the unit tests has no slot assignment; there the children stand in for it.
+  private slottedElements(): Element[] {
+    const slot = this.host.shadowRoot?.querySelector<HTMLSlotElement>("slot:not([name])");
+    if (typeof slot?.assignedElements === "function")
+      return slot.assignedElements({ flatten: true });
+    return Array.from(this.host.children).filter((child) => !child.hasAttribute("slot"));
   }
 
   // Without a label the menu is named by its trigger. The reference points out of this shadow
@@ -339,7 +361,9 @@ export class IdgMenu {
     const trigger = this.trigger;
     const lost = active === null || active === document.body;
     const inside =
-      active !== null && isWithin(active, this.host) && !(trigger && isWithin(active, trigger));
+      active !== null &&
+      (isWithin(active, this.host) || this.items().some((item) => isWithin(active, item))) &&
+      !(trigger && isWithin(active, trigger));
     if (trigger && (lost || inside)) focusInto(trigger);
     this.idgClose.emit();
   }
