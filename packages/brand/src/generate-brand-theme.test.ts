@@ -94,14 +94,17 @@ describe("generateBrandTheme", () => {
     ["#111827", "dark"],
     ["#000000", "dark"],
     ["#1d4ed8", "dark"],
+    ["#10b981", "light"],
+    ["#0000ff", "dark"],
   ] as const)(
     "keeps %s as the %s accent fill and marks state with an indicator that reaches 3:1",
     (primary, scheme) => {
       const theme = generateBrandTheme(kitFrom({ colors: { primary } }));
       const colors = resolvedColors(theme, scheme);
       expect(colors.get("accent")).toBe(primary);
-      for (const background of ["bg", "bg-subtle", "surface", "surface-raised"]) {
+      for (const background of ["bg", "bg-subtle", "surface", "surface-raised", "accent-subtle"]) {
         for (const role of ["accent-indicator", "accent-border"]) {
+          if (role === "accent-border" && background === "accent-subtle") continue;
           expect(
             contrastRatio(colors.get(role) ?? "", colors.get(background) ?? ""),
             `${role} on ${background}`,

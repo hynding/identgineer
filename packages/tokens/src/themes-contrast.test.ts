@@ -57,6 +57,14 @@ describe("check-contrast", () => {
     expect(find("on-accent-indicator", "accent-indicator")?.minimum).toBe(4.5);
   });
 
+  it("holds the accent's state indicator to 3:1 on the accent-subtle tint it marks the current navigation item on", () => {
+    const pair = CONTRAST_PAIRS.find(
+      (candidate) =>
+        candidate.foreground === "accent-indicator" && candidate.background === "accent-subtle",
+    );
+    expect(pair?.minimum).toBe(3);
+  });
+
   it("reports a failing pair with its ratio and threshold", () => {
     const colors = new Map([
       ["text", "#777777"],

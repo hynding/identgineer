@@ -403,6 +403,35 @@ test.describe("generated brand themes", () => {
   }
 });
 
+test.describe("current navigation item in generated brand themes", () => {
+  for (const [id, primary] of BRANDS) {
+    for (const scheme of SCHEMES) {
+      test(`is marked at 3:1 or more beyond its tint with ${primary} in ${scheme}`, async ({
+        page,
+      }) => {
+        await page.goto("/fixtures/layout-shell.html");
+        await hydrated(page);
+        await adoptBrandTheme(page, id, primary);
+        for (const layout of LAYOUTS) {
+          await applyAxes(page, { layout, theme: id, scheme });
+          const markers = await readNavigationMarkers(page);
+          expect(markers.length, `${layout}: a bar or underline`).toBeGreaterThan(0);
+          for (const { name, color, tint, behind } of markers) {
+            expect(
+              contrastRatio(color, tint),
+              `${layout} ${name}: ${color} on the tint ${tint}`,
+            ).toBeGreaterThanOrEqual(3);
+            expect(
+              contrastRatio(color, behind),
+              `${layout} ${name}: ${color} on ${behind}`,
+            ).toBeGreaterThanOrEqual(3);
+          }
+        }
+      });
+    }
+  }
+});
+
 /** Accents that blend with the page: the primary must still read as primary next to the secondary. */
 const BLENDING = [
   { theme: "citrus", scheme: "light", primary: undefined },

@@ -108,9 +108,12 @@ function rgbOf(hex: string): Rgb {
 
 const PAGE_BACKGROUNDS = ["bg", "bg-subtle", "surface", "surface-raised"];
 
+/** The indicator also marks the current navigation item on the accent-subtle tint. */
+const INDICATOR_BACKGROUNDS = [...PAGE_BACKGROUNDS, "accent-subtle"];
+
 function weakestOnPage(colors: ReadonlyMap<string, string>, role: string): number {
   return Math.min(
-    ...PAGE_BACKGROUNDS.map((background) =>
+    ...INDICATOR_BACKGROUNDS.map((background) =>
       contrastRatio(colors.get(role) ?? "", colors.get(background) ?? ""),
     ),
   );
@@ -124,7 +127,7 @@ function accentRoleProblems(colors: ReadonlyMap<string, string>): string[] {
   const problems: string[] = [];
   for (const role of ["accent-indicator", "accent-border"]) {
     const ratio = weakestOnPage(colors, role);
-    if (ratio < 3) problems.push(`${role} is ${ratio.toFixed(2)}:1 on the page`);
+    if (ratio < 3) problems.push(`${role} is ${ratio.toFixed(2)}:1 on the page or its tint`);
   }
   if (weakestOnPage(colors, "accent") >= 3) {
     for (const [role, own] of [
