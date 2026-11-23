@@ -1,0 +1,373 @@
+import { retryDelay } from "./backoff.ts";
+import { dropReason, type DropReason } from "./drop-reason.ts";
+import { readDeliveredIds, recordDeliveredIds } from "./delivered-marker.ts";
+import { createEventQueue, type QueueEntry } from "./event-queue.ts";
+import { readStoredQueue, writeStoredQueue } from "./queue-persistence.ts";
+import type { ResolvedOptions } from "./resolve-options.ts";
+import { sendByBeacon, sendByFetch } from "./send-batch.ts";
+import { serialiseBatch } from "./serialise-batch.ts";
+import { utf8Length } from "./utf8-length.ts";
+import type { TrackingEvent } from "./wire-format.ts";
+
+/** Events older than this are never sent: what they describe is too stale to be worth the data. */
+const MAX_EVENT_AGE_MS = 24 * 60 * 60 * 1000;
+/** A stored event stamped further ahead than this came from a wrong clock, and is not trusted. */
+const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
+
+export interface DeliveryDeps {
+  readonly options: ResolvedOptions;
+  /** Whether sending and storing are allowed right now; consults effective consent afresh. */
+  readonly allowed: () => boolean;
+  readonly report: (reason: DropReason) => void;
+}
+
+export interface Delivery {
+  readonly enqueue: (event: TrackingEvent) => void;
+  /** Takes up the events an earlier page left in storage. */
+  readonly loadStored: () => void;
+  readonly flush: () => Promise<void>;
+  /** The page is going away: send what is queued by beacon, or a keepalive fetch. */
+  readonly flushOnHide: () => void;
+  /** The browser is back online. */
+  readonly resume: () => void;
+  /** Consent was revoked: forget everything held, cancel timers and ignore what is in flight. */
+  readonly revoke: () => void;
+  readonly dispose: () => void;
+}
+
+/**
+ * The batch queue and its delivery: one request in flight at a time, retried with backoff, held
+ * while offline, persisted while consent stands. A request already in flight cannot be recalled,
+ * but once it is answered nothing follows from the answer if consent was revoked meanwhile.
+ */
+export const createDelivery = (deps: DeliveryDeps): Delivery => {
+  const { options, allowed, report } = deps;
+  const { clock } = options;
+  const queue = createEventQueue({
+    maxEvents: options.maxQueueEvents,
+    maxBytes: options.maxQueueBytes,
+  });
+
+  let timer: unknown;
+  let timerDue = 0;
+  let loop: Promise<void> | undefined;
+  let attempts = 0;
+  let nextAttemptAt = 0;
+  // How long the current wait was meant to be, so a clock set back cannot stretch it.
+  let backoffMs = 0;
+  // The ids in the request now on the wire, if there is one.
+  let inFlight: ReadonlySet<string> | undefined;
+  // Bumped on revocation: a request answered under an older epoch is moot.
+  let epoch = 0;
+  let restartNeeded = false;
+  let disposed = false;
+
+  const clearTimer = (): void => {
+    if (timer !== undefined) clock.clearTimeout(timer);
+    timer = undefined;
+  };
+
+  // The earlier of the pending timer and this one wins; the loop re-arms what is still due.
+  const armTimer = (delay: number): void => {
+    if (disposed) return;
+    const due = clock.now() + delay;
+    if (timer !== undefined && timerDue <= due) return;
+    clearTimer();
+    timerDue = due;
+    timer = clock.setTimeout(() => {
+      timer = undefined;
+      void flush();
+    }, delay);
+  };
+
+  // Ids this tab delivered or dropped since the stored queue last reflected that: the only ones
+  // it may remove from storage, where another tab's events may also wait.
+  const gone = new Set<string>();
+
+  const settleIds = (ids: Iterable<string>): void => {
+    for (const id of ids) gone.add(id);
+  };
+
+  // Another tab may have delivered what this one also loaded: those are not sent again.
+  const dropDelivered = (): void => {
+    const delivered = readDeliveredIds(options.localStorage, clock.now());
+    if (delivered.size === 0) return;
+    const held = queue.entries().filter((entry) => delivered.has(entry.event.id));
+    if (held.length > 0) queue.remove(new Set(held.map((entry) => entry.event.id)));
+  };
+
+  const markDelivered = (ids: Iterable<string>): void => {
+    if (allowed()) recordDeliveredIds(options.localStorage, [...ids], clock.now());
+  };
+
+  const persist = (): void => {
+    if (!allowed()) return;
+    dropDelivered();
+    const written = writeStoredQueue(options.localStorage, queue.entries(), gone, {
+      maxEvents: options.maxQueueEvents,
+      maxBytes: options.maxQueueBytes,
+    });
+    if (written) gone.clear();
+  };
+
+  const overhead = (withKey: boolean): number =>
+    utf8Length(serialiseBatch([], clock.now(), withKey ? options.writeKey : undefined));
+
+  // A report goes to the page's own code, which may call the tracker back: it comes last, once
+  // the state it describes is settled.
+  const reportOverflow = (dropped: number): void => {
+    if (dropped > 0) {
+      report(
+        dropReason(
+          "queue-overflow",
+          `${String(dropped)} queued events were dropped to hold the queue's limits`,
+        ),
+      );
+    }
+  };
+
+  const dropExpired = (): void => {
+    const cutoff = clock.now() - MAX_EVENT_AGE_MS;
+    const stale = queue.entries().filter((entry) => entry.event.at < cutoff);
+    if (stale.length === 0) return;
+    const ids = stale.map((entry) => entry.event.id);
+    queue.remove(new Set(ids));
+    settleIds(ids);
+    persist();
+    report(dropReason("expired", `${String(stale.length)} queued events were older than 24 hours`));
+  };
+
+  // As many events as fit the batch size and the payload cap, always at least the first.
+  const planBatch = (withKey: boolean, exclude?: ReadonlySet<string>): QueueEntry[] => {
+    let total = overhead(withKey);
+    const picked: QueueEntry[] = [];
+    for (const entry of queue.entries()) {
+      if (exclude?.has(entry.event.id) === true) continue;
+      if (picked.length >= options.maxBatchSize) break;
+      const added = entry.bytes + (picked.length > 0 ? 1 : 0);
+      if (picked.length > 0 && total + added > options.maxPayloadBytes) break;
+      picked.push(entry);
+      total += added;
+    }
+    return picked;
+  };
+
+  const isOnline = (): boolean => {
+    try {
+      return options.page.signals().onLine !== false;
+    } catch {
+      return true;
+    }
+  };
+
+  const backoffRemaining = (): number => {
+    const remaining = nextAttemptAt - clock.now();
+    if (remaining <= 0) return 0;
+    if (remaining <= backoffMs) return remaining;
+    // The clock was set back: the wait is what was chosen, from now.
+    nextAttemptAt = clock.now() + backoffMs;
+    return backoffMs;
+  };
+
+  const waitingForBackoff = (): boolean => {
+    const remaining = backoffRemaining();
+    if (remaining <= 0) return false;
+    armTimer(remaining);
+    return true;
+  };
+
+  const ready = (): boolean =>
+    !disposed && options.fetch !== undefined && allowed() && isOnline() && !waitingForBackoff();
+
+  const run = async (keepalive: boolean): Promise<void> => {
+    const { fetch } = options;
+    if (fetch === undefined) return;
+    for (;;) {
+      if (!ready()) return;
+      dropExpired();
+      dropDelivered();
+      const batch = planBatch(false);
+      if (batch.length === 0) return;
+      const ids = new Set(batch.map((entry) => entry.event.id));
+      const startedIn = epoch;
+      inFlight = ids;
+      const outcome = await sendByFetch(
+        {
+          fetch,
+          endpoint: options.endpoint,
+          writeKey: options.writeKey,
+          now: () => clock.now(),
+          clock,
+          requestTimeout: options.requestTimeout,
+        },
+        serialiseBatch(
+          batch.map((entry) => entry.event),
+          clock.now(),
+        ),
+        keepalive,
+      );
+      inFlight = undefined;
+      if (disposed) return;
+      if (epoch !== startedIn) {
+        restartNeeded = true;
+        return;
+      }
+      if (outcome.kind === "retry") {
+        attempts += 1;
+        const delay = retryDelay(attempts, outcome.retryAfterSeconds, options.random);
+        backoffMs = delay;
+        nextAttemptAt = clock.now() + delay;
+        armTimer(delay);
+        return;
+      }
+      attempts = 0;
+      queue.remove(ids);
+      settleIds(ids);
+      if (outcome.kind === "delivered") markDelivered(ids);
+      persist();
+      if (outcome.kind === "rejected") {
+        report(
+          dropReason(
+            "rejected-by-server",
+            `the collector answered ${String(outcome.status)}; the batch was dropped`,
+          ),
+        );
+      }
+    }
+  };
+
+  const startLoop = (keepalive: boolean): Promise<void> => {
+    clearTimer();
+    let release: () => void = () => undefined;
+    const current = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    loop = current;
+    void run(keepalive)
+      .catch(() => undefined)
+      .finally(() => {
+        loop = undefined;
+        release();
+        if (disposed) return;
+        if (queue.size() === 0) clearTimer();
+        else if (restartNeeded) armTimer(options.flushInterval);
+        restartNeeded = false;
+      });
+    return current;
+  };
+
+  function flush(): Promise<void> {
+    if (disposed) return Promise.resolve();
+    return loop ?? startLoop(false);
+  }
+
+  const takeStored = (): void => {
+    const stored = readStoredQueue(options.localStorage, {
+      maxEvents: options.maxQueueEvents,
+      maxBytes: options.maxQueueBytes,
+    });
+    if (stored.kind === "none") return;
+    const cutoff = clock.now() - MAX_EVENT_AGE_MS;
+    const latest = clock.now() + MAX_FUTURE_SKEW_MS;
+    const delivered = readDeliveredIds(options.localStorage, clock.now());
+    const seen = new Set<string>(delivered);
+    const entries: QueueEntry[] = [];
+    const drops: DropReason[] = [];
+    let expired = 0;
+    for (const event of stored.events) {
+      if (event.at < cutoff || event.at > latest) {
+        expired += 1;
+        settleIds([event.id]);
+      } else if (!seen.has(event.id)) {
+        seen.add(event.id);
+        const bytes = utf8Length(JSON.stringify(event));
+        if (overhead(true) + bytes > options.maxPayloadBytes) {
+          settleIds([event.id]);
+          drops.push(
+            dropReason("event-too-large", `stored event "${event.name}" is over the payload cap`),
+          );
+        } else entries.push({ event, bytes });
+      }
+    }
+    if (expired > 0) {
+      drops.push(
+        dropReason("expired", `${String(expired)} stored events were older than 24 hours`),
+      );
+    }
+    const overflow = queue.prepend(entries);
+    persist();
+    if (queue.size() > 0) armTimer(options.flushInterval);
+    for (const drop of drops) report(drop);
+    reportOverflow(overflow);
+  };
+
+  return {
+    enqueue: (event) => {
+      if (disposed) return;
+      const bytes = utf8Length(JSON.stringify(event));
+      if (overhead(true) + bytes > options.maxPayloadBytes) {
+        report(
+          dropReason(
+            "event-too-large",
+            `event "${event.name}" alone is over the payload cap of ${String(options.maxPayloadBytes)} bytes`,
+          ),
+        );
+        return;
+      }
+      const overflow = queue.push({ event, bytes });
+      persist();
+      armTimer(options.flushInterval);
+      if (queue.size() >= options.maxBatchSize) void flush();
+      reportOverflow(overflow);
+    },
+    loadStored: takeStored,
+    flush,
+    flushOnHide: () => {
+      if (disposed || !allowed() || !isOnline() || backoffRemaining() > 0) return;
+      dropExpired();
+      dropDelivered();
+      // A beacon is fire-and-forget and does not count as a request in flight, so what is not in
+      // the request on the wire may still leave with the page.
+      const exclude = inFlight ?? new Set<string>();
+      for (
+        let batch = planBatch(true, exclude);
+        batch.length > 0;
+        batch = planBatch(true, exclude)
+      ) {
+        const { sendBeacon } = options;
+        const body = serialiseBatch(
+          batch.map((entry) => entry.event),
+          clock.now(),
+          options.writeKey,
+        );
+        if (sendBeacon === undefined || !sendByBeacon(sendBeacon, options.endpoint, body)) break;
+        const ids = batch.map((entry) => entry.event.id);
+        queue.remove(new Set(ids));
+        settleIds(ids);
+        markDelivered(ids);
+      }
+      persist();
+      if (loop === undefined && queue.size() > 0 && options.fetch !== undefined) {
+        void startLoop(true);
+      }
+    },
+    resume: () => {
+      void flush();
+    },
+    revoke: () => {
+      epoch += 1;
+      queue.clear();
+      gone.clear();
+      clearTimer();
+      attempts = 0;
+      nextAttemptAt = 0;
+      backoffMs = 0;
+      restartNeeded = false;
+    },
+    dispose: () => {
+      disposed = true;
+      clearTimer();
+      queue.clear();
+    },
+  };
+};
