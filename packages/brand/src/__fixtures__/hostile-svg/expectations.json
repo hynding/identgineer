@@ -386,6 +386,9 @@
     "outcome": "accept",
     "removed": []
   },
+  "clip-path-of-two-shapes-on-root-with-mask.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
   "clip-path-sc-zzp-n60.svg": {
     "outcome": "accept",
     "removed": [

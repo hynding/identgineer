@@ -302,6 +302,8 @@ Refused, as the whole document (each with its own `code`):
 - duplicate ids, a reference cycle (a `use` of itself or an ancestor, gradients that inherit from
   each other, a clip path or mask that uses itself), and a root with no size (neither a view box
   nor a width and height in absolute units);
+- a clip path of more than one shape on a root that has a mask of its own, which cannot be written
+  as a mask (see clip paths of more than one shape, below);
 - going over any limit below.
 
 Dropped (and listed in `removed`, with the element, attribute or style property, a reason and a
@@ -316,11 +318,13 @@ make the logo far costlier to draw than its budgets can see, where the picture s
 close to it: a `preserveAspectRatio` of `none` or `slice`, which would stretch or crop the view box
 (the logo is then drawn to fit, as by default), and a `clip-path` or `mask` on a clip path or on a
 shape inside one, which makes a browser draw the clip path as a mask layer each time it is applied
-(Chromium does not even draw such a mask). The reasons are `active-content`, `event-handler`,
-`external-reference` (only on an attribute that takes a reference: a `url(` in path data is just an
-`invalid-value`), `styling`, `editor-metadata`, `text`, `filter`, `foreign-namespace`,
-`unsupported-element`, `unsupported-attribute`, `invalid-value`, `misplaced`,
-`dangling-reference`, `character-data`, `document-type` and `render-cost`. Script, handlers and
+(Chromium does not even draw such a mask). A clip path of more than one shape, or of one clipped in
+turn, is not dropped but written as an alpha mask of the same shapes, and listed with the reason
+`rewritten` (see clip paths of more than one shape, below). The reasons are `active-content`,
+`event-handler`, `external-reference` (only on an attribute that takes a reference: a `url(` in
+path data is just an `invalid-value`), `styling`, `editor-metadata`, `text`, `filter`,
+`foreign-namespace`, `unsupported-element`, `unsupported-attribute`, `invalid-value`, `misplaced`,
+`dangling-reference`, `character-data`, `document-type`, `render-cost` and `rewritten`. Script, handlers and
 external references can be dropped rather than refused because the output is built only from what
 passed, so it is inert whatever the input tried. The first 100 removals are listed and
 `removedCount` counts them all.
@@ -393,7 +397,10 @@ Decisions, with the reason for each:
 - **A clip path holds shapes and uses of them, and a mask takes no transform, clip path or mask of
   its own.** Browsers leave a group out of a clip path, and apply none of those on a mask, so
   dropping them changes nothing drawn; what a browser would honour but draw far more slowly (a clip
-  path or mask on a clip path or what it holds) is dropped too, as `render-cost`.
+  path or mask on a clip path or what it holds) is dropped too, as `render-cost`. A `use` in a clip
+  path of anything but a shape is dropped as `misplaced`: the specification calls it an error, and
+  Chromium 153, against it, clips to everything the group draws, which would bring back the costly
+  union of many shapes (below).
 - **Editor metadata goes.** Inkscape, Sodipodi, RDF, Creative Commons, Dublin Core, Adobe, Sketch
   and Serif namespaces, `metadata`, `xml:space`, `version`, the root's `x` and `y`.
 - **`xml:base` goes**, so it cannot redirect a fragment reference to another document.
@@ -426,7 +433,6 @@ Each is in `SVG_LOGO_LIMITS`; going over one refuses the document.
 | `renderedElements`     | 20,000        | Elements once every `use`, clip path and mask is expanded: the copies a renderer builds |
 | `drawingCost`          | 200,000       | What drawing its geometry costs once every reference is expanded; see below             |
 | `overdraw`             | 500           | What painting it costs, in images' worth of solid paint; see below                      |
-| `clipCrossings`        | 10,000        | How often the shapes of its clip paths could cross one another; see below               |
 | `maskApplications`     | 128           | Masks and clip paths applied once every reference is expanded                           |
 | `maskDepth`            | 4             | Masks and clip paths applied inside one another, in a row                               |
 | `ids`                  | 1,024         | Elements with an id                                                                     |
@@ -506,7 +512,7 @@ ten times a stroked line, an arc about fourteen), a dash about one stroked line,
 1.3 to 1.6 ms. The 32 for each shape covers setting it up, not painting it: what a fill or a stroke
 paints is the overdraw's to count. Geometry is weighed the same at every size, and filling is
 about a fifth the cost of stroking, so filled art is weighed as if stroked. A real logo is far
-below the limit: the logos in the clean corpus cost from 109 to 1,045, under 1% of it.
+below the limit: the logos in the clean corpus cost from 109 to 1,678, under 1% of it.
 
 The limit has little headroom over the busiest real logos: 300 uses of a 60-cubic symbol cost
 190,201, 95% of it, yet draw in 9 ms at 600 pixels and 85 ms at 2000 twice as dense, because a
@@ -548,11 +554,9 @@ the `use` that draws it):
   dash period as for the drawing cost, with an odd dash array counted as repeated; each dash also
   adds its width squared to the area. When the dashes are closer together than the stroke is wide,
   their caps overlap and cross every row, so they crowd it like the edges above.
-- **Clip paths drawn as masks.** A clip path of one shape is cheap; Chromium draws a clip path of
-  more than 42 shapes, or one whose shape is itself clipped, as a mask, and WebKit (from its
-  source, not measured here) does so past one shape. So a clip path of more than one shape, or of
-  a shape clipped in turn, is charged as an alpha mask. A clip path's own `transform` is applied
-  to its content, as browsers do.
+- **Clip paths.** A clip path is only ever of one shape that is not clipped in turn (any other is
+  written as an alpha mask, below, and charged as one), and is charged as a clip over the box of
+  what it applies to. A clip path's own `transform` is applied to its content, as browsers do.
 
 | What is painted (once over the whole image)        | 600 px         | 2000 px, ×2      | Weight    |
 | -------------------------------------------------- | -------------- | ---------------- | --------- |
@@ -580,37 +584,79 @@ wide as the image, 2,000 dashes took 0.25 seconds, 3,000 took 15 and 5,000 took 
 stroke 300 wide took 4.6. 5,000 round dots, subpaths of no length, took 2.4 seconds without any
 dash. The stroke ends charge all of these by their outline.
 
-#### Crossing shapes in a clip path
+#### Clip paths of more than one shape
 
-A clip path of several shapes is clipped to their union, and the union costs in proportion to how
-often the edges cross, each shape's own edges among them, which can grow as the square of the
-segments. Two zigzags crossing each other took, to their first frame, 33 ms with 51 segments each,
-255 ms with 101, 0.8 seconds with 141 and 14.9 seconds with 200 (the browser keeps the union
-afterwards, so only the first frame pays). Drawn as two subpaths of one path beside a square of no
-consequence, they took 0.24, 0.95, 2.4 and 9.0 seconds with 100, 150, 200 and 300 segments each;
-as the only shape, 1 ms. So a clip path of more than one shape counts half the square of its
-shapes' segments added up, and all clip paths together count at most `clipCrossings`, 10,000
-(`drawing-too-costly` over it). A line counts 1, a quadratic or an arc 2, a cubic 3; a rect 4, a
-rounded rect 12, a circle or an ellipse 8; a `use` what it draws, and a `use` of a group as many
-shapes as the group holds (Chromium clips nothing with one). At the limit the costliest
-arrangements built took under a quarter of a second: a shape of two crossing zigzags of 68
-segments beside a square, two zigzags of 70 crossing each other, five of 28 (see the table below).
+A clip path of several shapes clips to their union, and a renderer that works the union out with
+path operations can take minutes over it, at no size the budgets can see. A review found two
+zigzags of 69 segments, each edge all but on top of the next, at 30,000 in a view box 60,000 wide,
+taking 7.8 minutes to their first frame in Chromium; two of 69 a little further apart at 100,000,
+22 seconds; one zigzag beside a square, 16.9 seconds; and the time erratic in the number of
+segments. An earlier version counted how often the shapes could cross and refused past a limit;
+since the time does not follow the count, no limit on it was safe. So no clip path of more than one
+shape is kept.
 
-A clip path of one shape counts nothing, however long: it clips by its outline. Measured with two
-zigzags of 2,000 segments crossing as subpaths of one shape, it took 1 ms at 600 pixels and 26 to
-33 ms at 2000 twice as dense or inline, alone, with a transform on the shape or on the clip path,
-through a `use`, with `clipPathUnits="objectBoundingBox"`, with the even-odd rule, applied inside
-another clip path, and applied twice over. Every clip path in the clean corpus and in the
-realistic logos (Figma's included) holds one shape.
+A clip path of more than one shape, or of one shape that is clipped in turn (a `use` of a shape
+with a clip path of its own), is written as an alpha mask (`mask-type="alpha"`) of the same shapes,
+under the same id, and reported with the reason `rewritten`. A mask paints its content and never
+combines it, and its alpha is 1 wherever any shape covers, so it lets through what the clip path
+let through:
 
-A known limitation: clip paths made of many shapes are refused. A clip path of 18 circles, or of
-shapes whose segments come to 142 or more, is over the limit (17 circles, or 141 segments, are
-not). A logo that needs one can usually merge its clipping shapes into one path, which clips the
-same when they wind the same way and counts nothing here.
+- **Content.** Each shape is drawn opaque and bare: `fill="#ffffff"`, `fill-opacity="1"`,
+  `stroke="none"`, `visibility="visible"`, its geometry and its own `transform`, and nothing else
+  (a clip path takes neither its shapes' paint nor their strokes, filters or masks). The fill rule
+  is the shape's clip rule: its own, or the `use`'s, or the clip path's or what holds it, as
+  Chromium inherits it. A `use` becomes a group carrying the use's `transform` and then its `x` and
+  `y` (a percentage taken of the view box, or of the box in object-bounding-box units) around a
+  copy of the shape; a shape clipped in turn keeps its clip path in the copy. What a clip path
+  ignores is left out (a shape not displayed or hidden, by itself or the `use` that draws it, and
+  a `use` of anything but a shape), and dropped as `render-cost` or `misplaced`. The clip path's
+  own `transform` goes on a group around the content.
+- **Units and region.** `clipPathUnits="objectBoundingBox"` becomes
+  `maskContentUnits="objectBoundingBox"`, the region staying in the same box; otherwise the
+  region is in user space (`maskUnits="userSpaceOnUse"`). The region is the box of every shape
+  through its transforms, grown by a tenth of its larger side on each side, so that antialiasing
+  at the edge is kept. Nothing outside the shapes is let through by the clip or by the mask, so
+  any region holding them draws the same; a region far larger costs no more (Chromium bounds the
+  mask by what it masks: 12 masked squares took the same with a region of the view box and of two
+  million units). An element with an empty box (a horizontal line, say) draws nothing under a clip
+  path or mask in object-bounding-box units, and draws nothing the same way after the rewrite.
+  `display` is copied, since a mask not displayed is ignored as a clip path not displayed is.
+- **What used it.** Every `clip-path` that named it, written as an attribute or in `style`, in
+  the drawing or in a mask's content, becomes `mask`. An element that has a mask of its own moves
+  into a group that takes its id, its `transform` and the new mask, so a `use` of it, and the
+  space both masks work in, stay as they were. The root's clip path works in the space around the
+  root, in CSS pixels, which only a mask on the root shares: one on a root without a mask becomes
+  a mask on the root, and one on a root with a mask of its own is refused (`drawing-too-costly`).
+- **Sharing and budgets.** One mask stands for each clip path, however many elements used it, and
+  takes an id from the same counter as everything else, so the output is still a fixed point. A
+  rewritten clip path counts as a mask: in `maskApplications`, in `maskDepth` (nested inside any
+  mask it is applied within), in the drawing cost (200 an application, plus its shapes) and in the
+  overdraw (an alpha mask, 32, over the box of what it masks).
 
-Masks do not union their content, so none of this applies to them; what they could still do (a
-`transform`, a `clip-path` or a `mask` on a mask, a mask on a clip path's shape) Chromium ignores,
-and the allowlist does not keep.
+Before and after are drawn as images in the browser test and compared pixel by pixel, for
+overlapping circles, compound shapes by the even-odd and the nonzero rule, a clip path with its own
+transform, one in object-bounding-box units, uses of shapes with paint and strokes of their own, a
+clip under an element's own mask, one on a transformed element drawn again by a `use`, a stroke
+reaching far past its shape's box, hidden shapes and a percentage position, one in a mask's
+content, a shape clipped in turn and one on the root: at most 0.5% of the pixels may differ, by
+antialiasing. One departure is Chromium's: with the even-odd rule, a shape with a hole before a
+shape overlapping it clips to less than their union, and to the union with the order turned round;
+the mask draws the union the specification asks for in either order, which the test checks
+against Chromium's own drawing of the turned order.
+
+A clip path of one shape that is not clipped in turn is kept, however long or self-crossing: it
+clips by its outline, with no union. The browser test times the costliest of each form at both of
+the reviewer's offsets (31 uses of a near-coincident zigzag of 6,000 segments at 30,000 and at
+100,000, alone, turned by its own transform or the clip path's, through a `use`, by the even-odd
+rule; 15 inside another such clip path; and 7 in object-bounding-box units of a unit square drawn
+at full size): each took 1 to 3 ms at 600 pixels, 26 to 34 ms at 2000 twice as dense and 32 to 50
+ms inline. Applied inside another, the two clips are applied one after the other, never combined
+by path operations: two near-coincident clips nested took 1, 30 and 49 ms.
+
+The rewrite costs real logos little: a wordmark of eight outlined letters clipping a gradient, as
+Illustrator writes text made into a clip (560 cubics), comes to 3.1% of the drawing cost and 7.7%
+of the overdraw, four such in one logo to 12.2% and 30.6%, and thirteen fit before the overdraw
+limit (each masks the whole image here; a mask over a smaller box costs less).
 
 #### What each term stands for
 
@@ -632,8 +678,7 @@ pixels; the slowest at 2000 twice as dense is paint, as the overdraw intends.
 | Overdraw: layers and masks             | an offscreen surface, and blending it | 131 group opacity layers over small shapes spread across the image                          | 14 ms      | 0.69 s       | 19 ms          |
 | Overdraw: edges, crowded rows          | rasterising every edge on every row   | 4,853 long lines in one path; 1,500 edges in an even-odd clip path                          | 73, 316 ms | 0.32, 0.71 s | 93, 127 ms     |
 | Overdraw: stroke ends                  | walking the outline of joins and caps | 1,047 butt dashes on a stroke as wide as the image; 875 miter joins at a miter limit of 100 | 319, 4 ms  | 0.12, 0.05 s | 104, 22 ms     |
-| Overdraw: clip paths drawn as masks    | a mask surface                        | 12 clip paths of 43 shapes                                                                  | 33 ms      | 1.81 s       | 35 ms          |
-| `clipCrossings`                        | combining a clip path's shapes        | a shape of two crossing zigzags of 68 segments, beside a square                             | 138 ms     | 0.18 s       | 166 ms         |
+| Overdraw: clip paths written as masks  | a mask surface, the shapes painted in | 13 clip paths of two near-coincident zigzags of 3,000 segments; 12 of 43 shapes             | 19, 33 ms  | 0.98, 1.66 s | 33, 33 ms      |
 
 The costliest logos the sanitiser accepts of each kind, rasterised in full as an image on that
 machine (load average about 8 on four cores, median of three) at 600 CSS pixels and at 2000 with a
@@ -662,36 +707,39 @@ device scale factor of 2, and drawn inline at 600 until a screenshot shows it:
 | 522 dashes of four lengths on a stroke as wide as the image        | 1,082         | 499.4      | 331 ms | 0.12 s      | 84 ms          |
 | 1,335 round joins on a stroke as wide as the image                 | 1,368         | 499.4      | 53 ms  | 0.32 s      | 50 ms          |
 | 294 round dots on a stroke as wide as the image                    | 327           | 497.9      | 8 ms   | 0.06 s      | 23 ms          |
-| A clip path of two zigzags of 70 segments crossing                 | 442           | 33.1       | 159 ms | 0.19 s      | 208 ms         |
-| A clip path of a shape of two crossing zigzags of 68, and a square | 442           | 33.1       | 138 ms | 0.18 s      | 166 ms         |
-| A clip path of five zigzags of 28 crossing                         | 538           | 33.1       | 136 ms | 0.14 s      | 164 ms         |
-| A clip path of two waves of 23 cubics crossing                     | 764           | 37.5       | 6 ms   | 0.05 s      | 40 ms          |
-| 12 clip paths of a shape clipped in turn                           | 6,577         | 469.4      | 24 ms  | 1.48 s      | 33 ms          |
-| 12 clip paths of 43 shapes                                         | 20,917        | 467.1      | 33 ms  | 1.81 s      | 35 ms          |
+| 13 clip paths of two near-coincident zigzags of 3,000, as masks    | 81,927        | 473.5      | 19 ms  | 0.98 s      | 33 ms          |
+| 13 of a zigzag crossing itself and a square, as masks              | 81,979        | 470.7      | 19 ms  | 0.93 s      | 33 ms          |
+| 12 of five near-coincident zigzags of 3,000, as masks              | 184,777       | 436.1      | 18 ms  | 0.98 s      | 50 ms          |
+| 31 clip paths of one near-coincident zigzag of 6,000               | 194,371       | 168.0      | 1 ms   | 0.03 s      | 50 ms          |
+| 12 clip paths of a shape clipped in turn, as masks                 | 6,565         | 469.4      | 27 ms  | 1.44 s      | 35 ms          |
+| 12 clip paths of 43 shapes, as masks                               | 20,917        | 467.1      | 33 ms  | 1.66 s      | 33 ms          |
 | 7 masks holding a clipped shape                                    | 3,830         | 497.8      | 28 ms  | 1.47 s      | 52 ms          |
 | 19 radial gradients on a shape scaled a million million times      | 741           | 497.4      | 37 ms  | 1.62 s      | 73 ms          |
 
-The clip paths are timed to their first frame, which is what the union costs; the dashes on a wide
-stroke and the round dots stop at the overdraw limit, the crossing clip paths at `clipCrossings`,
-the hairline dashes and the thin view box at the drawing cost. The two documents above that took
-10.6 and 5.4 seconds at 600 pixels are refused, as is a single path of 3,000 edges across the
-image, which took 4.8 seconds at 2000 twice as dense, and so is each of the documents that broke an
-earlier model: two zigzags of 200 segments crossing in a clip path (14.9 seconds to their first
-frame), or drawn as one shape beside a square (2.4 seconds here, 12.5 on a reviewer's machine),
-3,000 dashes on a stroke as wide as the image (15.2 seconds), clip paths of 43 shapes or of clipped
-shapes, which Chromium draws as masks (4.7 seconds), a hairline zigzag with a dash array of 64
+The rows for clip paths were measured again with the rewrite on the same machine idle (load about
+0.3), so they read a little low beside the rest; the clip paths are timed to their first frame. The
+dashes on a wide stroke, the round dots and the clip paths written as masks stop at the overdraw
+limit, and the hairline dashes, the thin view box, the five zigzags and the clip paths of one
+zigzag at the drawing cost. The two documents above that took 10.6 and 5.4 seconds at 600 pixels
+are refused, as is a single path of 3,000 edges across the image, which took 4.8 seconds at 2000
+twice as dense, and so is each of the documents that broke an earlier model: 3,000 dashes on a
+stroke as wide as the image (15.2 seconds), clip paths of 43 shapes or of clipped shapes, which
+Chromium draws as masks (4.7 seconds), a hairline zigzag with a dash array of 64
 lengths, whose dashes were once counted as one a repeat (1.1 seconds as an image at 600 pixels,
 3.9 inline, where the same drawing cost in dashes of two lengths takes 30 and 136 ms), a transform
 that overflows to infinity, whose `NaN` once turned the overdraw off, and a view box stretched or
-sliced past the square the budget assumes, which is now shown whole instead (below).
+sliced past the square the budget assumes, which is now shown whole instead (below). The clip paths
+that broke earlier models are accepted now and written as masks, and are fast: two zigzags of 200
+segments crossing (14.9 seconds to their first frame as a clip path) took 3 ms at 600 pixels, 0.11
+seconds at 2000 twice as dense and 33 ms inline; drawn as one shape beside a square (2.4 seconds,
+12.5 on a reviewer's machine), 3 ms, 0.11 seconds and 18 ms; the reviewer's near-coincident
+zigzags (7.8 minutes, 22 and 16.9 seconds), 3 ms, 0.11 seconds and 17 to 34 ms.
 
 The browser test rasterises each of these families under a budget of 3 seconds at 600 pixels and 6
 at 2000 twice as dense, and draws each inline at 600 under 3 seconds. With the overdraw limit raised
 tenfold, nine families blew through them (4.5 to 16.5 seconds: the gradients, layers, masks, the
 even-odd clip path, the butt and four-length dashes and the scaled shape), and in four more another
-limit took over first; with `clipCrossings` raised tenfold, the zigzag clip path took 10 to 54
-seconds; counting only the crossings between shapes, the clip path of a shape crossing itself took
-10 seconds to draw and over two minutes to rasterise; and counting one dash a repeat in the drawing
+limit took over first; and counting one dash a repeat in the drawing
 cost, the hairline dashes of 64 lengths ran into the overdraw limit first. Real logos stay inside
 both budgets: a Figma export with eight full-size alpha masks and ten gradients under six clip paths
 come to about 59% of the overdraw (they take 0.9 and 0.46 seconds themselves at 2000 twice as
@@ -766,9 +814,10 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. The geometry is kept to six
 decimals; colours set only by CSS are lost (see above).
 
-The tests hold it to that: a hostile corpus of 196 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 108
-refused, and every removal, by element, attribute and reason, for each of the 88 accepted) and
+The tests hold it to that: a hostile corpus of 240 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 106
+refused, and every removal, by element, attribute and reason, for each of the 134 accepted, 32 of
+them with a clip path written as a mask) and
 generated oversized inputs, each refused or accepted with an output an independent checker finds
 inert (its own tokeniser, its own copy of the allowlist, its own grammar for every value and its
 own rules for where each element may stand); a clean corpus of logos as Inkscape, Illustrator,
