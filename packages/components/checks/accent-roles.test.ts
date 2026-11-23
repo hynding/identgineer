@@ -13,7 +13,8 @@ function listFiles(directory: string): string[] {
   });
 }
 
-const key = (file: string, property: string, token: string) => `${file} ${property} ${token}`;
+const key = (file: string, selector: string, property: string, token: string) =>
+  `${file} ${selector} ${property} ${token}`;
 
 describe("findAccentUses", () => {
   it("lists each accent role a declaration reads, accent-subtle included, leaving comments out", () => {
@@ -22,12 +23,37 @@ describe("findAccentUses", () => {
       box-shadow: inset 0 0 0 1px var(--idg-color-accent-border), var(--idg-elevation-sm);
       outline-color: var(--idg-color-on-accent-subtle); }`;
     expect(findAccentUses(css)).toEqual([
-      { property: "background", token: "accent" },
-      { property: "color", token: "on-accent-indicator" },
-      { property: "border-color", token: "accent-subtle" },
-      { property: "box-shadow", token: "accent-border" },
-      { property: "outline-color", token: "on-accent-subtle" },
+      { selector: "a", property: "background", token: "accent" },
+      { selector: "a", property: "color", token: "on-accent-indicator" },
+      { selector: "a", property: "border-color", token: "accent-subtle" },
+      { selector: "a", property: "box-shadow", token: "accent-border" },
+      { selector: "a", property: "outline-color", token: "on-accent-subtle" },
     ]);
+  });
+
+  it("names the normalised selector and every at-rule around a declaration", () => {
+    const css = `.a,
+      .b:hover { color: var(--idg-color-accent); }
+      @container  idg-nav style(--_nav: drawer) {
+        @media (min-width: 40rem) {
+          .a   > .c { background: var(--idg-color-accent-subtle) }
+        }
+      }`;
+    expect(findAccentUses(css)).toEqual([
+      { selector: ".a, .b:hover", property: "color", token: "accent" },
+      {
+        selector:
+          "@container idg-nav style(--_nav: drawer) >> @media (min-width: 40rem) >> .a > .c",
+        property: "background",
+        token: "accent-subtle",
+      },
+    ]);
+  });
+
+  it("tells the same property and token apart by selector, so moving one is seen", () => {
+    const before = findAccentUses(".a { color: var(--idg-color-accent); } .b { color: red; }");
+    const after = findAccentUses(".a { color: red; } .b { color: var(--idg-color-accent); }");
+    expect(before).not.toEqual(after);
   });
 });
 
@@ -38,7 +64,18 @@ describe("findAccentUses, var() spellings", () => {
     ["a fallback after a space", "a { color: var(--idg-color-accent , currentcolor); }"],
     ["a line break", "a { color: var(\n    --idg-color-accent\n  ); }"],
   ])("finds a role read with %s", (_label, css) => {
-    expect(findAccentUses(css)).toEqual([{ property: "color", token: "accent" }]);
+    expect(findAccentUses(css)).toEqual([{ selector: "a", property: "color", token: "accent" }]);
+  });
+
+  it("reads the function name in any case, as CSS does", () => {
+    expect(
+      findAccentUses(
+        "a { color: VAR(--idg-color-accent); background: Var( --idg-color-on-accent ); }",
+      ),
+    ).toEqual([
+      { selector: "a", property: "color", token: "accent" },
+      { selector: "a", property: "background", token: "on-accent" },
+    ]);
   });
 
   it("does not take a longer role name for a shorter one", () => {
@@ -46,20 +83,55 @@ describe("findAccentUses, var() spellings", () => {
   });
 });
 
+/** The CSS a source file carries: the file itself, or the template literals of a TypeScript one. */
+function stylesheetsIn(file: string): string[] {
+  const source = readFileSync(file, "utf8");
+  if (file.endsWith(".css")) return [source];
+  return [...source.matchAll(/`([^`]*)`/g)].map((match) => match[1] ?? "");
+}
+
+const isSource = (file: string) =>
+  file.endsWith(".css") ||
+  (file.endsWith(".ts") && !file.endsWith(".d.ts") && !/\.test\.ts$/.test(file));
+
+const ACCENT_MENTION = /--idg-color-(?:on-)?accent/gi;
+
 describe("accent roles in the component stylesheets", () => {
-  const actual = listFiles(SRC)
-    .filter((file) => file.endsWith(".css"))
+  const files = listFiles(SRC).filter(isSource);
+  const rel = (file: string) => relative(SRC, file).split("\\").join("/");
+  const actual = files
     .flatMap((file) =>
-      findAccentUses(readFileSync(file, "utf8")).map(({ property, token }) =>
-        key(relative(SRC, file).split("\\").join("/"), property, token),
+      stylesheetsIn(file).flatMap((css) =>
+        findAccentUses(css).map(({ selector, property, token }) =>
+          key(rel(file), selector, property, token),
+        ),
       ),
     )
     .sort();
 
   it("are exactly the classified uses, so a new one has to be classified", () => {
     expect(actual).toEqual(
-      ACCENT_ROLE_USES.map(({ file, property, token }) => key(file, property, token)).sort(),
+      ACCENT_ROLE_USES.map(({ file, selector, property, token }) =>
+        key(file, selector, property, token),
+      ).sort(),
     );
+  });
+
+  it("include the CSS written as a template string in a TypeScript file", () => {
+    expect(ACCENT_ROLE_USES).toContainEqual(
+      expect.objectContaining({
+        file: "components/table/table-light-styles.ts",
+        token: "accent-subtle",
+      }),
+    );
+  });
+
+  it("are read only where a scan sees them: every mention sits inside a stylesheet", () => {
+    for (const file of files) {
+      const mentions = (readFileSync(file, "utf8").match(ACCENT_MENTION) ?? []).length;
+      const scanned = stylesheetsIn(file).join("\n");
+      expect((scanned.match(ACCENT_MENTION) ?? []).length, rel(file)).toBe(mentions);
+    }
   });
 
   it("show state through the accent-subtle tint only where something else marks it too", () => {
