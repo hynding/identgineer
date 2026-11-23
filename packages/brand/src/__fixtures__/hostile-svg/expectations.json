@@ -1055,6 +1055,12 @@
   "out-of-range-character-reference.svg": {
     "outcome": "reject:invalid-character"
   },
+  "overdraw-gradient-both.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "overdraw-gradient-fill.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
   "overlong-character-reference.svg": {
     "outcome": "reject:invalid-entity"
   },
