@@ -12,6 +12,26 @@
       }
     ]
   },
+  "aspect-ratio-none-stretch.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "aspect-ratio-slice-crop.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      }
+    ]
+  },
   "attribute-quote-injection.svg": {
     "outcome": "accept",
     "removed": [

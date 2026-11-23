@@ -394,6 +394,42 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
     );
   });
 
+  it.each(["none", "xMinYMin slice", "xMidYMid  slice", "none meet"])(
+    "drops preserveAspectRatio %s, which would stretch or crop the view box, so the logo is drawn to fit",
+    (value) => {
+      const result = accepted(
+        `<svg ${NS} viewBox="0 0 1000 1" width="600" height="600" preserveAspectRatio="${value}"/>`,
+      );
+      expect(result.svg).not.toContain("preserveAspectRatio");
+      expect(result.removed).toEqual([
+        {
+          element: "svg",
+          attribute: "preserveAspectRatio",
+          reason: "render-cost",
+          line: 1,
+          column: 85,
+        },
+      ]);
+    },
+  );
+
+  it.each(["xMinYMin", "xMidYMid meet", "xMaxYMax meet"])(
+    "keeps preserveAspectRatio %s, which fits the view box inside the image",
+    (value) => {
+      expect(
+        accepted(`<svg ${NS} viewBox="0 0 1000 1" preserveAspectRatio="${value}"/>`).svg,
+      ).toContain(`preserveAspectRatio="${value}"`);
+    },
+  );
+
+  it("still drops a preserveAspectRatio that is not valid as an invalid value", () => {
+    expect(
+      accepted(`<svg ${NS} viewBox="0 0 1 1" preserveAspectRatio="xMidYMid fit"/>`).removed,
+    ).toEqual([
+      expect.objectContaining({ attribute: "preserveAspectRatio", reason: "invalid-value" }),
+    ]);
+  });
+
   it("paints nothing for a paint reference that cannot be found, rather than black", () => {
     expect(
       output('<rect width="1" height="1" fill="url(#nowhere)" stroke="url(#nowhere)"/>'),

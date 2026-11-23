@@ -102,6 +102,16 @@ describe("the overdraw of a logo", () => {
     );
   });
 
+  it("charges a view box a thousand times wider than tall, drawn to fit, by its larger side", () => {
+    // Shown to fit (the only way a kept logo is shown) in any image, the view box spans the image's
+    // width at most, so its larger side is the image's: the bar covers a thousandth of the square.
+    const bar = '<rect width="1000" height="1"/>';
+    expect(overdraw(bar, "0 0 1000 1")).toBeCloseTo(0.001 * W.solid + edges(2.002), 9);
+    expect(
+      accepted(`<svg ${NS} viewBox="0 0 1000 1" preserveAspectRatio="none">${bar}</svg>`).overdraw,
+    ).toBeCloseTo(0.001 * W.solid + edges(2.002), 9);
+  });
+
   it("bounds how much of each segment's edge can be seen by its kind", () => {
     const hairline = 'fill="none" stroke="#000" stroke-width="0.000001"';
     const edges = (data: string): number => overdraw(`<path d="${data}" ${hairline}/>`);
