@@ -342,6 +342,9 @@
       }
     ]
   },
+  "dashes-on-a-wide-stroke.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
   "deep-nesting.svg": {
     "outcome": "reject:too-deep"
   },
@@ -1297,6 +1300,9 @@
         "reason": "active-content"
       }
     ]
+  },
+  "square-dashes-on-a-wide-stroke.svg": {
+    "outcome": "reject:overdraw-too-large"
   },
   "surrogate-character-reference.svg": {
     "outcome": "reject:invalid-character"

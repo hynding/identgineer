@@ -14,6 +14,10 @@ function svg(body: string, viewBox = "0 0 100 100"): string {
   return `<svg ${NS} viewBox="${viewBox}">${body}</svg>`;
 }
 
+function payload(name: string): string {
+  return readFileSync(new URL(`./__fixtures__/hostile-svg/${name}`, import.meta.url), "utf8");
+}
+
 function accepted(input: string): SvgLogoAccepted {
   const result = sanitiseSvgLogo(input);
   if (!result.ok) throw new Error(JSON.stringify(result.errors));
@@ -39,9 +43,12 @@ function edges(sides: number): number {
   return sides * W.edge * (1 + (sides / W.edgesPerRow) ** 2);
 }
 
-/** A stroke's outline runs along both sides of the path. */
-function strokeEdges(sides: number): number {
-  return edges(2 * sides);
+/**
+ * A stroke's outline runs along both sides of the path, with `ends` more for its joins and caps
+ * (and each dash's), in sides of the image.
+ */
+function strokeEdges(sides: number, ends = 0): number {
+  return edges(2 * sides + ends);
 }
 
 describe("the overdraw of a logo", () => {
@@ -158,26 +165,108 @@ describe("the overdraw of a logo", () => {
       overdraw(
         '<rect width="10" height="10" fill="none" stroke="#000" stroke-width="4" stroke-linejoin="round"/>',
       ),
-    ).toBeCloseTo((roundArea / 10_000) * W.solid + strokeEdges(0.4), 9);
+    ).toBeCloseTo(
+      (roundArea / 10_000) * W.solid +
+        // Four round joins of half a turn at width 4, and two butt caps 4 across.
+        strokeEdges(0.4, (4 * 2 * Math.PI + 2 * 4) / 100),
+      9,
+    );
     // Miter joins reach out to the miter limit, 4 by default.
     const miter = 4 * 2;
     const miterArea = Math.min((10 + 2 * miter) ** 2, 40 * 4 + 5 * (2 * miter) ** 2);
     expect(
       overdraw('<rect width="10" height="10" fill="#000" stroke="#000" stroke-width="4"/>'),
-    ).toBeCloseTo(((100 + miterArea) / 10_000) * W.solid + edges(0.4) + strokeEdges(0.4), 9);
+    ).toBeCloseTo(
+      ((100 + miterArea) / 10_000) * W.solid +
+        edges(0.4) +
+        // Four miter joins up to 4 times 4 long, and two butt caps.
+        strokeEdges(0.4, (4 * 16 + 2 * 4) / 100),
+      9,
+    );
     expect(overdraw('<line x2="50" stroke="#000" stroke-width="0"/>')).toBe(0);
+  });
+
+  it("charges a stroke's joins, and the caps of every subpath and of every dash, as edges", () => {
+    const line = (attributes: string): number =>
+      overdraw(`<path d="M0 50H100" fill="none" stroke="#000" stroke-width="10" ${attributes}/>`);
+    // One miter join reaching 4 times 10 (an upper bound: a path's segments meet at most once each),
+    // and a butt cap 10 across at each end of the one subpath; the line's box grown by the miter.
+    const area = (extra: number): number =>
+      Math.min(140 * 40, 100 * 10 + 2 * 40 ** 2 + extra) / 10_000;
+    expect(line("")).toBeCloseTo(area(0) * W.solid + strokeEdges(1, (40 + 2 * 10) / 100), 9);
+    // Dashes 5 long every 10: up to 10 whole ones and one more begun, each with two caps and as
+    // much area again as a square cap could add.
+    expect(line('stroke-dasharray="5"')).toBeCloseTo(
+      area(11 * 100) * W.solid + strokeEdges(1, (40 + 2 * 11 * 10) / 100),
+      9,
+    );
+    // A round cap is half a turn, a square one three sides of a square; each dash of four entries
+    // has two; an offset moves the dashes but adds none.
+    expect(line('stroke-dasharray="5" stroke-linecap="round"')).toBeCloseTo(
+      area(11 * 100) * W.solid + strokeEdges(1, (40 + 2 * 11 * 5 * Math.PI) / 100),
+      9,
+    );
+    expect(line('stroke-dasharray="5" stroke-linecap="square"')).toBeCloseTo(
+      area(11 * 100) * W.solid + strokeEdges(1, (40 + 2 * 11 * 20) / 100),
+      9,
+    );
+    expect(line('stroke-dasharray="1 2 3 4" stroke-dashoffset="3"')).toBeCloseTo(
+      area(22 * 100) * W.solid + strokeEdges(1, (40 + 2 * 22 * 10) / 100),
+      9,
+    );
+    // A dash of no length still has its caps.
+    expect(line('stroke-dasharray="0 10" stroke-linecap="round"')).toBeCloseTo(
+      area(11 * 100) * W.solid + strokeEdges(1, (40 + 2 * 11 * 5 * Math.PI) / 100),
+      9,
+    );
+    // A dash array inherits, and none turns it off again.
+    expect(
+      overdraw(
+        '<g stroke-dasharray="5"><path d="M0 50H100" fill="none" stroke="#000" stroke-width="10"/></g>',
+      ),
+    ).toBeCloseTo(line('stroke-dasharray="5"'), 9);
+    expect(
+      overdraw(
+        '<g stroke-dasharray="5"><path d="M0 50H100" fill="none" stroke="#000" stroke-width="10" stroke-dasharray="none"/></g>',
+      ),
+    ).toBeCloseTo(line(""), 9);
+    // No cap or join shows more than the image's perimeter.
+    expect(
+      overdraw(
+        '<path d="M0 50H100" fill="none" stroke="#000" stroke-width="5000" stroke-linecap="round"/>',
+      ),
+    ).toBeCloseTo(W.solid + strokeEdges(1, 4 + 2 * 4), 9);
+  });
+
+  it("refuses wide strokes whose caps or joins crowd every row", () => {
+    const wide = (data: string, attributes = ""): string =>
+      svg(
+        `<path d="${data}" fill="none" stroke="#000" stroke-width="1000" ${attributes}/>`,
+        "0 0 1000 1000",
+      );
+    // The reviewer's: dashes a tenth long on a stroke as wide as the image.
+    expect(refusal(payload("dashes-on-a-wide-stroke.svg"))).toBe("overdraw-too-large");
+    expect(refusal(payload("square-dashes-on-a-wide-stroke.svg"))).toBe("overdraw-too-large");
+    expect(accepted(wide("M0 500H1000", 'stroke-dasharray="1"')).ok).toBe(true);
+    expect(refusal(wide("M0 500H1000", 'stroke-dasharray="0.2"'))).toBe("overdraw-too-large");
+    // 5,000 subpaths of no length, each drawn as a round dot as wide as the image.
+    const dots = Array.from({ length: 5000 }, (_, index) => `M${String(index / 5)} 500h0`).join("");
+    expect(refusal(wide(dots, 'stroke-linecap="round"'))).toBe("overdraw-too-large");
+    // 5,000 short segments, each meeting the next in a round join as wide as the image.
+    const turns = `M500 500${" l1 0.5 l-1 0.5".repeat(2500)}`;
+    expect(refusal(wide(turns, 'stroke-linejoin="round"'))).toBe("overdraw-too-large");
   });
 
   it("inherits paint and stroke width from ancestors and from the use that draws a definition", () => {
     const defs = '<defs><rect id="a" width="10" height="10" fill="none"/></defs>';
     const wide = 10 + 2 * 4 * 2;
     expect(overdraw(`${defs}<g stroke="#000" stroke-width="4"><use href="#a"/></g>`)).toBeCloseTo(
-      ((wide * wide) / 10_000) * W.solid + strokeEdges(0.4),
+      ((wide * wide) / 10_000) * W.solid + strokeEdges(0.4, (4 * 16 + 2 * 4) / 100),
       9,
     );
     expect(overdraw(`${defs}<use href="#a" stroke="#000" stroke-opacity="0.5"/>`)).toBeCloseTo(
       // A width of 1: the outline of 40 and a 4 by 4 miter at each of 5 vertices, under the box.
-      ((40 + 5 * 16) / 10_000) * W.translucent + strokeEdges(0.4),
+      ((40 + 5 * 16) / 10_000) * W.translucent + strokeEdges(0.4, (4 * 4 + 2) / 100),
       9,
     );
   });
@@ -324,9 +413,6 @@ describe("the overdraw of a logo", () => {
 });
 
 describe("the overdraw limit", () => {
-  const payload = (name: string): string =>
-    readFileSync(new URL(`./__fixtures__/hostile-svg/${name}`, import.meta.url), "utf8");
-
   it.each([
     ["a 64-stop radial gradient filling and stroking 5,373 times", "overdraw-gradient-both.svg"],
     ["a 64-stop radial gradient filling 5,373 times", "overdraw-gradient-fill.svg"],
