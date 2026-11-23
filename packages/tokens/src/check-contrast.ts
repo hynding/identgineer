@@ -54,6 +54,8 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
     nonText("accent-indicator", background),
     nonText("accent-border", background),
   ]),
+  // The current navigation item is marked in the indicator on its accent-subtle tint.
+  nonText("accent-indicator", "accent-subtle"),
 ];
 
 export function findContrastFailures(colors: ReadonlyMap<string, string>): ContrastFailure[] {

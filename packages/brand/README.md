@@ -116,13 +116,15 @@ The page constrains the two roles that need it, both held to 3:1 on `bg`, `bg-su
 and `surface-raised`:
 
 - `accent-indicator`, the accent as a mark of state or selection (a checked box, a switch, a
-  progress fill, the current page), with `on-accent-indicator` at 4.5:1 on it;
+  progress fill, the current page), with `on-accent-indicator` at 4.5:1 on it. It is also held to
+  3:1 on `accent-subtle`, the tint behind the current navigation item that its marker sits on; the
+  indicator moves for that and the tint stays, so the brand's subtle wash is untouched;
 - `accent-border`, the edge of an accent fill where the fill alone cannot be told apart.
 
-Where the accent already reaches 3:1 on all four they are the accent's own colours (and
+Where the accent already reaches 3:1 on all four (and, for the indicator, on `accent-subtle`)
+they are the accent's own colours (and
 `on-accent-indicator` is `on-accent`), as in the built-in themes. Otherwise each moves from the
-accent in lightness only, keeping its hue, and is reported. That happens in 49% of light schemes
-(9,863 kits) and 29% of dark ones (5,894).
+accent in lightness only, keeping its hue, and is reported.
 
 The hover state follows the built-in themes: one hover step further from the page (darker in
 light, lighter in dark). Where the text on it would fail there, or the accent is already at the
@@ -174,8 +176,8 @@ Tested on every run:
   (`findContrastFailures`) and meets every pairing in the table above, checked with the tokens
   package's own functions over 2,700 seeded random colour sets and twenty edge sets, for every
   tone and corner style. That includes `accent-indicator` and `accent-border` at 3:1 on `bg`,
-  `bg-subtle`, `surface` and `surface-raised` in each scheme, both equal to the accent wherever
-  the accent itself reaches that, and a hover that differs from the accent.
+  `bg-subtle`, `surface` and `surface-raised` in each scheme, and the indicator on `accent-subtle`
+  too, both equal to the accent wherever the accent itself reaches that, and a hover that differs from the accent.
 - **The brand's own fill.** The accent is the primary unchanged, in both schemes, for every kit.
 - **Recognisable.** The primary is used unchanged unless a move is reported; a moved brand colour
   keeps its hue within 3° while it still has colour (OKLCH chroma of at least 0.04; about 2.4° at

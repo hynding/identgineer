@@ -95,7 +95,8 @@ The accent has three roles, because WCAG asks different things of them:
   barely shows against the page: citrus light's lime is 1.19:1 on its background.
 - `accent-indicator` (with `on-accent-indicator` at 4.5:1 on it) is the accent as a mark of state
   or selection on the page: a checked box, a switch that is on, a progress fill, the current page,
-  the selected tab. It must reach 3:1 against every page background (WCAG 1.4.11).
+  the selected tab. It must reach 3:1 against every page background (WCAG 1.4.11), and against
+  `accent-subtle`, the tint behind the current navigation item that its marker sits on.
 - `accent-border` is the edge of an accent fill, for where the fill alone cannot be told apart from
   the page. It must reach 3:1 against every page background.
 - `accent-edge` is derived by the build, never authored: `accent-border` where the accent is below

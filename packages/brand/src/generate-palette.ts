@@ -89,7 +89,8 @@ const EXTRA_REQUIREMENTS: Readonly<Record<string, readonly Requirement[]>> = {
 /**
  * Fills that also mark state on the page (a checked control, progress, the current page, an error
  * border) must stand out from every background at the non-text level, 3:1. The accent fill itself
- * carries a text label, so it only needs its text; its indicator and edge take the page. Warning is left out:
+ * carries a text label, so it only needs its text; its indicator and edge take the page, and the
+ * indicator also the accent-subtle tint behind the current navigation item. Warning is left out:
  * the built-in themes do not give amber 3:1 on a light page either.
  */
 const FILLS_ON_PAGE: readonly string[] = ["accent-indicator", "danger", "success", "info"];
@@ -196,9 +197,11 @@ class Builder {
       chroma: Math.min(0.03, start.chroma),
       hue: start.hue,
     });
-    const page = FILLS_ON_PAGE.includes(role)
-      ? PAGE.map((background) => ({ background, minimum: 3, rgb: this.color(background) }))
-      : [];
+    const page = this.stateBackgrounds(role).map((background) => ({
+      background,
+      minimum: 3,
+      rgb: this.color(background),
+    }));
     const passesWith = (on: Rgb) => (rgb: Rgb) =>
       contrastBetween(rgb, on) >= minimum &&
       page.every((entry) => contrastBetween(rgb, entry.rgb) >= entry.minimum);
@@ -273,8 +276,18 @@ class Builder {
     this.set(role, used);
   }
 
-  weakestOnPage(rgb: Rgb): number {
-    return Math.min(...PAGE.map((background) => contrastBetween(rgb, this.color(background))));
+  /** What a fill that marks state must stand out from: the page, and for the indicator its tint. */
+  stateBackgrounds(role: string): readonly string[] {
+    if (role === "accent-indicator") return [...PAGE, "accent-subtle"];
+    return FILLS_ON_PAGE.includes(role) ? PAGE : [];
+  }
+
+  weakestAsIndicator(rgb: Rgb): number {
+    return Math.min(
+      ...this.stateBackgrounds("accent-indicator").map((background) =>
+        contrastBetween(rgb, this.color(background)),
+      ),
+    );
   }
 
   minimumBetween(foreground: string, background: string): number {
@@ -384,7 +397,7 @@ function accent(builder: Builder, kit: BrandKit): void {
   builder.fill("accent", "on-accent", kit.colors.primary, "primary");
   builder.hover("accent-hover", "accent", "on-accent");
   const fill = builder.color("accent");
-  if (builder.weakestOnPage(fill) >= 3) {
+  if (builder.weakestAsIndicator(fill) >= 3) {
     // The accent already marks state on the page: the indicator is the accent, text and all.
     builder.set("accent-indicator", fill);
     builder.set("on-accent-indicator", builder.color("on-accent"));

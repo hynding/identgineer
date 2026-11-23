@@ -120,7 +120,11 @@ describe("generateBrandTheme", () => {
       const indicator = theme.adjustments.find(
         (entry) => entry.token === "color.accent-indicator" && entry.scheme === scheme,
       );
-      expect(indicator).toMatchObject({ origin: "primary", requested: primary, minimum: 3 });
+      // Whichever check bound the move: 3:1 on a page background or the accent-subtle tint, or the
+      // text on the indicator at 4.5:1 where the tint pushes the indicator towards the text colour.
+      expect(indicator).toMatchObject({ origin: "primary", requested: primary });
+      expect([3, 4.5]).toContain(indicator?.minimum);
+      expect(indicator?.contrastAfter).toBeGreaterThanOrEqual(indicator?.minimum ?? 0);
     },
   );
 
