@@ -36,6 +36,21 @@ export const STYLE_PROPERTIES: ReadonlySet<string> = new Set([
 
 const GRADIENT_CHILDREN = ["stop"] as const;
 const DESCRIPTIVE = ["title", "desc"] as const;
+/**
+ * What a clip path may hold: shapes, and uses of them. Browsers leave anything else (a group, say)
+ * out of the clip, so it is dropped as misplaced.
+ */
+const CLIP_CHILDREN = [
+  "path",
+  "rect",
+  "circle",
+  "ellipse",
+  "line",
+  "polyline",
+  "polygon",
+  "use",
+  ...DESCRIPTIVE,
+] as const;
 const DRAWING_CHILDREN = [
   "g",
   "defs",
@@ -99,8 +114,23 @@ export const SVG_ELEMENT_RULES: Readonly<Record<SvgElementName, SvgElementRule>>
   },
   g: container(),
   defs: container(),
-  clipPath: container("clipPathUnits"),
-  mask: container("x", "y", "width", "height", "maskUnits", "maskContentUnits", "mask-type"),
+  clipPath: { ...container("clipPathUnits"), children: CLIP_CHILDREN },
+  // Browsers apply no transform, clip path or mask set on a mask itself.
+  mask: {
+    attributes: [
+      "id",
+      "x",
+      "y",
+      "width",
+      "height",
+      "maskUnits",
+      "maskContentUnits",
+      "mask-type",
+      ...PRESENTATION.filter((name) => name !== "clip-path" && name !== "mask"),
+    ],
+    children: DRAWING_CHILDREN,
+    text: false,
+  },
   path: shape("d"),
   rect: shape("x", "y", "width", "height", "rx", "ry"),
   circle: shape("cx", "cy", "r"),

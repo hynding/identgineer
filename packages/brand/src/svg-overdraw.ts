@@ -127,6 +127,20 @@ function parseTransform(text: string): Matrix {
   return matrix;
 }
 
+/** The inverse of `m`, or `undefined` when it flattens the plane. */
+function invert(m: Matrix): Matrix | undefined {
+  const det = m[0] * m[3] - m[1] * m[2];
+  if (det === 0) return undefined;
+  return [
+    m[3] / det,
+    -m[1] / det,
+    -m[2] / det,
+    m[0] / det,
+    (m[2] * m[5] - m[3] * m[4]) / det,
+    (m[1] * m[4] - m[0] * m[5]) / det,
+  ];
+}
+
 /** How much a matrix scales areas. */
 function determinant(m: Matrix): number {
   return Math.abs(m[0] * m[3] - m[1] * m[2]);
@@ -334,14 +348,33 @@ class OverdrawWalk {
     return box;
   }
 
-  /** A clip path applied to `box`: its area, and its content drawn as coverage each time. */
+  /**
+   * A clip path applied to `box`: its area, and its content drawn as coverage each time. One shape
+   * clips by its outline; more than one, or a shape that is clipped or masked in turn, is drawn
+   * into a mask layer by some browser (WebKit past one shape, Chromium past 42 or when a shape is
+   * clipped), which costs what an alpha mask does.
+   */
   private applyClip(element: CleanElement, matrix: Matrix, box: SvgBox): void {
     const clip = this.target(element, "clip-path");
     if (clip === undefined) return;
-    this.charge(this.share(box) * SVG_OVERDRAW_WEIGHTS.clip);
+    const shapes = clip.children.filter((child) => child.name !== "title" && child.name !== "desc");
+    const asMask = shapes.length > 1 || shapes.some((shape) => this.clippedInTurn(shape));
+    this.charge(
+      this.share(box) * (asMask ? SVG_OVERDRAW_WEIGHTS.alphaMask : SVG_OVERDRAW_WEIGHTS.clip),
+    );
     const content = this.contentMatrix(clip, "clipPathUnits", matrix, box);
     for (const child of clip.children) this.draw(child, content, ROOT_INHERITED, true);
     this.applyClip(clip, content, box);
+  }
+
+  /** Whether a shape in a clip path, or what a use there draws, has a clip path or mask of its own. */
+  private clippedInTurn(shape: CleanElement): boolean {
+    let at: CleanElement | undefined = shape;
+    for (let step = 0; at !== undefined && step <= this.ids.size; step += 1) {
+      if (at.attributes.has("clip-path") || at.attributes.has("mask")) return true;
+      at = at.name === "use" ? this.target(at, "href") : undefined;
+    }
+    return false;
   }
 
   /** A mask applied to `box`: its area, and its content painted each time. */
@@ -361,7 +394,8 @@ class OverdrawWalk {
   /**
    * The space a clip path's or a mask's content is drawn in: the user space of what refers to it,
    * or, in bounding box units, the box of what it is applied to (the drawn box stands in for the
-   * element's own: both are no smaller than what it paints).
+   * element's own: both are no smaller than what it paints); then the definition's own transform,
+   * which only a clip path keeps.
    */
   private contentMatrix(
     definition: CleanElement,
@@ -369,9 +403,15 @@ class OverdrawWalk {
     matrix: Matrix,
     box: SvgBox,
   ): Matrix {
-    if (textOf(definition, units) !== "objectBoundingBox") return matrix;
+    const transform = textOf(definition, "transform");
+    const own = transform === undefined ? IDENTITY : parseTransform(transform);
+    if (textOf(definition, units) !== "objectBoundingBox") return multiply(matrix, own);
     if (box.minX > box.maxX) return [0, 0, 0, 0, 0, 0];
-    return bounded([box.maxX - box.minX, 0, 0, box.maxY - box.minY, box.minX, box.minY]);
+    const unitBox = bounded([box.maxX - box.minX, 0, 0, box.maxY - box.minY, box.minX, box.minY]);
+    // The box is in the root's space and the transform acts in the element's: carry it over.
+    const back = invert(matrix);
+    if (transform === undefined || back === undefined) return unitBox;
+    return multiply(multiply(multiply(matrix, own), back), unitBox);
   }
 
   /** What a mask's content inherits: from the mask's own ancestors, not from what it masks. */

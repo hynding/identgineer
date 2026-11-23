@@ -25,6 +25,8 @@ const PAINT_AND_PRESENTATION = [
   "shape-rendering",
 ];
 const DRAWN = ["id", "transform", ...PAINT_AND_PRESENTATION];
+// A clip path, what it holds and a mask take neither a clip path nor a mask.
+const UNCLIPPED = DRAWN.filter((name) => name !== "clip-path" && name !== "mask");
 
 const ALLOWED: Readonly<Record<string, readonly string[]>> = {
   svg: [
@@ -38,8 +40,18 @@ const ALLOWED: Readonly<Record<string, readonly string[]>> = {
   ],
   g: DRAWN,
   defs: DRAWN,
-  clipPath: [...DRAWN, "clipPathUnits"],
-  mask: [...DRAWN, "x", "y", "width", "height", "maskUnits", "maskContentUnits", "mask-type"],
+  clipPath: [...UNCLIPPED, "clipPathUnits"],
+  mask: [
+    "id",
+    ...UNCLIPPED.filter((name) => name !== "id" && name !== "transform"),
+    "x",
+    "y",
+    "width",
+    "height",
+    "maskUnits",
+    "maskContentUnits",
+    "mask-type",
+  ],
   path: [...DRAWN, "d"],
   rect: [...DRAWN, "x", "y", "width", "height", "rx", "ry"],
   circle: [...DRAWN, "cx", "cy", "r"],
@@ -97,11 +109,23 @@ const CONTAINER_CHILDREN = [
   "desc",
 ];
 const SHAPE_CHILDREN = ["title", "desc"];
+const CLIP_CHILDREN = [
+  "path",
+  "rect",
+  "circle",
+  "ellipse",
+  "line",
+  "polyline",
+  "polygon",
+  "use",
+  "title",
+  "desc",
+];
 const CHILDREN: Readonly<Record<string, readonly string[]>> = {
   svg: CONTAINER_CHILDREN,
   g: CONTAINER_CHILDREN,
   defs: CONTAINER_CHILDREN,
-  clipPath: CONTAINER_CHILDREN,
+  clipPath: CLIP_CHILDREN,
   mask: CONTAINER_CHILDREN,
   path: SHAPE_CHILDREN,
   rect: SHAPE_CHILDREN,
@@ -245,8 +269,7 @@ const GRAMMARS: Readonly<Record<string, Grammar>> = {
       parts.length === 4 && parts.every(isNumber) && Number(parts[2]) > 0 && Number(parts[3]) > 0
     );
   },
-  preserveAspectRatio: (value) =>
-    /^(?:none|x(?:Min|Mid|Max)Y(?:Min|Mid|Max))(?: (?:meet|slice))?$/.test(value),
+  preserveAspectRatio: (value) => /^x(?:Min|Mid|Max)Y(?:Min|Mid|Max)(?: meet)?$/.test(value),
   transform,
   gradientTransform: transform,
   offset: unitInterval,
@@ -358,6 +381,8 @@ export function findSanitisedSvgProblems(svg: string): string[] {
         if (seen.has(attribute)) problems.push(`${name}: ${attribute} twice`);
         seen.add(attribute);
         if (!allowed?.includes(attribute)) problems.push(`${name}: the attribute ${attribute}`);
+        if (parent === "clipPath" && (attribute === "clip-path" || attribute === "mask"))
+          problems.push(`${name}: the attribute ${attribute} inside a clip path`);
         checkValue(name, attribute, value, problems, references);
         if (attribute === "id") {
           if (ids.has(value)) problems.push(`the id ${value} twice`);

@@ -78,6 +78,8 @@ interface Item {
   readonly measure: (period: number) => Measure;
   /** What it paints, drawn as itself or (`clipping`) as coverage inside a clip path. */
   readonly paint: (clipping: boolean) => Paint;
+  /** Whether it has a clip path or mask of its own; for a clip path, whether what it holds has. */
+  readonly clipped: boolean;
 }
 
 const NONE: Measure = { cost: 0, masks: 0, depth: 0 };
@@ -186,6 +188,7 @@ class LogoGraph {
       markup: `<path id="${id}" d="${data}"${this.dash()}/>`,
       measure: (period) => shape(geometry, length, period),
       paint: () => painted,
+      clipped: false,
     };
   }
 
@@ -196,6 +199,7 @@ class LogoGraph {
         id,
         markup: `<rect id="${id}" width="${String(width)}" height="${String(height)}"${this.dash()}/>`,
         measure: (period) => shape(4 * WEIGHT.line, 2 * (width + height), period),
+        clipped: false,
         paint: () =>
           filled(width * height, 4, 2 * (width + height), {
             minX: 0,
@@ -210,6 +214,7 @@ class LogoGraph {
       id,
       markup: `<circle id="${id}" r="${String(radius)}"${this.dash()}/>`,
       measure: (period) => shape(4 * WEIGHT.cubic, 2 * Math.PI * radius, period),
+      clipped: false,
       paint: () =>
         filled(Math.PI * radius * radius, 4, 2 * Math.PI * radius, {
           minX: -radius,
@@ -226,6 +231,7 @@ class LogoGraph {
       measure: (period) =>
         add({ cost: WEIGHT.element, masks: 0, depth: 0 }, target.measure(period)),
       paint: (clipping) => target.paint(clipping),
+      clipped: target.clipped,
     };
   }
 
@@ -249,7 +255,9 @@ class LogoGraph {
       },
       paint: (box, clipping) => {
         if (clipping && !clip) return 0;
-        return share(box) * (clip ? PAINT.clip : PAINT.mask) + mask.paint(clip).overdraw;
+        // A clip path holding a shape clipped or masked in turn is drawn as an alpha mask.
+        const weight = clip ? (mask.clipped ? PAINT.alphaMask : PAINT.clip) : PAINT.mask;
+        return share(box) * weight + mask.paint(clip).overdraw;
       },
     };
   }
@@ -282,6 +290,7 @@ class LogoGraph {
         const opacity = layer && !clipping ? share(box) * PAINT.layer : 0;
         return { overdraw: own + opacity + applied.paint(box, clipping), box };
       },
+      clipped: mask !== undefined,
     };
   }
 
@@ -292,20 +301,32 @@ class LogoGraph {
     // Mostly the newest mask, so chains of masks inside masks grow long.
     const inner = this.random() < 0.9 ? this.masks.at(-1) : undefined;
     const applied = this.applied(inner);
-    const name = id.startsWith("c") ? "clipPath" : "mask";
+    if (id.startsWith("c")) {
+      // A clip path holds its shape directly: a group there, or a clip path or mask on what it
+      // holds, would be dropped.
+      return {
+        id,
+        markup: `<clipPath id="${id}">${content.markup}</clipPath>`,
+        measure: (period) =>
+          add({ cost: WEIGHT.element, masks: 0, depth: 0 }, content.measure(period)),
+        paint: (clipping) => content.paint(clipping),
+        clipped: content.clipped,
+      };
+    }
     return {
       id,
-      markup: `<${name} id="${id}"><g${applied.markup}>${content.markup}</g></${name}>`,
+      markup: `<mask id="${id}"><g${applied.markup}>${content.markup}</g></mask>`,
       measure: (period) =>
         add(
           { cost: 2 * WEIGHT.element, masks: 0, depth: 0 },
           add(applied.measure(period), content.measure(period)),
         ),
-      // What its content paints each time it is applied (as coverage, for a clip path).
+      // What its content paints each time it is applied.
       paint: (clipping) => {
         const inside = content.paint(clipping);
         return { overdraw: inside.overdraw + applied.paint(inside.box, clipping), box: inside.box };
       },
+      clipped: false,
     };
   }
 
@@ -319,9 +340,10 @@ class LogoGraph {
       definitions += item.markup;
     }
     // Masks come before the groups that apply them; some logos have none, some a long chain.
-    const maskCount = this.integer(this.pick([1, 4, 8]));
+    const maskCount = this.integer(this.pick([1, 4, 8, 12]));
     for (let index = 0; index < maskCount; index += 1) {
-      const mask = this.mask(`${this.random() < 0.5 ? "c" : "m"}${String(index)}`);
+      // Fewer clip paths than masks: a clip path, holding a shape directly, ends a chain of masks.
+      const mask = this.mask(`${this.random() < 0.2 ? "c" : "m"}${String(index)}`);
       this.masks.push(mask);
       definitions += mask.markup;
     }

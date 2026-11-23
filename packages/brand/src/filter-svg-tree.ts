@@ -41,6 +41,13 @@ const REFERENCE_TAKING: ReadonlySet<string> = new Set(["fill", "stroke", "clip-p
 const SCHEME = /^[a-z][a-z0-9+.-]*:/;
 
 /**
+ * A clip path or mask on a clip path, or on a shape inside one: a browser can no longer clip with
+ * the shapes' outlines and draws the clip path into a mask layer each time it is applied instead,
+ * so it is dropped (a mask there is not even drawn by Chromium).
+ */
+const CLIPPED_AS_MASK: ReadonlySet<string> = new Set(["clip-path", "mask"]);
+
+/**
  * Why a value that failed its grammar was dropped: what it was trying to do, where that shows. A
  * `url(` or a scheme is an external reference only where the attribute could have taken one; in
  * path data, say, it is just not a valid value.
@@ -105,9 +112,15 @@ class TreeFilter {
     return this.element(source, "svg", true);
   }
 
-  private element(source: ResolvedElement, name: SvgElementName, isRoot: boolean): CleanElement {
+  /** `clipping`: the element is a clip path, or stands inside one. */
+  private element(
+    source: ResolvedElement,
+    name: SvgElementName,
+    isRoot: boolean,
+    clipping = false,
+  ): CleanElement {
     const rule = SVG_ELEMENT_RULES[name];
-    const attributes = this.attributes(source, rule, isRoot);
+    const attributes = this.attributes(source, rule, isRoot, clipping || name === "clipPath");
     const children: CleanElement[] = [];
     let text = "";
     let reportedText = false;
@@ -120,7 +133,7 @@ class TreeFilter {
         }
         continue;
       }
-      const kept = this.child(child, rule);
+      const kept = this.child(child, rule, name === "clipPath");
       if (kept !== undefined) children.push(kept);
     }
     if (text.length > this.limits.textLength) {
@@ -143,6 +156,7 @@ class TreeFilter {
   private child(
     source: ResolvedElement | XmlText,
     parent: SvgElementRule,
+    clipping: boolean,
   ): CleanElement | undefined {
     if (source.kind === "text") return undefined;
     let reason: SvgLogoRemovalReason | undefined;
@@ -156,7 +170,7 @@ class TreeFilter {
     } else if (!parent.children.includes(source.local)) {
       reason = "misplaced";
     } else {
-      return this.element(source, source.local, false);
+      return this.element(source, source.local, false, clipping);
     }
     this.removals.add({ element: source.qualified }, reason, source.offset);
     return undefined;
@@ -166,6 +180,7 @@ class TreeFilter {
     source: ResolvedElement,
     rule: SvgElementRule,
     isRoot: boolean,
+    clipping: boolean,
   ): Map<string, SvgValue> {
     const kept = new Map<string, SvgValue>();
     let style: ResolvedAttribute | undefined;
@@ -190,6 +205,14 @@ class TreeFilter {
         style = attribute;
         continue;
       }
+      if (namespace === null && clipping && CLIPPED_AS_MASK.has(local)) {
+        this.removals.add(
+          { element: source.qualified, attribute: attribute.qualified },
+          "render-cost",
+          attribute.offset,
+        );
+        continue;
+      }
       if (namespace === null && local !== "href" && rule.attributes.includes(local)) {
         this.keep(
           kept,
@@ -206,7 +229,7 @@ class TreeFilter {
         attribute.offset,
       );
     }
-    if (style !== undefined) this.style(kept, source, rule, style);
+    if (style !== undefined) this.style(kept, source, rule, style, clipping);
     return kept;
   }
 
@@ -254,6 +277,7 @@ class TreeFilter {
     source: ResolvedElement,
     rule: SvgElementRule,
     attribute: ResolvedAttribute,
+    clipping: boolean,
   ): void {
     for (const declaration of attribute.value.split(";")) {
       if (isXmlWhitespaceOnly(declaration)) continue;
@@ -263,6 +287,10 @@ class TreeFilter {
       const names = { element: source.qualified, attribute: attribute.qualified };
       if (!PROPERTY_NAME.test(property)) {
         this.removals.add(names, "invalid-value", attribute.offset);
+        continue;
+      }
+      if (clipping && CLIPPED_AS_MASK.has(property)) {
+        this.removals.add({ ...names, property }, "render-cost", attribute.offset);
         continue;
       }
       if (!STYLE_PROPERTIES.has(property) || !rule.attributes.includes(property)) {
