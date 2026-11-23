@@ -15,7 +15,12 @@ export interface SparklineSummary {
   readonly trend: Trend;
 }
 
-const DECIMAL = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i;
+// `\d+(?:\.\d*)?` and not `\d+\.?\d*`: the second can split a run of digits in as many ways as it has
+// digits, which a long token that fails at its last character turns into quadratic time.
+const DECIMAL = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i;
+
+/** No number anyone means to draw has more characters than this. */
+const MAX_TOKEN_LENGTH = 64;
 
 function finiteNumbers(values: readonly unknown[]): number[] {
   const kept: number[] = [];
@@ -45,7 +50,7 @@ function fromText(text: string): number[] {
   return finiteNumbers(
     list.split(",").map((entry) => {
       const token = entry.trim();
-      return DECIMAL.test(token) ? Number(token) : Number.NaN;
+      return token.length <= MAX_TOKEN_LENGTH && DECIMAL.test(token) ? Number(token) : Number.NaN;
     }),
   );
 }
