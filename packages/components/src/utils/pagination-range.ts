@@ -13,10 +13,13 @@ export interface PaginationRangeOptions {
 const DEFAULT_SIBLINGS = 1;
 const DEFAULT_BOUNDARIES = 1;
 
-// More slots than this do not fit a row, and past 2 ** 53 adding one to a page number changes
-// nothing, so a loop over pages would never end.
+// More slots than this do not fit a row.
 const MAX_SLOTS = 10;
-const MAX_PAGE_COUNT = Number.MAX_SAFE_INTEGER - 1;
+/**
+ * The most pages a pager counts: ten million, so no page number is longer than eight digits and a
+ * button always fits a narrow page. A count above it is held to it.
+ */
+export const MAX_PAGE_COUNT = 10_000_000;
 
 function wholeNumber(value: number | undefined, fallback: number, minimum: number): number {
   return value !== undefined && Number.isInteger(value) && value >= minimum

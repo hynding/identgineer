@@ -122,6 +122,23 @@ test.describe("dashboard components with large text on a narrow screen", () => {
   });
 });
 
+test("a pager with an absurd page count does not widen a 320px page with the text doubled", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await openDashboard(page);
+  await page.locator("html").evaluate((element) => {
+    element.style.fontSize = "200%";
+    const pager = document.createElement("idg-pagination");
+    pager.setAttribute("page-count", "1000000000000000");
+    pager.setAttribute("page", "500000000000000");
+    document.body.append(pager);
+  });
+  await expect(page.locator("idg-pagination.hydrated").last()).toBeVisible();
+  await settle(page);
+  expect(await overflow(page)).toBeLessThanOrEqual(0);
+});
+
 test.describe("dashboard components at larger and wider text", () => {
   for (const size of TEXT_SIZES) {
     test(`at ${size.label}, nothing is clipped or scrolls sideways`, async ({ page }) => {

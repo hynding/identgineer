@@ -20,20 +20,9 @@ import { ConsentBannerLabels } from "./components/consent-banner/consent-banner-
 import { ConsentPlacement } from "./components/consent-banner/consent-banner-options";
 import { ConsentPreferencesLabels } from "./components/consent-preferences/consent-preferences-labels";
 import { CoverHeight } from "./components/cover/cover-options";
-import {
-  DialogCancelDetail,
-  DialogCloseDetail,
-  DialogOpenDetail,
-  DialogSize,
-} from "./components/dialog/dialog-options";
+import { DialogCancelDetail, DialogCloseDetail, DialogOpenDetail, DialogSize } from "./components/dialog/dialog-options";
 import { DividerOrientation } from "./components/divider/divider-options";
-import {
-  EventSort,
-  EventSortDirection,
-  EventSortKey,
-  TrackedEvent,
-  TrackedProperty,
-} from "./dashboard/dashboard-types";
+import { EventSort, EventSortDirection, EventSortKey, TrackedEvent, TrackedProperty } from "./dashboard/dashboard-types";
 import { EventTableLabels } from "./components/event-table/event-table-labels";
 import { PageChangeDetail } from "./components/pagination/pagination-options";
 import { IconName } from "./components/icon/icon-paths";
@@ -42,14 +31,7 @@ import { InputSize, InputType } from "./components/input/input-options";
 import { NavigationToggleDetail } from "./components/layout/layout-options";
 import { Placement } from "./utils/position";
 import { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
-import {
-  PasswordResetClient,
-  ProfileClient,
-  RegisterClient,
-  SessionGuardClient,
-  SignInClient,
-  UserMenuClient,
-} from "./identity/identity-types";
+import { PasswordResetClient, ProfileClient, RegisterClient, SessionGuardClient, SignInClient, UserMenuClient } from "./identity/identity-types";
 import { PasswordResetMode } from "./components/password-reset/password-reset-options";
 import { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
 import { CountdownClock } from "./identity/throttle-countdown";
@@ -93,20 +75,9 @@ export { ConsentBannerLabels } from "./components/consent-banner/consent-banner-
 export { ConsentPlacement } from "./components/consent-banner/consent-banner-options";
 export { ConsentPreferencesLabels } from "./components/consent-preferences/consent-preferences-labels";
 export { CoverHeight } from "./components/cover/cover-options";
-export {
-  DialogCancelDetail,
-  DialogCloseDetail,
-  DialogOpenDetail,
-  DialogSize,
-} from "./components/dialog/dialog-options";
+export { DialogCancelDetail, DialogCloseDetail, DialogOpenDetail, DialogSize } from "./components/dialog/dialog-options";
 export { DividerOrientation } from "./components/divider/divider-options";
-export {
-  EventSort,
-  EventSortDirection,
-  EventSortKey,
-  TrackedEvent,
-  TrackedProperty,
-} from "./dashboard/dashboard-types";
+export { EventSort, EventSortDirection, EventSortKey, TrackedEvent, TrackedProperty } from "./dashboard/dashboard-types";
 export { EventTableLabels } from "./components/event-table/event-table-labels";
 export { PageChangeDetail } from "./components/pagination/pagination-options";
 export { IconName } from "./components/icon/icon-paths";
@@ -115,14 +86,7 @@ export { InputSize, InputType } from "./components/input/input-options";
 export { NavigationToggleDetail } from "./components/layout/layout-options";
 export { Placement } from "./utils/position";
 export { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item-options";
-export {
-  PasswordResetClient,
-  ProfileClient,
-  RegisterClient,
-  SessionGuardClient,
-  SignInClient,
-  UserMenuClient,
-} from "./identity/identity-types";
+export { PasswordResetClient, ProfileClient, RegisterClient, SessionGuardClient, SignInClient, UserMenuClient } from "./identity/identity-types";
 export { PasswordResetMode } from "./components/password-reset/password-reset-options";
 export { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
 export { CountdownClock } from "./identity/throttle-countdown";
@@ -152,7541 +116,6127 @@ export { UserMenuLabels } from "./components/user-menu/user-menu-labels";
 export { SwitcherOrientation } from "./components/variation-switcher/variation-switcher-options";
 export { VariationsChangeDetail } from "./components/variation-switcher/variation-switcher-types";
 export namespace Components {
-  /**
-   * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
-   * one item is open at a time. Up and Down, Home and End move between the headers.
-   */
-  interface IdgAccordion {
     /**
-     * Lets the browser's find in page open a closed item that holds the text it finds, by hiding closed panels with `hidden="until-found"`. A browser without it hides them as usual.
-     * @default false
-     */
-    findInPage: boolean;
-    /**
-     * The level of every item's heading, 1 to 6. Pick the one that follows the page's own heading.
-     * @default 3
-     */
-    headingLevel: number;
-    /**
-     * Lets several items be open at once. Otherwise opening one closes the others.
-     * @default false
-     */
-    multiple: boolean;
-  }
-  /**
-   * One item of an idg-accordion: a heading holding the button that shows or hides the panel
-   * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
-   * the panel's name are plain id references.
-   */
-  interface IdgAccordionItem {
-    /**
-     * Keeps the item where it is but stops the button being used.
-     * @default false
-     */
-    disabled: boolean;
-    /**
-     * Set by the accordion: whether a closed panel can be found by the browser.
-     * @default false
-     */
-    findInPage: boolean;
-    /**
-     * Set by the accordion: whether the panel is a region landmark.
-     * @default true
-     */
-    hasRegion: boolean;
-    /**
-     * The text of the button. Use the heading slot for anything richer.
-     */
-    heading?: string;
-    /**
-     * Set by the accordion: the heading's level.
-     * @default 3
-     */
-    headingLevel: number;
-    /**
-     * Whether the panel is showing.
-     * @default false
-     */
-    open: boolean;
-    /**
-     * Set by the accordion while it settles the items at load: a change then is not announced.
-     * @default false
-     */
-    quiet: boolean;
-    /**
-     * Focuses the button.
-     */
-    setFocus: () => Promise<void>;
-    /**
-     * Names the item in `idgToggle`.
-     * @default ""
-     */
-    value: string;
-  }
-  /**
-   * A message that stays on the page until it is read or dismissed. For a message that appears in
-   * response to what the user did, render the alert at that moment: a live region announces what is
-   * inserted, not what was already there.
-   */
-  interface IdgAlert {
-    /**
-     * The dismiss button's accessible name.
-     * @default "Dismiss"
-     */
-    dismissLabel: string;
-    /**
-     * Adds a button that dismisses the alert.
-     * @default false
-     */
-    dismissible: boolean;
-    /**
-     * Leaves out the live role, for a message that changes while it is shown (a countdown, say), which a live role would announce on every change. Announce it some other way.
-     * @default false
-     */
-    quiet: boolean;
-    /**
-     * Meaning and urgency. Warning and danger interrupt assistive technology; info and success do not.
-     * @default "info"
-     */
-    variant: AlertVariant;
-  }
-  /**
-   * A person or account, as a picture or, when there is none or it fails to load, their initials on a
-   * colour chosen from their name.
-   */
-  interface IdgAvatar {
-    /**
-     * What the picture shows. Defaults to `name`. An empty string marks the avatar as decoration, for one that sits beside the same name written out as text.
-     */
-    alt?: string;
-    /**
-     * The person's name: the source of the initials and the colour, and the default alt.
-     */
-    name?: string;
-    /**
-     * Avatar size.
-     * @default "md"
-     */
-    size: AvatarSize;
-    /**
-     * The picture. Only http, https and relative urls are loaded.
-     */
-    src?: string;
-    /**
-     * Shows a status dot. Each status has its own shape, so colour is not the only cue.
-     */
-    status?: AvatarStatus;
-    /**
-     * The status dot's accessible name. Defaults to the status in English.
-     */
-    statusLabel?: string;
-  }
-  /**
-   * Overlaps a row of idg-avatar. It sets their size, and with `max` hides the ones past the limit
-   * and shows how many there are.
-   */
-  interface IdgAvatarGroup {
-    /**
-     * Names the group for assistive technology, such as "Reviewers".
-     */
-    label?: string;
-    /**
-     * The most avatars to show. The rest are hidden and counted.
-     */
-    max?: number;
-    /**
-     * The word after the count in its accessible name, such as "2 more".
-     * @default "more"
-     */
-    moreLabel: string;
-    /**
-     * The size of every avatar in the group.
-     * @default "md"
-     */
-    size: AvatarSize;
-  }
-  /**
-   * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
-   */
-  interface IdgBadge {
-    /**
-     * Shows a dot before the label.
-     * @default false
-     */
-    dot: boolean;
-    /**
-     * Badge size.
-     * @default "md"
-     */
-    size: BadgeSize;
-    /**
-     * Emphasis and meaning.
-     * @default "neutral"
-     */
-    variant: BadgeVariant;
-  }
-  /**
-   * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
-   * idg-breadcrumb-item. The last item is the current page unless another item says it is.
-   */
-  interface IdgBreadcrumb {
-    /**
-     * The landmark's accessible name. Give each breadcrumb on a page its own.
-     * @default "Breadcrumb"
-     */
-    label: string;
-    /**
-     * The mark between items. It is decoration and hidden from assistive technology.
-     * @default BREADCRUMB_SEPARATORS[0]
-     */
-    separator: BreadcrumbSeparator;
-  }
-  /**
-   * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
-   * one, and separator are drawn in its own shadow root.
-   */
-  interface IdgBreadcrumbItem {
-    /**
-     * Marks this step as the current page, in place of the last one.
-     * @default false
-     */
-    current: boolean;
-    /**
-     * Where the step goes. Only http, https, mailto, tel and relative urls are kept.
-     */
-    href?: string;
-    /**
-     * Set by the breadcrumb: whether this step is the current page.
-     * @default false
-     */
-    isCurrent: boolean;
-    /**
-     * Set by the breadcrumb: whether this is the last step, which has no separator after it.
-     * @default false
-     */
-    isLast: boolean;
-    /**
-     * Set by the breadcrumb: the mark after the step.
-     * @default "chevron"
-     */
-    separator: BreadcrumbSeparator;
-  }
-  interface IdgButton {
-    /**
-     * Set by an overlay this button opens: the element it opens (`aria-controls`).
-     */
-    accessibleControls?: Element[];
-    /**
-     * Set by idg-tooltip: the hint, as the control's accessible description.
-     */
-    accessibleDescription?: string;
-    /**
-     * Set by an overlay this button opens: whether it is open (`aria-expanded`).
-     */
-    accessibleExpanded?: boolean;
-    /**
-     * Set by an overlay this button opens: what kind of popup it is (`aria-haspopup`).
-     */
-    accessibleHaspopup?: string;
-    /**
-     * Blocks activation and takes the control out of the tab order.
-     * @default false
-     */
-    disabled: boolean;
-    /**
-     * Stretches the button to its container.
-     * @default false
-     */
-    fullWidth: boolean;
-    /**
-     * Renders a link. Only http, https, mailto, tel and relative urls are kept.
-     */
-    href?: string;
-    /**
-     * Shows a spinner and blocks activation, but keeps the control focusable.
-     * @default false
-     */
-    loading: boolean;
-    /**
-     * Link relationship.
-     */
-    rel?: string;
-    /**
-     * A hint such as `Enter`, shown only when the UX mode turns shortcuts on.
-     */
-    shortcut?: string;
-    /**
-     * Control size. Never smaller than the design's minimum target size.
-     * @default "md"
-     */
-    size: ButtonSize;
-    /**
-     * Where a link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
-     */
-    target?: string;
-    /**
-     * What activating the button does inside a form. Ignored when `href` is set.
-     * @default "button"
-     */
-    type: ButtonType;
-    /**
-     * Visual emphasis.
-     * @default "primary"
-     */
-    variant: ButtonVariant;
-  }
-  /**
-   * A surface that groups related content, drawn in the design language's own surface, border and
-   * elevation.
-   * With `href` and a `heading`, the heading becomes the card's one link and covers the whole card, so
-   * a click anywhere follows it while assistive technology still finds a single link. Anything in
-   * the footer slot sits above the link and stays clickable.
-   */
-  interface IdgCard {
-    /**
-     * The card's title, drawn as a heading.
-     */
-    heading?: string;
-    /**
-     * The heading level, 1 to 6.
-     * @default 3
-     */
-    headingLevel: number;
-    /**
-     * Makes the heading a link that covers the card. Only http, https, mailto, tel and relative urls are kept.
-     */
-    href?: string;
-    /**
-     * Lifts the whole card on hover. A card with a link is always interactive.
-     * @default false
-     */
-    interactive: boolean;
-    /**
-     * Space inside the card around its content.
-     * @default "md"
-     */
-    padding: CardPadding;
-    /**
-     * Link relationship.
-     */
-    rel?: string;
-    /**
-     * Where the link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
-     */
-    target?: string;
-    /**
-     * Surface treatment.
-     * @default "plain"
-     */
-    variant: CardVariant;
-  }
-  interface IdgCheckbox {
-    /**
-     * Set by idg-field: the hint and error text, as the control's accessible description.
-     */
-    accessibleDescription?: string;
-    /**
-     * Set by idg-field, or by you: replaces the slotted text as the accessible name.
-     */
-    accessibleLabel?: string;
-    /**
-     * Whether the choice satisfies its constraints.
-     */
-    checkValidity: () => Promise<boolean>;
-    /**
-     * @default false
-     */
-    checked: boolean;
-    /**
-     * @default false
-     */
-    disabled: boolean;
-    /**
-     * Shows a mixed state, such as a parent of partly selected children. A user choice clears it.
-     * @default false
-     */
-    indeterminate: boolean;
-    /**
-     * Marks the choice as wrong.
-     * @default false
-     */
-    invalid: boolean;
-    name?: string;
-    /**
-     * Whether the choice is valid, showing the browser's message when it is not.
-     */
-    reportValidity: () => Promise<boolean>;
-    /**
-     * @default false
-     */
-    required: boolean;
-    /**
-     * Focuses the native checkbox.
-     */
-    setFocus: () => Promise<void>;
-    /**
-     * What is submitted while checked.
-     * @default "on"
-     */
-    value: string;
-  }
-  /**
-   * A group of items in a row that wraps onto further rows when it runs out of room, such as tags,
-   * buttons or a toolbar. It only arranges, so it adds no role and the source order stays the
-   * reading order.
-   */
-  interface IdgCluster {
-    /**
-     * How items in a row line up on the block axis.
-     * @default "center"
-     */
-    align: ClusterAlignment;
-    /**
-     * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
-     */
-    gap?: GapStep;
-    /**
-     * How each row is spread along the inline axis. `between` pushes the first and last items apart.
-     * @default "start"
-     */
-    justify: ClusterJustification;
-  }
-  /**
-   * Asks once whether analytics may be switched on, for the consent object it is given in `consent`
-   * (the tracker's `tracker.consent`). It is a region of the page, not a dialog: it never blocks
-   * anything, takes no focus when it appears, and ignoring it, or pressing Escape, means no consent.
-   * It asks only while the state is `unknown` and no browser privacy signal is set. Under Global
-   * Privacy Control or Do Not Track it does not ask at all, since asking would invite a choice the
-   * browser has already made: it draws nothing, or, with `announce-signal`, one line saying the
-   * signal is respected. "Decline" comes first and has the same variant and size as "Accept
-   * analytics". After a choice, focus goes back to what had it before the banner, else to the main
-   * landmark, and a polite live region confirms it.
-   * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
-   * natural place is further on, so it keeps its space in the page's flow and never covers the end
-   * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
-   * element is scrolled clear of it. In a window too short for both, it joins the page's flow
-   * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
-   * is: a bar at the top scrolls away with the page and never covers a header that sticks.
-   */
-  interface IdgConsentBanner {
-    /**
-     * Under a browser privacy signal, say in one line that it is respected, instead of nothing.
-     * @default false
-     */
-    announceSignal: boolean;
-    /**
-     * The tracker's consent object, `tracker.consent` (a JavaScript property).
-     */
-    consent?: ConsentClient;
-    /**
-     * The text, merged over the English defaults. Assign a new object to change it.
-     */
-    labels?: Partial<ConsentBannerLabels>;
-    /**
-     * `bottom` (the default): a bar that stays in view; `top` and `inline`: in the page's flow.
-     * @default "bottom"
-     */
-    placement: ConsentPlacement;
-    /**
-     * The id of an `idg-consent-preferences` elsewhere in the page that "Choose" opens.
-     */
-    preferences?: string;
-  }
-  /**
-   * The visitor's choices about analytics, for the consent object it is given in `consent` (the
-   * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
-   * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
-   * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
-   * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
-   * the switch is disabled with the signal named, and saving can only record a denial.
-   * It follows changes made elsewhere (another tab, the banner). If the stored state changes under
-   * an unsaved edit, the edit is dropped and a note says so. With `modal` it is drawn inside an
-   * `idg-dialog` that `open()` and `close()` control; the dialog holds and restores focus.
-   */
-  interface IdgConsentPreferences {
-    /**
-     * Closes the dialog when `modal`, dropping an unsaved edit; does nothing otherwise.
-     */
-    close: () => Promise<void>;
-    /**
-     * The tracker's consent object, `tracker.consent` (a JavaScript property).
-     */
-    consent?: ConsentClient;
-    /**
-     * The level of the heading, 2 to 6, to fit the page's outline.
-     * @default 2
-     */
-    headingLevel: number;
-    /**
-     * The text, merged over the English defaults. Assign a new object to change it.
-     */
-    labels?: Partial<ConsentPreferencesLabels>;
-    /**
-     * Draws the panel inside an `idg-dialog`, opened with `open()` and closed with `close()`.
-     * @default false
-     */
-    modal: boolean;
-    /**
-     * Opens the dialog when `modal`; otherwise moves focus to the panel's heading. Without a consent object there is nothing to choose, so it does nothing and says `false`.
-     */
-    open: () => Promise<boolean>;
-  }
-  /**
-   * A block at least as tall as `min-height` that centres its content, with optional regions pinned
-   * to its top and bottom, such as a hero, a splash or a sign-in screen. It only arranges, so it
-   * adds no role and the source order stays the reading order.
-   */
-  interface IdgCover {
-    /**
-     * Space between the regions, a step of the space scale. Without it the layout's gap is used.
-     */
-    gap?: GapStep;
-    /**
-     * Least height of the block, a step of the size scale, or `screen` for the height of the viewport.
-     * @default "l"
-     */
-    minHeight: CoverHeight;
-  }
-  /**
-   * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
-   * of the page inert and contains focus, and Escape is the browser's close request. The component
-   * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
-   * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
-   * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
-   * closed.
-   */
-  interface IdgDialog {
-    /**
-     * Makes it an `alertdialog`: an urgent message that needs a response, described by its body.
-     * @default false
-     */
-    alert: boolean;
-    /**
-     * Closes the dialog. `idgClose` reports the return value and the reason `method`.
-     */
-    close: (returnValue?: string) => Promise<void>;
-    /**
-     * The close button's accessible name.
-     * @default "Close"
-     */
-    closeLabel: string;
-    /**
-     * Whether a click on the backdrop of a modal dialog dismisses it. Needs `dismissible`.
-     * @default false
-     */
-    closeOnBackdrop: boolean;
-    /**
-     * Whether the user can dismiss the dialog with Escape and the close button.
-     * @default true
-     */
-    dismissible: boolean;
-    /**
-     * The title, drawn as a heading. It is the dialog's accessible name.
-     */
-    heading?: string;
-    /**
-     * Whether setting `open` opens a modal dialog. The methods choose for themselves.
-     * @default true
-     */
-    modal: boolean;
-    /**
-     * Whether the dialog is open. Setting it opens (as `modal` says) or closes the dialog.
-     * @default false
-     */
-    open: boolean;
-    /**
-     * Opens the dialog without a modal: the page stays usable and focus is not contained.
-     */
-    show: () => Promise<void>;
-    /**
-     * Opens the dialog as a modal: the rest of the page is inert until it closes.
-     */
-    showModal: () => Promise<void>;
-    /**
-     * Width: `sm`, `md`, `lg`, or `full` for the whole viewport less a margin.
-     * @default "md"
-     */
-    size: DialogSize;
-  }
-  /**
-   * A rule between groups of content, drawn in the design language's own border.
-   */
-  interface IdgDivider {
-    /**
-     * Takes the divider out of the accessibility tree, for a rule that only decorates.
-     * @default false
-     */
-    decorative: boolean;
-    /**
-     * Direction of the rule. A vertical divider needs a parent that gives it a height.
-     * @default "horizontal"
-     */
-    orientation: DividerOrientation;
-  }
-  /**
-   * A table of tracked events: the event, when it happened, the path and its properties, with
-   * paging and optional sorting by time or name. It takes its data through properties and never
-   * fetches.
-   * Every value is untrusted text from the public internet. It is drawn as text and nothing else: no
-   * markup is read, no link or address is made from it, control and bidirectional characters are
-   * replaced by a visible mark, each value is isolated in a `<bdi>` so right to left text cannot
-   * reorder what is beside it, long values wrap and are cut to a limit, and an event shows at most
-   * ten properties. Records that are malformed are left out.
-   * With `events` as the whole list, the table sorts and pages it. With `total` set, `events` is the
-   * one page the server answered with: the table draws it as it is and only reports `idgPageChange`
-   * and `idgSort` for the page to fetch with. Either way it draws at most `pageSize` rows (to 100).
-   * The state that matters is said politely: loading, an error, no events, and which events are shown.
-   */
-  interface IdgEventTable {
-    /**
-     * The accessible name of the table, drawn as its caption. Required.
-     */
-    caption?: string;
-    /**
-     * The message of an error that stopped the events loading. Drawn in an alert, as text.
-     */
-    error?: string;
-    /**
-     * The events: `{ id, name, occurredAt, path?, properties? }`. Malformed records are left out.
-     */
-    events?: TrackedEvent[];
-    /**
-     * The words of the table, merged over the English defaults.
-     */
-    labels?: Partial<EventTableLabels>;
-    /**
-     * Draws a skeleton and says the events are loading.
-     * @default false
-     */
-    loading: boolean;
-    /**
-     * The current page, from 1. A page beyond the last is drawn as the last.
-     * @default 1
-     */
-    page: number;
-    /**
-     * Rows on a page, 1 to 100.
-     * @default 10
-     */
-    pageSize: number;
-    /**
-     * The direction of the sort.
-     * @default "ascending"
-     */
-    sortDirection: EventSortDirection;
-    /**
-     * The column the rows are sorted by: `time` or `name`. Empty leaves the order given.
-     * @default ""
-     */
-    sortKey: EventSortKey | "";
-    /**
-     * Makes the Event and Time headers sort buttons.
-     * @default false
-     */
-    sortable: boolean;
-    /**
-     * The IANA time zone times are shown in, such as `UTC`. The reader's own by default.
-     */
-    timeZone?: string;
-    /**
-     * How many events there are in all. Set it when `events` is one page the server answered with: the table then draws `events` as it is, and neither sorts nor pages it.
-     */
-    total?: number;
-  }
-  /**
-   * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
-   * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
-   * reference cannot cross a shadow boundary, so their text is handed to the control as properties
-   * and the control applies it to its own native element.
-   */
-  interface IdgField {
-    /**
-     * The error message. Setting it marks the control invalid and announces the message.
-     */
-    error?: string;
-    /**
-     * Help text. Shown when the UX mode turns hints on, and always read with the control.
-     */
-    hint?: string;
-    /**
-     * The visible label, and the control's accessible name.
-     */
-    label?: string;
-    /**
-     * Text such as "optional" shown beside the label of a field that is not required.
-     */
-    optionalText?: string;
-    /**
-     * Marks the control required and shows a star.
-     * @default false
-     */
-    required: boolean;
-  }
-  /**
-   * Items in as many equal columns as fit. Each column is at least `min` wide, and there are never
-   * more columns than the layout allows, so the same markup has more or fewer columns under each
-   * `data-layout`. It only arranges, so it adds no role and the source order stays the reading order.
-   */
-  interface IdgGrid {
-    /**
-     * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
-     */
-    gap?: GapStep;
-    /**
-     * Narrowest a column may be, a step of the size scale. Without it the layout's track size is used.
-     */
-    min?: SizeStep;
-  }
-  /**
-   * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
-   */
-  interface IdgIcon {
-    /**
-     * Gives the icon an accessible name. Without it the icon is decoration and hidden.
-     */
-    label?: string;
-    /**
-     * Which icon to draw. An unknown name draws nothing.
-     */
-    name?: IconName;
-    /**
-     * Size relative to the surrounding text.
-     * @default "md"
-     */
-    size: IconSize;
-  }
-  /**
-   * A form-associated text field. Enter submits its form as a native input does (see the README):
-   * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
-   * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
-   */
-  interface IdgInput {
-    /**
-     * Set by idg-field: the hint and error text, as the control's accessible description.
-     */
-    accessibleDescription?: string;
-    /**
-     * Set by idg-field: the control's accessible name.
-     */
-    accessibleLabel?: string;
-    autocapitalize?: string;
-    autocomplete?: string;
-    /**
-     * Whether the value satisfies its constraints. Fires no UI.
-     */
-    checkValidity: () => Promise<boolean>;
-    /**
-     * @default false
-     */
-    disabled: boolean;
-    enterkeyhint?: string;
-    inputmode?: string;
-    /**
-     * Set by idg-field, or by you: marks the value as wrong.
-     * @default false
-     */
-    invalid: boolean;
-    max?: string;
-    maxlength?: number;
-    min?: string;
-    minlength?: number;
-    /**
-     * The name the value is submitted under.
-     */
-    name?: string;
-    pattern?: string;
-    placeholder?: string;
-    /**
-     * @default false
-     */
-    readonly: boolean;
-    /**
-     * Whether the value is valid, showing the browser's message when it is not.
-     */
-    reportValidity: () => Promise<boolean>;
-    /**
-     * @default false
-     */
-    required: boolean;
-    /**
-     * Adds a button that shows a password as text. Only for `type="password"`.
-     * @default false
-     */
-    reveal: boolean;
-    /**
-     * The name of the reveal button.
-     * @default "Show password"
-     */
-    revealLabel: string;
-    /**
-     * Selects the text of the native input, for a value that is meant to be copied.
-     */
-    selectText: () => Promise<void>;
-    /**
-     * Focuses the native input.
-     */
-    setFocus: () => Promise<void>;
-    /**
-     * Control size. Never smaller than the design's minimum target size.
-     * @default "md"
-     */
-    size: InputSize;
-    spellcheck?: string;
-    step?: string;
-    /**
-     * What kind of text the control takes. Unknown values fall back to `text`.
-     * @default "text"
-     */
-    type: InputType;
-    /**
-     * The current value. Reset restores the value the element started with.
-     * @default ""
-     */
-    value: string;
-  }
-  /**
-   * The page shell. One page, written once, is housed in the structure the `data-layout` attribute of
-   * the root (or of an ancestor) names: the same landmarks in the same reading order in all eight, and
-   * only a stylesheet that places them differently. The shell never reorders its own tree, so the
-   * order a reader and the Tab key meet things is the order of the markup in every layout.
-   * It is a size container, and every layout decides its small, medium and large arrangement from its
-   * own width, never the viewport's. Where a layout collapses the navigation behind a toggle, the
-   * stylesheet decides that too, and the script only reads what it decided (`--_nav`).
-   */
-  interface IdgLayout {
-    /**
-     * The accessible name of the aside landmark.
-     * @default "Related content"
-     */
-    asideLabel: string;
-    /**
-     * The accessible name of the button that closes the navigation drawer.
-     * @default "Close"
-     */
-    closeLabel: string;
-    /**
-     * Whether the shell sits inside a page rather than being the page. An embedded shell does not claim the height of the window, which a shell that is the page does.
-     * @default false
-     */
-    embedded: boolean;
-    /**
-     * The text of the button that opens the collapsed navigation.
-     * @default "Menu"
-     */
-    menuLabel: string;
-    /**
-     * The accessible name of the navigation landmark.
-     * @default "Main navigation"
-     */
-    navigationLabel: string;
-    /**
-     * Whether the collapsed navigation is open. It can only be open while the layout collapses the navigation: it goes back to false when the container grows and the navigation is drawn inline.
-     * @default false
-     */
-    navigationOpen: boolean;
-    /**
-     * The text of the skip link, the first control on the page.
-     * @default "Skip to content"
-     */
-    skipLabel: string;
-  }
-  /**
-   * An inline text link. It takes the same hardening as the button's link mode: the url goes
-   * through `safeUrl` and a link that opens another browsing context always gets `noopener
-   * noreferrer`.
-   */
-  interface IdgLink {
-    /**
-     * Marks a link to another site: shows an indicator and opens a new tab unless `target` is set.
-     * @default false
-     */
-    external: boolean;
-    /**
-     * The accessible name of the external indicator.
-     * @default "External link"
-     */
-    externalLabel: string;
-    /**
-     * Where the link goes. Only http, https, mailto, tel and relative urls are kept.
-     */
-    href?: string;
-    /**
-     * Link relationship.
-     */
-    rel?: string;
-    /**
-     * Where the link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
-     */
-    target?: string;
-  }
-  /**
-   * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
-   * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
-   * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
-   * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
-   * focus moves to the items themselves (roving focus). Each item carries its own role and state.
-   */
-  interface IdgMenu {
-    /**
-     * Closes the menu.
-     */
-    hide: () => Promise<void>;
-    /**
-     * The menu's accessible name. Without it the menu is named by its trigger.
-     */
-    label?: string;
-    /**
-     * The gap between the trigger and the menu, in pixels.
-     * @default 4
-     */
-    offset: number;
-    /**
-     * Whether the menu is open.
-     * @default false
-     */
-    open: boolean;
-    /**
-     * Where the menu sits against the trigger. It flips to the opposite side when out of room.
-     * @default "bottom-start"
-     */
-    placement: Placement;
-    /**
-     * Opens the menu and focuses its first item.
-     */
-    show: () => Promise<void>;
-  }
-  /**
-   * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
-   * uncheck each other within their group.
-   */
-  interface IdgMenuGroup {
-    /**
-     * The group's visible label and accessible name.
-     */
-    label?: string;
-  }
-  /**
-   * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
-   * its own shadow root, so its role and state are set on the focusable element inside it, and the
-   * host is a plain wrapper that assistive technology passes through.
-   */
-  interface IdgMenuItem {
-    /**
-     * Whether a checkbox or radio item is on. The menu changes it when the item is chosen.
-     * @default false
-     */
-    checked: boolean;
-    /**
-     * Keeps the item in the menu, where it can be found, but stops it being chosen.
-     * @default false
-     */
-    disabled: boolean;
-    /**
-     * Follows the item's link, as a click on it would.
-     */
-    follow: () => Promise<void>;
-    /**
-     * Makes the item a link. Only http, https, mailto, tel and relative urls are kept.
-     */
-    href?: string;
-    /**
-     * A leading icon, drawn as decoration.
-     */
-    icon?: IconName;
-    /**
-     * Link relationship.
-     */
-    rel?: string;
-    /**
-     * Focuses the item.
-     */
-    setFocus: () => Promise<void>;
-    /**
-     * A hint such as `Ctrl+E`, shown when the UX mode turns shortcuts on. Nothing binds the key.
-     */
-    shortcut?: string;
-    /**
-     * Where a link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
-     */
-    target?: string;
-    /**
-     * `item` does something, `checkbox` toggles, `radio` picks one of its group.
-     * @default "item"
-     */
-    type: MenuItemType;
-    /**
-     * What `idgSelect` reports when this item is chosen.
-     * @default ""
-     */
-    value: string;
-  }
-  /**
-   * A rule between groups of items in an idg-menu.
-   */
-  interface IdgMenuSeparator {}
-  /**
-   * Page controls for a long list: previous and next, the current page and a window of its
-   * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
-   * given, so each page is an address that can be opened, shared and followed without script, and
-   * buttons that fire `idgPageChange` otherwise.
-   */
-  interface IdgPagination {
-    /**
-     * Pages always shown at the start and the end.
-     * @default 1
-     */
-    boundaries: number;
-    /**
-     * Makes the controls links. `{page}` is replaced by the page number, as in `/items?page={page}`. Only http, https, mailto, tel and relative urls are kept.
-     */
-    hrefTemplate?: string;
-    /**
-     * The landmark's accessible name. Give each pagination on a page its own.
-     * @default "Pagination"
-     */
-    label: string;
-    /**
-     * The accessible name of the next control.
-     * @default "Next page"
-     */
-    nextLabel: string;
-    /**
-     * The current page, from 1.
-     * @default 1
-     */
-    page: number;
-    /**
-     * How many pages there are.
-     * @default 1
-     */
-    pageCount: number;
-    /**
-     * The accessible name of a page control, where `{page}` is the number.
-     * @default "Page {page}"
-     */
-    pageLabel: string;
-    /**
-     * The accessible name of the previous control.
-     * @default "Previous page"
-     */
-    previousLabel: string;
-    /**
-     * Pages shown on each side of the current one.
-     * @default 1
-     */
-    siblings: number;
-  }
-  /**
-   * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
-   * for the address and always answers the same, whether or not an account uses it. `complete`
-   * sets the new password with the emailed code, which the page reads from the link and passes in
-   * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
-   * inputs are emptied after every attempt.
-   */
-  interface IdgPasswordReset {
-    /**
-     * The identity client (a JavaScript property). The element never creates one.
-     */
-    client?: PasswordResetClient;
-    /**
-     * Timers for the throttle countdown; the browser's by default. For tests.
-     */
-    clock?: CountdownClock;
-    /**
-     * The code from the reset email, which the page reads from the link it was sent. Without one, `complete` mode asks for it.
-     */
-    code?: string;
-    /**
-     * The text, merged over the English defaults. Assign a new object to change it.
-     */
-    labels?: Partial<PasswordResetLabels>;
-    /**
-     * Which step to show. Unknown values fall back to `request`.
-     * @default "request"
-     */
-    mode: PasswordResetMode;
-  }
-  /**
-   * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
-   * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
-   * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
-   * not contained, and Tab moves on from the content.
-   */
-  interface IdgPopover {
-    /**
-     * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
-     */
-    for?: string;
-    /**
-     * Closes the popover.
-     */
-    hide: () => Promise<void>;
-    /**
-     * The gap between the trigger and the surface, in pixels.
-     * @default 8
-     */
-    offset: number;
-    /**
-     * Whether the popover is open.
-     * @default false
-     */
-    open: boolean;
-    /**
-     * Where the surface sits against the trigger. It flips to the opposite side when out of room.
-     * @default "bottom-start"
-     */
-    placement: Placement;
-    /**
-     * Opens the popover.
-     */
-    show: () => Promise<void>;
-    /**
-     * Opens the popover when closed and closes it when open.
-     */
-    toggle: () => Promise<void>;
-  }
-  /**
-   * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
-   * (display name, about, language, time zone and email preference), a password change, and the
-   * sessions of the account with a button to sign each other one out and one to sign out everywhere.
-   * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
-   */
-  interface IdgProfile {
-    /**
-     * A picture of the owner for the avatar, such as the one their profile links to.
-     */
-    avatarSrc?: string;
-    /**
-     * The identity client (a JavaScript property). The element never creates one.
-     */
-    client?: ProfileClient;
-    /**
-     * Timers for the throttle countdown; the browser's by default. For tests.
-     */
-    clock?: CountdownClock;
-    /**
-     * The level of the section headings, 2 to 6, to fit the page's outline: below a page title (`h1`), 2.
-     * @default 2
-     */
-    headingLevel: number;
-    /**
-     * The text, merged over the English defaults. Assign a new object to change it.
-     */
-    labels?: Partial<ProfileLabels>;
-  }
-  /**
-   * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
-   * the browser's own. Without a value it is indeterminate.
-   */
-  interface IdgProgress {
-    /**
-     * Marks work of unknown length, whatever the value.
-     * @default false
-     */
-    indeterminate: boolean;
-    /**
-     * What is progressing. Visible, and the bar's accessible name, so it should always be set.
-     */
-    label?: string;
-    /**
-     * The value that means done.
-     * @default 100
-     */
-    max: number;
-    /**
-     * Shows the percentage beside the label. Only for determinate progress.
-     * @default false
-     */
-    showValue: boolean;
-    /**
-     * Bar thickness.
-     * @default "md"
-     */
-    size: ProgressSize;
-    /**
-     * How much is done. Without it the progress is indeterminate.
-     */
-    value?: number;
-  }
-  /**
-   * Lets a signed-in user choose which tracked property (site) the dashboard shows. It is a labelled
-   * `idg-select` that lists the `properties` it is given and reports the chosen id with `idgChange`.
-   * It is form associated: with a `name` it submits the chosen id.
-   * Property names are text the user typed: they are shown as text only, with control and
-   * bidirectional characters replaced and long names cut. A `value` that is not one of the
-   * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
-   * property appears in the list later, and is never replaced by the first property.
-   */
-  interface IdgPropertyPicker {
-    /**
-     * @default false
-     */
-    disabled: boolean;
-    /**
-     * The visible label and the accessible name.
-     */
-    label?: string;
-    /**
-     * The words of the picker, merged over the English defaults.
-     */
-    labels?: Partial<PropertyPickerLabels>;
-    /**
-     * While the properties load: disabled, busy, and said politely.
-     * @default false
-     */
-    loading: boolean;
-    name?: string;
-    /**
-     * The properties to choose from: `{ id, name, origin? }`. Records that are malformed or repeat an id are left out.
-     */
-    properties?: TrackedProperty[];
-    /**
-     * Focuses the select.
-     */
-    setFocus: () => Promise<void>;
-    /**
-     * The id of the chosen property. Reset restores the value the element started with.
-     * @default ""
-     */
-    value: string;
-  }
-  /**
-   * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
-   * as set by the group are how it passes state down, because radios in separate shadow roots are
-   * not a native radio group.
-   */
-  interface IdgRadio {
-    /**
-     * Set by the group from its value.
-     * @default false
-     */
-    checked: boolean;
-    /**
-     * @default false
-     */
-    disabled: boolean;
-    /**
-     * Set by the group: whether the whole group is disabled.
-     * @default false
-     */
-    groupDisabled: boolean;
-    /**
-     * Set by the group: marks the group's value as wrong.
-     * @default false
-     */
-    invalid: boolean;
-    /**
-     * Set by the group: this radio's place, from 1.
-     */
-    position?: number;
-    /**
-     * Focuses the native radio.
-     */
-    setFocus: () => Promise<void>;
-    /**
-     * Set by the group: how many radios the group holds.
-     */
-    setSize?: number;
-    /**
-     * Set by the group: whether this radio is the group's one tab stop.
-     * @default true
-     */
-    tabbable: boolean;
-    /**
-     * What the group takes as its value when this radio is chosen.
-     * @default ""
-     */
-    value: string;
-  }
-  /**
-   * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
-   * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
-   * its radios, is the form control.
-   */
-  interface IdgRadioGroup {
-    /**
-     * Set by idg-field: the hint and error text, as the group's accessible description.
-     */
-    accessibleDescription?: string;
-    /**
-     * Set by idg-field, or by you: the group's accessible name.
-     */
-    accessibleLabel?: string;
-    /**
-     * Whether a choice has been made when one is required.
-     */
-    checkValidity: () => Promise<boolean>;
-    /**
-     * @default false
-     */
-    disabled: boolean;
-    /**
-     * Set by idg-field, or by you: marks the choice as wrong.
-     * @default false
-     */
-    invalid: boolean;
-    name?: string;
-    /**
-     * How the radios are laid out.
-     * @default "vertical"
-     */
-    orientation: Orientation;
-    /**
-     * Whether a choice has been made, showing the browser's message when it has not.
-     */
-    reportValidity: () => Promise<boolean>;
-    /**
-     * @default false
-     */
-    required: boolean;
-    /**
-     * Focuses the radio that is the group's tab stop.
-     */
-    setFocus: () => Promise<void>;
-    /**
-     * The value of the chosen radio. Reset restores the value the element started with.
-     * @default ""
-     */
-    value: string;
-  }
-  /**
-   * A registration form for the identity client it is given in `client`. With email confirmation on,
-   * a new address and one already registered get the same answer, so the form never tells whether
-   * an account exists. The password is read from its input when the form is sent and the input is
-   * emptied after every attempt.
-   */
-  interface IdgRegister {
-    /**
-     * The identity client (a JavaScript property). The element never creates one.
-     */
-    client?: RegisterClient;
-    /**
-     * Timers for the throttle countdown; the browser's by default. For tests.
-     */
-    clock?: CountdownClock;
-    /**
-     * The text, merged over the English defaults. Assign a new object to change it.
-     */
-    labels?: Partial<RegisterLabels>;
-  }
-  /**
-   * Options are written as children, exactly as for a native select, and copied into the native
-   * select inside the component: the same markup works with or without a framework, and no option
-   * data has to be serialised into an attribute.
-   */
-  interface IdgSelect {
-    /**
-     * Set by idg-field: the hint and error text, as the control's accessible description.
-     */
-    accessibleDescription?: string;
-    /**
-     * Set by idg-field: the control's accessible name.
-     */
-    accessibleLabel?: string;
-    /**
-     * Whether the choice satisfies its constraints.
-     */
-    checkValidity: () => Promise<boolean>;
-    /**
-     * @default false
-     */
-    disabled: boolean;
-    /**
-     * Set by idg-field, or by you: marks the value as wrong.
-     * @default false
-     */
-    invalid: boolean;
-    name?: string;
-    /**
-     * Whether the choice is valid, showing the browser's message when it is not.
-     */
-    reportValidity: () => Promise<boolean>;
-    /**
-     * @default false
-     */
-    required: boolean;
-    /**
-     * Focuses the native select.
-     */
-    setFocus: () => Promise<void>;
-    /**
-     * @default "md"
-     */
-    size: InputSize;
-    /**
-     * The value of the chosen option. Reset restores the value the element started with.
-     * @default ""
-     */
-    value: string;
-  }
-  /**
-   * Shows its content only while someone is signed in, through the identity client it is given in
-   * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
-   * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
-   * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
-   * at once.
-   * The guard adds no box around what it shows: the host is `display: contents` and the slots are
-   * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
-   * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
-   * before the content and out of the page's layout, whose text says the change; Tab goes on into
-   * the content. A notice, when the guard shows one, is one block before the content.
-   * This is a convenience for the interface, not access control: the content is still in the page
-   * for anyone who reads its markup, and only the API decides what a request may read or change.
-   */
-  interface IdgSessionGuard {
-    /**
-     * The identity client (a JavaScript property). The element never creates one.
-     */
-    client?: SessionGuardClient;
-    /**
-     * The text of the guard's own notices, merged over the English defaults.
-     */
-    labels?: Partial<SessionGuardLabels>;
-  }
-  /**
-   * Two regions side by side: a side region of a set width and the content, which takes the rest.
-   * When the content would get less than half of the width, the regions stack instead, with no
-   * breakpoint and no script, so it follows the width of its container rather than the viewport.
-   * The side region is drawn first when it is at the start and last when it is at the end, so what a
-   * reader and the Tab key meet first is also what is shown first, in either text direction. When
-   * the regions stack, the side region is above the content when it is at the start and below it
-   * when it is at the end.
-   */
-  interface IdgSidebar {
-    /**
-     * Space between the regions, a step of the space scale. Without it the layout's gap is used.
-     */
-    gap?: GapStep;
-    /**
-     * Which side of the content the side region is on, in the reading direction.
-     * @default "start"
-     */
-    side: SidebarSide;
-    /**
-     * Width of the side region, a step of the size scale. Without it the layout's aside width is used.
-     */
-    sideWidth?: SizeStep;
-  }
-  /**
-   * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
-   * password: the password is read from its input when the form is sent and the input is emptied
-   * after a sign-in, a refused one, or when the element leaves the page.
-   */
-  interface IdgSignIn {
-    /**
-     * The identity client (a JavaScript property). The element never creates one.
-     */
-    client?: SignInClient;
-    /**
-     * Timers for the throttle countdown; the browser's by default. For tests.
-     */
-    clock?: CountdownClock;
-    /**
-     * The text, merged over the English defaults. Assign a new object to change it.
-     */
-    labels?: Partial<SignInLabels>;
-    /**
-     * The page the CMS sends the browser back to after a provider sign-in.
-     */
-    providerCallback?: string;
-    /**
-     * Provider buttons, in order. Each starts the provider's sign-in through the client.
-     */
-    providers?: readonly SignInProvider[];
-  }
-  /**
-   * A placeholder shaped like content that is still loading. It is always hidden from assistive
-   * technology, so it announces nothing by itself. Mark the region being loaded with
-   * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
-   * and replace the skeletons when the content arrives.
-   * Size it with the page's own CSS on the element, for example `idg-skeleton { inline-size: 12rem }`.
-   */
-  interface IdgSkeleton {
-    /**
-     * How many lines of text to draw. The last of several is shorter. Only for `text`.
-     * @default 1
-     */
-    lines: number;
-    /**
-     * The shape of what is loading.
-     * @default "text"
-     */
-    variant: SkeletonVariant;
-  }
-  /**
-   * A small trend line drawn as SVG from a series of numbers, for beside a figure. It scales to the
-   * width of its container (set one with the page's own CSS, `idg-sparkline { inline-size: 8rem }`),
-   * keeps its proportions, and never animates. It is an image with a text alternative: the label
-   * you give it and a sentence with the first, last, lowest and highest value and which way the
-   * series went, formatted in the language of the page. Time runs left to right in every
-   * writing direction.
-   * Anything in `values` that is not a finite number is left out, never drawn as zero. A series
-   * longer than 120 points is thinned for drawing, keeping its first, last, lowest and highest.
-   */
-  interface IdgSparkline {
-    /**
-     * Fills the area under the line.
-     * @default false
-     */
-    area: boolean;
-    /**
-     * What the series measures, such as `Visitors`. It is the accessible name, so give it one.
-     */
-    label?: string;
-    /**
-     * The words of the text alternative, merged over the English defaults.
-     */
-    labels?: Partial<SparklineLabels>;
-    /**
-     * The series: an array of numbers, or, from an attribute, a JSON array or numbers separated by commas. A text longer than 200,000 characters is read as far as there.
-     */
-    values?: number[] | string;
-  }
-  /**
-   * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
-   * and the source order stays the reading order.
-   */
-  interface IdgStack {
-    /**
-     * Where children sit on the inline axis.
-     * @default "stretch"
-     */
-    align: StackAlignment;
-    /**
-     * Space between children, a step of the space scale. Without it the layout's gap is used.
-     */
-    gap?: GapStep;
-  }
-  /**
-   * A figure with its label and, optionally, how it changed.
-   */
-  interface IdgStat {
-    /**
-     * The change, formatted as it should be shown, such as `12%`.
-     */
-    delta?: string;
-    /**
-     * Which way the figure moved. Shown as an icon and spoken to screen readers.
-     * @default "flat"
-     */
-    direction: StatDirection;
-    /**
-     * Spoken before the change of a figure that fell.
-     * @default "Decreased by"
-     */
-    downLabel: string;
-    /**
-     * Spoken before the change of a figure that did not move.
-     * @default "No change"
-     */
-    flatLabel: string;
-    /**
-     * What the figure measures.
-     */
-    label?: string;
-    /**
-     * What the change is measured against, such as `vs previous 7 days`. It is seen beside the change and spoken with it, since a change with no basis is ambiguous. Without a change it is not shown.
-     */
-    period?: string;
-    /**
-     * Whether the change is good, for the colour. Defaults from the direction, so set it where a rise is bad, such as a churn rate.
-     */
-    sentiment?: StatSentiment;
-    /**
-     * Spoken before the change of a figure that rose.
-     * @default "Increased by"
-     */
-    upLabel: string;
-    /**
-     * The figure, formatted as it should be shown.
-     */
-    value?: string;
-  }
-  interface IdgSwitch {
-    /**
-     * Set by idg-field: the hint and error text, as the control's accessible description.
-     */
-    accessibleDescription?: string;
-    /**
-     * Set by idg-field, or by you: replaces the slotted text as the accessible name.
-     */
-    accessibleLabel?: string;
-    /**
-     * Whether the choice satisfies its constraints.
-     */
-    checkValidity: () => Promise<boolean>;
-    /**
-     * @default false
-     */
-    checked: boolean;
-    /**
-     * @default false
-     */
-    disabled: boolean;
-    /**
-     * Marks the choice as wrong.
-     * @default false
-     */
-    invalid: boolean;
-    name?: string;
-    /**
-     * Whether the choice is valid, showing the browser's message when it is not.
-     */
-    reportValidity: () => Promise<boolean>;
-    /**
-     * @default false
-     */
-    required: boolean;
-    /**
-     * Focuses the native input.
-     */
-    setFocus: () => Promise<void>;
-    /**
-     * What is submitted while checked.
-     * @default "on"
-     */
-    value: string;
-  }
-  /**
-   * Items in one row that switch to one column when their container is narrower than `threshold`.
-   * Every item is as wide as the others in either arrangement. There is no breakpoint and no script,
-   * so it follows the width of its container rather than the viewport. It only arranges, so it adds
-   * no role and the source order stays the reading order.
-   */
-  interface IdgSwitcher {
-    /**
-     * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
-     */
-    gap?: GapStep;
-    /**
-     * Most items allowed in a row, 2 to 6. With more items than that, they stack at any width. Hidden items, templates and scripts do not count; the count is taken again when items are added, removed, hidden or shown.
-     */
-    limit?: number;
-    /**
-     * Container width below which the items stack, a step of the size scale.
-     * @default "l"
-     */
-    threshold: SizeStep;
-  }
-  /**
-   * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
-   * host carries the tab role and state itself, so the relations to the panel, which sits beside it
-   * in the page, can be made between the two hosts.
-   */
-  interface IdgTab {
-    /**
-     * Keeps the tab in the list, where it is announced, but stops it being selected.
-     * @default false
-     */
-    disabled: boolean;
-    /**
-     * Set by the tabs: which way the list runs.
-     * @default "horizontal"
-     */
-    orientation: TabsOrientation;
-    /**
-     * Set by the tabs: whether this tab is selected.
-     * @default false
-     */
-    selected: boolean;
-    /**
-     * Set by the tabs: whether this tab is the one tab stop of the list.
-     * @default false
-     */
-    tabbable: boolean;
-    /**
-     * Pairs the tab with the panel of the same value.
-     * @default ""
-     */
-    value: string;
-  }
-  /**
-   * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
-   * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
-   * reader can still move into it.
-   */
-  interface IdgTabPanel {
-    /**
-     * Set by the tabs: whether this panel's tab is selected.
-     * @default false
-     */
-    selected: boolean;
-    /**
-     * Pairs the panel with the tab of the same value.
-     * @default ""
-     */
-    value: string;
-  }
-  /**
-   * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
-   * header cells, row and column relations) and the component adds what a table needs around it: a
-   * surface drawn in the design language, a scroll region that is reachable by keyboard and named
-   * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
-   * sortable column headers.
-   * The cells are the page's own, so a shadow root cannot style them. The component adopts a
-   * constructable stylesheet into the document or shadow root the table lives in, scoped to
-   * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
-   * constructable stylesheets shows the table unstyled.
-   * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
-   * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
-   */
-  interface IdgTable {
-    /**
-     * Whether the owner of the rows is busy, such as while it fetches a sorted page. The sort buttons are marked `aria-disabled` and presses on them do nothing and say nothing.
-     * @default false
-     */
-    busy: boolean;
-    /**
-     * The scroll region's accessible name, when the table is wider than the page. The caption is used without it.
-     */
-    label?: string;
-    /**
-     * For when you sort the rows yourself, such as on a server. A press only reports `idgSort` with the sort it asks for; the sort that is marked and announced is the one you set in `sortKey` and `sortDirection`, so a header never shows an order the rows are not in.
-     * @default false
-     */
-    manualSort: boolean;
-    /**
-     * The tallest the region grows before its rows scroll, as a length such as `24rem`.
-     */
-    maxHeight?: string;
-    /**
-     * The narrowest the table is drawn before it scrolls sideways, as a length such as `40rem`.
-     */
-    minWidth?: string;
-    /**
-     * The word for an ascending sort in the announcement. Translate it with `sortStatus`.
-     * @default "ascending"
-     */
-    sortAscendingLabel: string;
-    /**
-     * The word for a descending sort in the announcement. Translate it with `sortStatus`.
-     * @default "descending"
-     */
-    sortDescendingLabel: string;
-    /**
-     * The direction of the sort.
-     * @default "ascending"
-     */
-    sortDirection: SortDirection;
-    /**
-     * The key of the column the rows are sorted by. Empty leaves them in their original order.
-     * @default ""
-     */
-    sortKey: string;
-    /**
-     * Announced after a sort, where `{column}` is the column and `{direction}` is ascending or descending.
-     * @default "Sorted by {column}, {direction}"
-     */
-    sortStatus: string;
-    /**
-     * Keeps the header in view while the rows scroll. It needs `maxHeight`, as the rows scroll in the region.
-     * @default false
-     */
-    stickyHeader: boolean;
-    /**
-     * Shades every other row.
-     * @default false
-     */
-    striped: boolean;
-  }
-  /**
-   * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
-   * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
-   * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
-   * its position among its own kind as its value.
-   */
-  interface IdgTabs {
-    /**
-     * `automatic` selects a tab as the arrow keys reach it. `manual` only moves focus, and Enter or Space selects, which suits panels that are slow to show.
-     * @default "automatic"
-     */
-    activation: TabsActivation;
-    /**
-     * The tab list's accessible name.
-     */
-    label?: string;
-    /**
-     * Which way the tab list runs.
-     * @default "horizontal"
-     */
-    orientation: TabsOrientation;
-    /**
-     * Focuses the selected tab.
-     */
-    setFocus: () => Promise<void>;
-    /**
-     * The value of the selected tab. Without a match, the enabled tab nearest to where the selection was takes over, which is the first enabled tab until one has been selected. Values should be unique: a tab that repeats an earlier tab's value cannot be selected, and a warning is logged.
-     * @default ""
-     */
-    value: string;
-  }
-  interface IdgTextarea {
-    /**
-     * Set by idg-field: the hint and error text, as the control's accessible description.
-     */
-    accessibleDescription?: string;
-    /**
-     * Set by idg-field: the control's accessible name.
-     */
-    accessibleLabel?: string;
-    autocapitalize?: string;
-    autocomplete?: string;
-    /**
-     * Grows with its content, using `field-sizing` where it exists and a hidden twin elsewhere.
-     * @default false
-     */
-    autogrow: boolean;
-    /**
-     * Whether the value satisfies its constraints.
-     */
-    checkValidity: () => Promise<boolean>;
-    /**
-     * Shows the number of characters, against `maxlength` when there is one.
-     * @default false
-     */
-    counter: boolean;
-    /**
-     * @default false
-     */
-    disabled: boolean;
-    /**
-     * Set by idg-field, or by you: marks the value as wrong.
-     * @default false
-     */
-    invalid: boolean;
-    maxlength?: number;
-    minlength?: number;
-    name?: string;
-    placeholder?: string;
-    /**
-     * @default false
-     */
-    readonly: boolean;
-    /**
-     * Whether the value is valid, showing the browser's message when it is not.
-     */
-    reportValidity: () => Promise<boolean>;
-    /**
-     * @default false
-     */
-    required: boolean;
-    /**
-     * Visible lines. With `autogrow` it is the minimum.
-     * @default 3
-     */
-    rows: number;
-    /**
-     * Focuses the native textarea.
-     */
-    setFocus: () => Promise<void>;
-    /**
-     * @default "md"
-     */
-    size: InputSize;
-    spellcheck?: string;
-    /**
-     * The current value. Reset restores the value the element started with.
-     * @default ""
-     */
-    value: string;
-  }
-  /**
-   * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
-   * time, announces each as it appears, pauses them while they are being read and lets the keyboard
-   * reach them; the `toast()` function does all of that from script.
-   * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
-   * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
-   * is given a duration, so nobody loses the chance to act on it.
-   */
-  interface IdgToast {
-    /**
-     * The label of an action button, such as "Undo". Choosing it fires `idgAction`.
-     */
-    actionLabel?: string;
-    /**
-     * The close button's accessible name.
-     * @default "Dismiss"
-     */
-    closeLabel: string;
-    /**
-     * More detail under the heading. Set as text, never as markup.
-     */
-    description?: string;
-    /**
-     * Dismisses the toast, as if its close button had been chosen but with the reason `api`.
-     */
-    dismiss: () => Promise<void>;
-    /**
-     * How long the toast stays, in milliseconds. `0` keeps it until it is dismissed. Without a duration it stays for six seconds, or until dismissed when it has an action.
-     */
-    duration?: number;
-    /**
-     * The heading, and the toast's accessible name. Set as text, never as markup.
-     */
-    heading?: string;
-    /**
-     * Set by the region while the toasts are being read: the countdown stands still.
-     * @default false
-     */
-    paused: boolean;
-    /**
-     * Set by the region while the toast waits its turn: it is hidden and does not count down.
-     * @default false
-     */
-    queued: boolean;
-    /**
-     * Meaning. A danger toast is announced at once; the others wait for a pause in speech.
-     * @default "neutral"
-     */
-    variant: ToastVariant;
-  }
-  /**
-   * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
-   * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
-   * rest, and announces each toast as it comes into view through a live region of its own: politely,
-   * or at once for danger. Focus never moves on its own.
-   * While the pointer is over it, focus is inside it, the window is in the background or the user
-   * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
-   * and nothing slides under the pointer.
-   */
-  interface IdgToastRegion {
-    /**
-     * The key, as `KeyboardEvent.key` names it, that moves focus to the toasts.
-     * @default "F8"
-     */
-    hotkey: string;
-    /**
-     * The landmark's accessible name.
-     * @default "Notifications"
-     */
-    label: string;
-    /**
-     * How many toasts show at once. The rest wait their turn.
-     * @default 3
-     */
-    max: number;
-    /**
-     * The corner or edge the toasts gather at.
-     * @default "bottom-end"
-     */
-    position: ToastPosition;
-  }
-  /**
-   * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
-   * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
-   * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
-   * only: put anything interactive in an idg-popover.
-   * The text is also the trigger's accessible description, given to the trigger itself, so it is
-   * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
-   * technology so it is not read twice.
-   */
-  interface IdgTooltip {
-    /**
-     * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
-     */
-    for?: string;
-    /**
-     * The gap between the trigger and the hint, in pixels.
-     * @default 8
-     */
-    offset: number;
-    /**
-     * Where the hint sits against the trigger. It flips to the opposite side when out of room.
-     * @default "top"
-     */
-    placement: Placement;
-    /**
-     * The hint. Set as text, never as markup.
-     */
-    text?: string;
-  }
-  /**
-   * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
-   * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
-   * user how the sign-out went: a server that could not be reached is said plainly, since the
-   * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
-   * It goes away when the client hears that another tab signed out.
-   */
-  interface IdgUserMenu {
-    /**
-     * A picture of the user for the avatar, such as their profile's; initials without one.
-     */
-    avatarSrc?: string;
-    /**
-     * The identity client (a JavaScript property). The element never creates one.
-     */
-    client?: UserMenuClient;
-    /**
-     * The name to show; the username by default.
-     */
-    displayName?: string;
-    /**
-     * The text, merged over the English defaults. Assign a new object to change it.
-     */
-    labels?: Partial<UserMenuLabels>;
-  }
-  /**
-   * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
-   * always acts on the document's root element, through `@identgineer/variations`, so the page's own
-   * attributes stay the single truth: a change made anywhere else (markup, a script, another
-   * switcher) is shown here, and nothing here is announced for a change the visitor did not make.
-   */
-  interface IdgVariationSwitcher {
-    /**
-     * The controls to show, as a comma separated list of `theme`, `design`, `layout`, `ux` and `scheme`. Unknown names are ignored, and without a known name every control is shown.
-     */
-    axes?: string;
-    /**
-     * A visible heading, which also names the panel. Without one the name is "Appearance".
-     */
-    heading?: string;
-    /**
-     * `stacked` puts the controls in a column, `inline` side by side where there is room.
-     * @default "stacked"
-     */
-    orientation: SwitcherOrientation;
-    /**
-     * Saves each change with the runtime's persistence, so the choice is still there on the next visit. The bootstrap script of `@identgineer/variations` applies it before the page is painted.
-     * @default false
-     */
-    persist: boolean;
-  }
+     * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
+     * one item is open at a time. Up and Down, Home and End move between the headers.
+     */
+    interface IdgAccordion {
+        /**
+          * Lets the browser's find in page open a closed item that holds the text it finds, by hiding closed panels with `hidden="until-found"`. A browser without it hides them as usual.
+          * @default false
+         */
+        "findInPage": boolean;
+        /**
+          * The level of every item's heading, 1 to 6. Pick the one that follows the page's own heading.
+          * @default 3
+         */
+        "headingLevel": number;
+        /**
+          * Lets several items be open at once. Otherwise opening one closes the others.
+          * @default false
+         */
+        "multiple": boolean;
+    }
+    /**
+     * One item of an idg-accordion: a heading holding the button that shows or hides the panel
+     * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
+     * the panel's name are plain id references.
+     */
+    interface IdgAccordionItem {
+        /**
+          * Keeps the item where it is but stops the button being used.
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by the accordion: whether a closed panel can be found by the browser.
+          * @default false
+         */
+        "findInPage": boolean;
+        /**
+          * Set by the accordion: whether the panel is a region landmark.
+          * @default true
+         */
+        "hasRegion": boolean;
+        /**
+          * The text of the button. Use the heading slot for anything richer.
+         */
+        "heading"?: string;
+        /**
+          * Set by the accordion: the heading's level.
+          * @default 3
+         */
+        "headingLevel": number;
+        /**
+          * Whether the panel is showing.
+          * @default false
+         */
+        "open": boolean;
+        /**
+          * Set by the accordion while it settles the items at load: a change then is not announced.
+          * @default false
+         */
+        "quiet": boolean;
+        /**
+          * Focuses the button.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * Names the item in `idgToggle`.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * A message that stays on the page until it is read or dismissed. For a message that appears in
+     * response to what the user did, render the alert at that moment: a live region announces what is
+     * inserted, not what was already there.
+     */
+    interface IdgAlert {
+        /**
+          * The dismiss button's accessible name.
+          * @default "Dismiss"
+         */
+        "dismissLabel": string;
+        /**
+          * Adds a button that dismisses the alert.
+          * @default false
+         */
+        "dismissible": boolean;
+        /**
+          * Leaves out the live role, for a message that changes while it is shown (a countdown, say), which a live role would announce on every change. Announce it some other way.
+          * @default false
+         */
+        "quiet": boolean;
+        /**
+          * Meaning and urgency. Warning and danger interrupt assistive technology; info and success do not.
+          * @default "info"
+         */
+        "variant": AlertVariant;
+    }
+    /**
+     * A person or account, as a picture or, when there is none or it fails to load, their initials on a
+     * colour chosen from their name.
+     */
+    interface IdgAvatar {
+        /**
+          * What the picture shows. Defaults to `name`. An empty string marks the avatar as decoration, for one that sits beside the same name written out as text.
+         */
+        "alt"?: string;
+        /**
+          * The person's name: the source of the initials and the colour, and the default alt.
+         */
+        "name"?: string;
+        /**
+          * Avatar size.
+          * @default "md"
+         */
+        "size": AvatarSize;
+        /**
+          * The picture. Only http, https and relative urls are loaded.
+         */
+        "src"?: string;
+        /**
+          * Shows a status dot. Each status has its own shape, so colour is not the only cue.
+         */
+        "status"?: AvatarStatus;
+        /**
+          * The status dot's accessible name. Defaults to the status in English.
+         */
+        "statusLabel"?: string;
+    }
+    /**
+     * Overlaps a row of idg-avatar. It sets their size, and with `max` hides the ones past the limit
+     * and shows how many there are.
+     */
+    interface IdgAvatarGroup {
+        /**
+          * Names the group for assistive technology, such as "Reviewers".
+         */
+        "label"?: string;
+        /**
+          * The most avatars to show. The rest are hidden and counted.
+         */
+        "max"?: number;
+        /**
+          * The word after the count in its accessible name, such as "2 more".
+          * @default "more"
+         */
+        "moreLabel": string;
+        /**
+          * The size of every avatar in the group.
+          * @default "md"
+         */
+        "size": AvatarSize;
+    }
+    /**
+     * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
+     */
+    interface IdgBadge {
+        /**
+          * Shows a dot before the label.
+          * @default false
+         */
+        "dot": boolean;
+        /**
+          * Badge size.
+          * @default "md"
+         */
+        "size": BadgeSize;
+        /**
+          * Emphasis and meaning.
+          * @default "neutral"
+         */
+        "variant": BadgeVariant;
+    }
+    /**
+     * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
+     * idg-breadcrumb-item. The last item is the current page unless another item says it is.
+     */
+    interface IdgBreadcrumb {
+        /**
+          * The landmark's accessible name. Give each breadcrumb on a page its own.
+          * @default "Breadcrumb"
+         */
+        "label": string;
+        /**
+          * The mark between items. It is decoration and hidden from assistive technology.
+          * @default BREADCRUMB_SEPARATORS[0]
+         */
+        "separator": BreadcrumbSeparator;
+    }
+    /**
+     * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
+     * one, and separator are drawn in its own shadow root.
+     */
+    interface IdgBreadcrumbItem {
+        /**
+          * Marks this step as the current page, in place of the last one.
+          * @default false
+         */
+        "current": boolean;
+        /**
+          * Where the step goes. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * Set by the breadcrumb: whether this step is the current page.
+          * @default false
+         */
+        "isCurrent": boolean;
+        /**
+          * Set by the breadcrumb: whether this is the last step, which has no separator after it.
+          * @default false
+         */
+        "isLast": boolean;
+        /**
+          * Set by the breadcrumb: the mark after the step.
+          * @default "chevron"
+         */
+        "separator": BreadcrumbSeparator;
+    }
+    interface IdgButton {
+        /**
+          * Set by an overlay this button opens: the element it opens (`aria-controls`).
+         */
+        "accessibleControls"?: Element[];
+        /**
+          * Set by idg-tooltip: the hint, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by an overlay this button opens: whether it is open (`aria-expanded`).
+         */
+        "accessibleExpanded"?: boolean;
+        /**
+          * Set by an overlay this button opens: what kind of popup it is (`aria-haspopup`).
+         */
+        "accessibleHaspopup"?: string;
+        /**
+          * Blocks activation and takes the control out of the tab order.
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Stretches the button to its container.
+          * @default false
+         */
+        "fullWidth": boolean;
+        /**
+          * Renders a link. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * Shows a spinner and blocks activation, but keeps the control focusable.
+          * @default false
+         */
+        "loading": boolean;
+        /**
+          * Link relationship.
+         */
+        "rel"?: string;
+        /**
+          * A hint such as `Enter`, shown only when the UX mode turns shortcuts on.
+         */
+        "shortcut"?: string;
+        /**
+          * Control size. Never smaller than the design's minimum target size.
+          * @default "md"
+         */
+        "size": ButtonSize;
+        /**
+          * Where a link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
+         */
+        "target"?: string;
+        /**
+          * What activating the button does inside a form. Ignored when `href` is set.
+          * @default "button"
+         */
+        "type": ButtonType;
+        /**
+          * Visual emphasis.
+          * @default "primary"
+         */
+        "variant": ButtonVariant;
+    }
+    /**
+     * A surface that groups related content, drawn in the design language's own surface, border and
+     * elevation.
+     * With `href` and a `heading`, the heading becomes the card's one link and covers the whole card, so
+     * a click anywhere follows it while assistive technology still finds a single link. Anything in
+     * the footer slot sits above the link and stays clickable.
+     */
+    interface IdgCard {
+        /**
+          * The card's title, drawn as a heading.
+         */
+        "heading"?: string;
+        /**
+          * The heading level, 1 to 6.
+          * @default 3
+         */
+        "headingLevel": number;
+        /**
+          * Makes the heading a link that covers the card. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * Lifts the whole card on hover. A card with a link is always interactive.
+          * @default false
+         */
+        "interactive": boolean;
+        /**
+          * Space inside the card around its content.
+          * @default "md"
+         */
+        "padding": CardPadding;
+        /**
+          * Link relationship.
+         */
+        "rel"?: string;
+        /**
+          * Where the link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
+         */
+        "target"?: string;
+        /**
+          * Surface treatment.
+          * @default "plain"
+         */
+        "variant": CardVariant;
+    }
+    interface IdgCheckbox {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: replaces the slotted text as the accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * Whether the choice satisfies its constraints.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "checked": boolean;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Shows a mixed state, such as a parent of partly selected children. A user choice clears it.
+          * @default false
+         */
+        "indeterminate": boolean;
+        /**
+          * Marks the choice as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "name"?: string;
+        /**
+          * Whether the choice is valid, showing the browser's message when it is not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Focuses the native checkbox.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * What is submitted while checked.
+          * @default "on"
+         */
+        "value": string;
+    }
+    /**
+     * A group of items in a row that wraps onto further rows when it runs out of room, such as tags,
+     * buttons or a toolbar. It only arranges, so it adds no role and the source order stays the
+     * reading order.
+     */
+    interface IdgCluster {
+        /**
+          * How items in a row line up on the block axis.
+          * @default "center"
+         */
+        "align": ClusterAlignment;
+        /**
+          * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * How each row is spread along the inline axis. `between` pushes the first and last items apart.
+          * @default "start"
+         */
+        "justify": ClusterJustification;
+    }
+    /**
+     * Asks once whether analytics may be switched on, for the consent object it is given in `consent`
+     * (the tracker's `tracker.consent`). It is a region of the page, not a dialog: it never blocks
+     * anything, takes no focus when it appears, and ignoring it, or pressing Escape, means no consent.
+     * It asks only while the state is `unknown` and no browser privacy signal is set. Under Global
+     * Privacy Control or Do Not Track it does not ask at all, since asking would invite a choice the
+     * browser has already made: it draws nothing, or, with `announce-signal`, one line saying the
+     * signal is respected. "Decline" comes first and has the same variant and size as "Accept
+     * analytics". After a choice, focus goes back to what had it before the banner, else to the main
+     * landmark, and a polite live region confirms it.
+     * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
+     * natural place is further on, so it keeps its space in the page's flow and never covers the end
+     * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
+     * element is scrolled clear of it. In a window too short for both, it joins the page's flow
+     * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
+     * is: a bar at the top scrolls away with the page and never covers a header that sticks.
+     */
+    interface IdgConsentBanner {
+        /**
+          * Under a browser privacy signal, say in one line that it is respected, instead of nothing.
+          * @default false
+         */
+        "announceSignal": boolean;
+        /**
+          * The tracker's consent object, `tracker.consent` (a JavaScript property).
+         */
+        "consent"?: ConsentClient;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<ConsentBannerLabels>;
+        /**
+          * `bottom` (the default): a bar that stays in view; `top` and `inline`: in the page's flow.
+          * @default "bottom"
+         */
+        "placement": ConsentPlacement;
+        /**
+          * The id of an `idg-consent-preferences` elsewhere in the page that "Choose" opens.
+         */
+        "preferences"?: string;
+    }
+    /**
+     * The visitor's choices about analytics, for the consent object it is given in `consent` (the
+     * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
+     * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
+     * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
+     * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
+     * the switch is disabled with the signal named, and saving can only record a denial.
+     * It follows changes made elsewhere (another tab, the banner). If the stored state changes under
+     * an unsaved edit, the edit is dropped and a note says so. With `modal` it is drawn inside an
+     * `idg-dialog` that `open()` and `close()` control; the dialog holds and restores focus.
+     */
+    interface IdgConsentPreferences {
+        /**
+          * Closes the dialog when `modal`, dropping an unsaved edit; does nothing otherwise.
+         */
+        "close": () => Promise<void>;
+        /**
+          * The tracker's consent object, `tracker.consent` (a JavaScript property).
+         */
+        "consent"?: ConsentClient;
+        /**
+          * The level of the heading, 2 to 6, to fit the page's outline.
+          * @default 2
+         */
+        "headingLevel": number;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<ConsentPreferencesLabels>;
+        /**
+          * Draws the panel inside an `idg-dialog`, opened with `open()` and closed with `close()`.
+          * @default false
+         */
+        "modal": boolean;
+        /**
+          * Opens the dialog when `modal`; otherwise moves focus to the panel's heading. Without a consent object there is nothing to choose, so it does nothing and says `false`.
+         */
+        "open": () => Promise<boolean>;
+    }
+    /**
+     * A block at least as tall as `min-height` that centres its content, with optional regions pinned
+     * to its top and bottom, such as a hero, a splash or a sign-in screen. It only arranges, so it
+     * adds no role and the source order stays the reading order.
+     */
+    interface IdgCover {
+        /**
+          * Space between the regions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Least height of the block, a step of the size scale, or `screen` for the height of the viewport.
+          * @default "l"
+         */
+        "minHeight": CoverHeight;
+    }
+    /**
+     * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
+     * of the page inert and contains focus, and Escape is the browser's close request. The component
+     * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
+     * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
+     * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
+     * closed.
+     */
+    interface IdgDialog {
+        /**
+          * Makes it an `alertdialog`: an urgent message that needs a response, described by its body.
+          * @default false
+         */
+        "alert": boolean;
+        /**
+          * Closes the dialog. `idgClose` reports the return value and the reason `method`.
+         */
+        "close": (returnValue?: string) => Promise<void>;
+        /**
+          * The close button's accessible name.
+          * @default "Close"
+         */
+        "closeLabel": string;
+        /**
+          * Whether a click on the backdrop of a modal dialog dismisses it. Needs `dismissible`.
+          * @default false
+         */
+        "closeOnBackdrop": boolean;
+        /**
+          * Whether the user can dismiss the dialog with Escape and the close button.
+          * @default true
+         */
+        "dismissible": boolean;
+        /**
+          * The title, drawn as a heading. It is the dialog's accessible name.
+         */
+        "heading"?: string;
+        /**
+          * Whether setting `open` opens a modal dialog. The methods choose for themselves.
+          * @default true
+         */
+        "modal": boolean;
+        /**
+          * Whether the dialog is open. Setting it opens (as `modal` says) or closes the dialog.
+          * @default false
+         */
+        "open": boolean;
+        /**
+          * Opens the dialog without a modal: the page stays usable and focus is not contained.
+         */
+        "show": () => Promise<void>;
+        /**
+          * Opens the dialog as a modal: the rest of the page is inert until it closes.
+         */
+        "showModal": () => Promise<void>;
+        /**
+          * Width: `sm`, `md`, `lg`, or `full` for the whole viewport less a margin.
+          * @default "md"
+         */
+        "size": DialogSize;
+    }
+    /**
+     * A rule between groups of content, drawn in the design language's own border.
+     */
+    interface IdgDivider {
+        /**
+          * Takes the divider out of the accessibility tree, for a rule that only decorates.
+          * @default false
+         */
+        "decorative": boolean;
+        /**
+          * Direction of the rule. A vertical divider needs a parent that gives it a height.
+          * @default "horizontal"
+         */
+        "orientation": DividerOrientation;
+    }
+    /**
+     * A table of tracked events: the event, when it happened, the path and its properties, with
+     * paging and optional sorting by time or name. It takes its data through properties and never
+     * fetches.
+     * Every value is untrusted text from the public internet. It is drawn as text and nothing else: no
+     * markup is read, no link or address is made from it, control and bidirectional characters are
+     * replaced by a visible mark, each value is isolated in a `<bdi>` so right to left text cannot
+     * reorder what is beside it, long values wrap and are cut to a limit, and an event shows at most
+     * ten properties. Records that are malformed are left out.
+     * With `events` as the whole list, the table sorts and pages it. With `total` set, `events` is the
+     * one page the server answered with: the table draws it as it is and only reports `idgPageChange`
+     * and `idgSort` for the page to fetch with. Either way it draws at most `pageSize` rows (to 100).
+     * The state that matters is said politely: loading, an error, no events, and which events are shown.
+     */
+    interface IdgEventTable {
+        /**
+          * The accessible name of the table, drawn as its caption. Required.
+         */
+        "caption"?: string;
+        /**
+          * The message of an error that stopped the events loading. Drawn in an alert, as text.
+         */
+        "error"?: string;
+        /**
+          * The events: `{ id, name, occurredAt, path?, properties? }`. Malformed records are left out.
+         */
+        "events"?: TrackedEvent[];
+        /**
+          * The words of the table, merged over the English defaults.
+         */
+        "labels"?: Partial<EventTableLabels>;
+        /**
+          * Draws a skeleton and says the events are loading.
+          * @default false
+         */
+        "loading": boolean;
+        /**
+          * The current page, from 1. A page beyond the last is drawn as the last.
+          * @default 1
+         */
+        "page": number;
+        /**
+          * Rows on a page, 1 to 100.
+          * @default 10
+         */
+        "pageSize": number;
+        /**
+          * The direction of the sort.
+          * @default "ascending"
+         */
+        "sortDirection": EventSortDirection;
+        /**
+          * The column the rows are sorted by: `time` or `name`. Empty leaves the order given.
+          * @default ""
+         */
+        "sortKey": EventSortKey | "";
+        /**
+          * Makes the Event and Time headers sort buttons.
+          * @default false
+         */
+        "sortable": boolean;
+        /**
+          * The IANA time zone times are shown in, such as `UTC`. The reader's own by default.
+         */
+        "timeZone"?: string;
+        /**
+          * How many events there are in all. Set it when `events` is one page the server answered with: the table then draws `events` as it is, and neither sorts nor pages it.
+         */
+        "total"?: number;
+    }
+    /**
+     * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
+     * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
+     * reference cannot cross a shadow boundary, so their text is handed to the control as properties
+     * and the control applies it to its own native element.
+     */
+    interface IdgField {
+        /**
+          * The error message. Setting it marks the control invalid and announces the message.
+         */
+        "error"?: string;
+        /**
+          * Help text. Shown when the UX mode turns hints on, and always read with the control.
+         */
+        "hint"?: string;
+        /**
+          * The visible label, and the control's accessible name.
+         */
+        "label"?: string;
+        /**
+          * Text such as "optional" shown beside the label of a field that is not required.
+         */
+        "optionalText"?: string;
+        /**
+          * Marks the control required and shows a star.
+          * @default false
+         */
+        "required": boolean;
+    }
+    /**
+     * Items in as many equal columns as fit. Each column is at least `min` wide, and there are never
+     * more columns than the layout allows, so the same markup has more or fewer columns under each
+     * `data-layout`. It only arranges, so it adds no role and the source order stays the reading order.
+     */
+    interface IdgGrid {
+        /**
+          * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Narrowest a column may be, a step of the size scale. Without it the layout's track size is used.
+         */
+        "min"?: SizeStep;
+    }
+    /**
+     * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
+     */
+    interface IdgIcon {
+        /**
+          * Gives the icon an accessible name. Without it the icon is decoration and hidden.
+         */
+        "label"?: string;
+        /**
+          * Which icon to draw. An unknown name draws nothing.
+         */
+        "name"?: IconName;
+        /**
+          * Size relative to the surrounding text.
+          * @default "md"
+         */
+        "size": IconSize;
+    }
+    /**
+     * A form-associated text field. Enter submits its form as a native input does (see the README):
+     * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
+     * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
+     */
+    interface IdgInput {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        "autocapitalize"?: string;
+        "autocomplete"?: string;
+        /**
+          * Whether the value satisfies its constraints. Fires no UI.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        "enterkeyhint"?: string;
+        "inputmode"?: string;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "max"?: string;
+        "maxlength"?: number;
+        "min"?: string;
+        "minlength"?: number;
+        /**
+          * The name the value is submitted under.
+         */
+        "name"?: string;
+        "pattern"?: string;
+        "placeholder"?: string;
+        /**
+          * @default false
+         */
+        "readonly": boolean;
+        /**
+          * Whether the value is valid, showing the browser's message when it is not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Adds a button that shows a password as text. Only for `type="password"`.
+          * @default false
+         */
+        "reveal": boolean;
+        /**
+          * The name of the reveal button.
+          * @default "Show password"
+         */
+        "revealLabel": string;
+        /**
+          * Selects the text of the native input, for a value that is meant to be copied.
+         */
+        "selectText": () => Promise<void>;
+        /**
+          * Focuses the native input.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * Control size. Never smaller than the design's minimum target size.
+          * @default "md"
+         */
+        "size": InputSize;
+        "spellcheck"?: string;
+        "step"?: string;
+        /**
+          * What kind of text the control takes. Unknown values fall back to `text`.
+          * @default "text"
+         */
+        "type": InputType;
+        /**
+          * The current value. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * The page shell. One page, written once, is housed in the structure the `data-layout` attribute of
+     * the root (or of an ancestor) names: the same landmarks in the same reading order in all eight, and
+     * only a stylesheet that places them differently. The shell never reorders its own tree, so the
+     * order a reader and the Tab key meet things is the order of the markup in every layout.
+     * It is a size container, and every layout decides its small, medium and large arrangement from its
+     * own width, never the viewport's. Where a layout collapses the navigation behind a toggle, the
+     * stylesheet decides that too, and the script only reads what it decided (`--_nav`).
+     */
+    interface IdgLayout {
+        /**
+          * The accessible name of the aside landmark.
+          * @default "Related content"
+         */
+        "asideLabel": string;
+        /**
+          * The accessible name of the button that closes the navigation drawer.
+          * @default "Close"
+         */
+        "closeLabel": string;
+        /**
+          * Whether the shell sits inside a page rather than being the page. An embedded shell does not claim the height of the window, which a shell that is the page does.
+          * @default false
+         */
+        "embedded": boolean;
+        /**
+          * The text of the button that opens the collapsed navigation.
+          * @default "Menu"
+         */
+        "menuLabel": string;
+        /**
+          * The accessible name of the navigation landmark.
+          * @default "Main navigation"
+         */
+        "navigationLabel": string;
+        /**
+          * Whether the collapsed navigation is open. It can only be open while the layout collapses the navigation: it goes back to false when the container grows and the navigation is drawn inline.
+          * @default false
+         */
+        "navigationOpen": boolean;
+        /**
+          * The text of the skip link, the first control on the page.
+          * @default "Skip to content"
+         */
+        "skipLabel": string;
+    }
+    /**
+     * An inline text link. It takes the same hardening as the button's link mode: the url goes
+     * through `safeUrl` and a link that opens another browsing context always gets `noopener
+     * noreferrer`.
+     */
+    interface IdgLink {
+        /**
+          * Marks a link to another site: shows an indicator and opens a new tab unless `target` is set.
+          * @default false
+         */
+        "external": boolean;
+        /**
+          * The accessible name of the external indicator.
+          * @default "External link"
+         */
+        "externalLabel": string;
+        /**
+          * Where the link goes. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * Link relationship.
+         */
+        "rel"?: string;
+        /**
+          * Where the link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
+         */
+        "target"?: string;
+    }
+    /**
+     * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
+     * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
+     * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
+     * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
+     * focus moves to the items themselves (roving focus). Each item carries its own role and state.
+     */
+    interface IdgMenu {
+        /**
+          * Closes the menu.
+         */
+        "hide": () => Promise<void>;
+        /**
+          * The menu's accessible name. Without it the menu is named by its trigger.
+         */
+        "label"?: string;
+        /**
+          * The gap between the trigger and the menu, in pixels.
+          * @default 4
+         */
+        "offset": number;
+        /**
+          * Whether the menu is open.
+          * @default false
+         */
+        "open": boolean;
+        /**
+          * Where the menu sits against the trigger. It flips to the opposite side when out of room.
+          * @default "bottom-start"
+         */
+        "placement": Placement;
+        /**
+          * Opens the menu and focuses its first item.
+         */
+        "show": () => Promise<void>;
+    }
+    /**
+     * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
+     * uncheck each other within their group.
+     */
+    interface IdgMenuGroup {
+        /**
+          * The group's visible label and accessible name.
+         */
+        "label"?: string;
+    }
+    /**
+     * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
+     * its own shadow root, so its role and state are set on the focusable element inside it, and the
+     * host is a plain wrapper that assistive technology passes through.
+     */
+    interface IdgMenuItem {
+        /**
+          * Whether a checkbox or radio item is on. The menu changes it when the item is chosen.
+          * @default false
+         */
+        "checked": boolean;
+        /**
+          * Keeps the item in the menu, where it can be found, but stops it being chosen.
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Follows the item's link, as a click on it would.
+         */
+        "follow": () => Promise<void>;
+        /**
+          * Makes the item a link. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * A leading icon, drawn as decoration.
+         */
+        "icon"?: IconName;
+        /**
+          * Link relationship.
+         */
+        "rel"?: string;
+        /**
+          * Focuses the item.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * A hint such as `Ctrl+E`, shown when the UX mode turns shortcuts on. Nothing binds the key.
+         */
+        "shortcut"?: string;
+        /**
+          * Where a link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
+         */
+        "target"?: string;
+        /**
+          * `item` does something, `checkbox` toggles, `radio` picks one of its group.
+          * @default "item"
+         */
+        "type": MenuItemType;
+        /**
+          * What `idgSelect` reports when this item is chosen.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * A rule between groups of items in an idg-menu.
+     */
+    interface IdgMenuSeparator {
+    }
+    /**
+     * Page controls for a long list: previous and next, the current page and a window of its
+     * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
+     * given, so each page is an address that can be opened, shared and followed without script, and
+     * buttons that fire `idgPageChange` otherwise.
+     */
+    interface IdgPagination {
+        /**
+          * Pages always shown at the start and the end.
+          * @default 1
+         */
+        "boundaries": number;
+        /**
+          * Makes the controls links. `{page}` is replaced by the page number, as in `/items?page={page}`. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "hrefTemplate"?: string;
+        /**
+          * The landmark's accessible name. Give each pagination on a page its own.
+          * @default "Pagination"
+         */
+        "label": string;
+        /**
+          * The accessible name of the next control.
+          * @default "Next page"
+         */
+        "nextLabel": string;
+        /**
+          * The current page, from 1.
+          * @default 1
+         */
+        "page": number;
+        /**
+          * How many pages there are, up to ten million: more is held to that.
+          * @default 1
+         */
+        "pageCount": number;
+        /**
+          * The accessible name of a page control, where `{page}` is the number.
+          * @default "Page {page}"
+         */
+        "pageLabel": string;
+        /**
+          * The accessible name of the previous control.
+          * @default "Previous page"
+         */
+        "previousLabel": string;
+        /**
+          * Pages shown on each side of the current one.
+          * @default 1
+         */
+        "siblings": number;
+    }
+    /**
+     * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
+     * for the address and always answers the same, whether or not an account uses it. `complete`
+     * sets the new password with the emailed code, which the page reads from the link and passes in
+     * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
+     * inputs are emptied after every attempt.
+     */
+    interface IdgPasswordReset {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: PasswordResetClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The code from the reset email, which the page reads from the link it was sent. Without one, `complete` mode asks for it.
+         */
+        "code"?: string;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<PasswordResetLabels>;
+        /**
+          * Which step to show. Unknown values fall back to `request`.
+          * @default "request"
+         */
+        "mode": PasswordResetMode;
+    }
+    /**
+     * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
+     * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
+     * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
+     * not contained, and Tab moves on from the content.
+     */
+    interface IdgPopover {
+        /**
+          * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
+         */
+        "for"?: string;
+        /**
+          * Closes the popover.
+         */
+        "hide": () => Promise<void>;
+        /**
+          * The gap between the trigger and the surface, in pixels.
+          * @default 8
+         */
+        "offset": number;
+        /**
+          * Whether the popover is open.
+          * @default false
+         */
+        "open": boolean;
+        /**
+          * Where the surface sits against the trigger. It flips to the opposite side when out of room.
+          * @default "bottom-start"
+         */
+        "placement": Placement;
+        /**
+          * Opens the popover.
+         */
+        "show": () => Promise<void>;
+        /**
+          * Opens the popover when closed and closes it when open.
+         */
+        "toggle": () => Promise<void>;
+    }
+    /**
+     * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
+     * (display name, about, language, time zone and email preference), a password change, and the
+     * sessions of the account with a button to sign each other one out and one to sign out everywhere.
+     * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
+     */
+    interface IdgProfile {
+        /**
+          * A picture of the owner for the avatar, such as the one their profile links to.
+         */
+        "avatarSrc"?: string;
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: ProfileClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The level of the section headings, 2 to 6, to fit the page's outline: below a page title (`h1`), 2.
+          * @default 2
+         */
+        "headingLevel": number;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<ProfileLabels>;
+    }
+    /**
+     * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
+     * the browser's own. Without a value it is indeterminate.
+     */
+    interface IdgProgress {
+        /**
+          * Marks work of unknown length, whatever the value.
+          * @default false
+         */
+        "indeterminate": boolean;
+        /**
+          * What is progressing. Visible, and the bar's accessible name, so it should always be set.
+         */
+        "label"?: string;
+        /**
+          * The value that means done.
+          * @default 100
+         */
+        "max": number;
+        /**
+          * Shows the percentage beside the label. Only for determinate progress.
+          * @default false
+         */
+        "showValue": boolean;
+        /**
+          * Bar thickness.
+          * @default "md"
+         */
+        "size": ProgressSize;
+        /**
+          * How much is done. Without it the progress is indeterminate.
+         */
+        "value"?: number;
+    }
+    /**
+     * Lets a signed-in user choose which tracked property (site) the dashboard shows. It is a labelled
+     * `idg-select` that lists the `properties` it is given and reports the chosen id with `idgChange`.
+     * It is form associated: with a `name` it submits the chosen id.
+     * Property names are text the user typed: they are shown as text only, with control and
+     * bidirectional characters replaced and long names cut. A `value` that is not one of the
+     * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
+     * property appears in the list later, and is never replaced by the first property.
+     */
+    interface IdgPropertyPicker {
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * The visible label and the accessible name.
+         */
+        "label"?: string;
+        /**
+          * The words of the picker, merged over the English defaults.
+         */
+        "labels"?: Partial<PropertyPickerLabels>;
+        /**
+          * While the properties load: disabled, busy, and said politely.
+          * @default false
+         */
+        "loading": boolean;
+        "name"?: string;
+        /**
+          * The properties to choose from: `{ id, name, origin? }`. Records that are malformed or repeat an id are left out.
+         */
+        "properties"?: TrackedProperty[];
+        /**
+          * Focuses the select.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * The id of the chosen property. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
+     * as set by the group are how it passes state down, because radios in separate shadow roots are
+     * not a native radio group.
+     */
+    interface IdgRadio {
+        /**
+          * Set by the group from its value.
+          * @default false
+         */
+        "checked": boolean;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by the group: whether the whole group is disabled.
+          * @default false
+         */
+        "groupDisabled": boolean;
+        /**
+          * Set by the group: marks the group's value as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        /**
+          * Set by the group: this radio's place, from 1.
+         */
+        "position"?: number;
+        /**
+          * Focuses the native radio.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * Set by the group: how many radios the group holds.
+         */
+        "setSize"?: number;
+        /**
+          * Set by the group: whether this radio is the group's one tab stop.
+          * @default true
+         */
+        "tabbable": boolean;
+        /**
+          * What the group takes as its value when this radio is chosen.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
+     * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
+     * its radios, is the form control.
+     */
+    interface IdgRadioGroup {
+        /**
+          * Set by idg-field: the hint and error text, as the group's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: the group's accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * Whether a choice has been made when one is required.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by idg-field, or by you: marks the choice as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "name"?: string;
+        /**
+          * How the radios are laid out.
+          * @default "vertical"
+         */
+        "orientation": Orientation;
+        /**
+          * Whether a choice has been made, showing the browser's message when it has not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Focuses the radio that is the group's tab stop.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * The value of the chosen radio. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * A registration form for the identity client it is given in `client`. With email confirmation on,
+     * a new address and one already registered get the same answer, so the form never tells whether
+     * an account exists. The password is read from its input when the form is sent and the input is
+     * emptied after every attempt.
+     */
+    interface IdgRegister {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: RegisterClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<RegisterLabels>;
+    }
+    /**
+     * Options are written as children, exactly as for a native select, and copied into the native
+     * select inside the component: the same markup works with or without a framework, and no option
+     * data has to be serialised into an attribute.
+     */
+    interface IdgSelect {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * Whether the choice satisfies its constraints.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "name"?: string;
+        /**
+          * Whether the choice is valid, showing the browser's message when it is not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Focuses the native select.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * @default "md"
+         */
+        "size": InputSize;
+        /**
+          * The value of the chosen option. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * Shows its content only while someone is signed in, through the identity client it is given in
+     * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
+     * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
+     * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
+     * at once.
+     * The guard adds no box around what it shows: the host is `display: contents` and the slots are
+     * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
+     * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
+     * before the content and out of the page's layout, whose text says the change; Tab goes on into
+     * the content. A notice, when the guard shows one, is one block before the content.
+     * This is a convenience for the interface, not access control: the content is still in the page
+     * for anyone who reads its markup, and only the API decides what a request may read or change.
+     */
+    interface IdgSessionGuard {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: SessionGuardClient;
+        /**
+          * The text of the guard's own notices, merged over the English defaults.
+         */
+        "labels"?: Partial<SessionGuardLabels>;
+    }
+    /**
+     * Two regions side by side: a side region of a set width and the content, which takes the rest.
+     * When the content would get less than half of the width, the regions stack instead, with no
+     * breakpoint and no script, so it follows the width of its container rather than the viewport.
+     * The side region is drawn first when it is at the start and last when it is at the end, so what a
+     * reader and the Tab key meet first is also what is shown first, in either text direction. When
+     * the regions stack, the side region is above the content when it is at the start and below it
+     * when it is at the end.
+     */
+    interface IdgSidebar {
+        /**
+          * Space between the regions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Which side of the content the side region is on, in the reading direction.
+          * @default "start"
+         */
+        "side": SidebarSide;
+        /**
+          * Width of the side region, a step of the size scale. Without it the layout's aside width is used.
+         */
+        "sideWidth"?: SizeStep;
+    }
+    /**
+     * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
+     * password: the password is read from its input when the form is sent and the input is emptied
+     * after a sign-in, a refused one, or when the element leaves the page.
+     */
+    interface IdgSignIn {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: SignInClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<SignInLabels>;
+        /**
+          * The page the CMS sends the browser back to after a provider sign-in.
+         */
+        "providerCallback"?: string;
+        /**
+          * Provider buttons, in order. Each starts the provider's sign-in through the client.
+         */
+        "providers"?: readonly SignInProvider[];
+    }
+    /**
+     * A placeholder shaped like content that is still loading. It is always hidden from assistive
+     * technology, so it announces nothing by itself. Mark the region being loaded with
+     * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
+     * and replace the skeletons when the content arrives.
+     * Size it with the page's own CSS on the element, for example `idg-skeleton { inline-size: 12rem }`.
+     */
+    interface IdgSkeleton {
+        /**
+          * How many lines of text to draw. The last of several is shorter. Only for `text`.
+          * @default 1
+         */
+        "lines": number;
+        /**
+          * The shape of what is loading.
+          * @default "text"
+         */
+        "variant": SkeletonVariant;
+    }
+    /**
+     * A small trend line drawn as SVG from a series of numbers, for beside a figure. It scales to the
+     * width of its container (set one with the page's own CSS, `idg-sparkline { inline-size: 8rem }`),
+     * keeps its proportions, and never animates. It is an image with a text alternative: the label
+     * you give it and a sentence with the first, last, lowest and highest value and which way the
+     * series went, formatted in the language of the page. Time runs left to right in every
+     * writing direction.
+     * Anything in `values` that is not a finite number is left out, never drawn as zero. A series
+     * longer than 120 points is thinned for drawing, keeping its first, last, lowest and highest.
+     */
+    interface IdgSparkline {
+        /**
+          * Fills the area under the line.
+          * @default false
+         */
+        "area": boolean;
+        /**
+          * What the series measures, such as `Visitors`. It is the accessible name, so give it one.
+         */
+        "label"?: string;
+        /**
+          * The words of the text alternative, merged over the English defaults.
+         */
+        "labels"?: Partial<SparklineLabels>;
+        /**
+          * The series: an array of numbers, or, from an attribute, a JSON array or numbers separated by commas. A text longer than 200,000 characters is read as far as there.
+         */
+        "values"?: number[] | string;
+    }
+    /**
+     * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
+     * and the source order stays the reading order.
+     */
+    interface IdgStack {
+        /**
+          * Where children sit on the inline axis.
+          * @default "stretch"
+         */
+        "align": StackAlignment;
+        /**
+          * Space between children, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+    }
+    /**
+     * A figure with its label and, optionally, how it changed.
+     */
+    interface IdgStat {
+        /**
+          * The change, formatted as it should be shown, such as `12%`.
+         */
+        "delta"?: string;
+        /**
+          * Which way the figure moved. Shown as an icon and spoken to screen readers.
+          * @default "flat"
+         */
+        "direction": StatDirection;
+        /**
+          * Spoken before the change of a figure that fell.
+          * @default "Decreased by"
+         */
+        "downLabel": string;
+        /**
+          * Spoken before the change of a figure that did not move.
+          * @default "No change"
+         */
+        "flatLabel": string;
+        /**
+          * What the figure measures.
+         */
+        "label"?: string;
+        /**
+          * What the change is measured against, such as `vs previous 7 days`. It is seen beside the change and spoken with it, since a change with no basis is ambiguous. Without a change it is not shown.
+         */
+        "period"?: string;
+        /**
+          * Whether the change is good, for the colour. Defaults from the direction, so set it where a rise is bad, such as a churn rate.
+         */
+        "sentiment"?: StatSentiment;
+        /**
+          * Spoken before the change of a figure that rose.
+          * @default "Increased by"
+         */
+        "upLabel": string;
+        /**
+          * The figure, formatted as it should be shown.
+         */
+        "value"?: string;
+    }
+    interface IdgSwitch {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: replaces the slotted text as the accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * Whether the choice satisfies its constraints.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "checked": boolean;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Marks the choice as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "name"?: string;
+        /**
+          * Whether the choice is valid, showing the browser's message when it is not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Focuses the native input.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * What is submitted while checked.
+          * @default "on"
+         */
+        "value": string;
+    }
+    /**
+     * Items in one row that switch to one column when their container is narrower than `threshold`.
+     * Every item is as wide as the others in either arrangement. There is no breakpoint and no script,
+     * so it follows the width of its container rather than the viewport. It only arranges, so it adds
+     * no role and the source order stays the reading order.
+     */
+    interface IdgSwitcher {
+        /**
+          * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Most items allowed in a row, 2 to 6. With more items than that, they stack at any width. Hidden items, templates and scripts do not count; the count is taken again when items are added, removed, hidden or shown.
+         */
+        "limit"?: number;
+        /**
+          * Container width below which the items stack, a step of the size scale.
+          * @default "l"
+         */
+        "threshold": SizeStep;
+    }
+    /**
+     * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
+     * host carries the tab role and state itself, so the relations to the panel, which sits beside it
+     * in the page, can be made between the two hosts.
+     */
+    interface IdgTab {
+        /**
+          * Keeps the tab in the list, where it is announced, but stops it being selected.
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by the tabs: which way the list runs.
+          * @default "horizontal"
+         */
+        "orientation": TabsOrientation;
+        /**
+          * Set by the tabs: whether this tab is selected.
+          * @default false
+         */
+        "selected": boolean;
+        /**
+          * Set by the tabs: whether this tab is the one tab stop of the list.
+          * @default false
+         */
+        "tabbable": boolean;
+        /**
+          * Pairs the tab with the panel of the same value.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
+     * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
+     * reader can still move into it.
+     */
+    interface IdgTabPanel {
+        /**
+          * Set by the tabs: whether this panel's tab is selected.
+          * @default false
+         */
+        "selected": boolean;
+        /**
+          * Pairs the panel with the tab of the same value.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
+     * header cells, row and column relations) and the component adds what a table needs around it: a
+     * surface drawn in the design language, a scroll region that is reachable by keyboard and named
+     * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
+     * sortable column headers.
+     * The cells are the page's own, so a shadow root cannot style them. The component adopts a
+     * constructable stylesheet into the document or shadow root the table lives in, scoped to
+     * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
+     * constructable stylesheets shows the table unstyled.
+     * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
+     * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
+     */
+    interface IdgTable {
+        /**
+          * Whether the owner of the rows is busy, such as while it fetches a sorted page. The sort buttons are marked `aria-disabled` and presses on them do nothing and say nothing.
+          * @default false
+         */
+        "busy": boolean;
+        /**
+          * The scroll region's accessible name, when the table is wider than the page. The caption is used without it.
+         */
+        "label"?: string;
+        /**
+          * For when you sort the rows yourself, such as on a server. A press only reports `idgSort` with the sort it asks for; the sort that is marked and announced is the one you set in `sortKey` and `sortDirection`, so a header never shows an order the rows are not in.
+          * @default false
+         */
+        "manualSort": boolean;
+        /**
+          * The tallest the region grows before its rows scroll, as a length such as `24rem`.
+         */
+        "maxHeight"?: string;
+        /**
+          * The narrowest the table is drawn before it scrolls sideways, as a length such as `40rem`.
+         */
+        "minWidth"?: string;
+        /**
+          * The word for an ascending sort in the announcement. Translate it with `sortStatus`.
+          * @default "ascending"
+         */
+        "sortAscendingLabel": string;
+        /**
+          * The word for a descending sort in the announcement. Translate it with `sortStatus`.
+          * @default "descending"
+         */
+        "sortDescendingLabel": string;
+        /**
+          * The direction of the sort.
+          * @default "ascending"
+         */
+        "sortDirection": SortDirection;
+        /**
+          * The key of the column the rows are sorted by. Empty leaves them in their original order.
+          * @default ""
+         */
+        "sortKey": string;
+        /**
+          * Announced after a sort, where `{column}` is the column and `{direction}` is ascending or descending.
+          * @default "Sorted by {column}, {direction}"
+         */
+        "sortStatus": string;
+        /**
+          * Keeps the header in view while the rows scroll. It needs `maxHeight`, as the rows scroll in the region.
+          * @default false
+         */
+        "stickyHeader": boolean;
+        /**
+          * Shades every other row.
+          * @default false
+         */
+        "striped": boolean;
+    }
+    /**
+     * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
+     * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
+     * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
+     * its position among its own kind as its value.
+     */
+    interface IdgTabs {
+        /**
+          * `automatic` selects a tab as the arrow keys reach it. `manual` only moves focus, and Enter or Space selects, which suits panels that are slow to show.
+          * @default "automatic"
+         */
+        "activation": TabsActivation;
+        /**
+          * The tab list's accessible name.
+         */
+        "label"?: string;
+        /**
+          * Which way the tab list runs.
+          * @default "horizontal"
+         */
+        "orientation": TabsOrientation;
+        /**
+          * Focuses the selected tab.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * The value of the selected tab. Without a match, the enabled tab nearest to where the selection was takes over, which is the first enabled tab until one has been selected. Values should be unique: a tab that repeats an earlier tab's value cannot be selected, and a warning is logged.
+          * @default ""
+         */
+        "value": string;
+    }
+    interface IdgTextarea {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        "autocapitalize"?: string;
+        "autocomplete"?: string;
+        /**
+          * Grows with its content, using `field-sizing` where it exists and a hidden twin elsewhere.
+          * @default false
+         */
+        "autogrow": boolean;
+        /**
+          * Whether the value satisfies its constraints.
+         */
+        "checkValidity": () => Promise<boolean>;
+        /**
+          * Shows the number of characters, against `maxlength` when there is one.
+          * @default false
+         */
+        "counter": boolean;
+        /**
+          * @default false
+         */
+        "disabled": boolean;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid": boolean;
+        "maxlength"?: number;
+        "minlength"?: number;
+        "name"?: string;
+        "placeholder"?: string;
+        /**
+          * @default false
+         */
+        "readonly": boolean;
+        /**
+          * Whether the value is valid, showing the browser's message when it is not.
+         */
+        "reportValidity": () => Promise<boolean>;
+        /**
+          * @default false
+         */
+        "required": boolean;
+        /**
+          * Visible lines. With `autogrow` it is the minimum.
+          * @default 3
+         */
+        "rows": number;
+        /**
+          * Focuses the native textarea.
+         */
+        "setFocus": () => Promise<void>;
+        /**
+          * @default "md"
+         */
+        "size": InputSize;
+        "spellcheck"?: string;
+        /**
+          * The current value. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value": string;
+    }
+    /**
+     * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
+     * time, announces each as it appears, pauses them while they are being read and lets the keyboard
+     * reach them; the `toast()` function does all of that from script.
+     * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
+     * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
+     * is given a duration, so nobody loses the chance to act on it.
+     */
+    interface IdgToast {
+        /**
+          * The label of an action button, such as "Undo". Choosing it fires `idgAction`.
+         */
+        "actionLabel"?: string;
+        /**
+          * The close button's accessible name.
+          * @default "Dismiss"
+         */
+        "closeLabel": string;
+        /**
+          * More detail under the heading. Set as text, never as markup.
+         */
+        "description"?: string;
+        /**
+          * Dismisses the toast, as if its close button had been chosen but with the reason `api`.
+         */
+        "dismiss": () => Promise<void>;
+        /**
+          * How long the toast stays, in milliseconds. `0` keeps it until it is dismissed. Without a duration it stays for six seconds, or until dismissed when it has an action.
+         */
+        "duration"?: number;
+        /**
+          * The heading, and the toast's accessible name. Set as text, never as markup.
+         */
+        "heading"?: string;
+        /**
+          * Set by the region while the toasts are being read: the countdown stands still.
+          * @default false
+         */
+        "paused": boolean;
+        /**
+          * Set by the region while the toast waits its turn: it is hidden and does not count down.
+          * @default false
+         */
+        "queued": boolean;
+        /**
+          * Meaning. A danger toast is announced at once; the others wait for a pause in speech.
+          * @default "neutral"
+         */
+        "variant": ToastVariant;
+    }
+    /**
+     * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
+     * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
+     * rest, and announces each toast as it comes into view through a live region of its own: politely,
+     * or at once for danger. Focus never moves on its own.
+     * While the pointer is over it, focus is inside it, the window is in the background or the user
+     * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
+     * and nothing slides under the pointer.
+     */
+    interface IdgToastRegion {
+        /**
+          * The key, as `KeyboardEvent.key` names it, that moves focus to the toasts.
+          * @default "F8"
+         */
+        "hotkey": string;
+        /**
+          * The landmark's accessible name.
+          * @default "Notifications"
+         */
+        "label": string;
+        /**
+          * How many toasts show at once. The rest wait their turn.
+          * @default 3
+         */
+        "max": number;
+        /**
+          * The corner or edge the toasts gather at.
+          * @default "bottom-end"
+         */
+        "position": ToastPosition;
+    }
+    /**
+     * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
+     * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
+     * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
+     * only: put anything interactive in an idg-popover.
+     * The text is also the trigger's accessible description, given to the trigger itself, so it is
+     * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
+     * technology so it is not read twice.
+     */
+    interface IdgTooltip {
+        /**
+          * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
+         */
+        "for"?: string;
+        /**
+          * The gap between the trigger and the hint, in pixels.
+          * @default 8
+         */
+        "offset": number;
+        /**
+          * Where the hint sits against the trigger. It flips to the opposite side when out of room.
+          * @default "top"
+         */
+        "placement": Placement;
+        /**
+          * The hint. Set as text, never as markup.
+         */
+        "text"?: string;
+    }
+    /**
+     * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
+     * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
+     * user how the sign-out went: a server that could not be reached is said plainly, since the
+     * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
+     * It goes away when the client hears that another tab signed out.
+     */
+    interface IdgUserMenu {
+        /**
+          * A picture of the user for the avatar, such as their profile's; initials without one.
+         */
+        "avatarSrc"?: string;
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: UserMenuClient;
+        /**
+          * The name to show; the username by default.
+         */
+        "displayName"?: string;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<UserMenuLabels>;
+    }
+    /**
+     * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
+     * always acts on the document's root element, through `@identgineer/variations`, so the page's own
+     * attributes stay the single truth: a change made anywhere else (markup, a script, another
+     * switcher) is shown here, and nothing here is announced for a change the visitor did not make.
+     */
+    interface IdgVariationSwitcher {
+        /**
+          * The controls to show, as a comma separated list of `theme`, `design`, `layout`, `ux` and `scheme`. Unknown names are ignored, and without a known name every control is shown.
+         */
+        "axes"?: string;
+        /**
+          * A visible heading, which also names the panel. Without one the name is "Appearance".
+         */
+        "heading"?: string;
+        /**
+          * `stacked` puts the controls in a column, `inline` side by side where there is room.
+          * @default "stacked"
+         */
+        "orientation": SwitcherOrientation;
+        /**
+          * Saves each change with the runtime's persistence, so the choice is still there on the next visit. The bootstrap script of `@identgineer/variations` applies it before the page is painted.
+          * @default false
+         */
+        "persist": boolean;
+    }
 }
 export interface IdgAccordionItemCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgAccordionItemElement;
+    detail: T;
+    target: HTMLIdgAccordionItemElement;
 }
 export interface IdgAlertCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgAlertElement;
+    detail: T;
+    target: HTMLIdgAlertElement;
 }
 export interface IdgCheckboxCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgCheckboxElement;
+    detail: T;
+    target: HTMLIdgCheckboxElement;
 }
 export interface IdgConsentBannerCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgConsentBannerElement;
+    detail: T;
+    target: HTMLIdgConsentBannerElement;
 }
 export interface IdgConsentPreferencesCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgConsentPreferencesElement;
+    detail: T;
+    target: HTMLIdgConsentPreferencesElement;
 }
 export interface IdgDialogCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgDialogElement;
+    detail: T;
+    target: HTMLIdgDialogElement;
 }
 export interface IdgEventTableCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgEventTableElement;
+    detail: T;
+    target: HTMLIdgEventTableElement;
 }
 export interface IdgInputCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgInputElement;
+    detail: T;
+    target: HTMLIdgInputElement;
 }
 export interface IdgLayoutCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgLayoutElement;
+    detail: T;
+    target: HTMLIdgLayoutElement;
 }
 export interface IdgMenuCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgMenuElement;
+    detail: T;
+    target: HTMLIdgMenuElement;
 }
 export interface IdgPaginationCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgPaginationElement;
+    detail: T;
+    target: HTMLIdgPaginationElement;
 }
 export interface IdgPasswordResetCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgPasswordResetElement;
+    detail: T;
+    target: HTMLIdgPasswordResetElement;
 }
 export interface IdgPopoverCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgPopoverElement;
+    detail: T;
+    target: HTMLIdgPopoverElement;
 }
 export interface IdgProfileCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgProfileElement;
+    detail: T;
+    target: HTMLIdgProfileElement;
 }
 export interface IdgPropertyPickerCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgPropertyPickerElement;
+    detail: T;
+    target: HTMLIdgPropertyPickerElement;
 }
 export interface IdgRadioCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgRadioElement;
+    detail: T;
+    target: HTMLIdgRadioElement;
 }
 export interface IdgRadioGroupCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgRadioGroupElement;
+    detail: T;
+    target: HTMLIdgRadioGroupElement;
 }
 export interface IdgRegisterCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgRegisterElement;
+    detail: T;
+    target: HTMLIdgRegisterElement;
 }
 export interface IdgSelectCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgSelectElement;
+    detail: T;
+    target: HTMLIdgSelectElement;
 }
 export interface IdgSessionGuardCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgSessionGuardElement;
+    detail: T;
+    target: HTMLIdgSessionGuardElement;
 }
 export interface IdgSignInCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgSignInElement;
+    detail: T;
+    target: HTMLIdgSignInElement;
 }
 export interface IdgSwitchCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgSwitchElement;
+    detail: T;
+    target: HTMLIdgSwitchElement;
 }
 export interface IdgTableCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgTableElement;
+    detail: T;
+    target: HTMLIdgTableElement;
 }
 export interface IdgTabsCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgTabsElement;
+    detail: T;
+    target: HTMLIdgTabsElement;
 }
 export interface IdgTextareaCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgTextareaElement;
+    detail: T;
+    target: HTMLIdgTextareaElement;
 }
 export interface IdgToastCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgToastElement;
+    detail: T;
+    target: HTMLIdgToastElement;
 }
 export interface IdgUserMenuCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgUserMenuElement;
+    detail: T;
+    target: HTMLIdgUserMenuElement;
 }
 export interface IdgVariationSwitcherCustomEvent<T> extends CustomEvent<T> {
-  detail: T;
-  target: HTMLIdgVariationSwitcherElement;
+    detail: T;
+    target: HTMLIdgVariationSwitcherElement;
 }
 declare global {
-  /**
-   * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
-   * one item is open at a time. Up and Down, Home and End move between the headers.
-   */
-  interface HTMLIdgAccordionElement extends Components.IdgAccordion, HTMLStencilElement {}
-  var HTMLIdgAccordionElement: {
-    prototype: HTMLIdgAccordionElement;
-    new (): HTMLIdgAccordionElement;
-  };
-  interface HTMLIdgAccordionItemElementEventMap {
-    idgToggle: AccordionToggleDetail;
-  }
-  /**
-   * One item of an idg-accordion: a heading holding the button that shows or hides the panel
-   * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
-   * the panel's name are plain id references.
-   */
-  interface HTMLIdgAccordionItemElement extends Components.IdgAccordionItem, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgAccordionItemElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgAccordionItemElement,
-        ev: IdgAccordionItemCustomEvent<HTMLIdgAccordionItemElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgAccordionItemElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgAccordionItemElement,
-        ev: IdgAccordionItemCustomEvent<HTMLIdgAccordionItemElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgAccordionItemElement: {
-    prototype: HTMLIdgAccordionItemElement;
-    new (): HTMLIdgAccordionItemElement;
-  };
-  interface HTMLIdgAlertElementEventMap {
-    idgDismiss: void;
-  }
-  /**
-   * A message that stays on the page until it is read or dismissed. For a message that appears in
-   * response to what the user did, render the alert at that moment: a live region announces what is
-   * inserted, not what was already there.
-   */
-  interface HTMLIdgAlertElement extends Components.IdgAlert, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgAlertElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgAlertElement,
-        ev: IdgAlertCustomEvent<HTMLIdgAlertElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgAlertElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgAlertElement,
-        ev: IdgAlertCustomEvent<HTMLIdgAlertElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgAlertElement: {
-    prototype: HTMLIdgAlertElement;
-    new (): HTMLIdgAlertElement;
-  };
-  /**
-   * A person or account, as a picture or, when there is none or it fails to load, their initials on a
-   * colour chosen from their name.
-   */
-  interface HTMLIdgAvatarElement extends Components.IdgAvatar, HTMLStencilElement {}
-  var HTMLIdgAvatarElement: {
-    prototype: HTMLIdgAvatarElement;
-    new (): HTMLIdgAvatarElement;
-  };
-  /**
-   * Overlaps a row of idg-avatar. It sets their size, and with `max` hides the ones past the limit
-   * and shows how many there are.
-   */
-  interface HTMLIdgAvatarGroupElement extends Components.IdgAvatarGroup, HTMLStencilElement {}
-  var HTMLIdgAvatarGroupElement: {
-    prototype: HTMLIdgAvatarGroupElement;
-    new (): HTMLIdgAvatarGroupElement;
-  };
-  /**
-   * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
-   */
-  interface HTMLIdgBadgeElement extends Components.IdgBadge, HTMLStencilElement {}
-  var HTMLIdgBadgeElement: {
-    prototype: HTMLIdgBadgeElement;
-    new (): HTMLIdgBadgeElement;
-  };
-  /**
-   * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
-   * idg-breadcrumb-item. The last item is the current page unless another item says it is.
-   */
-  interface HTMLIdgBreadcrumbElement extends Components.IdgBreadcrumb, HTMLStencilElement {}
-  var HTMLIdgBreadcrumbElement: {
-    prototype: HTMLIdgBreadcrumbElement;
-    new (): HTMLIdgBreadcrumbElement;
-  };
-  /**
-   * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
-   * one, and separator are drawn in its own shadow root.
-   */
-  interface HTMLIdgBreadcrumbItemElement extends Components.IdgBreadcrumbItem, HTMLStencilElement {}
-  var HTMLIdgBreadcrumbItemElement: {
-    prototype: HTMLIdgBreadcrumbItemElement;
-    new (): HTMLIdgBreadcrumbItemElement;
-  };
-  interface HTMLIdgButtonElement extends Components.IdgButton, HTMLStencilElement {}
-  var HTMLIdgButtonElement: {
-    prototype: HTMLIdgButtonElement;
-    new (): HTMLIdgButtonElement;
-  };
-  /**
-   * A surface that groups related content, drawn in the design language's own surface, border and
-   * elevation.
-   * With `href` and a `heading`, the heading becomes the card's one link and covers the whole card, so
-   * a click anywhere follows it while assistive technology still finds a single link. Anything in
-   * the footer slot sits above the link and stays clickable.
-   */
-  interface HTMLIdgCardElement extends Components.IdgCard, HTMLStencilElement {}
-  var HTMLIdgCardElement: {
-    prototype: HTMLIdgCardElement;
-    new (): HTMLIdgCardElement;
-  };
-  interface HTMLIdgCheckboxElementEventMap {
-    idgChange: CheckedDetail;
-  }
-  interface HTMLIdgCheckboxElement extends Components.IdgCheckbox, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgCheckboxElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgCheckboxElement,
-        ev: IdgCheckboxCustomEvent<HTMLIdgCheckboxElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgCheckboxElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgCheckboxElement,
-        ev: IdgCheckboxCustomEvent<HTMLIdgCheckboxElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgCheckboxElement: {
-    prototype: HTMLIdgCheckboxElement;
-    new (): HTMLIdgCheckboxElement;
-  };
-  /**
-   * A group of items in a row that wraps onto further rows when it runs out of room, such as tags,
-   * buttons or a toolbar. It only arranges, so it adds no role and the source order stays the
-   * reading order.
-   */
-  interface HTMLIdgClusterElement extends Components.IdgCluster, HTMLStencilElement {}
-  var HTMLIdgClusterElement: {
-    prototype: HTMLIdgClusterElement;
-    new (): HTMLIdgClusterElement;
-  };
-  interface HTMLIdgConsentBannerElementEventMap {
-    idgConsentChange: ConsentChangeDetail;
-    idgConsentChoose: void;
-  }
-  /**
-   * Asks once whether analytics may be switched on, for the consent object it is given in `consent`
-   * (the tracker's `tracker.consent`). It is a region of the page, not a dialog: it never blocks
-   * anything, takes no focus when it appears, and ignoring it, or pressing Escape, means no consent.
-   * It asks only while the state is `unknown` and no browser privacy signal is set. Under Global
-   * Privacy Control or Do Not Track it does not ask at all, since asking would invite a choice the
-   * browser has already made: it draws nothing, or, with `announce-signal`, one line saying the
-   * signal is respected. "Decline" comes first and has the same variant and size as "Accept
-   * analytics". After a choice, focus goes back to what had it before the banner, else to the main
-   * landmark, and a polite live region confirms it.
-   * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
-   * natural place is further on, so it keeps its space in the page's flow and never covers the end
-   * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
-   * element is scrolled clear of it. In a window too short for both, it joins the page's flow
-   * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
-   * is: a bar at the top scrolls away with the page and never covers a header that sticks.
-   */
-  interface HTMLIdgConsentBannerElement extends Components.IdgConsentBanner, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgConsentBannerElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgConsentBannerElement,
-        ev: IdgConsentBannerCustomEvent<HTMLIdgConsentBannerElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgConsentBannerElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgConsentBannerElement,
-        ev: IdgConsentBannerCustomEvent<HTMLIdgConsentBannerElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgConsentBannerElement: {
-    prototype: HTMLIdgConsentBannerElement;
-    new (): HTMLIdgConsentBannerElement;
-  };
-  interface HTMLIdgConsentPreferencesElementEventMap {
-    idgConsentChange: ConsentChangeDetail;
-  }
-  /**
-   * The visitor's choices about analytics, for the consent object it is given in `consent` (the
-   * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
-   * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
-   * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
-   * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
-   * the switch is disabled with the signal named, and saving can only record a denial.
-   * It follows changes made elsewhere (another tab, the banner). If the stored state changes under
-   * an unsaved edit, the edit is dropped and a note says so. With `modal` it is drawn inside an
-   * `idg-dialog` that `open()` and `close()` control; the dialog holds and restores focus.
-   */
-  interface HTMLIdgConsentPreferencesElement
-    extends Components.IdgConsentPreferences, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgConsentPreferencesElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgConsentPreferencesElement,
-        ev: IdgConsentPreferencesCustomEvent<HTMLIdgConsentPreferencesElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgConsentPreferencesElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgConsentPreferencesElement,
-        ev: IdgConsentPreferencesCustomEvent<HTMLIdgConsentPreferencesElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgConsentPreferencesElement: {
-    prototype: HTMLIdgConsentPreferencesElement;
-    new (): HTMLIdgConsentPreferencesElement;
-  };
-  /**
-   * A block at least as tall as `min-height` that centres its content, with optional regions pinned
-   * to its top and bottom, such as a hero, a splash or a sign-in screen. It only arranges, so it
-   * adds no role and the source order stays the reading order.
-   */
-  interface HTMLIdgCoverElement extends Components.IdgCover, HTMLStencilElement {}
-  var HTMLIdgCoverElement: {
-    prototype: HTMLIdgCoverElement;
-    new (): HTMLIdgCoverElement;
-  };
-  interface HTMLIdgDialogElementEventMap {
-    idgOpen: DialogOpenDetail;
-    idgClose: DialogCloseDetail;
-    idgCancel: DialogCancelDetail;
-  }
-  /**
-   * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
-   * of the page inert and contains focus, and Escape is the browser's close request. The component
-   * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
-   * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
-   * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
-   * closed.
-   */
-  interface HTMLIdgDialogElement extends Components.IdgDialog, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgDialogElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgDialogElement,
-        ev: IdgDialogCustomEvent<HTMLIdgDialogElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgDialogElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgDialogElement,
-        ev: IdgDialogCustomEvent<HTMLIdgDialogElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgDialogElement: {
-    prototype: HTMLIdgDialogElement;
-    new (): HTMLIdgDialogElement;
-  };
-  /**
-   * A rule between groups of content, drawn in the design language's own border.
-   */
-  interface HTMLIdgDividerElement extends Components.IdgDivider, HTMLStencilElement {}
-  var HTMLIdgDividerElement: {
-    prototype: HTMLIdgDividerElement;
-    new (): HTMLIdgDividerElement;
-  };
-  interface HTMLIdgEventTableElementEventMap {
-    idgPageChange: PageChangeDetail;
-    idgSort: EventSort;
-  }
-  /**
-   * A table of tracked events: the event, when it happened, the path and its properties, with
-   * paging and optional sorting by time or name. It takes its data through properties and never
-   * fetches.
-   * Every value is untrusted text from the public internet. It is drawn as text and nothing else: no
-   * markup is read, no link or address is made from it, control and bidirectional characters are
-   * replaced by a visible mark, each value is isolated in a `<bdi>` so right to left text cannot
-   * reorder what is beside it, long values wrap and are cut to a limit, and an event shows at most
-   * ten properties. Records that are malformed are left out.
-   * With `events` as the whole list, the table sorts and pages it. With `total` set, `events` is the
-   * one page the server answered with: the table draws it as it is and only reports `idgPageChange`
-   * and `idgSort` for the page to fetch with. Either way it draws at most `pageSize` rows (to 100).
-   * The state that matters is said politely: loading, an error, no events, and which events are shown.
-   */
-  interface HTMLIdgEventTableElement extends Components.IdgEventTable, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgEventTableElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgEventTableElement,
-        ev: IdgEventTableCustomEvent<HTMLIdgEventTableElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgEventTableElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgEventTableElement,
-        ev: IdgEventTableCustomEvent<HTMLIdgEventTableElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgEventTableElement: {
-    prototype: HTMLIdgEventTableElement;
-    new (): HTMLIdgEventTableElement;
-  };
-  /**
-   * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
-   * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
-   * reference cannot cross a shadow boundary, so their text is handed to the control as properties
-   * and the control applies it to its own native element.
-   */
-  interface HTMLIdgFieldElement extends Components.IdgField, HTMLStencilElement {}
-  var HTMLIdgFieldElement: {
-    prototype: HTMLIdgFieldElement;
-    new (): HTMLIdgFieldElement;
-  };
-  /**
-   * Items in as many equal columns as fit. Each column is at least `min` wide, and there are never
-   * more columns than the layout allows, so the same markup has more or fewer columns under each
-   * `data-layout`. It only arranges, so it adds no role and the source order stays the reading order.
-   */
-  interface HTMLIdgGridElement extends Components.IdgGrid, HTMLStencilElement {}
-  var HTMLIdgGridElement: {
-    prototype: HTMLIdgGridElement;
-    new (): HTMLIdgGridElement;
-  };
-  /**
-   * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
-   */
-  interface HTMLIdgIconElement extends Components.IdgIcon, HTMLStencilElement {}
-  var HTMLIdgIconElement: {
-    prototype: HTMLIdgIconElement;
-    new (): HTMLIdgIconElement;
-  };
-  interface HTMLIdgInputElementEventMap {
-    idgInput: ValueDetail;
-    idgChange: ValueDetail;
-  }
-  /**
-   * A form-associated text field. Enter submits its form as a native input does (see the README):
-   * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
-   * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
-   */
-  interface HTMLIdgInputElement extends Components.IdgInput, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgInputElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgInputElement,
-        ev: IdgInputCustomEvent<HTMLIdgInputElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgInputElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgInputElement,
-        ev: IdgInputCustomEvent<HTMLIdgInputElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgInputElement: {
-    prototype: HTMLIdgInputElement;
-    new (): HTMLIdgInputElement;
-  };
-  interface HTMLIdgLayoutElementEventMap {
-    idgNavigationToggle: NavigationToggleDetail;
-  }
-  /**
-   * The page shell. One page, written once, is housed in the structure the `data-layout` attribute of
-   * the root (or of an ancestor) names: the same landmarks in the same reading order in all eight, and
-   * only a stylesheet that places them differently. The shell never reorders its own tree, so the
-   * order a reader and the Tab key meet things is the order of the markup in every layout.
-   * It is a size container, and every layout decides its small, medium and large arrangement from its
-   * own width, never the viewport's. Where a layout collapses the navigation behind a toggle, the
-   * stylesheet decides that too, and the script only reads what it decided (`--_nav`).
-   */
-  interface HTMLIdgLayoutElement extends Components.IdgLayout, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgLayoutElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgLayoutElement,
-        ev: IdgLayoutCustomEvent<HTMLIdgLayoutElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgLayoutElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgLayoutElement,
-        ev: IdgLayoutCustomEvent<HTMLIdgLayoutElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgLayoutElement: {
-    prototype: HTMLIdgLayoutElement;
-    new (): HTMLIdgLayoutElement;
-  };
-  /**
-   * An inline text link. It takes the same hardening as the button's link mode: the url goes
-   * through `safeUrl` and a link that opens another browsing context always gets `noopener
-   * noreferrer`.
-   */
-  interface HTMLIdgLinkElement extends Components.IdgLink, HTMLStencilElement {}
-  var HTMLIdgLinkElement: {
-    prototype: HTMLIdgLinkElement;
-    new (): HTMLIdgLinkElement;
-  };
-  interface HTMLIdgMenuElementEventMap {
-    idgSelect: MenuSelectDetail;
-    idgOpen: void;
-    idgClose: void;
-  }
-  /**
-   * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
-   * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
-   * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
-   * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
-   * focus moves to the items themselves (roving focus). Each item carries its own role and state.
-   */
-  interface HTMLIdgMenuElement extends Components.IdgMenu, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgMenuElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgMenuElement,
-        ev: IdgMenuCustomEvent<HTMLIdgMenuElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgMenuElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgMenuElement,
-        ev: IdgMenuCustomEvent<HTMLIdgMenuElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgMenuElement: {
-    prototype: HTMLIdgMenuElement;
-    new (): HTMLIdgMenuElement;
-  };
-  /**
-   * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
-   * uncheck each other within their group.
-   */
-  interface HTMLIdgMenuGroupElement extends Components.IdgMenuGroup, HTMLStencilElement {}
-  var HTMLIdgMenuGroupElement: {
-    prototype: HTMLIdgMenuGroupElement;
-    new (): HTMLIdgMenuGroupElement;
-  };
-  /**
-   * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
-   * its own shadow root, so its role and state are set on the focusable element inside it, and the
-   * host is a plain wrapper that assistive technology passes through.
-   */
-  interface HTMLIdgMenuItemElement extends Components.IdgMenuItem, HTMLStencilElement {}
-  var HTMLIdgMenuItemElement: {
-    prototype: HTMLIdgMenuItemElement;
-    new (): HTMLIdgMenuItemElement;
-  };
-  /**
-   * A rule between groups of items in an idg-menu.
-   */
-  interface HTMLIdgMenuSeparatorElement extends Components.IdgMenuSeparator, HTMLStencilElement {}
-  var HTMLIdgMenuSeparatorElement: {
-    prototype: HTMLIdgMenuSeparatorElement;
-    new (): HTMLIdgMenuSeparatorElement;
-  };
-  interface HTMLIdgPaginationElementEventMap {
-    idgPageChange: PageChangeDetail;
-  }
-  /**
-   * Page controls for a long list: previous and next, the current page and a window of its
-   * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
-   * given, so each page is an address that can be opened, shared and followed without script, and
-   * buttons that fire `idgPageChange` otherwise.
-   */
-  interface HTMLIdgPaginationElement extends Components.IdgPagination, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgPaginationElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgPaginationElement,
-        ev: IdgPaginationCustomEvent<HTMLIdgPaginationElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgPaginationElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgPaginationElement,
-        ev: IdgPaginationCustomEvent<HTMLIdgPaginationElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgPaginationElement: {
-    prototype: HTMLIdgPaginationElement;
-    new (): HTMLIdgPaginationElement;
-  };
-  interface HTMLIdgPasswordResetElementEventMap {
-    idgResetRequested: void;
-    idgPasswordReset: SignedInDetail;
-  }
-  /**
-   * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
-   * for the address and always answers the same, whether or not an account uses it. `complete`
-   * sets the new password with the emailed code, which the page reads from the link and passes in
-   * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
-   * inputs are emptied after every attempt.
-   */
-  interface HTMLIdgPasswordResetElement extends Components.IdgPasswordReset, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgPasswordResetElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgPasswordResetElement,
-        ev: IdgPasswordResetCustomEvent<HTMLIdgPasswordResetElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgPasswordResetElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgPasswordResetElement,
-        ev: IdgPasswordResetCustomEvent<HTMLIdgPasswordResetElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgPasswordResetElement: {
-    prototype: HTMLIdgPasswordResetElement;
-    new (): HTMLIdgPasswordResetElement;
-  };
-  interface HTMLIdgPopoverElementEventMap {
-    idgOpen: void;
-    idgClose: void;
-  }
-  /**
-   * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
-   * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
-   * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
-   * not contained, and Tab moves on from the content.
-   */
-  interface HTMLIdgPopoverElement extends Components.IdgPopover, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgPopoverElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgPopoverElement,
-        ev: IdgPopoverCustomEvent<HTMLIdgPopoverElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgPopoverElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgPopoverElement,
-        ev: IdgPopoverCustomEvent<HTMLIdgPopoverElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgPopoverElement: {
-    prototype: HTMLIdgPopoverElement;
-    new (): HTMLIdgPopoverElement;
-  };
-  interface HTMLIdgProfileElementEventMap {
-    idgProfileSaved: ProfileSavedDetail;
-    idgPasswordChanged: void;
-    idgSessionRevoked: SessionRevokedDetail;
-    idgSignedOut: SignedOutDetail;
-  }
-  /**
-   * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
-   * (display name, about, language, time zone and email preference), a password change, and the
-   * sessions of the account with a button to sign each other one out and one to sign out everywhere.
-   * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
-   */
-  interface HTMLIdgProfileElement extends Components.IdgProfile, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgProfileElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgProfileElement,
-        ev: IdgProfileCustomEvent<HTMLIdgProfileElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgProfileElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgProfileElement,
-        ev: IdgProfileCustomEvent<HTMLIdgProfileElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgProfileElement: {
-    prototype: HTMLIdgProfileElement;
-    new (): HTMLIdgProfileElement;
-  };
-  /**
-   * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
-   * the browser's own. Without a value it is indeterminate.
-   */
-  interface HTMLIdgProgressElement extends Components.IdgProgress, HTMLStencilElement {}
-  var HTMLIdgProgressElement: {
-    prototype: HTMLIdgProgressElement;
-    new (): HTMLIdgProgressElement;
-  };
-  interface HTMLIdgPropertyPickerElementEventMap {
-    idgChange: ValueDetail;
-  }
-  /**
-   * Lets a signed-in user choose which tracked property (site) the dashboard shows. It is a labelled
-   * `idg-select` that lists the `properties` it is given and reports the chosen id with `idgChange`.
-   * It is form associated: with a `name` it submits the chosen id.
-   * Property names are text the user typed: they are shown as text only, with control and
-   * bidirectional characters replaced and long names cut. A `value` that is not one of the
-   * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
-   * property appears in the list later, and is never replaced by the first property.
-   */
-  interface HTMLIdgPropertyPickerElement extends Components.IdgPropertyPicker, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgPropertyPickerElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgPropertyPickerElement,
-        ev: IdgPropertyPickerCustomEvent<HTMLIdgPropertyPickerElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgPropertyPickerElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgPropertyPickerElement,
-        ev: IdgPropertyPickerCustomEvent<HTMLIdgPropertyPickerElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgPropertyPickerElement: {
-    prototype: HTMLIdgPropertyPickerElement;
-    new (): HTMLIdgPropertyPickerElement;
-  };
-  interface HTMLIdgRadioElementEventMap {
-    idgSelect: RadioSelectDetail;
-  }
-  /**
-   * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
-   * as set by the group are how it passes state down, because radios in separate shadow roots are
-   * not a native radio group.
-   */
-  interface HTMLIdgRadioElement extends Components.IdgRadio, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgRadioElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgRadioElement,
-        ev: IdgRadioCustomEvent<HTMLIdgRadioElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgRadioElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgRadioElement,
-        ev: IdgRadioCustomEvent<HTMLIdgRadioElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgRadioElement: {
-    prototype: HTMLIdgRadioElement;
-    new (): HTMLIdgRadioElement;
-  };
-  interface HTMLIdgRadioGroupElementEventMap {
-    idgChange: ValueDetail;
-  }
-  /**
-   * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
-   * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
-   * its radios, is the form control.
-   */
-  interface HTMLIdgRadioGroupElement extends Components.IdgRadioGroup, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgRadioGroupElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgRadioGroupElement,
-        ev: IdgRadioGroupCustomEvent<HTMLIdgRadioGroupElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgRadioGroupElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgRadioGroupElement,
-        ev: IdgRadioGroupCustomEvent<HTMLIdgRadioGroupElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgRadioGroupElement: {
-    prototype: HTMLIdgRadioGroupElement;
-    new (): HTMLIdgRadioGroupElement;
-  };
-  interface HTMLIdgRegisterElementEventMap {
-    idgRegistered: RegisteredDetail;
-  }
-  /**
-   * A registration form for the identity client it is given in `client`. With email confirmation on,
-   * a new address and one already registered get the same answer, so the form never tells whether
-   * an account exists. The password is read from its input when the form is sent and the input is
-   * emptied after every attempt.
-   */
-  interface HTMLIdgRegisterElement extends Components.IdgRegister, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgRegisterElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgRegisterElement,
-        ev: IdgRegisterCustomEvent<HTMLIdgRegisterElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgRegisterElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgRegisterElement,
-        ev: IdgRegisterCustomEvent<HTMLIdgRegisterElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgRegisterElement: {
-    prototype: HTMLIdgRegisterElement;
-    new (): HTMLIdgRegisterElement;
-  };
-  interface HTMLIdgSelectElementEventMap {
-    idgInput: ValueDetail;
-    idgChange: ValueDetail;
-  }
-  /**
-   * Options are written as children, exactly as for a native select, and copied into the native
-   * select inside the component: the same markup works with or without a framework, and no option
-   * data has to be serialised into an attribute.
-   */
-  interface HTMLIdgSelectElement extends Components.IdgSelect, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgSelectElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgSelectElement,
-        ev: IdgSelectCustomEvent<HTMLIdgSelectElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgSelectElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgSelectElement,
-        ev: IdgSelectCustomEvent<HTMLIdgSelectElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgSelectElement: {
-    prototype: HTMLIdgSelectElement;
-    new (): HTMLIdgSelectElement;
-  };
-  interface HTMLIdgSessionGuardElementEventMap {
-    idgSessionChange: SessionChangeDetail;
-  }
-  /**
-   * Shows its content only while someone is signed in, through the identity client it is given in
-   * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
-   * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
-   * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
-   * at once.
-   * The guard adds no box around what it shows: the host is `display: contents` and the slots are
-   * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
-   * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
-   * before the content and out of the page's layout, whose text says the change; Tab goes on into
-   * the content. A notice, when the guard shows one, is one block before the content.
-   * This is a convenience for the interface, not access control: the content is still in the page
-   * for anyone who reads its markup, and only the API decides what a request may read or change.
-   */
-  interface HTMLIdgSessionGuardElement extends Components.IdgSessionGuard, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgSessionGuardElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgSessionGuardElement,
-        ev: IdgSessionGuardCustomEvent<HTMLIdgSessionGuardElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgSessionGuardElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgSessionGuardElement,
-        ev: IdgSessionGuardCustomEvent<HTMLIdgSessionGuardElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgSessionGuardElement: {
-    prototype: HTMLIdgSessionGuardElement;
-    new (): HTMLIdgSessionGuardElement;
-  };
-  /**
-   * Two regions side by side: a side region of a set width and the content, which takes the rest.
-   * When the content would get less than half of the width, the regions stack instead, with no
-   * breakpoint and no script, so it follows the width of its container rather than the viewport.
-   * The side region is drawn first when it is at the start and last when it is at the end, so what a
-   * reader and the Tab key meet first is also what is shown first, in either text direction. When
-   * the regions stack, the side region is above the content when it is at the start and below it
-   * when it is at the end.
-   */
-  interface HTMLIdgSidebarElement extends Components.IdgSidebar, HTMLStencilElement {}
-  var HTMLIdgSidebarElement: {
-    prototype: HTMLIdgSidebarElement;
-    new (): HTMLIdgSidebarElement;
-  };
-  interface HTMLIdgSignInElementEventMap {
-    idgSignedIn: SignedInDetail;
-    idgProviderSignIn: ProviderSignInDetail;
-  }
-  /**
-   * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
-   * password: the password is read from its input when the form is sent and the input is emptied
-   * after a sign-in, a refused one, or when the element leaves the page.
-   */
-  interface HTMLIdgSignInElement extends Components.IdgSignIn, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgSignInElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgSignInElement,
-        ev: IdgSignInCustomEvent<HTMLIdgSignInElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgSignInElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgSignInElement,
-        ev: IdgSignInCustomEvent<HTMLIdgSignInElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgSignInElement: {
-    prototype: HTMLIdgSignInElement;
-    new (): HTMLIdgSignInElement;
-  };
-  /**
-   * A placeholder shaped like content that is still loading. It is always hidden from assistive
-   * technology, so it announces nothing by itself. Mark the region being loaded with
-   * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
-   * and replace the skeletons when the content arrives.
-   * Size it with the page's own CSS on the element, for example `idg-skeleton { inline-size: 12rem }`.
-   */
-  interface HTMLIdgSkeletonElement extends Components.IdgSkeleton, HTMLStencilElement {}
-  var HTMLIdgSkeletonElement: {
-    prototype: HTMLIdgSkeletonElement;
-    new (): HTMLIdgSkeletonElement;
-  };
-  /**
-   * A small trend line drawn as SVG from a series of numbers, for beside a figure. It scales to the
-   * width of its container (set one with the page's own CSS, `idg-sparkline { inline-size: 8rem }`),
-   * keeps its proportions, and never animates. It is an image with a text alternative: the label
-   * you give it and a sentence with the first, last, lowest and highest value and which way the
-   * series went, formatted in the language of the page. Time runs left to right in every
-   * writing direction.
-   * Anything in `values` that is not a finite number is left out, never drawn as zero. A series
-   * longer than 120 points is thinned for drawing, keeping its first, last, lowest and highest.
-   */
-  interface HTMLIdgSparklineElement extends Components.IdgSparkline, HTMLStencilElement {}
-  var HTMLIdgSparklineElement: {
-    prototype: HTMLIdgSparklineElement;
-    new (): HTMLIdgSparklineElement;
-  };
-  /**
-   * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
-   * and the source order stays the reading order.
-   */
-  interface HTMLIdgStackElement extends Components.IdgStack, HTMLStencilElement {}
-  var HTMLIdgStackElement: {
-    prototype: HTMLIdgStackElement;
-    new (): HTMLIdgStackElement;
-  };
-  /**
-   * A figure with its label and, optionally, how it changed.
-   */
-  interface HTMLIdgStatElement extends Components.IdgStat, HTMLStencilElement {}
-  var HTMLIdgStatElement: {
-    prototype: HTMLIdgStatElement;
-    new (): HTMLIdgStatElement;
-  };
-  interface HTMLIdgSwitchElementEventMap {
-    idgChange: CheckedDetail;
-  }
-  interface HTMLIdgSwitchElement extends Components.IdgSwitch, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgSwitchElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgSwitchElement,
-        ev: IdgSwitchCustomEvent<HTMLIdgSwitchElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgSwitchElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgSwitchElement,
-        ev: IdgSwitchCustomEvent<HTMLIdgSwitchElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgSwitchElement: {
-    prototype: HTMLIdgSwitchElement;
-    new (): HTMLIdgSwitchElement;
-  };
-  /**
-   * Items in one row that switch to one column when their container is narrower than `threshold`.
-   * Every item is as wide as the others in either arrangement. There is no breakpoint and no script,
-   * so it follows the width of its container rather than the viewport. It only arranges, so it adds
-   * no role and the source order stays the reading order.
-   */
-  interface HTMLIdgSwitcherElement extends Components.IdgSwitcher, HTMLStencilElement {}
-  var HTMLIdgSwitcherElement: {
-    prototype: HTMLIdgSwitcherElement;
-    new (): HTMLIdgSwitcherElement;
-  };
-  /**
-   * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
-   * host carries the tab role and state itself, so the relations to the panel, which sits beside it
-   * in the page, can be made between the two hosts.
-   */
-  interface HTMLIdgTabElement extends Components.IdgTab, HTMLStencilElement {}
-  var HTMLIdgTabElement: {
-    prototype: HTMLIdgTabElement;
-    new (): HTMLIdgTabElement;
-  };
-  /**
-   * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
-   * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
-   * reader can still move into it.
-   */
-  interface HTMLIdgTabPanelElement extends Components.IdgTabPanel, HTMLStencilElement {}
-  var HTMLIdgTabPanelElement: {
-    prototype: HTMLIdgTabPanelElement;
-    new (): HTMLIdgTabPanelElement;
-  };
-  interface HTMLIdgTableElementEventMap {
-    idgSort: TableSortDetail;
-  }
-  /**
-   * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
-   * header cells, row and column relations) and the component adds what a table needs around it: a
-   * surface drawn in the design language, a scroll region that is reachable by keyboard and named
-   * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
-   * sortable column headers.
-   * The cells are the page's own, so a shadow root cannot style them. The component adopts a
-   * constructable stylesheet into the document or shadow root the table lives in, scoped to
-   * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
-   * constructable stylesheets shows the table unstyled.
-   * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
-   * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
-   */
-  interface HTMLIdgTableElement extends Components.IdgTable, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgTableElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgTableElement,
-        ev: IdgTableCustomEvent<HTMLIdgTableElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgTableElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgTableElement,
-        ev: IdgTableCustomEvent<HTMLIdgTableElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgTableElement: {
-    prototype: HTMLIdgTableElement;
-    new (): HTMLIdgTableElement;
-  };
-  interface HTMLIdgTabsElementEventMap {
-    idgChange: ValueDetail;
-  }
-  /**
-   * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
-   * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
-   * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
-   * its position among its own kind as its value.
-   */
-  interface HTMLIdgTabsElement extends Components.IdgTabs, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgTabsElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgTabsElement,
-        ev: IdgTabsCustomEvent<HTMLIdgTabsElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgTabsElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgTabsElement,
-        ev: IdgTabsCustomEvent<HTMLIdgTabsElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgTabsElement: {
-    prototype: HTMLIdgTabsElement;
-    new (): HTMLIdgTabsElement;
-  };
-  interface HTMLIdgTextareaElementEventMap {
-    idgInput: ValueDetail;
-    idgChange: ValueDetail;
-  }
-  interface HTMLIdgTextareaElement extends Components.IdgTextarea, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgTextareaElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgTextareaElement,
-        ev: IdgTextareaCustomEvent<HTMLIdgTextareaElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgTextareaElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgTextareaElement,
-        ev: IdgTextareaCustomEvent<HTMLIdgTextareaElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgTextareaElement: {
-    prototype: HTMLIdgTextareaElement;
-    new (): HTMLIdgTextareaElement;
-  };
-  interface HTMLIdgToastElementEventMap {
-    idgAction: void;
-    idgDismiss: ToastDismissDetail;
-  }
-  /**
-   * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
-   * time, announces each as it appears, pauses them while they are being read and lets the keyboard
-   * reach them; the `toast()` function does all of that from script.
-   * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
-   * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
-   * is given a duration, so nobody loses the chance to act on it.
-   */
-  interface HTMLIdgToastElement extends Components.IdgToast, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgToastElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgToastElement,
-        ev: IdgToastCustomEvent<HTMLIdgToastElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgToastElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgToastElement,
-        ev: IdgToastCustomEvent<HTMLIdgToastElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgToastElement: {
-    prototype: HTMLIdgToastElement;
-    new (): HTMLIdgToastElement;
-  };
-  /**
-   * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
-   * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
-   * rest, and announces each toast as it comes into view through a live region of its own: politely,
-   * or at once for danger. Focus never moves on its own.
-   * While the pointer is over it, focus is inside it, the window is in the background or the user
-   * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
-   * and nothing slides under the pointer.
-   */
-  interface HTMLIdgToastRegionElement extends Components.IdgToastRegion, HTMLStencilElement {}
-  var HTMLIdgToastRegionElement: {
-    prototype: HTMLIdgToastRegionElement;
-    new (): HTMLIdgToastRegionElement;
-  };
-  /**
-   * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
-   * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
-   * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
-   * only: put anything interactive in an idg-popover.
-   * The text is also the trigger's accessible description, given to the trigger itself, so it is
-   * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
-   * technology so it is not read twice.
-   */
-  interface HTMLIdgTooltipElement extends Components.IdgTooltip, HTMLStencilElement {}
-  var HTMLIdgTooltipElement: {
-    prototype: HTMLIdgTooltipElement;
-    new (): HTMLIdgTooltipElement;
-  };
-  interface HTMLIdgUserMenuElementEventMap {
-    idgSignedOut: SignedOutDetail;
-  }
-  /**
-   * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
-   * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
-   * user how the sign-out went: a server that could not be reached is said plainly, since the
-   * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
-   * It goes away when the client hears that another tab signed out.
-   */
-  interface HTMLIdgUserMenuElement extends Components.IdgUserMenu, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgUserMenuElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgUserMenuElement,
-        ev: IdgUserMenuCustomEvent<HTMLIdgUserMenuElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgUserMenuElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgUserMenuElement,
-        ev: IdgUserMenuCustomEvent<HTMLIdgUserMenuElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgUserMenuElement: {
-    prototype: HTMLIdgUserMenuElement;
-    new (): HTMLIdgUserMenuElement;
-  };
-  interface HTMLIdgVariationSwitcherElementEventMap {
-    idgVariationsChange: VariationsChangeDetail;
-  }
-  /**
-   * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
-   * always acts on the document's root element, through `@identgineer/variations`, so the page's own
-   * attributes stay the single truth: a change made anywhere else (markup, a script, another
-   * switcher) is shown here, and nothing here is announced for a change the visitor did not make.
-   */
-  interface HTMLIdgVariationSwitcherElement
-    extends Components.IdgVariationSwitcher, HTMLStencilElement {
-    addEventListener<K extends keyof HTMLIdgVariationSwitcherElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgVariationSwitcherElement,
-        ev: IdgVariationSwitcherCustomEvent<HTMLIdgVariationSwitcherElementEventMap[K]>,
-      ) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    addEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLIdgVariationSwitcherElementEventMap>(
-      type: K,
-      listener: (
-        this: HTMLIdgVariationSwitcherElement,
-        ev: IdgVariationSwitcherCustomEvent<HTMLIdgVariationSwitcherElementEventMap[K]>,
-      ) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof DocumentEventMap>(
-      type: K,
-      listener: (this: Document, ev: DocumentEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener<K extends keyof HTMLElementEventMap>(
-      type: K,
-      listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-      options?: boolean | EventListenerOptions,
-    ): void;
-    removeEventListener(
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | EventListenerOptions,
-    ): void;
-  }
-  var HTMLIdgVariationSwitcherElement: {
-    prototype: HTMLIdgVariationSwitcherElement;
-    new (): HTMLIdgVariationSwitcherElement;
-  };
-  interface HTMLElementTagNameMap {
-    "idg-accordion": HTMLIdgAccordionElement;
-    "idg-accordion-item": HTMLIdgAccordionItemElement;
-    "idg-alert": HTMLIdgAlertElement;
-    "idg-avatar": HTMLIdgAvatarElement;
-    "idg-avatar-group": HTMLIdgAvatarGroupElement;
-    "idg-badge": HTMLIdgBadgeElement;
-    "idg-breadcrumb": HTMLIdgBreadcrumbElement;
-    "idg-breadcrumb-item": HTMLIdgBreadcrumbItemElement;
-    "idg-button": HTMLIdgButtonElement;
-    "idg-card": HTMLIdgCardElement;
-    "idg-checkbox": HTMLIdgCheckboxElement;
-    "idg-cluster": HTMLIdgClusterElement;
-    "idg-consent-banner": HTMLIdgConsentBannerElement;
-    "idg-consent-preferences": HTMLIdgConsentPreferencesElement;
-    "idg-cover": HTMLIdgCoverElement;
-    "idg-dialog": HTMLIdgDialogElement;
-    "idg-divider": HTMLIdgDividerElement;
-    "idg-event-table": HTMLIdgEventTableElement;
-    "idg-field": HTMLIdgFieldElement;
-    "idg-grid": HTMLIdgGridElement;
-    "idg-icon": HTMLIdgIconElement;
-    "idg-input": HTMLIdgInputElement;
-    "idg-layout": HTMLIdgLayoutElement;
-    "idg-link": HTMLIdgLinkElement;
-    "idg-menu": HTMLIdgMenuElement;
-    "idg-menu-group": HTMLIdgMenuGroupElement;
-    "idg-menu-item": HTMLIdgMenuItemElement;
-    "idg-menu-separator": HTMLIdgMenuSeparatorElement;
-    "idg-pagination": HTMLIdgPaginationElement;
-    "idg-password-reset": HTMLIdgPasswordResetElement;
-    "idg-popover": HTMLIdgPopoverElement;
-    "idg-profile": HTMLIdgProfileElement;
-    "idg-progress": HTMLIdgProgressElement;
-    "idg-property-picker": HTMLIdgPropertyPickerElement;
-    "idg-radio": HTMLIdgRadioElement;
-    "idg-radio-group": HTMLIdgRadioGroupElement;
-    "idg-register": HTMLIdgRegisterElement;
-    "idg-select": HTMLIdgSelectElement;
-    "idg-session-guard": HTMLIdgSessionGuardElement;
-    "idg-sidebar": HTMLIdgSidebarElement;
-    "idg-sign-in": HTMLIdgSignInElement;
-    "idg-skeleton": HTMLIdgSkeletonElement;
-    "idg-sparkline": HTMLIdgSparklineElement;
-    "idg-stack": HTMLIdgStackElement;
-    "idg-stat": HTMLIdgStatElement;
-    "idg-switch": HTMLIdgSwitchElement;
-    "idg-switcher": HTMLIdgSwitcherElement;
-    "idg-tab": HTMLIdgTabElement;
-    "idg-tab-panel": HTMLIdgTabPanelElement;
-    "idg-table": HTMLIdgTableElement;
-    "idg-tabs": HTMLIdgTabsElement;
-    "idg-textarea": HTMLIdgTextareaElement;
-    "idg-toast": HTMLIdgToastElement;
-    "idg-toast-region": HTMLIdgToastRegionElement;
-    "idg-tooltip": HTMLIdgTooltipElement;
-    "idg-user-menu": HTMLIdgUserMenuElement;
-    "idg-variation-switcher": HTMLIdgVariationSwitcherElement;
-  }
+    /**
+     * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
+     * one item is open at a time. Up and Down, Home and End move between the headers.
+     */
+    interface HTMLIdgAccordionElement extends Components.IdgAccordion, HTMLStencilElement {
+    }
+    var HTMLIdgAccordionElement: {
+        prototype: HTMLIdgAccordionElement;
+        new (): HTMLIdgAccordionElement;
+    };
+    interface HTMLIdgAccordionItemElementEventMap {
+        "idgToggle": AccordionToggleDetail;
+    }
+    /**
+     * One item of an idg-accordion: a heading holding the button that shows or hides the panel
+     * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
+     * the panel's name are plain id references.
+     */
+    interface HTMLIdgAccordionItemElement extends Components.IdgAccordionItem, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgAccordionItemElementEventMap>(type: K, listener: (this: HTMLIdgAccordionItemElement, ev: IdgAccordionItemCustomEvent<HTMLIdgAccordionItemElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgAccordionItemElementEventMap>(type: K, listener: (this: HTMLIdgAccordionItemElement, ev: IdgAccordionItemCustomEvent<HTMLIdgAccordionItemElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgAccordionItemElement: {
+        prototype: HTMLIdgAccordionItemElement;
+        new (): HTMLIdgAccordionItemElement;
+    };
+    interface HTMLIdgAlertElementEventMap {
+        "idgDismiss": void;
+    }
+    /**
+     * A message that stays on the page until it is read or dismissed. For a message that appears in
+     * response to what the user did, render the alert at that moment: a live region announces what is
+     * inserted, not what was already there.
+     */
+    interface HTMLIdgAlertElement extends Components.IdgAlert, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgAlertElementEventMap>(type: K, listener: (this: HTMLIdgAlertElement, ev: IdgAlertCustomEvent<HTMLIdgAlertElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgAlertElementEventMap>(type: K, listener: (this: HTMLIdgAlertElement, ev: IdgAlertCustomEvent<HTMLIdgAlertElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgAlertElement: {
+        prototype: HTMLIdgAlertElement;
+        new (): HTMLIdgAlertElement;
+    };
+    /**
+     * A person or account, as a picture or, when there is none or it fails to load, their initials on a
+     * colour chosen from their name.
+     */
+    interface HTMLIdgAvatarElement extends Components.IdgAvatar, HTMLStencilElement {
+    }
+    var HTMLIdgAvatarElement: {
+        prototype: HTMLIdgAvatarElement;
+        new (): HTMLIdgAvatarElement;
+    };
+    /**
+     * Overlaps a row of idg-avatar. It sets their size, and with `max` hides the ones past the limit
+     * and shows how many there are.
+     */
+    interface HTMLIdgAvatarGroupElement extends Components.IdgAvatarGroup, HTMLStencilElement {
+    }
+    var HTMLIdgAvatarGroupElement: {
+        prototype: HTMLIdgAvatarGroupElement;
+        new (): HTMLIdgAvatarGroupElement;
+    };
+    /**
+     * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
+     */
+    interface HTMLIdgBadgeElement extends Components.IdgBadge, HTMLStencilElement {
+    }
+    var HTMLIdgBadgeElement: {
+        prototype: HTMLIdgBadgeElement;
+        new (): HTMLIdgBadgeElement;
+    };
+    /**
+     * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
+     * idg-breadcrumb-item. The last item is the current page unless another item says it is.
+     */
+    interface HTMLIdgBreadcrumbElement extends Components.IdgBreadcrumb, HTMLStencilElement {
+    }
+    var HTMLIdgBreadcrumbElement: {
+        prototype: HTMLIdgBreadcrumbElement;
+        new (): HTMLIdgBreadcrumbElement;
+    };
+    /**
+     * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
+     * one, and separator are drawn in its own shadow root.
+     */
+    interface HTMLIdgBreadcrumbItemElement extends Components.IdgBreadcrumbItem, HTMLStencilElement {
+    }
+    var HTMLIdgBreadcrumbItemElement: {
+        prototype: HTMLIdgBreadcrumbItemElement;
+        new (): HTMLIdgBreadcrumbItemElement;
+    };
+    interface HTMLIdgButtonElement extends Components.IdgButton, HTMLStencilElement {
+    }
+    var HTMLIdgButtonElement: {
+        prototype: HTMLIdgButtonElement;
+        new (): HTMLIdgButtonElement;
+    };
+    /**
+     * A surface that groups related content, drawn in the design language's own surface, border and
+     * elevation.
+     * With `href` and a `heading`, the heading becomes the card's one link and covers the whole card, so
+     * a click anywhere follows it while assistive technology still finds a single link. Anything in
+     * the footer slot sits above the link and stays clickable.
+     */
+    interface HTMLIdgCardElement extends Components.IdgCard, HTMLStencilElement {
+    }
+    var HTMLIdgCardElement: {
+        prototype: HTMLIdgCardElement;
+        new (): HTMLIdgCardElement;
+    };
+    interface HTMLIdgCheckboxElementEventMap {
+        "idgChange": CheckedDetail;
+    }
+    interface HTMLIdgCheckboxElement extends Components.IdgCheckbox, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgCheckboxElementEventMap>(type: K, listener: (this: HTMLIdgCheckboxElement, ev: IdgCheckboxCustomEvent<HTMLIdgCheckboxElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgCheckboxElementEventMap>(type: K, listener: (this: HTMLIdgCheckboxElement, ev: IdgCheckboxCustomEvent<HTMLIdgCheckboxElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgCheckboxElement: {
+        prototype: HTMLIdgCheckboxElement;
+        new (): HTMLIdgCheckboxElement;
+    };
+    /**
+     * A group of items in a row that wraps onto further rows when it runs out of room, such as tags,
+     * buttons or a toolbar. It only arranges, so it adds no role and the source order stays the
+     * reading order.
+     */
+    interface HTMLIdgClusterElement extends Components.IdgCluster, HTMLStencilElement {
+    }
+    var HTMLIdgClusterElement: {
+        prototype: HTMLIdgClusterElement;
+        new (): HTMLIdgClusterElement;
+    };
+    interface HTMLIdgConsentBannerElementEventMap {
+        "idgConsentChange": ConsentChangeDetail;
+        "idgConsentChoose": void;
+    }
+    /**
+     * Asks once whether analytics may be switched on, for the consent object it is given in `consent`
+     * (the tracker's `tracker.consent`). It is a region of the page, not a dialog: it never blocks
+     * anything, takes no focus when it appears, and ignoring it, or pressing Escape, means no consent.
+     * It asks only while the state is `unknown` and no browser privacy signal is set. Under Global
+     * Privacy Control or Do Not Track it does not ask at all, since asking would invite a choice the
+     * browser has already made: it draws nothing, or, with `announce-signal`, one line saying the
+     * signal is respected. "Decline" comes first and has the same variant and size as "Accept
+     * analytics". After a choice, focus goes back to what had it before the banner, else to the main
+     * landmark, and a polite live region confirms it.
+     * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
+     * natural place is further on, so it keeps its space in the page's flow and never covers the end
+     * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
+     * element is scrolled clear of it. In a window too short for both, it joins the page's flow
+     * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
+     * is: a bar at the top scrolls away with the page and never covers a header that sticks.
+     */
+    interface HTMLIdgConsentBannerElement extends Components.IdgConsentBanner, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgConsentBannerElementEventMap>(type: K, listener: (this: HTMLIdgConsentBannerElement, ev: IdgConsentBannerCustomEvent<HTMLIdgConsentBannerElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgConsentBannerElementEventMap>(type: K, listener: (this: HTMLIdgConsentBannerElement, ev: IdgConsentBannerCustomEvent<HTMLIdgConsentBannerElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgConsentBannerElement: {
+        prototype: HTMLIdgConsentBannerElement;
+        new (): HTMLIdgConsentBannerElement;
+    };
+    interface HTMLIdgConsentPreferencesElementEventMap {
+        "idgConsentChange": ConsentChangeDetail;
+    }
+    /**
+     * The visitor's choices about analytics, for the consent object it is given in `consent` (the
+     * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
+     * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
+     * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
+     * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
+     * the switch is disabled with the signal named, and saving can only record a denial.
+     * It follows changes made elsewhere (another tab, the banner). If the stored state changes under
+     * an unsaved edit, the edit is dropped and a note says so. With `modal` it is drawn inside an
+     * `idg-dialog` that `open()` and `close()` control; the dialog holds and restores focus.
+     */
+    interface HTMLIdgConsentPreferencesElement extends Components.IdgConsentPreferences, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgConsentPreferencesElementEventMap>(type: K, listener: (this: HTMLIdgConsentPreferencesElement, ev: IdgConsentPreferencesCustomEvent<HTMLIdgConsentPreferencesElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgConsentPreferencesElementEventMap>(type: K, listener: (this: HTMLIdgConsentPreferencesElement, ev: IdgConsentPreferencesCustomEvent<HTMLIdgConsentPreferencesElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgConsentPreferencesElement: {
+        prototype: HTMLIdgConsentPreferencesElement;
+        new (): HTMLIdgConsentPreferencesElement;
+    };
+    /**
+     * A block at least as tall as `min-height` that centres its content, with optional regions pinned
+     * to its top and bottom, such as a hero, a splash or a sign-in screen. It only arranges, so it
+     * adds no role and the source order stays the reading order.
+     */
+    interface HTMLIdgCoverElement extends Components.IdgCover, HTMLStencilElement {
+    }
+    var HTMLIdgCoverElement: {
+        prototype: HTMLIdgCoverElement;
+        new (): HTMLIdgCoverElement;
+    };
+    interface HTMLIdgDialogElementEventMap {
+        "idgOpen": DialogOpenDetail;
+        "idgClose": DialogCloseDetail;
+        "idgCancel": DialogCancelDetail;
+    }
+    /**
+     * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
+     * of the page inert and contains focus, and Escape is the browser's close request. The component
+     * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
+     * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
+     * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
+     * closed.
+     */
+    interface HTMLIdgDialogElement extends Components.IdgDialog, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgDialogElementEventMap>(type: K, listener: (this: HTMLIdgDialogElement, ev: IdgDialogCustomEvent<HTMLIdgDialogElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgDialogElementEventMap>(type: K, listener: (this: HTMLIdgDialogElement, ev: IdgDialogCustomEvent<HTMLIdgDialogElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgDialogElement: {
+        prototype: HTMLIdgDialogElement;
+        new (): HTMLIdgDialogElement;
+    };
+    /**
+     * A rule between groups of content, drawn in the design language's own border.
+     */
+    interface HTMLIdgDividerElement extends Components.IdgDivider, HTMLStencilElement {
+    }
+    var HTMLIdgDividerElement: {
+        prototype: HTMLIdgDividerElement;
+        new (): HTMLIdgDividerElement;
+    };
+    interface HTMLIdgEventTableElementEventMap {
+        "idgPageChange": PageChangeDetail;
+        "idgSort": EventSort;
+    }
+    /**
+     * A table of tracked events: the event, when it happened, the path and its properties, with
+     * paging and optional sorting by time or name. It takes its data through properties and never
+     * fetches.
+     * Every value is untrusted text from the public internet. It is drawn as text and nothing else: no
+     * markup is read, no link or address is made from it, control and bidirectional characters are
+     * replaced by a visible mark, each value is isolated in a `<bdi>` so right to left text cannot
+     * reorder what is beside it, long values wrap and are cut to a limit, and an event shows at most
+     * ten properties. Records that are malformed are left out.
+     * With `events` as the whole list, the table sorts and pages it. With `total` set, `events` is the
+     * one page the server answered with: the table draws it as it is and only reports `idgPageChange`
+     * and `idgSort` for the page to fetch with. Either way it draws at most `pageSize` rows (to 100).
+     * The state that matters is said politely: loading, an error, no events, and which events are shown.
+     */
+    interface HTMLIdgEventTableElement extends Components.IdgEventTable, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgEventTableElementEventMap>(type: K, listener: (this: HTMLIdgEventTableElement, ev: IdgEventTableCustomEvent<HTMLIdgEventTableElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgEventTableElementEventMap>(type: K, listener: (this: HTMLIdgEventTableElement, ev: IdgEventTableCustomEvent<HTMLIdgEventTableElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgEventTableElement: {
+        prototype: HTMLIdgEventTableElement;
+        new (): HTMLIdgEventTableElement;
+    };
+    /**
+     * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
+     * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
+     * reference cannot cross a shadow boundary, so their text is handed to the control as properties
+     * and the control applies it to its own native element.
+     */
+    interface HTMLIdgFieldElement extends Components.IdgField, HTMLStencilElement {
+    }
+    var HTMLIdgFieldElement: {
+        prototype: HTMLIdgFieldElement;
+        new (): HTMLIdgFieldElement;
+    };
+    /**
+     * Items in as many equal columns as fit. Each column is at least `min` wide, and there are never
+     * more columns than the layout allows, so the same markup has more or fewer columns under each
+     * `data-layout`. It only arranges, so it adds no role and the source order stays the reading order.
+     */
+    interface HTMLIdgGridElement extends Components.IdgGrid, HTMLStencilElement {
+    }
+    var HTMLIdgGridElement: {
+        prototype: HTMLIdgGridElement;
+        new (): HTMLIdgGridElement;
+    };
+    /**
+     * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
+     */
+    interface HTMLIdgIconElement extends Components.IdgIcon, HTMLStencilElement {
+    }
+    var HTMLIdgIconElement: {
+        prototype: HTMLIdgIconElement;
+        new (): HTMLIdgIconElement;
+    };
+    interface HTMLIdgInputElementEventMap {
+        "idgInput": ValueDetail;
+        "idgChange": ValueDetail;
+    }
+    /**
+     * A form-associated text field. Enter submits its form as a native input does (see the README):
+     * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
+     * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
+     */
+    interface HTMLIdgInputElement extends Components.IdgInput, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgInputElementEventMap>(type: K, listener: (this: HTMLIdgInputElement, ev: IdgInputCustomEvent<HTMLIdgInputElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgInputElementEventMap>(type: K, listener: (this: HTMLIdgInputElement, ev: IdgInputCustomEvent<HTMLIdgInputElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgInputElement: {
+        prototype: HTMLIdgInputElement;
+        new (): HTMLIdgInputElement;
+    };
+    interface HTMLIdgLayoutElementEventMap {
+        "idgNavigationToggle": NavigationToggleDetail;
+    }
+    /**
+     * The page shell. One page, written once, is housed in the structure the `data-layout` attribute of
+     * the root (or of an ancestor) names: the same landmarks in the same reading order in all eight, and
+     * only a stylesheet that places them differently. The shell never reorders its own tree, so the
+     * order a reader and the Tab key meet things is the order of the markup in every layout.
+     * It is a size container, and every layout decides its small, medium and large arrangement from its
+     * own width, never the viewport's. Where a layout collapses the navigation behind a toggle, the
+     * stylesheet decides that too, and the script only reads what it decided (`--_nav`).
+     */
+    interface HTMLIdgLayoutElement extends Components.IdgLayout, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgLayoutElementEventMap>(type: K, listener: (this: HTMLIdgLayoutElement, ev: IdgLayoutCustomEvent<HTMLIdgLayoutElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgLayoutElementEventMap>(type: K, listener: (this: HTMLIdgLayoutElement, ev: IdgLayoutCustomEvent<HTMLIdgLayoutElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgLayoutElement: {
+        prototype: HTMLIdgLayoutElement;
+        new (): HTMLIdgLayoutElement;
+    };
+    /**
+     * An inline text link. It takes the same hardening as the button's link mode: the url goes
+     * through `safeUrl` and a link that opens another browsing context always gets `noopener
+     * noreferrer`.
+     */
+    interface HTMLIdgLinkElement extends Components.IdgLink, HTMLStencilElement {
+    }
+    var HTMLIdgLinkElement: {
+        prototype: HTMLIdgLinkElement;
+        new (): HTMLIdgLinkElement;
+    };
+    interface HTMLIdgMenuElementEventMap {
+        "idgSelect": MenuSelectDetail;
+        "idgOpen": void;
+        "idgClose": void;
+    }
+    /**
+     * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
+     * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
+     * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
+     * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
+     * focus moves to the items themselves (roving focus). Each item carries its own role and state.
+     */
+    interface HTMLIdgMenuElement extends Components.IdgMenu, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgMenuElementEventMap>(type: K, listener: (this: HTMLIdgMenuElement, ev: IdgMenuCustomEvent<HTMLIdgMenuElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgMenuElementEventMap>(type: K, listener: (this: HTMLIdgMenuElement, ev: IdgMenuCustomEvent<HTMLIdgMenuElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgMenuElement: {
+        prototype: HTMLIdgMenuElement;
+        new (): HTMLIdgMenuElement;
+    };
+    /**
+     * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
+     * uncheck each other within their group.
+     */
+    interface HTMLIdgMenuGroupElement extends Components.IdgMenuGroup, HTMLStencilElement {
+    }
+    var HTMLIdgMenuGroupElement: {
+        prototype: HTMLIdgMenuGroupElement;
+        new (): HTMLIdgMenuGroupElement;
+    };
+    /**
+     * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
+     * its own shadow root, so its role and state are set on the focusable element inside it, and the
+     * host is a plain wrapper that assistive technology passes through.
+     */
+    interface HTMLIdgMenuItemElement extends Components.IdgMenuItem, HTMLStencilElement {
+    }
+    var HTMLIdgMenuItemElement: {
+        prototype: HTMLIdgMenuItemElement;
+        new (): HTMLIdgMenuItemElement;
+    };
+    /**
+     * A rule between groups of items in an idg-menu.
+     */
+    interface HTMLIdgMenuSeparatorElement extends Components.IdgMenuSeparator, HTMLStencilElement {
+    }
+    var HTMLIdgMenuSeparatorElement: {
+        prototype: HTMLIdgMenuSeparatorElement;
+        new (): HTMLIdgMenuSeparatorElement;
+    };
+    interface HTMLIdgPaginationElementEventMap {
+        "idgPageChange": PageChangeDetail;
+    }
+    /**
+     * Page controls for a long list: previous and next, the current page and a window of its
+     * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
+     * given, so each page is an address that can be opened, shared and followed without script, and
+     * buttons that fire `idgPageChange` otherwise.
+     */
+    interface HTMLIdgPaginationElement extends Components.IdgPagination, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgPaginationElementEventMap>(type: K, listener: (this: HTMLIdgPaginationElement, ev: IdgPaginationCustomEvent<HTMLIdgPaginationElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgPaginationElementEventMap>(type: K, listener: (this: HTMLIdgPaginationElement, ev: IdgPaginationCustomEvent<HTMLIdgPaginationElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgPaginationElement: {
+        prototype: HTMLIdgPaginationElement;
+        new (): HTMLIdgPaginationElement;
+    };
+    interface HTMLIdgPasswordResetElementEventMap {
+        "idgResetRequested": void;
+        "idgPasswordReset": SignedInDetail;
+    }
+    /**
+     * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
+     * for the address and always answers the same, whether or not an account uses it. `complete`
+     * sets the new password with the emailed code, which the page reads from the link and passes in
+     * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
+     * inputs are emptied after every attempt.
+     */
+    interface HTMLIdgPasswordResetElement extends Components.IdgPasswordReset, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgPasswordResetElementEventMap>(type: K, listener: (this: HTMLIdgPasswordResetElement, ev: IdgPasswordResetCustomEvent<HTMLIdgPasswordResetElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgPasswordResetElementEventMap>(type: K, listener: (this: HTMLIdgPasswordResetElement, ev: IdgPasswordResetCustomEvent<HTMLIdgPasswordResetElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgPasswordResetElement: {
+        prototype: HTMLIdgPasswordResetElement;
+        new (): HTMLIdgPasswordResetElement;
+    };
+    interface HTMLIdgPopoverElementEventMap {
+        "idgOpen": void;
+        "idgClose": void;
+    }
+    /**
+     * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
+     * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
+     * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
+     * not contained, and Tab moves on from the content.
+     */
+    interface HTMLIdgPopoverElement extends Components.IdgPopover, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgPopoverElementEventMap>(type: K, listener: (this: HTMLIdgPopoverElement, ev: IdgPopoverCustomEvent<HTMLIdgPopoverElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgPopoverElementEventMap>(type: K, listener: (this: HTMLIdgPopoverElement, ev: IdgPopoverCustomEvent<HTMLIdgPopoverElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgPopoverElement: {
+        prototype: HTMLIdgPopoverElement;
+        new (): HTMLIdgPopoverElement;
+    };
+    interface HTMLIdgProfileElementEventMap {
+        "idgProfileSaved": ProfileSavedDetail;
+        "idgPasswordChanged": void;
+        "idgSessionRevoked": SessionRevokedDetail;
+        "idgSignedOut": SignedOutDetail;
+    }
+    /**
+     * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
+     * (display name, about, language, time zone and email preference), a password change, and the
+     * sessions of the account with a button to sign each other one out and one to sign out everywhere.
+     * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
+     */
+    interface HTMLIdgProfileElement extends Components.IdgProfile, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgProfileElementEventMap>(type: K, listener: (this: HTMLIdgProfileElement, ev: IdgProfileCustomEvent<HTMLIdgProfileElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgProfileElementEventMap>(type: K, listener: (this: HTMLIdgProfileElement, ev: IdgProfileCustomEvent<HTMLIdgProfileElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgProfileElement: {
+        prototype: HTMLIdgProfileElement;
+        new (): HTMLIdgProfileElement;
+    };
+    /**
+     * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
+     * the browser's own. Without a value it is indeterminate.
+     */
+    interface HTMLIdgProgressElement extends Components.IdgProgress, HTMLStencilElement {
+    }
+    var HTMLIdgProgressElement: {
+        prototype: HTMLIdgProgressElement;
+        new (): HTMLIdgProgressElement;
+    };
+    interface HTMLIdgPropertyPickerElementEventMap {
+        "idgChange": ValueDetail;
+    }
+    /**
+     * Lets a signed-in user choose which tracked property (site) the dashboard shows. It is a labelled
+     * `idg-select` that lists the `properties` it is given and reports the chosen id with `idgChange`.
+     * It is form associated: with a `name` it submits the chosen id.
+     * Property names are text the user typed: they are shown as text only, with control and
+     * bidirectional characters replaced and long names cut. A `value` that is not one of the
+     * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
+     * property appears in the list later, and is never replaced by the first property.
+     */
+    interface HTMLIdgPropertyPickerElement extends Components.IdgPropertyPicker, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgPropertyPickerElementEventMap>(type: K, listener: (this: HTMLIdgPropertyPickerElement, ev: IdgPropertyPickerCustomEvent<HTMLIdgPropertyPickerElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgPropertyPickerElementEventMap>(type: K, listener: (this: HTMLIdgPropertyPickerElement, ev: IdgPropertyPickerCustomEvent<HTMLIdgPropertyPickerElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgPropertyPickerElement: {
+        prototype: HTMLIdgPropertyPickerElement;
+        new (): HTMLIdgPropertyPickerElement;
+    };
+    interface HTMLIdgRadioElementEventMap {
+        "idgSelect": RadioSelectDetail;
+    }
+    /**
+     * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
+     * as set by the group are how it passes state down, because radios in separate shadow roots are
+     * not a native radio group.
+     */
+    interface HTMLIdgRadioElement extends Components.IdgRadio, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgRadioElementEventMap>(type: K, listener: (this: HTMLIdgRadioElement, ev: IdgRadioCustomEvent<HTMLIdgRadioElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgRadioElementEventMap>(type: K, listener: (this: HTMLIdgRadioElement, ev: IdgRadioCustomEvent<HTMLIdgRadioElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgRadioElement: {
+        prototype: HTMLIdgRadioElement;
+        new (): HTMLIdgRadioElement;
+    };
+    interface HTMLIdgRadioGroupElementEventMap {
+        "idgChange": ValueDetail;
+    }
+    /**
+     * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
+     * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
+     * its radios, is the form control.
+     */
+    interface HTMLIdgRadioGroupElement extends Components.IdgRadioGroup, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgRadioGroupElementEventMap>(type: K, listener: (this: HTMLIdgRadioGroupElement, ev: IdgRadioGroupCustomEvent<HTMLIdgRadioGroupElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgRadioGroupElementEventMap>(type: K, listener: (this: HTMLIdgRadioGroupElement, ev: IdgRadioGroupCustomEvent<HTMLIdgRadioGroupElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgRadioGroupElement: {
+        prototype: HTMLIdgRadioGroupElement;
+        new (): HTMLIdgRadioGroupElement;
+    };
+    interface HTMLIdgRegisterElementEventMap {
+        "idgRegistered": RegisteredDetail;
+    }
+    /**
+     * A registration form for the identity client it is given in `client`. With email confirmation on,
+     * a new address and one already registered get the same answer, so the form never tells whether
+     * an account exists. The password is read from its input when the form is sent and the input is
+     * emptied after every attempt.
+     */
+    interface HTMLIdgRegisterElement extends Components.IdgRegister, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgRegisterElementEventMap>(type: K, listener: (this: HTMLIdgRegisterElement, ev: IdgRegisterCustomEvent<HTMLIdgRegisterElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgRegisterElementEventMap>(type: K, listener: (this: HTMLIdgRegisterElement, ev: IdgRegisterCustomEvent<HTMLIdgRegisterElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgRegisterElement: {
+        prototype: HTMLIdgRegisterElement;
+        new (): HTMLIdgRegisterElement;
+    };
+    interface HTMLIdgSelectElementEventMap {
+        "idgInput": ValueDetail;
+        "idgChange": ValueDetail;
+    }
+    /**
+     * Options are written as children, exactly as for a native select, and copied into the native
+     * select inside the component: the same markup works with or without a framework, and no option
+     * data has to be serialised into an attribute.
+     */
+    interface HTMLIdgSelectElement extends Components.IdgSelect, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgSelectElementEventMap>(type: K, listener: (this: HTMLIdgSelectElement, ev: IdgSelectCustomEvent<HTMLIdgSelectElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgSelectElementEventMap>(type: K, listener: (this: HTMLIdgSelectElement, ev: IdgSelectCustomEvent<HTMLIdgSelectElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgSelectElement: {
+        prototype: HTMLIdgSelectElement;
+        new (): HTMLIdgSelectElement;
+    };
+    interface HTMLIdgSessionGuardElementEventMap {
+        "idgSessionChange": SessionChangeDetail;
+    }
+    /**
+     * Shows its content only while someone is signed in, through the identity client it is given in
+     * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
+     * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
+     * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
+     * at once.
+     * The guard adds no box around what it shows: the host is `display: contents` and the slots are
+     * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
+     * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
+     * before the content and out of the page's layout, whose text says the change; Tab goes on into
+     * the content. A notice, when the guard shows one, is one block before the content.
+     * This is a convenience for the interface, not access control: the content is still in the page
+     * for anyone who reads its markup, and only the API decides what a request may read or change.
+     */
+    interface HTMLIdgSessionGuardElement extends Components.IdgSessionGuard, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgSessionGuardElementEventMap>(type: K, listener: (this: HTMLIdgSessionGuardElement, ev: IdgSessionGuardCustomEvent<HTMLIdgSessionGuardElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgSessionGuardElementEventMap>(type: K, listener: (this: HTMLIdgSessionGuardElement, ev: IdgSessionGuardCustomEvent<HTMLIdgSessionGuardElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgSessionGuardElement: {
+        prototype: HTMLIdgSessionGuardElement;
+        new (): HTMLIdgSessionGuardElement;
+    };
+    /**
+     * Two regions side by side: a side region of a set width and the content, which takes the rest.
+     * When the content would get less than half of the width, the regions stack instead, with no
+     * breakpoint and no script, so it follows the width of its container rather than the viewport.
+     * The side region is drawn first when it is at the start and last when it is at the end, so what a
+     * reader and the Tab key meet first is also what is shown first, in either text direction. When
+     * the regions stack, the side region is above the content when it is at the start and below it
+     * when it is at the end.
+     */
+    interface HTMLIdgSidebarElement extends Components.IdgSidebar, HTMLStencilElement {
+    }
+    var HTMLIdgSidebarElement: {
+        prototype: HTMLIdgSidebarElement;
+        new (): HTMLIdgSidebarElement;
+    };
+    interface HTMLIdgSignInElementEventMap {
+        "idgSignedIn": SignedInDetail;
+        "idgProviderSignIn": ProviderSignInDetail;
+    }
+    /**
+     * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
+     * password: the password is read from its input when the form is sent and the input is emptied
+     * after a sign-in, a refused one, or when the element leaves the page.
+     */
+    interface HTMLIdgSignInElement extends Components.IdgSignIn, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgSignInElementEventMap>(type: K, listener: (this: HTMLIdgSignInElement, ev: IdgSignInCustomEvent<HTMLIdgSignInElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgSignInElementEventMap>(type: K, listener: (this: HTMLIdgSignInElement, ev: IdgSignInCustomEvent<HTMLIdgSignInElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgSignInElement: {
+        prototype: HTMLIdgSignInElement;
+        new (): HTMLIdgSignInElement;
+    };
+    /**
+     * A placeholder shaped like content that is still loading. It is always hidden from assistive
+     * technology, so it announces nothing by itself. Mark the region being loaded with
+     * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
+     * and replace the skeletons when the content arrives.
+     * Size it with the page's own CSS on the element, for example `idg-skeleton { inline-size: 12rem }`.
+     */
+    interface HTMLIdgSkeletonElement extends Components.IdgSkeleton, HTMLStencilElement {
+    }
+    var HTMLIdgSkeletonElement: {
+        prototype: HTMLIdgSkeletonElement;
+        new (): HTMLIdgSkeletonElement;
+    };
+    /**
+     * A small trend line drawn as SVG from a series of numbers, for beside a figure. It scales to the
+     * width of its container (set one with the page's own CSS, `idg-sparkline { inline-size: 8rem }`),
+     * keeps its proportions, and never animates. It is an image with a text alternative: the label
+     * you give it and a sentence with the first, last, lowest and highest value and which way the
+     * series went, formatted in the language of the page. Time runs left to right in every
+     * writing direction.
+     * Anything in `values` that is not a finite number is left out, never drawn as zero. A series
+     * longer than 120 points is thinned for drawing, keeping its first, last, lowest and highest.
+     */
+    interface HTMLIdgSparklineElement extends Components.IdgSparkline, HTMLStencilElement {
+    }
+    var HTMLIdgSparklineElement: {
+        prototype: HTMLIdgSparklineElement;
+        new (): HTMLIdgSparklineElement;
+    };
+    /**
+     * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
+     * and the source order stays the reading order.
+     */
+    interface HTMLIdgStackElement extends Components.IdgStack, HTMLStencilElement {
+    }
+    var HTMLIdgStackElement: {
+        prototype: HTMLIdgStackElement;
+        new (): HTMLIdgStackElement;
+    };
+    /**
+     * A figure with its label and, optionally, how it changed.
+     */
+    interface HTMLIdgStatElement extends Components.IdgStat, HTMLStencilElement {
+    }
+    var HTMLIdgStatElement: {
+        prototype: HTMLIdgStatElement;
+        new (): HTMLIdgStatElement;
+    };
+    interface HTMLIdgSwitchElementEventMap {
+        "idgChange": CheckedDetail;
+    }
+    interface HTMLIdgSwitchElement extends Components.IdgSwitch, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgSwitchElementEventMap>(type: K, listener: (this: HTMLIdgSwitchElement, ev: IdgSwitchCustomEvent<HTMLIdgSwitchElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgSwitchElementEventMap>(type: K, listener: (this: HTMLIdgSwitchElement, ev: IdgSwitchCustomEvent<HTMLIdgSwitchElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgSwitchElement: {
+        prototype: HTMLIdgSwitchElement;
+        new (): HTMLIdgSwitchElement;
+    };
+    /**
+     * Items in one row that switch to one column when their container is narrower than `threshold`.
+     * Every item is as wide as the others in either arrangement. There is no breakpoint and no script,
+     * so it follows the width of its container rather than the viewport. It only arranges, so it adds
+     * no role and the source order stays the reading order.
+     */
+    interface HTMLIdgSwitcherElement extends Components.IdgSwitcher, HTMLStencilElement {
+    }
+    var HTMLIdgSwitcherElement: {
+        prototype: HTMLIdgSwitcherElement;
+        new (): HTMLIdgSwitcherElement;
+    };
+    /**
+     * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
+     * host carries the tab role and state itself, so the relations to the panel, which sits beside it
+     * in the page, can be made between the two hosts.
+     */
+    interface HTMLIdgTabElement extends Components.IdgTab, HTMLStencilElement {
+    }
+    var HTMLIdgTabElement: {
+        prototype: HTMLIdgTabElement;
+        new (): HTMLIdgTabElement;
+    };
+    /**
+     * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
+     * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
+     * reader can still move into it.
+     */
+    interface HTMLIdgTabPanelElement extends Components.IdgTabPanel, HTMLStencilElement {
+    }
+    var HTMLIdgTabPanelElement: {
+        prototype: HTMLIdgTabPanelElement;
+        new (): HTMLIdgTabPanelElement;
+    };
+    interface HTMLIdgTableElementEventMap {
+        "idgSort": TableSortDetail;
+    }
+    /**
+     * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
+     * header cells, row and column relations) and the component adds what a table needs around it: a
+     * surface drawn in the design language, a scroll region that is reachable by keyboard and named
+     * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
+     * sortable column headers.
+     * The cells are the page's own, so a shadow root cannot style them. The component adopts a
+     * constructable stylesheet into the document or shadow root the table lives in, scoped to
+     * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
+     * constructable stylesheets shows the table unstyled.
+     * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
+     * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
+     */
+    interface HTMLIdgTableElement extends Components.IdgTable, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgTableElementEventMap>(type: K, listener: (this: HTMLIdgTableElement, ev: IdgTableCustomEvent<HTMLIdgTableElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgTableElementEventMap>(type: K, listener: (this: HTMLIdgTableElement, ev: IdgTableCustomEvent<HTMLIdgTableElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgTableElement: {
+        prototype: HTMLIdgTableElement;
+        new (): HTMLIdgTableElement;
+    };
+    interface HTMLIdgTabsElementEventMap {
+        "idgChange": ValueDetail;
+    }
+    /**
+     * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
+     * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
+     * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
+     * its position among its own kind as its value.
+     */
+    interface HTMLIdgTabsElement extends Components.IdgTabs, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgTabsElementEventMap>(type: K, listener: (this: HTMLIdgTabsElement, ev: IdgTabsCustomEvent<HTMLIdgTabsElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgTabsElementEventMap>(type: K, listener: (this: HTMLIdgTabsElement, ev: IdgTabsCustomEvent<HTMLIdgTabsElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgTabsElement: {
+        prototype: HTMLIdgTabsElement;
+        new (): HTMLIdgTabsElement;
+    };
+    interface HTMLIdgTextareaElementEventMap {
+        "idgInput": ValueDetail;
+        "idgChange": ValueDetail;
+    }
+    interface HTMLIdgTextareaElement extends Components.IdgTextarea, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgTextareaElementEventMap>(type: K, listener: (this: HTMLIdgTextareaElement, ev: IdgTextareaCustomEvent<HTMLIdgTextareaElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgTextareaElementEventMap>(type: K, listener: (this: HTMLIdgTextareaElement, ev: IdgTextareaCustomEvent<HTMLIdgTextareaElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgTextareaElement: {
+        prototype: HTMLIdgTextareaElement;
+        new (): HTMLIdgTextareaElement;
+    };
+    interface HTMLIdgToastElementEventMap {
+        "idgAction": void;
+        "idgDismiss": ToastDismissDetail;
+    }
+    /**
+     * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
+     * time, announces each as it appears, pauses them while they are being read and lets the keyboard
+     * reach them; the `toast()` function does all of that from script.
+     * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
+     * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
+     * is given a duration, so nobody loses the chance to act on it.
+     */
+    interface HTMLIdgToastElement extends Components.IdgToast, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgToastElementEventMap>(type: K, listener: (this: HTMLIdgToastElement, ev: IdgToastCustomEvent<HTMLIdgToastElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgToastElementEventMap>(type: K, listener: (this: HTMLIdgToastElement, ev: IdgToastCustomEvent<HTMLIdgToastElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgToastElement: {
+        prototype: HTMLIdgToastElement;
+        new (): HTMLIdgToastElement;
+    };
+    /**
+     * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
+     * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
+     * rest, and announces each toast as it comes into view through a live region of its own: politely,
+     * or at once for danger. Focus never moves on its own.
+     * While the pointer is over it, focus is inside it, the window is in the background or the user
+     * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
+     * and nothing slides under the pointer.
+     */
+    interface HTMLIdgToastRegionElement extends Components.IdgToastRegion, HTMLStencilElement {
+    }
+    var HTMLIdgToastRegionElement: {
+        prototype: HTMLIdgToastRegionElement;
+        new (): HTMLIdgToastRegionElement;
+    };
+    /**
+     * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
+     * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
+     * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
+     * only: put anything interactive in an idg-popover.
+     * The text is also the trigger's accessible description, given to the trigger itself, so it is
+     * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
+     * technology so it is not read twice.
+     */
+    interface HTMLIdgTooltipElement extends Components.IdgTooltip, HTMLStencilElement {
+    }
+    var HTMLIdgTooltipElement: {
+        prototype: HTMLIdgTooltipElement;
+        new (): HTMLIdgTooltipElement;
+    };
+    interface HTMLIdgUserMenuElementEventMap {
+        "idgSignedOut": SignedOutDetail;
+    }
+    /**
+     * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
+     * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
+     * user how the sign-out went: a server that could not be reached is said plainly, since the
+     * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
+     * It goes away when the client hears that another tab signed out.
+     */
+    interface HTMLIdgUserMenuElement extends Components.IdgUserMenu, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgUserMenuElementEventMap>(type: K, listener: (this: HTMLIdgUserMenuElement, ev: IdgUserMenuCustomEvent<HTMLIdgUserMenuElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgUserMenuElementEventMap>(type: K, listener: (this: HTMLIdgUserMenuElement, ev: IdgUserMenuCustomEvent<HTMLIdgUserMenuElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgUserMenuElement: {
+        prototype: HTMLIdgUserMenuElement;
+        new (): HTMLIdgUserMenuElement;
+    };
+    interface HTMLIdgVariationSwitcherElementEventMap {
+        "idgVariationsChange": VariationsChangeDetail;
+    }
+    /**
+     * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
+     * always acts on the document's root element, through `@identgineer/variations`, so the page's own
+     * attributes stay the single truth: a change made anywhere else (markup, a script, another
+     * switcher) is shown here, and nothing here is announced for a change the visitor did not make.
+     */
+    interface HTMLIdgVariationSwitcherElement extends Components.IdgVariationSwitcher, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgVariationSwitcherElementEventMap>(type: K, listener: (this: HTMLIdgVariationSwitcherElement, ev: IdgVariationSwitcherCustomEvent<HTMLIdgVariationSwitcherElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgVariationSwitcherElementEventMap>(type: K, listener: (this: HTMLIdgVariationSwitcherElement, ev: IdgVariationSwitcherCustomEvent<HTMLIdgVariationSwitcherElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgVariationSwitcherElement: {
+        prototype: HTMLIdgVariationSwitcherElement;
+        new (): HTMLIdgVariationSwitcherElement;
+    };
+    interface HTMLElementTagNameMap {
+        "idg-accordion": HTMLIdgAccordionElement;
+        "idg-accordion-item": HTMLIdgAccordionItemElement;
+        "idg-alert": HTMLIdgAlertElement;
+        "idg-avatar": HTMLIdgAvatarElement;
+        "idg-avatar-group": HTMLIdgAvatarGroupElement;
+        "idg-badge": HTMLIdgBadgeElement;
+        "idg-breadcrumb": HTMLIdgBreadcrumbElement;
+        "idg-breadcrumb-item": HTMLIdgBreadcrumbItemElement;
+        "idg-button": HTMLIdgButtonElement;
+        "idg-card": HTMLIdgCardElement;
+        "idg-checkbox": HTMLIdgCheckboxElement;
+        "idg-cluster": HTMLIdgClusterElement;
+        "idg-consent-banner": HTMLIdgConsentBannerElement;
+        "idg-consent-preferences": HTMLIdgConsentPreferencesElement;
+        "idg-cover": HTMLIdgCoverElement;
+        "idg-dialog": HTMLIdgDialogElement;
+        "idg-divider": HTMLIdgDividerElement;
+        "idg-event-table": HTMLIdgEventTableElement;
+        "idg-field": HTMLIdgFieldElement;
+        "idg-grid": HTMLIdgGridElement;
+        "idg-icon": HTMLIdgIconElement;
+        "idg-input": HTMLIdgInputElement;
+        "idg-layout": HTMLIdgLayoutElement;
+        "idg-link": HTMLIdgLinkElement;
+        "idg-menu": HTMLIdgMenuElement;
+        "idg-menu-group": HTMLIdgMenuGroupElement;
+        "idg-menu-item": HTMLIdgMenuItemElement;
+        "idg-menu-separator": HTMLIdgMenuSeparatorElement;
+        "idg-pagination": HTMLIdgPaginationElement;
+        "idg-password-reset": HTMLIdgPasswordResetElement;
+        "idg-popover": HTMLIdgPopoverElement;
+        "idg-profile": HTMLIdgProfileElement;
+        "idg-progress": HTMLIdgProgressElement;
+        "idg-property-picker": HTMLIdgPropertyPickerElement;
+        "idg-radio": HTMLIdgRadioElement;
+        "idg-radio-group": HTMLIdgRadioGroupElement;
+        "idg-register": HTMLIdgRegisterElement;
+        "idg-select": HTMLIdgSelectElement;
+        "idg-session-guard": HTMLIdgSessionGuardElement;
+        "idg-sidebar": HTMLIdgSidebarElement;
+        "idg-sign-in": HTMLIdgSignInElement;
+        "idg-skeleton": HTMLIdgSkeletonElement;
+        "idg-sparkline": HTMLIdgSparklineElement;
+        "idg-stack": HTMLIdgStackElement;
+        "idg-stat": HTMLIdgStatElement;
+        "idg-switch": HTMLIdgSwitchElement;
+        "idg-switcher": HTMLIdgSwitcherElement;
+        "idg-tab": HTMLIdgTabElement;
+        "idg-tab-panel": HTMLIdgTabPanelElement;
+        "idg-table": HTMLIdgTableElement;
+        "idg-tabs": HTMLIdgTabsElement;
+        "idg-textarea": HTMLIdgTextareaElement;
+        "idg-toast": HTMLIdgToastElement;
+        "idg-toast-region": HTMLIdgToastRegionElement;
+        "idg-tooltip": HTMLIdgTooltipElement;
+        "idg-user-menu": HTMLIdgUserMenuElement;
+        "idg-variation-switcher": HTMLIdgVariationSwitcherElement;
+    }
 }
 declare namespace LocalJSX {
-  /**
-   * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
-   * one item is open at a time. Up and Down, Home and End move between the headers.
-   */
-  interface IdgAccordion {
     /**
-     * Lets the browser's find in page open a closed item that holds the text it finds, by hiding closed panels with `hidden="until-found"`. A browser without it hides them as usual.
-     * @default false
-     */
-    findInPage?: boolean;
-    /**
-     * The level of every item's heading, 1 to 6. Pick the one that follows the page's own heading.
-     * @default 3
-     */
-    headingLevel?: number;
-    /**
-     * Lets several items be open at once. Otherwise opening one closes the others.
-     * @default false
-     */
-    multiple?: boolean;
-  }
-  /**
-   * One item of an idg-accordion: a heading holding the button that shows or hides the panel
-   * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
-   * the panel's name are plain id references.
-   */
-  interface IdgAccordionItem {
-    /**
-     * Keeps the item where it is but stops the button being used.
-     * @default false
-     */
-    disabled?: boolean;
-    /**
-     * Set by the accordion: whether a closed panel can be found by the browser.
-     * @default false
-     */
-    findInPage?: boolean;
-    /**
-     * Set by the accordion: whether the panel is a region landmark.
-     * @default true
-     */
-    hasRegion?: boolean;
-    /**
-     * The text of the button. Use the heading slot for anything richer.
-     */
-    heading?: string;
-    /**
-     * Set by the accordion: the heading's level.
-     * @default 3
-     */
-    headingLevel?: number;
-    /**
-     * Fires when the item opens or closes, whether the user did it or a script.
-     */
-    onIdgToggle?: (event: IdgAccordionItemCustomEvent<AccordionToggleDetail>) => void;
-    /**
-     * Whether the panel is showing.
-     * @default false
-     */
-    open?: boolean;
-    /**
-     * Set by the accordion while it settles the items at load: a change then is not announced.
-     * @default false
-     */
-    quiet?: boolean;
-    /**
-     * Names the item in `idgToggle`.
-     * @default ""
-     */
-    value?: string;
-  }
-  /**
-   * A message that stays on the page until it is read or dismissed. For a message that appears in
-   * response to what the user did, render the alert at that moment: a live region announces what is
-   * inserted, not what was already there.
-   */
-  interface IdgAlert {
-    /**
-     * The dismiss button's accessible name.
-     * @default "Dismiss"
-     */
-    dismissLabel?: string;
-    /**
-     * Adds a button that dismisses the alert.
-     * @default false
-     */
-    dismissible?: boolean;
-    /**
-     * Fires when the dismiss button is activated. The alert then hides itself, unless a listener calls `preventDefault()` to remove or keep it some other way.
-     */
-    onIdgDismiss?: (event: IdgAlertCustomEvent<void>) => void;
-    /**
-     * Leaves out the live role, for a message that changes while it is shown (a countdown, say), which a live role would announce on every change. Announce it some other way.
-     * @default false
-     */
-    quiet?: boolean;
-    /**
-     * Meaning and urgency. Warning and danger interrupt assistive technology; info and success do not.
-     * @default "info"
-     */
-    variant?: AlertVariant;
-  }
-  /**
-   * A person or account, as a picture or, when there is none or it fails to load, their initials on a
-   * colour chosen from their name.
-   */
-  interface IdgAvatar {
-    /**
-     * What the picture shows. Defaults to `name`. An empty string marks the avatar as decoration, for one that sits beside the same name written out as text.
-     */
-    alt?: string;
-    /**
-     * The person's name: the source of the initials and the colour, and the default alt.
-     */
-    name?: string;
-    /**
-     * Avatar size.
-     * @default "md"
-     */
-    size?: AvatarSize;
-    /**
-     * The picture. Only http, https and relative urls are loaded.
-     */
-    src?: string;
-    /**
-     * Shows a status dot. Each status has its own shape, so colour is not the only cue.
-     */
-    status?: AvatarStatus;
-    /**
-     * The status dot's accessible name. Defaults to the status in English.
-     */
-    statusLabel?: string;
-  }
-  /**
-   * Overlaps a row of idg-avatar. It sets their size, and with `max` hides the ones past the limit
-   * and shows how many there are.
-   */
-  interface IdgAvatarGroup {
-    /**
-     * Names the group for assistive technology, such as "Reviewers".
-     */
-    label?: string;
-    /**
-     * The most avatars to show. The rest are hidden and counted.
-     */
-    max?: number;
-    /**
-     * The word after the count in its accessible name, such as "2 more".
-     * @default "more"
-     */
-    moreLabel?: string;
-    /**
-     * The size of every avatar in the group.
-     * @default "md"
-     */
-    size?: AvatarSize;
-  }
-  /**
-   * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
-   */
-  interface IdgBadge {
-    /**
-     * Shows a dot before the label.
-     * @default false
-     */
-    dot?: boolean;
-    /**
-     * Badge size.
-     * @default "md"
-     */
-    size?: BadgeSize;
-    /**
-     * Emphasis and meaning.
-     * @default "neutral"
-     */
-    variant?: BadgeVariant;
-  }
-  /**
-   * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
-   * idg-breadcrumb-item. The last item is the current page unless another item says it is.
-   */
-  interface IdgBreadcrumb {
-    /**
-     * The landmark's accessible name. Give each breadcrumb on a page its own.
-     * @default "Breadcrumb"
-     */
-    label?: string;
-    /**
-     * The mark between items. It is decoration and hidden from assistive technology.
-     * @default BREADCRUMB_SEPARATORS[0]
-     */
-    separator?: BreadcrumbSeparator;
-  }
-  /**
-   * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
-   * one, and separator are drawn in its own shadow root.
-   */
-  interface IdgBreadcrumbItem {
-    /**
-     * Marks this step as the current page, in place of the last one.
-     * @default false
-     */
-    current?: boolean;
-    /**
-     * Where the step goes. Only http, https, mailto, tel and relative urls are kept.
-     */
-    href?: string;
-    /**
-     * Set by the breadcrumb: whether this step is the current page.
-     * @default false
-     */
-    isCurrent?: boolean;
-    /**
-     * Set by the breadcrumb: whether this is the last step, which has no separator after it.
-     * @default false
-     */
-    isLast?: boolean;
-    /**
-     * Set by the breadcrumb: the mark after the step.
-     * @default "chevron"
-     */
-    separator?: BreadcrumbSeparator;
-  }
-  interface IdgButton {
-    /**
-     * Set by an overlay this button opens: the element it opens (`aria-controls`).
-     */
-    accessibleControls?: Element[];
-    /**
-     * Set by idg-tooltip: the hint, as the control's accessible description.
-     */
-    accessibleDescription?: string;
-    /**
-     * Set by an overlay this button opens: whether it is open (`aria-expanded`).
-     */
-    accessibleExpanded?: boolean;
-    /**
-     * Set by an overlay this button opens: what kind of popup it is (`aria-haspopup`).
-     */
-    accessibleHaspopup?: string;
-    /**
-     * Blocks activation and takes the control out of the tab order.
-     * @default false
-     */
-    disabled?: boolean;
-    /**
-     * The `id` of a `<form>` element to associate this element with.
-     */
-    form?: string;
-    /**
-     * Stretches the button to its container.
-     * @default false
-     */
-    fullWidth?: boolean;
-    /**
-     * Renders a link. Only http, https, mailto, tel and relative urls are kept.
-     */
-    href?: string;
-    /**
-     * Shows a spinner and blocks activation, but keeps the control focusable.
-     * @default false
-     */
-    loading?: boolean;
-    /**
-     * The name of the element, used when submitting an HTML form.
-     */
-    name?: string;
-    /**
-     * Link relationship.
-     */
-    rel?: string;
-    /**
-     * A hint such as `Enter`, shown only when the UX mode turns shortcuts on.
-     */
-    shortcut?: string;
-    /**
-     * Control size. Never smaller than the design's minimum target size.
-     * @default "md"
-     */
-    size?: ButtonSize;
-    /**
-     * Where a link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
-     */
-    target?: string;
-    /**
-     * What activating the button does inside a form. Ignored when `href` is set.
-     * @default "button"
-     */
-    type?: ButtonType;
-    /**
-     * Visual emphasis.
-     * @default "primary"
-     */
-    variant?: ButtonVariant;
-  }
-  /**
-   * A surface that groups related content, drawn in the design language's own surface, border and
-   * elevation.
-   * With `href` and a `heading`, the heading becomes the card's one link and covers the whole card, so
-   * a click anywhere follows it while assistive technology still finds a single link. Anything in
-   * the footer slot sits above the link and stays clickable.
-   */
-  interface IdgCard {
-    /**
-     * The card's title, drawn as a heading.
-     */
-    heading?: string;
-    /**
-     * The heading level, 1 to 6.
-     * @default 3
-     */
-    headingLevel?: number;
-    /**
-     * Makes the heading a link that covers the card. Only http, https, mailto, tel and relative urls are kept.
-     */
-    href?: string;
-    /**
-     * Lifts the whole card on hover. A card with a link is always interactive.
-     * @default false
-     */
-    interactive?: boolean;
-    /**
-     * Space inside the card around its content.
-     * @default "md"
-     */
-    padding?: CardPadding;
-    /**
-     * Link relationship.
-     */
-    rel?: string;
-    /**
-     * Where the link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
-     */
-    target?: string;
-    /**
-     * Surface treatment.
-     * @default "plain"
-     */
-    variant?: CardVariant;
-  }
-  interface IdgCheckbox {
-    /**
-     * Set by idg-field: the hint and error text, as the control's accessible description.
-     */
-    accessibleDescription?: string;
-    /**
-     * Set by idg-field, or by you: replaces the slotted text as the accessible name.
-     */
-    accessibleLabel?: string;
-    /**
-     * @default false
-     */
-    checked?: boolean;
-    /**
-     * @default false
-     */
-    disabled?: boolean;
-    /**
-     * The `id` of a `<form>` element to associate this element with.
-     */
-    form?: string;
-    /**
-     * Shows a mixed state, such as a parent of partly selected children. A user choice clears it.
-     * @default false
-     */
-    indeterminate?: boolean;
-    /**
-     * Marks the choice as wrong.
-     * @default false
-     */
-    invalid?: boolean;
-    name?: string;
-    /**
-     * Fires when the user toggles the checkbox.
-     */
-    onIdgChange?: (event: IdgCheckboxCustomEvent<CheckedDetail>) => void;
-    /**
-     * @default false
-     */
-    required?: boolean;
-    /**
-     * What is submitted while checked.
-     * @default "on"
-     */
-    value?: string;
-  }
-  /**
-   * A group of items in a row that wraps onto further rows when it runs out of room, such as tags,
-   * buttons or a toolbar. It only arranges, so it adds no role and the source order stays the
-   * reading order.
-   */
-  interface IdgCluster {
-    /**
-     * How items in a row line up on the block axis.
-     * @default "center"
-     */
-    align?: ClusterAlignment;
-    /**
-     * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
-     */
-    gap?: GapStep;
-    /**
-     * How each row is spread along the inline axis. `between` pushes the first and last items apart.
-     * @default "start"
-     */
-    justify?: ClusterJustification;
-  }
-  /**
-   * Asks once whether analytics may be switched on, for the consent object it is given in `consent`
-   * (the tracker's `tracker.consent`). It is a region of the page, not a dialog: it never blocks
-   * anything, takes no focus when it appears, and ignoring it, or pressing Escape, means no consent.
-   * It asks only while the state is `unknown` and no browser privacy signal is set. Under Global
-   * Privacy Control or Do Not Track it does not ask at all, since asking would invite a choice the
-   * browser has already made: it draws nothing, or, with `announce-signal`, one line saying the
-   * signal is respected. "Decline" comes first and has the same variant and size as "Accept
-   * analytics". After a choice, focus goes back to what had it before the banner, else to the main
-   * landmark, and a polite live region confirms it.
-   * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
-   * natural place is further on, so it keeps its space in the page's flow and never covers the end
-   * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
-   * element is scrolled clear of it. In a window too short for both, it joins the page's flow
-   * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
-   * is: a bar at the top scrolls away with the page and never covers a header that sticks.
-   */
-  interface IdgConsentBanner {
-    /**
-     * Under a browser privacy signal, say in one line that it is respected, instead of nothing.
-     * @default false
-     */
-    announceSignal?: boolean;
-    /**
-     * The tracker's consent object, `tracker.consent` (a JavaScript property).
-     */
-    consent?: ConsentClient;
-    /**
-     * The text, merged over the English defaults. Assign a new object to change it.
-     */
-    labels?: Partial<ConsentBannerLabels>;
-    /**
-     * Fires when the user chooses here, with the state that is now stored. A change made elsewhere (another tab, the preferences) is not announced by it: subscribe with `consent.onChange`.
-     */
-    onIdgConsentChange?: (event: IdgConsentBannerCustomEvent<ConsentChangeDetail>) => void;
-    /**
-     * Fires when "Choose" is pressed. Call `preventDefault()` to open the preferences yourself.
-     */
-    onIdgConsentChoose?: (event: IdgConsentBannerCustomEvent<void>) => void;
-    /**
-     * `bottom` (the default): a bar that stays in view; `top` and `inline`: in the page's flow.
-     * @default "bottom"
-     */
-    placement?: ConsentPlacement;
-    /**
-     * The id of an `idg-consent-preferences` elsewhere in the page that "Choose" opens.
-     */
-    preferences?: string;
-  }
-  /**
-   * The visitor's choices about analytics, for the consent object it is given in `consent` (the
-   * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
-   * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
-   * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
-   * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
-   * the switch is disabled with the signal named, and saving can only record a denial.
-   * It follows changes made elsewhere (another tab, the banner). If the stored state changes under
-   * an unsaved edit, the edit is dropped and a note says so. With `modal` it is drawn inside an
-   * `idg-dialog` that `open()` and `close()` control; the dialog holds and restores focus.
-   */
-  interface IdgConsentPreferences {
-    /**
-     * The tracker's consent object, `tracker.consent` (a JavaScript property).
-     */
-    consent?: ConsentClient;
-    /**
-     * The level of the heading, 2 to 6, to fit the page's outline.
-     * @default 2
-     */
-    headingLevel?: number;
-    /**
-     * The text, merged over the English defaults. Assign a new object to change it.
-     */
-    labels?: Partial<ConsentPreferencesLabels>;
-    /**
-     * Draws the panel inside an `idg-dialog`, opened with `open()` and closed with `close()`.
-     * @default false
-     */
-    modal?: boolean;
-    /**
-     * Fires when the user saves or erases here, with the state that is now stored. A change made elsewhere (another tab, the banner) is not announced by it: subscribe with `consent.onChange`.
-     */
-    onIdgConsentChange?: (event: IdgConsentPreferencesCustomEvent<ConsentChangeDetail>) => void;
-  }
-  /**
-   * A block at least as tall as `min-height` that centres its content, with optional regions pinned
-   * to its top and bottom, such as a hero, a splash or a sign-in screen. It only arranges, so it
-   * adds no role and the source order stays the reading order.
-   */
-  interface IdgCover {
-    /**
-     * Space between the regions, a step of the space scale. Without it the layout's gap is used.
-     */
-    gap?: GapStep;
-    /**
-     * Least height of the block, a step of the size scale, or `screen` for the height of the viewport.
-     * @default "l"
-     */
-    minHeight?: CoverHeight;
-  }
-  /**
-   * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
-   * of the page inert and contains focus, and Escape is the browser's close request. The component
-   * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
-   * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
-   * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
-   * closed.
-   */
-  interface IdgDialog {
-    /**
-     * Makes it an `alertdialog`: an urgent message that needs a response, described by its body.
-     * @default false
-     */
-    alert?: boolean;
-    /**
-     * The close button's accessible name.
-     * @default "Close"
-     */
-    closeLabel?: string;
-    /**
-     * Whether a click on the backdrop of a modal dialog dismisses it. Needs `dismissible`.
-     * @default false
-     */
-    closeOnBackdrop?: boolean;
-    /**
-     * Whether the user can dismiss the dialog with Escape and the close button.
-     * @default true
-     */
-    dismissible?: boolean;
-    /**
-     * The title, drawn as a heading. It is the dialog's accessible name.
-     */
-    heading?: string;
-    /**
-     * Whether setting `open` opens a modal dialog. The methods choose for themselves.
-     * @default true
-     */
-    modal?: boolean;
-    /**
-     * Fires when the user tries to dismiss the dialog (Escape, the backdrop or the close button). Call `preventDefault()` to keep it open. Browsers close the dialog anyway on a second Escape without other input in between, so that a page cannot trap the user.
-     */
-    onIdgCancel?: (event: IdgDialogCustomEvent<DialogCancelDetail>) => void;
-    /**
-     * Fires after the dialog has closed, with the return value and why it closed.
-     */
-    onIdgClose?: (event: IdgDialogCustomEvent<DialogCloseDetail>) => void;
-    /**
-     * Fires when the dialog opens.
-     */
-    onIdgOpen?: (event: IdgDialogCustomEvent<DialogOpenDetail>) => void;
-    /**
-     * Whether the dialog is open. Setting it opens (as `modal` says) or closes the dialog.
-     * @default false
-     */
-    open?: boolean;
-    /**
-     * Width: `sm`, `md`, `lg`, or `full` for the whole viewport less a margin.
-     * @default "md"
-     */
-    size?: DialogSize;
-  }
-  /**
-   * A rule between groups of content, drawn in the design language's own border.
-   */
-  interface IdgDivider {
-    /**
-     * Takes the divider out of the accessibility tree, for a rule that only decorates.
-     * @default false
-     */
-    decorative?: boolean;
-    /**
-     * Direction of the rule. A vertical divider needs a parent that gives it a height.
-     * @default "horizontal"
-     */
-    orientation?: DividerOrientation;
-  }
-  /**
-   * A table of tracked events: the event, when it happened, the path and its properties, with
-   * paging and optional sorting by time or name. It takes its data through properties and never
-   * fetches.
-   * Every value is untrusted text from the public internet. It is drawn as text and nothing else: no
-   * markup is read, no link or address is made from it, control and bidirectional characters are
-   * replaced by a visible mark, each value is isolated in a `<bdi>` so right to left text cannot
-   * reorder what is beside it, long values wrap and are cut to a limit, and an event shows at most
-   * ten properties. Records that are malformed are left out.
-   * With `events` as the whole list, the table sorts and pages it. With `total` set, `events` is the
-   * one page the server answered with: the table draws it as it is and only reports `idgPageChange`
-   * and `idgSort` for the page to fetch with. Either way it draws at most `pageSize` rows (to 100).
-   * The state that matters is said politely: loading, an error, no events, and which events are shown.
-   */
-  interface IdgEventTable {
-    /**
-     * The accessible name of the table, drawn as its caption. Required.
-     */
-    caption?: string;
-    /**
-     * The message of an error that stopped the events loading. Drawn in an alert, as text.
-     */
-    error?: string;
-    /**
-     * The events: `{ id, name, occurredAt, path?, properties? }`. Malformed records are left out.
-     */
-    events?: TrackedEvent[];
-    /**
-     * The words of the table, merged over the English defaults.
-     */
-    labels?: Partial<EventTableLabels>;
-    /**
-     * Draws a skeleton and says the events are loading.
-     * @default false
-     */
-    loading?: boolean;
-    /**
-     * Fires when the user chooses another page, with `{ page }`. Call `preventDefault()` to keep the page where it is, such as to fetch it first and set `page` yourself.
-     */
-    onIdgPageChange?: (event: IdgEventTableCustomEvent<PageChangeDetail>) => void;
-    /**
-     * Fires when the user sorts a column, with `{ key, direction }`.
-     */
-    onIdgSort?: (event: IdgEventTableCustomEvent<EventSort>) => void;
-    /**
-     * The current page, from 1. A page beyond the last is drawn as the last.
-     * @default 1
-     */
-    page?: number;
-    /**
-     * Rows on a page, 1 to 100.
-     * @default 10
-     */
-    pageSize?: number;
-    /**
-     * The direction of the sort.
-     * @default "ascending"
-     */
-    sortDirection?: EventSortDirection;
-    /**
-     * The column the rows are sorted by: `time` or `name`. Empty leaves the order given.
-     * @default ""
-     */
-    sortKey?: EventSortKey | "";
-    /**
-     * Makes the Event and Time headers sort buttons.
-     * @default false
-     */
-    sortable?: boolean;
-    /**
-     * The IANA time zone times are shown in, such as `UTC`. The reader's own by default.
-     */
-    timeZone?: string;
-    /**
-     * How many events there are in all. Set it when `events` is one page the server answered with: the table then draws `events` as it is, and neither sorts nor pages it.
-     */
-    total?: number;
-  }
-  /**
-   * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
-   * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
-   * reference cannot cross a shadow boundary, so their text is handed to the control as properties
-   * and the control applies it to its own native element.
-   */
-  interface IdgField {
-    /**
-     * The error message. Setting it marks the control invalid and announces the message.
-     */
-    error?: string;
-    /**
-     * Help text. Shown when the UX mode turns hints on, and always read with the control.
-     */
-    hint?: string;
-    /**
-     * The visible label, and the control's accessible name.
-     */
-    label?: string;
-    /**
-     * Text such as "optional" shown beside the label of a field that is not required.
-     */
-    optionalText?: string;
-    /**
-     * Marks the control required and shows a star.
-     * @default false
-     */
-    required?: boolean;
-  }
-  /**
-   * Items in as many equal columns as fit. Each column is at least `min` wide, and there are never
-   * more columns than the layout allows, so the same markup has more or fewer columns under each
-   * `data-layout`. It only arranges, so it adds no role and the source order stays the reading order.
-   */
-  interface IdgGrid {
-    /**
-     * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
-     */
-    gap?: GapStep;
-    /**
-     * Narrowest a column may be, a step of the size scale. Without it the layout's track size is used.
-     */
-    min?: SizeStep;
-  }
-  /**
-   * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
-   */
-  interface IdgIcon {
-    /**
-     * Gives the icon an accessible name. Without it the icon is decoration and hidden.
-     */
-    label?: string;
-    /**
-     * Which icon to draw. An unknown name draws nothing.
-     */
-    name?: IconName;
-    /**
-     * Size relative to the surrounding text.
-     * @default "md"
-     */
-    size?: IconSize;
-  }
-  /**
-   * A form-associated text field. Enter submits its form as a native input does (see the README):
-   * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
-   * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
-   */
-  interface IdgInput {
-    /**
-     * Set by idg-field: the hint and error text, as the control's accessible description.
-     */
-    accessibleDescription?: string;
-    /**
-     * Set by idg-field: the control's accessible name.
-     */
-    accessibleLabel?: string;
-    autocapitalize?: string;
-    autocomplete?: string;
-    /**
-     * @default false
-     */
-    disabled?: boolean;
-    enterkeyhint?: string;
-    /**
-     * The `id` of a `<form>` element to associate this element with.
-     */
-    form?: string;
-    inputmode?: string;
-    /**
-     * Set by idg-field, or by you: marks the value as wrong.
-     * @default false
-     */
-    invalid?: boolean;
-    max?: string;
-    maxlength?: number;
-    min?: string;
-    minlength?: number;
-    /**
-     * The name the value is submitted under.
-     */
-    name?: string;
-    /**
-     * Fires when the user commits a value, such as on blur or Enter.
-     */
-    onIdgChange?: (event: IdgInputCustomEvent<ValueDetail>) => void;
-    /**
-     * Fires on every edit.
-     */
-    onIdgInput?: (event: IdgInputCustomEvent<ValueDetail>) => void;
-    pattern?: string;
-    placeholder?: string;
-    /**
-     * @default false
-     */
-    readonly?: boolean;
-    /**
-     * @default false
-     */
-    required?: boolean;
-    /**
-     * Adds a button that shows a password as text. Only for `type="password"`.
-     * @default false
-     */
-    reveal?: boolean;
-    /**
-     * The name of the reveal button.
-     * @default "Show password"
-     */
-    revealLabel?: string;
-    /**
-     * Control size. Never smaller than the design's minimum target size.
-     * @default "md"
-     */
-    size?: InputSize;
-    spellcheck?: string;
-    step?: string;
-    /**
-     * What kind of text the control takes. Unknown values fall back to `text`.
-     * @default "text"
-     */
-    type?: InputType;
-    /**
-     * The current value. Reset restores the value the element started with.
-     * @default ""
-     */
-    value?: string;
-  }
-  /**
-   * The page shell. One page, written once, is housed in the structure the `data-layout` attribute of
-   * the root (or of an ancestor) names: the same landmarks in the same reading order in all eight, and
-   * only a stylesheet that places them differently. The shell never reorders its own tree, so the
-   * order a reader and the Tab key meet things is the order of the markup in every layout.
-   * It is a size container, and every layout decides its small, medium and large arrangement from its
-   * own width, never the viewport's. Where a layout collapses the navigation behind a toggle, the
-   * stylesheet decides that too, and the script only reads what it decided (`--_nav`).
-   */
-  interface IdgLayout {
-    /**
-     * The accessible name of the aside landmark.
-     * @default "Related content"
-     */
-    asideLabel?: string;
-    /**
-     * The accessible name of the button that closes the navigation drawer.
-     * @default "Close"
-     */
-    closeLabel?: string;
-    /**
-     * Whether the shell sits inside a page rather than being the page. An embedded shell does not claim the height of the window, which a shell that is the page does.
-     * @default false
-     */
-    embedded?: boolean;
-    /**
-     * The text of the button that opens the collapsed navigation.
-     * @default "Menu"
-     */
-    menuLabel?: string;
-    /**
-     * The accessible name of the navigation landmark.
-     * @default "Main navigation"
-     */
-    navigationLabel?: string;
-    /**
-     * Whether the collapsed navigation is open. It can only be open while the layout collapses the navigation: it goes back to false when the container grows and the navigation is drawn inline.
-     * @default false
-     */
-    navigationOpen?: boolean;
-    /**
-     * Fires when the collapsed navigation opens or closes.
-     */
-    onIdgNavigationToggle?: (event: IdgLayoutCustomEvent<NavigationToggleDetail>) => void;
-    /**
-     * The text of the skip link, the first control on the page.
-     * @default "Skip to content"
-     */
-    skipLabel?: string;
-  }
-  /**
-   * An inline text link. It takes the same hardening as the button's link mode: the url goes
-   * through `safeUrl` and a link that opens another browsing context always gets `noopener
-   * noreferrer`.
-   */
-  interface IdgLink {
-    /**
-     * Marks a link to another site: shows an indicator and opens a new tab unless `target` is set.
-     * @default false
-     */
-    external?: boolean;
-    /**
-     * The accessible name of the external indicator.
-     * @default "External link"
-     */
-    externalLabel?: string;
-    /**
-     * Where the link goes. Only http, https, mailto, tel and relative urls are kept.
-     */
-    href?: string;
-    /**
-     * Link relationship.
-     */
-    rel?: string;
-    /**
-     * Where the link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
-     */
-    target?: string;
-  }
-  /**
-   * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
-   * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
-   * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
-   * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
-   * focus moves to the items themselves (roving focus). Each item carries its own role and state.
-   */
-  interface IdgMenu {
-    /**
-     * The menu's accessible name. Without it the menu is named by its trigger.
-     */
-    label?: string;
-    /**
-     * The gap between the trigger and the menu, in pixels.
-     * @default 4
-     */
-    offset?: number;
-    /**
-     * Fires when the menu closes.
-     */
-    onIdgClose?: (event: IdgMenuCustomEvent<void>) => void;
-    /**
-     * Fires when the menu opens.
-     */
-    onIdgOpen?: (event: IdgMenuCustomEvent<void>) => void;
-    /**
-     * Fires when an item is chosen, with its value and, for a checkable item, its new state.
-     */
-    onIdgSelect?: (event: IdgMenuCustomEvent<MenuSelectDetail>) => void;
-    /**
-     * Whether the menu is open.
-     * @default false
-     */
-    open?: boolean;
-    /**
-     * Where the menu sits against the trigger. It flips to the opposite side when out of room.
-     * @default "bottom-start"
-     */
-    placement?: Placement;
-  }
-  /**
-   * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
-   * uncheck each other within their group.
-   */
-  interface IdgMenuGroup {
-    /**
-     * The group's visible label and accessible name.
-     */
-    label?: string;
-  }
-  /**
-   * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
-   * its own shadow root, so its role and state are set on the focusable element inside it, and the
-   * host is a plain wrapper that assistive technology passes through.
-   */
-  interface IdgMenuItem {
-    /**
-     * Whether a checkbox or radio item is on. The menu changes it when the item is chosen.
-     * @default false
-     */
-    checked?: boolean;
-    /**
-     * Keeps the item in the menu, where it can be found, but stops it being chosen.
-     * @default false
-     */
-    disabled?: boolean;
-    /**
-     * Makes the item a link. Only http, https, mailto, tel and relative urls are kept.
-     */
-    href?: string;
-    /**
-     * A leading icon, drawn as decoration.
-     */
-    icon?: IconName;
-    /**
-     * Link relationship.
-     */
-    rel?: string;
-    /**
-     * A hint such as `Ctrl+E`, shown when the UX mode turns shortcuts on. Nothing binds the key.
-     */
-    shortcut?: string;
-    /**
-     * Where a link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
-     */
-    target?: string;
-    /**
-     * `item` does something, `checkbox` toggles, `radio` picks one of its group.
-     * @default "item"
-     */
-    type?: MenuItemType;
-    /**
-     * What `idgSelect` reports when this item is chosen.
-     * @default ""
-     */
-    value?: string;
-  }
-  /**
-   * A rule between groups of items in an idg-menu.
-   */
-  interface IdgMenuSeparator {}
-  /**
-   * Page controls for a long list: previous and next, the current page and a window of its
-   * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
-   * given, so each page is an address that can be opened, shared and followed without script, and
-   * buttons that fire `idgPageChange` otherwise.
-   */
-  interface IdgPagination {
-    /**
-     * Pages always shown at the start and the end.
-     * @default 1
-     */
-    boundaries?: number;
-    /**
-     * Makes the controls links. `{page}` is replaced by the page number, as in `/items?page={page}`. Only http, https, mailto, tel and relative urls are kept.
-     */
-    hrefTemplate?: string;
-    /**
-     * The landmark's accessible name. Give each pagination on a page its own.
-     * @default "Pagination"
-     */
-    label?: string;
-    /**
-     * The accessible name of the next control.
-     * @default "Next page"
-     */
-    nextLabel?: string;
-    /**
-     * Fires when the user chooses a page other than the current one. Call `preventDefault()` to keep the page where it is, for instance to load the page yourself first. On a link it also stops the link being followed.
-     */
-    onIdgPageChange?: (event: IdgPaginationCustomEvent<PageChangeDetail>) => void;
-    /**
-     * The current page, from 1.
-     * @default 1
-     */
-    page?: number;
-    /**
-     * How many pages there are.
-     * @default 1
-     */
-    pageCount?: number;
-    /**
-     * The accessible name of a page control, where `{page}` is the number.
-     * @default "Page {page}"
-     */
-    pageLabel?: string;
-    /**
-     * The accessible name of the previous control.
-     * @default "Previous page"
-     */
-    previousLabel?: string;
-    /**
-     * Pages shown on each side of the current one.
-     * @default 1
-     */
-    siblings?: number;
-  }
-  /**
-   * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
-   * for the address and always answers the same, whether or not an account uses it. `complete`
-   * sets the new password with the emailed code, which the page reads from the link and passes in
-   * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
-   * inputs are emptied after every attempt.
-   */
-  interface IdgPasswordReset {
-    /**
-     * The identity client (a JavaScript property). The element never creates one.
-     */
-    client?: PasswordResetClient;
-    /**
-     * Timers for the throttle countdown; the browser's by default. For tests.
-     */
-    clock?: CountdownClock;
-    /**
-     * The code from the reset email, which the page reads from the link it was sent. Without one, `complete` mode asks for it.
-     */
-    code?: string;
-    /**
-     * The text, merged over the English defaults. Assign a new object to change it.
-     */
-    labels?: Partial<PasswordResetLabels>;
-    /**
-     * Which step to show. Unknown values fall back to `request`.
-     * @default "request"
-     */
-    mode?: PasswordResetMode;
-    /**
-     * Fires once the new password is set and the user signed in, with their id and username.
-     */
-    onIdgPasswordReset?: (event: IdgPasswordResetCustomEvent<SignedInDetail>) => void;
-    /**
-     * Fires once a reset email is asked for. It carries nothing: the answer is the same for all.
-     */
-    onIdgResetRequested?: (event: IdgPasswordResetCustomEvent<void>) => void;
-  }
-  /**
-   * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
-   * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
-   * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
-   * not contained, and Tab moves on from the content.
-   */
-  interface IdgPopover {
-    /**
-     * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
-     */
-    for?: string;
-    /**
-     * The gap between the trigger and the surface, in pixels.
-     * @default 8
-     */
-    offset?: number;
-    /**
-     * Fires when the popover closes, however it was closed.
-     */
-    onIdgClose?: (event: IdgPopoverCustomEvent<void>) => void;
-    /**
-     * Fires when the popover opens.
-     */
-    onIdgOpen?: (event: IdgPopoverCustomEvent<void>) => void;
-    /**
-     * Whether the popover is open.
-     * @default false
-     */
-    open?: boolean;
-    /**
-     * Where the surface sits against the trigger. It flips to the opposite side when out of room.
-     * @default "bottom-start"
-     */
-    placement?: Placement;
-  }
-  /**
-   * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
-   * (display name, about, language, time zone and email preference), a password change, and the
-   * sessions of the account with a button to sign each other one out and one to sign out everywhere.
-   * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
-   */
-  interface IdgProfile {
-    /**
-     * A picture of the owner for the avatar, such as the one their profile links to.
-     */
-    avatarSrc?: string;
-    /**
-     * The identity client (a JavaScript property). The element never creates one.
-     */
-    client?: ProfileClient;
-    /**
-     * Timers for the throttle countdown; the browser's by default. For tests.
-     */
-    clock?: CountdownClock;
-    /**
-     * The level of the section headings, 2 to 6, to fit the page's outline: below a page title (`h1`), 2.
-     * @default 2
-     */
-    headingLevel?: number;
-    /**
-     * The text, merged over the English defaults. Assign a new object to change it.
-     */
-    labels?: Partial<ProfileLabels>;
-    /**
-     * Fires after the password is changed. It carries nothing.
-     */
-    onIdgPasswordChanged?: (event: IdgProfileCustomEvent<void>) => void;
-    /**
-     * Fires after the profile is saved, with the saved fields.
-     */
-    onIdgProfileSaved?: (event: IdgProfileCustomEvent<ProfileSavedDetail>) => void;
-    /**
-     * Fires after another session is signed out, with its id.
-     */
-    onIdgSessionRevoked?: (event: IdgProfileCustomEvent<SessionRevokedDetail>) => void;
-    /**
-     * Fires after "Sign out everywhere", with how it went. Navigating on is the page's job.
-     */
-    onIdgSignedOut?: (event: IdgProfileCustomEvent<SignedOutDetail>) => void;
-  }
-  /**
-   * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
-   * the browser's own. Without a value it is indeterminate.
-   */
-  interface IdgProgress {
-    /**
-     * Marks work of unknown length, whatever the value.
-     * @default false
-     */
-    indeterminate?: boolean;
-    /**
-     * What is progressing. Visible, and the bar's accessible name, so it should always be set.
-     */
-    label?: string;
-    /**
-     * The value that means done.
-     * @default 100
-     */
-    max?: number;
-    /**
-     * Shows the percentage beside the label. Only for determinate progress.
-     * @default false
-     */
-    showValue?: boolean;
-    /**
-     * Bar thickness.
-     * @default "md"
-     */
-    size?: ProgressSize;
-    /**
-     * How much is done. Without it the progress is indeterminate.
-     */
-    value?: number;
-  }
-  /**
-   * Lets a signed-in user choose which tracked property (site) the dashboard shows. It is a labelled
-   * `idg-select` that lists the `properties` it is given and reports the chosen id with `idgChange`.
-   * It is form associated: with a `name` it submits the chosen id.
-   * Property names are text the user typed: they are shown as text only, with control and
-   * bidirectional characters replaced and long names cut. A `value` that is not one of the
-   * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
-   * property appears in the list later, and is never replaced by the first property.
-   */
-  interface IdgPropertyPicker {
-    /**
-     * @default false
-     */
-    disabled?: boolean;
-    /**
-     * The `id` of a `<form>` element to associate this element with.
-     */
-    form?: string;
-    /**
-     * The visible label and the accessible name.
-     */
-    label?: string;
-    /**
-     * The words of the picker, merged over the English defaults.
-     */
-    labels?: Partial<PropertyPickerLabels>;
-    /**
-     * While the properties load: disabled, busy, and said politely.
-     * @default false
-     */
-    loading?: boolean;
-    name?: string;
-    /**
-     * Fires when the user chooses a property, with its id as `{ value }`, and not when `value` is set from script.
-     */
-    onIdgChange?: (event: IdgPropertyPickerCustomEvent<ValueDetail>) => void;
-    /**
-     * The properties to choose from: `{ id, name, origin? }`. Records that are malformed or repeat an id are left out.
-     */
-    properties?: TrackedProperty[];
-    /**
-     * The id of the chosen property. Reset restores the value the element started with.
-     * @default ""
-     */
-    value?: string;
-  }
-  /**
-   * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
-   * as set by the group are how it passes state down, because radios in separate shadow roots are
-   * not a native radio group.
-   */
-  interface IdgRadio {
-    /**
-     * Set by the group from its value.
-     * @default false
-     */
-    checked?: boolean;
-    /**
-     * @default false
-     */
-    disabled?: boolean;
-    /**
-     * Set by the group: whether the whole group is disabled.
-     * @default false
-     */
-    groupDisabled?: boolean;
-    /**
-     * Set by the group: marks the group's value as wrong.
-     * @default false
-     */
-    invalid?: boolean;
-    /**
-     * Fires when the user chooses this radio. The group listens; you listen to the group.
-     */
-    onIdgSelect?: (event: IdgRadioCustomEvent<RadioSelectDetail>) => void;
-    /**
-     * Set by the group: this radio's place, from 1.
-     */
-    position?: number;
-    /**
-     * Set by the group: how many radios the group holds.
-     */
-    setSize?: number;
-    /**
-     * Set by the group: whether this radio is the group's one tab stop.
-     * @default true
-     */
-    tabbable?: boolean;
-    /**
-     * What the group takes as its value when this radio is chosen.
-     * @default ""
-     */
-    value?: string;
-  }
-  /**
-   * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
-   * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
-   * its radios, is the form control.
-   */
-  interface IdgRadioGroup {
-    /**
-     * Set by idg-field: the hint and error text, as the group's accessible description.
-     */
-    accessibleDescription?: string;
-    /**
-     * Set by idg-field, or by you: the group's accessible name.
-     */
-    accessibleLabel?: string;
-    /**
-     * @default false
-     */
-    disabled?: boolean;
-    /**
-     * The `id` of a `<form>` element to associate this element with.
-     */
-    form?: string;
-    /**
-     * Set by idg-field, or by you: marks the choice as wrong.
-     * @default false
-     */
-    invalid?: boolean;
-    name?: string;
-    /**
-     * Fires when the user chooses a radio.
-     */
-    onIdgChange?: (event: IdgRadioGroupCustomEvent<ValueDetail>) => void;
-    /**
-     * How the radios are laid out.
-     * @default "vertical"
-     */
-    orientation?: Orientation;
-    /**
-     * @default false
-     */
-    required?: boolean;
-    /**
-     * The value of the chosen radio. Reset restores the value the element started with.
-     * @default ""
-     */
-    value?: string;
-  }
-  /**
-   * A registration form for the identity client it is given in `client`. With email confirmation on,
-   * a new address and one already registered get the same answer, so the form never tells whether
-   * an account exists. The password is read from its input when the form is sent and the input is
-   * emptied after every attempt.
-   */
-  interface IdgRegister {
-    /**
-     * The identity client (a JavaScript property). The element never creates one.
-     */
-    client?: RegisterClient;
-    /**
-     * Timers for the throttle countdown; the browser's by default. For tests.
-     */
-    clock?: CountdownClock;
-    /**
-     * The text, merged over the English defaults. Assign a new object to change it.
-     */
-    labels?: Partial<RegisterLabels>;
-    /**
-     * Fires once the account is asked for. Navigating on is the page's job.
-     */
-    onIdgRegistered?: (event: IdgRegisterCustomEvent<RegisteredDetail>) => void;
-  }
-  /**
-   * Options are written as children, exactly as for a native select, and copied into the native
-   * select inside the component: the same markup works with or without a framework, and no option
-   * data has to be serialised into an attribute.
-   */
-  interface IdgSelect {
-    /**
-     * Set by idg-field: the hint and error text, as the control's accessible description.
-     */
-    accessibleDescription?: string;
-    /**
-     * Set by idg-field: the control's accessible name.
-     */
-    accessibleLabel?: string;
-    /**
-     * @default false
-     */
-    disabled?: boolean;
-    /**
-     * The `id` of a `<form>` element to associate this element with.
-     */
-    form?: string;
-    /**
-     * Set by idg-field, or by you: marks the value as wrong.
-     * @default false
-     */
-    invalid?: boolean;
-    name?: string;
-    /**
-     * Fires when the user commits a choice.
-     */
-    onIdgChange?: (event: IdgSelectCustomEvent<ValueDetail>) => void;
-    /**
-     * Fires as the choice changes.
-     */
-    onIdgInput?: (event: IdgSelectCustomEvent<ValueDetail>) => void;
-    /**
-     * @default false
-     */
-    required?: boolean;
-    /**
-     * @default "md"
-     */
-    size?: InputSize;
-    /**
-     * The value of the chosen option. Reset restores the value the element started with.
-     * @default ""
-     */
-    value?: string;
-  }
-  /**
-   * Shows its content only while someone is signed in, through the identity client it is given in
-   * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
-   * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
-   * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
-   * at once.
-   * The guard adds no box around what it shows: the host is `display: contents` and the slots are
-   * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
-   * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
-   * before the content and out of the page's layout, whose text says the change; Tab goes on into
-   * the content. A notice, when the guard shows one, is one block before the content.
-   * This is a convenience for the interface, not access control: the content is still in the page
-   * for anyone who reads its markup, and only the API decides what a request may read or change.
-   */
-  interface IdgSessionGuard {
-    /**
-     * The identity client (a JavaScript property). The element never creates one.
-     */
-    client?: SessionGuardClient;
-    /**
-     * The text of the guard's own notices, merged over the English defaults.
-     */
-    labels?: Partial<SessionGuardLabels>;
-    /**
-     * Fires when what the guard shows changes, and with the first state each client reports.
-     */
-    onIdgSessionChange?: (event: IdgSessionGuardCustomEvent<SessionChangeDetail>) => void;
-  }
-  /**
-   * Two regions side by side: a side region of a set width and the content, which takes the rest.
-   * When the content would get less than half of the width, the regions stack instead, with no
-   * breakpoint and no script, so it follows the width of its container rather than the viewport.
-   * The side region is drawn first when it is at the start and last when it is at the end, so what a
-   * reader and the Tab key meet first is also what is shown first, in either text direction. When
-   * the regions stack, the side region is above the content when it is at the start and below it
-   * when it is at the end.
-   */
-  interface IdgSidebar {
-    /**
-     * Space between the regions, a step of the space scale. Without it the layout's gap is used.
-     */
-    gap?: GapStep;
-    /**
-     * Which side of the content the side region is on, in the reading direction.
-     * @default "start"
-     */
-    side?: SidebarSide;
-    /**
-     * Width of the side region, a step of the size scale. Without it the layout's aside width is used.
-     */
-    sideWidth?: SizeStep;
-  }
-  /**
-   * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
-   * password: the password is read from its input when the form is sent and the input is emptied
-   * after a sign-in, a refused one, or when the element leaves the page.
-   */
-  interface IdgSignIn {
-    /**
-     * The identity client (a JavaScript property). The element never creates one.
-     */
-    client?: SignInClient;
-    /**
-     * Timers for the throttle countdown; the browser's by default. For tests.
-     */
-    clock?: CountdownClock;
-    /**
-     * The text, merged over the English defaults. Assign a new object to change it.
-     */
-    labels?: Partial<SignInLabels>;
-    /**
-     * Fires before going to a provider's sign-in. Cancel it to navigate yourself; otherwise the browser goes to `detail.url` with `location.assign`.
-     */
-    onIdgProviderSignIn?: (event: IdgSignInCustomEvent<ProviderSignInDetail>) => void;
-    /**
-     * Fires after a sign-in, with the user's id and username. Navigating on is the page's job.
-     */
-    onIdgSignedIn?: (event: IdgSignInCustomEvent<SignedInDetail>) => void;
-    /**
-     * The page the CMS sends the browser back to after a provider sign-in.
-     */
-    providerCallback?: string;
-    /**
-     * Provider buttons, in order. Each starts the provider's sign-in through the client.
-     */
-    providers?: readonly SignInProvider[];
-  }
-  /**
-   * A placeholder shaped like content that is still loading. It is always hidden from assistive
-   * technology, so it announces nothing by itself. Mark the region being loaded with
-   * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
-   * and replace the skeletons when the content arrives.
-   * Size it with the page's own CSS on the element, for example `idg-skeleton { inline-size: 12rem }`.
-   */
-  interface IdgSkeleton {
-    /**
-     * How many lines of text to draw. The last of several is shorter. Only for `text`.
-     * @default 1
-     */
-    lines?: number;
-    /**
-     * The shape of what is loading.
-     * @default "text"
-     */
-    variant?: SkeletonVariant;
-  }
-  /**
-   * A small trend line drawn as SVG from a series of numbers, for beside a figure. It scales to the
-   * width of its container (set one with the page's own CSS, `idg-sparkline { inline-size: 8rem }`),
-   * keeps its proportions, and never animates. It is an image with a text alternative: the label
-   * you give it and a sentence with the first, last, lowest and highest value and which way the
-   * series went, formatted in the language of the page. Time runs left to right in every
-   * writing direction.
-   * Anything in `values` that is not a finite number is left out, never drawn as zero. A series
-   * longer than 120 points is thinned for drawing, keeping its first, last, lowest and highest.
-   */
-  interface IdgSparkline {
-    /**
-     * Fills the area under the line.
-     * @default false
-     */
-    area?: boolean;
-    /**
-     * What the series measures, such as `Visitors`. It is the accessible name, so give it one.
-     */
-    label?: string;
-    /**
-     * The words of the text alternative, merged over the English defaults.
-     */
-    labels?: Partial<SparklineLabels>;
-    /**
-     * The series: an array of numbers, or, from an attribute, a JSON array or numbers separated by commas. A text longer than 200,000 characters is read as far as there.
-     */
-    values?: number[] | string;
-  }
-  /**
-   * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
-   * and the source order stays the reading order.
-   */
-  interface IdgStack {
-    /**
-     * Where children sit on the inline axis.
-     * @default "stretch"
-     */
-    align?: StackAlignment;
-    /**
-     * Space between children, a step of the space scale. Without it the layout's gap is used.
-     */
-    gap?: GapStep;
-  }
-  /**
-   * A figure with its label and, optionally, how it changed.
-   */
-  interface IdgStat {
-    /**
-     * The change, formatted as it should be shown, such as `12%`.
-     */
-    delta?: string;
-    /**
-     * Which way the figure moved. Shown as an icon and spoken to screen readers.
-     * @default "flat"
-     */
-    direction?: StatDirection;
-    /**
-     * Spoken before the change of a figure that fell.
-     * @default "Decreased by"
-     */
-    downLabel?: string;
-    /**
-     * Spoken before the change of a figure that did not move.
-     * @default "No change"
-     */
-    flatLabel?: string;
-    /**
-     * What the figure measures.
-     */
-    label?: string;
-    /**
-     * What the change is measured against, such as `vs previous 7 days`. It is seen beside the change and spoken with it, since a change with no basis is ambiguous. Without a change it is not shown.
-     */
-    period?: string;
-    /**
-     * Whether the change is good, for the colour. Defaults from the direction, so set it where a rise is bad, such as a churn rate.
-     */
-    sentiment?: StatSentiment;
-    /**
-     * Spoken before the change of a figure that rose.
-     * @default "Increased by"
-     */
-    upLabel?: string;
-    /**
-     * The figure, formatted as it should be shown.
-     */
-    value?: string;
-  }
-  interface IdgSwitch {
-    /**
-     * Set by idg-field: the hint and error text, as the control's accessible description.
-     */
-    accessibleDescription?: string;
-    /**
-     * Set by idg-field, or by you: replaces the slotted text as the accessible name.
-     */
-    accessibleLabel?: string;
-    /**
-     * @default false
-     */
-    checked?: boolean;
-    /**
-     * @default false
-     */
-    disabled?: boolean;
-    /**
-     * The `id` of a `<form>` element to associate this element with.
-     */
-    form?: string;
-    /**
-     * Marks the choice as wrong.
-     * @default false
-     */
-    invalid?: boolean;
-    name?: string;
-    /**
-     * Fires when the user flips the switch.
-     */
-    onIdgChange?: (event: IdgSwitchCustomEvent<CheckedDetail>) => void;
-    /**
-     * @default false
-     */
-    required?: boolean;
-    /**
-     * What is submitted while checked.
-     * @default "on"
-     */
-    value?: string;
-  }
-  /**
-   * Items in one row that switch to one column when their container is narrower than `threshold`.
-   * Every item is as wide as the others in either arrangement. There is no breakpoint and no script,
-   * so it follows the width of its container rather than the viewport. It only arranges, so it adds
-   * no role and the source order stays the reading order.
-   */
-  interface IdgSwitcher {
-    /**
-     * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
-     */
-    gap?: GapStep;
-    /**
-     * Most items allowed in a row, 2 to 6. With more items than that, they stack at any width. Hidden items, templates and scripts do not count; the count is taken again when items are added, removed, hidden or shown.
-     */
-    limit?: number;
-    /**
-     * Container width below which the items stack, a step of the size scale.
-     * @default "l"
-     */
-    threshold?: SizeStep;
-  }
-  /**
-   * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
-   * host carries the tab role and state itself, so the relations to the panel, which sits beside it
-   * in the page, can be made between the two hosts.
-   */
-  interface IdgTab {
-    /**
-     * Keeps the tab in the list, where it is announced, but stops it being selected.
-     * @default false
-     */
-    disabled?: boolean;
-    /**
-     * Set by the tabs: which way the list runs.
-     * @default "horizontal"
-     */
-    orientation?: TabsOrientation;
-    /**
-     * Set by the tabs: whether this tab is selected.
-     * @default false
-     */
-    selected?: boolean;
-    /**
-     * Set by the tabs: whether this tab is the one tab stop of the list.
-     * @default false
-     */
-    tabbable?: boolean;
-    /**
-     * Pairs the tab with the panel of the same value.
-     * @default ""
-     */
-    value?: string;
-  }
-  /**
-   * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
-   * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
-   * reader can still move into it.
-   */
-  interface IdgTabPanel {
-    /**
-     * Set by the tabs: whether this panel's tab is selected.
-     * @default false
-     */
-    selected?: boolean;
-    /**
-     * Pairs the panel with the tab of the same value.
-     * @default ""
-     */
-    value?: string;
-  }
-  /**
-   * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
-   * header cells, row and column relations) and the component adds what a table needs around it: a
-   * surface drawn in the design language, a scroll region that is reachable by keyboard and named
-   * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
-   * sortable column headers.
-   * The cells are the page's own, so a shadow root cannot style them. The component adopts a
-   * constructable stylesheet into the document or shadow root the table lives in, scoped to
-   * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
-   * constructable stylesheets shows the table unstyled.
-   * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
-   * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
-   */
-  interface IdgTable {
-    /**
-     * Whether the owner of the rows is busy, such as while it fetches a sorted page. The sort buttons are marked `aria-disabled` and presses on them do nothing and say nothing.
-     * @default false
-     */
-    busy?: boolean;
-    /**
-     * The scroll region's accessible name, when the table is wider than the page. The caption is used without it.
-     */
-    label?: string;
-    /**
-     * For when you sort the rows yourself, such as on a server. A press only reports `idgSort` with the sort it asks for; the sort that is marked and announced is the one you set in `sortKey` and `sortDirection`, so a header never shows an order the rows are not in.
-     * @default false
-     */
-    manualSort?: boolean;
-    /**
-     * The tallest the region grows before its rows scroll, as a length such as `24rem`.
-     */
-    maxHeight?: string;
-    /**
-     * The narrowest the table is drawn before it scrolls sideways, as a length such as `40rem`.
-     */
-    minWidth?: string;
-    /**
-     * Fires when the user chooses a column to sort by, and not when `sortKey` is set from script.
-     */
-    onIdgSort?: (event: IdgTableCustomEvent<TableSortDetail>) => void;
-    /**
-     * The word for an ascending sort in the announcement. Translate it with `sortStatus`.
-     * @default "ascending"
-     */
-    sortAscendingLabel?: string;
-    /**
-     * The word for a descending sort in the announcement. Translate it with `sortStatus`.
-     * @default "descending"
-     */
-    sortDescendingLabel?: string;
-    /**
-     * The direction of the sort.
-     * @default "ascending"
-     */
-    sortDirection?: SortDirection;
-    /**
-     * The key of the column the rows are sorted by. Empty leaves them in their original order.
-     * @default ""
-     */
-    sortKey?: string;
-    /**
-     * Announced after a sort, where `{column}` is the column and `{direction}` is ascending or descending.
-     * @default "Sorted by {column}, {direction}"
-     */
-    sortStatus?: string;
-    /**
-     * Keeps the header in view while the rows scroll. It needs `maxHeight`, as the rows scroll in the region.
-     * @default false
-     */
-    stickyHeader?: boolean;
-    /**
-     * Shades every other row.
-     * @default false
-     */
-    striped?: boolean;
-  }
-  /**
-   * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
-   * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
-   * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
-   * its position among its own kind as its value.
-   */
-  interface IdgTabs {
-    /**
-     * `automatic` selects a tab as the arrow keys reach it. `manual` only moves focus, and Enter or Space selects, which suits panels that are slow to show.
-     * @default "automatic"
-     */
-    activation?: TabsActivation;
-    /**
-     * The tab list's accessible name.
-     */
-    label?: string;
-    /**
-     * Fires when the user selects a tab, and not when `value` is set from script.
-     */
-    onIdgChange?: (event: IdgTabsCustomEvent<ValueDetail>) => void;
-    /**
-     * Which way the tab list runs.
-     * @default "horizontal"
-     */
-    orientation?: TabsOrientation;
-    /**
-     * The value of the selected tab. Without a match, the enabled tab nearest to where the selection was takes over, which is the first enabled tab until one has been selected. Values should be unique: a tab that repeats an earlier tab's value cannot be selected, and a warning is logged.
-     * @default ""
-     */
-    value?: string;
-  }
-  interface IdgTextarea {
-    /**
-     * Set by idg-field: the hint and error text, as the control's accessible description.
-     */
-    accessibleDescription?: string;
-    /**
-     * Set by idg-field: the control's accessible name.
-     */
-    accessibleLabel?: string;
-    autocapitalize?: string;
-    autocomplete?: string;
-    /**
-     * Grows with its content, using `field-sizing` where it exists and a hidden twin elsewhere.
-     * @default false
-     */
-    autogrow?: boolean;
-    /**
-     * Shows the number of characters, against `maxlength` when there is one.
-     * @default false
-     */
-    counter?: boolean;
-    /**
-     * @default false
-     */
-    disabled?: boolean;
-    /**
-     * The `id` of a `<form>` element to associate this element with.
-     */
-    form?: string;
-    /**
-     * Set by idg-field, or by you: marks the value as wrong.
-     * @default false
-     */
-    invalid?: boolean;
-    maxlength?: number;
-    minlength?: number;
-    name?: string;
-    /**
-     * Fires when the user commits a value, such as on blur.
-     */
-    onIdgChange?: (event: IdgTextareaCustomEvent<ValueDetail>) => void;
-    /**
-     * Fires on every edit.
-     */
-    onIdgInput?: (event: IdgTextareaCustomEvent<ValueDetail>) => void;
-    placeholder?: string;
-    /**
-     * @default false
-     */
-    readonly?: boolean;
-    /**
-     * @default false
-     */
-    required?: boolean;
-    /**
-     * Visible lines. With `autogrow` it is the minimum.
-     * @default 3
-     */
-    rows?: number;
-    /**
-     * @default "md"
-     */
-    size?: InputSize;
-    spellcheck?: string;
-    /**
-     * The current value. Reset restores the value the element started with.
-     * @default ""
-     */
-    value?: string;
-  }
-  /**
-   * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
-   * time, announces each as it appears, pauses them while they are being read and lets the keyboard
-   * reach them; the `toast()` function does all of that from script.
-   * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
-   * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
-   * is given a duration, so nobody loses the chance to act on it.
-   */
-  interface IdgToast {
-    /**
-     * The label of an action button, such as "Undo". Choosing it fires `idgAction`.
-     */
-    actionLabel?: string;
-    /**
-     * The close button's accessible name.
-     * @default "Dismiss"
-     */
-    closeLabel?: string;
-    /**
-     * More detail under the heading. Set as text, never as markup.
-     */
-    description?: string;
-    /**
-     * How long the toast stays, in milliseconds. `0` keeps it until it is dismissed. Without a duration it stays for six seconds, or until dismissed when it has an action.
-     */
-    duration?: number;
-    /**
-     * The heading, and the toast's accessible name. Set as text, never as markup.
-     */
-    heading?: string;
-    /**
-     * Fires when the action button is chosen, just before the toast is dismissed.
-     */
-    onIdgAction?: (event: IdgToastCustomEvent<void>) => void;
-    /**
-     * Fires when the toast is dismissed, with the reason. The toast then removes itself, unless a listener calls `preventDefault()`.
-     */
-    onIdgDismiss?: (event: IdgToastCustomEvent<ToastDismissDetail>) => void;
-    /**
-     * Set by the region while the toasts are being read: the countdown stands still.
-     * @default false
-     */
-    paused?: boolean;
-    /**
-     * Set by the region while the toast waits its turn: it is hidden and does not count down.
-     * @default false
-     */
-    queued?: boolean;
-    /**
-     * Meaning. A danger toast is announced at once; the others wait for a pause in speech.
-     * @default "neutral"
-     */
-    variant?: ToastVariant;
-  }
-  /**
-   * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
-   * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
-   * rest, and announces each toast as it comes into view through a live region of its own: politely,
-   * or at once for danger. Focus never moves on its own.
-   * While the pointer is over it, focus is inside it, the window is in the background or the user
-   * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
-   * and nothing slides under the pointer.
-   */
-  interface IdgToastRegion {
-    /**
-     * The key, as `KeyboardEvent.key` names it, that moves focus to the toasts.
-     * @default "F8"
-     */
-    hotkey?: string;
-    /**
-     * The landmark's accessible name.
-     * @default "Notifications"
-     */
-    label?: string;
-    /**
-     * How many toasts show at once. The rest wait their turn.
-     * @default 3
-     */
-    max?: number;
-    /**
-     * The corner or edge the toasts gather at.
-     * @default "bottom-end"
-     */
-    position?: ToastPosition;
-  }
-  /**
-   * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
-   * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
-   * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
-   * only: put anything interactive in an idg-popover.
-   * The text is also the trigger's accessible description, given to the trigger itself, so it is
-   * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
-   * technology so it is not read twice.
-   */
-  interface IdgTooltip {
-    /**
-     * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
-     */
-    for?: string;
-    /**
-     * The gap between the trigger and the hint, in pixels.
-     * @default 8
-     */
-    offset?: number;
-    /**
-     * Where the hint sits against the trigger. It flips to the opposite side when out of room.
-     * @default "top"
-     */
-    placement?: Placement;
-    /**
-     * The hint. Set as text, never as markup.
-     */
-    text?: string;
-  }
-  /**
-   * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
-   * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
-   * user how the sign-out went: a server that could not be reached is said plainly, since the
-   * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
-   * It goes away when the client hears that another tab signed out.
-   */
-  interface IdgUserMenu {
-    /**
-     * A picture of the user for the avatar, such as their profile's; initials without one.
-     */
-    avatarSrc?: string;
-    /**
-     * The identity client (a JavaScript property). The element never creates one.
-     */
-    client?: UserMenuClient;
-    /**
-     * The name to show; the username by default.
-     */
-    displayName?: string;
-    /**
-     * The text, merged over the English defaults. Assign a new object to change it.
-     */
-    labels?: Partial<UserMenuLabels>;
-    /**
-     * Fires after "Sign out", with how it went. Navigating on is the page's job.
-     */
-    onIdgSignedOut?: (event: IdgUserMenuCustomEvent<SignedOutDetail>) => void;
-  }
-  /**
-   * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
-   * always acts on the document's root element, through `@identgineer/variations`, so the page's own
-   * attributes stay the single truth: a change made anywhere else (markup, a script, another
-   * switcher) is shown here, and nothing here is announced for a change the visitor did not make.
-   */
-  interface IdgVariationSwitcher {
-    /**
-     * The controls to show, as a comma separated list of `theme`, `design`, `layout`, `ux` and `scheme`. Unknown names are ignored, and without a known name every control is shown.
-     */
-    axes?: string;
-    /**
-     * A visible heading, which also names the panel. Without one the name is "Appearance".
-     */
-    heading?: string;
-    /**
-     * Fires when the visitor changes something through the panel, with the new state.
-     */
-    onIdgVariationsChange?: (
-      event: IdgVariationSwitcherCustomEvent<VariationsChangeDetail>,
-    ) => void;
-    /**
-     * `stacked` puts the controls in a column, `inline` side by side where there is room.
-     * @default "stacked"
-     */
-    orientation?: SwitcherOrientation;
-    /**
-     * Saves each change with the runtime's persistence, so the choice is still there on the next visit. The bootstrap script of `@identgineer/variations` applies it before the page is painted.
-     * @default false
-     */
-    persist?: boolean;
-  }
+     * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
+     * one item is open at a time. Up and Down, Home and End move between the headers.
+     */
+    interface IdgAccordion {
+        /**
+          * Lets the browser's find in page open a closed item that holds the text it finds, by hiding closed panels with `hidden="until-found"`. A browser without it hides them as usual.
+          * @default false
+         */
+        "findInPage"?: boolean;
+        /**
+          * The level of every item's heading, 1 to 6. Pick the one that follows the page's own heading.
+          * @default 3
+         */
+        "headingLevel"?: number;
+        /**
+          * Lets several items be open at once. Otherwise opening one closes the others.
+          * @default false
+         */
+        "multiple"?: boolean;
+    }
+    /**
+     * One item of an idg-accordion: a heading holding the button that shows or hides the panel
+     * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
+     * the panel's name are plain id references.
+     */
+    interface IdgAccordionItem {
+        /**
+          * Keeps the item where it is but stops the button being used.
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * Set by the accordion: whether a closed panel can be found by the browser.
+          * @default false
+         */
+        "findInPage"?: boolean;
+        /**
+          * Set by the accordion: whether the panel is a region landmark.
+          * @default true
+         */
+        "hasRegion"?: boolean;
+        /**
+          * The text of the button. Use the heading slot for anything richer.
+         */
+        "heading"?: string;
+        /**
+          * Set by the accordion: the heading's level.
+          * @default 3
+         */
+        "headingLevel"?: number;
+        /**
+          * Fires when the item opens or closes, whether the user did it or a script.
+         */
+        "onIdgToggle"?: (event: IdgAccordionItemCustomEvent<AccordionToggleDetail>) => void;
+        /**
+          * Whether the panel is showing.
+          * @default false
+         */
+        "open"?: boolean;
+        /**
+          * Set by the accordion while it settles the items at load: a change then is not announced.
+          * @default false
+         */
+        "quiet"?: boolean;
+        /**
+          * Names the item in `idgToggle`.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * A message that stays on the page until it is read or dismissed. For a message that appears in
+     * response to what the user did, render the alert at that moment: a live region announces what is
+     * inserted, not what was already there.
+     */
+    interface IdgAlert {
+        /**
+          * The dismiss button's accessible name.
+          * @default "Dismiss"
+         */
+        "dismissLabel"?: string;
+        /**
+          * Adds a button that dismisses the alert.
+          * @default false
+         */
+        "dismissible"?: boolean;
+        /**
+          * Fires when the dismiss button is activated. The alert then hides itself, unless a listener calls `preventDefault()` to remove or keep it some other way.
+         */
+        "onIdgDismiss"?: (event: IdgAlertCustomEvent<void>) => void;
+        /**
+          * Leaves out the live role, for a message that changes while it is shown (a countdown, say), which a live role would announce on every change. Announce it some other way.
+          * @default false
+         */
+        "quiet"?: boolean;
+        /**
+          * Meaning and urgency. Warning and danger interrupt assistive technology; info and success do not.
+          * @default "info"
+         */
+        "variant"?: AlertVariant;
+    }
+    /**
+     * A person or account, as a picture or, when there is none or it fails to load, their initials on a
+     * colour chosen from their name.
+     */
+    interface IdgAvatar {
+        /**
+          * What the picture shows. Defaults to `name`. An empty string marks the avatar as decoration, for one that sits beside the same name written out as text.
+         */
+        "alt"?: string;
+        /**
+          * The person's name: the source of the initials and the colour, and the default alt.
+         */
+        "name"?: string;
+        /**
+          * Avatar size.
+          * @default "md"
+         */
+        "size"?: AvatarSize;
+        /**
+          * The picture. Only http, https and relative urls are loaded.
+         */
+        "src"?: string;
+        /**
+          * Shows a status dot. Each status has its own shape, so colour is not the only cue.
+         */
+        "status"?: AvatarStatus;
+        /**
+          * The status dot's accessible name. Defaults to the status in English.
+         */
+        "statusLabel"?: string;
+    }
+    /**
+     * Overlaps a row of idg-avatar. It sets their size, and with `max` hides the ones past the limit
+     * and shows how many there are.
+     */
+    interface IdgAvatarGroup {
+        /**
+          * Names the group for assistive technology, such as "Reviewers".
+         */
+        "label"?: string;
+        /**
+          * The most avatars to show. The rest are hidden and counted.
+         */
+        "max"?: number;
+        /**
+          * The word after the count in its accessible name, such as "2 more".
+          * @default "more"
+         */
+        "moreLabel"?: string;
+        /**
+          * The size of every avatar in the group.
+          * @default "md"
+         */
+        "size"?: AvatarSize;
+    }
+    /**
+     * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
+     */
+    interface IdgBadge {
+        /**
+          * Shows a dot before the label.
+          * @default false
+         */
+        "dot"?: boolean;
+        /**
+          * Badge size.
+          * @default "md"
+         */
+        "size"?: BadgeSize;
+        /**
+          * Emphasis and meaning.
+          * @default "neutral"
+         */
+        "variant"?: BadgeVariant;
+    }
+    /**
+     * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
+     * idg-breadcrumb-item. The last item is the current page unless another item says it is.
+     */
+    interface IdgBreadcrumb {
+        /**
+          * The landmark's accessible name. Give each breadcrumb on a page its own.
+          * @default "Breadcrumb"
+         */
+        "label"?: string;
+        /**
+          * The mark between items. It is decoration and hidden from assistive technology.
+          * @default BREADCRUMB_SEPARATORS[0]
+         */
+        "separator"?: BreadcrumbSeparator;
+    }
+    /**
+     * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
+     * one, and separator are drawn in its own shadow root.
+     */
+    interface IdgBreadcrumbItem {
+        /**
+          * Marks this step as the current page, in place of the last one.
+          * @default false
+         */
+        "current"?: boolean;
+        /**
+          * Where the step goes. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * Set by the breadcrumb: whether this step is the current page.
+          * @default false
+         */
+        "isCurrent"?: boolean;
+        /**
+          * Set by the breadcrumb: whether this is the last step, which has no separator after it.
+          * @default false
+         */
+        "isLast"?: boolean;
+        /**
+          * Set by the breadcrumb: the mark after the step.
+          * @default "chevron"
+         */
+        "separator"?: BreadcrumbSeparator;
+    }
+    interface IdgButton {
+        /**
+          * Set by an overlay this button opens: the element it opens (`aria-controls`).
+         */
+        "accessibleControls"?: Element[];
+        /**
+          * Set by idg-tooltip: the hint, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by an overlay this button opens: whether it is open (`aria-expanded`).
+         */
+        "accessibleExpanded"?: boolean;
+        /**
+          * Set by an overlay this button opens: what kind of popup it is (`aria-haspopup`).
+         */
+        "accessibleHaspopup"?: string;
+        /**
+          * Blocks activation and takes the control out of the tab order.
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Stretches the button to its container.
+          * @default false
+         */
+        "fullWidth"?: boolean;
+        /**
+          * Renders a link. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * Shows a spinner and blocks activation, but keeps the control focusable.
+          * @default false
+         */
+        "loading"?: boolean;
+        /**
+          * The name of the element, used when submitting an HTML form.
+         */
+        "name"?: string;
+        /**
+          * Link relationship.
+         */
+        "rel"?: string;
+        /**
+          * A hint such as `Enter`, shown only when the UX mode turns shortcuts on.
+         */
+        "shortcut"?: string;
+        /**
+          * Control size. Never smaller than the design's minimum target size.
+          * @default "md"
+         */
+        "size"?: ButtonSize;
+        /**
+          * Where a link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
+         */
+        "target"?: string;
+        /**
+          * What activating the button does inside a form. Ignored when `href` is set.
+          * @default "button"
+         */
+        "type"?: ButtonType;
+        /**
+          * Visual emphasis.
+          * @default "primary"
+         */
+        "variant"?: ButtonVariant;
+    }
+    /**
+     * A surface that groups related content, drawn in the design language's own surface, border and
+     * elevation.
+     * With `href` and a `heading`, the heading becomes the card's one link and covers the whole card, so
+     * a click anywhere follows it while assistive technology still finds a single link. Anything in
+     * the footer slot sits above the link and stays clickable.
+     */
+    interface IdgCard {
+        /**
+          * The card's title, drawn as a heading.
+         */
+        "heading"?: string;
+        /**
+          * The heading level, 1 to 6.
+          * @default 3
+         */
+        "headingLevel"?: number;
+        /**
+          * Makes the heading a link that covers the card. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * Lifts the whole card on hover. A card with a link is always interactive.
+          * @default false
+         */
+        "interactive"?: boolean;
+        /**
+          * Space inside the card around its content.
+          * @default "md"
+         */
+        "padding"?: CardPadding;
+        /**
+          * Link relationship.
+         */
+        "rel"?: string;
+        /**
+          * Where the link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
+         */
+        "target"?: string;
+        /**
+          * Surface treatment.
+          * @default "plain"
+         */
+        "variant"?: CardVariant;
+    }
+    interface IdgCheckbox {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: replaces the slotted text as the accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * @default false
+         */
+        "checked"?: boolean;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Shows a mixed state, such as a parent of partly selected children. A user choice clears it.
+          * @default false
+         */
+        "indeterminate"?: boolean;
+        /**
+          * Marks the choice as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "name"?: string;
+        /**
+          * Fires when the user toggles the checkbox.
+         */
+        "onIdgChange"?: (event: IdgCheckboxCustomEvent<CheckedDetail>) => void;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * What is submitted while checked.
+          * @default "on"
+         */
+        "value"?: string;
+    }
+    /**
+     * A group of items in a row that wraps onto further rows when it runs out of room, such as tags,
+     * buttons or a toolbar. It only arranges, so it adds no role and the source order stays the
+     * reading order.
+     */
+    interface IdgCluster {
+        /**
+          * How items in a row line up on the block axis.
+          * @default "center"
+         */
+        "align"?: ClusterAlignment;
+        /**
+          * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * How each row is spread along the inline axis. `between` pushes the first and last items apart.
+          * @default "start"
+         */
+        "justify"?: ClusterJustification;
+    }
+    /**
+     * Asks once whether analytics may be switched on, for the consent object it is given in `consent`
+     * (the tracker's `tracker.consent`). It is a region of the page, not a dialog: it never blocks
+     * anything, takes no focus when it appears, and ignoring it, or pressing Escape, means no consent.
+     * It asks only while the state is `unknown` and no browser privacy signal is set. Under Global
+     * Privacy Control or Do Not Track it does not ask at all, since asking would invite a choice the
+     * browser has already made: it draws nothing, or, with `announce-signal`, one line saying the
+     * signal is respected. "Decline" comes first and has the same variant and size as "Accept
+     * analytics". After a choice, focus goes back to what had it before the banner, else to the main
+     * landmark, and a polite live region confirms it.
+     * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
+     * natural place is further on, so it keeps its space in the page's flow and never covers the end
+     * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
+     * element is scrolled clear of it. In a window too short for both, it joins the page's flow
+     * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
+     * is: a bar at the top scrolls away with the page and never covers a header that sticks.
+     */
+    interface IdgConsentBanner {
+        /**
+          * Under a browser privacy signal, say in one line that it is respected, instead of nothing.
+          * @default false
+         */
+        "announceSignal"?: boolean;
+        /**
+          * The tracker's consent object, `tracker.consent` (a JavaScript property).
+         */
+        "consent"?: ConsentClient;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<ConsentBannerLabels>;
+        /**
+          * Fires when the user chooses here, with the state that is now stored. A change made elsewhere (another tab, the preferences) is not announced by it: subscribe with `consent.onChange`.
+         */
+        "onIdgConsentChange"?: (event: IdgConsentBannerCustomEvent<ConsentChangeDetail>) => void;
+        /**
+          * Fires when "Choose" is pressed. Call `preventDefault()` to open the preferences yourself.
+         */
+        "onIdgConsentChoose"?: (event: IdgConsentBannerCustomEvent<void>) => void;
+        /**
+          * `bottom` (the default): a bar that stays in view; `top` and `inline`: in the page's flow.
+          * @default "bottom"
+         */
+        "placement"?: ConsentPlacement;
+        /**
+          * The id of an `idg-consent-preferences` elsewhere in the page that "Choose" opens.
+         */
+        "preferences"?: string;
+    }
+    /**
+     * The visitor's choices about analytics, for the consent object it is given in `consent` (the
+     * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
+     * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
+     * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
+     * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
+     * the switch is disabled with the signal named, and saving can only record a denial.
+     * It follows changes made elsewhere (another tab, the banner). If the stored state changes under
+     * an unsaved edit, the edit is dropped and a note says so. With `modal` it is drawn inside an
+     * `idg-dialog` that `open()` and `close()` control; the dialog holds and restores focus.
+     */
+    interface IdgConsentPreferences {
+        /**
+          * The tracker's consent object, `tracker.consent` (a JavaScript property).
+         */
+        "consent"?: ConsentClient;
+        /**
+          * The level of the heading, 2 to 6, to fit the page's outline.
+          * @default 2
+         */
+        "headingLevel"?: number;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<ConsentPreferencesLabels>;
+        /**
+          * Draws the panel inside an `idg-dialog`, opened with `open()` and closed with `close()`.
+          * @default false
+         */
+        "modal"?: boolean;
+        /**
+          * Fires when the user saves or erases here, with the state that is now stored. A change made elsewhere (another tab, the banner) is not announced by it: subscribe with `consent.onChange`.
+         */
+        "onIdgConsentChange"?: (event: IdgConsentPreferencesCustomEvent<ConsentChangeDetail>) => void;
+    }
+    /**
+     * A block at least as tall as `min-height` that centres its content, with optional regions pinned
+     * to its top and bottom, such as a hero, a splash or a sign-in screen. It only arranges, so it
+     * adds no role and the source order stays the reading order.
+     */
+    interface IdgCover {
+        /**
+          * Space between the regions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Least height of the block, a step of the size scale, or `screen` for the height of the viewport.
+          * @default "l"
+         */
+        "minHeight"?: CoverHeight;
+    }
+    /**
+     * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
+     * of the page inert and contains focus, and Escape is the browser's close request. The component
+     * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
+     * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
+     * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
+     * closed.
+     */
+    interface IdgDialog {
+        /**
+          * Makes it an `alertdialog`: an urgent message that needs a response, described by its body.
+          * @default false
+         */
+        "alert"?: boolean;
+        /**
+          * The close button's accessible name.
+          * @default "Close"
+         */
+        "closeLabel"?: string;
+        /**
+          * Whether a click on the backdrop of a modal dialog dismisses it. Needs `dismissible`.
+          * @default false
+         */
+        "closeOnBackdrop"?: boolean;
+        /**
+          * Whether the user can dismiss the dialog with Escape and the close button.
+          * @default true
+         */
+        "dismissible"?: boolean;
+        /**
+          * The title, drawn as a heading. It is the dialog's accessible name.
+         */
+        "heading"?: string;
+        /**
+          * Whether setting `open` opens a modal dialog. The methods choose for themselves.
+          * @default true
+         */
+        "modal"?: boolean;
+        /**
+          * Fires when the user tries to dismiss the dialog (Escape, the backdrop or the close button). Call `preventDefault()` to keep it open. Browsers close the dialog anyway on a second Escape without other input in between, so that a page cannot trap the user.
+         */
+        "onIdgCancel"?: (event: IdgDialogCustomEvent<DialogCancelDetail>) => void;
+        /**
+          * Fires after the dialog has closed, with the return value and why it closed.
+         */
+        "onIdgClose"?: (event: IdgDialogCustomEvent<DialogCloseDetail>) => void;
+        /**
+          * Fires when the dialog opens.
+         */
+        "onIdgOpen"?: (event: IdgDialogCustomEvent<DialogOpenDetail>) => void;
+        /**
+          * Whether the dialog is open. Setting it opens (as `modal` says) or closes the dialog.
+          * @default false
+         */
+        "open"?: boolean;
+        /**
+          * Width: `sm`, `md`, `lg`, or `full` for the whole viewport less a margin.
+          * @default "md"
+         */
+        "size"?: DialogSize;
+    }
+    /**
+     * A rule between groups of content, drawn in the design language's own border.
+     */
+    interface IdgDivider {
+        /**
+          * Takes the divider out of the accessibility tree, for a rule that only decorates.
+          * @default false
+         */
+        "decorative"?: boolean;
+        /**
+          * Direction of the rule. A vertical divider needs a parent that gives it a height.
+          * @default "horizontal"
+         */
+        "orientation"?: DividerOrientation;
+    }
+    /**
+     * A table of tracked events: the event, when it happened, the path and its properties, with
+     * paging and optional sorting by time or name. It takes its data through properties and never
+     * fetches.
+     * Every value is untrusted text from the public internet. It is drawn as text and nothing else: no
+     * markup is read, no link or address is made from it, control and bidirectional characters are
+     * replaced by a visible mark, each value is isolated in a `<bdi>` so right to left text cannot
+     * reorder what is beside it, long values wrap and are cut to a limit, and an event shows at most
+     * ten properties. Records that are malformed are left out.
+     * With `events` as the whole list, the table sorts and pages it. With `total` set, `events` is the
+     * one page the server answered with: the table draws it as it is and only reports `idgPageChange`
+     * and `idgSort` for the page to fetch with. Either way it draws at most `pageSize` rows (to 100).
+     * The state that matters is said politely: loading, an error, no events, and which events are shown.
+     */
+    interface IdgEventTable {
+        /**
+          * The accessible name of the table, drawn as its caption. Required.
+         */
+        "caption"?: string;
+        /**
+          * The message of an error that stopped the events loading. Drawn in an alert, as text.
+         */
+        "error"?: string;
+        /**
+          * The events: `{ id, name, occurredAt, path?, properties? }`. Malformed records are left out.
+         */
+        "events"?: TrackedEvent[];
+        /**
+          * The words of the table, merged over the English defaults.
+         */
+        "labels"?: Partial<EventTableLabels>;
+        /**
+          * Draws a skeleton and says the events are loading.
+          * @default false
+         */
+        "loading"?: boolean;
+        /**
+          * Fires when the user chooses another page, with `{ page }`. Call `preventDefault()` to keep the page where it is, such as to fetch it first and set `page` yourself.
+         */
+        "onIdgPageChange"?: (event: IdgEventTableCustomEvent<PageChangeDetail>) => void;
+        /**
+          * Fires when the user sorts a column, with `{ key, direction }`.
+         */
+        "onIdgSort"?: (event: IdgEventTableCustomEvent<EventSort>) => void;
+        /**
+          * The current page, from 1. A page beyond the last is drawn as the last.
+          * @default 1
+         */
+        "page"?: number;
+        /**
+          * Rows on a page, 1 to 100.
+          * @default 10
+         */
+        "pageSize"?: number;
+        /**
+          * The direction of the sort.
+          * @default "ascending"
+         */
+        "sortDirection"?: EventSortDirection;
+        /**
+          * The column the rows are sorted by: `time` or `name`. Empty leaves the order given.
+          * @default ""
+         */
+        "sortKey"?: EventSortKey | "";
+        /**
+          * Makes the Event and Time headers sort buttons.
+          * @default false
+         */
+        "sortable"?: boolean;
+        /**
+          * The IANA time zone times are shown in, such as `UTC`. The reader's own by default.
+         */
+        "timeZone"?: string;
+        /**
+          * How many events there are in all. Set it when `events` is one page the server answered with: the table then draws `events` as it is, and neither sorts nor pages it.
+         */
+        "total"?: number;
+    }
+    /**
+     * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
+     * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
+     * reference cannot cross a shadow boundary, so their text is handed to the control as properties
+     * and the control applies it to its own native element.
+     */
+    interface IdgField {
+        /**
+          * The error message. Setting it marks the control invalid and announces the message.
+         */
+        "error"?: string;
+        /**
+          * Help text. Shown when the UX mode turns hints on, and always read with the control.
+         */
+        "hint"?: string;
+        /**
+          * The visible label, and the control's accessible name.
+         */
+        "label"?: string;
+        /**
+          * Text such as "optional" shown beside the label of a field that is not required.
+         */
+        "optionalText"?: string;
+        /**
+          * Marks the control required and shows a star.
+          * @default false
+         */
+        "required"?: boolean;
+    }
+    /**
+     * Items in as many equal columns as fit. Each column is at least `min` wide, and there are never
+     * more columns than the layout allows, so the same markup has more or fewer columns under each
+     * `data-layout`. It only arranges, so it adds no role and the source order stays the reading order.
+     */
+    interface IdgGrid {
+        /**
+          * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Narrowest a column may be, a step of the size scale. Without it the layout's track size is used.
+         */
+        "min"?: SizeStep;
+    }
+    /**
+     * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
+     */
+    interface IdgIcon {
+        /**
+          * Gives the icon an accessible name. Without it the icon is decoration and hidden.
+         */
+        "label"?: string;
+        /**
+          * Which icon to draw. An unknown name draws nothing.
+         */
+        "name"?: IconName;
+        /**
+          * Size relative to the surrounding text.
+          * @default "md"
+         */
+        "size"?: IconSize;
+    }
+    /**
+     * A form-associated text field. Enter submits its form as a native input does (see the README):
+     * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
+     * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
+     */
+    interface IdgInput {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        "autocapitalize"?: string;
+        "autocomplete"?: string;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        "enterkeyhint"?: string;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        "inputmode"?: string;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "max"?: string;
+        "maxlength"?: number;
+        "min"?: string;
+        "minlength"?: number;
+        /**
+          * The name the value is submitted under.
+         */
+        "name"?: string;
+        /**
+          * Fires when the user commits a value, such as on blur or Enter.
+         */
+        "onIdgChange"?: (event: IdgInputCustomEvent<ValueDetail>) => void;
+        /**
+          * Fires on every edit.
+         */
+        "onIdgInput"?: (event: IdgInputCustomEvent<ValueDetail>) => void;
+        "pattern"?: string;
+        "placeholder"?: string;
+        /**
+          * @default false
+         */
+        "readonly"?: boolean;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * Adds a button that shows a password as text. Only for `type="password"`.
+          * @default false
+         */
+        "reveal"?: boolean;
+        /**
+          * The name of the reveal button.
+          * @default "Show password"
+         */
+        "revealLabel"?: string;
+        /**
+          * Control size. Never smaller than the design's minimum target size.
+          * @default "md"
+         */
+        "size"?: InputSize;
+        "spellcheck"?: string;
+        "step"?: string;
+        /**
+          * What kind of text the control takes. Unknown values fall back to `text`.
+          * @default "text"
+         */
+        "type"?: InputType;
+        /**
+          * The current value. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * The page shell. One page, written once, is housed in the structure the `data-layout` attribute of
+     * the root (or of an ancestor) names: the same landmarks in the same reading order in all eight, and
+     * only a stylesheet that places them differently. The shell never reorders its own tree, so the
+     * order a reader and the Tab key meet things is the order of the markup in every layout.
+     * It is a size container, and every layout decides its small, medium and large arrangement from its
+     * own width, never the viewport's. Where a layout collapses the navigation behind a toggle, the
+     * stylesheet decides that too, and the script only reads what it decided (`--_nav`).
+     */
+    interface IdgLayout {
+        /**
+          * The accessible name of the aside landmark.
+          * @default "Related content"
+         */
+        "asideLabel"?: string;
+        /**
+          * The accessible name of the button that closes the navigation drawer.
+          * @default "Close"
+         */
+        "closeLabel"?: string;
+        /**
+          * Whether the shell sits inside a page rather than being the page. An embedded shell does not claim the height of the window, which a shell that is the page does.
+          * @default false
+         */
+        "embedded"?: boolean;
+        /**
+          * The text of the button that opens the collapsed navigation.
+          * @default "Menu"
+         */
+        "menuLabel"?: string;
+        /**
+          * The accessible name of the navigation landmark.
+          * @default "Main navigation"
+         */
+        "navigationLabel"?: string;
+        /**
+          * Whether the collapsed navigation is open. It can only be open while the layout collapses the navigation: it goes back to false when the container grows and the navigation is drawn inline.
+          * @default false
+         */
+        "navigationOpen"?: boolean;
+        /**
+          * Fires when the collapsed navigation opens or closes.
+         */
+        "onIdgNavigationToggle"?: (event: IdgLayoutCustomEvent<NavigationToggleDetail>) => void;
+        /**
+          * The text of the skip link, the first control on the page.
+          * @default "Skip to content"
+         */
+        "skipLabel"?: string;
+    }
+    /**
+     * An inline text link. It takes the same hardening as the button's link mode: the url goes
+     * through `safeUrl` and a link that opens another browsing context always gets `noopener
+     * noreferrer`.
+     */
+    interface IdgLink {
+        /**
+          * Marks a link to another site: shows an indicator and opens a new tab unless `target` is set.
+          * @default false
+         */
+        "external"?: boolean;
+        /**
+          * The accessible name of the external indicator.
+          * @default "External link"
+         */
+        "externalLabel"?: string;
+        /**
+          * Where the link goes. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * Link relationship.
+         */
+        "rel"?: string;
+        /**
+          * Where the link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
+         */
+        "target"?: string;
+    }
+    /**
+     * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
+     * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
+     * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
+     * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
+     * focus moves to the items themselves (roving focus). Each item carries its own role and state.
+     */
+    interface IdgMenu {
+        /**
+          * The menu's accessible name. Without it the menu is named by its trigger.
+         */
+        "label"?: string;
+        /**
+          * The gap between the trigger and the menu, in pixels.
+          * @default 4
+         */
+        "offset"?: number;
+        /**
+          * Fires when the menu closes.
+         */
+        "onIdgClose"?: (event: IdgMenuCustomEvent<void>) => void;
+        /**
+          * Fires when the menu opens.
+         */
+        "onIdgOpen"?: (event: IdgMenuCustomEvent<void>) => void;
+        /**
+          * Fires when an item is chosen, with its value and, for a checkable item, its new state.
+         */
+        "onIdgSelect"?: (event: IdgMenuCustomEvent<MenuSelectDetail>) => void;
+        /**
+          * Whether the menu is open.
+          * @default false
+         */
+        "open"?: boolean;
+        /**
+          * Where the menu sits against the trigger. It flips to the opposite side when out of room.
+          * @default "bottom-start"
+         */
+        "placement"?: Placement;
+    }
+    /**
+     * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
+     * uncheck each other within their group.
+     */
+    interface IdgMenuGroup {
+        /**
+          * The group's visible label and accessible name.
+         */
+        "label"?: string;
+    }
+    /**
+     * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
+     * its own shadow root, so its role and state are set on the focusable element inside it, and the
+     * host is a plain wrapper that assistive technology passes through.
+     */
+    interface IdgMenuItem {
+        /**
+          * Whether a checkbox or radio item is on. The menu changes it when the item is chosen.
+          * @default false
+         */
+        "checked"?: boolean;
+        /**
+          * Keeps the item in the menu, where it can be found, but stops it being chosen.
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * Makes the item a link. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "href"?: string;
+        /**
+          * A leading icon, drawn as decoration.
+         */
+        "icon"?: IconName;
+        /**
+          * Link relationship.
+         */
+        "rel"?: string;
+        /**
+          * A hint such as `Ctrl+E`, shown when the UX mode turns shortcuts on. Nothing binds the key.
+         */
+        "shortcut"?: string;
+        /**
+          * Where a link opens. Anything but `_self` adds `rel="noopener noreferrer"`.
+         */
+        "target"?: string;
+        /**
+          * `item` does something, `checkbox` toggles, `radio` picks one of its group.
+          * @default "item"
+         */
+        "type"?: MenuItemType;
+        /**
+          * What `idgSelect` reports when this item is chosen.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * A rule between groups of items in an idg-menu.
+     */
+    interface IdgMenuSeparator {
+    }
+    /**
+     * Page controls for a long list: previous and next, the current page and a window of its
+     * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
+     * given, so each page is an address that can be opened, shared and followed without script, and
+     * buttons that fire `idgPageChange` otherwise.
+     */
+    interface IdgPagination {
+        /**
+          * Pages always shown at the start and the end.
+          * @default 1
+         */
+        "boundaries"?: number;
+        /**
+          * Makes the controls links. `{page}` is replaced by the page number, as in `/items?page={page}`. Only http, https, mailto, tel and relative urls are kept.
+         */
+        "hrefTemplate"?: string;
+        /**
+          * The landmark's accessible name. Give each pagination on a page its own.
+          * @default "Pagination"
+         */
+        "label"?: string;
+        /**
+          * The accessible name of the next control.
+          * @default "Next page"
+         */
+        "nextLabel"?: string;
+        /**
+          * Fires when the user chooses a page other than the current one. Call `preventDefault()` to keep the page where it is, for instance to load the page yourself first. On a link it also stops the link being followed.
+         */
+        "onIdgPageChange"?: (event: IdgPaginationCustomEvent<PageChangeDetail>) => void;
+        /**
+          * The current page, from 1.
+          * @default 1
+         */
+        "page"?: number;
+        /**
+          * How many pages there are, up to ten million: more is held to that.
+          * @default 1
+         */
+        "pageCount"?: number;
+        /**
+          * The accessible name of a page control, where `{page}` is the number.
+          * @default "Page {page}"
+         */
+        "pageLabel"?: string;
+        /**
+          * The accessible name of the previous control.
+          * @default "Previous page"
+         */
+        "previousLabel"?: string;
+        /**
+          * Pages shown on each side of the current one.
+          * @default 1
+         */
+        "siblings"?: number;
+    }
+    /**
+     * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
+     * for the address and always answers the same, whether or not an account uses it. `complete`
+     * sets the new password with the emailed code, which the page reads from the link and passes in
+     * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
+     * inputs are emptied after every attempt.
+     */
+    interface IdgPasswordReset {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: PasswordResetClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The code from the reset email, which the page reads from the link it was sent. Without one, `complete` mode asks for it.
+         */
+        "code"?: string;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<PasswordResetLabels>;
+        /**
+          * Which step to show. Unknown values fall back to `request`.
+          * @default "request"
+         */
+        "mode"?: PasswordResetMode;
+        /**
+          * Fires once the new password is set and the user signed in, with their id and username.
+         */
+        "onIdgPasswordReset"?: (event: IdgPasswordResetCustomEvent<SignedInDetail>) => void;
+        /**
+          * Fires once a reset email is asked for. It carries nothing: the answer is the same for all.
+         */
+        "onIdgResetRequested"?: (event: IdgPasswordResetCustomEvent<void>) => void;
+    }
+    /**
+     * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
+     * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
+     * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
+     * not contained, and Tab moves on from the content.
+     */
+    interface IdgPopover {
+        /**
+          * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
+         */
+        "for"?: string;
+        /**
+          * The gap between the trigger and the surface, in pixels.
+          * @default 8
+         */
+        "offset"?: number;
+        /**
+          * Fires when the popover closes, however it was closed.
+         */
+        "onIdgClose"?: (event: IdgPopoverCustomEvent<void>) => void;
+        /**
+          * Fires when the popover opens.
+         */
+        "onIdgOpen"?: (event: IdgPopoverCustomEvent<void>) => void;
+        /**
+          * Whether the popover is open.
+          * @default false
+         */
+        "open"?: boolean;
+        /**
+          * Where the surface sits against the trigger. It flips to the opposite side when out of room.
+          * @default "bottom-start"
+         */
+        "placement"?: Placement;
+    }
+    /**
+     * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
+     * (display name, about, language, time zone and email preference), a password change, and the
+     * sessions of the account with a button to sign each other one out and one to sign out everywhere.
+     * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
+     */
+    interface IdgProfile {
+        /**
+          * A picture of the owner for the avatar, such as the one their profile links to.
+         */
+        "avatarSrc"?: string;
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: ProfileClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The level of the section headings, 2 to 6, to fit the page's outline: below a page title (`h1`), 2.
+          * @default 2
+         */
+        "headingLevel"?: number;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<ProfileLabels>;
+        /**
+          * Fires after the password is changed. It carries nothing.
+         */
+        "onIdgPasswordChanged"?: (event: IdgProfileCustomEvent<void>) => void;
+        /**
+          * Fires after the profile is saved, with the saved fields.
+         */
+        "onIdgProfileSaved"?: (event: IdgProfileCustomEvent<ProfileSavedDetail>) => void;
+        /**
+          * Fires after another session is signed out, with its id.
+         */
+        "onIdgSessionRevoked"?: (event: IdgProfileCustomEvent<SessionRevokedDetail>) => void;
+        /**
+          * Fires after "Sign out everywhere", with how it went. Navigating on is the page's job.
+         */
+        "onIdgSignedOut"?: (event: IdgProfileCustomEvent<SignedOutDetail>) => void;
+    }
+    /**
+     * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
+     * the browser's own. Without a value it is indeterminate.
+     */
+    interface IdgProgress {
+        /**
+          * Marks work of unknown length, whatever the value.
+          * @default false
+         */
+        "indeterminate"?: boolean;
+        /**
+          * What is progressing. Visible, and the bar's accessible name, so it should always be set.
+         */
+        "label"?: string;
+        /**
+          * The value that means done.
+          * @default 100
+         */
+        "max"?: number;
+        /**
+          * Shows the percentage beside the label. Only for determinate progress.
+          * @default false
+         */
+        "showValue"?: boolean;
+        /**
+          * Bar thickness.
+          * @default "md"
+         */
+        "size"?: ProgressSize;
+        /**
+          * How much is done. Without it the progress is indeterminate.
+         */
+        "value"?: number;
+    }
+    /**
+     * Lets a signed-in user choose which tracked property (site) the dashboard shows. It is a labelled
+     * `idg-select` that lists the `properties` it is given and reports the chosen id with `idgChange`.
+     * It is form associated: with a `name` it submits the chosen id.
+     * Property names are text the user typed: they are shown as text only, with control and
+     * bidirectional characters replaced and long names cut. A `value` that is not one of the
+     * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
+     * property appears in the list later, and is never replaced by the first property.
+     */
+    interface IdgPropertyPicker {
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * The visible label and the accessible name.
+         */
+        "label"?: string;
+        /**
+          * The words of the picker, merged over the English defaults.
+         */
+        "labels"?: Partial<PropertyPickerLabels>;
+        /**
+          * While the properties load: disabled, busy, and said politely.
+          * @default false
+         */
+        "loading"?: boolean;
+        "name"?: string;
+        /**
+          * Fires when the user chooses a property, with its id as `{ value }`, and not when `value` is set from script.
+         */
+        "onIdgChange"?: (event: IdgPropertyPickerCustomEvent<ValueDetail>) => void;
+        /**
+          * The properties to choose from: `{ id, name, origin? }`. Records that are malformed or repeat an id are left out.
+         */
+        "properties"?: TrackedProperty[];
+        /**
+          * The id of the chosen property. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
+     * as set by the group are how it passes state down, because radios in separate shadow roots are
+     * not a native radio group.
+     */
+    interface IdgRadio {
+        /**
+          * Set by the group from its value.
+          * @default false
+         */
+        "checked"?: boolean;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * Set by the group: whether the whole group is disabled.
+          * @default false
+         */
+        "groupDisabled"?: boolean;
+        /**
+          * Set by the group: marks the group's value as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        /**
+          * Fires when the user chooses this radio. The group listens; you listen to the group.
+         */
+        "onIdgSelect"?: (event: IdgRadioCustomEvent<RadioSelectDetail>) => void;
+        /**
+          * Set by the group: this radio's place, from 1.
+         */
+        "position"?: number;
+        /**
+          * Set by the group: how many radios the group holds.
+         */
+        "setSize"?: number;
+        /**
+          * Set by the group: whether this radio is the group's one tab stop.
+          * @default true
+         */
+        "tabbable"?: boolean;
+        /**
+          * What the group takes as its value when this radio is chosen.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
+     * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
+     * its radios, is the form control.
+     */
+    interface IdgRadioGroup {
+        /**
+          * Set by idg-field: the hint and error text, as the group's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: the group's accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Set by idg-field, or by you: marks the choice as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "name"?: string;
+        /**
+          * Fires when the user chooses a radio.
+         */
+        "onIdgChange"?: (event: IdgRadioGroupCustomEvent<ValueDetail>) => void;
+        /**
+          * How the radios are laid out.
+          * @default "vertical"
+         */
+        "orientation"?: Orientation;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * The value of the chosen radio. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * A registration form for the identity client it is given in `client`. With email confirmation on,
+     * a new address and one already registered get the same answer, so the form never tells whether
+     * an account exists. The password is read from its input when the form is sent and the input is
+     * emptied after every attempt.
+     */
+    interface IdgRegister {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: RegisterClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<RegisterLabels>;
+        /**
+          * Fires once the account is asked for. Navigating on is the page's job.
+         */
+        "onIdgRegistered"?: (event: IdgRegisterCustomEvent<RegisteredDetail>) => void;
+    }
+    /**
+     * Options are written as children, exactly as for a native select, and copied into the native
+     * select inside the component: the same markup works with or without a framework, and no option
+     * data has to be serialised into an attribute.
+     */
+    interface IdgSelect {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "name"?: string;
+        /**
+          * Fires when the user commits a choice.
+         */
+        "onIdgChange"?: (event: IdgSelectCustomEvent<ValueDetail>) => void;
+        /**
+          * Fires as the choice changes.
+         */
+        "onIdgInput"?: (event: IdgSelectCustomEvent<ValueDetail>) => void;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * @default "md"
+         */
+        "size"?: InputSize;
+        /**
+          * The value of the chosen option. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * Shows its content only while someone is signed in, through the identity client it is given in
+     * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
+     * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
+     * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
+     * at once.
+     * The guard adds no box around what it shows: the host is `display: contents` and the slots are
+     * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
+     * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
+     * before the content and out of the page's layout, whose text says the change; Tab goes on into
+     * the content. A notice, when the guard shows one, is one block before the content.
+     * This is a convenience for the interface, not access control: the content is still in the page
+     * for anyone who reads its markup, and only the API decides what a request may read or change.
+     */
+    interface IdgSessionGuard {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: SessionGuardClient;
+        /**
+          * The text of the guard's own notices, merged over the English defaults.
+         */
+        "labels"?: Partial<SessionGuardLabels>;
+        /**
+          * Fires when what the guard shows changes, and with the first state each client reports.
+         */
+        "onIdgSessionChange"?: (event: IdgSessionGuardCustomEvent<SessionChangeDetail>) => void;
+    }
+    /**
+     * Two regions side by side: a side region of a set width and the content, which takes the rest.
+     * When the content would get less than half of the width, the regions stack instead, with no
+     * breakpoint and no script, so it follows the width of its container rather than the viewport.
+     * The side region is drawn first when it is at the start and last when it is at the end, so what a
+     * reader and the Tab key meet first is also what is shown first, in either text direction. When
+     * the regions stack, the side region is above the content when it is at the start and below it
+     * when it is at the end.
+     */
+    interface IdgSidebar {
+        /**
+          * Space between the regions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Which side of the content the side region is on, in the reading direction.
+          * @default "start"
+         */
+        "side"?: SidebarSide;
+        /**
+          * Width of the side region, a step of the size scale. Without it the layout's aside width is used.
+         */
+        "sideWidth"?: SizeStep;
+    }
+    /**
+     * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
+     * password: the password is read from its input when the form is sent and the input is emptied
+     * after a sign-in, a refused one, or when the element leaves the page.
+     */
+    interface IdgSignIn {
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: SignInClient;
+        /**
+          * Timers for the throttle countdown; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<SignInLabels>;
+        /**
+          * Fires before going to a provider's sign-in. Cancel it to navigate yourself; otherwise the browser goes to `detail.url` with `location.assign`.
+         */
+        "onIdgProviderSignIn"?: (event: IdgSignInCustomEvent<ProviderSignInDetail>) => void;
+        /**
+          * Fires after a sign-in, with the user's id and username. Navigating on is the page's job.
+         */
+        "onIdgSignedIn"?: (event: IdgSignInCustomEvent<SignedInDetail>) => void;
+        /**
+          * The page the CMS sends the browser back to after a provider sign-in.
+         */
+        "providerCallback"?: string;
+        /**
+          * Provider buttons, in order. Each starts the provider's sign-in through the client.
+         */
+        "providers"?: readonly SignInProvider[];
+    }
+    /**
+     * A placeholder shaped like content that is still loading. It is always hidden from assistive
+     * technology, so it announces nothing by itself. Mark the region being loaded with
+     * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
+     * and replace the skeletons when the content arrives.
+     * Size it with the page's own CSS on the element, for example `idg-skeleton { inline-size: 12rem }`.
+     */
+    interface IdgSkeleton {
+        /**
+          * How many lines of text to draw. The last of several is shorter. Only for `text`.
+          * @default 1
+         */
+        "lines"?: number;
+        /**
+          * The shape of what is loading.
+          * @default "text"
+         */
+        "variant"?: SkeletonVariant;
+    }
+    /**
+     * A small trend line drawn as SVG from a series of numbers, for beside a figure. It scales to the
+     * width of its container (set one with the page's own CSS, `idg-sparkline { inline-size: 8rem }`),
+     * keeps its proportions, and never animates. It is an image with a text alternative: the label
+     * you give it and a sentence with the first, last, lowest and highest value and which way the
+     * series went, formatted in the language of the page. Time runs left to right in every
+     * writing direction.
+     * Anything in `values` that is not a finite number is left out, never drawn as zero. A series
+     * longer than 120 points is thinned for drawing, keeping its first, last, lowest and highest.
+     */
+    interface IdgSparkline {
+        /**
+          * Fills the area under the line.
+          * @default false
+         */
+        "area"?: boolean;
+        /**
+          * What the series measures, such as `Visitors`. It is the accessible name, so give it one.
+         */
+        "label"?: string;
+        /**
+          * The words of the text alternative, merged over the English defaults.
+         */
+        "labels"?: Partial<SparklineLabels>;
+        /**
+          * The series: an array of numbers, or, from an attribute, a JSON array or numbers separated by commas. A text longer than 200,000 characters is read as far as there.
+         */
+        "values"?: number[] | string;
+    }
+    /**
+     * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
+     * and the source order stays the reading order.
+     */
+    interface IdgStack {
+        /**
+          * Where children sit on the inline axis.
+          * @default "stretch"
+         */
+        "align"?: StackAlignment;
+        /**
+          * Space between children, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+    }
+    /**
+     * A figure with its label and, optionally, how it changed.
+     */
+    interface IdgStat {
+        /**
+          * The change, formatted as it should be shown, such as `12%`.
+         */
+        "delta"?: string;
+        /**
+          * Which way the figure moved. Shown as an icon and spoken to screen readers.
+          * @default "flat"
+         */
+        "direction"?: StatDirection;
+        /**
+          * Spoken before the change of a figure that fell.
+          * @default "Decreased by"
+         */
+        "downLabel"?: string;
+        /**
+          * Spoken before the change of a figure that did not move.
+          * @default "No change"
+         */
+        "flatLabel"?: string;
+        /**
+          * What the figure measures.
+         */
+        "label"?: string;
+        /**
+          * What the change is measured against, such as `vs previous 7 days`. It is seen beside the change and spoken with it, since a change with no basis is ambiguous. Without a change it is not shown.
+         */
+        "period"?: string;
+        /**
+          * Whether the change is good, for the colour. Defaults from the direction, so set it where a rise is bad, such as a churn rate.
+         */
+        "sentiment"?: StatSentiment;
+        /**
+          * Spoken before the change of a figure that rose.
+          * @default "Increased by"
+         */
+        "upLabel"?: string;
+        /**
+          * The figure, formatted as it should be shown.
+         */
+        "value"?: string;
+    }
+    interface IdgSwitch {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field, or by you: replaces the slotted text as the accessible name.
+         */
+        "accessibleLabel"?: string;
+        /**
+          * @default false
+         */
+        "checked"?: boolean;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Marks the choice as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "name"?: string;
+        /**
+          * Fires when the user flips the switch.
+         */
+        "onIdgChange"?: (event: IdgSwitchCustomEvent<CheckedDetail>) => void;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * What is submitted while checked.
+          * @default "on"
+         */
+        "value"?: string;
+    }
+    /**
+     * Items in one row that switch to one column when their container is narrower than `threshold`.
+     * Every item is as wide as the others in either arrangement. There is no breakpoint and no script,
+     * so it follows the width of its container rather than the viewport. It only arranges, so it adds
+     * no role and the source order stays the reading order.
+     */
+    interface IdgSwitcher {
+        /**
+          * Space between items, in both directions, a step of the space scale. Without it the layout's gap is used.
+         */
+        "gap"?: GapStep;
+        /**
+          * Most items allowed in a row, 2 to 6. With more items than that, they stack at any width. Hidden items, templates and scripts do not count; the count is taken again when items are added, removed, hidden or shown.
+         */
+        "limit"?: number;
+        /**
+          * Container width below which the items stack, a step of the size scale.
+          * @default "l"
+         */
+        "threshold"?: SizeStep;
+    }
+    /**
+     * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
+     * host carries the tab role and state itself, so the relations to the panel, which sits beside it
+     * in the page, can be made between the two hosts.
+     */
+    interface IdgTab {
+        /**
+          * Keeps the tab in the list, where it is announced, but stops it being selected.
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * Set by the tabs: which way the list runs.
+          * @default "horizontal"
+         */
+        "orientation"?: TabsOrientation;
+        /**
+          * Set by the tabs: whether this tab is selected.
+          * @default false
+         */
+        "selected"?: boolean;
+        /**
+          * Set by the tabs: whether this tab is the one tab stop of the list.
+          * @default false
+         */
+        "tabbable"?: boolean;
+        /**
+          * Pairs the tab with the panel of the same value.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
+     * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
+     * reader can still move into it.
+     */
+    interface IdgTabPanel {
+        /**
+          * Set by the tabs: whether this panel's tab is selected.
+          * @default false
+         */
+        "selected"?: boolean;
+        /**
+          * Pairs the panel with the tab of the same value.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
+     * header cells, row and column relations) and the component adds what a table needs around it: a
+     * surface drawn in the design language, a scroll region that is reachable by keyboard and named
+     * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
+     * sortable column headers.
+     * The cells are the page's own, so a shadow root cannot style them. The component adopts a
+     * constructable stylesheet into the document or shadow root the table lives in, scoped to
+     * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
+     * constructable stylesheets shows the table unstyled.
+     * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
+     * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
+     */
+    interface IdgTable {
+        /**
+          * Whether the owner of the rows is busy, such as while it fetches a sorted page. The sort buttons are marked `aria-disabled` and presses on them do nothing and say nothing.
+          * @default false
+         */
+        "busy"?: boolean;
+        /**
+          * The scroll region's accessible name, when the table is wider than the page. The caption is used without it.
+         */
+        "label"?: string;
+        /**
+          * For when you sort the rows yourself, such as on a server. A press only reports `idgSort` with the sort it asks for; the sort that is marked and announced is the one you set in `sortKey` and `sortDirection`, so a header never shows an order the rows are not in.
+          * @default false
+         */
+        "manualSort"?: boolean;
+        /**
+          * The tallest the region grows before its rows scroll, as a length such as `24rem`.
+         */
+        "maxHeight"?: string;
+        /**
+          * The narrowest the table is drawn before it scrolls sideways, as a length such as `40rem`.
+         */
+        "minWidth"?: string;
+        /**
+          * Fires when the user chooses a column to sort by, and not when `sortKey` is set from script.
+         */
+        "onIdgSort"?: (event: IdgTableCustomEvent<TableSortDetail>) => void;
+        /**
+          * The word for an ascending sort in the announcement. Translate it with `sortStatus`.
+          * @default "ascending"
+         */
+        "sortAscendingLabel"?: string;
+        /**
+          * The word for a descending sort in the announcement. Translate it with `sortStatus`.
+          * @default "descending"
+         */
+        "sortDescendingLabel"?: string;
+        /**
+          * The direction of the sort.
+          * @default "ascending"
+         */
+        "sortDirection"?: SortDirection;
+        /**
+          * The key of the column the rows are sorted by. Empty leaves them in their original order.
+          * @default ""
+         */
+        "sortKey"?: string;
+        /**
+          * Announced after a sort, where `{column}` is the column and `{direction}` is ascending or descending.
+          * @default "Sorted by {column}, {direction}"
+         */
+        "sortStatus"?: string;
+        /**
+          * Keeps the header in view while the rows scroll. It needs `maxHeight`, as the rows scroll in the region.
+          * @default false
+         */
+        "stickyHeader"?: boolean;
+        /**
+          * Shades every other row.
+          * @default false
+         */
+        "striped"?: boolean;
+    }
+    /**
+     * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
+     * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
+     * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
+     * its position among its own kind as its value.
+     */
+    interface IdgTabs {
+        /**
+          * `automatic` selects a tab as the arrow keys reach it. `manual` only moves focus, and Enter or Space selects, which suits panels that are slow to show.
+          * @default "automatic"
+         */
+        "activation"?: TabsActivation;
+        /**
+          * The tab list's accessible name.
+         */
+        "label"?: string;
+        /**
+          * Fires when the user selects a tab, and not when `value` is set from script.
+         */
+        "onIdgChange"?: (event: IdgTabsCustomEvent<ValueDetail>) => void;
+        /**
+          * Which way the tab list runs.
+          * @default "horizontal"
+         */
+        "orientation"?: TabsOrientation;
+        /**
+          * The value of the selected tab. Without a match, the enabled tab nearest to where the selection was takes over, which is the first enabled tab until one has been selected. Values should be unique: a tab that repeats an earlier tab's value cannot be selected, and a warning is logged.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    interface IdgTextarea {
+        /**
+          * Set by idg-field: the hint and error text, as the control's accessible description.
+         */
+        "accessibleDescription"?: string;
+        /**
+          * Set by idg-field: the control's accessible name.
+         */
+        "accessibleLabel"?: string;
+        "autocapitalize"?: string;
+        "autocomplete"?: string;
+        /**
+          * Grows with its content, using `field-sizing` where it exists and a hidden twin elsewhere.
+          * @default false
+         */
+        "autogrow"?: boolean;
+        /**
+          * Shows the number of characters, against `maxlength` when there is one.
+          * @default false
+         */
+        "counter"?: boolean;
+        /**
+          * @default false
+         */
+        "disabled"?: boolean;
+        /**
+          * The `id` of a `<form>` element to associate this element with.
+         */
+        "form"?: string;
+        /**
+          * Set by idg-field, or by you: marks the value as wrong.
+          * @default false
+         */
+        "invalid"?: boolean;
+        "maxlength"?: number;
+        "minlength"?: number;
+        "name"?: string;
+        /**
+          * Fires when the user commits a value, such as on blur.
+         */
+        "onIdgChange"?: (event: IdgTextareaCustomEvent<ValueDetail>) => void;
+        /**
+          * Fires on every edit.
+         */
+        "onIdgInput"?: (event: IdgTextareaCustomEvent<ValueDetail>) => void;
+        "placeholder"?: string;
+        /**
+          * @default false
+         */
+        "readonly"?: boolean;
+        /**
+          * @default false
+         */
+        "required"?: boolean;
+        /**
+          * Visible lines. With `autogrow` it is the minimum.
+          * @default 3
+         */
+        "rows"?: number;
+        /**
+          * @default "md"
+         */
+        "size"?: InputSize;
+        "spellcheck"?: string;
+        /**
+          * The current value. Reset restores the value the element started with.
+          * @default ""
+         */
+        "value"?: string;
+    }
+    /**
+     * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
+     * time, announces each as it appears, pauses them while they are being read and lets the keyboard
+     * reach them; the `toast()` function does all of that from script.
+     * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
+     * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
+     * is given a duration, so nobody loses the chance to act on it.
+     */
+    interface IdgToast {
+        /**
+          * The label of an action button, such as "Undo". Choosing it fires `idgAction`.
+         */
+        "actionLabel"?: string;
+        /**
+          * The close button's accessible name.
+          * @default "Dismiss"
+         */
+        "closeLabel"?: string;
+        /**
+          * More detail under the heading. Set as text, never as markup.
+         */
+        "description"?: string;
+        /**
+          * How long the toast stays, in milliseconds. `0` keeps it until it is dismissed. Without a duration it stays for six seconds, or until dismissed when it has an action.
+         */
+        "duration"?: number;
+        /**
+          * The heading, and the toast's accessible name. Set as text, never as markup.
+         */
+        "heading"?: string;
+        /**
+          * Fires when the action button is chosen, just before the toast is dismissed.
+         */
+        "onIdgAction"?: (event: IdgToastCustomEvent<void>) => void;
+        /**
+          * Fires when the toast is dismissed, with the reason. The toast then removes itself, unless a listener calls `preventDefault()`.
+         */
+        "onIdgDismiss"?: (event: IdgToastCustomEvent<ToastDismissDetail>) => void;
+        /**
+          * Set by the region while the toasts are being read: the countdown stands still.
+          * @default false
+         */
+        "paused"?: boolean;
+        /**
+          * Set by the region while the toast waits its turn: it is hidden and does not count down.
+          * @default false
+         */
+        "queued"?: boolean;
+        /**
+          * Meaning. A danger toast is announced at once; the others wait for a pause in speech.
+          * @default "neutral"
+         */
+        "variant"?: ToastVariant;
+    }
+    /**
+     * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
+     * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
+     * rest, and announces each toast as it comes into view through a live region of its own: politely,
+     * or at once for danger. Focus never moves on its own.
+     * While the pointer is over it, focus is inside it, the window is in the background or the user
+     * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
+     * and nothing slides under the pointer.
+     */
+    interface IdgToastRegion {
+        /**
+          * The key, as `KeyboardEvent.key` names it, that moves focus to the toasts.
+          * @default "F8"
+         */
+        "hotkey"?: string;
+        /**
+          * The landmark's accessible name.
+          * @default "Notifications"
+         */
+        "label"?: string;
+        /**
+          * How many toasts show at once. The rest wait their turn.
+          * @default 3
+         */
+        "max"?: number;
+        /**
+          * The corner or edge the toasts gather at.
+          * @default "bottom-end"
+         */
+        "position"?: ToastPosition;
+    }
+    /**
+     * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
+     * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
+     * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
+     * only: put anything interactive in an idg-popover.
+     * The text is also the trigger's accessible description, given to the trigger itself, so it is
+     * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
+     * technology so it is not read twice.
+     */
+    interface IdgTooltip {
+        /**
+          * The id of a trigger elsewhere in the same document or shadow root, in place of the slot.
+         */
+        "for"?: string;
+        /**
+          * The gap between the trigger and the hint, in pixels.
+          * @default 8
+         */
+        "offset"?: number;
+        /**
+          * Where the hint sits against the trigger. It flips to the opposite side when out of room.
+          * @default "top"
+         */
+        "placement"?: Placement;
+        /**
+          * The hint. Set as text, never as markup.
+         */
+        "text"?: string;
+    }
+    /**
+     * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
+     * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
+     * user how the sign-out went: a server that could not be reached is said plainly, since the
+     * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
+     * It goes away when the client hears that another tab signed out.
+     */
+    interface IdgUserMenu {
+        /**
+          * A picture of the user for the avatar, such as their profile's; initials without one.
+         */
+        "avatarSrc"?: string;
+        /**
+          * The identity client (a JavaScript property). The element never creates one.
+         */
+        "client"?: UserMenuClient;
+        /**
+          * The name to show; the username by default.
+         */
+        "displayName"?: string;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<UserMenuLabels>;
+        /**
+          * Fires after "Sign out", with how it went. Navigating on is the page's job.
+         */
+        "onIdgSignedOut"?: (event: IdgUserMenuCustomEvent<SignedOutDetail>) => void;
+    }
+    /**
+     * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
+     * always acts on the document's root element, through `@identgineer/variations`, so the page's own
+     * attributes stay the single truth: a change made anywhere else (markup, a script, another
+     * switcher) is shown here, and nothing here is announced for a change the visitor did not make.
+     */
+    interface IdgVariationSwitcher {
+        /**
+          * The controls to show, as a comma separated list of `theme`, `design`, `layout`, `ux` and `scheme`. Unknown names are ignored, and without a known name every control is shown.
+         */
+        "axes"?: string;
+        /**
+          * A visible heading, which also names the panel. Without one the name is "Appearance".
+         */
+        "heading"?: string;
+        /**
+          * Fires when the visitor changes something through the panel, with the new state.
+         */
+        "onIdgVariationsChange"?: (event: IdgVariationSwitcherCustomEvent<VariationsChangeDetail>) => void;
+        /**
+          * `stacked` puts the controls in a column, `inline` side by side where there is room.
+          * @default "stacked"
+         */
+        "orientation"?: SwitcherOrientation;
+        /**
+          * Saves each change with the runtime's persistence, so the choice is still there on the next visit. The bootstrap script of `@identgineer/variations` applies it before the page is painted.
+          * @default false
+         */
+        "persist"?: boolean;
+    }
 
-  interface IdgAccordionAttributes {
-    multiple: boolean;
-    headingLevel: number;
-    findInPage: boolean;
-  }
-  interface IdgAccordionItemAttributes {
-    heading: string;
-    value: string;
-    open: boolean;
-    disabled: boolean;
-    headingLevel: number;
-    hasRegion: boolean;
-    findInPage: boolean;
-    quiet: boolean;
-  }
-  interface IdgAlertAttributes {
-    variant: AlertVariant;
-    quiet: boolean;
-    dismissible: boolean;
-    dismissLabel: string;
-  }
-  interface IdgAvatarAttributes {
-    src: string;
-    alt: string;
-    name: string;
-    size: AvatarSize;
-    status: AvatarStatus;
-    statusLabel: string;
-  }
-  interface IdgAvatarGroupAttributes {
-    label: string;
-    size: AvatarSize;
-    max: number;
-    moreLabel: string;
-  }
-  interface IdgBadgeAttributes {
-    variant: BadgeVariant;
-    size: BadgeSize;
-    dot: boolean;
-  }
-  interface IdgBreadcrumbAttributes {
-    label: string;
-    separator: BreadcrumbSeparator;
-  }
-  interface IdgBreadcrumbItemAttributes {
-    href: string;
-    current: boolean;
-    isCurrent: boolean;
-    isLast: boolean;
-    separator: BreadcrumbSeparator;
-  }
-  interface IdgButtonAttributes {
-    variant: ButtonVariant;
-    size: ButtonSize;
-    type: ButtonType;
-    disabled: boolean;
-    loading: boolean;
-    href: string;
-    target: string;
-    rel: string;
-    fullWidth: boolean;
-    shortcut: string;
-    accessibleExpanded: boolean;
-    accessibleHaspopup: string;
-    accessibleDescription: string;
-  }
-  interface IdgCardAttributes {
-    variant: CardVariant;
-    padding: CardPadding;
-    interactive: boolean;
-    heading: string;
-    headingLevel: number;
-    href: string;
-    target: string;
-    rel: string;
-  }
-  interface IdgCheckboxAttributes {
-    name: string;
-    value: string;
-    checked: boolean;
-    indeterminate: boolean;
-    required: boolean;
-    disabled: boolean;
-    accessibleLabel: string;
-    accessibleDescription: string;
-    invalid: boolean;
-  }
-  interface IdgClusterAttributes {
-    gap: GapStep;
-    justify: ClusterJustification;
-    align: ClusterAlignment;
-  }
-  interface IdgConsentBannerAttributes {
-    placement: ConsentPlacement;
-    announceSignal: boolean;
-    preferences: string;
-  }
-  interface IdgConsentPreferencesAttributes {
-    modal: boolean;
-    headingLevel: number;
-  }
-  interface IdgCoverAttributes {
-    minHeight: CoverHeight;
-    gap: GapStep;
-  }
-  interface IdgDialogAttributes {
-    open: boolean;
-    modal: boolean;
-    heading: string;
-    size: DialogSize;
-    dismissible: boolean;
-    closeOnBackdrop: boolean;
-    alert: boolean;
-    closeLabel: string;
-  }
-  interface IdgDividerAttributes {
-    orientation: DividerOrientation;
-    decorative: boolean;
-  }
-  interface IdgEventTableAttributes {
-    caption: string;
-    loading: boolean;
-    error: string;
-    pageSize: number;
-    page: number;
-    total: number;
-    sortable: boolean;
-    sortKey: EventSortKey | "";
-    sortDirection: EventSortDirection;
-    timeZone: string;
-  }
-  interface IdgFieldAttributes {
-    label: string;
-    hint: string;
-    error: string;
-    required: boolean;
-    optionalText: string;
-  }
-  interface IdgGridAttributes {
-    min: SizeStep;
-    gap: GapStep;
-  }
-  interface IdgIconAttributes {
-    name: IconName;
-    size: IconSize;
-    label: string;
-  }
-  interface IdgInputAttributes {
-    type: InputType;
-    name: string;
-    value: string;
-    placeholder: string;
-    required: boolean;
-    disabled: boolean;
-    readonly: boolean;
-    minlength: number;
-    maxlength: number;
-    min: string;
-    max: string;
-    step: string;
-    pattern: string;
-    autocomplete: string;
-    inputmode: string;
-    enterkeyhint: string;
-    spellcheck: string;
-    autocapitalize: string;
-    size: InputSize;
-    reveal: boolean;
-    revealLabel: string;
-    accessibleLabel: string;
-    accessibleDescription: string;
-    invalid: boolean;
-  }
-  interface IdgLayoutAttributes {
-    navigationLabel: string;
-    asideLabel: string;
-    skipLabel: string;
-    menuLabel: string;
-    closeLabel: string;
-    navigationOpen: boolean;
-    embedded: boolean;
-  }
-  interface IdgLinkAttributes {
-    href: string;
-    target: string;
-    rel: string;
-    external: boolean;
-    externalLabel: string;
-  }
-  interface IdgMenuAttributes {
-    placement: Placement;
-    offset: number;
-    open: boolean;
-    label: string;
-  }
-  interface IdgMenuGroupAttributes {
-    label: string;
-  }
-  interface IdgMenuItemAttributes {
-    value: string;
-    type: MenuItemType;
-    checked: boolean;
-    disabled: boolean;
-    href: string;
-    target: string;
-    rel: string;
-    shortcut: string;
-    icon: IconName;
-  }
-  interface IdgPaginationAttributes {
-    page: number;
-    pageCount: number;
-    siblings: number;
-    boundaries: number;
-    hrefTemplate: string;
-    label: string;
-    previousLabel: string;
-    nextLabel: string;
-    pageLabel: string;
-  }
-  interface IdgPasswordResetAttributes {
-    mode: PasswordResetMode;
-    code: string;
-  }
-  interface IdgPopoverAttributes {
-    placement: Placement;
-    offset: number;
-    open: boolean;
-    for: string;
-  }
-  interface IdgProfileAttributes {
-    avatarSrc: string;
-    headingLevel: number;
-  }
-  interface IdgProgressAttributes {
-    label: string;
-    value: number;
-    max: number;
-    indeterminate: boolean;
-    showValue: boolean;
-    size: ProgressSize;
-  }
-  interface IdgPropertyPickerAttributes {
-    name: string;
-    value: string;
-    label: string;
-    loading: boolean;
-    disabled: boolean;
-  }
-  interface IdgRadioAttributes {
-    value: string;
-    checked: boolean;
-    disabled: boolean;
-    groupDisabled: boolean;
-    tabbable: boolean;
-    position: number;
-    setSize: number;
-    invalid: boolean;
-  }
-  interface IdgRadioGroupAttributes {
-    name: string;
-    value: string;
-    required: boolean;
-    disabled: boolean;
-    orientation: Orientation;
-    accessibleLabel: string;
-    accessibleDescription: string;
-    invalid: boolean;
-  }
-  interface IdgSelectAttributes {
-    name: string;
-    value: string;
-    required: boolean;
-    disabled: boolean;
-    size: InputSize;
-    accessibleLabel: string;
-    accessibleDescription: string;
-    invalid: boolean;
-  }
-  interface IdgSidebarAttributes {
-    side: SidebarSide;
-    sideWidth: SizeStep;
-    gap: GapStep;
-  }
-  interface IdgSignInAttributes {
-    providerCallback: string;
-  }
-  interface IdgSkeletonAttributes {
-    variant: SkeletonVariant;
-    lines: number;
-  }
-  interface IdgSparklineAttributes {
-    values: number[] | string;
-    label: string;
-    area: boolean;
-  }
-  interface IdgStackAttributes {
-    gap: GapStep;
-    align: StackAlignment;
-  }
-  interface IdgStatAttributes {
-    label: string;
-    value: string;
-    delta: string;
-    direction: StatDirection;
-    sentiment: StatSentiment;
-    period: string;
-    upLabel: string;
-    downLabel: string;
-    flatLabel: string;
-  }
-  interface IdgSwitchAttributes {
-    name: string;
-    value: string;
-    checked: boolean;
-    required: boolean;
-    disabled: boolean;
-    accessibleLabel: string;
-    accessibleDescription: string;
-    invalid: boolean;
-  }
-  interface IdgSwitcherAttributes {
-    threshold: SizeStep;
-    limit: number;
-    gap: GapStep;
-  }
-  interface IdgTabAttributes {
-    value: string;
-    disabled: boolean;
-    selected: boolean;
-    tabbable: boolean;
-    orientation: TabsOrientation;
-  }
-  interface IdgTabPanelAttributes {
-    value: string;
-    selected: boolean;
-  }
-  interface IdgTableAttributes {
-    label: string;
-    stickyHeader: boolean;
-    striped: boolean;
-    maxHeight: string;
-    minWidth: string;
-    sortKey: string;
-    sortDirection: SortDirection;
-    manualSort: boolean;
-    busy: boolean;
-    sortStatus: string;
-    sortAscendingLabel: string;
-    sortDescendingLabel: string;
-  }
-  interface IdgTabsAttributes {
-    value: string;
-    orientation: TabsOrientation;
-    activation: TabsActivation;
-    label: string;
-  }
-  interface IdgTextareaAttributes {
-    name: string;
-    value: string;
-    placeholder: string;
-    rows: number;
-    required: boolean;
-    disabled: boolean;
-    readonly: boolean;
-    minlength: number;
-    maxlength: number;
-    autocomplete: string;
-    spellcheck: string;
-    autocapitalize: string;
-    size: InputSize;
-    autogrow: boolean;
-    counter: boolean;
-    accessibleLabel: string;
-    accessibleDescription: string;
-    invalid: boolean;
-  }
-  interface IdgToastAttributes {
-    heading: string;
-    description: string;
-    variant: ToastVariant;
-    duration: number;
-    actionLabel: string;
-    closeLabel: string;
-    queued: boolean;
-    paused: boolean;
-  }
-  interface IdgToastRegionAttributes {
-    position: ToastPosition;
-    max: number;
-    label: string;
-    hotkey: string;
-  }
-  interface IdgTooltipAttributes {
-    text: string;
-    placement: Placement;
-    offset: number;
-    for: string;
-  }
-  interface IdgUserMenuAttributes {
-    displayName: string;
-    avatarSrc: string;
-  }
-  interface IdgVariationSwitcherAttributes {
-    persist: boolean;
-    axes: string;
-    orientation: SwitcherOrientation;
-    heading: string;
-  }
+    interface IdgAccordionAttributes {
+        "multiple": boolean;
+        "headingLevel": number;
+        "findInPage": boolean;
+    }
+    interface IdgAccordionItemAttributes {
+        "heading": string;
+        "value": string;
+        "open": boolean;
+        "disabled": boolean;
+        "headingLevel": number;
+        "hasRegion": boolean;
+        "findInPage": boolean;
+        "quiet": boolean;
+    }
+    interface IdgAlertAttributes {
+        "variant": AlertVariant;
+        "quiet": boolean;
+        "dismissible": boolean;
+        "dismissLabel": string;
+    }
+    interface IdgAvatarAttributes {
+        "src": string;
+        "alt": string;
+        "name": string;
+        "size": AvatarSize;
+        "status": AvatarStatus;
+        "statusLabel": string;
+    }
+    interface IdgAvatarGroupAttributes {
+        "label": string;
+        "size": AvatarSize;
+        "max": number;
+        "moreLabel": string;
+    }
+    interface IdgBadgeAttributes {
+        "variant": BadgeVariant;
+        "size": BadgeSize;
+        "dot": boolean;
+    }
+    interface IdgBreadcrumbAttributes {
+        "label": string;
+        "separator": BreadcrumbSeparator;
+    }
+    interface IdgBreadcrumbItemAttributes {
+        "href": string;
+        "current": boolean;
+        "isCurrent": boolean;
+        "isLast": boolean;
+        "separator": BreadcrumbSeparator;
+    }
+    interface IdgButtonAttributes {
+        "variant": ButtonVariant;
+        "size": ButtonSize;
+        "type": ButtonType;
+        "disabled": boolean;
+        "loading": boolean;
+        "href": string;
+        "target": string;
+        "rel": string;
+        "fullWidth": boolean;
+        "shortcut": string;
+        "accessibleExpanded": boolean;
+        "accessibleHaspopup": string;
+        "accessibleDescription": string;
+    }
+    interface IdgCardAttributes {
+        "variant": CardVariant;
+        "padding": CardPadding;
+        "interactive": boolean;
+        "heading": string;
+        "headingLevel": number;
+        "href": string;
+        "target": string;
+        "rel": string;
+    }
+    interface IdgCheckboxAttributes {
+        "name": string;
+        "value": string;
+        "checked": boolean;
+        "indeterminate": boolean;
+        "required": boolean;
+        "disabled": boolean;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
+    interface IdgClusterAttributes {
+        "gap": GapStep;
+        "justify": ClusterJustification;
+        "align": ClusterAlignment;
+    }
+    interface IdgConsentBannerAttributes {
+        "placement": ConsentPlacement;
+        "announceSignal": boolean;
+        "preferences": string;
+    }
+    interface IdgConsentPreferencesAttributes {
+        "modal": boolean;
+        "headingLevel": number;
+    }
+    interface IdgCoverAttributes {
+        "minHeight": CoverHeight;
+        "gap": GapStep;
+    }
+    interface IdgDialogAttributes {
+        "open": boolean;
+        "modal": boolean;
+        "heading": string;
+        "size": DialogSize;
+        "dismissible": boolean;
+        "closeOnBackdrop": boolean;
+        "alert": boolean;
+        "closeLabel": string;
+    }
+    interface IdgDividerAttributes {
+        "orientation": DividerOrientation;
+        "decorative": boolean;
+    }
+    interface IdgEventTableAttributes {
+        "caption": string;
+        "loading": boolean;
+        "error": string;
+        "pageSize": number;
+        "page": number;
+        "total": number;
+        "sortable": boolean;
+        "sortKey": EventSortKey | "";
+        "sortDirection": EventSortDirection;
+        "timeZone": string;
+    }
+    interface IdgFieldAttributes {
+        "label": string;
+        "hint": string;
+        "error": string;
+        "required": boolean;
+        "optionalText": string;
+    }
+    interface IdgGridAttributes {
+        "min": SizeStep;
+        "gap": GapStep;
+    }
+    interface IdgIconAttributes {
+        "name": IconName;
+        "size": IconSize;
+        "label": string;
+    }
+    interface IdgInputAttributes {
+        "type": InputType;
+        "name": string;
+        "value": string;
+        "placeholder": string;
+        "required": boolean;
+        "disabled": boolean;
+        "readonly": boolean;
+        "minlength": number;
+        "maxlength": number;
+        "min": string;
+        "max": string;
+        "step": string;
+        "pattern": string;
+        "autocomplete": string;
+        "inputmode": string;
+        "enterkeyhint": string;
+        "spellcheck": string;
+        "autocapitalize": string;
+        "size": InputSize;
+        "reveal": boolean;
+        "revealLabel": string;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
+    interface IdgLayoutAttributes {
+        "navigationLabel": string;
+        "asideLabel": string;
+        "skipLabel": string;
+        "menuLabel": string;
+        "closeLabel": string;
+        "navigationOpen": boolean;
+        "embedded": boolean;
+    }
+    interface IdgLinkAttributes {
+        "href": string;
+        "target": string;
+        "rel": string;
+        "external": boolean;
+        "externalLabel": string;
+    }
+    interface IdgMenuAttributes {
+        "placement": Placement;
+        "offset": number;
+        "open": boolean;
+        "label": string;
+    }
+    interface IdgMenuGroupAttributes {
+        "label": string;
+    }
+    interface IdgMenuItemAttributes {
+        "value": string;
+        "type": MenuItemType;
+        "checked": boolean;
+        "disabled": boolean;
+        "href": string;
+        "target": string;
+        "rel": string;
+        "shortcut": string;
+        "icon": IconName;
+    }
+    interface IdgPaginationAttributes {
+        "page": number;
+        "pageCount": number;
+        "siblings": number;
+        "boundaries": number;
+        "hrefTemplate": string;
+        "label": string;
+        "previousLabel": string;
+        "nextLabel": string;
+        "pageLabel": string;
+    }
+    interface IdgPasswordResetAttributes {
+        "mode": PasswordResetMode;
+        "code": string;
+    }
+    interface IdgPopoverAttributes {
+        "placement": Placement;
+        "offset": number;
+        "open": boolean;
+        "for": string;
+    }
+    interface IdgProfileAttributes {
+        "avatarSrc": string;
+        "headingLevel": number;
+    }
+    interface IdgProgressAttributes {
+        "label": string;
+        "value": number;
+        "max": number;
+        "indeterminate": boolean;
+        "showValue": boolean;
+        "size": ProgressSize;
+    }
+    interface IdgPropertyPickerAttributes {
+        "name": string;
+        "value": string;
+        "label": string;
+        "loading": boolean;
+        "disabled": boolean;
+    }
+    interface IdgRadioAttributes {
+        "value": string;
+        "checked": boolean;
+        "disabled": boolean;
+        "groupDisabled": boolean;
+        "tabbable": boolean;
+        "position": number;
+        "setSize": number;
+        "invalid": boolean;
+    }
+    interface IdgRadioGroupAttributes {
+        "name": string;
+        "value": string;
+        "required": boolean;
+        "disabled": boolean;
+        "orientation": Orientation;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
+    interface IdgSelectAttributes {
+        "name": string;
+        "value": string;
+        "required": boolean;
+        "disabled": boolean;
+        "size": InputSize;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
+    interface IdgSidebarAttributes {
+        "side": SidebarSide;
+        "sideWidth": SizeStep;
+        "gap": GapStep;
+    }
+    interface IdgSignInAttributes {
+        "providerCallback": string;
+    }
+    interface IdgSkeletonAttributes {
+        "variant": SkeletonVariant;
+        "lines": number;
+    }
+    interface IdgSparklineAttributes {
+        "values": number[] | string;
+        "label": string;
+        "area": boolean;
+    }
+    interface IdgStackAttributes {
+        "gap": GapStep;
+        "align": StackAlignment;
+    }
+    interface IdgStatAttributes {
+        "label": string;
+        "value": string;
+        "delta": string;
+        "direction": StatDirection;
+        "sentiment": StatSentiment;
+        "period": string;
+        "upLabel": string;
+        "downLabel": string;
+        "flatLabel": string;
+    }
+    interface IdgSwitchAttributes {
+        "name": string;
+        "value": string;
+        "checked": boolean;
+        "required": boolean;
+        "disabled": boolean;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
+    interface IdgSwitcherAttributes {
+        "threshold": SizeStep;
+        "limit": number;
+        "gap": GapStep;
+    }
+    interface IdgTabAttributes {
+        "value": string;
+        "disabled": boolean;
+        "selected": boolean;
+        "tabbable": boolean;
+        "orientation": TabsOrientation;
+    }
+    interface IdgTabPanelAttributes {
+        "value": string;
+        "selected": boolean;
+    }
+    interface IdgTableAttributes {
+        "label": string;
+        "stickyHeader": boolean;
+        "striped": boolean;
+        "maxHeight": string;
+        "minWidth": string;
+        "sortKey": string;
+        "sortDirection": SortDirection;
+        "manualSort": boolean;
+        "busy": boolean;
+        "sortStatus": string;
+        "sortAscendingLabel": string;
+        "sortDescendingLabel": string;
+    }
+    interface IdgTabsAttributes {
+        "value": string;
+        "orientation": TabsOrientation;
+        "activation": TabsActivation;
+        "label": string;
+    }
+    interface IdgTextareaAttributes {
+        "name": string;
+        "value": string;
+        "placeholder": string;
+        "rows": number;
+        "required": boolean;
+        "disabled": boolean;
+        "readonly": boolean;
+        "minlength": number;
+        "maxlength": number;
+        "autocomplete": string;
+        "spellcheck": string;
+        "autocapitalize": string;
+        "size": InputSize;
+        "autogrow": boolean;
+        "counter": boolean;
+        "accessibleLabel": string;
+        "accessibleDescription": string;
+        "invalid": boolean;
+    }
+    interface IdgToastAttributes {
+        "heading": string;
+        "description": string;
+        "variant": ToastVariant;
+        "duration": number;
+        "actionLabel": string;
+        "closeLabel": string;
+        "queued": boolean;
+        "paused": boolean;
+    }
+    interface IdgToastRegionAttributes {
+        "position": ToastPosition;
+        "max": number;
+        "label": string;
+        "hotkey": string;
+    }
+    interface IdgTooltipAttributes {
+        "text": string;
+        "placement": Placement;
+        "offset": number;
+        "for": string;
+    }
+    interface IdgUserMenuAttributes {
+        "displayName": string;
+        "avatarSrc": string;
+    }
+    interface IdgVariationSwitcherAttributes {
+        "persist": boolean;
+        "axes": string;
+        "orientation": SwitcherOrientation;
+        "heading": string;
+    }
 
-  interface IntrinsicElements {
-    "idg-accordion": Omit<IdgAccordion, keyof IdgAccordionAttributes> & {
-      [K in keyof IdgAccordion & keyof IdgAccordionAttributes]?: IdgAccordion[K];
-    } & {
-      [
-        K in keyof IdgAccordion & keyof IdgAccordionAttributes as `attr:${K}`
-      ]?: IdgAccordionAttributes[K];
-    } & {
-      [K in keyof IdgAccordion & keyof IdgAccordionAttributes as `prop:${K}`]?: IdgAccordion[K];
-    };
-    "idg-accordion-item": Omit<IdgAccordionItem, keyof IdgAccordionItemAttributes> & {
-      [K in keyof IdgAccordionItem & keyof IdgAccordionItemAttributes]?: IdgAccordionItem[K];
-    } & {
-      [
-        K in keyof IdgAccordionItem & keyof IdgAccordionItemAttributes as `attr:${K}`
-      ]?: IdgAccordionItemAttributes[K];
-    } & {
-      [
-        K in keyof IdgAccordionItem & keyof IdgAccordionItemAttributes as `prop:${K}`
-      ]?: IdgAccordionItem[K];
-    };
-    "idg-alert": Omit<IdgAlert, keyof IdgAlertAttributes> & {
-      [K in keyof IdgAlert & keyof IdgAlertAttributes]?: IdgAlert[K];
-    } & {
-      [K in keyof IdgAlert & keyof IdgAlertAttributes as `attr:${K}`]?: IdgAlertAttributes[K];
-    } & { [K in keyof IdgAlert & keyof IdgAlertAttributes as `prop:${K}`]?: IdgAlert[K] };
-    "idg-avatar": Omit<IdgAvatar, keyof IdgAvatarAttributes> & {
-      [K in keyof IdgAvatar & keyof IdgAvatarAttributes]?: IdgAvatar[K];
-    } & {
-      [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `attr:${K}`]?: IdgAvatarAttributes[K];
-    } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `prop:${K}`]?: IdgAvatar[K] };
-    "idg-avatar-group": Omit<IdgAvatarGroup, keyof IdgAvatarGroupAttributes> & {
-      [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes]?: IdgAvatarGroup[K];
-    } & {
-      [
-        K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `attr:${K}`
-      ]?: IdgAvatarGroupAttributes[K];
-    } & {
-      [
-        K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `prop:${K}`
-      ]?: IdgAvatarGroup[K];
-    };
-    "idg-badge": Omit<IdgBadge, keyof IdgBadgeAttributes> & {
-      [K in keyof IdgBadge & keyof IdgBadgeAttributes]?: IdgBadge[K];
-    } & {
-      [K in keyof IdgBadge & keyof IdgBadgeAttributes as `attr:${K}`]?: IdgBadgeAttributes[K];
-    } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `prop:${K}`]?: IdgBadge[K] };
-    "idg-breadcrumb": Omit<IdgBreadcrumb, keyof IdgBreadcrumbAttributes> & {
-      [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes]?: IdgBreadcrumb[K];
-    } & {
-      [
-        K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes as `attr:${K}`
-      ]?: IdgBreadcrumbAttributes[K];
-    } & {
-      [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes as `prop:${K}`]?: IdgBreadcrumb[K];
-    };
-    "idg-breadcrumb-item": Omit<IdgBreadcrumbItem, keyof IdgBreadcrumbItemAttributes> & {
-      [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes]?: IdgBreadcrumbItem[K];
-    } & {
-      [
-        K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes as `attr:${K}`
-      ]?: IdgBreadcrumbItemAttributes[K];
-    } & {
-      [
-        K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes as `prop:${K}`
-      ]?: IdgBreadcrumbItem[K];
-    };
-    "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & {
-      [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K];
-    } & {
-      [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K];
-    } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
-    "idg-card": Omit<IdgCard, keyof IdgCardAttributes> & {
-      [K in keyof IdgCard & keyof IdgCardAttributes]?: IdgCard[K];
-    } & { [K in keyof IdgCard & keyof IdgCardAttributes as `attr:${K}`]?: IdgCardAttributes[K] } & {
-      [K in keyof IdgCard & keyof IdgCardAttributes as `prop:${K}`]?: IdgCard[K];
-    };
-    "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & {
-      [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K];
-    } & {
-      [
-        K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`
-      ]?: IdgCheckboxAttributes[K];
-    } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
-    "idg-cluster": Omit<IdgCluster, keyof IdgClusterAttributes> & {
-      [K in keyof IdgCluster & keyof IdgClusterAttributes]?: IdgCluster[K];
-    } & {
-      [K in keyof IdgCluster & keyof IdgClusterAttributes as `attr:${K}`]?: IdgClusterAttributes[K];
-    } & { [K in keyof IdgCluster & keyof IdgClusterAttributes as `prop:${K}`]?: IdgCluster[K] };
-    "idg-consent-banner": Omit<IdgConsentBanner, keyof IdgConsentBannerAttributes> & {
-      [K in keyof IdgConsentBanner & keyof IdgConsentBannerAttributes]?: IdgConsentBanner[K];
-    } & {
-      [
-        K in keyof IdgConsentBanner & keyof IdgConsentBannerAttributes as `attr:${K}`
-      ]?: IdgConsentBannerAttributes[K];
-    } & {
-      [
-        K in keyof IdgConsentBanner & keyof IdgConsentBannerAttributes as `prop:${K}`
-      ]?: IdgConsentBanner[K];
-    };
-    "idg-consent-preferences": Omit<
-      IdgConsentPreferences,
-      keyof IdgConsentPreferencesAttributes
-    > & {
-      [
-        K in keyof IdgConsentPreferences & keyof IdgConsentPreferencesAttributes
-      ]?: IdgConsentPreferences[K];
-    } & {
-      [
-        K in keyof IdgConsentPreferences & keyof IdgConsentPreferencesAttributes as `attr:${K}`
-      ]?: IdgConsentPreferencesAttributes[K];
-    } & {
-      [
-        K in keyof IdgConsentPreferences & keyof IdgConsentPreferencesAttributes as `prop:${K}`
-      ]?: IdgConsentPreferences[K];
-    };
-    "idg-cover": Omit<IdgCover, keyof IdgCoverAttributes> & {
-      [K in keyof IdgCover & keyof IdgCoverAttributes]?: IdgCover[K];
-    } & {
-      [K in keyof IdgCover & keyof IdgCoverAttributes as `attr:${K}`]?: IdgCoverAttributes[K];
-    } & { [K in keyof IdgCover & keyof IdgCoverAttributes as `prop:${K}`]?: IdgCover[K] };
-    "idg-dialog": Omit<IdgDialog, keyof IdgDialogAttributes> & {
-      [K in keyof IdgDialog & keyof IdgDialogAttributes]?: IdgDialog[K];
-    } & {
-      [K in keyof IdgDialog & keyof IdgDialogAttributes as `attr:${K}`]?: IdgDialogAttributes[K];
-    } & { [K in keyof IdgDialog & keyof IdgDialogAttributes as `prop:${K}`]?: IdgDialog[K] };
-    "idg-divider": Omit<IdgDivider, keyof IdgDividerAttributes> & {
-      [K in keyof IdgDivider & keyof IdgDividerAttributes]?: IdgDivider[K];
-    } & {
-      [K in keyof IdgDivider & keyof IdgDividerAttributes as `attr:${K}`]?: IdgDividerAttributes[K];
-    } & { [K in keyof IdgDivider & keyof IdgDividerAttributes as `prop:${K}`]?: IdgDivider[K] };
-    "idg-event-table": Omit<IdgEventTable, keyof IdgEventTableAttributes> & {
-      [K in keyof IdgEventTable & keyof IdgEventTableAttributes]?: IdgEventTable[K];
-    } & {
-      [
-        K in keyof IdgEventTable & keyof IdgEventTableAttributes as `attr:${K}`
-      ]?: IdgEventTableAttributes[K];
-    } & {
-      [K in keyof IdgEventTable & keyof IdgEventTableAttributes as `prop:${K}`]?: IdgEventTable[K];
-    };
-    "idg-field": Omit<IdgField, keyof IdgFieldAttributes> & {
-      [K in keyof IdgField & keyof IdgFieldAttributes]?: IdgField[K];
-    } & {
-      [K in keyof IdgField & keyof IdgFieldAttributes as `attr:${K}`]?: IdgFieldAttributes[K];
-    } & { [K in keyof IdgField & keyof IdgFieldAttributes as `prop:${K}`]?: IdgField[K] };
-    "idg-grid": Omit<IdgGrid, keyof IdgGridAttributes> & {
-      [K in keyof IdgGrid & keyof IdgGridAttributes]?: IdgGrid[K];
-    } & { [K in keyof IdgGrid & keyof IdgGridAttributes as `attr:${K}`]?: IdgGridAttributes[K] } & {
-      [K in keyof IdgGrid & keyof IdgGridAttributes as `prop:${K}`]?: IdgGrid[K];
-    };
-    "idg-icon": Omit<IdgIcon, keyof IdgIconAttributes> & {
-      [K in keyof IdgIcon & keyof IdgIconAttributes]?: IdgIcon[K];
-    } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `attr:${K}`]?: IdgIconAttributes[K] } & {
-      [K in keyof IdgIcon & keyof IdgIconAttributes as `prop:${K}`]?: IdgIcon[K];
-    };
-    "idg-input": Omit<IdgInput, keyof IdgInputAttributes> & {
-      [K in keyof IdgInput & keyof IdgInputAttributes]?: IdgInput[K];
-    } & {
-      [K in keyof IdgInput & keyof IdgInputAttributes as `attr:${K}`]?: IdgInputAttributes[K];
-    } & { [K in keyof IdgInput & keyof IdgInputAttributes as `prop:${K}`]?: IdgInput[K] };
-    "idg-layout": Omit<IdgLayout, keyof IdgLayoutAttributes> & {
-      [K in keyof IdgLayout & keyof IdgLayoutAttributes]?: IdgLayout[K];
-    } & {
-      [K in keyof IdgLayout & keyof IdgLayoutAttributes as `attr:${K}`]?: IdgLayoutAttributes[K];
-    } & { [K in keyof IdgLayout & keyof IdgLayoutAttributes as `prop:${K}`]?: IdgLayout[K] };
-    "idg-link": Omit<IdgLink, keyof IdgLinkAttributes> & {
-      [K in keyof IdgLink & keyof IdgLinkAttributes]?: IdgLink[K];
-    } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `attr:${K}`]?: IdgLinkAttributes[K] } & {
-      [K in keyof IdgLink & keyof IdgLinkAttributes as `prop:${K}`]?: IdgLink[K];
-    };
-    "idg-menu": Omit<IdgMenu, keyof IdgMenuAttributes> & {
-      [K in keyof IdgMenu & keyof IdgMenuAttributes]?: IdgMenu[K];
-    } & { [K in keyof IdgMenu & keyof IdgMenuAttributes as `attr:${K}`]?: IdgMenuAttributes[K] } & {
-      [K in keyof IdgMenu & keyof IdgMenuAttributes as `prop:${K}`]?: IdgMenu[K];
-    };
-    "idg-menu-group": Omit<IdgMenuGroup, keyof IdgMenuGroupAttributes> & {
-      [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes]?: IdgMenuGroup[K];
-    } & {
-      [
-        K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes as `attr:${K}`
-      ]?: IdgMenuGroupAttributes[K];
-    } & {
-      [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes as `prop:${K}`]?: IdgMenuGroup[K];
-    };
-    "idg-menu-item": Omit<IdgMenuItem, keyof IdgMenuItemAttributes> & {
-      [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes]?: IdgMenuItem[K];
-    } & {
-      [
-        K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `attr:${K}`
-      ]?: IdgMenuItemAttributes[K];
-    } & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `prop:${K}`]?: IdgMenuItem[K] };
-    "idg-menu-separator": IdgMenuSeparator;
-    "idg-pagination": Omit<IdgPagination, keyof IdgPaginationAttributes> & {
-      [K in keyof IdgPagination & keyof IdgPaginationAttributes]?: IdgPagination[K];
-    } & {
-      [
-        K in keyof IdgPagination & keyof IdgPaginationAttributes as `attr:${K}`
-      ]?: IdgPaginationAttributes[K];
-    } & {
-      [K in keyof IdgPagination & keyof IdgPaginationAttributes as `prop:${K}`]?: IdgPagination[K];
-    };
-    "idg-password-reset": Omit<IdgPasswordReset, keyof IdgPasswordResetAttributes> & {
-      [K in keyof IdgPasswordReset & keyof IdgPasswordResetAttributes]?: IdgPasswordReset[K];
-    } & {
-      [
-        K in keyof IdgPasswordReset & keyof IdgPasswordResetAttributes as `attr:${K}`
-      ]?: IdgPasswordResetAttributes[K];
-    } & {
-      [
-        K in keyof IdgPasswordReset & keyof IdgPasswordResetAttributes as `prop:${K}`
-      ]?: IdgPasswordReset[K];
-    };
-    "idg-popover": Omit<IdgPopover, keyof IdgPopoverAttributes> & {
-      [K in keyof IdgPopover & keyof IdgPopoverAttributes]?: IdgPopover[K];
-    } & {
-      [K in keyof IdgPopover & keyof IdgPopoverAttributes as `attr:${K}`]?: IdgPopoverAttributes[K];
-    } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `prop:${K}`]?: IdgPopover[K] };
-    "idg-profile": Omit<IdgProfile, keyof IdgProfileAttributes> & {
-      [K in keyof IdgProfile & keyof IdgProfileAttributes]?: IdgProfile[K];
-    } & {
-      [K in keyof IdgProfile & keyof IdgProfileAttributes as `attr:${K}`]?: IdgProfileAttributes[K];
-    } & { [K in keyof IdgProfile & keyof IdgProfileAttributes as `prop:${K}`]?: IdgProfile[K] };
-    "idg-progress": Omit<IdgProgress, keyof IdgProgressAttributes> & {
-      [K in keyof IdgProgress & keyof IdgProgressAttributes]?: IdgProgress[K];
-    } & {
-      [
-        K in keyof IdgProgress & keyof IdgProgressAttributes as `attr:${K}`
-      ]?: IdgProgressAttributes[K];
-    } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `prop:${K}`]?: IdgProgress[K] };
-    "idg-property-picker": Omit<IdgPropertyPicker, keyof IdgPropertyPickerAttributes> & {
-      [K in keyof IdgPropertyPicker & keyof IdgPropertyPickerAttributes]?: IdgPropertyPicker[K];
-    } & {
-      [
-        K in keyof IdgPropertyPicker & keyof IdgPropertyPickerAttributes as `attr:${K}`
-      ]?: IdgPropertyPickerAttributes[K];
-    } & {
-      [
-        K in keyof IdgPropertyPicker & keyof IdgPropertyPickerAttributes as `prop:${K}`
-      ]?: IdgPropertyPicker[K];
-    };
-    "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & {
-      [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K];
-    } & {
-      [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K];
-    } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
-    "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & {
-      [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K];
-    } & {
-      [
-        K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`
-      ]?: IdgRadioGroupAttributes[K];
-    } & {
-      [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K];
-    };
-    "idg-register": IdgRegister;
-    "idg-select": Omit<IdgSelect, keyof IdgSelectAttributes> & {
-      [K in keyof IdgSelect & keyof IdgSelectAttributes]?: IdgSelect[K];
-    } & {
-      [K in keyof IdgSelect & keyof IdgSelectAttributes as `attr:${K}`]?: IdgSelectAttributes[K];
-    } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `prop:${K}`]?: IdgSelect[K] };
-    "idg-session-guard": IdgSessionGuard;
-    "idg-sidebar": Omit<IdgSidebar, keyof IdgSidebarAttributes> & {
-      [K in keyof IdgSidebar & keyof IdgSidebarAttributes]?: IdgSidebar[K];
-    } & {
-      [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `attr:${K}`]?: IdgSidebarAttributes[K];
-    } & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `prop:${K}`]?: IdgSidebar[K] };
-    "idg-sign-in": Omit<IdgSignIn, keyof IdgSignInAttributes> & {
-      [K in keyof IdgSignIn & keyof IdgSignInAttributes]?: IdgSignIn[K];
-    } & {
-      [K in keyof IdgSignIn & keyof IdgSignInAttributes as `attr:${K}`]?: IdgSignInAttributes[K];
-    } & { [K in keyof IdgSignIn & keyof IdgSignInAttributes as `prop:${K}`]?: IdgSignIn[K] };
-    "idg-skeleton": Omit<IdgSkeleton, keyof IdgSkeletonAttributes> & {
-      [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes]?: IdgSkeleton[K];
-    } & {
-      [
-        K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `attr:${K}`
-      ]?: IdgSkeletonAttributes[K];
-    } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `prop:${K}`]?: IdgSkeleton[K] };
-    "idg-sparkline": Omit<IdgSparkline, keyof IdgSparklineAttributes> & {
-      [K in keyof IdgSparkline & keyof IdgSparklineAttributes]?: IdgSparkline[K];
-    } & {
-      [
-        K in keyof IdgSparkline & keyof IdgSparklineAttributes as `attr:${K}`
-      ]?: IdgSparklineAttributes[K];
-    } & {
-      [K in keyof IdgSparkline & keyof IdgSparklineAttributes as `prop:${K}`]?: IdgSparkline[K];
-    };
-    "idg-stack": Omit<IdgStack, keyof IdgStackAttributes> & {
-      [K in keyof IdgStack & keyof IdgStackAttributes]?: IdgStack[K];
-    } & {
-      [K in keyof IdgStack & keyof IdgStackAttributes as `attr:${K}`]?: IdgStackAttributes[K];
-    } & { [K in keyof IdgStack & keyof IdgStackAttributes as `prop:${K}`]?: IdgStack[K] };
-    "idg-stat": Omit<IdgStat, keyof IdgStatAttributes> & {
-      [K in keyof IdgStat & keyof IdgStatAttributes]?: IdgStat[K];
-    } & { [K in keyof IdgStat & keyof IdgStatAttributes as `attr:${K}`]?: IdgStatAttributes[K] } & {
-      [K in keyof IdgStat & keyof IdgStatAttributes as `prop:${K}`]?: IdgStat[K];
-    };
-    "idg-switch": Omit<IdgSwitch, keyof IdgSwitchAttributes> & {
-      [K in keyof IdgSwitch & keyof IdgSwitchAttributes]?: IdgSwitch[K];
-    } & {
-      [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `attr:${K}`]?: IdgSwitchAttributes[K];
-    } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `prop:${K}`]?: IdgSwitch[K] };
-    "idg-switcher": Omit<IdgSwitcher, keyof IdgSwitcherAttributes> & {
-      [K in keyof IdgSwitcher & keyof IdgSwitcherAttributes]?: IdgSwitcher[K];
-    } & {
-      [
-        K in keyof IdgSwitcher & keyof IdgSwitcherAttributes as `attr:${K}`
-      ]?: IdgSwitcherAttributes[K];
-    } & { [K in keyof IdgSwitcher & keyof IdgSwitcherAttributes as `prop:${K}`]?: IdgSwitcher[K] };
-    "idg-tab": Omit<IdgTab, keyof IdgTabAttributes> & {
-      [K in keyof IdgTab & keyof IdgTabAttributes]?: IdgTab[K];
-    } & { [K in keyof IdgTab & keyof IdgTabAttributes as `attr:${K}`]?: IdgTabAttributes[K] } & {
-      [K in keyof IdgTab & keyof IdgTabAttributes as `prop:${K}`]?: IdgTab[K];
-    };
-    "idg-tab-panel": Omit<IdgTabPanel, keyof IdgTabPanelAttributes> & {
-      [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes]?: IdgTabPanel[K];
-    } & {
-      [
-        K in keyof IdgTabPanel & keyof IdgTabPanelAttributes as `attr:${K}`
-      ]?: IdgTabPanelAttributes[K];
-    } & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes as `prop:${K}`]?: IdgTabPanel[K] };
-    "idg-table": Omit<IdgTable, keyof IdgTableAttributes> & {
-      [K in keyof IdgTable & keyof IdgTableAttributes]?: IdgTable[K];
-    } & {
-      [K in keyof IdgTable & keyof IdgTableAttributes as `attr:${K}`]?: IdgTableAttributes[K];
-    } & { [K in keyof IdgTable & keyof IdgTableAttributes as `prop:${K}`]?: IdgTable[K] };
-    "idg-tabs": Omit<IdgTabs, keyof IdgTabsAttributes> & {
-      [K in keyof IdgTabs & keyof IdgTabsAttributes]?: IdgTabs[K];
-    } & { [K in keyof IdgTabs & keyof IdgTabsAttributes as `attr:${K}`]?: IdgTabsAttributes[K] } & {
-      [K in keyof IdgTabs & keyof IdgTabsAttributes as `prop:${K}`]?: IdgTabs[K];
-    };
-    "idg-textarea": Omit<IdgTextarea, keyof IdgTextareaAttributes> & {
-      [K in keyof IdgTextarea & keyof IdgTextareaAttributes]?: IdgTextarea[K];
-    } & {
-      [
-        K in keyof IdgTextarea & keyof IdgTextareaAttributes as `attr:${K}`
-      ]?: IdgTextareaAttributes[K];
-    } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `prop:${K}`]?: IdgTextarea[K] };
-    "idg-toast": Omit<IdgToast, keyof IdgToastAttributes> & {
-      [K in keyof IdgToast & keyof IdgToastAttributes]?: IdgToast[K];
-    } & {
-      [K in keyof IdgToast & keyof IdgToastAttributes as `attr:${K}`]?: IdgToastAttributes[K];
-    } & { [K in keyof IdgToast & keyof IdgToastAttributes as `prop:${K}`]?: IdgToast[K] };
-    "idg-toast-region": Omit<IdgToastRegion, keyof IdgToastRegionAttributes> & {
-      [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes]?: IdgToastRegion[K];
-    } & {
-      [
-        K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `attr:${K}`
-      ]?: IdgToastRegionAttributes[K];
-    } & {
-      [
-        K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `prop:${K}`
-      ]?: IdgToastRegion[K];
-    };
-    "idg-tooltip": Omit<IdgTooltip, keyof IdgTooltipAttributes> & {
-      [K in keyof IdgTooltip & keyof IdgTooltipAttributes]?: IdgTooltip[K];
-    } & {
-      [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `attr:${K}`]?: IdgTooltipAttributes[K];
-    } & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `prop:${K}`]?: IdgTooltip[K] };
-    "idg-user-menu": Omit<IdgUserMenu, keyof IdgUserMenuAttributes> & {
-      [K in keyof IdgUserMenu & keyof IdgUserMenuAttributes]?: IdgUserMenu[K];
-    } & {
-      [
-        K in keyof IdgUserMenu & keyof IdgUserMenuAttributes as `attr:${K}`
-      ]?: IdgUserMenuAttributes[K];
-    } & { [K in keyof IdgUserMenu & keyof IdgUserMenuAttributes as `prop:${K}`]?: IdgUserMenu[K] };
-    "idg-variation-switcher": Omit<IdgVariationSwitcher, keyof IdgVariationSwitcherAttributes> & {
-      [
-        K in keyof IdgVariationSwitcher & keyof IdgVariationSwitcherAttributes
-      ]?: IdgVariationSwitcher[K];
-    } & {
-      [
-        K in keyof IdgVariationSwitcher & keyof IdgVariationSwitcherAttributes as `attr:${K}`
-      ]?: IdgVariationSwitcherAttributes[K];
-    } & {
-      [
-        K in keyof IdgVariationSwitcher & keyof IdgVariationSwitcherAttributes as `prop:${K}`
-      ]?: IdgVariationSwitcher[K];
-    };
-  }
+    interface IntrinsicElements {
+        "idg-accordion": Omit<IdgAccordion, keyof IdgAccordionAttributes> & { [K in keyof IdgAccordion & keyof IdgAccordionAttributes]?: IdgAccordion[K] } & { [K in keyof IdgAccordion & keyof IdgAccordionAttributes as `attr:${K}`]?: IdgAccordionAttributes[K] } & { [K in keyof IdgAccordion & keyof IdgAccordionAttributes as `prop:${K}`]?: IdgAccordion[K] };
+        "idg-accordion-item": Omit<IdgAccordionItem, keyof IdgAccordionItemAttributes> & { [K in keyof IdgAccordionItem & keyof IdgAccordionItemAttributes]?: IdgAccordionItem[K] } & { [K in keyof IdgAccordionItem & keyof IdgAccordionItemAttributes as `attr:${K}`]?: IdgAccordionItemAttributes[K] } & { [K in keyof IdgAccordionItem & keyof IdgAccordionItemAttributes as `prop:${K}`]?: IdgAccordionItem[K] };
+        "idg-alert": Omit<IdgAlert, keyof IdgAlertAttributes> & { [K in keyof IdgAlert & keyof IdgAlertAttributes]?: IdgAlert[K] } & { [K in keyof IdgAlert & keyof IdgAlertAttributes as `attr:${K}`]?: IdgAlertAttributes[K] } & { [K in keyof IdgAlert & keyof IdgAlertAttributes as `prop:${K}`]?: IdgAlert[K] };
+        "idg-avatar": Omit<IdgAvatar, keyof IdgAvatarAttributes> & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes]?: IdgAvatar[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `attr:${K}`]?: IdgAvatarAttributes[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `prop:${K}`]?: IdgAvatar[K] };
+        "idg-avatar-group": Omit<IdgAvatarGroup, keyof IdgAvatarGroupAttributes> & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes]?: IdgAvatarGroup[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `attr:${K}`]?: IdgAvatarGroupAttributes[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `prop:${K}`]?: IdgAvatarGroup[K] };
+        "idg-badge": Omit<IdgBadge, keyof IdgBadgeAttributes> & { [K in keyof IdgBadge & keyof IdgBadgeAttributes]?: IdgBadge[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `attr:${K}`]?: IdgBadgeAttributes[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `prop:${K}`]?: IdgBadge[K] };
+        "idg-breadcrumb": Omit<IdgBreadcrumb, keyof IdgBreadcrumbAttributes> & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes]?: IdgBreadcrumb[K] } & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes as `attr:${K}`]?: IdgBreadcrumbAttributes[K] } & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes as `prop:${K}`]?: IdgBreadcrumb[K] };
+        "idg-breadcrumb-item": Omit<IdgBreadcrumbItem, keyof IdgBreadcrumbItemAttributes> & { [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes]?: IdgBreadcrumbItem[K] } & { [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes as `attr:${K}`]?: IdgBreadcrumbItemAttributes[K] } & { [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes as `prop:${K}`]?: IdgBreadcrumbItem[K] };
+        "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
+        "idg-card": Omit<IdgCard, keyof IdgCardAttributes> & { [K in keyof IdgCard & keyof IdgCardAttributes]?: IdgCard[K] } & { [K in keyof IdgCard & keyof IdgCardAttributes as `attr:${K}`]?: IdgCardAttributes[K] } & { [K in keyof IdgCard & keyof IdgCardAttributes as `prop:${K}`]?: IdgCard[K] };
+        "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`]?: IdgCheckboxAttributes[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
+        "idg-cluster": Omit<IdgCluster, keyof IdgClusterAttributes> & { [K in keyof IdgCluster & keyof IdgClusterAttributes]?: IdgCluster[K] } & { [K in keyof IdgCluster & keyof IdgClusterAttributes as `attr:${K}`]?: IdgClusterAttributes[K] } & { [K in keyof IdgCluster & keyof IdgClusterAttributes as `prop:${K}`]?: IdgCluster[K] };
+        "idg-consent-banner": Omit<IdgConsentBanner, keyof IdgConsentBannerAttributes> & { [K in keyof IdgConsentBanner & keyof IdgConsentBannerAttributes]?: IdgConsentBanner[K] } & { [K in keyof IdgConsentBanner & keyof IdgConsentBannerAttributes as `attr:${K}`]?: IdgConsentBannerAttributes[K] } & { [K in keyof IdgConsentBanner & keyof IdgConsentBannerAttributes as `prop:${K}`]?: IdgConsentBanner[K] };
+        "idg-consent-preferences": Omit<IdgConsentPreferences, keyof IdgConsentPreferencesAttributes> & { [K in keyof IdgConsentPreferences & keyof IdgConsentPreferencesAttributes]?: IdgConsentPreferences[K] } & { [K in keyof IdgConsentPreferences & keyof IdgConsentPreferencesAttributes as `attr:${K}`]?: IdgConsentPreferencesAttributes[K] } & { [K in keyof IdgConsentPreferences & keyof IdgConsentPreferencesAttributes as `prop:${K}`]?: IdgConsentPreferences[K] };
+        "idg-cover": Omit<IdgCover, keyof IdgCoverAttributes> & { [K in keyof IdgCover & keyof IdgCoverAttributes]?: IdgCover[K] } & { [K in keyof IdgCover & keyof IdgCoverAttributes as `attr:${K}`]?: IdgCoverAttributes[K] } & { [K in keyof IdgCover & keyof IdgCoverAttributes as `prop:${K}`]?: IdgCover[K] };
+        "idg-dialog": Omit<IdgDialog, keyof IdgDialogAttributes> & { [K in keyof IdgDialog & keyof IdgDialogAttributes]?: IdgDialog[K] } & { [K in keyof IdgDialog & keyof IdgDialogAttributes as `attr:${K}`]?: IdgDialogAttributes[K] } & { [K in keyof IdgDialog & keyof IdgDialogAttributes as `prop:${K}`]?: IdgDialog[K] };
+        "idg-divider": Omit<IdgDivider, keyof IdgDividerAttributes> & { [K in keyof IdgDivider & keyof IdgDividerAttributes]?: IdgDivider[K] } & { [K in keyof IdgDivider & keyof IdgDividerAttributes as `attr:${K}`]?: IdgDividerAttributes[K] } & { [K in keyof IdgDivider & keyof IdgDividerAttributes as `prop:${K}`]?: IdgDivider[K] };
+        "idg-event-table": Omit<IdgEventTable, keyof IdgEventTableAttributes> & { [K in keyof IdgEventTable & keyof IdgEventTableAttributes]?: IdgEventTable[K] } & { [K in keyof IdgEventTable & keyof IdgEventTableAttributes as `attr:${K}`]?: IdgEventTableAttributes[K] } & { [K in keyof IdgEventTable & keyof IdgEventTableAttributes as `prop:${K}`]?: IdgEventTable[K] };
+        "idg-field": Omit<IdgField, keyof IdgFieldAttributes> & { [K in keyof IdgField & keyof IdgFieldAttributes]?: IdgField[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `attr:${K}`]?: IdgFieldAttributes[K] } & { [K in keyof IdgField & keyof IdgFieldAttributes as `prop:${K}`]?: IdgField[K] };
+        "idg-grid": Omit<IdgGrid, keyof IdgGridAttributes> & { [K in keyof IdgGrid & keyof IdgGridAttributes]?: IdgGrid[K] } & { [K in keyof IdgGrid & keyof IdgGridAttributes as `attr:${K}`]?: IdgGridAttributes[K] } & { [K in keyof IdgGrid & keyof IdgGridAttributes as `prop:${K}`]?: IdgGrid[K] };
+        "idg-icon": Omit<IdgIcon, keyof IdgIconAttributes> & { [K in keyof IdgIcon & keyof IdgIconAttributes]?: IdgIcon[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `attr:${K}`]?: IdgIconAttributes[K] } & { [K in keyof IdgIcon & keyof IdgIconAttributes as `prop:${K}`]?: IdgIcon[K] };
+        "idg-input": Omit<IdgInput, keyof IdgInputAttributes> & { [K in keyof IdgInput & keyof IdgInputAttributes]?: IdgInput[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `attr:${K}`]?: IdgInputAttributes[K] } & { [K in keyof IdgInput & keyof IdgInputAttributes as `prop:${K}`]?: IdgInput[K] };
+        "idg-layout": Omit<IdgLayout, keyof IdgLayoutAttributes> & { [K in keyof IdgLayout & keyof IdgLayoutAttributes]?: IdgLayout[K] } & { [K in keyof IdgLayout & keyof IdgLayoutAttributes as `attr:${K}`]?: IdgLayoutAttributes[K] } & { [K in keyof IdgLayout & keyof IdgLayoutAttributes as `prop:${K}`]?: IdgLayout[K] };
+        "idg-link": Omit<IdgLink, keyof IdgLinkAttributes> & { [K in keyof IdgLink & keyof IdgLinkAttributes]?: IdgLink[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `attr:${K}`]?: IdgLinkAttributes[K] } & { [K in keyof IdgLink & keyof IdgLinkAttributes as `prop:${K}`]?: IdgLink[K] };
+        "idg-menu": Omit<IdgMenu, keyof IdgMenuAttributes> & { [K in keyof IdgMenu & keyof IdgMenuAttributes]?: IdgMenu[K] } & { [K in keyof IdgMenu & keyof IdgMenuAttributes as `attr:${K}`]?: IdgMenuAttributes[K] } & { [K in keyof IdgMenu & keyof IdgMenuAttributes as `prop:${K}`]?: IdgMenu[K] };
+        "idg-menu-group": Omit<IdgMenuGroup, keyof IdgMenuGroupAttributes> & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes]?: IdgMenuGroup[K] } & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes as `attr:${K}`]?: IdgMenuGroupAttributes[K] } & { [K in keyof IdgMenuGroup & keyof IdgMenuGroupAttributes as `prop:${K}`]?: IdgMenuGroup[K] };
+        "idg-menu-item": Omit<IdgMenuItem, keyof IdgMenuItemAttributes> & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes]?: IdgMenuItem[K] } & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `attr:${K}`]?: IdgMenuItemAttributes[K] } & { [K in keyof IdgMenuItem & keyof IdgMenuItemAttributes as `prop:${K}`]?: IdgMenuItem[K] };
+        "idg-menu-separator": IdgMenuSeparator;
+        "idg-pagination": Omit<IdgPagination, keyof IdgPaginationAttributes> & { [K in keyof IdgPagination & keyof IdgPaginationAttributes]?: IdgPagination[K] } & { [K in keyof IdgPagination & keyof IdgPaginationAttributes as `attr:${K}`]?: IdgPaginationAttributes[K] } & { [K in keyof IdgPagination & keyof IdgPaginationAttributes as `prop:${K}`]?: IdgPagination[K] };
+        "idg-password-reset": Omit<IdgPasswordReset, keyof IdgPasswordResetAttributes> & { [K in keyof IdgPasswordReset & keyof IdgPasswordResetAttributes]?: IdgPasswordReset[K] } & { [K in keyof IdgPasswordReset & keyof IdgPasswordResetAttributes as `attr:${K}`]?: IdgPasswordResetAttributes[K] } & { [K in keyof IdgPasswordReset & keyof IdgPasswordResetAttributes as `prop:${K}`]?: IdgPasswordReset[K] };
+        "idg-popover": Omit<IdgPopover, keyof IdgPopoverAttributes> & { [K in keyof IdgPopover & keyof IdgPopoverAttributes]?: IdgPopover[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `attr:${K}`]?: IdgPopoverAttributes[K] } & { [K in keyof IdgPopover & keyof IdgPopoverAttributes as `prop:${K}`]?: IdgPopover[K] };
+        "idg-profile": Omit<IdgProfile, keyof IdgProfileAttributes> & { [K in keyof IdgProfile & keyof IdgProfileAttributes]?: IdgProfile[K] } & { [K in keyof IdgProfile & keyof IdgProfileAttributes as `attr:${K}`]?: IdgProfileAttributes[K] } & { [K in keyof IdgProfile & keyof IdgProfileAttributes as `prop:${K}`]?: IdgProfile[K] };
+        "idg-progress": Omit<IdgProgress, keyof IdgProgressAttributes> & { [K in keyof IdgProgress & keyof IdgProgressAttributes]?: IdgProgress[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `attr:${K}`]?: IdgProgressAttributes[K] } & { [K in keyof IdgProgress & keyof IdgProgressAttributes as `prop:${K}`]?: IdgProgress[K] };
+        "idg-property-picker": Omit<IdgPropertyPicker, keyof IdgPropertyPickerAttributes> & { [K in keyof IdgPropertyPicker & keyof IdgPropertyPickerAttributes]?: IdgPropertyPicker[K] } & { [K in keyof IdgPropertyPicker & keyof IdgPropertyPickerAttributes as `attr:${K}`]?: IdgPropertyPickerAttributes[K] } & { [K in keyof IdgPropertyPicker & keyof IdgPropertyPickerAttributes as `prop:${K}`]?: IdgPropertyPicker[K] };
+        "idg-radio": Omit<IdgRadio, keyof IdgRadioAttributes> & { [K in keyof IdgRadio & keyof IdgRadioAttributes]?: IdgRadio[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `attr:${K}`]?: IdgRadioAttributes[K] } & { [K in keyof IdgRadio & keyof IdgRadioAttributes as `prop:${K}`]?: IdgRadio[K] };
+        "idg-radio-group": Omit<IdgRadioGroup, keyof IdgRadioGroupAttributes> & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes]?: IdgRadioGroup[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `attr:${K}`]?: IdgRadioGroupAttributes[K] } & { [K in keyof IdgRadioGroup & keyof IdgRadioGroupAttributes as `prop:${K}`]?: IdgRadioGroup[K] };
+        "idg-register": IdgRegister;
+        "idg-select": Omit<IdgSelect, keyof IdgSelectAttributes> & { [K in keyof IdgSelect & keyof IdgSelectAttributes]?: IdgSelect[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `attr:${K}`]?: IdgSelectAttributes[K] } & { [K in keyof IdgSelect & keyof IdgSelectAttributes as `prop:${K}`]?: IdgSelect[K] };
+        "idg-session-guard": IdgSessionGuard;
+        "idg-sidebar": Omit<IdgSidebar, keyof IdgSidebarAttributes> & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes]?: IdgSidebar[K] } & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `attr:${K}`]?: IdgSidebarAttributes[K] } & { [K in keyof IdgSidebar & keyof IdgSidebarAttributes as `prop:${K}`]?: IdgSidebar[K] };
+        "idg-sign-in": Omit<IdgSignIn, keyof IdgSignInAttributes> & { [K in keyof IdgSignIn & keyof IdgSignInAttributes]?: IdgSignIn[K] } & { [K in keyof IdgSignIn & keyof IdgSignInAttributes as `attr:${K}`]?: IdgSignInAttributes[K] } & { [K in keyof IdgSignIn & keyof IdgSignInAttributes as `prop:${K}`]?: IdgSignIn[K] };
+        "idg-skeleton": Omit<IdgSkeleton, keyof IdgSkeletonAttributes> & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes]?: IdgSkeleton[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `attr:${K}`]?: IdgSkeletonAttributes[K] } & { [K in keyof IdgSkeleton & keyof IdgSkeletonAttributes as `prop:${K}`]?: IdgSkeleton[K] };
+        "idg-sparkline": Omit<IdgSparkline, keyof IdgSparklineAttributes> & { [K in keyof IdgSparkline & keyof IdgSparklineAttributes]?: IdgSparkline[K] } & { [K in keyof IdgSparkline & keyof IdgSparklineAttributes as `attr:${K}`]?: IdgSparklineAttributes[K] } & { [K in keyof IdgSparkline & keyof IdgSparklineAttributes as `prop:${K}`]?: IdgSparkline[K] };
+        "idg-stack": Omit<IdgStack, keyof IdgStackAttributes> & { [K in keyof IdgStack & keyof IdgStackAttributes]?: IdgStack[K] } & { [K in keyof IdgStack & keyof IdgStackAttributes as `attr:${K}`]?: IdgStackAttributes[K] } & { [K in keyof IdgStack & keyof IdgStackAttributes as `prop:${K}`]?: IdgStack[K] };
+        "idg-stat": Omit<IdgStat, keyof IdgStatAttributes> & { [K in keyof IdgStat & keyof IdgStatAttributes]?: IdgStat[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `attr:${K}`]?: IdgStatAttributes[K] } & { [K in keyof IdgStat & keyof IdgStatAttributes as `prop:${K}`]?: IdgStat[K] };
+        "idg-switch": Omit<IdgSwitch, keyof IdgSwitchAttributes> & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes]?: IdgSwitch[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `attr:${K}`]?: IdgSwitchAttributes[K] } & { [K in keyof IdgSwitch & keyof IdgSwitchAttributes as `prop:${K}`]?: IdgSwitch[K] };
+        "idg-switcher": Omit<IdgSwitcher, keyof IdgSwitcherAttributes> & { [K in keyof IdgSwitcher & keyof IdgSwitcherAttributes]?: IdgSwitcher[K] } & { [K in keyof IdgSwitcher & keyof IdgSwitcherAttributes as `attr:${K}`]?: IdgSwitcherAttributes[K] } & { [K in keyof IdgSwitcher & keyof IdgSwitcherAttributes as `prop:${K}`]?: IdgSwitcher[K] };
+        "idg-tab": Omit<IdgTab, keyof IdgTabAttributes> & { [K in keyof IdgTab & keyof IdgTabAttributes]?: IdgTab[K] } & { [K in keyof IdgTab & keyof IdgTabAttributes as `attr:${K}`]?: IdgTabAttributes[K] } & { [K in keyof IdgTab & keyof IdgTabAttributes as `prop:${K}`]?: IdgTab[K] };
+        "idg-tab-panel": Omit<IdgTabPanel, keyof IdgTabPanelAttributes> & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes]?: IdgTabPanel[K] } & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes as `attr:${K}`]?: IdgTabPanelAttributes[K] } & { [K in keyof IdgTabPanel & keyof IdgTabPanelAttributes as `prop:${K}`]?: IdgTabPanel[K] };
+        "idg-table": Omit<IdgTable, keyof IdgTableAttributes> & { [K in keyof IdgTable & keyof IdgTableAttributes]?: IdgTable[K] } & { [K in keyof IdgTable & keyof IdgTableAttributes as `attr:${K}`]?: IdgTableAttributes[K] } & { [K in keyof IdgTable & keyof IdgTableAttributes as `prop:${K}`]?: IdgTable[K] };
+        "idg-tabs": Omit<IdgTabs, keyof IdgTabsAttributes> & { [K in keyof IdgTabs & keyof IdgTabsAttributes]?: IdgTabs[K] } & { [K in keyof IdgTabs & keyof IdgTabsAttributes as `attr:${K}`]?: IdgTabsAttributes[K] } & { [K in keyof IdgTabs & keyof IdgTabsAttributes as `prop:${K}`]?: IdgTabs[K] };
+        "idg-textarea": Omit<IdgTextarea, keyof IdgTextareaAttributes> & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes]?: IdgTextarea[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `attr:${K}`]?: IdgTextareaAttributes[K] } & { [K in keyof IdgTextarea & keyof IdgTextareaAttributes as `prop:${K}`]?: IdgTextarea[K] };
+        "idg-toast": Omit<IdgToast, keyof IdgToastAttributes> & { [K in keyof IdgToast & keyof IdgToastAttributes]?: IdgToast[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `attr:${K}`]?: IdgToastAttributes[K] } & { [K in keyof IdgToast & keyof IdgToastAttributes as `prop:${K}`]?: IdgToast[K] };
+        "idg-toast-region": Omit<IdgToastRegion, keyof IdgToastRegionAttributes> & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes]?: IdgToastRegion[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `attr:${K}`]?: IdgToastRegionAttributes[K] } & { [K in keyof IdgToastRegion & keyof IdgToastRegionAttributes as `prop:${K}`]?: IdgToastRegion[K] };
+        "idg-tooltip": Omit<IdgTooltip, keyof IdgTooltipAttributes> & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes]?: IdgTooltip[K] } & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `attr:${K}`]?: IdgTooltipAttributes[K] } & { [K in keyof IdgTooltip & keyof IdgTooltipAttributes as `prop:${K}`]?: IdgTooltip[K] };
+        "idg-user-menu": Omit<IdgUserMenu, keyof IdgUserMenuAttributes> & { [K in keyof IdgUserMenu & keyof IdgUserMenuAttributes]?: IdgUserMenu[K] } & { [K in keyof IdgUserMenu & keyof IdgUserMenuAttributes as `attr:${K}`]?: IdgUserMenuAttributes[K] } & { [K in keyof IdgUserMenu & keyof IdgUserMenuAttributes as `prop:${K}`]?: IdgUserMenu[K] };
+        "idg-variation-switcher": Omit<IdgVariationSwitcher, keyof IdgVariationSwitcherAttributes> & { [K in keyof IdgVariationSwitcher & keyof IdgVariationSwitcherAttributes]?: IdgVariationSwitcher[K] } & { [K in keyof IdgVariationSwitcher & keyof IdgVariationSwitcherAttributes as `attr:${K}`]?: IdgVariationSwitcherAttributes[K] } & { [K in keyof IdgVariationSwitcher & keyof IdgVariationSwitcherAttributes as `prop:${K}`]?: IdgVariationSwitcher[K] };
+    }
 }
 export { LocalJSX as JSX };
 declare module "@stencil/core" {
-  export namespace JSX {
-    interface IntrinsicElements {
-      /**
-       * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
-       * one item is open at a time. Up and Down, Home and End move between the headers.
-       */
-      "idg-accordion": LocalJSX.IntrinsicElements["idg-accordion"] &
-        JSXBase.HTMLAttributes<HTMLIdgAccordionElement>;
-      /**
-       * One item of an idg-accordion: a heading holding the button that shows or hides the panel
-       * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
-       * the panel's name are plain id references.
-       */
-      "idg-accordion-item": LocalJSX.IntrinsicElements["idg-accordion-item"] &
-        JSXBase.HTMLAttributes<HTMLIdgAccordionItemElement>;
-      /**
-       * A message that stays on the page until it is read or dismissed. For a message that appears in
-       * response to what the user did, render the alert at that moment: a live region announces what is
-       * inserted, not what was already there.
-       */
-      "idg-alert": LocalJSX.IntrinsicElements["idg-alert"] &
-        JSXBase.HTMLAttributes<HTMLIdgAlertElement>;
-      /**
-       * A person or account, as a picture or, when there is none or it fails to load, their initials on a
-       * colour chosen from their name.
-       */
-      "idg-avatar": LocalJSX.IntrinsicElements["idg-avatar"] &
-        JSXBase.HTMLAttributes<HTMLIdgAvatarElement>;
-      /**
-       * Overlaps a row of idg-avatar. It sets their size, and with `max` hides the ones past the limit
-       * and shows how many there are.
-       */
-      "idg-avatar-group": LocalJSX.IntrinsicElements["idg-avatar-group"] &
-        JSXBase.HTMLAttributes<HTMLIdgAvatarGroupElement>;
-      /**
-       * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
-       */
-      "idg-badge": LocalJSX.IntrinsicElements["idg-badge"] &
-        JSXBase.HTMLAttributes<HTMLIdgBadgeElement>;
-      /**
-       * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
-       * idg-breadcrumb-item. The last item is the current page unless another item says it is.
-       */
-      "idg-breadcrumb": LocalJSX.IntrinsicElements["idg-breadcrumb"] &
-        JSXBase.HTMLAttributes<HTMLIdgBreadcrumbElement>;
-      /**
-       * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
-       * one, and separator are drawn in its own shadow root.
-       */
-      "idg-breadcrumb-item": LocalJSX.IntrinsicElements["idg-breadcrumb-item"] &
-        JSXBase.HTMLAttributes<HTMLIdgBreadcrumbItemElement>;
-      "idg-button": LocalJSX.IntrinsicElements["idg-button"] &
-        JSXBase.HTMLAttributes<HTMLIdgButtonElement>;
-      /**
-       * A surface that groups related content, drawn in the design language's own surface, border and
-       * elevation.
-       * With `href` and a `heading`, the heading becomes the card's one link and covers the whole card, so
-       * a click anywhere follows it while assistive technology still finds a single link. Anything in
-       * the footer slot sits above the link and stays clickable.
-       */
-      "idg-card": LocalJSX.IntrinsicElements["idg-card"] &
-        JSXBase.HTMLAttributes<HTMLIdgCardElement>;
-      "idg-checkbox": LocalJSX.IntrinsicElements["idg-checkbox"] &
-        JSXBase.HTMLAttributes<HTMLIdgCheckboxElement>;
-      /**
-       * A group of items in a row that wraps onto further rows when it runs out of room, such as tags,
-       * buttons or a toolbar. It only arranges, so it adds no role and the source order stays the
-       * reading order.
-       */
-      "idg-cluster": LocalJSX.IntrinsicElements["idg-cluster"] &
-        JSXBase.HTMLAttributes<HTMLIdgClusterElement>;
-      /**
-       * Asks once whether analytics may be switched on, for the consent object it is given in `consent`
-       * (the tracker's `tracker.consent`). It is a region of the page, not a dialog: it never blocks
-       * anything, takes no focus when it appears, and ignoring it, or pressing Escape, means no consent.
-       * It asks only while the state is `unknown` and no browser privacy signal is set. Under Global
-       * Privacy Control or Do Not Track it does not ask at all, since asking would invite a choice the
-       * browser has already made: it draws nothing, or, with `announce-signal`, one line saying the
-       * signal is respected. "Decline" comes first and has the same variant and size as "Accept
-       * analytics". After a choice, focus goes back to what had it before the banner, else to the main
-       * landmark, and a polite live region confirms it.
-       * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
-       * natural place is further on, so it keeps its space in the page's flow and never covers the end
-       * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
-       * element is scrolled clear of it. In a window too short for both, it joins the page's flow
-       * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
-       * is: a bar at the top scrolls away with the page and never covers a header that sticks.
-       */
-      "idg-consent-banner": LocalJSX.IntrinsicElements["idg-consent-banner"] &
-        JSXBase.HTMLAttributes<HTMLIdgConsentBannerElement>;
-      /**
-       * The visitor's choices about analytics, for the consent object it is given in `consent` (the
-       * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
-       * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
-       * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
-       * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
-       * the switch is disabled with the signal named, and saving can only record a denial.
-       * It follows changes made elsewhere (another tab, the banner). If the stored state changes under
-       * an unsaved edit, the edit is dropped and a note says so. With `modal` it is drawn inside an
-       * `idg-dialog` that `open()` and `close()` control; the dialog holds and restores focus.
-       */
-      "idg-consent-preferences": LocalJSX.IntrinsicElements["idg-consent-preferences"] &
-        JSXBase.HTMLAttributes<HTMLIdgConsentPreferencesElement>;
-      /**
-       * A block at least as tall as `min-height` that centres its content, with optional regions pinned
-       * to its top and bottom, such as a hero, a splash or a sign-in screen. It only arranges, so it
-       * adds no role and the source order stays the reading order.
-       */
-      "idg-cover": LocalJSX.IntrinsicElements["idg-cover"] &
-        JSXBase.HTMLAttributes<HTMLIdgCoverElement>;
-      /**
-       * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
-       * of the page inert and contains focus, and Escape is the browser's close request. The component
-       * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
-       * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
-       * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
-       * closed.
-       */
-      "idg-dialog": LocalJSX.IntrinsicElements["idg-dialog"] &
-        JSXBase.HTMLAttributes<HTMLIdgDialogElement>;
-      /**
-       * A rule between groups of content, drawn in the design language's own border.
-       */
-      "idg-divider": LocalJSX.IntrinsicElements["idg-divider"] &
-        JSXBase.HTMLAttributes<HTMLIdgDividerElement>;
-      /**
-       * A table of tracked events: the event, when it happened, the path and its properties, with
-       * paging and optional sorting by time or name. It takes its data through properties and never
-       * fetches.
-       * Every value is untrusted text from the public internet. It is drawn as text and nothing else: no
-       * markup is read, no link or address is made from it, control and bidirectional characters are
-       * replaced by a visible mark, each value is isolated in a `<bdi>` so right to left text cannot
-       * reorder what is beside it, long values wrap and are cut to a limit, and an event shows at most
-       * ten properties. Records that are malformed are left out.
-       * With `events` as the whole list, the table sorts and pages it. With `total` set, `events` is the
-       * one page the server answered with: the table draws it as it is and only reports `idgPageChange`
-       * and `idgSort` for the page to fetch with. Either way it draws at most `pageSize` rows (to 100).
-       * The state that matters is said politely: loading, an error, no events, and which events are shown.
-       */
-      "idg-event-table": LocalJSX.IntrinsicElements["idg-event-table"] &
-        JSXBase.HTMLAttributes<HTMLIdgEventTableElement>;
-      /**
-       * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
-       * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
-       * reference cannot cross a shadow boundary, so their text is handed to the control as properties
-       * and the control applies it to its own native element.
-       */
-      "idg-field": LocalJSX.IntrinsicElements["idg-field"] &
-        JSXBase.HTMLAttributes<HTMLIdgFieldElement>;
-      /**
-       * Items in as many equal columns as fit. Each column is at least `min` wide, and there are never
-       * more columns than the layout allows, so the same markup has more or fewer columns under each
-       * `data-layout`. It only arranges, so it adds no role and the source order stays the reading order.
-       */
-      "idg-grid": LocalJSX.IntrinsicElements["idg-grid"] &
-        JSXBase.HTMLAttributes<HTMLIdgGridElement>;
-      /**
-       * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
-       */
-      "idg-icon": LocalJSX.IntrinsicElements["idg-icon"] &
-        JSXBase.HTMLAttributes<HTMLIdgIconElement>;
-      /**
-       * A form-associated text field. Enter submits its form as a native input does (see the README):
-       * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
-       * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
-       */
-      "idg-input": LocalJSX.IntrinsicElements["idg-input"] &
-        JSXBase.HTMLAttributes<HTMLIdgInputElement>;
-      /**
-       * The page shell. One page, written once, is housed in the structure the `data-layout` attribute of
-       * the root (or of an ancestor) names: the same landmarks in the same reading order in all eight, and
-       * only a stylesheet that places them differently. The shell never reorders its own tree, so the
-       * order a reader and the Tab key meet things is the order of the markup in every layout.
-       * It is a size container, and every layout decides its small, medium and large arrangement from its
-       * own width, never the viewport's. Where a layout collapses the navigation behind a toggle, the
-       * stylesheet decides that too, and the script only reads what it decided (`--_nav`).
-       */
-      "idg-layout": LocalJSX.IntrinsicElements["idg-layout"] &
-        JSXBase.HTMLAttributes<HTMLIdgLayoutElement>;
-      /**
-       * An inline text link. It takes the same hardening as the button's link mode: the url goes
-       * through `safeUrl` and a link that opens another browsing context always gets `noopener
-       * noreferrer`.
-       */
-      "idg-link": LocalJSX.IntrinsicElements["idg-link"] &
-        JSXBase.HTMLAttributes<HTMLIdgLinkElement>;
-      /**
-       * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
-       * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
-       * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
-       * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
-       * focus moves to the items themselves (roving focus). Each item carries its own role and state.
-       */
-      "idg-menu": LocalJSX.IntrinsicElements["idg-menu"] &
-        JSXBase.HTMLAttributes<HTMLIdgMenuElement>;
-      /**
-       * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
-       * uncheck each other within their group.
-       */
-      "idg-menu-group": LocalJSX.IntrinsicElements["idg-menu-group"] &
-        JSXBase.HTMLAttributes<HTMLIdgMenuGroupElement>;
-      /**
-       * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
-       * its own shadow root, so its role and state are set on the focusable element inside it, and the
-       * host is a plain wrapper that assistive technology passes through.
-       */
-      "idg-menu-item": LocalJSX.IntrinsicElements["idg-menu-item"] &
-        JSXBase.HTMLAttributes<HTMLIdgMenuItemElement>;
-      /**
-       * A rule between groups of items in an idg-menu.
-       */
-      "idg-menu-separator": LocalJSX.IntrinsicElements["idg-menu-separator"] &
-        JSXBase.HTMLAttributes<HTMLIdgMenuSeparatorElement>;
-      /**
-       * Page controls for a long list: previous and next, the current page and a window of its
-       * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
-       * given, so each page is an address that can be opened, shared and followed without script, and
-       * buttons that fire `idgPageChange` otherwise.
-       */
-      "idg-pagination": LocalJSX.IntrinsicElements["idg-pagination"] &
-        JSXBase.HTMLAttributes<HTMLIdgPaginationElement>;
-      /**
-       * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
-       * for the address and always answers the same, whether or not an account uses it. `complete`
-       * sets the new password with the emailed code, which the page reads from the link and passes in
-       * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
-       * inputs are emptied after every attempt.
-       */
-      "idg-password-reset": LocalJSX.IntrinsicElements["idg-password-reset"] &
-        JSXBase.HTMLAttributes<HTMLIdgPasswordResetElement>;
-      /**
-       * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
-       * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
-       * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
-       * not contained, and Tab moves on from the content.
-       */
-      "idg-popover": LocalJSX.IntrinsicElements["idg-popover"] &
-        JSXBase.HTMLAttributes<HTMLIdgPopoverElement>;
-      /**
-       * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
-       * (display name, about, language, time zone and email preference), a password change, and the
-       * sessions of the account with a button to sign each other one out and one to sign out everywhere.
-       * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
-       */
-      "idg-profile": LocalJSX.IntrinsicElements["idg-profile"] &
-        JSXBase.HTMLAttributes<HTMLIdgProfileElement>;
-      /**
-       * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
-       * the browser's own. Without a value it is indeterminate.
-       */
-      "idg-progress": LocalJSX.IntrinsicElements["idg-progress"] &
-        JSXBase.HTMLAttributes<HTMLIdgProgressElement>;
-      /**
-       * Lets a signed-in user choose which tracked property (site) the dashboard shows. It is a labelled
-       * `idg-select` that lists the `properties` it is given and reports the chosen id with `idgChange`.
-       * It is form associated: with a `name` it submits the chosen id.
-       * Property names are text the user typed: they are shown as text only, with control and
-       * bidirectional characters replaced and long names cut. A `value` that is not one of the
-       * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
-       * property appears in the list later, and is never replaced by the first property.
-       */
-      "idg-property-picker": LocalJSX.IntrinsicElements["idg-property-picker"] &
-        JSXBase.HTMLAttributes<HTMLIdgPropertyPickerElement>;
-      /**
-       * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
-       * as set by the group are how it passes state down, because radios in separate shadow roots are
-       * not a native radio group.
-       */
-      "idg-radio": LocalJSX.IntrinsicElements["idg-radio"] &
-        JSXBase.HTMLAttributes<HTMLIdgRadioElement>;
-      /**
-       * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
-       * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
-       * its radios, is the form control.
-       */
-      "idg-radio-group": LocalJSX.IntrinsicElements["idg-radio-group"] &
-        JSXBase.HTMLAttributes<HTMLIdgRadioGroupElement>;
-      /**
-       * A registration form for the identity client it is given in `client`. With email confirmation on,
-       * a new address and one already registered get the same answer, so the form never tells whether
-       * an account exists. The password is read from its input when the form is sent and the input is
-       * emptied after every attempt.
-       */
-      "idg-register": LocalJSX.IntrinsicElements["idg-register"] &
-        JSXBase.HTMLAttributes<HTMLIdgRegisterElement>;
-      /**
-       * Options are written as children, exactly as for a native select, and copied into the native
-       * select inside the component: the same markup works with or without a framework, and no option
-       * data has to be serialised into an attribute.
-       */
-      "idg-select": LocalJSX.IntrinsicElements["idg-select"] &
-        JSXBase.HTMLAttributes<HTMLIdgSelectElement>;
-      /**
-       * Shows its content only while someone is signed in, through the identity client it is given in
-       * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
-       * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
-       * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
-       * at once.
-       * The guard adds no box around what it shows: the host is `display: contents` and the slots are
-       * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
-       * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
-       * before the content and out of the page's layout, whose text says the change; Tab goes on into
-       * the content. A notice, when the guard shows one, is one block before the content.
-       * This is a convenience for the interface, not access control: the content is still in the page
-       * for anyone who reads its markup, and only the API decides what a request may read or change.
-       */
-      "idg-session-guard": LocalJSX.IntrinsicElements["idg-session-guard"] &
-        JSXBase.HTMLAttributes<HTMLIdgSessionGuardElement>;
-      /**
-       * Two regions side by side: a side region of a set width and the content, which takes the rest.
-       * When the content would get less than half of the width, the regions stack instead, with no
-       * breakpoint and no script, so it follows the width of its container rather than the viewport.
-       * The side region is drawn first when it is at the start and last when it is at the end, so what a
-       * reader and the Tab key meet first is also what is shown first, in either text direction. When
-       * the regions stack, the side region is above the content when it is at the start and below it
-       * when it is at the end.
-       */
-      "idg-sidebar": LocalJSX.IntrinsicElements["idg-sidebar"] &
-        JSXBase.HTMLAttributes<HTMLIdgSidebarElement>;
-      /**
-       * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
-       * password: the password is read from its input when the form is sent and the input is emptied
-       * after a sign-in, a refused one, or when the element leaves the page.
-       */
-      "idg-sign-in": LocalJSX.IntrinsicElements["idg-sign-in"] &
-        JSXBase.HTMLAttributes<HTMLIdgSignInElement>;
-      /**
-       * A placeholder shaped like content that is still loading. It is always hidden from assistive
-       * technology, so it announces nothing by itself. Mark the region being loaded with
-       * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
-       * and replace the skeletons when the content arrives.
-       * Size it with the page's own CSS on the element, for example `idg-skeleton { inline-size: 12rem }`.
-       */
-      "idg-skeleton": LocalJSX.IntrinsicElements["idg-skeleton"] &
-        JSXBase.HTMLAttributes<HTMLIdgSkeletonElement>;
-      /**
-       * A small trend line drawn as SVG from a series of numbers, for beside a figure. It scales to the
-       * width of its container (set one with the page's own CSS, `idg-sparkline { inline-size: 8rem }`),
-       * keeps its proportions, and never animates. It is an image with a text alternative: the label
-       * you give it and a sentence with the first, last, lowest and highest value and which way the
-       * series went, formatted in the language of the page. Time runs left to right in every
-       * writing direction.
-       * Anything in `values` that is not a finite number is left out, never drawn as zero. A series
-       * longer than 120 points is thinned for drawing, keeping its first, last, lowest and highest.
-       */
-      "idg-sparkline": LocalJSX.IntrinsicElements["idg-sparkline"] &
-        JSXBase.HTMLAttributes<HTMLIdgSparklineElement>;
-      /**
-       * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
-       * and the source order stays the reading order.
-       */
-      "idg-stack": LocalJSX.IntrinsicElements["idg-stack"] &
-        JSXBase.HTMLAttributes<HTMLIdgStackElement>;
-      /**
-       * A figure with its label and, optionally, how it changed.
-       */
-      "idg-stat": LocalJSX.IntrinsicElements["idg-stat"] &
-        JSXBase.HTMLAttributes<HTMLIdgStatElement>;
-      "idg-switch": LocalJSX.IntrinsicElements["idg-switch"] &
-        JSXBase.HTMLAttributes<HTMLIdgSwitchElement>;
-      /**
-       * Items in one row that switch to one column when their container is narrower than `threshold`.
-       * Every item is as wide as the others in either arrangement. There is no breakpoint and no script,
-       * so it follows the width of its container rather than the viewport. It only arranges, so it adds
-       * no role and the source order stays the reading order.
-       */
-      "idg-switcher": LocalJSX.IntrinsicElements["idg-switcher"] &
-        JSXBase.HTMLAttributes<HTMLIdgSwitcherElement>;
-      /**
-       * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
-       * host carries the tab role and state itself, so the relations to the panel, which sits beside it
-       * in the page, can be made between the two hosts.
-       */
-      "idg-tab": LocalJSX.IntrinsicElements["idg-tab"] & JSXBase.HTMLAttributes<HTMLIdgTabElement>;
-      /**
-       * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
-       * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
-       * reader can still move into it.
-       */
-      "idg-tab-panel": LocalJSX.IntrinsicElements["idg-tab-panel"] &
-        JSXBase.HTMLAttributes<HTMLIdgTabPanelElement>;
-      /**
-       * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
-       * header cells, row and column relations) and the component adds what a table needs around it: a
-       * surface drawn in the design language, a scroll region that is reachable by keyboard and named
-       * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
-       * sortable column headers.
-       * The cells are the page's own, so a shadow root cannot style them. The component adopts a
-       * constructable stylesheet into the document or shadow root the table lives in, scoped to
-       * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
-       * constructable stylesheets shows the table unstyled.
-       * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
-       * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
-       */
-      "idg-table": LocalJSX.IntrinsicElements["idg-table"] &
-        JSXBase.HTMLAttributes<HTMLIdgTableElement>;
-      /**
-       * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
-       * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
-       * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
-       * its position among its own kind as its value.
-       */
-      "idg-tabs": LocalJSX.IntrinsicElements["idg-tabs"] &
-        JSXBase.HTMLAttributes<HTMLIdgTabsElement>;
-      "idg-textarea": LocalJSX.IntrinsicElements["idg-textarea"] &
-        JSXBase.HTMLAttributes<HTMLIdgTextareaElement>;
-      /**
-       * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
-       * time, announces each as it appears, pauses them while they are being read and lets the keyboard
-       * reach them; the `toast()` function does all of that from script.
-       * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
-       * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
-       * is given a duration, so nobody loses the chance to act on it.
-       */
-      "idg-toast": LocalJSX.IntrinsicElements["idg-toast"] &
-        JSXBase.HTMLAttributes<HTMLIdgToastElement>;
-      /**
-       * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
-       * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
-       * rest, and announces each toast as it comes into view through a live region of its own: politely,
-       * or at once for danger. Focus never moves on its own.
-       * While the pointer is over it, focus is inside it, the window is in the background or the user
-       * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
-       * and nothing slides under the pointer.
-       */
-      "idg-toast-region": LocalJSX.IntrinsicElements["idg-toast-region"] &
-        JSXBase.HTMLAttributes<HTMLIdgToastRegionElement>;
-      /**
-       * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
-       * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
-       * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
-       * only: put anything interactive in an idg-popover.
-       * The text is also the trigger's accessible description, given to the trigger itself, so it is
-       * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
-       * technology so it is not read twice.
-       */
-      "idg-tooltip": LocalJSX.IntrinsicElements["idg-tooltip"] &
-        JSXBase.HTMLAttributes<HTMLIdgTooltipElement>;
-      /**
-       * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
-       * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
-       * user how the sign-out went: a server that could not be reached is said plainly, since the
-       * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
-       * It goes away when the client hears that another tab signed out.
-       */
-      "idg-user-menu": LocalJSX.IntrinsicElements["idg-user-menu"] &
-        JSXBase.HTMLAttributes<HTMLIdgUserMenuElement>;
-      /**
-       * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
-       * always acts on the document's root element, through `@identgineer/variations`, so the page's own
-       * attributes stay the single truth: a change made anywhere else (markup, a script, another
-       * switcher) is shown here, and nothing here is announced for a change the visitor did not make.
-       */
-      "idg-variation-switcher": LocalJSX.IntrinsicElements["idg-variation-switcher"] &
-        JSXBase.HTMLAttributes<HTMLIdgVariationSwitcherElement>;
+    export namespace JSX {
+        interface IntrinsicElements {
+            /**
+             * A stack of idg-accordion-item, each a heading whose button shows or hides its panel. By default
+             * one item is open at a time. Up and Down, Home and End move between the headers.
+             */
+            "idg-accordion": LocalJSX.IntrinsicElements["idg-accordion"] & JSXBase.HTMLAttributes<HTMLIdgAccordionElement>;
+            /**
+             * One item of an idg-accordion: a heading holding the button that shows or hides the panel
+             * beneath it. The button and the panel share a shadow root, so the button's `aria-controls` and
+             * the panel's name are plain id references.
+             */
+            "idg-accordion-item": LocalJSX.IntrinsicElements["idg-accordion-item"] & JSXBase.HTMLAttributes<HTMLIdgAccordionItemElement>;
+            /**
+             * A message that stays on the page until it is read or dismissed. For a message that appears in
+             * response to what the user did, render the alert at that moment: a live region announces what is
+             * inserted, not what was already there.
+             */
+            "idg-alert": LocalJSX.IntrinsicElements["idg-alert"] & JSXBase.HTMLAttributes<HTMLIdgAlertElement>;
+            /**
+             * A person or account, as a picture or, when there is none or it fails to load, their initials on a
+             * colour chosen from their name.
+             */
+            "idg-avatar": LocalJSX.IntrinsicElements["idg-avatar"] & JSXBase.HTMLAttributes<HTMLIdgAvatarElement>;
+            /**
+             * Overlaps a row of idg-avatar. It sets their size, and with `max` hides the ones past the limit
+             * and shows how many there are.
+             */
+            "idg-avatar-group": LocalJSX.IntrinsicElements["idg-avatar-group"] & JSXBase.HTMLAttributes<HTMLIdgAvatarGroupElement>;
+            /**
+             * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
+             */
+            "idg-badge": LocalJSX.IntrinsicElements["idg-badge"] & JSXBase.HTMLAttributes<HTMLIdgBadgeElement>;
+            /**
+             * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
+             * idg-breadcrumb-item. The last item is the current page unless another item says it is.
+             */
+            "idg-breadcrumb": LocalJSX.IntrinsicElements["idg-breadcrumb"] & JSXBase.HTMLAttributes<HTMLIdgBreadcrumbElement>;
+            /**
+             * One step of an idg-breadcrumb. It is a list item whose link, or plain text for a step without
+             * one, and separator are drawn in its own shadow root.
+             */
+            "idg-breadcrumb-item": LocalJSX.IntrinsicElements["idg-breadcrumb-item"] & JSXBase.HTMLAttributes<HTMLIdgBreadcrumbItemElement>;
+            "idg-button": LocalJSX.IntrinsicElements["idg-button"] & JSXBase.HTMLAttributes<HTMLIdgButtonElement>;
+            /**
+             * A surface that groups related content, drawn in the design language's own surface, border and
+             * elevation.
+             * With `href` and a `heading`, the heading becomes the card's one link and covers the whole card, so
+             * a click anywhere follows it while assistive technology still finds a single link. Anything in
+             * the footer slot sits above the link and stays clickable.
+             */
+            "idg-card": LocalJSX.IntrinsicElements["idg-card"] & JSXBase.HTMLAttributes<HTMLIdgCardElement>;
+            "idg-checkbox": LocalJSX.IntrinsicElements["idg-checkbox"] & JSXBase.HTMLAttributes<HTMLIdgCheckboxElement>;
+            /**
+             * A group of items in a row that wraps onto further rows when it runs out of room, such as tags,
+             * buttons or a toolbar. It only arranges, so it adds no role and the source order stays the
+             * reading order.
+             */
+            "idg-cluster": LocalJSX.IntrinsicElements["idg-cluster"] & JSXBase.HTMLAttributes<HTMLIdgClusterElement>;
+            /**
+             * Asks once whether analytics may be switched on, for the consent object it is given in `consent`
+             * (the tracker's `tracker.consent`). It is a region of the page, not a dialog: it never blocks
+             * anything, takes no focus when it appears, and ignoring it, or pressing Escape, means no consent.
+             * It asks only while the state is `unknown` and no browser privacy signal is set. Under Global
+             * Privacy Control or Do Not Track it does not ask at all, since asking would invite a choice the
+             * browser has already made: it draws nothing, or, with `announce-signal`, one line saying the
+             * signal is respected. "Decline" comes first and has the same variant and size as "Accept
+             * analytics". After a choice, focus goes back to what had it before the banner, else to the main
+             * landmark, and a polite live region confirms it.
+             * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
+             * natural place is further on, so it keeps its space in the page's flow and never covers the end
+             * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
+             * element is scrolled clear of it. In a window too short for both, it joins the page's flow
+             * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
+             * is: a bar at the top scrolls away with the page and never covers a header that sticks.
+             */
+            "idg-consent-banner": LocalJSX.IntrinsicElements["idg-consent-banner"] & JSXBase.HTMLAttributes<HTMLIdgConsentBannerElement>;
+            /**
+             * The visitor's choices about analytics, for the consent object it is given in `consent` (the
+             * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
+             * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
+             * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
+             * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
+             * the switch is disabled with the signal named, and saving can only record a denial.
+             * It follows changes made elsewhere (another tab, the banner). If the stored state changes under
+             * an unsaved edit, the edit is dropped and a note says so. With `modal` it is drawn inside an
+             * `idg-dialog` that `open()` and `close()` control; the dialog holds and restores focus.
+             */
+            "idg-consent-preferences": LocalJSX.IntrinsicElements["idg-consent-preferences"] & JSXBase.HTMLAttributes<HTMLIdgConsentPreferencesElement>;
+            /**
+             * A block at least as tall as `min-height` that centres its content, with optional regions pinned
+             * to its top and bottom, such as a hero, a splash or a sign-in screen. It only arranges, so it
+             * adds no role and the source order stays the reading order.
+             */
+            "idg-cover": LocalJSX.IntrinsicElements["idg-cover"] & JSXBase.HTMLAttributes<HTMLIdgCoverElement>;
+            /**
+             * A dialog built on the native `<dialog>`: `showModal()` puts it in the top layer, makes the rest
+             * of the page inert and contains focus, and Escape is the browser's close request. The component
+             * adds what the element leaves out: initial focus across shadow roots, focus returned to whatever
+             * opened it (or a sensible neighbour when that is gone), a scroll lock without layout shift,
+             * backdrop dismissal, `<form method="dialog">` in slotted content, and events that say why it
+             * closed.
+             */
+            "idg-dialog": LocalJSX.IntrinsicElements["idg-dialog"] & JSXBase.HTMLAttributes<HTMLIdgDialogElement>;
+            /**
+             * A rule between groups of content, drawn in the design language's own border.
+             */
+            "idg-divider": LocalJSX.IntrinsicElements["idg-divider"] & JSXBase.HTMLAttributes<HTMLIdgDividerElement>;
+            /**
+             * A table of tracked events: the event, when it happened, the path and its properties, with
+             * paging and optional sorting by time or name. It takes its data through properties and never
+             * fetches.
+             * Every value is untrusted text from the public internet. It is drawn as text and nothing else: no
+             * markup is read, no link or address is made from it, control and bidirectional characters are
+             * replaced by a visible mark, each value is isolated in a `<bdi>` so right to left text cannot
+             * reorder what is beside it, long values wrap and are cut to a limit, and an event shows at most
+             * ten properties. Records that are malformed are left out.
+             * With `events` as the whole list, the table sorts and pages it. With `total` set, `events` is the
+             * one page the server answered with: the table draws it as it is and only reports `idgPageChange`
+             * and `idgSort` for the page to fetch with. Either way it draws at most `pageSize` rows (to 100).
+             * The state that matters is said politely: loading, an error, no events, and which events are shown.
+             */
+            "idg-event-table": LocalJSX.IntrinsicElements["idg-event-table"] & JSXBase.HTMLAttributes<HTMLIdgEventTableElement>;
+            /**
+             * Wraps one idg-input, idg-textarea, idg-select, idg-radio-group (or any element that follows the
+             * field protocol in `utils/field-control`). The label, hint and error are drawn here, but an id
+             * reference cannot cross a shadow boundary, so their text is handed to the control as properties
+             * and the control applies it to its own native element.
+             */
+            "idg-field": LocalJSX.IntrinsicElements["idg-field"] & JSXBase.HTMLAttributes<HTMLIdgFieldElement>;
+            /**
+             * Items in as many equal columns as fit. Each column is at least `min` wide, and there are never
+             * more columns than the layout allows, so the same markup has more or fewer columns under each
+             * `data-layout`. It only arranges, so it adds no role and the source order stays the reading order.
+             */
+            "idg-grid": LocalJSX.IntrinsicElements["idg-grid"] & JSXBase.HTMLAttributes<HTMLIdgGridElement>;
+            /**
+             * A small built-in icon, drawn as inline svg paths and coloured by the text around it.
+             */
+            "idg-icon": LocalJSX.IntrinsicElements["idg-icon"] & JSXBase.HTMLAttributes<HTMLIdgIconElement>;
+            /**
+             * A form-associated text field. Enter submits its form as a native input does (see the README):
+             * a capture-phase `stopPropagation()` of the keypress at `window` or `document` prevents it, and
+             * with an `idg-button` as the default button `SubmitEvent.submitter` is `null`.
+             */
+            "idg-input": LocalJSX.IntrinsicElements["idg-input"] & JSXBase.HTMLAttributes<HTMLIdgInputElement>;
+            /**
+             * The page shell. One page, written once, is housed in the structure the `data-layout` attribute of
+             * the root (or of an ancestor) names: the same landmarks in the same reading order in all eight, and
+             * only a stylesheet that places them differently. The shell never reorders its own tree, so the
+             * order a reader and the Tab key meet things is the order of the markup in every layout.
+             * It is a size container, and every layout decides its small, medium and large arrangement from its
+             * own width, never the viewport's. Where a layout collapses the navigation behind a toggle, the
+             * stylesheet decides that too, and the script only reads what it decided (`--_nav`).
+             */
+            "idg-layout": LocalJSX.IntrinsicElements["idg-layout"] & JSXBase.HTMLAttributes<HTMLIdgLayoutElement>;
+            /**
+             * An inline text link. It takes the same hardening as the button's link mode: the url goes
+             * through `safeUrl` and a link that opens another browsing context always gets `noopener
+             * noreferrer`.
+             */
+            "idg-link": LocalJSX.IntrinsicElements["idg-link"] & JSXBase.HTMLAttributes<HTMLIdgLinkElement>;
+            /**
+             * A menu button, following the WAI-ARIA menu button pattern: the trigger opens a menu of
+             * idg-menu-item elements in the top layer, the arrow keys, Home, End and typing move focus, Enter
+             * and Space choose, Escape closes and returns to the trigger, and Tab closes and moves on.
+             * The items sit in their own shadow roots, where `aria-activedescendant` cannot reach them, so
+             * focus moves to the items themselves (roving focus). Each item carries its own role and state.
+             */
+            "idg-menu": LocalJSX.IntrinsicElements["idg-menu"] & JSXBase.HTMLAttributes<HTMLIdgMenuElement>;
+            /**
+             * A labelled group of items in an idg-menu, such as the radio items of one choice. Radio items
+             * uncheck each other within their group.
+             */
+            "idg-menu-group": LocalJSX.IntrinsicElements["idg-menu-group"] & JSXBase.HTMLAttributes<HTMLIdgMenuGroupElement>;
+            /**
+             * One choice in an idg-menu, which owns the keyboard, the focus and activation. Each item lives in
+             * its own shadow root, so its role and state are set on the focusable element inside it, and the
+             * host is a plain wrapper that assistive technology passes through.
+             */
+            "idg-menu-item": LocalJSX.IntrinsicElements["idg-menu-item"] & JSXBase.HTMLAttributes<HTMLIdgMenuItemElement>;
+            /**
+             * A rule between groups of items in an idg-menu.
+             */
+            "idg-menu-separator": LocalJSX.IntrinsicElements["idg-menu-separator"] & JSXBase.HTMLAttributes<HTMLIdgMenuSeparatorElement>;
+            /**
+             * Page controls for a long list: previous and next, the current page and a window of its
+             * neighbours, with the pages in between left out. The controls are links when `hrefTemplate` is
+             * given, so each page is an address that can be opened, shared and followed without script, and
+             * buttons that fire `idgPageChange` otherwise.
+             */
+            "idg-pagination": LocalJSX.IntrinsicElements["idg-pagination"] & JSXBase.HTMLAttributes<HTMLIdgPaginationElement>;
+            /**
+             * Password recovery for the identity client it is given in `client`, in two modes. `request` asks
+             * for the address and always answers the same, whether or not an account uses it. `complete`
+             * sets the new password with the emailed code, which the page reads from the link and passes in
+             * `code`, and signs in. The passwords are read from their inputs when the form is sent and the
+             * inputs are emptied after every attempt.
+             */
+            "idg-password-reset": LocalJSX.IntrinsicElements["idg-password-reset"] & JSXBase.HTMLAttributes<HTMLIdgPasswordResetElement>;
+            /**
+             * A surface anchored to a trigger, built on the Popover API: it is shown in the top layer, closes
+             * on Escape and on a click outside it (light dismiss), and gives focus back to the trigger. The
+             * trigger is told it is expanded and what it controls. It is a disclosure, not a dialog: focus is
+             * not contained, and Tab moves on from the content.
+             */
+            "idg-popover": LocalJSX.IntrinsicElements["idg-popover"] & JSXBase.HTMLAttributes<HTMLIdgPopoverElement>;
+            /**
+             * The signed-in owner's account, for the identity client it is given in `client`: their `Profile`
+             * (display name, about, language, time zone and email preference), a password change, and the
+             * sessions of the account with a button to sign each other one out and one to sign out everywhere.
+             * Avatars are not uploaded here; the page can show the one it has with `avatar-src`.
+             */
+            "idg-profile": LocalJSX.IntrinsicElements["idg-profile"] & JSXBase.HTMLAttributes<HTMLIdgProfileElement>;
+            /**
+             * How far along some work is. The bar is a native `<progress>`, so its value, maximum and name are
+             * the browser's own. Without a value it is indeterminate.
+             */
+            "idg-progress": LocalJSX.IntrinsicElements["idg-progress"] & JSXBase.HTMLAttributes<HTMLIdgProgressElement>;
+            /**
+             * Lets a signed-in user choose which tracked property (site) the dashboard shows. It is a labelled
+             * `idg-select` that lists the `properties` it is given and reports the chosen id with `idgChange`.
+             * It is form associated: with a `name` it submits the chosen id.
+             * Property names are text the user typed: they are shown as text only, with control and
+             * bidirectional characters replaced and long names cut. A `value` that is not one of the
+             * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
+             * property appears in the list later, and is never replaced by the first property.
+             */
+            "idg-property-picker": LocalJSX.IntrinsicElements["idg-property-picker"] & JSXBase.HTMLAttributes<HTMLIdgPropertyPickerElement>;
+            /**
+             * Use inside idg-radio-group, which owns the value, the keyboard and the form. The props marked
+             * as set by the group are how it passes state down, because radios in separate shadow roots are
+             * not a native radio group.
+             */
+            "idg-radio": LocalJSX.IntrinsicElements["idg-radio"] & JSXBase.HTMLAttributes<HTMLIdgRadioElement>;
+            /**
+             * Follows the WAI-ARIA radio group pattern: one tab stop (the checked radio, or the first),
+             * arrow keys move focus and choose, wrapping around and skipping disabled radios. The group, not
+             * its radios, is the form control.
+             */
+            "idg-radio-group": LocalJSX.IntrinsicElements["idg-radio-group"] & JSXBase.HTMLAttributes<HTMLIdgRadioGroupElement>;
+            /**
+             * A registration form for the identity client it is given in `client`. With email confirmation on,
+             * a new address and one already registered get the same answer, so the form never tells whether
+             * an account exists. The password is read from its input when the form is sent and the input is
+             * emptied after every attempt.
+             */
+            "idg-register": LocalJSX.IntrinsicElements["idg-register"] & JSXBase.HTMLAttributes<HTMLIdgRegisterElement>;
+            /**
+             * Options are written as children, exactly as for a native select, and copied into the native
+             * select inside the component: the same markup works with or without a framework, and no option
+             * data has to be serialised into an attribute.
+             */
+            "idg-select": LocalJSX.IntrinsicElements["idg-select"] & JSXBase.HTMLAttributes<HTMLIdgSelectElement>;
+            /**
+             * Shows its content only while someone is signed in, through the identity client it is given in
+             * `client`. Until then the default slot is not drawn at all, so the content never flashes: the
+             * `pending` slot shows while the client does not know yet (the guard calls `restore()` once), and
+             * the `fallback` slot once it knows nobody is signed in. Another tab's sign-out hides the content
+             * at once.
+             * The guard adds no box around what it shows: the host is `display: contents` and the slots are
+             * its shadow root's own children, so slotted elements are the parent's flex or grid items. When a
+             * transition takes away what had focus, focus goes to a hidden anchor of the guard's own, placed
+             * before the content and out of the page's layout, whose text says the change; Tab goes on into
+             * the content. A notice, when the guard shows one, is one block before the content.
+             * This is a convenience for the interface, not access control: the content is still in the page
+             * for anyone who reads its markup, and only the API decides what a request may read or change.
+             */
+            "idg-session-guard": LocalJSX.IntrinsicElements["idg-session-guard"] & JSXBase.HTMLAttributes<HTMLIdgSessionGuardElement>;
+            /**
+             * Two regions side by side: a side region of a set width and the content, which takes the rest.
+             * When the content would get less than half of the width, the regions stack instead, with no
+             * breakpoint and no script, so it follows the width of its container rather than the viewport.
+             * The side region is drawn first when it is at the start and last when it is at the end, so what a
+             * reader and the Tab key meet first is also what is shown first, in either text direction. When
+             * the regions stack, the side region is above the content when it is at the start and below it
+             * when it is at the end.
+             */
+            "idg-sidebar": LocalJSX.IntrinsicElements["idg-sidebar"] & JSXBase.HTMLAttributes<HTMLIdgSidebarElement>;
+            /**
+             * A sign-in form for the identity client it is given in `client`. It holds no token and keeps no
+             * password: the password is read from its input when the form is sent and the input is emptied
+             * after a sign-in, a refused one, or when the element leaves the page.
+             */
+            "idg-sign-in": LocalJSX.IntrinsicElements["idg-sign-in"] & JSXBase.HTMLAttributes<HTMLIdgSignInElement>;
+            /**
+             * A placeholder shaped like content that is still loading. It is always hidden from assistive
+             * technology, so it announces nothing by itself. Mark the region being loaded with
+             * `aria-busy="true"` and give it a text status such as "Loading profile", then clear `aria-busy`
+             * and replace the skeletons when the content arrives.
+             * Size it with the page's own CSS on the element, for example `idg-skeleton { inline-size: 12rem }`.
+             */
+            "idg-skeleton": LocalJSX.IntrinsicElements["idg-skeleton"] & JSXBase.HTMLAttributes<HTMLIdgSkeletonElement>;
+            /**
+             * A small trend line drawn as SVG from a series of numbers, for beside a figure. It scales to the
+             * width of its container (set one with the page's own CSS, `idg-sparkline { inline-size: 8rem }`),
+             * keeps its proportions, and never animates. It is an image with a text alternative: the label
+             * you give it and a sentence with the first, last, lowest and highest value and which way the
+             * series went, formatted in the language of the page. Time runs left to right in every
+             * writing direction.
+             * Anything in `values` that is not a finite number is left out, never drawn as zero. A series
+             * longer than 120 points is thinned for drawing, keeping its first, last, lowest and highest.
+             */
+            "idg-sparkline": LocalJSX.IntrinsicElements["idg-sparkline"] & JSXBase.HTMLAttributes<HTMLIdgSparklineElement>;
+            /**
+             * Vertical flow: children one under another with an even gap. It only arranges, so it adds no role
+             * and the source order stays the reading order.
+             */
+            "idg-stack": LocalJSX.IntrinsicElements["idg-stack"] & JSXBase.HTMLAttributes<HTMLIdgStackElement>;
+            /**
+             * A figure with its label and, optionally, how it changed.
+             */
+            "idg-stat": LocalJSX.IntrinsicElements["idg-stat"] & JSXBase.HTMLAttributes<HTMLIdgStatElement>;
+            "idg-switch": LocalJSX.IntrinsicElements["idg-switch"] & JSXBase.HTMLAttributes<HTMLIdgSwitchElement>;
+            /**
+             * Items in one row that switch to one column when their container is narrower than `threshold`.
+             * Every item is as wide as the others in either arrangement. There is no breakpoint and no script,
+             * so it follows the width of its container rather than the viewport. It only arranges, so it adds
+             * no role and the source order stays the reading order.
+             */
+            "idg-switcher": LocalJSX.IntrinsicElements["idg-switcher"] & JSXBase.HTMLAttributes<HTMLIdgSwitcherElement>;
+            /**
+             * One tab of an idg-tabs, which owns the keyboard, the selection and the link to its panel. The
+             * host carries the tab role and state itself, so the relations to the panel, which sits beside it
+             * in the page, can be made between the two hosts.
+             */
+            "idg-tab": LocalJSX.IntrinsicElements["idg-tab"] & JSXBase.HTMLAttributes<HTMLIdgTabElement>;
+            /**
+             * The content of one tab of an idg-tabs. The host carries the tabpanel role and is named by its
+             * tab. It takes a tab stop of its own only when it holds nothing the keyboard can reach, so a
+             * reader can still move into it.
+             */
+            "idg-tab-panel": LocalJSX.IntrinsicElements["idg-tab-panel"] & JSXBase.HTMLAttributes<HTMLIdgTabPanelElement>;
+            /**
+             * Wraps a native `<table>` that you slot in, so the table keeps its own semantics (caption,
+             * header cells, row and column relations) and the component adds what a table needs around it: a
+             * surface drawn in the design language, a scroll region that is reachable by keyboard and named
+             * when the table is wider than the page, a sticky header, stripes, density from the UX mode, and
+             * sortable column headers.
+             * The cells are the page's own, so a shadow root cannot style them. The component adopts a
+             * constructable stylesheet into the document or shadow root the table lives in, scoped to
+             * `idg-table > table` and in a cascade layer so the page's own CSS wins. A browser without
+             * constructable stylesheets shows the table unstyled.
+             * A header cell with `data-sortable` becomes a sort button. Its value is the column's key, or
+             * empty to use the column's position. A cell sorts by its `data-sort-value`, or else its text.
+             */
+            "idg-table": LocalJSX.IntrinsicElements["idg-table"] & JSXBase.HTMLAttributes<HTMLIdgTableElement>;
+            /**
+             * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
+             * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
+             * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
+             * its position among its own kind as its value.
+             */
+            "idg-tabs": LocalJSX.IntrinsicElements["idg-tabs"] & JSXBase.HTMLAttributes<HTMLIdgTabsElement>;
+            "idg-textarea": LocalJSX.IntrinsicElements["idg-textarea"] & JSXBase.HTMLAttributes<HTMLIdgTextareaElement>;
+            /**
+             * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a
+             * time, announces each as it appears, pauses them while they are being read and lets the keyboard
+             * reach them; the `toast()` function does all of that from script.
+             * It goes away after its duration, or by its close button, Escape from inside it, a sideways swipe,
+             * its action, or `dismiss()`. A toast that offers an action stays until it is dismissed unless it
+             * is given a duration, so nobody loses the chance to act on it.
+             */
+            "idg-toast": LocalJSX.IntrinsicElements["idg-toast"] & JSXBase.HTMLAttributes<HTMLIdgToastElement>;
+            /**
+             * The corner where toasts appear: a landmark, reached from anywhere with F8, in the top layer as a
+             * manual popover so it stays above other overlays. It shows a few toasts at a time and queues the
+             * rest, and announces each toast as it comes into view through a live region of its own: politely,
+             * or at once for danger. Focus never moves on its own.
+             * While the pointer is over it, focus is inside it, the window is in the background or the user
+             * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
+             * and nothing slides under the pointer.
+             */
+            "idg-toast-region": LocalJSX.IntrinsicElements["idg-toast-region"] & JSXBase.HTMLAttributes<HTMLIdgToastRegionElement>;
+            /**
+             * A short text hint for a trigger. It shows after the hover delay of the UX mode and at once on
+             * keyboard focus, stays while the pointer is over it, and hides on Escape, blur, pointer leave and
+             * scroll (WCAG 1.4.13). Touch is ignored, so a long press never covers the control. It holds text
+             * only: put anything interactive in an idg-popover.
+             * The text is also the trigger's accessible description, given to the trigger itself, so it is
+             * read on focus whether or not the hint is showing; the drawn hint is hidden from assistive
+             * technology so it is not read twice.
+             */
+            "idg-tooltip": LocalJSX.IntrinsicElements["idg-tooltip"] & JSXBase.HTMLAttributes<HTMLIdgTooltipElement>;
+            /**
+             * The signed-in user's menu, for the identity client it is given in `client`: an avatar button
+             * that opens an `idg-menu` with the user's name, the page's own items and "Sign out". It tells the
+             * user how the sign-out went: a server that could not be reached is said plainly, since the
+             * session may live on there, and a sign-out another tab's newer sign-in superseded is no error.
+             * It goes away when the client hears that another tab signed out.
+             */
+            "idg-user-menu": LocalJSX.IntrinsicElements["idg-user-menu"] & JSXBase.HTMLAttributes<HTMLIdgUserMenuElement>;
+            /**
+             * A panel that lets a visitor change the four variation axes and the colour scheme of the page. It
+             * always acts on the document's root element, through `@identgineer/variations`, so the page's own
+             * attributes stay the single truth: a change made anywhere else (markup, a script, another
+             * switcher) is shown here, and nothing here is announced for a change the visitor did not make.
+             */
+            "idg-variation-switcher": LocalJSX.IntrinsicElements["idg-variation-switcher"] & JSXBase.HTMLAttributes<HTMLIdgVariationSwitcherElement>;
+        }
     }
-  }
 }

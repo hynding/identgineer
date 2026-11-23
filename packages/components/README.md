@@ -827,6 +827,9 @@ Page navigation. Props: `page` (1-based, mutable), `pageCount`, `siblings` (defa
 `nextLabel`, `pageLabel`. Event `idgPageChange` (`{ page }`, cancelable); parts `nav`, `list`, `page`,
 `previous`, `next`.
 
+A `pageCount` above ten million is held to it, and `siblings` and `boundaries` to ten, so the
+list never has more slots or longer numbers than a narrow page holds.
+
 The list keeps a constant number of slots so it does not jump as the page changes. Without
 `hrefTemplate` the controls are buttons; with it they are links, through `safeUrl`, and a template
 that gives an unsafe url falls back to buttons. Modified clicks (Ctrl, Shift, middle button) are left
