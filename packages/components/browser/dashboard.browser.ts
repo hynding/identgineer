@@ -187,6 +187,36 @@ test.describe("the event table", () => {
     expect(await focusedControl(page)).toContain("Event");
   });
 
+  test("a second sort press while the first is loading changes nothing: header, announcement, requests, rows", async ({
+    page,
+  }) => {
+    await openDashboard(page);
+    const release = await holdAnswers(page);
+    const button = table(page).getByRole("button", { name: "Event" });
+    await button.click();
+    await expect(table(page).locator("th[aria-sort]")).toHaveAttribute("aria-sort", "ascending");
+    const announcement = table(page).locator("idg-table").locator("[role='status']");
+    await expect(announcement).toHaveText("Sorted by Event, ascending");
+    await expect(button).toHaveAttribute("aria-disabled", "true");
+    await button.click();
+    await page.keyboard.press("Enter");
+    await expect(table(page).locator("th[aria-sort]")).toHaveAttribute("aria-sort", "ascending");
+    await expect(announcement).toHaveText("Sorted by Event, ascending");
+    await release();
+    await expect.poll(async () => (await eventNames(page))[0]).toBe("button_clicked");
+    await expect(table(page).locator("th[aria-sort]")).toHaveAttribute("aria-sort", "ascending");
+    const sorts = (await calls(page)).filter(
+      (call) =>
+        call.method === "listEvents" && (call.args[1] as { sort?: unknown }).sort !== undefined,
+    );
+    expect(sorts).toHaveLength(1);
+    await expect(button).not.toHaveAttribute("aria-disabled", "true");
+    // The next press works, and asks for the opposite order.
+    await button.click();
+    await expect(table(page).locator("th[aria-sort]")).toHaveAttribute("aria-sort", "descending");
+    await expect.poll(async () => (await eventNames(page))[0]).toBe("signup_completed");
+  });
+
   test("puts focus on the message when the page that was asked for fails", async ({ page }) => {
     await openDashboard(page);
     await page.evaluate(`window.dashboardFixture.fake.failNext("listEvents", new Error("down"))`);
