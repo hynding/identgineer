@@ -232,8 +232,9 @@ base.describe("the checks themselves", () => {
 // The costliest logos the sanitiser still accepts, one for each kind of work a renderer does: long
 // paths, curves, copies through use, masks inside masks, and dashes. Each is the largest of its
 // family that is accepted (the next one up is refused for its cost), and must be drawn, as an image
-// and inline, well within the budget. The 120 KB path the review found drawn a thousand times
-// took over 40 seconds to the next frame.
+// and inline, within the budget. On a loaded four-core machine each took under 2 seconds at this
+// size, while the 120 KB path drawn a thousand times that the sanitiser once accepted took 20
+// seconds as an image alone, so the budget leaves room for a slow runner and still catches that.
 const SIZE = 600;
 const RENDER_BUDGET_MS = 15_000;
 

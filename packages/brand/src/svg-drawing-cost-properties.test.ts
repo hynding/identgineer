@@ -39,6 +39,7 @@ class LogoGraph {
   private readonly random: () => number;
   private readonly items: Item[] = [];
   private readonly masks: Item[] = [];
+  private readonly shapes: Item[] = [];
   private readonly periods: number[] = [];
 
   constructor(random: () => number) {
@@ -146,7 +147,12 @@ class LogoGraph {
       this.use(this.pick(this.items)),
     );
     const layer = this.random() < 0.2;
-    const mask = this.random() < 0.3 && this.masks.length > 0 ? this.pick(this.masks) : undefined;
+    const mask =
+      this.random() < 0.5 || this.masks.length === 0
+        ? undefined
+        : this.random() < 0.5
+          ? this.masks.at(-1)
+          : this.pick(this.masks);
     const applied = this.applied(mask);
     return {
       id,
@@ -161,8 +167,11 @@ class LogoGraph {
   }
 
   private mask(id: string): Item {
-    const content = this.use(this.pick(this.items));
-    const inner = this.random() < 0.5 && this.masks.length > 0 ? this.pick(this.masks) : undefined;
+    // A mask mostly holds a plain shape, the way masks are drawn, so its chain is not cut short by
+    // the reference depth limit.
+    const content = this.use(this.pick(this.random() < 0.8 ? this.shapes : this.items));
+    // Mostly the newest mask, so chains of masks inside masks grow long.
+    const inner = this.random() < 0.9 ? this.masks.at(-1) : undefined;
     const applied = this.applied(inner);
     const name = id.startsWith("c") ? "clipPath" : "mask";
     return {
@@ -182,20 +191,22 @@ class LogoGraph {
       const item =
         this.random() < 0.6 ? this.path(`s${String(index)}`) : this.basicShape(`s${String(index)}`);
       this.items.push(item);
+      this.shapes.push(item);
       definitions += item.markup;
     }
-    for (let index = 0; index < 2 + this.integer(5); index += 1) {
-      if (this.random() < 0.35) {
-        const mask = this.mask(`${this.random() < 0.5 ? "c" : "m"}${String(index)}`);
-        this.masks.push(mask);
-        definitions += mask.markup;
-      } else {
-        const group = this.group(`g${String(index)}`);
-        this.items.push(group);
-        definitions += group.markup;
-      }
+    // Masks come before the groups that apply them; some logos have none, some a long chain.
+    const maskCount = this.integer(this.pick([1, 4, 8]));
+    for (let index = 0; index < maskCount; index += 1) {
+      const mask = this.mask(`${this.random() < 0.5 ? "c" : "m"}${String(index)}`);
+      this.masks.push(mask);
+      definitions += mask.markup;
     }
-    const roots = Array.from({ length: 1 + this.integer(20) }, () =>
+    for (let index = 0; index < 1 + this.integer(8); index += 1) {
+      const group = this.group(`g${String(index)}`);
+      this.items.push(group);
+      definitions += group.markup;
+    }
+    const roots = Array.from({ length: 1 + this.integer(40) }, () =>
       this.use(this.pick(this.items)),
     );
     const period = this.periods.length === 0 ? 0 : Math.min(...this.periods);

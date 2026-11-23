@@ -23,7 +23,6 @@ const PRESENTATION = [
   "mask",
   "display",
   "visibility",
-  "vector-effect",
   "shape-rendering",
 ] as const;
 

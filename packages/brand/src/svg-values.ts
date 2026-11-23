@@ -22,7 +22,11 @@ const URL_REFERENCE = new RegExp(
 );
 const LIST_SEPARATOR = new RegExp(`(?:${XML_WHITESPACE}|,)+`);
 const WHITESPACE_RUN = new RegExp(`${XML_WHITESPACE}+`);
-const LENGTH_UNITS = new Set(["", "px", "%", "em", "ex", "mm", "cm", "in", "pt", "pc"]);
+// No em or ex: inline, they would take the page's font size, so neither the drawing nor its cost
+// would be the logo's own.
+const LENGTH_UNITS = new Set(["", "px", "%", "mm", "cm", "in", "pt", "pc"]);
+// A dash takes no percentage either, so its length, and so the dash count, is known.
+const DASH_UNITS = new Set(["", "px", "mm", "cm", "in", "pt", "pc"]);
 const ABSOLUTE_UNITS: Readonly<Record<string, number>> = {
   "": 1,
   px: 1,
@@ -49,9 +53,14 @@ function splitUnit(input: string): { amount: string; unit: string } {
     : { amount: value, unit: "" };
 }
 
-function length(input: string, limits: SvgLogoLimits, allowNegative: boolean): string | undefined {
+function length(
+  input: string,
+  limits: SvgLogoLimits,
+  allowNegative: boolean,
+  units: ReadonlySet<string> = LENGTH_UNITS,
+): string | undefined {
   const { amount, unit } = splitUnit(input);
-  if (!LENGTH_UNITS.has(unit)) return undefined;
+  if (!units.has(unit)) return undefined;
   const normalised = normaliseNumber(amount, limits);
   if (normalised === undefined || (!allowNegative && normalised.startsWith("-"))) return undefined;
   return normalised + (unit === "px" ? "" : unit);
@@ -154,7 +163,7 @@ const dashArray: SvgGrammar = (input, limits) => {
   if (trimXmlWhitespace(input) === "none") return text("none");
   const parts = trimXmlWhitespace(input).split(LIST_SEPARATOR);
   if (parts.length > 64) return undefined;
-  const lengths = parts.map((part) => length(part, limits, false));
+  const lengths = parts.map((part) => length(part, limits, false, DASH_UNITS));
   if (lengths.some((part) => part === undefined)) return undefined;
   return text(lengths.join(" "));
 };
@@ -240,7 +249,6 @@ export const SVG_GRAMMARS: Readonly<Record<string, SvgGrammar>> = {
   "stroke-dashoffset": anyLength,
   display: enumeration("inline", "none"),
   visibility: enumeration("visible", "hidden", "collapse"),
-  "vector-effect": enumeration("none", "non-scaling-stroke"),
   "shape-rendering": enumeration("auto", "optimizeSpeed", "crispEdges", "geometricPrecision"),
   gradientUnits: enumeration("userSpaceOnUse", "objectBoundingBox"),
   spreadMethod: enumeration("pad", "reflect", "repeat"),

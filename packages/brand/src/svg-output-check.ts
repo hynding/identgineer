@@ -21,7 +21,6 @@ const PAINT_AND_PRESENTATION = [
   "mask",
   "display",
   "visibility",
-  "vector-effect",
   "shape-rendering",
 ];
 const DRAWN = ["id", "transform", ...PAINT_AND_PRESENTATION];

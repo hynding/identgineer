@@ -1,5 +1,6 @@
 import type { CleanElement } from "./filter-svg-tree.ts";
 import { GRADIENTS, USABLE } from "./svg-allowlist.ts";
+import { dashPeriod, measureShape, SVG_DRAWING_WEIGHTS } from "./svg-drawing-cost.ts";
 import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 import type { Removals } from "./svg-removals.ts";
@@ -135,8 +136,7 @@ function dropDangling(
 
 interface Target {
   readonly element: CleanElement;
-  /** A gradient is not drawn again for each shape it paints, so paint adds nothing to the count. */
-  readonly drawn: boolean;
+  readonly attribute: string;
 }
 
 function targetsOf(element: CleanElement, ids: ReadonlyMap<string, CleanElement>): Target[] {
@@ -144,31 +144,90 @@ function targetsOf(element: CleanElement, ids: ReadonlyMap<string, CleanElement>
   for (const attribute of ["href", "fill", "stroke", "clip-path", "mask"]) {
     const reference = referenceOf(element, attribute);
     const target = reference === undefined ? undefined : ids.get(reference);
-    const drawn = attribute !== "fill" && attribute !== "stroke" && !GRADIENTS.has(element.name);
-    if (target !== undefined) targets.push({ element: target, drawn });
+    if (target !== undefined) targets.push({ element: target, attribute });
   }
   return targets;
 }
 
+/** Definitions: kept for what refers to them, never drawn where they stand. */
+const NOT_DRAWN_IN_PLACE: ReadonlySet<string> = new Set([
+  "defs",
+  "clipPath",
+  "mask",
+  "linearGradient",
+  "radialGradient",
+]);
+
 interface Expansion {
+  /** Elements once every reference is expanded, definitions included. */
   readonly size: number;
   /** The most references followed in a row from this element down. */
   readonly height: number;
+  /** What drawing it costs (see `SVG_DRAWING_WEIGHTS`), each reference expanded. */
+  readonly cost: number;
+  /** Masks and clip paths applied in drawing it. */
+  readonly masks: number;
+  /** The most masks and clip paths applied inside one another in drawing it. */
+  readonly maskDepth: number;
+}
+
+/** The smallest dash period anywhere in the logo, 0 for none: dash arrays inherit, through use too. */
+function shortestDashPeriod(elements: readonly CleanElement[]): number {
+  let shortest = 0;
+  for (const element of elements) {
+    const value = element.attributes.get("stroke-dasharray");
+    if (value === undefined || !("text" in value)) continue;
+    const period = dashPeriod(value.text);
+    if (period > 0 && (shortest === 0 || period < shortest)) shortest = period;
+  }
+  return shortest;
+}
+
+/** The larger side of the root's view box (at least 1), which bounds a percentage from above. */
+function percentBase(root: CleanElement): number {
+  const viewBox = root.attributes.get("viewBox");
+  const [, , width = 1, height = 1] =
+    viewBox !== undefined && "text" in viewBox ? viewBox.text.split(" ").map(Number) : [];
+  return Math.max(width, height, 1);
 }
 
 /**
- * Counts the elements drawn once every reference is expanded (an element referenced ten times is
- * drawn ten times), refusing a reference cycle, a chain of references deeper than the limit and a
- * total beyond it. Each element is measured once, so the work is linear however large the total.
+ * What drawing one element costs on its own: a shape its geometry and, wherever a dash array might
+ * reach it, its dashes at the shortest period in the logo; anything else a little; group opacity a
+ * layer.
+ */
+function ownCost(element: CleanElement, period: number, base: number): number {
+  const weights = SVG_DRAWING_WEIGHTS;
+  const geometry = measureShape(element, base);
+  let cost =
+    geometry === undefined
+      ? weights.element
+      : weights.shape +
+        geometry.weight +
+        (period > 0 ? Math.ceil(geometry.length / period) * weights.dash : 0);
+  const opacity = element.attributes.get("opacity");
+  if (opacity !== undefined && "text" in opacity && Number(opacity.text) < 1) cost += weights.layer;
+  return cost;
+}
+
+/**
+ * Expands every reference, refusing a reference cycle, a chain of references deeper than the limit
+ * and a logo over any limit on what drawing it takes: elements drawn (an element referenced ten
+ * times is drawn ten times), drawing cost, masks applied and masks nested. Each element is measured
+ * once, so the work is linear however large the totals. Returns the drawing cost.
  */
 function checkExpansion(
   root: CleanElement,
+  elements: readonly CleanElement[],
   ids: ReadonlyMap<string, CleanElement>,
   limits: SvgLogoLimits,
-): void {
+): number {
   const done = new Map<CleanElement, Expansion>();
   const visiting = new Set<CleanElement>();
-  const cap = limits.renderedElements + 1;
+  const period = shortestDashPeriod(elements);
+  const base = percentBase(root);
+  // Totals stop just over their limit, so no sum grows without bound.
+  const capped = (value: number, limit: number): number => Math.min(value, limit + 1);
   const tooDeep = (element: CleanElement): SvgLogoRejection =>
     new SvgLogoRejection(
       "reference-too-deep",
@@ -192,47 +251,81 @@ function checkExpansion(
     visiting.add(element);
     let size = 1;
     let height = 0;
+    let cost = ownCost(element, period, base);
+    let masks = 0;
+    let maskDepth = 0;
+    const draw = (measured: Expansion, extraCost: number, extraMasks: number): void => {
+      cost = capped(cost + extraCost + measured.cost, limits.drawingCost);
+      masks = capped(masks + extraMasks + measured.masks, limits.maskApplications);
+      maskDepth = Math.max(maskDepth, extraMasks + measured.maskDepth);
+    };
     for (const child of element.children) {
       const measured = visit(child, depth);
-      size = Math.min(cap, size + measured.size);
+      size = capped(size + measured.size, limits.renderedElements);
       height = Math.max(height, measured.height);
+      if (!NOT_DRAWN_IN_PLACE.has(child.name)) draw(measured, 0, 0);
     }
-    for (const target of targetsOf(element, ids)) {
-      const measured = visit(target.element, depth + 1);
-      if (target.drawn) size = Math.min(cap, size + measured.size);
+    for (const { element: target, attribute } of targetsOf(element, ids)) {
+      const measured = visit(target, depth + 1);
       height = Math.max(height, measured.height + 1);
+      // A paint server is not drawn again for each shape it paints; a gradient's href only
+      // borrows its stops.
+      if (attribute === "fill" || attribute === "stroke" || GRADIENTS.has(element.name)) continue;
+      size = capped(size + measured.size, limits.renderedElements);
+      if (attribute === "href") draw(measured, 0, 0);
+      else draw(measured, SVG_DRAWING_WEIGHTS.mask, 1);
     }
     visiting.delete(element);
-    const expansion = { size, height };
+    const expansion = { size, height, cost, masks, maskDepth };
     done.set(element, expansion);
     return expansion;
   };
-  if (visit(root, 0).size > limits.renderedElements) {
+  const total = visit(root, 0);
+  if (total.size > limits.renderedElements) {
     throw new SvgLogoRejection(
       "expansion-too-large",
       `draws more than ${String(limits.renderedElements)} elements once references are expanded`,
     );
   }
+  if (total.maskDepth > limits.maskDepth) {
+    throw new SvgLogoRejection(
+      "masks-too-deep",
+      `applies more than ${String(limits.maskDepth)} masks or clip paths inside one another`,
+    );
+  }
+  if (total.masks > limits.maskApplications) {
+    throw new SvgLogoRejection(
+      "too-many-masks",
+      `applies masks or clip paths more than ${String(limits.maskApplications)} times`,
+    );
+  }
+  if (total.cost > limits.drawingCost) {
+    throw new SvgLogoRejection(
+      "drawing-too-costly",
+      `would cost more than ${String(limits.drawingCost)} to draw (see SVG_DRAWING_WEIGHTS)`,
+    );
+  }
+  return total.cost;
 }
 
 /**
  * Settles every same-document reference: a reference to an id that does not exist, or to the
  * wrong kind of element, is dropped (a `use` with it); duplicate ids, cycles and expansions beyond
- * the limits refuse the document. Returns the new name of each id still referenced, numbered in
- * document order after `idPrefix`; every other id is dropped, so the output names nothing a page
- * could collide with by accident.
+ * the limits refuse the document. Returns the drawing cost, and the new name of each id still
+ * referenced, numbered in document order after `idPrefix`; every other id is dropped, so the output
+ * names nothing a page could collide with by accident.
  */
 export function settleSvgReferences(
   root: CleanElement,
   limits: SvgLogoLimits,
   idPrefix: string,
   removals: Removals,
-): Map<string, string> {
+): { readonly renamed: Map<string, string>; readonly drawingCost: number } {
   const all = walk(root);
   const dropped = dropDangling(all, collectIds(all, limits), removals);
   const elements = dropped.size === 0 ? all : all.filter((element) => !dropped.has(element));
   const ids = collectIds(elements, limits);
-  checkExpansion(root, ids, limits);
+  const drawingCost = checkExpansion(root, elements, ids, limits);
   const referenced = new Set<string>();
   for (const element of elements) {
     for (const attribute of ["href", "fill", "stroke", "clip-path", "mask"]) {
@@ -247,5 +340,5 @@ export function settleSvgReferences(
       renamed.set(id.text, `${idPrefix}${String(renamed.size)}`);
     }
   }
-  return renamed;
+  return { renamed, drawingCost };
 }
