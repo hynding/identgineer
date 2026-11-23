@@ -176,6 +176,25 @@ describe("clip paths of more than one shape", () => {
     );
   });
 
+  it("move a clip path on the root to a mask on the root, both in the root's own space", () => {
+    const result = sanitiseSvgLogo(
+      `<svg ${NS} viewBox="0 0 100 100" width="100" height="100" clip-path="url(#c)"><clipPath id="c">${TWO_CIRCLES}</clipPath><rect width="100" height="100"/></svg>`,
+    );
+    expect(result.ok && result.svg).toContain('height="100" mask="url(#logo-0)"><mask id="logo-0"');
+  });
+
+  it("refuse a clip path of more than one shape on a root that has a mask of its own", () => {
+    // The root's clip path and mask both work in the space around it, in CSS pixels, which nothing
+    // inside the root can stand in for at every size the logo is drawn.
+    const result = sanitiseSvgLogo(
+      `<svg ${NS} viewBox="0 0 100 100" width="100" height="100" clip-path="url(#c)" mask="url(#m)">` +
+        `<clipPath id="c">${TWO_CIRCLES}</clipPath><mask id="m"><rect width="100" height="50" fill="#fff"/></mask><rect width="100" height="100"/></svg>`,
+    );
+    expect(result.ok || result.errors[0]).toEqual(
+      expect.objectContaining({ code: "drawing-too-costly", line: 1, column: 1 }),
+    );
+  });
+
   it("swap a clip path in a mask's content too", () => {
     expect(
       inner(
