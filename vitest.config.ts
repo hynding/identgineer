@@ -57,6 +57,16 @@ export default defineConfig({
       },
       {
         test: {
+          name: "tracking",
+          include: ["packages/tracking/src/**/*.test.ts"],
+          // Every tracking test runs on a manual clock in well under a second: a flush that
+          // never settles fails fast instead of hanging CI.
+          testTimeout: 3_000,
+          hookTimeout: 3_000,
+        },
+      },
+      {
+        test: {
           name: "cms",
           include: ["cms/tests/**/*.test.ts"],
         },
