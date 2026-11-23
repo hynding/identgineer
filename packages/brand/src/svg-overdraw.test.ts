@@ -279,6 +279,48 @@ describe("the overdraw of a logo", () => {
     const zigzag = `M0 0${Array.from({ length: 50 }, (_, index) => `L${String(2 * index + 1)} ${index % 2 === 0 ? "100" : "0"}`).join("")}Z`;
     expect(clipped(`<path d="${zigzag}"/>`)).toBeGreaterThan(plain + edges(50));
   });
+
+  it("charges a clip path holding more than one shape, or a shape clipped in turn, as an alpha mask", () => {
+    const clipped = (content: string, defs = ""): number =>
+      overdraw(
+        `<defs>${defs}</defs><clipPath id="c">${content}</clipPath><rect ${SQUARE} clip-path="url(#c)"/>`,
+      );
+    const plain = overdraw(`<rect ${SQUARE}/>`);
+    const small = 0.01 * W.solid + edges(0.4);
+    expect(
+      clipped('<rect width="10" height="10"/><rect x="20" width="10" height="10"/>'),
+    ).toBeCloseTo(plain + QUARTER * W.alphaMask + 2 * small, 9);
+    // A shape a use draws into the clip path counts as one, but its own clip path makes it a mask.
+    const inner = '<clipPath id="k"><rect width="5" height="5"/></clipPath>';
+    expect(clipped('<use href="#r"/>', '<rect id="r" width="10" height="10"/>')).toBeCloseTo(
+      plain + QUARTER * W.clip + small,
+      9,
+    );
+    expect(
+      clipped(
+        '<use href="#r"/>',
+        `${inner}<rect id="r" width="10" height="10" clip-path="url(#k)"/>`,
+      ),
+    ).toBeCloseTo(
+      plain + QUARTER * W.alphaMask + small + 0.01 * W.clip + 0.0025 * W.solid + edges(0.2),
+      9,
+    );
+  });
+
+  it("draws a clip path's content through the clip path's own transform", () => {
+    const plain = overdraw(`<rect ${SQUARE}/>`);
+    expect(
+      overdraw(
+        `<clipPath id="c" transform="scale(2)"><rect width="10" height="10"/></clipPath><rect ${SQUARE} clip-path="url(#c)"/>`,
+      ),
+    ).toBeCloseTo(plain + QUARTER * W.clip + 0.04 * W.solid + edges(0.8), 9);
+    // In bounding box units, the transform applies to the box's units.
+    expect(
+      overdraw(
+        `<clipPath id="c" clipPathUnits="objectBoundingBox" transform="scale(0.5)"><rect width="1" height="1"/></clipPath><rect ${SQUARE} clip-path="url(#c)"/>`,
+      ),
+    ).toBeCloseTo(plain + QUARTER * W.clip + 0.0625 * W.solid + edges(1), 9);
+  });
 });
 
 describe("the overdraw limit", () => {

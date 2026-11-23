@@ -430,6 +430,51 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
     ]);
   });
 
+  it("drops a clip path or mask on a clip path or on what it holds, which would make it a mask layer", () => {
+    const dropped = removals(
+      '<clipPath id="k"><rect width="5" height="5"/></clipPath><mask id="m"><rect width="5" height="5" fill="#fff"/></mask>' +
+        '<clipPath id="c" clip-path="url(#k)" style="mask:url(#m)">' +
+        '<rect width="9" height="9" clip-path="url(#k)" mask="url(#m)"/>' +
+        '<use href="#r" style="clip-path:url(#k)"/></clipPath>' +
+        '<rect id="r" width="1" height="1" clip-path="url(#k)"/><rect width="9" height="9" clip-path="url(#c)"/>',
+    );
+    expect(
+      dropped.map(({ element, attribute, property, reason }) => ({
+        element,
+        attribute,
+        property,
+        reason,
+      })),
+    ).toEqual([
+      { element: "clipPath", attribute: "clip-path", property: undefined, reason: "render-cost" },
+      { element: "clipPath", attribute: "style", property: "mask", reason: "render-cost" },
+      { element: "rect", attribute: "clip-path", property: undefined, reason: "render-cost" },
+      { element: "rect", attribute: "mask", property: undefined, reason: "render-cost" },
+      { element: "use", attribute: "style", property: "clip-path", reason: "render-cost" },
+    ]);
+  });
+
+  it("drops a group inside a clip path, which browsers leave out of the clip", () => {
+    expect(
+      removals(
+        '<clipPath id="c"><g><rect width="5" height="5"/></g><rect width="9" height="9"/></clipPath><rect width="9" height="9" clip-path="url(#c)"/>',
+      ),
+    ).toEqual([expect.objectContaining({ element: "g", reason: "misplaced" })]);
+  });
+
+  it("drops a transform, clip path or mask on a mask, which browsers do not apply", () => {
+    const dropped = removals(
+      '<clipPath id="k"><rect width="5" height="5"/></clipPath><mask id="n"><rect width="5" height="5" fill="#fff"/></mask>' +
+        '<mask id="m" transform="scale(2)" clip-path="url(#k)" mask="url(#n)"><rect width="5" height="5" fill="#fff"/></mask>' +
+        '<rect width="9" height="9" mask="url(#m)"/>',
+    );
+    expect(dropped.map(({ attribute, reason }) => [attribute, reason])).toEqual([
+      ["transform", "unsupported-attribute"],
+      ["clip-path", "unsupported-attribute"],
+      ["mask", "unsupported-attribute"],
+    ]);
+  });
+
   it("paints nothing for a paint reference that cannot be found, rather than black", () => {
     expect(
       output('<rect width="1" height="1" fill="url(#nowhere)" stroke="url(#nowhere)"/>'),

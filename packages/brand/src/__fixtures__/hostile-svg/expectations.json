@@ -87,8 +87,31 @@
   "cdata-unclosed.svg": {
     "outcome": "reject:malformed"
   },
-  "clip-path-cycle.svg": {
+  "clip-path-cycle-through-use.svg": {
     "outcome": "reject:reference-cycle"
+  },
+  "clip-path-cycle.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "clip-path",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "clip-path-inside-clip-path.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "clip-path",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "clip-path-of-43-shapes.svg": {
+    "outcome": "reject:overdraw-too-large"
   },
   "comment-double-hyphen.svg": {
     "outcome": "reject:invalid-comment"
