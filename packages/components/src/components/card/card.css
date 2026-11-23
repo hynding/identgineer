@@ -42,9 +42,9 @@
   backdrop-filter: var(--idg-surface-backdrop-filter);
   box-shadow: var(--_shadow);
   color: var(--idg-color-text);
-  /* A word wider than the card breaks, so the card holds its text however large the type. Not
-     `anywhere`, which would also lower the minimum width of what the page puts in the card, and a
-     table in it would give up its scroller and break a letter a line. */
+  /* A word wider than what the padding leaves the text, which the padding gives way to keep, breaks
+     rather than spill out of the card. Not `anywhere`, which would lower the minimum width of what
+     the page puts in the card, and a table in it would give up its scroller. */
   overflow-wrap: break-word;
   font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
   line-height: var(--idg-font-body-line-height);
@@ -171,7 +171,14 @@
 .body,
 .footer {
   min-inline-size: 0;
-  padding-inline: var(--_pad);
+  /* The padding gives way in a card so narrow that the text would be left less than --idg-size-xs
+     (the smallest size of the scale, about a short word and a half of body text), down to the
+     smallest space. A card of at least twice the padding plus that is padded exactly as the
+     density says. */
+  padding-inline: min(
+    var(--_pad),
+    max(var(--idg-space-2xs), calc((100% - var(--idg-size-xs)) / 2))
+  );
 }
 
 .header {
