@@ -54,6 +54,20 @@ function invalidValueReason(name: string, value: string): SvgLogoRemovalReason {
   return "invalid-value";
 }
 
+/**
+ * A paint whose reference was dropped paints nothing: dropping the attribute alone would paint the
+ * shape black, a colour nobody chose.
+ */
+function paintNothingFor(
+  kept: Map<string, SvgValue>,
+  name: string,
+  reason: SvgLogoRemovalReason,
+): void {
+  if (reason === "external-reference" && (name === "fill" || name === "stroke")) {
+    kept.set(name, { text: "none" });
+  }
+}
+
 function attributeReason(attribute: ResolvedAttribute): SvgLogoRemovalReason {
   const { namespace, local } = attribute;
   if (namespace === null) {
@@ -216,6 +230,7 @@ class TreeFilter {
       reason,
       attribute.offset,
     );
+    paintNothingFor(kept, name, reason);
   }
 
   private pixels(value: string): SvgValue | undefined {
@@ -256,11 +271,9 @@ class TreeFilter {
       const value = declaration.slice(colon + 1);
       const parsed = this.parse(property, value);
       if (parsed === undefined) {
-        this.removals.add(
-          { ...names, property },
-          invalidValueReason(property, value),
-          attribute.offset,
-        );
+        const reason = invalidValueReason(property, value);
+        this.removals.add({ ...names, property }, reason, attribute.offset);
+        paintNothingFor(kept, property, reason);
         continue;
       }
       kept.set(property, parsed);
