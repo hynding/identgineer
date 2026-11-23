@@ -92,15 +92,12 @@ async function openSmall(page: Page, address: string, direction: "ltr" | "rtl", 
 }
 
 for (const address of PAGES) {
-  const variants =
-    address === PAGES[0]
-      ? ([
-          ["ltr", false],
-          ["ltr", true],
-          ["rtl", false],
-          ["rtl", true],
-        ] as const)
-      : ([["ltr", false]] as const);
+  const variants = [
+    ["ltr", false],
+    ["ltr", true],
+    ["rtl", false],
+    ["rtl", true],
+  ] as const;
   for (const [direction, wide] of variants) {
     for (const layout of LAYOUTS) {
       const font = wide ? "wide text" : "default text";

@@ -88,3 +88,52 @@ test.describe("the variation switcher cannot collapse where its container sizes 
     }
   });
 });
+
+test.describe("in a narrow window the switcher's words break inside its panel", () => {
+  for (const [name, selector, size] of [
+    ["heading", '[part="heading"]', "3rem"],
+    ["button label", "idg-button", "8rem"],
+  ] as const) {
+    test(`at 320px with text at 200% in a panel of ${size} the ${name} stays inside the panel`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 800 });
+      await page.goto("/fixtures/variation-switcher.html");
+      await expect(page.locator("idg-variation-switcher:not(.hydrated)")).toHaveCount(0);
+      await page.evaluate((width) => {
+        document.documentElement.style.fontSize = "200%";
+        document.documentElement.dataset.ux = "focus";
+        const host = document.querySelector("#switcher");
+        const narrow = document.createElement("div");
+        narrow.style.inlineSize = width;
+        host?.replaceWith(narrow);
+        if (host) narrow.append(host);
+      }, size);
+      await frames(page, 4);
+      const outside = await page.evaluate((target) => {
+        const shadow = document.querySelector("#switcher")?.shadowRoot;
+        const panel = shadow?.querySelector('[part="panel"]')?.getBoundingClientRect();
+        if (!shadow || !panel) throw new Error("no panel");
+        const found: string[] = [];
+        // The text of the elements the selector names, whether it is in this tree or in a slot.
+        const walk = (node: Node): void => {
+          if (node instanceof Text) {
+            const range = document.createRange();
+            range.selectNodeContents(node);
+            for (const box of range.getClientRects()) {
+              if (box.width > 0 && (box.right > panel.right + 1 || box.left < panel.left - 1)) {
+                found.push(node.data.trim());
+                break;
+              }
+            }
+            return;
+          }
+          node.childNodes.forEach(walk);
+        };
+        for (const element of shadow.querySelectorAll(target)) walk(element);
+        return found;
+      }, selector);
+      expect(outside).toEqual([]);
+    });
+  }
+});
