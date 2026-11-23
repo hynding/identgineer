@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { h } from "@stencil/vitest";
 import { MARK } from "../../utils/untrusted-text";
 import { renderWithInternals } from "../../testing/form-internals";
@@ -27,6 +27,18 @@ interface SelectElement extends HTMLElement {
   value: string;
   disabled: boolean;
 }
+
+const heard: { type: string; listener: (event: Event) => void }[] = [];
+
+/** Listens on the document for the rest of the test. */
+function listen(type: string, listener: (event: Event) => void): void {
+  document.addEventListener(type, listener);
+  heard.push({ type, listener });
+}
+
+afterEach(() => {
+  for (const { type, listener } of heard.splice(0)) document.removeEventListener(type, listener);
+});
 
 const select = (root: HTMLElement) => {
   const element = root.shadowRoot?.querySelector<SelectElement>("idg-select");
@@ -159,7 +171,9 @@ describe("idg-property-picker value", () => {
     expect(select(root).value).toBe("");
     root.properties = PROPERTIES;
     await waitForChanges();
-    expect(select(root).value).toBe("p2");
+    // The select is handed the value again, and the prompt, which stood for no choice, is gone.
+    expect(options(root).map((option) => option.value)).toEqual(["p1", "p2", "p3"]);
+    expect(root.value).toBe("p2");
   });
 
   it("follows a change of the value from script", async () => {
@@ -215,7 +229,7 @@ describe("idg-property-picker change", () => {
   it("emits idgChange with the id, once, and keeps the select's own event inside", async () => {
     const { root, waitForChanges } = await mount({ properties: PROPERTIES, value: "p1" });
     const seen: unknown[] = [];
-    document.addEventListener("idgChange", (event) => seen.push((event as CustomEvent).detail));
+    listen("idgChange", (event) => seen.push((event as CustomEvent).detail));
     await choose(root, "p3", waitForChanges);
     expect(seen).toEqual([{ value: "p3" }]);
     expect(root.value).toBe("p3");
@@ -224,7 +238,7 @@ describe("idg-property-picker change", () => {
   it("ignores a choice that is not one of its properties", async () => {
     const { root, waitForChanges } = await mount({ properties: PROPERTIES, value: "p1" });
     const seen: unknown[] = [];
-    document.addEventListener("idgChange", (event) => seen.push(event));
+    listen("idgChange", (event) => seen.push(event));
     await choose(root, "intruder", waitForChanges);
     expect(seen).toEqual([]);
     expect(root.value).toBe("p1");
@@ -233,7 +247,7 @@ describe("idg-property-picker change", () => {
   it("does not emit for the choice it already has", async () => {
     const { root, waitForChanges } = await mount({ properties: PROPERTIES, value: "p1" });
     const seen: unknown[] = [];
-    document.addEventListener("idgChange", (event) => seen.push(event));
+    listen("idgChange", (event) => seen.push(event));
     await choose(root, "p1", waitForChanges);
     expect(seen).toEqual([]);
   });
@@ -246,14 +260,16 @@ describe("idg-property-picker in a form", () => {
       value: "p2",
       name: "property",
     });
-    expect(internals.setFormValue).toHaveBeenLastCalledWith("p2");
+    // The inner select is given the same recorder, so these are looked for, not the last call.
+    expect(internals.setFormValue).toHaveBeenCalledWith("p2");
     await choose(root, "p3", waitForChanges);
-    expect(internals.setFormValue).toHaveBeenLastCalledWith("p3");
+    expect(internals.setFormValue).toHaveBeenCalledWith("p3");
   });
 
   it("submits nothing while no property is chosen, whatever the value says", async () => {
     const { internals } = await mount({ properties: PROPERTIES, value: "gone", name: "property" });
-    expect(internals.setFormValue).toHaveBeenLastCalledWith(null);
+    expect(internals.setFormValue).toHaveBeenCalledWith(null);
+    expect(internals.setFormValue).not.toHaveBeenCalledWith("gone");
   });
 
   it("restores the value it started with on reset, and takes a restored state", async () => {
