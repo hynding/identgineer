@@ -26,6 +26,18 @@ describe("minimisePath", () => {
     ["a path with non-ASCII letters", "/café", "/caf%C3%A9"],
     ["a path with spaces", "/a b", "/a%20b"],
     ["tabs and newlines the parser drops", "/a\t/b\n", "/a/b"],
+    ["matrix parameters on a segment", "/a;jsessionid=XYZ/b;x=1;y=2", "/a/b"],
+    ["a segment that is only matrix parameters", "/a/;jsessionid=XYZ/b", "/a//b"],
+    ["a segment with an encoded question mark", "/reset/token%3Fabc/x", "/reset/-/x"],
+    ["a segment with an encoded question mark in lower case", "/p/a%3fb", "/p/-"],
+    ["a segment with an encoded hash", "/p/a%23b/c", "/p/-/c"],
+    ["a segment with an encoded hash in lower case", "/p/a%23", "/p/-"],
+    ["a segment with an at sign", "/u/ada@example.com/profile", "/u/-/profile"],
+    ["a segment with an encoded at sign", "/u/ada%40example.com", "/u/-"],
+    ["a segment with an encoded at sign in lower case", "/u/ada%40", "/u/-"],
+    ["an at sign after matrix parameters is cut with them", "/u/ada;x=a@b", "/u/ada"],
+    ["an at sign before matrix parameters", "/u/a@b;x=1", "/u/-"],
+    ["only the segment with the identifier", "/team/42/ada@x.io/settings", "/team/42/-/settings"],
   ])("reduces %s to a path", (_label, input, expected) => {
     expect(path(input)).toBe(expected);
   });
