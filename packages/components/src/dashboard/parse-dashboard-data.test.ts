@@ -342,3 +342,64 @@ describe("the limits are reached by stopping, not by cutting afterwards", () => 
     expect(read).toBeLessThanOrEqual(DASHBOARD_LIMITS.eventProperties);
   });
 });
+
+describe("the calendar, arithmetically", () => {
+  it.each([
+    ["0000-02-29T00:00:00Z", "0000-02-29T00:00:00.000Z"],
+    ["2000-02-29T12:00:00Z", "2000-02-29T12:00:00.000Z"],
+    ["2024-02-29T12:00:00Z", "2024-02-29T12:00:00.000Z"],
+  ])("accepts the leap day %s", (occurredAt, iso) => {
+    expect(parseTrackedEvents([{ id: "e", name: "x", occurredAt }])[0]?.occurredAt).toBe(iso);
+  });
+
+  it.each(["1900-02-29T00:00:00Z", "2100-02-29T00:00:00Z", "2023-02-29T00:00:00Z"])(
+    "refuses %s, which is not a leap day",
+    (occurredAt) => {
+      expect(parseTrackedEvents([{ id: "e", name: "x", occurredAt }])).toEqual([]);
+    },
+  );
+});
+
+describe("the work is bounded by what is read as well as by what is kept", () => {
+  it("reads a small multiple of the limit from a list of duplicates", () => {
+    let read = 0;
+    const duplicates = Array.from({ length: 100_000 }, () => ({
+      get id() {
+        read += 1;
+        return "same";
+      },
+      name: "x",
+      occurredAt: 0,
+    }));
+    expect(parseTrackedEvents(duplicates)).toHaveLength(1);
+    expect(read).toBeLessThanOrEqual(DASHBOARD_LIMITS.events * 4);
+  });
+
+  it("reads a small multiple of the limit from a list of records that do not parse", () => {
+    let read = 0;
+    const broken = Array.from({ length: 100_000 }, () => ({
+      get id() {
+        read += 1;
+        return undefined;
+      },
+    }));
+    expect(parseTrackedEvents(broken)).toEqual([]);
+    expect(read).toBeLessThanOrEqual(DASHBOARD_LIMITS.events * 4);
+  });
+
+  it("reads a small multiple of the limit from the properties of an event whose values do not parse", () => {
+    let read = 0;
+    const properties: Record<string, unknown> = {};
+    for (let index = 0; index < 5_000; index += 1) {
+      Object.defineProperty(properties, `k${String(index)}`, {
+        enumerable: true,
+        get() {
+          read += 1;
+          return { not: "a value" };
+        },
+      });
+    }
+    parseTrackedEvents([{ id: "e", name: "x", occurredAt: 0, properties }]);
+    expect(read).toBeLessThanOrEqual(DASHBOARD_LIMITS.eventProperties * 4);
+  });
+});

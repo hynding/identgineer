@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { paginationRange, type PaginationToken } from "./pagination-range";
+import { MAX_PAGE_COUNT, paginationRange, type PaginationToken } from "./pagination-range";
 
 const GAP_START = "start-ellipsis";
 const GAP_END = "end-ellipsis";
@@ -150,5 +150,17 @@ describe("paginationRange with numbers no pager could draw", () => {
   it("holds siblings and boundaries to a number of slots a row can hold", () => {
     const tokens = paginationRange({ page: 500, pageCount: 1000, siblings: 1e9, boundaries: 1e9 });
     expect(tokens.length).toBeLessThanOrEqual(2 * 10 + 2 * 10 + 3);
+  });
+});
+
+describe("paginationRange with a page count no one pages through", () => {
+  it("holds the count to ten million, so no page number is longer than eight digits", () => {
+    for (const pageCount of [10_000_001, 1e15, Number.MAX_SAFE_INTEGER]) {
+      const numbers = paginationRange({ page: 1, pageCount }).filter(
+        (token): token is number => typeof token === "number",
+      );
+      expect(Math.max(...numbers)).toBe(MAX_PAGE_COUNT);
+      expect(String(MAX_PAGE_COUNT)).toHaveLength(8);
+    }
   });
 });
