@@ -411,9 +411,8 @@ describe("idg-event-table untrusted text", () => {
     const table = shadow(root).querySelector("table");
     expect(table?.querySelector("a, [href], [src], [srcset], [action], [formaction]")).toBeNull();
     for (const element of Array.from(table?.querySelectorAll("*") ?? [])) {
-      expect(element.getAttributeNames().filter((attribute) => attribute.startsWith("on"))).toEqual(
-        [],
-      );
+      const names = Array.from(element.attributes).map((attribute) => attribute.name);
+      expect(names.filter((attribute) => attribute.startsWith("on"))).toEqual([]);
       expect(element.getAttribute("style")).toBeNull();
     }
   });
