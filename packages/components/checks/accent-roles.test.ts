@@ -92,7 +92,7 @@ function stylesheetsIn(file: string): string[] {
 
 const isSource = (file: string) =>
   file.endsWith(".css") ||
-  (file.endsWith(".ts") && !file.endsWith(".d.ts") && !/\.test\.ts$/.test(file));
+  (file.endsWith(".ts") && !file.endsWith(".d.ts") && !file.endsWith(".test.ts"));
 
 const ACCENT_MENTION = /--idg-color-(?:on-)?accent/gi;
 
