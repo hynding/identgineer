@@ -2,6 +2,8 @@ import type { CleanElement } from "./filter-svg-tree.ts";
 import { GRADIENTS } from "./svg-allowlist.ts";
 import {
   boxArea,
+  dashesPerPeriod,
+  dashPeriod,
   EMPTY_BOX,
   type Geometry,
   measureShape,
@@ -41,6 +43,9 @@ export const SVG_OVERDRAW_WEIGHTS = Object.freeze({
    */
   edgesPerRow: 800,
 });
+
+/** The most of a convex outline a square image shows: its perimeter, in sides. */
+const PERIMETER = 4;
 
 /** What edges as long as `sides` sides of the image cost, within one path. */
 function edgeCost(sides: number): number {
@@ -195,6 +200,8 @@ interface Inherited {
   readonly strokeWidth: number;
   readonly strokeLinejoin: string;
   readonly strokeMiterlimit: number;
+  readonly strokeLinecap: string;
+  readonly strokeDasharray: string;
 }
 
 const ROOT_INHERITED: Inherited = {
@@ -205,6 +212,8 @@ const ROOT_INHERITED: Inherited = {
   strokeWidth: 1,
   strokeLinejoin: "miter",
   strokeMiterlimit: 4,
+  strokeLinecap: "butt",
+  strokeDasharray: "none",
 };
 
 function textOf(element: CleanElement, name: string): string | undefined {
@@ -332,20 +341,47 @@ class OverdrawWalk {
           ? Math.max(paint.strokeMiterlimit, Math.SQRT2)
           : Math.SQRT2);
       const outer = grow(geometry.box, reach);
+      const pieces = this.strokePieces(geometry, paint.strokeDasharray);
       const local = Math.min(
         boxArea(outer),
-        geometry.length * width + (geometry.segments + 1) * (2 * reach) ** 2,
+        geometry.length * width +
+          (geometry.segments + 1) * (2 * reach) ** 2 +
+          // A dash's caps can reach past it, a square cap's by a square of the width in all.
+          (pieces.dashed ? pieces.count * width * width : 0),
       );
       const area = Math.min(scale * local, boxArea(mapBox(matrix, outer))) / this.square;
+      const shown = (length: number): number =>
+        Math.min(PERIMETER, (stretch(matrix) * length) / this.side);
       this.charge(
         Math.min(1, area) * this.paintWeight(paint.stroke, paint.strokeOpacity * alpha) +
-          // A stroke's outline runs along both sides of the path.
-          edgeCost(2 * edges),
+          // A stroke's outline runs along both sides of the path, round each join (counted at
+          // every segment), and across both ends of every subpath or dash.
+          edgeCost(
+            2 * edges +
+              geometry.segments * shown(joinLength(paint)) +
+              2 * pieces.count * shown(capLength(paint)),
+          ),
       );
       box = mapBox(matrix, outer);
     }
     if (layered) this.charge(this.share(box) * SVG_OVERDRAW_WEIGHTS.layer);
     return box;
+  }
+
+  /**
+   * The pieces a stroke is drawn in: its subpaths, or, dashed, every dash, each subpath starting
+   * the pattern afresh (so up to one more repeat each).
+   */
+  private strokePieces(
+    geometry: Geometry,
+    dasharray: string,
+  ): { readonly count: number; readonly dashed: boolean } {
+    const period = dashPeriod(dasharray);
+    if (period === 0) return { count: geometry.subpaths, dashed: false };
+    return {
+      count: (Math.ceil(geometry.length / period) + geometry.subpaths) * dashesPerPeriod(dasharray),
+      dashed: true,
+    };
   }
 
   /**
@@ -433,6 +469,8 @@ class OverdrawWalk {
       strokeWidth: width === undefined ? from.strokeWidth : this.length(element, "stroke-width"),
       strokeLinejoin: textOf(element, "stroke-linejoin") ?? from.strokeLinejoin,
       strokeMiterlimit: numberOf(element, "stroke-miterlimit") ?? from.strokeMiterlimit,
+      strokeLinecap: textOf(element, "stroke-linecap") ?? from.strokeLinecap,
+      strokeDasharray: textOf(element, "stroke-dasharray") ?? from.strokeDasharray,
     };
   }
 
@@ -498,6 +536,22 @@ class OverdrawWalk {
       );
     }
   }
+}
+
+/** The outline a join adds at most: a miter's two sides, half a turn round, or a bevel's width. */
+function joinLength(paint: Inherited): number {
+  const width = paint.strokeWidth;
+  if (paint.strokeLinejoin === "round") return (Math.PI * width) / 2;
+  if (paint.strokeLinejoin === "miter") return Math.max(paint.strokeMiterlimit, 1) * width;
+  return width;
+}
+
+/** The outline across one end of a subpath or dash: straight, half a turn, or a square's sides. */
+function capLength(paint: Inherited): number {
+  const width = paint.strokeWidth;
+  if (paint.strokeLinecap === "round") return (Math.PI * width) / 2;
+  if (paint.strokeLinecap === "square") return 2 * width;
+  return width;
 }
 
 function isNone(paint: SvgValue): boolean {

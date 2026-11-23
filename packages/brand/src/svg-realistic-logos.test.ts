@@ -103,7 +103,7 @@ function figmaMasks(): string {
 /** Each logo with the most of each budget, in percent, it may use. */
 const REALISTIC: readonly (readonly [string, string, number, number])[] = [
   ["an emblem of 4,000 cubics, filled and stroked", emblem(40, 6), 21, 5],
-  ["an emblem of 8,000 cubics, filled and stroked", emblem(80, 3), 42, 9],
+  ["an emblem of 8,000 cubics, filled and stroked", emblem(80, 3), 42, 10],
   ["traced artwork of 470 KB", traced(470_000), 61, 1],
   [
     "a wordmark of 20 glyphs",
@@ -118,7 +118,7 @@ const REALISTIC: readonly (readonly [string, string, number, number])[] = [
   ],
   ["10 gradients under 6 clip paths", gradientsUnderClips(), 8, 60],
   ["300 uses of a 20-cubic symbol", pattern(20), 36, 1],
-  ["300 uses of a 60-cubic symbol", pattern(60), 96, 1],
+  ["300 uses of a 60-cubic symbol", pattern(60), 96, 2],
   ["dashed rings", dashedRings("1 2"), 2, 1],
   ["finely dashed rings", dashedRings("0.25 0.5"), 7, 1],
   ["a Figma export with 8 alpha masks", figmaMasks(), 4, 60],

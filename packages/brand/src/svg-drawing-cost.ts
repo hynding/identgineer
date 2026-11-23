@@ -28,6 +28,8 @@ export interface Geometry {
   readonly length: number;
   /** Segments drawn: each a join or a cap to stroke. */
   readonly segments: number;
+  /** Subpaths: each has its own two caps, and starts its dashes afresh. */
+  readonly subpaths: number;
   /**
    * The most of the outline a square image can show, in sides of the square: a straight segment
    * at most its diagonal; a convex curve (a quadratic, an arc, a whole rectangle or ellipse) at most
@@ -108,8 +110,11 @@ class Pen {
   weight = 0;
   length = 0;
   segments = 0;
+  subpaths = 0;
   visibleOutline = 0;
   degree = 0;
+  /** Whether the subpath was just closed: drawing on without a move starts another. */
+  closed = false;
   /** The letter, in upper case, of the segment just drawn. */
   previous = "";
   box: SvgBox = EMPTY_BOX;
@@ -121,6 +126,8 @@ class Pen {
   /** Starts a subpath at the current point. */
   begin(): void {
     this.end();
+    this.subpaths += 1;
+    this.closed = false;
     this.startX = this.x;
     this.startY = this.y;
     this.include(this.x, this.y, 0);
@@ -150,6 +157,10 @@ class Pen {
     hull = 0,
     reach = 0,
   ): void {
+    if (this.closed) {
+      this.subpaths += 1;
+      this.closed = false;
+    }
     let fromX = this.x;
     let fromY = this.y;
     this.include(fromX, fromY, reach);
@@ -193,6 +204,7 @@ class Pen {
       weight: this.weight,
       length: this.length,
       segments: this.segments,
+      subpaths: this.subpaths,
       visibleOutline: this.visibleOutline,
       degree: this.degree,
       box: this.box,
@@ -254,6 +266,7 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
       STRAIGHT,
       1,
     );
+    pen.closed = true;
   } else if (upper === "C" || upper === "S") {
     const [x1, y1] = upper === "C" ? [at(0, x), at(1, y)] : pen.reflected("C");
     const offset = upper === "C" ? 2 : 0;
@@ -398,6 +411,13 @@ export function dashPeriod(value: string): number {
   return lengths.length % 2 === 1 ? 2 * sum : sum;
 }
 
+/** Dashes in one repeat of a kept dash array, a dash of no length included (it has its caps). */
+export function dashesPerPeriod(value: string): number {
+  if (value === "none") return 0;
+  const count = value.split(" ").length;
+  return count % 2 === 1 ? count : count / 2;
+}
+
 function polyline(text: string, closed: boolean): Geometry {
   const pen = new Pen();
   const pairs = text.split(" ");
@@ -448,6 +468,7 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
         weight: 4 * line + (rounded ? 4 * cubic : 0),
         length: 2 * (width + height),
         segments: rounded ? 8 : 4,
+        subpaths: 1,
         visibleOutline: CONVEX,
         degree: rounded ? 4 + 4 * 2 : 4,
         box: boxOf(length("x"), length("y"), width, height),
@@ -462,6 +483,7 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
         weight: 4 * cubic,
         length: 2 * Math.PI * Math.max(rx, ry),
         segments: 4,
+        subpaths: 1,
         visibleOutline: CONVEX,
         degree: 4 * 2,
         box: boxOf(length("cx") - rx, length("cy") - ry, 2 * rx, 2 * ry),
@@ -474,6 +496,7 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
         weight: line,
         length: Math.hypot(x2 - x1, y2 - y1),
         segments: 1,
+        subpaths: 1,
         visibleOutline: STRAIGHT,
         degree: 1,
         box: {
