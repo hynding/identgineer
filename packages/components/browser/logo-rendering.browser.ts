@@ -33,7 +33,9 @@ const LOGO_POLICY = CONTENT_SECURITY_POLICY.replace(
 
 interface Logo {
   readonly name: string;
-  readonly svg: string;
+  /** Rendered inline when given. */
+  readonly svg?: string;
+  /** Rendered as an image when given. */
   readonly dataUrl?: string;
 }
 
@@ -203,7 +205,9 @@ test.describe("sanitised logos in a browser", () => {
 });
 
 // The control: the same page and checks, given the corpus as uploaded. If these did not trip, the
-// passing tests above would prove nothing.
+// passing tests above would prove nothing. Inline is the control that can trip: an image never runs
+// a script or loads anything, whatever the file holds, as the last test here shows. That is why
+// an image is the second layer, and why it cannot be the control for the first.
 base.describe("the checks themselves", () => {
   // Only the files the sanitiser accepts (after removing their payload): those it refuses include
   // the resource attacks (billions of drawn copies), which would only hang the page.
@@ -219,6 +223,20 @@ base.describe("the checks themselves", () => {
     expect(await canary(page)).toBeGreaterThan(0);
     expect(watch.requests.some((url) => new URL(url).hostname === "attacker.invalid")).toBe(true);
   });
+
+  base(
+    "show an image runs and loads nothing even from the unsanitised corpus, with no policy",
+    async ({ page }) => {
+      const images = raw.map(({ name, svg }) => ({
+        name,
+        dataUrl: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
+      }));
+      const watch = await render(page, images, undefined);
+      expect(await canary(page)).toBe(0);
+      expect(watch.dialogs).toEqual([]);
+      expect(watch.requests.filter((url) => new URL(url).origin !== ORIGIN)).toEqual([]);
+    },
+  );
 
   base(
     "catch a policy violation in the unsanitised corpus under the strict policy",

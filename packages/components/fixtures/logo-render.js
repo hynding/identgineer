@@ -1,5 +1,5 @@
 // Renders every logo the test lists twice: as an <img> from its data URL, and inline, parsed by
-// the page's HTML parser through innerHTML. A Trusted Types policy passes the markup on unchanged:
+// the page's HTML parser through innerHTML (a logo listed without markup is shown only as an image). A Trusted Types policy passes the markup on unchanged:
 // the test is whether the markup itself is inert, so nothing here cleans it.
 const policy = globalThis.trustedTypes?.createPolicy("logo-fixture", {
   createHTML: (markup) => markup,
@@ -17,10 +17,12 @@ async function render() {
   const images = document.getElementById("images");
   const inline = document.getElementById("inline");
   const decoded = logos.map(({ name, svg, dataUrl }) => {
-    const figure = document.createElement("div");
-    figure.dataset.logo = name;
-    figure.innerHTML = policy ? policy.createHTML(svg) : svg;
-    inline.append(figure);
+    if (svg !== undefined) {
+      const figure = document.createElement("div");
+      figure.dataset.logo = name;
+      figure.innerHTML = policy ? policy.createHTML(svg) : svg;
+      inline.append(figure);
+    }
     if (dataUrl === undefined) return Promise.resolve();
     const image = new Image();
     image.alt = name;
