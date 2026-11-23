@@ -251,6 +251,11 @@
 /* The navigation. Its items are whatever the page puts in the slot, as direct children, laid out
    in a row, or in a column where the navigation is a rail, a panel or a drawer. */
 .navigation {
+  /* How the current item is marked: an underline where the items run in a row, a bar at the
+     inline start where they stand in a column. */
+  --_current-bar: 0px;
+  --_current-line: underline;
+
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -275,10 +280,19 @@
   color: var(--idg-color-on-accent-subtle);
 }
 
+/* The tint alone is too faint to tell the current item from the rest (about 1.1:1 on the page),
+   so a mark in the accent indicator, 3:1 on every page background, says which item it is. The
+   bar takes its width out of the padding, so the label does not move. */
 ::slotted([slot="navigation"][aria-current]) {
+  padding-inline-start: calc(var(--idg-space-xs) - var(--_current-bar));
+  border-inline-start: var(--_current-bar) solid var(--idg-color-accent-indicator);
   background: var(--idg-color-accent-subtle);
   color: var(--idg-color-on-accent-subtle);
   font-weight: var(--idg-font-weight-semibold);
+  text-decoration-line: var(--_current-line);
+  text-decoration-color: var(--idg-color-accent-indicator);
+  text-decoration-thickness: calc(var(--idg-space-3xs) / 2);
+  text-underline-offset: var(--idg-space-3xs);
 }
 
 ::slotted([slot="navigation"]:focus-visible),
@@ -343,6 +357,9 @@
   }
 
   .navigation {
+    --_current-bar: var(--idg-space-3xs);
+    --_current-line: none;
+
     flex-direction: column;
     align-items: stretch;
   }
@@ -433,6 +450,9 @@
   }
 
   .navigation {
+    --_current-bar: var(--idg-space-3xs);
+    --_current-line: none;
+
     flex-direction: column;
     align-items: stretch;
   }
@@ -586,6 +606,9 @@
     }
 
     .navigation {
+      --_current-bar: var(--idg-space-3xs);
+      --_current-line: none;
+
       flex: 1 1 0;
       min-block-size: 0;
       flex-direction: column;
@@ -983,6 +1006,9 @@
     }
 
     .navigation {
+      --_current-bar: var(--idg-space-3xs);
+      --_current-line: none;
+
       flex: 1 1 0;
       min-block-size: 0;
       flex-direction: column;

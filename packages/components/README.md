@@ -18,6 +18,10 @@ The accent appears in three ways, and each reads its own colour role:
   focus ring, and forced colours drop it.
 - An **indicator** identifies state or selection on the page, so it needs 3:1 against what it sits
   on (WCAG 1.4.11): `accent-indicator`, with `on-accent-indicator` for a glyph or number on it.
+- A **tint** is the faint `accent-subtle` wash of hover feedback, with `on-accent-subtle` for its
+  text. It is about 1.1:1 on the page, so where it shows a state it is not enough alone: the
+  current navigation item also carries an `accent-indicator` mark, and the pressed password reveal
+  changes its icon. The check names what marks each such tint.
 - **Decoration** identifies nothing and stays on `accent`.
 
 Every use in the component stylesheets, checked by `checks/accent-roles.test.ts` so a new one has
@@ -32,6 +36,8 @@ to be classified:
 | `idg-pagination` | current page and its number                      | `accent-indicator`, `on-accent-indicator` | indicator  |
 | `idg-tab`        | selected tab marker                              | `accent-indicator`                        | indicator  |
 | `idg-card`       | outlined interactive card, hovered ring          | `accent-indicator`                        | indicator  |
+| `idg-layout`     | current navigation item: underline in a row, bar | `accent-indicator`                        | indicator  |
+| `idg-layout`     | current navigation item, behind the mark         | `accent-subtle`, `on-accent-subtle`       | tint       |
 | `idg-button`     | primary fill, label and hover                    | `accent`, `on-accent`, `accent-hover`     | fill       |
 | `idg-button`     | primary edge where the accent does not stand out | `accent-edge`                             | fill       |
 | `idg-card`       | accent variant and everything on it              | `accent`, `on-accent`                     | fill       |
@@ -39,6 +45,11 @@ to be classified:
 | `idg-layout`     | skip link                                        | `accent`, `on-accent`                     | fill       |
 | `idg-layout`     | hero glow                                        | `accent`                                  | decoration |
 | demo page        | background glow                                  | `accent`                                  | decoration |
+
+Hovered controls and links read the tint too; their rows are left out here, and the check lists
+them. Where the navigation stands in a column (a disclosure, a drawer, or the rail or panel of a
+layout) the current item has a bar at its inline start, taken out of its padding so the label stays
+put; where the items run in a row it is underlined.
 
 Links use `link`, and the focus ring uses `focus-ring`; neither is part of this table.
 
