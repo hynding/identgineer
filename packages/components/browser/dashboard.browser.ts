@@ -239,7 +239,7 @@ test.describe("the event table", () => {
     await expect(table(page).locator("table")).toHaveCount(0);
     // One announcement: the polite region says it, and nothing inside it is live on its own.
     await expect(table(page).locator("[role='alert'], [aria-live], [role='status']")).toHaveCount(
-      2,
+      1,
     );
     await expect(region.locator("[role='alert'], [aria-live], [role='status']")).toHaveCount(0);
     await pickerSelect(page).selectOption("p-shop");
