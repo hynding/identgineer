@@ -1,0 +1,101 @@
+import type { Page, Request } from "@playwright/test";
+import { expect } from "./fixtures";
+
+export const CONSENT_PAGE = "/fixtures/consent.html";
+const TAGS = ["idg-consent-banner", "idg-consent-preferences"];
+
+export interface ConsentPage {
+  /** Every request the page made to the collector, in order. */
+  readonly collected: Request[];
+}
+
+export interface OpenOptions {
+  /** Navigator signals set before any page script runs, as a browser with the setting would. */
+  readonly gpc?: boolean;
+  readonly dnt?: boolean;
+  /** Query string for the fixture: `?granted`, `?denied`, `?announce`, `?fake-collector`. */
+  readonly query?: string;
+}
+
+/**
+ * Opens the consent fixture: a real tracker on the page, posting to /collect, which the test
+ * answers itself, so every request the tracker makes is seen at the network level.
+ */
+export async function openConsent(page: Page, options: OpenOptions = {}): Promise<ConsentPage> {
+  const collected: Request[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/collect") collected.push(request);
+  });
+  await page.route("**/collect", (route) => route.fulfill({ status: 202, body: "" }));
+  await page.addInitScript(
+    ({ gpc, dnt }) => {
+      if (gpc) Object.defineProperty(navigator, "globalPrivacyControl", { value: true });
+      if (dnt) Object.defineProperty(navigator, "doNotTrack", { value: "1" });
+    },
+    { gpc: options.gpc === true, dnt: options.dnt === true },
+  );
+  await page.goto(`${CONSENT_PAGE}${options.query ?? ""}`);
+  await expect(page.locator("html[data-consent-ready]")).toHaveCount(1);
+  await expect(page.locator(TAGS.map((tag) => `${tag}:not(.hydrated)`).join(", "))).toHaveCount(0);
+  return { collected };
+}
+
+interface Fixture {
+  tracker: {
+    consent: { get: () => { state: string; reason?: string }; reset: () => boolean };
+    track: (name: string) => void;
+    page: () => void;
+    flush: () => Promise<void>;
+  };
+  events: { type: string; detail: unknown }[];
+}
+
+type Handle = (fixture: Fixture) => unknown;
+
+/** Runs `script` in the page with the fixture's tracker and recorded events. */
+export function withFixture<T = unknown>(page: Page, script: Handle): Promise<T> {
+  return page.evaluate(`(${script.toString()})(window.consentFixture)`) as Promise<T>;
+}
+
+/** What the tracker would do for a page that tracks: an event and a page view, then a flush. */
+export function trackAndFlush(page: Page): Promise<void> {
+  return page.evaluate(`(async () => {
+    const { tracker } = window.consentFixture;
+    tracker.track("clicked");
+    tracker.page();
+    await tracker.flush();
+  })()`) as Promise<void>;
+}
+
+export function consentState(page: Page): Promise<{ state: string; reason?: string }> {
+  return withFixture(page, (fixture) => fixture.tracker.consent.get());
+}
+
+export function recordedEvents(page: Page): Promise<{ type: string; detail: unknown }[]> {
+  return withFixture(page, (fixture) => fixture.events);
+}
+
+export const banner = (page: Page) => page.locator("#banner");
+export const bannerRegion = (page: Page) => banner(page).locator('[part="banner"]');
+export const bannerButton = (page: Page, name: "decline" | "accept" | "choose") =>
+  banner(page).locator(`idg-button.${name} button`);
+export const bannerStatus = (page: Page) => banner(page).locator('[part="status"]');
+
+export const inlinePanel = (page: Page) => page.locator("#prefs");
+export const modalPanel = (page: Page) => page.locator("#prefs-dialog");
+export const switchIn = (host: ReturnType<typeof inlinePanel>, name: "analytics" | "necessary") =>
+  host.locator(`idg-switch.${name} input`);
+
+/**
+ * The element focus is on, through every shadow root, as its accessible name where it has one
+ * (a button's text, a link's text) and its tag otherwise.
+ */
+export function activeName(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    let element: Element | null = document.activeElement;
+    while (element?.shadowRoot?.activeElement) element = element.shadowRoot.activeElement;
+    if (!element || element === document.body) return "body";
+    const label = element.getAttribute("aria-label") ?? element.textContent;
+    return (label ?? "").replace(/\s+/g, " ").trim() || element.localName;
+  });
+}
