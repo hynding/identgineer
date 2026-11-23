@@ -11,6 +11,7 @@ interface Schema {
   readonly propertyNames?: Schema;
   readonly items?: Schema;
   readonly oneOf?: readonly Schema[];
+  readonly not?: Schema;
   readonly pattern?: string;
   readonly minLength?: number;
   readonly maxLength?: number;
@@ -48,17 +49,22 @@ const resolve = (schema: Schema): Schema => {
 // A checker for the subset of JSON Schema the document uses, so the test needs no dependency.
 const conforms = (value: unknown, raw: Schema): boolean => {
   const schema = resolve(raw);
-  if (schema.oneOf !== undefined) {
-    return schema.oneOf.filter((option) => conforms(value, option)).length === 1;
+  if (
+    schema.oneOf !== undefined &&
+    schema.oneOf.filter((option) => conforms(value, option)).length !== 1
+  ) {
+    return false;
   }
+  if (schema.not !== undefined && conforms(value, schema.not)) return false;
   if (schema.type !== undefined) {
     const types = typeof schema.type === "string" ? [schema.type] : schema.type;
     if (!types.some((type) => typeMatches(value, type))) return false;
   }
   if ("const" in schema && schema.const !== value) return false;
   if (typeof value === "string") {
-    if (schema.minLength !== undefined && value.length < schema.minLength) return false;
-    if (schema.maxLength !== undefined && value.length > schema.maxLength) return false;
+    if (schema.minLength !== undefined && [...value].length < schema.minLength) return false;
+    // JSON Schema counts code points, and the validator counts them the same way.
+    if (schema.maxLength !== undefined && [...value].length > schema.maxLength) return false;
     if (schema.pattern !== undefined && !new RegExp(schema.pattern, "u").test(value)) return false;
     // JSON Schema strings are Unicode: a lone surrogate is not a valid one.
     if (/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/.test(value)) {
@@ -109,6 +115,7 @@ const event = (overrides: Record<string, unknown> = {}): Record<string, unknown>
 const batch = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
   v: 1,
   sentAt: 1_700_000_001_000,
+  transport: "fetch",
   events: [event()],
   ...overrides,
 });
@@ -118,9 +125,22 @@ const manyProperties = (count: number): Record<string, number> =>
 
 const CORPUS: readonly [string, unknown][] = [
   ["a minimal batch", batch()],
-  ["the write key", batch({ writeKey: "k".repeat(16) })],
-  ["a short write key", batch({ writeKey: "k".repeat(15) })],
-  ["a long write key", batch({ writeKey: "k".repeat(129) })],
+  ["a beacon with the write key", batch({ transport: "beacon", writeKey: "k".repeat(16) })],
+  ["a beacon with a short write key", batch({ transport: "beacon", writeKey: "k".repeat(15) })],
+  ["a beacon with a long write key", batch({ transport: "beacon", writeKey: "k".repeat(129) })],
+  ["a beacon without the key", batch({ transport: "beacon" })],
+  ["a fetch batch with the key", batch({ writeKey: "k".repeat(16) })],
+  ["another transport", batch({ transport: "xhr" })],
+  ["no transport", { v: 1, sentAt: 1, events: [event()] }],
+  [
+    "an event without a session",
+    batch({
+      events: [Object.fromEntries(Object.entries(event()).filter(([key]) => key !== "session"))],
+    }),
+  ],
+  ["a null session", batch({ events: [event({ session: null })] })],
+  ["1024 emoji", batch({ events: [event({ properties: { a: "\u{1f600}".repeat(1024) } })] })],
+  ["1025 emoji", batch({ events: [event({ properties: { a: "\u{1f600}".repeat(1025) } })] })],
   ["another version", batch({ v: 2 })],
   ["a version as a string", batch({ v: "1" })],
   ["no events", batch({ events: [] })],

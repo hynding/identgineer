@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { parseTrackingBatch, parseTrackingEvent } from "./parse-tracking-batch.ts";
+import {
+  MAX_TRACKING_BATCH_BYTES,
+  parseTrackingBatch,
+  parseTrackingBatchText,
+  parseTrackingEvent,
+} from "./parse-tracking-batch.ts";
 
 const event = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
   id: "AAAAAAAAAAAAAAAAAAAAAA",
@@ -12,9 +17,17 @@ const event = (overrides: Record<string, unknown> = {}): Record<string, unknown>
 const batch = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
   v: 1,
   sentAt: 1_700_000_001_000,
+  transport: "fetch",
   events: [event()],
   ...overrides,
 });
+
+const sparse = (): unknown[] => {
+  const events = new Array<unknown>(3);
+  events[0] = event({ id: "C".repeat(22) });
+  events[2] = event();
+  return events;
+};
 
 const rejected = (input: unknown): string => {
   const result = parseTrackingBatch(input);
@@ -30,6 +43,7 @@ describe("parseTrackingBatch", () => {
 
   it("accepts every optional field", () => {
     const full = batch({
+      transport: "beacon",
       writeKey: "k".repeat(16),
       events: [
         event({
@@ -60,19 +74,25 @@ describe("parseTrackingBatch", () => {
   });
 
   it.each([
-    ["a missing version", { sentAt: 1, events: [event()] }],
+    ["a missing version", { sentAt: 1, transport: "fetch", events: [event()] }],
+    ["a missing transport", { v: 1, sentAt: 1, events: [event()] }],
+    ["an unknown transport", batch({ transport: "xhr" })],
+    ["a write key in a fetch batch", batch({ writeKey: "k".repeat(16) })],
+    ["a beacon without a write key", batch({ transport: "beacon" })],
+    ["duplicate event ids", batch({ events: [event(), event()] })],
+    ["a sparse events list", batch({ events: sparse() })],
     ["another version", batch({ v: 2 })],
-    ["a missing sentAt", { v: 1, events: [event()] }],
+    ["a missing sentAt", { v: 1, transport: "fetch", events: [event()] }],
     ["a fractional sentAt", batch({ sentAt: 1.5 })],
     ["a negative sentAt", batch({ sentAt: -1 })],
     ["a sentAt beyond the Date range", batch({ sentAt: 8.64e15 + 1 })],
-    ["a missing events list", { v: 1, sentAt: 1 }],
+    ["a missing events list", { v: 1, sentAt: 1, transport: "fetch" }],
     ["an empty events list", batch({ events: [] })],
     ["events that are not a list", batch({ events: {} })],
     ["more than 500 events", batch({ events: Array.from({ length: 501 }, () => event()) })],
     ["an unknown key", batch({ extra: 1 })],
-    ["a short write key", batch({ writeKey: "short" })],
-    ["a write key with a symbol", batch({ writeKey: `${"k".repeat(16)}!` })],
+    ["a short write key", batch({ transport: "beacon", writeKey: "short" })],
+    ["a write key with a symbol", batch({ transport: "beacon", writeKey: `${"k".repeat(16)}!` })],
   ])("rejects %s", (_label, input) => {
     expect(parseTrackingBatch(input).ok).toBe(false);
   });
@@ -98,6 +118,7 @@ describe("parseTrackingEvent", () => {
     ["a short id", event({ id: "short" })],
     ["an id with a symbol", event({ id: "AAAAAAAAAAAAAAAA+/==" })],
     ["a short session", event({ session: "short" })],
+    ["a session that is null", event({ session: null })],
     ["a fractional timestamp", event({ at: 1.5 })],
     ["a missing timestamp", { id: "AAAAAAAAAAAAAAAAAAAAAA", name: "a", session: "B".repeat(22) }],
     ["a user with an at sign", event({ user: "ada@example.com" })],
@@ -117,7 +138,8 @@ describe("parseTrackingEvent", () => {
     ["an array property", event({ properties: { a: [1] } })],
     ["a nested property", event({ properties: { a: { b: 1 } } })],
     ["a property key in upper case", event({ properties: { Plan: "x" } })],
-    ["a string over 1024 units", event({ properties: { a: "x".repeat(1025) } })],
+    ["a string of 1025 code points", event({ properties: { a: "x".repeat(1025) } })],
+    ["a string of 1025 emoji", event({ properties: { a: "\u{1f600}".repeat(1025) } })],
     ["a lone high surrogate", event({ properties: { a: "x\ud800" } })],
     ["a lone low surrogate", event({ properties: { a: "\udc00x" } })],
     ["a lone surrogate in the path", event({ path: "/\ud800" })],
@@ -129,6 +151,17 @@ describe("parseTrackingEvent", () => {
     ],
   ])("rejects %s", (_label, input) => {
     expect(parseTrackingEvent(input).ok).toBe(false);
+  });
+
+  it("accepts an event with no session, as one restored from an earlier page load is sent", () => {
+    const { session: _session, ...restored } = event();
+    expect(parseTrackingEvent(restored)).toEqual({ ok: true, value: restored });
+  });
+
+  it("counts string length in code points: 1024 emoji are accepted", () => {
+    expect(parseTrackingEvent(event({ properties: { a: "\u{1f600}".repeat(1024) } })).ok).toBe(
+      true,
+    );
   });
 
   it("accepts 1024 units of a string and 32 properties", () => {
@@ -154,14 +187,14 @@ describe("parseTrackingEvent", () => {
     const polluted = (json: string): unknown => JSON.parse(json) as unknown;
 
     it.each([
-      ["the batch", `{"v":1,"sentAt":1,"__proto__":{"x":1},"events":[]}`],
+      ["the batch", `{"v":1,"sentAt":1,"__proto__":{"x":1},"transport":"fetch","events":[]}`],
       [
         "an event",
-        `{"v":1,"sentAt":1,"events":[{"id":"AAAAAAAAAAAAAAAAAAAAAA","name":"a","at":1,"session":"BBBBBBBBBBBBBBBBBBBBBB","__proto__":{"x":1}}]}`,
+        `{"v":1,"sentAt":1,"transport":"fetch","events":[{"id":"AAAAAAAAAAAAAAAAAAAAAA","name":"a","at":1,"session":"BBBBBBBBBBBBBBBBBBBBBB","__proto__":{"x":1}}]}`,
       ],
       [
         "the properties",
-        `{"v":1,"sentAt":1,"events":[{"id":"AAAAAAAAAAAAAAAAAAAAAA","name":"a","at":1,"session":"BBBBBBBBBBBBBBBBBBBBBB","properties":{"__proto__":1}}]}`,
+        `{"v":1,"sentAt":1,"transport":"fetch","events":[{"id":"AAAAAAAAAAAAAAAAAAAAAA","name":"a","at":1,"session":"BBBBBBBBBBBBBBBBBBBBBB","properties":{"__proto__":1}}]}`,
       ],
     ])("rejects an own __proto__ key on %s", (_label, json) => {
       expect(parseTrackingBatch(polluted(json)).ok).toBe(false);
@@ -181,5 +214,42 @@ describe("parseTrackingEvent", () => {
       properties.a = 1;
       expect(parseTrackingEvent(event({ properties })).ok).toBe(true);
     });
+  });
+});
+
+describe("parseTrackingBatchText", () => {
+  it("reads a body that is within the cap", () => {
+    expect(parseTrackingBatchText(JSON.stringify(batch())).ok).toBe(true);
+  });
+
+  it("names the cap, which is the largest payload a client may send", () => {
+    expect(MAX_TRACKING_BATCH_BYTES).toBe(65_536);
+  });
+
+  it("refuses a body above the cap before parsing it", () => {
+    const parse = JSON.parse;
+    let parsed = 0;
+    JSON.parse = (...args: Parameters<typeof JSON.parse>) => {
+      parsed += 1;
+      return parse(...args);
+    };
+    try {
+      const result = parseTrackingBatchText(" ".repeat(MAX_TRACKING_BATCH_BYTES + 1));
+      expect(result.ok).toBe(false);
+      expect(parsed).toBe(0);
+    } finally {
+      JSON.parse = parse;
+    }
+  });
+
+  it("counts bytes, not characters", () => {
+    const body = `"${"\u20ac".repeat(MAX_TRACKING_BATCH_BYTES / 3)}"`;
+    expect(body.length).toBeLessThan(MAX_TRACKING_BATCH_BYTES);
+    expect(parseTrackingBatchText(body).ok).toBe(false);
+    expect((parseTrackingBatchText(body) as { error: string }).error).toContain("bytes");
+  });
+
+  it.each(["", "{", "null", "[]", '{"v":1}'])("refuses %j without throwing", (text) => {
+    expect(parseTrackingBatchText(text).ok).toBe(false);
   });
 });

@@ -12,7 +12,7 @@ const event = (id: string) => ({
   session: "S".repeat(22),
 });
 const body = (...ids: string[]): string =>
-  JSON.stringify({ v: 1, sentAt: 2, events: ids.map(event) });
+  JSON.stringify({ v: 1, sentAt: 2, transport: "fetch", events: ids.map(event) });
 
 const init = (overrides: Partial<FetchInit> = {}, text = body("a")): FetchInit => ({
   method: "POST",
@@ -103,7 +103,16 @@ describe("createFakeCollector", () => {
         () =>
           fake.fetch(
             ENDPOINT,
-            init({}, JSON.stringify({ v: 1, sentAt: 1, writeKey: KEY, events: [event("a")] })),
+            init(
+              {},
+              JSON.stringify({
+                v: 1,
+                sentAt: 1,
+                transport: "fetch",
+                writeKey: KEY,
+                events: [event("a")],
+              }),
+            ),
           ),
       ],
     ];
@@ -115,6 +124,31 @@ describe("createFakeCollector", () => {
     }
   });
 
+  it("flags a fetch body that says it is a beacon, and a beacon that says it is a fetch", async () => {
+    const asBeacon = collector();
+    await asBeacon.fetch(
+      ENDPOINT,
+      init({}, JSON.stringify({ v: 1, sentAt: 2, transport: "beacon", events: [event("a")] })),
+    );
+    expect(asBeacon.violations.join("\n")).toContain("transport");
+    const asFetch = collector();
+    asFetch.sendBeacon(ENDPOINT, body("a"));
+    expect(asFetch.violations.join("\n")).toContain("transport");
+  });
+
+  it("settles a request that is aborted, so it is no longer in flight", async () => {
+    const fake = collector();
+    fake.answer("hang");
+    const controller = new AbortController();
+    const pending = fake.fetch(ENDPOINT, init({ signal: controller.signal }));
+    expect(fake.inFlight).toBe(1);
+    expect(fake.requests[0]?.pending).toBe(true);
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(fake.inFlight).toBe(0);
+    expect(fake.requests[0]?.pending).toBe(false);
+  });
+
   it("flags a body over its payload cap", async () => {
     const fake = createFakeCollector({ endpoint: ENDPOINT, writeKey: KEY, maxPayloadBytes: 100 });
     await fake.fetch(ENDPOINT, init());
@@ -123,7 +157,13 @@ describe("createFakeCollector", () => {
 
   it("takes a beacon with the key in its body and none in the URL", () => {
     const fake = collector();
-    const text = JSON.stringify({ v: 1, sentAt: 2, writeKey: KEY, events: [event("a")] });
+    const text = JSON.stringify({
+      v: 1,
+      sentAt: 2,
+      transport: "beacon",
+      writeKey: KEY,
+      events: [event("a")],
+    });
     expect(fake.sendBeacon(ENDPOINT, text)).toBe(true);
     expect(fake.requests[0]?.via).toBe("beacon");
     expect(fake.deliveredEvents()).toHaveLength(1);
@@ -137,7 +177,7 @@ describe("createFakeCollector", () => {
     const inUrl = collector();
     inUrl.sendBeacon(
       `${ENDPOINT}?key=${KEY}`,
-      JSON.stringify({ v: 1, sentAt: 2, writeKey: KEY, events: [event("a")] }),
+      JSON.stringify({ v: 1, sentAt: 2, transport: "beacon", writeKey: KEY, events: [event("a")] }),
     );
     expect(inUrl.violations.join("\n")).toContain("url");
   });
