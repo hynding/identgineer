@@ -76,9 +76,9 @@ test.describe("the header at ordinary sizes is arranged as it always was", () =>
   }
 });
 
-test.describe("a card is padded as the tokens say at ordinary sizes", () => {
-  for (const width of [390, 768, 1280]) {
-    test(`at ${String(width)}px the inline padding of every card region is the density's, in every layout and UX mode`, async ({
+test.describe("a card is padded as the tokens say, and only a narrow card gives up padding", () => {
+  for (const width of [320, 390, 768, 1280]) {
+    test(`at ${String(width)}px the inline padding of every card region follows the rule, in every layout and UX mode`, async ({
       page,
     }) => {
       test.setTimeout(120_000);
@@ -89,35 +89,127 @@ test.describe("a card is padded as the tokens say at ordinary sizes", () => {
           await applyAxes(page, { layout, ux });
           await frames(page, 2);
           const found = await page.evaluate(() => {
-            // The expected value is computed from the tokens the card itself reads.
-            const probe = document.createElement("div");
-            probe.style.paddingInlineStart =
-              "calc(var(--idg-space-m) * var(--idg-density-gap-scale))";
-            document.body.append(probe);
-            const expected = Number.parseFloat(getComputedStyle(probe).paddingInlineStart);
-            probe.remove();
-            const seen: number[] = [];
+            // Every value is computed from the tokens the card itself reads: its padding is the
+            // density's, unless the card is so narrow that the text would be left less than the
+            // minimum width, when the padding gives way down to the floor.
+            const lengthOf = (value: string): number => {
+              const probe = document.createElement("div");
+              probe.style.paddingInlineStart = value;
+              document.body.append(probe);
+              const pixels = Number.parseFloat(getComputedStyle(probe).paddingInlineStart);
+              probe.remove();
+              return pixels;
+            };
+            const pad = lengthOf("calc(var(--idg-space-m) * var(--idg-density-gap-scale))");
+            const floor = lengthOf("var(--idg-space-2xs)");
+            const minimum = lengthOf("var(--idg-size-xs)");
+            const seen: { padding: number; expected: number }[] = [];
             for (const card of document.querySelectorAll("idg-card")) {
+              const box = card.shadowRoot?.querySelector<HTMLElement>('[part="card"]');
+              if (!box) continue;
+              const style = getComputedStyle(box);
+              const room =
+                box.getBoundingClientRect().width -
+                Number.parseFloat(style.borderInlineStartWidth) -
+                Number.parseFloat(style.borderInlineEndWidth);
+              const expected = Math.min(pad, Math.max(floor, (room - minimum) / 2));
               for (const part of ["header", "body"]) {
                 const region = card.shadowRoot?.querySelector(`[part="${part}"]`);
-                if (region)
-                  seen.push(Number.parseFloat(getComputedStyle(region).paddingInlineStart));
+                if (region) {
+                  const padding = Number.parseFloat(getComputedStyle(region).paddingInlineStart);
+                  seen.push({ padding, expected });
+                }
               }
             }
-            return { expected, seen };
+            return seen;
           });
-          if (found.seen.length === 0) failures.push(`${layout} / ${ux}: no card regions`);
-          for (const padding of found.seen) {
-            if (Math.abs(padding - found.expected) > 0.1) {
-              failures.push(
-                `${layout} / ${ux}: ${String(padding)}px, not ${String(found.expected)}px`,
-              );
+          if (found.length === 0) failures.push(`${layout} / ${ux}: no card regions`);
+          for (const { padding, expected } of found) {
+            if (Math.abs(padding - expected) > 0.1) {
+              failures.push(`${layout} / ${ux}: ${String(padding)}px, not ${String(expected)}px`);
               break;
             }
           }
         }
       }
       expect(failures).toEqual([]);
+    });
+  }
+});
+
+test.describe("a card keeps the words that fit its text whole", () => {
+  /**
+   * The pieces of the text in the cards (a word, or the part of one up to a hyphen) that run over
+   * more than one line although they are no wider than the room the card's rule leaves the text.
+   * A piece wider than that may break: nothing else would hold it.
+   */
+  const brokenWords = (page: Page): Promise<string[]> =>
+    page.evaluate(() => {
+      const lengthOf = (value: string): number => {
+        const probe = document.createElement("div");
+        probe.style.paddingInlineStart = value;
+        document.body.append(probe);
+        const pixels = Number.parseFloat(getComputedStyle(probe).paddingInlineStart);
+        probe.remove();
+        return pixels;
+      };
+      const pad = lengthOf("calc(var(--idg-space-m) * var(--idg-density-gap-scale))");
+      const floor = lengthOf("var(--idg-space-2xs)");
+      const minimum = lengthOf("var(--idg-size-xs)");
+      const measure = document.createElement("canvas").getContext("2d");
+      if (!measure) throw new Error("no canvas");
+      // The card's borders and the measuring of a string are not exact, so a piece must fit with a little to spare.
+      const EDGE = 6;
+      const found: string[] = [];
+      for (const card of document.querySelectorAll("idg-card")) {
+        const box = card.shadowRoot?.querySelector<HTMLElement>('[part="card"]');
+        if (!box) continue;
+        const style = getComputedStyle(box);
+        const width =
+          box.getBoundingClientRect().width -
+          Number.parseFloat(style.borderInlineStartWidth) -
+          Number.parseFloat(style.borderInlineEndWidth);
+        const room = width - 2 * Math.min(pad, Math.max(floor, (width - minimum) / 2));
+        const walk = (node: Node): void => {
+          if (node instanceof Text) {
+            const parent = node.parentElement;
+            if (!parent?.checkVisibility()) return;
+            const text = getComputedStyle(parent);
+            measure.font = `${text.fontWeight} ${text.fontSize} ${text.fontFamily}`;
+            const spacing = Number.parseFloat(text.letterSpacing) || 0;
+            for (const piece of node.data.matchAll(/[^\s-]+-?/g)) {
+              const natural = measure.measureText(piece[0]).width + spacing * piece[0].length;
+              const range = document.createRange();
+              range.setStart(node, piece.index);
+              range.setEnd(node, piece.index + piece[0].length);
+              const lines = new Set([...range.getClientRects()].map((box) => Math.round(box.top)));
+              if (lines.size > 1 && natural + EDGE <= room) found.push(piece[0]);
+            }
+            return;
+          }
+          node.childNodes.forEach(walk);
+        };
+        walk(card);
+      }
+      return found;
+    });
+
+  for (const [width, layout, design, ux] of [
+    [768, "dashboard", "pixel", "focus"],
+    [1280, "dashboard", "pixel", "focus"],
+    [1280, "dashboard", "flat", "comfortable"],
+    [390, "top-bar", "flat", "comfortable"],
+  ] as const) {
+    test(`${layout} / ${design} / ${ux} at ${String(width)}px: no word that fits a card's text is broken inside`, async ({
+      page,
+    }) => {
+      await openShell(page, { width });
+      await applyAxes(page, { layout, ux });
+      await page.evaluate((value) => {
+        document.documentElement.dataset.design = value;
+      }, design);
+      await frames(page, 3);
+      expect(await brokenWords(page)).toEqual([]);
     });
   }
 });
