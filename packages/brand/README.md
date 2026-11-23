@@ -489,13 +489,16 @@ is. Masks and clip paths also have limits of their own: 128 applications in all 
 another (`too-many-masks`, `masks-too-deep`).
 
 Dashes are counted from geometry: an upper bound of each shape's length in its own user units (a
-curve is no longer than the lines through its control points, an arc than its whole ellipse with
-its radii scaled up as SVG scales them), divided by the shortest dash period anywhere in the logo,
-since a dash array inherits, through `use` too. Dashing happens in the shape's own user space, so
-no transform changes the count; that is why `vector-effect` (whose non-scaling stroke is dashed
-after the transforms), percentage dashes and `em` and `ex` lengths, all of which depend on the page,
-are not kept. The cost model reads back only the units a grammar keeps, and refuses anything else
-rather than reading it as zero.
+curve is no longer than the lines through its control points, an arc than its whole ellipse with its
+radii scaled up as SVG scales them), divided by the dash period, times the dashes in each repeat
+(half the lengths of an even dash array, all of an odd one, which repeats twice over), with a repeat
+more for each subpath, which starts the pattern afresh. Since a dash array inherits, through `use`
+too, every shape is counted at the shortest period and the most dashes in a repeat anywhere in the
+logo. The overdraw counts a stroke's dashes with the same function, so the two cannot disagree.
+Dashing happens in the shape's own user space, so no transform changes the count; that is why
+`vector-effect` (whose non-scaling stroke is dashed after the transforms), percentage dashes and
+`em` and `ex` lengths, all of which depend on the page, are not kept. The cost model reads back only
+the units a grammar keeps, and refuses anything else rather than reading it as zero.
 
 The weights were measured in Chromium, drawing at 600 CSS pixels on a loaded four-core machine:
 about 10 µs a unit for stroked lines, and the same per unit for curves (a stroked cubic took about
@@ -579,71 +582,130 @@ dash. The stroke ends charge all of these by their outline.
 
 #### Crossing shapes in a clip path
 
-A clip path of several shapes is clipped to their union, and the union of shapes whose edges cross
-costs in proportion to the crossings, which can grow as the product of their segments. Two zigzags
-crossing each other took, to their first frame, 33 ms with 51 segments each, 255 ms with 101,
-0.8 seconds with 141 and 14.9 seconds with 200 (the browser keeps the union afterwards, so only the
-first frame pays). So the sum, over every pair of shapes in each clip path, of the product of their
-segment counts is at most `clipCrossings`, 10,000 (`drawing-too-costly` over it). A line counts 1,
-a quadratic or an arc 2, a cubic 3; a rect 4, a rounded rect 12, a circle or an ellipse 8; a `use`
-the sum of what it draws. A clip path of one shape costs nothing here, however long, and every
-clip path in the clean corpus and in the realistic logos (Figma's included) holds one shape.
+A clip path of several shapes is clipped to their union, and the union costs in proportion to how
+often the edges cross, each shape's own edges among them, which can grow as the square of the
+segments. Two zigzags crossing each other took, to their first frame, 33 ms with 51 segments each,
+255 ms with 101, 0.8 seconds with 141 and 14.9 seconds with 200 (the browser keeps the union
+afterwards, so only the first frame pays). Drawn as two subpaths of one path beside a square of no
+consequence, they took 0.24, 0.95, 2.4 and 9.0 seconds with 100, 150, 200 and 300 segments each;
+as the only shape, 1 ms. So a clip path of more than one shape counts half the square of its
+shapes' segments added up, and all clip paths together count at most `clipCrossings`, 10,000
+(`drawing-too-costly` over it). A line counts 1, a quadratic or an arc 2, a cubic 3; a rect 4, a
+rounded rect 12, a circle or an ellipse 8; a `use` what it draws, and a `use` of a group as many
+shapes as the group holds (Chromium clips nothing with one). At the limit the costliest
+arrangements built took under a quarter of a second: a shape of two crossing zigzags of 68
+segments beside a square, two zigzags of 70 crossing each other, five of 28 (see the table below).
+
+A clip path of one shape counts nothing, however long: it clips by its outline. Measured with two
+zigzags of 2,000 segments crossing as subpaths of one shape, it took 1 ms at 600 pixels and 26 to
+33 ms at 2000 twice as dense or inline, alone, with a transform on the shape or on the clip path,
+through a `use`, with `clipPathUnits="objectBoundingBox"`, with the even-odd rule, applied inside
+another clip path, and applied twice over. Every clip path in the clean corpus and in the
+realistic logos (Figma's included) holds one shape.
+
+A known limitation: clip paths made of many shapes are refused. A clip path of 18 circles, or of
+shapes whose segments come to 142 or more, is over the limit (17 circles, or 141 segments, are
+not). A logo that needs one can usually merge its clipping shapes into one path, which clips the
+same when they wind the same way and counts nothing here.
 
 Masks do not union their content, so none of this applies to them; what they could still do (a
 `transform`, a `clip-path` or a `mask` on a mask, a mask on a clip path's shape) Chromium ignores,
 and the allowlist does not keep.
 
-The costliest logos the sanitiser accepts of each kind, rasterised in full on that machine (load
-average about 8 on four cores), at 600 CSS pixels and at 2000 with a device scale factor of 2:
+#### What each term stands for
 
-| The costliest accepted                                             | `drawingCost` | `overdraw` | 600 px | 2000 px, ×2 |
-| ------------------------------------------------------------------ | ------------- | ---------- | ------ | ----------- |
-| One path of 4,853 long stroked lines                               | 4,886         | 499.9      | 85 ms  | 0.31 s      |
-| One path of 390 wide stroked arcs                                  | 5,493         | 497.6      | 19 ms  | 0.10 s      |
-| 190,000 round-capped hairline dashes                               | 191,791       | 4.1        | 27 ms  | 0.05 s      |
-| 446 full-size solid fills                                          | 16,503        | 499.5      | 16 ms  | 1.09 s      |
-| 21 full-size 64-stop linear gradients                              | 778           | 485.5      | 35 ms  | 1.53 s      |
-| 19 full-size 64-stop translucent radial gradients                  | 704           | 496.3      | 34 ms  | 1.60 s      |
-| 9 gradient fills under gradient strokes twice the image            | 334           | 476.6      | 33 ms  | 1.57 s      |
-| 29 full-size group opacity layers                                  | 3,597         | 496.5      | 21 ms  | 1.33 s      |
-| Full-size masks four deep                                          | 986           | 261.6      | 15 ms  | 0.83 s      |
-| A clip path of 1,500 crowded edges, even-odd, applied twice        | 3,543         | 412.9      | 328 ms | 0.72 s      |
-| 5,370 radial gradients on a view box 1,000 wide and 1 tall, `meet` | 199,765       | 462.1      | 50 ms  | 0.47 s      |
-| 1,047 butt dashes on a stroke as wide as the image                 | 1,081         | 499.4      | 334 ms | 0.12 s      |
-| 666 round dashes on a stroke as wide as the image                  | 700           | 499.0      | 24 ms  | 0.12 s      |
-| 523 square dashes on a stroke as wide as the image                 | 557           | 499.4      | 3 ms   | 0.04 s      |
-| 2,342 dashes on a stroke a tenth as wide as the image              | 2,376         | 499.5      | 91 ms  | 0.64 s      |
-| 3,512 dashes on a stroke 30 wide                                   | 3,547         | 499.6      | 44 ms  | 0.87 s      |
-| 522 dashes of four lengths on a stroke as wide as the image        | 557           | 499.4      | 329 ms | 0.12 s      |
-| 1,335 round joins on a stroke as wide as the image                 | 1,368         | 499.4      | 54 ms  | 0.34 s      |
-| 294 round dots on a stroke as wide as the image                    | 327           | 497.9      | 8 ms   | 0.06 s      |
-| A clip path of two zigzags of 100 segments crossing                | 502           | 33.1       | 0.54 s | 0.55 s      |
-| A clip path of two waves of 33 cubics crossing                     | 964           | 38.7       | 11 ms  | 0.05 s      |
-| 12 clip paths of a shape clipped in turn                           | 6,577         | 469.4      | 24 ms  | 1.49 s      |
-| 12 clip paths of 43 shapes                                         | 20,917        | 467.1      | 33 ms  | 1.72 s      |
-| 7 masks holding a clipped shape                                    | 3,830         | 497.8      | 26 ms  | 1.56 s      |
-| 19 radial gradients on a shape scaled a million million times      | 741           | 497.4      | 36 ms  | 1.58 s      |
+Each round of review found work that fell between two terms, so each term was attacked on its own:
+for each, the input that does the most real work for what it is charged, made as large as the
+limits allow and timed the same way as the table that follows. None comes near a second at 600
+pixels; the slowest at 2000 twice as dense is paint, as the overdraw intends.
 
-The zigzag clip path is timed to its first frame, which is what the union costs; the dashes and
-dots stop at the overdraw limit, the crossing clip paths at `clipCrossings`, the thin view box at
-the drawing cost. The two documents above that took 10.6 and 5.4 seconds at 600 pixels are
-refused, as is a single path of 3,000 edges across the image, which took 4.8 seconds at 2000 twice
-as dense, and so is each of the documents that broke the earlier model: two zigzags of 200 segments
-crossing in a clip path (14.9 seconds to their first frame), 3,000 dashes on a stroke as wide as
-the image (15.2 seconds), clip paths of 43 shapes or of clipped shapes, which Chromium draws as
-masks (4.7 seconds), a transform that overflows to infinity, whose `NaN` once turned the overdraw
-off, and a view box stretched or sliced past the square the budget assumes, which is now shown
-whole instead (below).
+| Term                                   | The work it stands for                | What does the most work for what it is charged                                              | 600 px     | 2000 px, ×2  | Inline, 600 px |
+| -------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------- | ---------- | ------------ | -------------- |
+| Drawing cost: a line, 1                | walking and stroking a segment        | 19 uses of a path of 10,000 tiny segments, filled and stroked with round joins              | 165 ms     | 1.05 s       | 217 ms         |
+| Drawing cost: a curve, 6 to 14         | flattening it into segments           | 9 uses of 2,000 tiny cubics; 7 of 2,000 tiny arcs                                           | 36, 39 ms  | 0.10, 0.28 s | 47, 50 ms      |
+| Drawing cost: a shape, 32              | setting a shape up                    | 2,777 tiny circles, filled; stroked                                                         | 5, 5 ms    | 0.03, 0.04 s | 37, 52 ms      |
+| Drawing cost: an element, 1            | walking the tree                      | 4,095 empty groups; 4,093 uses of a small square (the element limit)                        | 2, 13 ms   | 0.03, 0.04 s | 32, 71 ms      |
+| Drawing cost: a layer, 50              | setting a layer up                    | 2,325 small shapes with opacity on a fill and a stroke                                      | 8 ms       | 0.04 s       | 52 ms          |
+| Drawing cost: a mask or clip path, 200 | applying it                           | 128 small shapes each masked; each clipped (the application limit)                          | 3, 8 ms    | 0.03, 0.10 s | 34 ms          |
+| Drawing cost: a dash, 1                | starting a dash, its caps             | 190,000 round hairline dashes; 180,000 of 64 lengths                                        | 31, 19 ms  | 0.06, 0.05 s | 151, 112 ms    |
+| Overdraw: area by paint                | painting pixels                       | 19 full-size radial gradients of 64 translucent stops, repeating every 0.3% of the image    | 39 ms      | 1.71 s       | 80 ms          |
+| Overdraw: layers and masks             | an offscreen surface, and blending it | 131 group opacity layers over small shapes spread across the image                          | 14 ms      | 0.69 s       | 19 ms          |
+| Overdraw: edges, crowded rows          | rasterising every edge on every row   | 4,853 long lines in one path; 1,500 edges in an even-odd clip path                          | 73, 316 ms | 0.32, 0.71 s | 93, 127 ms     |
+| Overdraw: stroke ends                  | walking the outline of joins and caps | 1,047 butt dashes on a stroke as wide as the image; 875 miter joins at a miter limit of 100 | 319, 4 ms  | 0.12, 0.05 s | 104, 22 ms     |
+| Overdraw: clip paths drawn as masks    | a mask surface                        | 12 clip paths of 43 shapes                                                                  | 33 ms      | 1.81 s       | 35 ms          |
+| `clipCrossings`                        | combining a clip path's shapes        | a shape of two crossing zigzags of 68 segments, beside a square                             | 138 ms     | 0.18 s       | 166 ms         |
+
+The costliest logos the sanitiser accepts of each kind, rasterised in full as an image on that
+machine (load average about 8 on four cores, median of three) at 600 CSS pixels and at 2000 with a
+device scale factor of 2, and drawn inline at 600 until a screenshot shows it:
+
+| The costliest accepted                                             | `drawingCost` | `overdraw` | 600 px | 2000 px, ×2 | Inline, 600 px |
+| ------------------------------------------------------------------ | ------------- | ---------- | ------ | ----------- | -------------- |
+| One path of 4,853 long stroked lines                               | 4,886         | 499.9      | 73 ms  | 0.32 s      | 93 ms          |
+| One path of 390 wide stroked arcs                                  | 5,493         | 497.6      | 25 ms  | 0.10 s      | 32 ms          |
+| 190,000 round-capped hairline dashes                               | 191,801       | 4.1        | 31 ms  | 0.06 s      | 151 ms         |
+| 180,000 hairline dashes of 64 lengths                              | 180,757       | 24.0       | 19 ms  | 0.05 s      | 112 ms         |
+| 180,000 hairline dashes of two lengths                             | 180,549       | 24.0       | 20 ms  | 0.04 s      | 110 ms         |
+| 446 full-size solid fills                                          | 16,503        | 499.5      | 17 ms  | 1.19 s      | 34 ms          |
+| 21 full-size 64-stop linear gradients                              | 778           | 485.5      | 34 ms  | 1.41 s      | 42 ms          |
+| 19 full-size 64-stop translucent radial gradients                  | 704           | 496.3      | 34 ms  | 1.55 s      | 70 ms          |
+| 9 gradient fills under gradient strokes twice the image            | 334           | 476.6      | 33 ms  | 1.48 s      | 96 ms          |
+| 29 full-size group opacity layers                                  | 3,597         | 496.5      | 21 ms  | 1.27 s      | 32 ms          |
+| Full-size masks four deep                                          | 986           | 261.6      | 17 ms  | 0.82 s      | 53 ms          |
+| A clip path of 1,500 crowded edges, even-odd, applied twice        | 3,543         | 412.9      | 316 ms | 0.71 s      | 127 ms         |
+| 5,370 radial gradients on a view box 1,000 wide and 1 tall, `meet` | 199,765       | 462.1      | 79 ms  | 0.48 s      | 156 ms         |
+| 1,047 butt dashes on a stroke as wide as the image                 | 1,082         | 499.4      | 319 ms | 0.12 s      | 104 ms         |
+| 666 round dashes on a stroke as wide as the image                  | 701           | 499.0      | 25 ms  | 0.12 s      | 50 ms          |
+| 523 square dashes on a stroke as wide as the image                 | 558           | 499.4      | 3 ms   | 0.04 s      | 34 ms          |
+| 2,342 dashes on a stroke a tenth as wide as the image              | 2,377         | 499.5      | 88 ms  | 0.66 s      | 49 ms          |
+| 3,512 dashes on a stroke 30 wide                                   | 3,548         | 499.6      | 46 ms  | 0.89 s      | 31 ms          |
+| 522 dashes of four lengths on a stroke as wide as the image        | 1,082         | 499.4      | 331 ms | 0.12 s      | 84 ms          |
+| 1,335 round joins on a stroke as wide as the image                 | 1,368         | 499.4      | 53 ms  | 0.32 s      | 50 ms          |
+| 294 round dots on a stroke as wide as the image                    | 327           | 497.9      | 8 ms   | 0.06 s      | 23 ms          |
+| A clip path of two zigzags of 70 segments crossing                 | 442           | 33.1       | 159 ms | 0.19 s      | 208 ms         |
+| A clip path of a shape of two crossing zigzags of 68, and a square | 442           | 33.1       | 138 ms | 0.18 s      | 166 ms         |
+| A clip path of five zigzags of 28 crossing                         | 538           | 33.1       | 136 ms | 0.14 s      | 164 ms         |
+| A clip path of two waves of 23 cubics crossing                     | 764           | 37.5       | 6 ms   | 0.05 s      | 40 ms          |
+| 12 clip paths of a shape clipped in turn                           | 6,577         | 469.4      | 24 ms  | 1.48 s      | 33 ms          |
+| 12 clip paths of 43 shapes                                         | 20,917        | 467.1      | 33 ms  | 1.81 s      | 35 ms          |
+| 7 masks holding a clipped shape                                    | 3,830         | 497.8      | 28 ms  | 1.47 s      | 52 ms          |
+| 19 radial gradients on a shape scaled a million million times      | 741           | 497.4      | 37 ms  | 1.62 s      | 73 ms          |
+
+The clip paths are timed to their first frame, which is what the union costs; the dashes on a wide
+stroke and the round dots stop at the overdraw limit, the crossing clip paths at `clipCrossings`,
+the hairline dashes and the thin view box at the drawing cost. The two documents above that took
+10.6 and 5.4 seconds at 600 pixels are refused, as is a single path of 3,000 edges across the
+image, which took 4.8 seconds at 2000 twice as dense, and so is each of the documents that broke an
+earlier model: two zigzags of 200 segments crossing in a clip path (14.9 seconds to their first
+frame), or drawn as one shape beside a square (2.4 seconds here, 12.5 on a reviewer's machine),
+3,000 dashes on a stroke as wide as the image (15.2 seconds), clip paths of 43 shapes or of clipped
+shapes, which Chromium draws as masks (4.7 seconds), a hairline zigzag with a dash array of 64
+lengths, whose dashes were once counted as one a repeat (1.1 seconds as an image at 600 pixels,
+3.9 inline, where the same drawing cost in dashes of two lengths takes 30 and 136 ms), a transform
+that overflows to infinity, whose `NaN` once turned the overdraw off, and a view box stretched or
+sliced past the square the budget assumes, which is now shown whole instead (below).
 
 The browser test rasterises each of these families under a budget of 3 seconds at 600 pixels and 6
-at 2000 twice as dense. With the overdraw limit raised tenfold, nine families blew through them
-(4.5 to 16.5 seconds: the gradients, layers, masks, the even-odd clip path, the butt and
-four-length dashes and the scaled shape), and in four more another limit took over first; with
-`clipCrossings` raised tenfold, the zigzag clip path took 10 to 54 seconds. Real logos stay inside
-both budgets: a Figma export with eight full-size alpha masks and ten gradients under six clip
-paths come to about 59% of the overdraw (they take 0.9 and 0.46 seconds themselves at 2000 twice as
+at 2000 twice as dense, and draws each inline at 600 under 3 seconds. With the overdraw limit raised
+tenfold, nine families blew through them (4.5 to 16.5 seconds: the gradients, layers, masks, the
+even-odd clip path, the butt and four-length dashes and the scaled shape), and in four more another
+limit took over first; with `clipCrossings` raised tenfold, the zigzag clip path took 10 to 54
+seconds; counting only the crossings between shapes, the clip path of a shape crossing itself took
+10 seconds to draw and over two minutes to rasterise; and counting one dash a repeat in the drawing
+cost, the hairline dashes of 64 lengths ran into the overdraw limit first. Real logos stay inside
+both budgets: a Figma export with eight full-size alpha masks and ten gradients under six clip paths
+come to about 59% of the overdraw (they take 0.9 and 0.46 seconds themselves at 2000 twice as
 dense), emblems of 8,000 cubics to 9.3%, finely dashed rings to 7.9%, traced artwork near the input
 limit to under 1%.
+
+What the budgets cover: a logo drawn as an `<img>` (or a CSS background) at any size up to 2000 CSS
+pixels at a device scale factor of 2, and a logo drawn inline up to 600 CSS pixels at a scale factor
+of 1. Inline at larger sizes is not supported. Chromium draws a large inline SVG tile by tile, and
+every tile walks again each path it touches, so long paths cost many times over: seven uses of a
+serpentine of 25,000 segments with round joins, at 88% of the drawing cost, took 0.57 seconds as an
+image at 600 pixels, 0.64 at 2000 twice as dense and 0.48 inline at 600, but 10.9 seconds inline at
+2000 twice as dense. Show a logo at a large size only through `logoDataUrl` in an `<img>` with a
+bounded width and height.
 
 What the budgets do not bound: other renderers (Firefox, Safari, librsvg, a design tool), which
 were not measured; a GPU rasteriser, which is usually faster; and sizes beyond those measured,
@@ -704,9 +766,9 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. The geometry is kept to six
 decimals; colours set only by CSS are lost (see above).
 
-The tests hold it to that: a hostile corpus of 190 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 104
-refused, and every removal, by element, attribute and reason, for each of the 86 accepted) and
+The tests hold it to that: a hostile corpus of 196 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 108
+refused, and every removal, by element, attribute and reason, for each of the 88 accepted) and
 generated oversized inputs, each refused or accepted with an output an independent checker finds
 inert (its own tokeniser, its own copy of the allowlist, its own grammar for every value and its
 own rules for where each element may stand); a clean corpus of logos as Inkscape, Illustrator,
