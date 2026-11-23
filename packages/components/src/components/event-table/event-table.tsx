@@ -76,7 +76,7 @@ export class IdgEventTable {
   @Prop() error?: string;
 
   /** Rows on a page, 1 to 100. */
-  @Prop({ attribute: "page-size" }) pageSize = EVENT_TABLE_LIMITS.defaultPageSize;
+  @Prop({ attribute: "page-size" }) pageSize: number = EVENT_TABLE_LIMITS.defaultPageSize;
 
   /** The current page, from 1. A page beyond the last is drawn as the last. */
   @Prop({ mutable: true, reflect: true }) page = 1;
@@ -93,6 +93,7 @@ export class IdgEventTable {
   /** The column the rows are sorted by: `time` or `name`. Empty leaves the order given. */
   @Prop({ mutable: true, reflect: true, attribute: "sort-key" }) sortKey: EventSortKey | "" = "";
 
+  /** The direction of the sort. */
   @Prop({ mutable: true, reflect: true, attribute: "sort-direction" })
   sortDirection: EventSortDirection = "ascending";
 

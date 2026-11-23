@@ -64,9 +64,7 @@ async function mount(
     labels?: Record<string, string>;
   } = {},
 ) {
-  const rendered = await renderWithInternals(
-    <idg-property-picker properties={props.properties as never} {...props} />,
-  );
+  const rendered = await renderWithInternals(<idg-property-picker {...(props as object)} />);
   return { ...rendered, root: rendered.root as PickerElement };
 }
 

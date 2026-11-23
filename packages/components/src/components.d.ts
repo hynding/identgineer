@@ -732,8 +732,9 @@ export namespace Components {
           * Rows on a page, 1 to 100.
           * @default 10
          */
-        "pageSize": 10;
+        "pageSize": number;
         /**
+          * The direction of the sort.
           * @default "ascending"
          */
         "sortDirection": EventSortDirection;
@@ -3927,8 +3928,9 @@ declare namespace LocalJSX {
           * Rows on a page, 1 to 100.
           * @default 10
          */
-        "pageSize"?: 10;
+        "pageSize"?: number;
         /**
+          * The direction of the sort.
           * @default "ascending"
          */
         "sortDirection"?: EventSortDirection;
@@ -5477,7 +5479,7 @@ declare namespace LocalJSX {
         "caption": string;
         "loading": boolean;
         "error": string;
-        "pageSize": 10;
+        "pageSize": number;
         "page": number;
         "total": number;
         "sortable": boolean;
