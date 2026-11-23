@@ -256,22 +256,35 @@ describe("revoking consent", () => {
 
   describe("by Global Privacy Control or Do Not Track appearing", () => {
     it.each([
-      ["gpc", (tab: ReturnType<typeof openTab>) => tab.page.setGpc(true)],
-      ["dnt", (tab: ReturnType<typeof openTab>) => tab.page.setDnt("1")],
-    ] as const)("treats %s as a revocation that keeps the consent record", async (reason, appear) => {
-      const world = createWorld();
-      const tab = grantedTab(world);
-      tab.tracker.track("clicked", { target: "a" });
-      appear(tab);
-      expect(tab.tracker.consent.get()).toEqual({ state: "denied", reason });
-      expect(world.local.keys()).toEqual([CONSENT_KEY]);
-      expect(world.local.peek(CONSENT_KEY)).toBe(consentRecord("granted"));
-      expect(tab.session.keys()).toEqual([]);
-      expect(world.clock.pendingTimers()).toBe(0);
-      world.clock.advance(HOUR);
-      await settle();
-      expect(world.collector.requests).toEqual([]);
-    });
+      [
+        "gpc",
+        (tab: ReturnType<typeof openTab>) => {
+          tab.page.setGpc(true);
+        },
+      ],
+      [
+        "dnt",
+        (tab: ReturnType<typeof openTab>) => {
+          tab.page.setDnt("1");
+        },
+      ],
+    ] as const)(
+      "treats %s as a revocation that keeps the consent record",
+      async (reason, appear) => {
+        const world = createWorld();
+        const tab = grantedTab(world);
+        tab.tracker.track("clicked", { target: "a" });
+        appear(tab);
+        expect(tab.tracker.consent.get()).toEqual({ state: "denied", reason });
+        expect(world.local.keys()).toEqual([CONSENT_KEY]);
+        expect(world.local.peek(CONSENT_KEY)).toBe(consentRecord("granted"));
+        expect(tab.session.keys()).toEqual([]);
+        expect(world.clock.pendingTimers()).toBe(0);
+        world.clock.advance(HOUR);
+        await settle();
+        expect(world.collector.requests).toEqual([]);
+      },
+    );
 
     it("lets tracking resume, on a new session, when the signal goes away", async () => {
       const world = createWorld();

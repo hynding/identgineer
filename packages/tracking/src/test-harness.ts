@@ -98,8 +98,11 @@ export const returningTab = (world: World, options: TabOptions = {}): Tab => {
   return openTab(world, options);
 };
 
-export const consentRecord = (state: "granted" | "denied", version = 1, decidedAt = START): string =>
-  JSON.stringify({ state, version, decidedAt });
+export const consentRecord = (
+  state: "granted" | "denied",
+  version = 1,
+  decidedAt = START,
+): string => JSON.stringify({ state, version, decidedAt });
 
 /** Lets the fake network's answers and the SDK's promise chains run. */
 export const settle = async (): Promise<void> => {

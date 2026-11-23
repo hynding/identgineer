@@ -12,7 +12,8 @@ import {
 const SECOND = 1000;
 
 const trackMany = (tab: Tab, count: number): void => {
-  for (let index = 0; index < count; index += 1) tab.tracker.track("clicked", { target: `t${String(index)}` });
+  for (let index = 0; index < count; index += 1)
+    tab.tracker.track("clicked", { target: `t${String(index)}` });
 };
 
 const clean = (tab: Tab): void => {
@@ -32,14 +33,12 @@ describe("batching", () => {
     clean(tab);
   });
 
-  it("takes maxBatchSize from the option and sends the rest in further requests", async () => {
+  it("takes maxBatchSize from the option; a flush sends everything queued, a batch at a time", async () => {
     const tab = grantedTab(createWorld(), { maxBatchSize: 3 });
     trackMany(tab, 7);
     await settle();
-    expect(tab.world.collector.batches().map((batch) => batch.events.length)).toEqual([3, 3]);
-    tab.world.clock.advance(5 * SECOND);
-    await settle();
     expect(tab.world.collector.batches().map((batch) => batch.events.length)).toEqual([3, 3, 1]);
+    expect(tab.world.clock.pendingTimers()).toBe(0);
     clean(tab);
   });
 
@@ -137,7 +136,8 @@ describe("the request", () => {
 describe("the payload cap", () => {
   it("splits a batch that would be over maxPayloadBytes, and never sends a body over it", async () => {
     const tab = grantedTab(createWorld(), { maxPayloadBytes: 1024, maxBatchSize: 100 });
-    for (let index = 0; index < 12; index += 1) tab.tracker.track("clicked", { target: "x".repeat(200) });
+    for (let index = 0; index < 12; index += 1)
+      tab.tracker.track("clicked", { target: "x".repeat(200) });
     await tab.tracker.flush();
     const { requests } = tab.world.collector;
     expect(requests.length).toBeGreaterThan(1);
@@ -148,9 +148,11 @@ describe("the payload cap", () => {
 
   it("counts bytes, not characters", async () => {
     const tab = grantedTab(createWorld(), { maxPayloadBytes: 1024, maxStringLength: 1024 });
-    for (let index = 0; index < 5; index += 1) tab.tracker.track("clicked", { target: "€".repeat(100) });
+    for (let index = 0; index < 5; index += 1)
+      tab.tracker.track("clicked", { target: "€".repeat(100) });
     await tab.tracker.flush();
-    for (const request of tab.world.collector.requests) expect(request.bytes).toBeLessThanOrEqual(1024);
+    for (const request of tab.world.collector.requests)
+      expect(request.bytes).toBeLessThanOrEqual(1024);
     expect(tab.world.collector.deliveredEvents()).toHaveLength(5);
   });
 
@@ -320,20 +322,23 @@ describe("retry", () => {
 });
 
 describe("rejection", () => {
-  it.each([400, 401, 403, 404, 413, 422])("drops the batch on a %i, reports it and does not retry", async (status) => {
-    const tab = grantedTab(createWorld());
-    tab.world.collector.answer({ status });
-    trackMany(tab, 2);
-    await tab.tracker.flush();
-    tab.world.clock.advance(3600 * SECOND);
-    await settle();
-    expect(tab.world.collector.requests).toHaveLength(1);
-    expect(tab.drops).toHaveLength(1);
-    expect(tab.drops[0]?.code).toBe("rejected-by-server");
-    expect(tab.drops[0]?.message).toContain(String(status));
-    expect(tab.world.local.peek(QUEUE_KEY)).toBeNull();
-    expect(tab.world.clock.pendingTimers()).toBe(0);
-  });
+  it.each([400, 401, 403, 404, 413, 422])(
+    "drops the batch on a %i, reports it and does not retry",
+    async (status) => {
+      const tab = grantedTab(createWorld());
+      tab.world.collector.answer({ status });
+      trackMany(tab, 2);
+      await tab.tracker.flush();
+      tab.world.clock.advance(3600 * SECOND);
+      await settle();
+      expect(tab.world.collector.requests).toHaveLength(1);
+      expect(tab.drops).toHaveLength(1);
+      expect(tab.drops[0]?.code).toBe("rejected-by-server");
+      expect(tab.drops[0]?.message).toContain(String(status));
+      expect(tab.world.local.peek(QUEUE_KEY)).toBeNull();
+      expect(tab.world.clock.pendingTimers()).toBe(0);
+    },
+  );
 
   it("goes on to send what came after", async () => {
     const tab = grantedTab(createWorld());
@@ -349,10 +354,29 @@ describe("rejection", () => {
 describe("hostile answers", () => {
   it.each([
     ["no status", () => Promise.resolve({ headers: { get: () => null } })],
-    ["a status that is not a number", () => Promise.resolve({ status: "200", headers: { get: () => null } })],
+    [
+      "a status that is not a number",
+      () => Promise.resolve({ status: "200", headers: { get: () => null } }),
+    ],
     ["no headers on a 429", () => Promise.resolve({ status: 429 })],
-    ["headers that throw", () => Promise.resolve({ status: 503, headers: { get: () => { throw new Error("hostile"); } } })],
-    ["a fetch that throws at once", () => { throw new Error("sync"); }],
+    [
+      "headers that throw",
+      () =>
+        Promise.resolve({
+          status: 503,
+          headers: {
+            get: () => {
+              throw new Error("hostile");
+            },
+          },
+        }),
+    ],
+    [
+      "a fetch that throws at once",
+      () => {
+        throw new Error("sync");
+      },
+    ],
     ["a fetch that rejects with a non-error", () => Promise.reject(new Error("x"))],
   ])("keeps the batch and retries after %s", async (_label, answer) => {
     const world = createWorld();
@@ -405,7 +429,8 @@ describe("leaving the page", () => {
 
   it("splits what it sends by beacon at the payload cap too", async () => {
     const tab = grantedTab(createWorld(), { maxPayloadBytes: 1024, maxBatchSize: 100 });
-    for (let index = 0; index < 12; index += 1) tab.tracker.track("clicked", { target: "x".repeat(200) });
+    for (let index = 0; index < 12; index += 1)
+      tab.tracker.track("clicked", { target: "x".repeat(200) });
     tab.page.hide();
     await settle();
     const beacons = tab.world.collector.requests.filter((request) => request.via === "beacon");

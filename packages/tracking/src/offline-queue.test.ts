@@ -20,11 +20,15 @@ const GOOD = {
 };
 
 const trackMany = (tab: Tab, count: number): void => {
-  for (let index = 0; index < count; index += 1) tab.tracker.track("clicked", { target: `t${String(index)}` });
+  for (let index = 0; index < count; index += 1)
+    tab.tracker.track("clicked", { target: `t${String(index)}` });
 };
 
 const stored = (tab: Tab): { v: number; events: { id: string; at: number }[] } =>
-  JSON.parse(tab.world.local.peek(QUEUE_KEY) ?? "null") as { v: number; events: { id: string; at: number }[] };
+  JSON.parse(tab.world.local.peek(QUEUE_KEY) ?? "null") as {
+    v: number;
+    events: { id: string; at: number }[];
+  };
 
 describe("the offline queue", () => {
   it("is stored under one versioned key while events wait, and removed when they are delivered", async () => {
@@ -48,7 +52,7 @@ describe("the offline queue", () => {
     const world = createWorld();
     const first = grantedTab(world);
     first.tracker.track("clicked", { target: "before-reload" });
-    const [{ id }] = stored(first).events as [{ id: string }];
+    const [{ id }] = stored(first).events as unknown as [{ id: string }];
     first.tracker.dispose();
     const second = grantedTab(world);
     await second.tracker.flush();
@@ -72,7 +76,10 @@ describe("the offline queue", () => {
 
   it("is neither sent nor kept for a visitor who has not granted", async () => {
     const world = createWorld();
-    world.local.seed(QUEUE_KEY, JSON.stringify({ v: 1, events: [{ ...GOOD, at: world.clock.now() }] }));
+    world.local.seed(
+      QUEUE_KEY,
+      JSON.stringify({ v: 1, events: [{ ...GOOD, at: world.clock.now() }] }),
+    );
     const tab = openTab(world);
     await tab.tracker.flush();
     world.clock.advance(HOUR);
@@ -107,7 +114,8 @@ describe("the offline queue", () => {
 
   it("holds the cap on bytes", () => {
     const tab = grantedTab(createWorld(), { maxQueueBytes: 2048, fetch: null, maxBatchSize: 500 });
-    for (let index = 0; index < 30; index += 1) tab.tracker.track("clicked", { target: "x".repeat(100) });
+    for (let index = 0; index < 30; index += 1)
+      tab.tracker.track("clicked", { target: "x".repeat(100) });
     expect((tab.world.local.peek(QUEUE_KEY) ?? "").length).toBeLessThanOrEqual(2048 + 64);
     expect(stored(tab).events.length).toBeGreaterThan(0);
     expect(stored(tab).events.length).toBeLessThan(30);
@@ -123,10 +131,22 @@ describe("the offline queue", () => {
       ["no events list", JSON.stringify({ v: 1 })],
       ["an extra key", JSON.stringify({ v: 1, events: [good], extra: 1 })],
       ["an own __proto__", `{"v":1,"events":[],"__proto__":{"x":1}}`],
-      ["an event with an own __proto__", `{"v":1,"events":[{"id":"AAAAAAAAAAAAAAAAAAAAAA","name":"clicked","at":1,"session":"BBBBBBBBBBBBBBBBBBBBBB","__proto__":{"x":1}}]}`],
-      ["an event with an unknown key", JSON.stringify({ v: 1, events: [{ ...good, ip: "1.2.3.4" }] })],
-      ["one bad event among good ones", JSON.stringify({ v: 1, events: [good, { ...good, name: "Bad Name" }] })],
-      ["a property that is nested", JSON.stringify({ v: 1, events: [{ ...good, properties: { a: { b: 1 } } }] })],
+      [
+        "an event with an own __proto__",
+        `{"v":1,"events":[{"id":"AAAAAAAAAAAAAAAAAAAAAA","name":"clicked","at":1,"session":"BBBBBBBBBBBBBBBBBBBBBB","__proto__":{"x":1}}]}`,
+      ],
+      [
+        "an event with an unknown key",
+        JSON.stringify({ v: 1, events: [{ ...good, ip: "1.2.3.4" }] }),
+      ],
+      [
+        "one bad event among good ones",
+        JSON.stringify({ v: 1, events: [good, { ...good, name: "Bad Name" }] }),
+      ],
+      [
+        "a property that is nested",
+        JSON.stringify({ v: 1, events: [{ ...good, properties: { a: { b: 1 } } }] }),
+      ],
       ["far too much", `{"v":1,"events":[],"pad":"${"x".repeat(2_000_000)}"}`],
     ])("(%s)", async (_label, text) => {
       const world = createWorld();
@@ -140,7 +160,10 @@ describe("the offline queue", () => {
 
     it("accepts a well-formed queue", async () => {
       const world = createWorld();
-      world.local.seed(QUEUE_KEY, JSON.stringify({ v: 1, events: [{ ...good, at: world.clock.now() }] }));
+      world.local.seed(
+        QUEUE_KEY,
+        JSON.stringify({ v: 1, events: [{ ...good, at: world.clock.now() }] }),
+      );
       const tab = returningTab(world);
       await tab.tracker.flush();
       expect(world.collector.deliveredEvents()).toHaveLength(1);
@@ -149,7 +172,12 @@ describe("the offline queue", () => {
     it("drops duplicate ids and an event that alone is over the payload cap", async () => {
       const world = createWorld();
       const event = { ...good, at: world.clock.now() };
-      const huge = { ...good, id: "CCCCCCCCCCCCCCCCCCCCCC", at: world.clock.now(), properties: { a: "x".repeat(1024), b: "x".repeat(1024) } };
+      const huge = {
+        ...good,
+        id: "CCCCCCCCCCCCCCCCCCCCCC",
+        at: world.clock.now(),
+        properties: { a: "x".repeat(1024), b: "x".repeat(1024) },
+      };
       world.local.seed(QUEUE_KEY, JSON.stringify({ v: 1, events: [event, event, huge] }));
       const tab = returningTab(world, { maxPayloadBytes: 1024 });
       await tab.tracker.flush();
@@ -182,7 +210,9 @@ describe("the offline queue", () => {
 
     it("works when session storage is full", async () => {
       const world = createWorld();
-      const tab = grantedTab(world, { sessionStorage: createMemoryStorage({ quotaCharacters: 1 }) });
+      const tab = grantedTab(world, {
+        sessionStorage: createMemoryStorage({ quotaCharacters: 1 }),
+      });
       trackMany(tab, 2);
       await tab.tracker.flush();
       expect(world.collector.deliveredEvents()).toHaveLength(2);

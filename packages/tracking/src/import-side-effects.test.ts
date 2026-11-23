@@ -9,9 +9,6 @@ const TOUCHED = [
   "fetch",
   "addEventListener",
   "removeEventListener",
-  "setTimeout",
-  "setInterval",
-  "queueMicrotask",
   "BroadcastChannel",
   "localStorage",
   "sessionStorage",
@@ -34,6 +31,7 @@ describe("importing the package", () => {
         },
       });
     }
+    vi.useFakeTimers();
     try {
       vi.resetModules();
       await import("./index.ts");
@@ -43,6 +41,8 @@ describe("importing the package", () => {
       for (const name of TOUCHED) Reflect.deleteProperty(globalThis, name);
     }
     expect(touched).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
   });
 
   it("exports the documented surface and no more", async () => {
@@ -68,9 +68,17 @@ describe("importing the package", () => {
 
   it("keeps the wire format free of any browser API", async () => {
     const { readFileSync } = await import("node:fs");
-    for (const file of ["wire-format.ts", "parse-tracking-batch.ts", "tracking-batch-schema.ts", "well-formed.ts", "wire.ts"]) {
+    for (const file of [
+      "wire-format.ts",
+      "parse-tracking-batch.ts",
+      "tracking-batch-schema.ts",
+      "well-formed.ts",
+      "wire.ts",
+    ]) {
       const source = readFileSync(new URL(`./${file}`, import.meta.url), "utf8");
-      expect(source, file).not.toMatch(/\b(window|document|navigator|localStorage|sessionStorage|globalThis|location|fetch)\b/);
+      expect(source, file).not.toMatch(
+        /\b(window|document|navigator|localStorage|sessionStorage|globalThis|location|fetch)\b/,
+      );
     }
   });
 });

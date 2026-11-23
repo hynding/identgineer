@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createTracker } from "./index.ts";
 import { parseTrackingBatch } from "./wire.ts";
 
@@ -24,9 +24,29 @@ describe("server-side rendering", () => {
     tracker.dispose();
   });
 
-  it("opens no channel and arms no timer of its own while there is no page", () => {
-    const tracker = createTracker(OPTIONS);
-    tracker.dispose();
-    expect(typeof parseTrackingBatch).toBe("function");
+  it("opens no channel and arms no timer while there is no page", async () => {
+    vi.useFakeTimers();
+    const opened: unknown[] = [];
+    vi.stubGlobal(
+      "BroadcastChannel",
+      vi.fn((name: unknown) => {
+        opened.push(name);
+      }),
+    );
+    try {
+      const tracker = createTracker({ ...OPTIONS, autoPageViews: true });
+      tracker.track("clicked", { target: "x" });
+      await tracker.flush();
+      expect(opened).toEqual([]);
+      expect(vi.getTimerCount()).toBe(0);
+      tracker.dispose();
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shares its wire format with a server, which needs no tracker to check a body", () => {
+    expect(parseTrackingBatch({ v: 1, sentAt: 1, events: [] }).ok).toBe(false);
   });
 });

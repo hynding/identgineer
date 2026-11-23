@@ -13,7 +13,7 @@ import {
 import { createTracker } from "./create-tracker.ts";
 import { createMemoryStorage } from "./testing/memory-storage.ts";
 
-const polluted = (): boolean => ({} as { polluted?: unknown }).polluted !== undefined;
+const polluted = (): boolean => (({}) as { polluted?: unknown }).polluted !== undefined;
 
 describe("hostile inputs", () => {
   describe("prototype pollution", () => {
@@ -35,7 +35,9 @@ describe("hostile inputs", () => {
 
     it("keeps a declared constructor property an ordinary one", async () => {
       const world = createWorld();
-      const tab = grantedTab(world, { events: { clicked: { properties: { constructor: "string" } } } });
+      const tab = grantedTab(world, {
+        events: { clicked: { properties: { constructor: "string" as const } } },
+      });
       tab.tracker.track("clicked", { constructor: "x" });
       await tab.tracker.flush();
       expect(world.collector.deliveredEvents()[0]?.properties).toEqual({ constructor: "x" });
@@ -47,17 +49,25 @@ describe("hostile inputs", () => {
         openTab(world, { events: JSON.parse('{"__proto__":{"properties":{}}}') as never }),
       ).toThrow(TypeError);
       expect(() =>
-        openTab(world, { events: { a: { properties: JSON.parse('{"__proto__":"string"}') as never } } }),
+        openTab(world, {
+          events: { a: { properties: JSON.parse('{"__proto__":"string"}') as never } },
+        }),
       ).toThrow(TypeError);
       expect(polluted()).toBe(false);
     });
 
     it("reads hostile JSON from every storage key without effect", async () => {
       const world = createWorld();
-      world.local.seed(CONSENT_KEY, '{"__proto__":{"polluted":true},"state":"granted","version":1,"decidedAt":1}');
+      world.local.seed(
+        CONSENT_KEY,
+        '{"__proto__":{"polluted":true},"state":"granted","version":1,"decidedAt":1}',
+      );
       world.local.seed(QUEUE_KEY, '{"__proto__":{"polluted":true},"v":1,"events":[]}');
       const session = createMemoryStorage();
-      session.seed(SESSION_KEY, '{"__proto__":{"polluted":true},"id":"AAAAAAAAAAAAAAAAAAAAAA","last":1}');
+      session.seed(
+        SESSION_KEY,
+        '{"__proto__":{"polluted":true},"id":"AAAAAAAAAAAAAAAAAAAAAA","last":1}',
+      );
       const tab = openTab(world, { session });
       expect(tab.tracker.consent.get()).toEqual({ state: "unknown" });
       tab.tracker.consent.grant();
@@ -104,7 +114,7 @@ describe("hostile inputs", () => {
         },
       );
       expect(() => {
-        tab.tracker.track("clicked", proxy as never);
+        tab.tracker.track("clicked", proxy);
         tab.tracker.track("clicked", {
           get target(): string {
             throw new Error("hostile");
@@ -128,7 +138,7 @@ describe("hostile inputs", () => {
         },
       };
       expect(() => {
-        tab.tracker.page(hostile as never);
+        tab.tracker.page(hostile);
         tab.tracker.page(null as never);
         tab.tracker.identify(hostile as never);
       }).not.toThrow();
@@ -179,7 +189,8 @@ describe("hostile inputs", () => {
       const world = createWorld();
       const tab = returningTab(world);
       world.local.failWrites(true);
-      for (let index = 0; index < 30; index += 1) tab.tracker.track("clicked", { target: String(index) });
+      for (let index = 0; index < 30; index += 1)
+        tab.tracker.track("clicked", { target: String(index) });
       await tab.tracker.flush();
       expect(world.collector.deliveredEvents()).toHaveLength(30);
       expect(world.local.peek(CONSENT_KEY)).toBe(consentRecord("granted"));
@@ -195,7 +206,7 @@ describe("hostile inputs", () => {
   });
 
   describe("an environment that is missing or odd", () => {
-    it("sends nothing without a clock that works... and says nothing when random jitter is garbage", async () => {
+    it("retries even when the random source for jitter answers garbage", async () => {
       const world = createWorld();
       const tab = grantedTab(world, { random: () => Number.NaN });
       world.collector.answer({ status: 500 });

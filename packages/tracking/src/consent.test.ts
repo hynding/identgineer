@@ -59,7 +59,10 @@ describe("consent state machine", () => {
     ["not JSON", "{"],
     ["a record with another key", '{"state":"granted","version":1,"decidedAt":1,"x":1}'],
     ["an unknown state", '{"state":"unknown","version":1,"decidedAt":1}'],
-    ["an own __proto__", '{"__proto__":{"state":"granted"},"state":"granted","version":1,"decidedAt":1}'],
+    [
+      "an own __proto__",
+      '{"__proto__":{"state":"granted"},"state":"granted","version":1,"decidedAt":1}',
+    ],
     ["a huge value", "x".repeat(100_000)],
   ])("treats %s in storage as unknown", (_label, stored) => {
     const world = createWorld();
@@ -97,12 +100,15 @@ describe("consent state machine", () => {
     it.each([
       ["gpc", { gpc: true }],
       ["dnt", { dnt: "1" }],
-    ] as const)("make effective consent denied with the reason %s whatever was stored", (reason, signal) => {
-      const world = createWorld();
-      world.local.seed(CONSENT_KEY, consentRecord("granted"));
-      const tab = openTab(world, signal);
-      expect(tab.tracker.consent.get()).toEqual({ state: "denied", reason });
-    });
+    ] as const)(
+      "make effective consent denied with the reason %s whatever was stored",
+      (reason, signal) => {
+        const world = createWorld();
+        world.local.seed(CONSENT_KEY, consentRecord("granted"));
+        const tab = openTab(world, signal);
+        expect(tab.tracker.consent.get()).toEqual({ state: "denied", reason });
+      },
+    );
 
     it("makes an undecided visitor denied too, and names GPC before DNT", () => {
       const world = createWorld();
