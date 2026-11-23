@@ -47,7 +47,21 @@ function wholeNumberBetween(value: unknown, least: number, most: number): boolea
   return typeof value === "number" && Number.isInteger(value) && value >= least && value <= most;
 }
 
-function checkQuery(propertyId: unknown, query: EventQuery): DashboardError | undefined {
+function isSort(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false;
+  const sort = value as { key?: unknown; direction?: unknown };
+  return (
+    EVENT_SORT_KEYS.some((key) => key === sort.key) &&
+    (sort.direction === "ascending" || sort.direction === "descending")
+  );
+}
+
+function checkQuery(propertyId: unknown, input: unknown): DashboardError | undefined {
+  // Typed as unknown: the call may come from script, which checks nothing.
+  if (typeof input !== "object" || input === null) {
+    return invalidRequest("listEvents", "the query is missing");
+  }
+  const query = input as { page?: unknown; pageSize?: unknown; sort?: unknown };
   if (!isIdentifier(propertyId)) return invalidRequest("listEvents", "the property id is empty");
   if (!wholeNumberBetween(query.page, 1, Number.MAX_SAFE_INTEGER)) {
     return invalidRequest("listEvents", "the page must be a whole number from 1");
@@ -58,13 +72,8 @@ function checkQuery(propertyId: unknown, query: EventQuery): DashboardError | un
       `the page size must be a whole number from 1 to ${String(DASHBOARD_LIMITS.pageSize)}`,
     );
   }
-  // Typed as unknown: the call may come from script, which checks nothing.
-  const sort: { key?: unknown; direction?: unknown } | undefined = query.sort;
-  if (
-    sort !== undefined &&
-    (!EVENT_SORT_KEYS.some((key) => key === sort.key) ||
-      (sort.direction !== "ascending" && sort.direction !== "descending"))
-  ) {
+  const sort = query.sort;
+  if (sort !== undefined && !isSort(sort)) {
     return invalidRequest("listEvents", "the sort is not by time or name, ascending or descending");
   }
   return undefined;

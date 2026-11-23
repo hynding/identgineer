@@ -1399,7 +1399,7 @@ seam the server task implements over the authenticated API; **ownership is the s
 enforce**, and a property the user does not own is answered exactly as one that does not exist
 (`DashboardError` `not-found`). `validatedSource(source)` wraps any source so that every request
 and answer is checked against the contract (`parseTrackedProperties`, `parseTrackedEvents`,
-`parseEventPage`, `parseStatSummary` are exported) and a raw failure never reaches the page.
+`parseEventPage`, `parseStatSummary` are exported) and a failure that is not a `DashboardError` becomes one (`unavailable`, without its message).
 `src/testing/fake-dashboard-source.ts` is a fake that enforces the same ownership rule; it is not
 part of `dist`.
 

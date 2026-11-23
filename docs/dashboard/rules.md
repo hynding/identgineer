@@ -25,8 +25,15 @@ implements over the authenticated API therefore enforces ownership, on the serve
   an answer for another property is stopped before an element sees it.
 - Requests are checked too: a page below 1, a page size above 100 or a sort key that is not
   `time` or `name` rejects with `invalid-request` and the source is never asked.
-- Anything that is not a `DashboardError` is turned into `unavailable` with no message of the
-  original, so a stack trace or a server's internals never reach the page.
+- A `DashboardError` the source throws passes through as it was, so its code and its message are
+  the source's to choose: write messages that are safe to log. Any other failure (a network error,
+  a bug) is turned into `unavailable` with no message of the original, so a stack trace or a
+  server's address is not carried on. Neither is for the page to print: show a sentence of your
+  own and send the code to the console.
+- A request that is not even an object (no query, a null query, a null sort) rejects with
+  `invalid-request` as a rejection, never as a thrown error.
+- `total` is clamped to ten million and dates must be real: a time with a day the month lacks or
+  an hour of 24 is dropped, as is one with no zone.
 
 The fake source in the package's `src/testing` enforces the same rule (an id that is not among its
 properties rejects with an identical `not-found`) so tests can exercise the denied path, not only

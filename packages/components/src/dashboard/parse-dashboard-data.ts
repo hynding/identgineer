@@ -20,6 +20,8 @@ export const DASHBOARD_LIMITS = {
   series: 400,
   /** The most events asked for or drawn in one page. */
   pageSize: 100,
+  /** The most events a total may claim: more would make a pager of pages no one will reach. */
+  total: 10_000_000,
   idLength: 200,
   textLength: 10_000,
 } as const;
@@ -61,7 +63,7 @@ function httpOrigin(value: unknown): string | undefined {
   }
 }
 
-export function parseTrackedProperty(value: unknown): TrackedProperty | undefined {
+function parseTrackedProperty(value: unknown): TrackedProperty | undefined {
   const record = asRecord(value);
   if (!record) return undefined;
   const id = identifier(field(record, "id"));
@@ -71,13 +73,19 @@ export function parseTrackedProperty(value: unknown): TrackedProperty | undefine
   return origin === undefined ? { id, name } : { id, name, origin };
 }
 
-function dedupe<T extends { readonly id: string }>(
-  records: readonly (T | undefined)[],
+/**
+ * The records that parse, once each, in order, read only until `limit` are kept: a response with a
+ * million entries costs the limit, not the million.
+ */
+function collect<T extends { readonly id: string }>(
+  list: readonly unknown[],
+  parse: (value: unknown) => T | undefined,
   limit: number,
 ): T[] {
   const seen = new Set<string>();
   const kept: T[] = [];
-  for (const record of records) {
+  for (const entry of list) {
+    const record = parse(entry);
     if (record === undefined || seen.has(record.id)) continue;
     seen.add(record.id);
     kept.push(record);
@@ -89,19 +97,42 @@ function dedupe<T extends { readonly id: string }>(
 /** The properties that are well formed, once each, in the order they came. */
 export function parseTrackedProperties(value: unknown): TrackedProperty[] {
   return Array.isArray(value)
-    ? dedupe(value.map(parseTrackedProperty), DASHBOARD_LIMITS.properties)
+    ? collect(value, parseTrackedProperty, DASHBOARD_LIMITS.properties)
     : [];
 }
 
 // A time with its zone, so that it names one instant; a bare date or a time without a zone would
 // be read in the browser's zone and mean something different to each reader.
-const ISO_WITH_ZONE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/;
+const ISO_WITH_ZONE =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(?:Z|[+-](\d{2}):(\d{2}))$/;
+
+/** Every part is in its range, so a date the calendar lacks is refused and not rolled over. */
+function isCalendarTime(parts: RegExpExecArray): boolean {
+  const [year, month, day, hour, minute, second, offsetHour, offsetMinute] = parts
+    .slice(1)
+    .map((part) => (part === undefined ? 0 : Number(part)));
+  const daysInMonth = new Date(Date.UTC(year ?? 0, month ?? 0, 0)).getUTCDate();
+  return (
+    (month ?? 0) >= 1 &&
+    (month ?? 0) <= 12 &&
+    (day ?? 0) >= 1 &&
+    (day ?? 0) <= daysInMonth &&
+    (hour ?? 0) <= 23 &&
+    (minute ?? 0) <= 59 &&
+    (second ?? 0) <= 59 &&
+    (offsetHour ?? 0) <= 23 &&
+    (offsetMinute ?? 0) <= 59
+  );
+}
 
 function isoTime(value: unknown): string | undefined {
   let milliseconds: number;
   if (typeof value === "number") milliseconds = value;
-  else if (typeof value === "string" && ISO_WITH_ZONE.test(value)) milliseconds = Date.parse(value);
-  else return undefined;
+  else if (typeof value === "string") {
+    const parts = ISO_WITH_ZONE.exec(value);
+    if (!parts || !isCalendarTime(parts)) return undefined;
+    milliseconds = Date.parse(value);
+  } else return undefined;
   if (!Number.isFinite(milliseconds)) return undefined;
   const date = new Date(milliseconds);
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
@@ -119,6 +150,8 @@ function eventProperties(value: unknown): Record<string, EventPropertyValue> | u
   const record = asRecord(value);
   if (!record) return undefined;
   const entries: [string, EventPropertyValue][] = [];
+  // The keys of an object that is already in memory are listed; their values are read only until
+  // the limit is reached.
   for (const key of Object.keys(record)) {
     const kept = propertyValue(record[key]);
     if (kept === undefined || key.length > DASHBOARD_LIMITS.idLength) continue;
@@ -129,7 +162,7 @@ function eventProperties(value: unknown): Record<string, EventPropertyValue> | u
   return Object.fromEntries(entries);
 }
 
-export function parseTrackedEvent(value: unknown): TrackedEvent | undefined {
+function parseTrackedEvent(value: unknown): TrackedEvent | undefined {
   const record = asRecord(value);
   if (!record) return undefined;
   const id = identifier(field(record, "id"));
@@ -149,7 +182,7 @@ export function parseTrackedEvent(value: unknown): TrackedEvent | undefined {
 
 /** The events that are well formed, once each, in the order they came. */
 export function parseTrackedEvents(value: unknown): TrackedEvent[] {
-  return Array.isArray(value) ? dedupe(value.map(parseTrackedEvent), DASHBOARD_LIMITS.events) : [];
+  return Array.isArray(value) ? collect(value, parseTrackedEvent, DASHBOARD_LIMITS.events) : [];
 }
 
 /** A page of events and its total, or undefined for a response that has no list of events. */
@@ -160,7 +193,7 @@ export function parseEventPage(value: unknown): EventPage | undefined {
   const events = parseTrackedEvents(list);
   const total = field(record, "total");
   const stated = typeof total === "number" && Number.isInteger(total) && total >= 0 ? total : 0;
-  return { events, total: Math.max(stated, events.length) };
+  return { events, total: Math.min(Math.max(stated, events.length), DASHBOARD_LIMITS.total) };
 }
 
 function finite(value: unknown): value is number {

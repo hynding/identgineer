@@ -80,8 +80,9 @@ has moved on is dropped:
 import { DashboardError, validatedSource } from "@identgineer/components";
 import { createApiSource } from "./api-source.js"; // the page's own, over its authenticated API
 
-// validatedSource checks every answer and every request against the contract, and never lets a
-// raw failure through: what it throws is a DashboardError.
+// validatedSource checks every answer and every request against the contract, and turns a
+// failure that is not a DashboardError into one (code "unavailable"); the source's own
+// DashboardErrors pass through as they were.
 const source = validatedSource(createApiSource());
 
 const picker = document.getElementById("picker");
