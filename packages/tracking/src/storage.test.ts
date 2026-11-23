@@ -38,7 +38,12 @@ describe("storage helpers", () => {
     expect(readItem(storage, "a")).toBe("1");
     expect(readItem(storage, "b")).toBeUndefined();
     expect(readItem(undefined, "a")).toBeUndefined();
-    expect(readItem({ getItem: () => 5 as never, setItem: () => undefined, removeItem: () => undefined }, "a")).toBeUndefined();
+    expect(
+      readItem(
+        { getItem: () => 5 as never, setItem: () => undefined, removeItem: () => undefined },
+        "a",
+      ),
+    ).toBeUndefined();
     storage.failAll(true);
     expect(readItem(storage, "a")).toBeUndefined();
   });

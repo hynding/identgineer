@@ -6,7 +6,7 @@ const KEY = "write_key_0123456789";
 const ENDPOINT = "https://collect.example.com/v1/events";
 
 const event = (id: string) => ({
-  id: `${id}`.padEnd(22, "A"),
+  id: id.padEnd(22, "A"),
   name: "clicked",
   at: 1,
   session: "S".repeat(22),
@@ -87,7 +87,10 @@ describe("createFakeCollector", () => {
   it("flags a request that breaks the contract", async () => {
     const cases: [string, () => Promise<unknown>][] = [
       ["url", () => fake.fetch("https://other.example/", init())],
-      ["write key", () => fake.fetch(ENDPOINT, init({ headers: { "Content-Type": "application/json" } }))],
+      [
+        "write key",
+        () => fake.fetch(ENDPOINT, init({ headers: { "Content-Type": "application/json" } })),
+      ],
       ["content type", () => fake.fetch(ENDPOINT, init({ headers: { "X-Idg-Write-Key": KEY } }))],
       ["credentials", () => fake.fetch(ENDPOINT, init({ credentials: "include" as never }))],
       ["referrer policy", () => fake.fetch(ENDPOINT, init({ referrerPolicy: "origin" as never }))],
@@ -95,7 +98,14 @@ describe("createFakeCollector", () => {
       ["mode", () => fake.fetch(ENDPOINT, init({ mode: "no-cors" as never }))],
       ["batch", () => fake.fetch(ENDPOINT, init({}, "{}"))],
       ["json", () => fake.fetch(ENDPOINT, init({}, "not json"))],
-      ["body key", () => fake.fetch(ENDPOINT, init({}, JSON.stringify({ v: 1, sentAt: 1, writeKey: KEY, events: [event("a")] })))],
+      [
+        "body key",
+        () =>
+          fake.fetch(
+            ENDPOINT,
+            init({}, JSON.stringify({ v: 1, sentAt: 1, writeKey: KEY, events: [event("a")] })),
+          ),
+      ],
     ];
     let fake = collector();
     for (const [rule, send] of cases) {
@@ -125,7 +135,10 @@ describe("createFakeCollector", () => {
     missing.sendBeacon(ENDPOINT, body("a"));
     expect(missing.violations.join("\n")).toContain("write key");
     const inUrl = collector();
-    inUrl.sendBeacon(`${ENDPOINT}?key=${KEY}`, JSON.stringify({ v: 1, sentAt: 2, writeKey: KEY, events: [event("a")] }));
+    inUrl.sendBeacon(
+      `${ENDPOINT}?key=${KEY}`,
+      JSON.stringify({ v: 1, sentAt: 2, writeKey: KEY, events: [event("a")] }),
+    );
     expect(inUrl.violations.join("\n")).toContain("url");
   });
 

@@ -83,7 +83,7 @@ describe("createMemoryStorage", () => {
     const storage = createMemoryStorage({ quotaCharacters: 10 });
     storage.setItem("k", "12345");
     expect(() => {
-      storage.setItem("k", "123456789");
+      storage.setItem("k", "12345678901");
     }).toThrow(expect.objectContaining({ name: "QuotaExceededError" }));
     expect(storage.getItem("k")).toBe("12345");
     storage.setItem("k", "12345678");

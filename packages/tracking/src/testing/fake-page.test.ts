@@ -39,7 +39,11 @@ describe("createFakePage", () => {
 
   it("counts the listeners that are still subscribed", () => {
     const page = createFakePage();
-    const stops = [page.onHidden(() => undefined), page.onOnline(() => undefined), page.onNavigate(() => undefined)];
+    const stops = [
+      page.onHidden(() => undefined),
+      page.onOnline(() => undefined),
+      page.onNavigate(() => undefined),
+    ];
     expect(page.listenerCount()).toBe(3);
     for (const stop of stops) stop();
     expect(page.listenerCount()).toBe(0);

@@ -42,11 +42,11 @@ const stubDom = (): Dom => {
   const counting = (target: EventTarget) => ({
     addEventListener: (type: string, listener: EventListener) => {
       count += 1;
-      target.addEventListener(type, listener);
+      EventTarget.prototype.addEventListener.call(target, type, listener);
     },
     removeEventListener: (type: string, listener: EventListener) => {
       count -= 1;
-      target.removeEventListener(type, listener);
+      EventTarget.prototype.removeEventListener.call(target, type, listener);
     },
   });
   Object.assign(doc, counting(doc));
@@ -94,16 +94,16 @@ describe("createBrowserPage", () => {
     expect(page.location()).toBe("https://a.example/start");
     dom.location.href = "https://a.example/next";
     dom.doc.referrer = "https://b.example/page";
-    dom.navigator["globalPrivacyControl"] = true;
+    dom.navigator.globalPrivacyControl = true;
     expect(page.location()).toBe("https://a.example/next");
     expect(page.referrer()).toBe("https://b.example/page");
     expect(page.signals()).toMatchObject({ globalPrivacyControl: true, onLine: true });
   });
 
   it.each([
-    ["navigator.doNotTrack", (dom: Dom) => (dom.navigator["doNotTrack"] = "1")],
+    ["navigator.doNotTrack", (dom: Dom) => (dom.navigator.doNotTrack = "1")],
     ["window.doNotTrack", () => vi.stubGlobal("doNotTrack", "1")],
-    ["navigator.msDoNotTrack", (dom: Dom) => (dom.navigator["msDoNotTrack"] = "1")],
+    ["navigator.msDoNotTrack", (dom: Dom) => (dom.navigator.msDoNotTrack = "1")],
   ])("reports Do Not Track from %s", (_label, set) => {
     const dom = stubDom();
     set(dom);
@@ -112,9 +112,9 @@ describe("createBrowserPage", () => {
 
   it("does not report Do Not Track when it is off or unspecified", () => {
     const dom = stubDom();
-    dom.navigator["doNotTrack"] = "0";
+    dom.navigator.doNotTrack = "0";
     expect(createBrowserPage().signals().doNotTrack).not.toBe("1");
-    dom.navigator["doNotTrack"] = "unspecified";
+    dom.navigator.doNotTrack = "unspecified";
     expect(createBrowserPage().signals().doNotTrack).not.toBe("1");
   });
 
