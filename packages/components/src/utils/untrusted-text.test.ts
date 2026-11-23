@@ -84,6 +84,7 @@ const REAL_TEXT: readonly (readonly [string, string])[] = [
     "the flag of England as a tag sequence",
     "\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}",
   ],
+  ["the flag of Wales", "\u{1F3F4}\u{E0067}\u{E0062}\u{E0077}\u{E006C}\u{E0073}\u{E007F}"],
   ["the flag of Scotland", "\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}"],
   ["a family", "👨\u200D👩\u200D👧\u200D👦"],
   ["the rainbow flag", "🏳\uFE0F\u200D🌈"],
@@ -110,6 +111,26 @@ const SPOOFS: readonly (readonly [string, string, string])[] = [
   ],
   ["tags after a letter and not a flag", "a\u{E0067}\u{E007F}", `a${MARK}${MARK}`],
   ["a heap of combining marks", `e${"\u0301".repeat(40)}`, `e${"\u0301".repeat(8)}${MARK}`],
+  ["an Arabic letter joined to a Devanagari one", "ب\u200Cक", `ب${MARK}क`],
+  ["a Mongolian letter joined to an Arabic one", "\u1820\u200Dب", `\u1820${MARK}ب`],
+  ["a Khmer letter joined to a Myanmar one", "ក\u200Dက", `ក${MARK}က`],
+  ["a Tamil letter joined to a Telugu one", "த\u200Dత", `த${MARK}త`],
+  [
+    "a Latin letter with a Devanagari mark that has a Latin extension",
+    "a\u0951\u200Dक",
+    `a\u0951${MARK}क`,
+  ],
+  ["a joiner after a selector that was marked", "a\uFE0F\u200D😀", `a${MARK}${MARK}😀`],
+  [
+    "a flag tag sequence that is not one of the three",
+    "\u{1F3F4}\u{E0075}\u{E0073}\u{E0074}\u{E0078}\u{E007F}",
+    `\u{1F3F4}${MARK.repeat(5)}`,
+  ],
+  [
+    "a Hindi joiner before an invisible selector",
+    "क\u200C\u180B\u2800ज",
+    `क${MARK}${MARK}${MARK}ज`,
+  ],
   ["a Hangul filler as a name", "\u3164", MARK],
   ["a name of white space", " \u00A0 ", MARK],
 ];
@@ -234,5 +255,130 @@ describe("displayText", () => {
   it("shows a value that is not text as nothing, and a number as its digits", () => {
     expect(displayText({ toString: () => "<b>" }, 10)).toBe("");
     expect(displayText(42, 10)).toBe("42");
+  });
+});
+
+// A seeded generator, so a failure can be run again.
+function generator(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const POOL = [
+  "\u200C",
+  "\u200D",
+  "\u200B",
+  "\u2060",
+  "\uFE0E",
+  "\uFE0F",
+  "\uFE00",
+  "\u{E0100}",
+  "\u{E01EF}",
+  "\u180B",
+  "\u180D",
+  "\u180F",
+  "\u034F",
+  "\u0301",
+  "\u0302",
+  "\u0951",
+  "\u094D",
+  "\u05BC",
+  "\u20E3",
+  "\u{E0067}",
+  "\u{E0062}",
+  "\u{E0065}",
+  "\u{E006E}",
+  "\u{E0073}",
+  "\u{E0063}",
+  "\u{E0074}",
+  "\u{E007F}",
+  "\u{1F3F4}",
+  "\u3164",
+  "\uFFA0",
+  "\u115F",
+  "\u2800",
+  "\u{1D159}",
+  "\u202E",
+  "\u0085",
+  "\n",
+  " ",
+  "a",
+  "Z",
+  "ب",
+  "ث",
+  "क",
+  "ज",
+  "র",
+  "த",
+  "త",
+  "ශ",
+  "ក",
+  "က",
+  "\u1820",
+  "\u1828",
+  "葛",
+  "辻",
+  "ש",
+  "ת",
+  "😀",
+  "👩",
+  "💻",
+  "❤",
+  "\u{1F3FD}",
+  "1",
+  "#",
+  MARK,
+  "\uD800",
+];
+
+describe("neutraliseText on random strings from the awkward characters", () => {
+  const next = generator(20260301);
+  const strings = Array.from({ length: 60_000 }, () => {
+    const length = 1 + Math.floor(next() * 9);
+    return Array.from({ length }, () => POOL[Math.floor(next() * POOL.length)] ?? "a").join("");
+  });
+
+  it("is a fixed point: neutralising the result changes nothing", () => {
+    const changed = strings.filter(
+      (text) => neutraliseText(neutraliseText(text)) !== neutraliseText(text),
+    );
+    expect(
+      changed.slice(0, 5).map((text) => [...text].map((c) => c.codePointAt(0)?.toString(16))),
+    ).toEqual([]);
+  });
+
+  it("leaves no invisible character outside the shapes that are documented", () => {
+    const INVISIBLE =
+      /^[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Default_Ignorable_Code_Point}\u2800\u{1D159}]$/u;
+    const bad: string[] = [];
+    for (const text of strings) {
+      const out = Array.from(neutraliseText(text));
+      out.forEach((character, index) => {
+        if (!INVISIBLE.test(character)) return;
+        const code = character.codePointAt(0) ?? 0;
+        const before = out[index - 1] ?? "";
+        const after = out[index + 1] ?? "";
+        let fine = false;
+        if (code === 0x200c || code === 0x200d) {
+          fine =
+            /[\p{L}\p{M}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F]/u.test(before) &&
+            /[\p{L}\p{Extended_Pictographic}]/u.test(after);
+        } else if (code === 0xfe0e || code === 0xfe0f) fine = /\p{Emoji}/u.test(before);
+        else if (code >= 0xe0100 && code <= 0xe01ef) fine = /\p{Script=Han}/u.test(before);
+        else if ((code >= 0x180b && code <= 0x180d) || code === 0x180f) {
+          fine = /\p{Script=Mongolian}/u.test(before);
+        } else if (code >= 0xe0020 && code <= 0xe007f) {
+          const run = out.join("");
+          fine = /\u{1F3F4}[\u{E0061}-\u{E007A}]{5}\u{E007F}/u.test(run);
+        }
+        if (!fine) bad.push([...text].map((c) => c.codePointAt(0)?.toString(16)).join(" "));
+      });
+    }
+    expect(bad.slice(0, 5)).toEqual([]);
   });
 });
