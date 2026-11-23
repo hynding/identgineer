@@ -9,20 +9,15 @@ import { CONSENT_CHANGED, isConsentNotice } from "./cross-tab.ts";
 import { createDelivery } from "./delivery.ts";
 import { dropReason, type DropReason } from "./drop-reason.ts";
 import { minimisePath } from "./minimise-url.ts";
-import { resolveOptions } from "./resolve-options.ts";
+import { resolveOptions, type ResolvedOptions } from "./resolve-options.ts";
 import { createSessionStore } from "./session-store.ts";
+import { shareTracker } from "./tracker-registry.ts";
 import { removeItemIfPresent } from "./storage.ts";
 import { STORAGE_KEYS } from "./storage-keys.ts";
 import type { ConsentStatus, Tracker, TrackerOptions } from "./tracker-types.ts";
 import { IDENTIFIER_PATTERN } from "./wire-format.ts";
 
-/**
- * Creates a tracker. Consent comes first: until the visitor grants it (and no browser signal says
- * otherwise) nothing is sent, queued, or written to any storage but the consent record itself.
- * Throws a `TypeError` for an invalid option; after that no method ever throws.
- */
-export const createTracker = (trackerOptions: TrackerOptions): Tracker => {
-  const options = resolveOptions(trackerOptions);
+const buildTracker = (options: ResolvedOptions): Tracker => {
   const { page, localStorage, crossTab } = options;
 
   const controller = createConsentController({
@@ -240,4 +235,25 @@ export const createTracker = (trackerOptions: TrackerOptions): Tracker => {
       listeners.clear();
     },
   };
+};
+
+/**
+ * Creates a tracker. Consent comes first: until the visitor grants it (and no browser signal says
+ * otherwise) nothing is sent, queued, or written to any storage but the consent record itself.
+ * Throws a `TypeError` for an invalid option; after that no method ever throws.
+ *
+ * A page has one tracker per endpoint and write key: a second call that finds the first still
+ * undisposed (same storages) returns that tracker and ignores its other options, because two
+ * trackers on the same storage keys would each hold a queue, a session and a timer for them.
+ */
+export const createTracker = (trackerOptions: TrackerOptions): Tracker => {
+  const options = resolveOptions(trackerOptions);
+  return shareTracker(
+    {
+      localStorage: options.localStorage,
+      sessionStorage: options.sessionStorage,
+      key: `${options.endpoint}\n${options.writeKey}`,
+    },
+    () => buildTracker(options),
+  );
 };
