@@ -144,7 +144,7 @@ test("a pager with an absurd page count does not widen a 320px page with the tex
     .evaluate((pager) =>
       Math.max(
         ...Array.from(pager.shadowRoot?.querySelectorAll('[part="page"]') ?? []).map(
-          (control) => (control.textContent ?? "").trim().length,
+          (control) => control.textContent.trim().length,
         ),
       ),
     );

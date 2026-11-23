@@ -113,9 +113,9 @@ test.describe("idg-select does not rebuild its options when nothing about them c
     await build(page);
     const texts = await page.evaluate(async () => {
       const wait = () => new Promise((resolve) => setTimeout(resolve, 150));
-      const select = document.getElementById("probe-select") as HTMLElement;
-      const native = select.shadowRoot?.querySelector("select");
-      if (!native) throw new Error("no native select");
+      const select = document.getElementById("probe-select");
+      const native = select?.shadowRoot?.querySelector("select");
+      if (!select || !native) throw new Error("no native select");
       const option = document.createElement("option");
       option.value = "y";
       option.textContent = "Y";
