@@ -264,8 +264,9 @@ test.describe("consent components in forced colours and with reduced motion", ()
       }
       return roots
         .flatMap((root) => root.getAnimations())
-        .filter((animation) => animation instanceof CSSAnimation && animation.playState === "running")
-        .length;
+        .filter(
+          (animation) => animation instanceof CSSAnimation && animation.playState === "running",
+        ).length;
     });
     expect(running).toBe(0);
   });
