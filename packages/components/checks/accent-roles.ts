@@ -193,13 +193,6 @@ export const ACCENT_ROLE_USES: readonly AccentRoleEntry[] = [
     use: "indicator",
     what: "checked checkbox, radio dot, switch track when on",
   },
-  {
-    file: "styles/tone.css",
-    property: "--_tone-solid",
-    token: "accent",
-    use: "decoration",
-    what: "accent tone's solid colour, for edges",
-  },
 ];
 
 // Whitespace may surround the name, and a fallback may follow it.
