@@ -3,6 +3,7 @@ import { findThemeProblems } from "@identgineer/tokens/theme-pipeline";
 import { describe, expect, it } from "vitest";
 import { emitBrandThemeCss } from "./emit-brand-theme.ts";
 import { fontPairingFor } from "./font-pairings.ts";
+import { ACCENT_BLENDS_WITH_PAGE } from "./generate-palette.ts";
 import { generateBrandTheme, type BrandTheme } from "./generate-brand-theme.ts";
 import { toOklab, toOklch } from "./oklch.ts";
 import { parseHexColor } from "./srgb.ts";
@@ -119,6 +120,36 @@ describe("generateBrandTheme", () => {
       expect(indicator).toMatchObject({ origin: "primary", requested: primary, minimum: 3 });
     },
   );
+
+  it.each([
+    ["#ffffff", "light"],
+    ["#fafafa", "light"],
+    ["#111827", "dark"],
+    ["#000000", "dark"],
+  ] as const)("notes that %s blends with the %s page, for the brand guide", (primary, scheme) => {
+    const theme = generateBrandTheme(kitFrom({ colors: { primary } }));
+    const notes = theme.notes.filter((note) => note.kind === "accent-blends-with-page");
+    expect(notes).toEqual([
+      {
+        scheme,
+        kind: "accent-blends-with-page",
+        token: "color.accent",
+        against: "color.bg",
+        contrast: contrastRatio(primary, resolvedColors(theme, scheme).get("bg") ?? ""),
+      },
+    ]);
+    expect(notes[0]?.contrast).toBeLessThan(ACCENT_BLENDS_WITH_PAGE);
+  });
+
+  it("does not note an accent that stands apart from the page, even below 3:1", () => {
+    for (const primary of ["#4f46e5", "#facc15", "#0ea5e9"]) {
+      const theme = generateBrandTheme(kitFrom({ colors: { primary } }));
+      expect(
+        theme.notes.filter((note) => note.kind === "accent-blends-with-page"),
+        primary,
+      ).toEqual([]);
+    }
+  });
 
   it("notes a status colour that sits close to the accent, for the brand guide", () => {
     const red = generateBrandTheme(kitFrom({ colors: { primary: "#dc2626" } }));
