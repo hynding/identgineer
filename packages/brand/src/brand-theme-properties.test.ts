@@ -186,14 +186,19 @@ describe("brand theme properties", () => {
     expect(edgeCases().flatMap(checkCase)).toEqual([]);
   });
 
-  it(`holds for ${String(RANDOM_CASES)} random colour sets (seed ${String(SEED)})`, () => {
-    const failures: string[] = [];
-    for (const entry of randomCases(SEED, RANDOM_CASES)) {
-      failures.push(...checkCase(entry));
-      if (failures.length > 20) break;
-    }
-    expect(failures).toEqual([]);
-  });
+  // Thousands of generated themes take longer than the default five seconds on a shared runner.
+  it(
+    `holds for ${String(RANDOM_CASES)} random colour sets (seed ${String(SEED)})`,
+    { timeout: 120_000 },
+    () => {
+      const failures: string[] = [];
+      for (const entry of randomCases(SEED, RANDOM_CASES)) {
+        failures.push(...checkCase(entry));
+        if (failures.length > 20) break;
+      }
+      expect(failures).toEqual([]);
+    },
+  );
 
   it("holds generated themes to pairs every built-in theme passes", () => {
     expect(BUILT_IN_PAIRS.length).toBeGreaterThan(20);
