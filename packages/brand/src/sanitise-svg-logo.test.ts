@@ -389,6 +389,18 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
     ).toContain('fill="none" stroke="none"');
   });
 
+  it.each([
+    ["attributes", 'fill="url(http://x/y)" stroke="url(data:image/svg+xml,x)"'],
+    ["style declarations", 'style="fill:url(http://x/y);stroke:javascript:x" fill="red"'],
+  ])("paints nothing for an external paint reference in %s, rather than black", (_l, paint) => {
+    const result = accepted(svg(`<rect width="1" height="1" ${paint}/>`));
+    expect(result.svg).toContain('fill="none" stroke="none"');
+    expect(result.removed.map(({ reason }) => reason)).toEqual([
+      "external-reference",
+      "external-reference",
+    ]);
+  });
+
   it("drops a whole subtree with its element, never lifting children out", () => {
     expect(output('<a href="#x"><rect width="1" height="1"/></a><foo><circle r="1"/></foo>')).toBe(
       EMPTY,
