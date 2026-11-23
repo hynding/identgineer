@@ -120,8 +120,11 @@ test.describe("consent components meet WCAG 2.2 AA", () => {
       document.getElementById("prefs").consent = broken;
     })()`);
     await bannerButton(page, "decline").click();
+    await expect(banner(page).locator('[part="error"]')).toBeVisible();
     await switchIn(inlinePanel(page), "analytics").check();
+    await expect(switchIn(inlinePanel(page), "analytics")).toBeChecked();
     await inlinePanel(page).locator("idg-button.save button").click();
+    await expect(inlinePanel(page).locator('[part="error"]')).toBeVisible();
     await inlinePanel(page).locator("idg-button.erase button").click();
     await expect(banner(page).locator('[part="error"]')).toBeVisible();
     await expect(inlinePanel(page).locator('[part="error"]')).toBeVisible();

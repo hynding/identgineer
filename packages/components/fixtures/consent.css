@@ -46,3 +46,9 @@ idg-consent-banner:not(.hydrated),
 idg-consent-preferences:not(.hydrated) {
   display: none;
 }
+
+/* Doubled text in a narrow column must break a long word rather than push the page sideways. */
+.consent-main h1,
+.consent-main h2 {
+  overflow-wrap: anywhere;
+}
