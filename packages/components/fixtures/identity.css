@@ -18,8 +18,11 @@ body {
   font-weight: var(--idg-font-weight-bold);
 }
 
+/* One column no wider than the page: a heading's long word wraps and never widens the track,
+   whatever font the system falls back to. */
 .identity-main {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--idg-space-l);
   max-inline-size: var(--idg-size-xl);
   margin-inline: auto;
@@ -34,6 +37,11 @@ body {
 
 .identity-main h2 {
   margin-block: 0 var(--idg-space-s);
+}
+
+.identity-main h1,
+.identity-main h2 {
+  overflow-wrap: anywhere;
 }
 
 /* Nothing of an identity component shows before it hydrates: the guard's protected content most
