@@ -185,9 +185,13 @@ class Builder {
     const passesWith = (on: Rgb) => (rgb: Rgb) =>
       contrastBetween(rgb, on) >= minimum &&
       page.every((entry) => contrastBetween(rgb, entry.rgb) >= entry.minimum);
+    // Pure black is the last resort: with white it reaches 4.5:1 on any colour, so a fill that
+    // only has to carry text is always kept, but the tinted near-black reads better where it passes.
+    const onBlack: Rgb = [0, 0, 0];
     const keep = [onLight, onDark]
       .filter((on) => passesWith(on)(requested))
       .sort((a, b) => contrastBetween(requested, b) - contrastBetween(requested, a));
+    if (keep.length === 0 && passesWith(onBlack)(requested)) keep.push(onBlack);
     if (keep[0]) {
       this.set(onRole, keep[0]);
       return { fill: this.set(role, requested), on: keep[0] };

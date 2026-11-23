@@ -105,11 +105,12 @@ they must stand out from every page background as well as carry their own text. 
 out of that row because the built-in themes do not give amber 3:1 on a light page either; danger
 used as text is likewise only required at 3:1, as in the built-ins.
 
-The primary is the accent fill as given whenever white or near-black text reaches 4.5:1 on it,
-which is 94.4% of colours (18,877 of 20,000 seeded random kits, the same in both schemes): light
-yellows, amber, white and near-black keep their colour. The fill carries a text label, so the page
-does not constrain it. Only a mid-tone that carries neither text moves, the shorter way in
-lightness and just far enough, and the move is reported.
+The primary is always the accent fill, exactly as given: light yellows, amber, white and
+near-black keep their colour. The fill carries a text label, so the page does not constrain it,
+only its text. That text is white or a near-black tinted with the primary's hue, whichever reads
+better; for the 5.6% of colours on which neither reaches 4.5:1 (mid-tones such as `#777777`;
+1,123 of 20,000 seeded random kits), it is pure black, and since white or black reaches 4.5:1 on
+any colour, the fill never has to move.
 
 The page constrains the two roles that need it, both held to 3:1 on `bg`, `bg-subtle`, `surface`
 and `surface-raised`:
@@ -169,8 +170,7 @@ Tested on every run:
   tone and corner style. That includes `accent-indicator` and `accent-border` at 3:1 on `bg`,
   `bg-subtle`, `surface` and `surface-raised` in each scheme, both equal to the accent wherever
   the accent itself reaches that, and a hover that differs from the accent.
-- **The brand's own fill.** The accent is the primary unchanged for every primary that white or
-  near-black text reaches 4.5:1 on.
+- **The brand's own fill.** The accent is the primary unchanged, in both schemes, for every kit.
 - **Recognisable.** The primary is used unchanged unless a move is reported; a moved brand colour
   keeps its hue within 3° while it still has colour (OKLCH chroma of at least 0.04; about 2.4° at
   most over 20,000 random sets, up to 5° for near-greys whose hue barely shows); a moved colour stops
