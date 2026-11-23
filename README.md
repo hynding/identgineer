@@ -36,6 +36,15 @@ components that take the identity client of `packages/identity`. Guides:
 [Vue](docs/identity/vue.md) and [Angular](docs/identity/angular.md), and the
 [security notes](docs/identity/security.md).
 
+## Consent components
+
+A consent banner and a preferences panel are web components that take the consent object of the
+tracker of `packages/tracking`: the banner never asks under Global Privacy Control or Do Not
+Track, gives "Decline" and "Accept analytics" the same weight, and never blocks the page. Guides:
+[plain HTML](docs/consent/plain-html.md), [React](docs/consent/react.md),
+[Vue](docs/consent/vue.md) and [Angular](docs/consent/angular.md), and
+[the rules the banner follows and why](docs/consent/rules.md).
+
 ## Brand themes
 
 A brand kit (name, colours, a font pairing, corners and tone) becomes a theme of its own:
