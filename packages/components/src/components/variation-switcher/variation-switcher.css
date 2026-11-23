@@ -27,6 +27,9 @@
   background: var(--idg-surface-background);
   backdrop-filter: var(--idg-surface-backdrop-filter);
   box-shadow: var(--idg-elevation-sm);
+  /* The heading, the status and the labels of the buttons break inside a word that is wider than
+     the panel, at a large type size, instead of leaving it. */
+  overflow-wrap: anywhere;
   font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
   line-height: var(--idg-font-body-line-height);
   letter-spacing: var(--idg-font-body-letter-spacing);
