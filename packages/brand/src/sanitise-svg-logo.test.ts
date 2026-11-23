@@ -100,6 +100,29 @@ describe("sanitiseSvgLogo, output", () => {
     ]);
   });
 
+  it.each([
+    ['mask-type="alpha"', 'mask-type="alpha"'],
+    ['mask-type=" luminance "', 'mask-type="luminance"'],
+    ['style="mask-type: alpha"', 'mask-type="alpha"'],
+    ['mask-type="luminance" style="mask-type:alpha"', 'mask-type="alpha"'],
+  ])("keeps a mask's type, given as %s", (attribute, written) => {
+    expect(output(`<mask id="m" ${attribute}/><rect height="1" mask="url(#m)"/>`)).toContain(
+      `<mask id="logo-0" ${written}/>`,
+    );
+  });
+
+  it("drops a mask type that is not one, or not on a mask", () => {
+    expect(
+      removals(
+        '<mask mask-type="Alpha"/><rect height="1" mask-type="alpha" style="mask-type:alpha"/>',
+      ),
+    ).toEqual([
+      expect.objectContaining({ element: "mask", attribute: "mask-type", reason: "invalid-value" }),
+      expect.objectContaining({ element: "rect", attribute: "mask-type" }),
+      expect.objectContaining({ element: "rect", property: "mask-type" }),
+    ]);
+  });
+
   it("escapes the text of titles and descriptions and keeps nothing else as text", () => {
     expect(output('<title>A &amp; B &lt;i&gt; "q"</title><g>stray text</g>')).toBe(
       `${ROOT}<title>A &amp; B &lt;i&gt; &quot;q&quot;</title><g/></svg>`,

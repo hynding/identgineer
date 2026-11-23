@@ -33,6 +33,7 @@ function geometry(svg: string): number[][] {
 describe("the clean SVG corpus", () => {
   it("holds logos as common tools export them", () => {
     expect(FILES).toEqual([
+      "figma-alpha-mask.svg",
       "figma-export.svg",
       "illustrator-internal-css.svg",
       "illustrator-presentation-attributes.svg",
@@ -82,6 +83,14 @@ describe("the clean SVG corpus", () => {
     expect(svg).toContain('fill="url(#logo-1)"');
     expect(svg).toContain('stop-color="#38bdf8" stop-opacity="0.85"');
     expect([width, height]).toEqual([241.889764, 120.944882]);
+  });
+
+  it("keeps the alpha mask type Figma writes in a style attribute, so the mask does not fade the logo", () => {
+    const result = sanitised("figma-alpha-mask.svg");
+    expect(result.svg).toContain(
+      '<mask id="logo-0" x="0" y="0" width="64" height="64" maskUnits="userSpaceOnUse" mask-type="alpha">',
+    );
+    expect(result.removed).toEqual([]);
   });
 
   it("drops a stylesheet and its classes, so a logo coloured only by CSS loses its colours", () => {
