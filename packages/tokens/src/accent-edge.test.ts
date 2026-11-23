@@ -61,7 +61,7 @@ describe("the built accent edge", () => {
   it("is citrus light's accent border, and no edge in citrus dark", () => {
     const declarations = files["themes/citrus.css"]?.match(/--idg-color-accent-edge: [^;]+;/g);
     expect(declarations).toEqual([
-      "--idg-color-accent-edge: #7f8c2a;",
+      "--idg-color-accent-edge: #5c7d00;",
       "--idg-color-accent-edge: transparent;",
       "--idg-color-accent-edge: transparent;",
     ]);

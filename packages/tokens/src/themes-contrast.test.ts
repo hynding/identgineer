@@ -114,6 +114,10 @@ describe("citrus light, whose accent is a light lime", () => {
     expect(contrastRatio("#bef000", colors.get("bg") ?? "")).toBeLessThan(3);
   });
 
+  it("edges the fill in its indicator colour, so the lime has one darker partner, not two", () => {
+    expect(colors.get("accent-border")).toBe(colors.get("accent-indicator"));
+  });
+
   it("marks state with a darker relative of the accent and bounds the fill", () => {
     expect(colors.get("accent-indicator")).not.toBe("#bef000");
     expect(colors.get("accent-border")).not.toBe("#bef000");
