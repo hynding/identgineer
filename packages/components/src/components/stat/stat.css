@@ -11,6 +11,7 @@
 
 .stat {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--idg-space-s);
@@ -24,11 +25,18 @@
   min-inline-size: 0;
 }
 
+/* A chart that does not fit beside the figures goes under them, and never wider than the stat. */
+::slotted([slot="chart"]) {
+  max-inline-size: 100%;
+  min-inline-size: 0;
+}
+
 .label {
   color: var(--idg-color-text-muted);
   font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
   font-weight: var(--idg-font-weight-semibold);
   line-height: var(--idg-font-body-line-height);
+  overflow-wrap: anywhere;
   text-transform: var(--idg-ornament-control-transform);
 }
 
@@ -39,6 +47,21 @@
   font-weight: var(--idg-font-display-weight);
   letter-spacing: var(--idg-font-display-letter-spacing);
   line-height: var(--idg-font-display-line-height);
+  overflow-wrap: anywhere;
+}
+
+.change {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--idg-space-3xs) var(--idg-space-2xs);
+}
+
+.period {
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+  overflow-wrap: anywhere;
 }
 
 .delta {
