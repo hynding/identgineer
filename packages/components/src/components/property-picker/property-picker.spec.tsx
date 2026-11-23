@@ -53,6 +53,9 @@ const options = (root: HTMLElement) =>
     text: option.textContent,
   }));
 
+/** The options that are properties, without the prompt. */
+const choices = (root: HTMLElement) => options(root).filter((option) => option.value !== "");
+
 async function mount(
   props: {
     properties?: unknown;
@@ -80,7 +83,7 @@ describe("idg-property-picker rendering", () => {
   it("is a field with a label around a select that has one option for each property, valued by its id", async () => {
     const { root } = await mount({ properties: PROPERTIES, value: "p2", label: "Site" });
     expect(field(root)?.label).toBe("Site");
-    expect(options(root).map((option) => option.value)).toEqual(["p1", "p2", "p3"]);
+    expect(options(root).map((option) => option.value)).toEqual(["", "p1", "p2", "p3"]);
     expect(select(root).value).toBe("p2");
   });
 
@@ -91,7 +94,7 @@ describe("idg-property-picker rendering", () => {
 
   it("shows the host of a property's origin beside its name, so two with one name can be told apart", async () => {
     const { root } = await mount({ properties: PROPERTIES, value: "p1" });
-    expect(options(root).map((option) => option.text)).toEqual([
+    expect(choices(root).map((option) => option.text)).toEqual([
       "Docs · docs.example.com",
       "Shop",
       "Blog · blog.example.org:8080",
@@ -103,7 +106,7 @@ describe("idg-property-picker rendering", () => {
       properties: [{ id: "a", name: "A" }, null, { id: "a", name: "Again" }, { id: "b" }, 4],
       value: "a",
     });
-    expect(options(root)).toEqual([{ value: "a", text: "A" }]);
+    expect(choices(root)).toEqual([{ value: "a", text: "A" }]);
   });
 
   it("treats a properties value that is not a list as no properties", async () => {
@@ -117,7 +120,7 @@ describe("idg-property-picker untrusted names", () => {
   it("shows a name as text and never as markup", async () => {
     const name = '<img src=x onerror="alert(1)"><script>alert(2)</script>';
     const { root } = await mount({ properties: [{ id: "x", name }], value: "x" });
-    expect(options(root)[0]?.text).toBe(name);
+    expect(choices(root)[0]?.text).toBe(name);
     expect(root.shadowRoot?.querySelector("img, script")).toBeNull();
     expect(select(root).querySelector("img, script")).toBeNull();
   });
@@ -127,12 +130,12 @@ describe("idg-property-picker untrusted names", () => {
       properties: [{ id: "x", name: "pay‮fdp.exe\u0000\n" }],
       value: "x",
     });
-    expect(options(root)[0]?.text).toBe(`pay${MARK}fdp.exe${MARK} `);
+    expect(choices(root)[0]?.text).toBe(`pay${MARK}fdp.exe${MARK} `);
   });
 
   it("cuts a very long name, so one property cannot make the menu as wide as the page", async () => {
     const { root } = await mount({ properties: [{ id: "x", name: "w".repeat(5000) }], value: "x" });
-    const text = options(root)[0]?.text ?? "";
+    const text = choices(root)[0]?.text ?? "";
     expect(text.length).toBeLessThanOrEqual(81);
     expect(text.endsWith("…")).toBe(true);
   });
@@ -140,7 +143,7 @@ describe("idg-property-picker untrusted names", () => {
   it("uses an id as an attribute value only, whatever it holds", async () => {
     const id = '"><script>alert(1)</script>';
     const { root } = await mount({ properties: [{ id, name: "x" }], value: id });
-    expect(options(root)[0]?.value).toBe(id);
+    expect(choices(root)[0]?.value).toBe(id);
     expect(root.shadowRoot?.querySelector("script")).toBeNull();
   });
 });
@@ -152,9 +155,10 @@ describe("idg-property-picker value", () => {
     expect(select(root).value).toBe("");
   });
 
-  it("has no prompt once a property is chosen", async () => {
+  it("keeps the prompt, which cannot be chosen, whatever is chosen, so its options never change with the value", async () => {
     const { root } = await mount({ properties: PROPERTIES, value: "p3" });
-    expect(options(root).map((option) => option.value)).not.toContain("");
+    expect(options(root)[0]).toEqual({ value: "", text: "Choose a property" });
+    expect(select(root).querySelector("option")?.hasAttribute("disabled")).toBe(true);
   });
 
   it("selects nothing for a value that is not one of the properties, and leaves the value as it was", async () => {
@@ -169,8 +173,8 @@ describe("idg-property-picker value", () => {
     expect(select(root).value).toBe("");
     root.properties = PROPERTIES;
     await waitForChanges();
-    // The select is handed the value again, and the prompt, which stood for no choice, is gone.
-    expect(options(root).map((option) => option.value)).toEqual(["p1", "p2", "p3"]);
+    // The select is handed the value again, over the same options.
+    expect(options(root).map((option) => option.value)).toEqual(["", "p1", "p2", "p3"]);
     expect(root.value).toBe("p2");
   });
 

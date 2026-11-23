@@ -34,7 +34,7 @@ function optionText(property: TrackedProperty): string {
  *
  * Property names are text the user typed: they are shown as text only, with control and
  * bidirectional characters replaced and long names cut. A `value` that is not one of the
- * properties selects nothing (the prompt shows) and is left as it is, so it is chosen when the
+ * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
  * property appears in the list later, and is never replaced by the first property.
  *
  * @part field - The labelled field.
@@ -141,16 +141,17 @@ export class IdgPropertyPicker {
     event.stopPropagation();
   };
 
-  private renderOptions(labels: PropertyPickerLabels, selected: string) {
+  // The prompt is always the first option, and disabled so it cannot be chosen again. The set of
+  // options then never changes with the value, so the select is never asked for a value whose
+  // option is not there yet, which it would answer by choosing the first property.
+  private renderOptions(labels: PropertyPickerLabels) {
     const properties = this.list();
     if (this.loading) return <option value="">{labels.loading}</option>;
     if (properties.length === 0) return <option value="">{labels.empty}</option>;
     return [
-      selected === "" ? (
-        <option key="" value="">
-          {labels.placeholder}
-        </option>
-      ) : null,
+      <option key="" value="" disabled>
+        {labels.placeholder}
+      </option>,
       ...properties.map((property) => (
         <option key={property.id} value={property.id}>
           {optionText(property)}
@@ -177,7 +178,7 @@ export class IdgPropertyPicker {
             onIdgChange={this.handleChange}
             onIdgInput={this.handleInput}
           >
-            {this.renderOptions(labels, selected)}
+            {this.renderOptions(labels)}
           </idg-select>
         </idg-field>
         <span class="visually-hidden" part="status" role="status">

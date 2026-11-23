@@ -1279,7 +1279,7 @@ export namespace Components {
      * It is form associated: with a `name` it submits the chosen id.
      * Property names are text the user typed: they are shown as text only, with control and
      * bidirectional characters replaced and long names cut. A `value` that is not one of the
-     * properties selects nothing (the prompt shows) and is left as it is, so it is chosen when the
+     * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
      * property appears in the list later, and is never replaced by the first property.
      */
     interface IdgPropertyPicker {
@@ -2782,7 +2782,7 @@ declare global {
      * It is form associated: with a `name` it submits the chosen id.
      * Property names are text the user typed: they are shown as text only, with control and
      * bidirectional characters replaced and long names cut. A `value` that is not one of the
-     * properties selects nothing (the prompt shows) and is left as it is, so it is chosen when the
+     * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
      * property appears in the list later, and is never replaced by the first property.
      */
     interface HTMLIdgPropertyPickerElement extends Components.IdgPropertyPicker, HTMLStencilElement {
@@ -4495,7 +4495,7 @@ declare namespace LocalJSX {
      * It is form associated: with a `name` it submits the chosen id.
      * Property names are text the user typed: they are shown as text only, with control and
      * bidirectional characters replaced and long names cut. A `value` that is not one of the
-     * properties selects nothing (the prompt shows) and is left as it is, so it is chosen when the
+     * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
      * property appears in the list later, and is never replaced by the first property.
      */
     interface IdgPropertyPicker {
@@ -6052,7 +6052,7 @@ declare module "@stencil/core" {
              * It is form associated: with a `name` it submits the chosen id.
              * Property names are text the user typed: they are shown as text only, with control and
              * bidirectional characters replaced and long names cut. A `value` that is not one of the
-             * properties selects nothing (the prompt shows) and is left as it is, so it is chosen when the
+             * properties selects nothing (the disabled prompt shows) and is left as it is, so it is chosen when the
              * property appears in the list later, and is never replaced by the first property.
              */
             "idg-property-picker": LocalJSX.IntrinsicElements["idg-property-picker"] & JSXBase.HTMLAttributes<HTMLIdgPropertyPickerElement>;

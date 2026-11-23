@@ -1,0 +1,68 @@
+/* The dashboard fixture: a header that holds the property picker, and a column of sections that
+   fills a phone and centres on a wide screen. */
+body {
+  margin: 0;
+}
+
+.dashboard-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--idg-space-s);
+  padding: var(--idg-space-s) var(--idg-space-m);
+  border-block-end: var(--idg-border-width) var(--idg-border-style) var(--idg-border-color);
+}
+
+.dashboard-brand {
+  margin: 0;
+  font-weight: var(--idg-font-weight-bold);
+}
+
+/* The picker is as wide as its longest option up to the header, and never wider than the page. */
+.dashboard-header idg-property-picker {
+  flex: 0 1 var(--idg-size-s);
+  min-inline-size: 0;
+}
+
+/* One column no wider than the page: a heading's long word wraps and never widens the track,
+   whatever font the system falls back to. */
+.dashboard-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--idg-space-l);
+  max-inline-size: var(--idg-size-2xl);
+  margin-inline: auto;
+  padding: var(--idg-space-m);
+  box-sizing: border-box;
+}
+
+.dashboard-main section {
+  display: block;
+  min-inline-size: 0;
+}
+
+.dashboard-main h1,
+.dashboard-main h2 {
+  margin-block: 0 var(--idg-space-s);
+  overflow-wrap: anywhere;
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr));
+  gap: var(--idg-space-m);
+}
+
+/* A sparkline fills the width the stat leaves it, up to a few rems, and wraps under the figures
+   when there is no room. */
+.dashboard-stats idg-sparkline {
+  inline-size: 6rem;
+}
+
+/* The documented rule: hide the elements until they have hydrated. */
+idg-property-picker:not(.hydrated),
+idg-event-table:not(.hydrated),
+idg-sparkline:not(.hydrated) {
+  visibility: hidden;
+}
