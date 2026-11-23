@@ -14,7 +14,7 @@ import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import type { SvgLogoRemovalReason } from "./svg-logo-result.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 import type { Removals } from "./svg-removals.ts";
-import { absolutePixels, SVG_GRAMMARS, type SvgValue } from "./svg-values.ts";
+import { absolutePixels, stretchesOrCrops, SVG_GRAMMARS, type SvgValue } from "./svg-values.ts";
 import {
   SVG_NAMESPACE,
   XLINK_NAMESPACE,
@@ -48,6 +48,7 @@ const SCHEME = /^[a-z][a-z0-9+.-]*:/;
 function invalidValueReason(name: string, value: string): SvgLogoRemovalReason {
   const lower = trimXmlWhitespace(value).toLowerCase();
   if (lower.includes("expression(")) return "active-content";
+  if (name === "preserveAspectRatio" && stretchesOrCrops(value)) return "render-cost";
   if (REFERENCE_TAKING.has(name) && (lower.includes("url(") || SCHEME.test(lower))) {
     return "external-reference";
   }

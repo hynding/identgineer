@@ -407,7 +407,7 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
           attribute: "preserveAspectRatio",
           reason: "render-cost",
           line: 1,
-          column: 85,
+          column: 87,
         },
       ]);
     },

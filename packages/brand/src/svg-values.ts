@@ -199,13 +199,29 @@ const ALIGNMENTS = ["xMin", "xMid", "xMax"].flatMap((x) =>
   ["YMin", "YMid", "YMax"].map((y) => x + y),
 );
 
-const preserveAspectRatio: SvgGrammar = (input) => {
+/** A `preserveAspectRatio` as SVG reads it: an alignment or `none`, then `meet` or `slice`. */
+function aspectRatio(input: string): { align: string; meet: string } | undefined {
   const parts = trimXmlWhitespace(input).split(WHITESPACE_RUN);
-  const [align, meet] = parts;
+  const [align, meet = "meet"] = parts;
   if (parts.length > 2 || align === undefined) return undefined;
   if (align !== "none" && !ALIGNMENTS.includes(align)) return undefined;
-  if (meet !== undefined && meet !== "meet" && meet !== "slice") return undefined;
-  return text(parts.join(" "));
+  if (meet !== "meet" && meet !== "slice") return undefined;
+  return { align, meet };
+}
+
+/**
+ * Whether a valid `preserveAspectRatio` stretches the view box (`none`) or crops it (`slice`):
+ * either can spread a thin view box over the whole image, painting far more than its larger side's
+ * square, so neither is kept and the logo is drawn to fit, as it is by default.
+ */
+export function stretchesOrCrops(input: string): boolean {
+  const parsed = aspectRatio(input);
+  return parsed !== undefined && (parsed.align === "none" || parsed.meet === "slice");
+}
+
+const preserveAspectRatio: SvgGrammar = (input) => {
+  if (aspectRatio(input) === undefined || stretchesOrCrops(input)) return undefined;
+  return text(trimXmlWhitespace(input).split(WHITESPACE_RUN).join(" "));
 };
 
 const fragment: SvgGrammar = (input) => {

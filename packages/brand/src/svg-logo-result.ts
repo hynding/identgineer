@@ -65,7 +65,12 @@ export type SvgLogoRemovalReason =
   | "dangling-reference"
   | "character-data"
   /** A document type declaration with no internal subset: read, never honoured, not written. */
-  | "document-type";
+  | "document-type"
+  /**
+   * Valid, but able to make the logo far costlier to draw than its budgets can see; dropped where
+   * the picture stays the same or close to it (see the README).
+   */
+  | "render-cost";
 
 /**
  * One thing the sanitiser dropped. `element` and `attribute` are names as written (names only ever
