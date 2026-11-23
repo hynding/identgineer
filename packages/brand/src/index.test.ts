@@ -15,6 +15,7 @@ describe("the public API", () => {
         "NAME_MAX_LENGTH",
         "RESERVED_BRAND_IDS",
         "STATUS_NEAR_ACCENT",
+        "SVG_DRAWING_WEIGHTS",
         "SVG_LOGO_LIMITS",
         "TAGLINE_MAX_LENGTH",
         "TONES",
