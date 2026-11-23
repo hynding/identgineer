@@ -33,7 +33,8 @@ implements over the authenticated API therefore enforces ownership, on the serve
 - A request that is not even an object (no query, a null query, a null sort) rejects with
   `invalid-request` as a rejection, never as a thrown error.
 - `total` is clamped to ten million and dates must be real: a time with a day the month lacks or
-  an hour of 24 is dropped, as is one with no zone.
+  an hour of 24 is dropped, as is one with no zone. A list is read for at most four times the number of entries it keeps, so a response
+  of junk costs a few times the limit and not its own length.
 
 The fake source in the package's `src/testing` enforces the same rule (an id that is not among its
 properties rejects with an identical `not-found`) so tests can exercise the denied path, not only
