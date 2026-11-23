@@ -31,6 +31,8 @@ export interface ProbeRequest {
   /** Send and keep cookies, as the SDK's cookie requests do (`credentials: "include"`). */
   readonly cookie?: boolean;
   readonly headers?: Readonly<Record<string, string>>;
+  /** A body sent as written, with the type `headers` give it, in place of `body` as JSON. */
+  readonly rawBody?: string;
   /** The page the request comes from; the site's own page by default. */
   readonly page?: string;
 }
@@ -62,6 +64,8 @@ export interface Observation {
     readonly message?: string;
   };
   readonly shape?: unknown;
+  /** Values the SDK acts on, where the answer has them: the token's lifetime, a mail sent. */
+  readonly values?: { readonly expiresIn?: unknown; readonly sent?: unknown };
   readonly cookie: "set" | "cleared" | "unchanged";
   readonly retryAfter?: boolean;
 }
@@ -88,7 +92,11 @@ const read = (reader: Reader, body: unknown): unknown => {
       case "user":
         return outline(readUser(body));
       case "sessions":
-        return readSessions(body).map((session) => outline(session));
+        // Which session is the current one is a value the SDK reads, not only its type.
+        return readSessions(body).map((session) => ({
+          ...(outline(session) as object),
+          current: session.current,
+        }));
       case "profiles":
         return outline(readProfileList(body));
       case "raw":
@@ -99,20 +107,12 @@ const read = (reader: Reader, body: unknown): unknown => {
   }
 };
 
-export interface Gap {
-  readonly description: string;
-  /** What strapi-php answers today, pinned so the gap cannot change shape unnoticed. */
-  readonly today: Observation;
-}
-
 interface Step {
   readonly name: string;
   readonly reader?: Reader;
   /** The SDK reads this error's message (the not-confirmed sign-in). */
   readonly message?: true;
   readonly retryAfter?: true;
-  /** Why the real server is expected to differ from the fake: a camis gap, named. */
-  readonly gap?: Gap;
   readonly request: (state: State) => ProbeRequest | Promise<ProbeRequest>;
   readonly keep?: (state: State, body: unknown) => void;
 }
@@ -192,6 +192,27 @@ const MAIN_STEPS: readonly Step[] = [
     },
   },
   { name: "sign-in: wrong password", request: (s) => signIn(s, "not the password") },
+  {
+    name: "sign-in: a JSON body sent as text/plain",
+    request: (s) => ({
+      method: "POST",
+      path: "/api/auth/local",
+      headers: { "Content-Type": "text/plain" },
+      rawBody: JSON.stringify({ identifier: s.account.email, password: s.account.password }),
+    }),
+  },
+  {
+    name: "sign-in: a form body",
+    request: (s) => ({
+      method: "POST",
+      path: "/api/auth/local",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      rawBody: new URLSearchParams({
+        identifier: s.account.email,
+        password: s.account.password,
+      }).toString(),
+    }),
+  },
   {
     name: "sign-in: unknown account",
     request: (s) => ({
@@ -394,14 +415,6 @@ const MAIN_STEPS: readonly Step[] = [
   {
     name: "profiles: create",
     reader: "raw",
-    gap: {
-      description: "strapi-php validates the assigned owner as a required body field",
-      today: {
-        status: 400,
-        error: { name: "ValidationError", fields: ["owner"] },
-        cookie: "unchanged",
-      },
-    },
     request: (s) => ({
       method: "POST",
       path: "/api/profiles",
@@ -416,10 +429,32 @@ const MAIN_STEPS: readonly Step[] = [
         },
       },
     }),
+    keep: (state, body) => {
+      state.tokens.profile = String((body as { data?: { documentId?: unknown } }).data?.documentId);
+    },
+  },
+  {
+    name: "profiles: the one created",
+    reader: "profiles",
+    request: (s) => ({ method: "GET", path: "/api/profiles", token: s.tokens.reset ?? "" }),
+  },
+  {
+    name: "profiles: update",
+    reader: "raw",
+    request: (s) => ({
+      method: "PUT",
+      path: `/api/profiles/${s.tokens.profile ?? ""}`,
+      token: s.tokens.reset ?? "",
+      body: { data: { displayName: "Ada L.", timezone: "Europe/London" } },
+    }),
   },
   {
     name: "logout: no token",
     request: () => ({ method: "POST", path: "/api/auth/logout", body: {} }),
+  },
+  {
+    name: "logout: no token and no body, which the JSON rule lets through",
+    request: () => ({ method: "POST", path: "/api/auth/logout" }),
   },
   {
     name: "sign-in: cookie mode, to log out",
@@ -467,12 +502,42 @@ const MAIN_STEPS: readonly Step[] = [
 const CONFIRMATION_STEPS: readonly Step[] = [
   {
     name: "register: a new account",
-    reader: "auth",
+    reader: "raw",
     request: (s) => ({ method: "POST", path: "/api/auth/local/register", body: s.account }),
   },
   {
     name: "register: a taken account",
+    reader: "raw",
     request: (s) => ({ method: "POST", path: "/api/auth/local/register", body: s.account }),
+  },
+  {
+    name: "register: a taken username with another address",
+    reader: "raw",
+    request: (s) => ({
+      method: "POST",
+      path: "/api/auth/local/register",
+      body: { ...s.account, email: s.unknownEmail },
+    }),
+  },
+  {
+    name: "register: a username naming another address with a fullwidth @",
+    request: (s) => ({
+      method: "POST",
+      path: "/api/auth/local/register",
+      body: {
+        username: `${s.account.username}\uFF20elsewhere.example`,
+        email: `fullwidth-${s.account.email}`,
+        password: s.account.password,
+      },
+    }),
+  },
+  {
+    name: "register: a username naming another address",
+    request: (s) => ({
+      method: "POST",
+      path: "/api/auth/local/register",
+      body: { ...s.account, username: s.unknownEmail },
+    }),
   },
   { name: "sign-in: before confirming", message: true, request: (s) => signIn(s) },
   {
@@ -506,7 +571,8 @@ const CONFIRMATION_STEPS: readonly Step[] = [
   },
   {
     name: "confirm: the mailed token",
-    // The second confirmation mail: the registration's, then the resend's, which replaced it.
+    // The second mail with a confirmation link: the registration's, then the resend's, which
+    // replaced it (a notice to a taken address between them has none).
     request: async (s) => ({
       method: "GET",
       path: `/api/auth/email-confirmation?confirmation=${await s.target.confirmation(s.account.email, 2)}`,
@@ -539,6 +605,7 @@ const throttledSteps = (rate: number): readonly Step[] => [
 export const scenarios = (backend: LiveBackend) => ({
   main: { server: backend.servers.main, steps: MAIN_STEPS },
   confirmation: { server: backend.servers.confirmation, steps: CONFIRMATION_STEPS },
+  disclosing: { server: backend.servers.disclosing, steps: CONFIRMATION_STEPS },
   throttled: {
     server: backend.servers.throttled,
     steps: throttledSteps(backend.servers.throttled.throttlePerMinute),
@@ -546,6 +613,18 @@ export const scenarios = (backend: LiveBackend) => ({
 });
 
 export type Scenario = ReturnType<typeof scenarios>[keyof ReturnType<typeof scenarios>];
+
+/** The values of the fields the SDK acts on, both servers being set up with the same lifetime. */
+const valuesOf = (body: unknown): Pick<Observation, "values"> => {
+  if (typeof body !== "object" || body === null) return {};
+  const fields = body as Record<string, unknown>;
+  const values = Object.fromEntries(
+    (["expiresIn", "sent"] as const)
+      .filter((key) => key in fields)
+      .map((key) => [key, fields[key]]),
+  );
+  return Object.keys(values).length === 0 ? {} : { values };
+};
 
 const observe = async (step: Step, state: State): Promise<Observation> => {
   const before = state.target.refreshCookie();
@@ -567,6 +646,7 @@ const observe = async (step: Step, state: State): Promise<Observation> => {
           },
         }),
     ...(ok && step.reader !== undefined ? { shape: read(step.reader, answer.body) } : {}),
+    ...(ok ? valuesOf(answer.body) : {}),
     cookie,
     ...(step.retryAfter === true ? { retryAfter: answer.retryAfter !== null } : {}),
   };
@@ -616,6 +696,7 @@ const initOf = (request: ProbeRequest): RequestInit => ({
     ...request.headers,
   },
   ...(request.body === undefined ? {} : { body: JSON.stringify(request.body) }),
+  ...(request.rawBody === undefined ? {} : { body: request.rawBody }),
   credentials: request.cookie === true ? "include" : "omit",
   redirect: "manual",
 });
@@ -652,6 +733,8 @@ export const fakeTarget = (backend: LiveBackend, server: LiveServer): ProbeTarge
     clock: systemClock,
     sessions: "refresh",
     emailConfirmation: server.emailConfirmation,
+    hideAccountExistence: server.hideAccountExistence,
+    accessTokenLifetimeSeconds: server.accessTokenLifetimeSeconds,
     throttlePerMinute: server.throttlePerMinute,
     addressThrottlePerMinute: server.addressThrottlePerMinute,
     refreshThrottlePerMinute: server.refreshThrottlePerMinute,
@@ -670,6 +753,6 @@ export const fakeTarget = (backend: LiveBackend, server: LiveServer): ProbeTarge
   };
 };
 
-/** Each step's name and the gap it is expected to show, for the test titles. */
-export const stepsOf = (scenario: Scenario): readonly Pick<Step, "name" | "gap">[] =>
-  scenario.steps.map(({ name, gap }) => (gap === undefined ? { name } : { name, gap }));
+/** Each step's name, for the test titles. */
+export const stepsOf = (scenario: Scenario): readonly string[] =>
+  scenario.steps.map(({ name }) => name);

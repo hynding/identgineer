@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { fake, NODE, removeFakes, runFake, SCRIPT } from "./fake-php";
+import { fake, NODE, PROVIDERS_BEFORE_AUTH, removeFakes, runFake, SCRIPT } from "./fake-php";
 
 const run = (camisDir: string | undefined) => {
   const env: NodeJS.ProcessEnv = { ...process.env, CAMIS_DIR: camisDir };
@@ -54,13 +54,20 @@ describe("cms/scripts/live-backend.js", () => {
     { timeout: 30_000 },
     () => {
       const setup = fake();
-      const check = `const b = require(process.env.IDENTITY_LIVE_BACKEND); process.exit(Object.keys(b.servers).length === 4 ? 0 : 3);`;
+      const check = `const b = require(process.env.IDENTITY_LIVE_BACKEND); process.exit(Object.keys(b.servers).length === 5 ? 0 : 3);`;
       const result = runFake(setup, [NODE, "-e", check]);
       expect(result.stderr).toBe("");
       expect(result.status).toBe(0);
       const servers = setup.records("server.jsonl");
-      expect(servers).toHaveLength(4);
+      expect(servers).toHaveLength(5);
       for (const server of servers) expect(server.args[1]).toMatch(/^127\.0\.0\.1:\d+$/);
+      // One server answers as Strapi does, so the SDK is checked against both settings.
+      const hiding = servers.map((server) => [
+        server.env.CAMIS_EMAIL_CONFIRMATION,
+        server.env.CAMIS_AUTH_HIDE_ACCOUNT_EXISTENCE,
+      ]);
+      expect(hiding.filter(([, hide]) => hide === "false")).toEqual([["true", "false"]]);
+      expect(hiding.filter(([, hide]) => hide === "true")).toHaveLength(4);
     },
   );
 
@@ -108,6 +115,34 @@ describe("cms/scripts/live-backend.js", () => {
       expect(third.stdout).not.toContain("scaffolding the Laravel app");
     },
   );
+
+  it(
+    "registers camis' auth provider in an app scaffolded before it, once, after the panel's",
+    { timeout: 30_000 },
+    () => {
+      const setup = fake();
+      const providers = join(setup.live, "strapi-php", "bootstrap", "providers.php");
+      expect(runFake(setup, [NODE, "-e", ""]).status).toBe(0);
+      const once = readFileSync(providers, "utf8");
+      expect(once).toBe(
+        PROVIDERS_BEFORE_AUTH.replace(
+          "AdminPanelProvider::class,\n",
+          "AdminPanelProvider::class,\n    ...(class_exists(\\App\\Providers\\CamisAuthServiceProvider::class) ? [\\App\\Providers\\CamisAuthServiceProvider::class] : []),\n",
+        ),
+      );
+      expect(runFake(setup, [NODE, "-e", ""]).status).toBe(0);
+      expect(readFileSync(providers, "utf8")).toBe(once);
+    },
+  );
+
+  it("leaves a providers file without the panel's entry as it is", { timeout: 30_000 }, () => {
+    const setup = fake();
+    const providers = join(setup.live, "strapi-php", "bootstrap", "providers.php");
+    const bare = "<?php\n\nreturn [\n    App\\Providers\\AppServiceProvider::class,\n];\n";
+    writeFileSync(providers, bare);
+    expect(runFake(setup, [NODE, "-e", ""]).status).toBe(0);
+    expect(readFileSync(providers, "utf8")).toBe(bare);
+  });
 
   it("makes a fresh APP_KEY on every run", { timeout: 30_000 }, () => {
     const setup = fake();

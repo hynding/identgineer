@@ -11,9 +11,11 @@ import { linkParameterIn, mailsIn } from "./mail-log.ts";
 
 /** One running strapi-php server, as cms/scripts/live-backend.js describes it. */
 export interface LiveServer {
-  readonly name: "main" | "confirmation" | "throttled" | "shortLived";
+  readonly name: "main" | "confirmation" | "disclosing" | "throttled" | "shortLived";
   readonly url: string;
   readonly emailConfirmation: boolean;
+  /** CAMIS_AUTH_HIDE_ACCOUNT_EXISTENCE: off only on the disclosing server, as Strapi answers. */
+  readonly hideAccountExistence: boolean;
   /** CAMIS_ACCESS_TOKEN_LIFESPAN: 600 seconds, or 2 on the short-lived server. */
   readonly accessTokenLifetimeSeconds: number;
   readonly throttlePerMinute: number;
@@ -117,17 +119,19 @@ const pause = (ms: number): Promise<void> =>
   });
 
 /**
- * The mails to `to` once at least `count` have been logged. PHP buffers its log stream and may
- * flush it only after the answer has gone out, so a mail can land a moment after its request.
+ * The mails to `to` that `keep` accepts, once at least `count` have been logged. camis sends
+ * account mail after the answer, and PHP may flush its log later still, so a mail can land a
+ * moment after its request.
  */
 export const waitForMails = async (
   backend: LiveBackend,
   to: string,
   count: number,
+  keep: (mail: string) => boolean = () => true,
 ): Promise<string[]> => {
   const deadline = Date.now() + 5_000;
   for (;;) {
-    const mails = mailsTo(backend, to);
+    const mails = mailsTo(backend, to).filter(keep);
     if (mails.length >= count) return mails;
     if (Date.now() > deadline) throw new Error(`${String(count)} mails to ${to} never arrived`);
     await pause(50);
@@ -140,15 +144,23 @@ export const settledMailsTo = async (backend: LiveBackend, to: string): Promise<
   return mailsTo(backend, to);
 };
 
-/** A query parameter of the link in the `count`th mail to `to`, waiting for that mail. */
+/**
+ * A query parameter of the link in the `count`th mail to `to` that has one, waiting for that mail.
+ * Other mails between (the notice a registration of a taken address sends) are passed over.
+ */
 export const linkParameter = async (
   backend: LiveBackend,
   to: string,
   name: string,
   count = 1,
 ): Promise<string> => {
-  const mail = (await waitForMails(backend, to, count))[count - 1] ?? "";
-  const value = linkParameterIn(mail, name);
+  const mails = await waitForMails(
+    backend,
+    to,
+    count,
+    (mail) => linkParameterIn(mail, name) !== undefined,
+  );
+  const value = linkParameterIn(mails[count - 1] ?? "", name);
   if (value === undefined) throw new Error(`no ${name} in mail ${String(count)} to ${to}`);
   return value;
 };

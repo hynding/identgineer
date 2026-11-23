@@ -35,7 +35,8 @@ const response = await identity.authorizedFetch("/api/brand-kits");
 `127.0.0.1` or `[::1]` for development; no credentials, query or fragment), and optionally `fetch`,
 `clock` (`now`, `setTimeout`, `clearTimeout`), `requestTimeoutMs` (default 15000),
 `channelName` (the BroadcastChannel name, default `identgineer-identity`),
-`accessTokenLifetimeSeconds` (default 600, camis' `CAMIS_ACCESS_TOKEN_LIFESPAN`; see Refresh),
+`accessTokenLifetimeSeconds` (default 600, camis' `CAMIS_ACCESS_TOKEN_LIFESPAN`; used only when
+an answer does not say how long its token lives; see Refresh),
 `locks` (an object with `request(name, callback)` as `navigator.locks`; by default
 `navigator.locks` where the browser has it, and `null` turns locking off) and `onOnline` (a
 function that subscribes a listener to the browser coming back online and returns the function
@@ -161,8 +162,12 @@ always returns in the body.
 The next refresh is scheduled from the access token's lifetime, measured from when the answer
 arrived, so a wrong client clock does not matter (except for an `expiresAt`, or a JWT without `iat`). The lifetime is, first found: an `expiresIn`
 (seconds) in the answer, an `expiresAt` (an ISO date or epoch milliseconds) less the client's
-time, a JWT's `exp` less its `iat` (or less the client's time without `iat`), or `accessTokenLifetimeSeconds` (default 600) for strapi-php's opaque Sanctum
-tokens, which say nothing about their life. The refresh runs 30 seconds before the end of that
+time, a JWT's `exp` less its `iat` (or less the client's time without `iat`), or
+`accessTokenLifetimeSeconds` (default 600) when the answer and the token say nothing. What the
+backend says wins over the configured guess; an `expiresIn` counts only as whole seconds from 1 to
+a year, and anything else is skipped. camis answers `expiresIn` in refresh mode, so against
+strapi-php the configured lifetime is not used. A token whose known lifetime has passed is never
+sent: the client refreshes first. The refresh runs 30 seconds before the end of that
 lifetime, or halfway through a lifetime under a minute, and never sooner than 5 seconds after the
 token arrived (so a token living 5 to 10 seconds is refreshed every 5 seconds). Only
 tokens living less than 5 seconds are refreshed with a wait that doubles, from 5 seconds up to 5
@@ -225,11 +230,16 @@ the two GETs users-permissions defines (`/auth/email-confirmation`, the provider
 other request omits credentials and sends the bearer token.
 
 **Enumeration.** `register` (with email confirmation on), `requestPasswordReset` and
-`resendConfirmation` resolve to the same frozen value for existing and unknown accounts, even
-where the backend answers differently: a taken address or username, "already confirmed", "user
-blocked" and a server failure only an existing account can reach all resolve as success. Every
-failed sign-in is `invalid-credentials`. Without email confirmation a new account is signed in at
-once, so registration cannot hide that an address was free.
+`resendConfirmation` resolve to the same frozen value for existing and unknown accounts. camis
+answers every address alike itself with `CAMIS_AUTH_HIDE_ACCOUNT_EXISTENCE` on (its default):
+registration `{email, sent: true}`, which the client reads as `check-email`. Where the backend
+answers differently (that setting off, or Strapi), a taken address or username, "already
+confirmed", "user blocked" and a server failure only an existing account can reach all resolve as
+success too. A username that is an email address other than the one registering is refused by
+camis with the setting on, and the client reports it as a `validation` error on `username`. Every
+failed sign-in is `invalid-credentials`. A 415 (a body that was not JSON, which this client never
+sends) is `unknown`. Without email confirmation a new account is signed in at once, so
+registration cannot hide that an address was free.
 
 **Throttling.** After a 429 the client refuses credential requests locally for the `Retry-After`
 time (60 seconds, the CMS's throttle window, when the header is missing or hidden by CORS). After
@@ -346,8 +356,12 @@ and a one-line reason; copy its strapi-php section into the deployment's `.env`.
 
 - **Sessions:** `CAMIS_JWT_MANAGEMENT=refresh` on strapi-php (`jwtManagement: 'refresh'` on
   Strapi). Without it there is no refresh, `restore()` finds no session, the session ends on
-  reload and `signOut` cannot revoke the token on the server. Set `accessTokenLifetimeSeconds` to the
-  backend's access token lifetime (`CAMIS_ACCESS_TOKEN_LIFESPAN`, default 600) if it was changed.
+  reload and `signOut` cannot revoke the token on the server. Each token answer says how long the
+  access token lives (`expiresIn`, from `CAMIS_ACCESS_TOKEN_LIFESPAN`), which the client follows.
+- **Accounts:** `CAMIS_EMAIL_CONFIRMATION=true` and `CAMIS_AUTH_HIDE_ACCOUNT_EXISTENCE=true`, so
+  registration and the confirmation resend answer every address alike; `CAMIS_ACCOUNT_MAIL_PER_HOUR`
+  bounds the mail anyone can send an address; `CACHE_STORE` `database`, `redis` or `memcached`, so
+  the throttles and that bound count atomically.
 - **Cookie:** `CAMIS_SESSIONS_COOKIE_SECURE=true` and `CAMIS_SESSIONS_COOKIE_SAME_SITE=strict`
   (the defaults are production-only Secure and `lax`).
 - **CORS:** the CMS must allow the client's headers and expose `Retry-After`:
@@ -393,9 +407,6 @@ sign in from the token answer); see `src/passkeys.ts`.
   request. Use `signOut` instead.
 - `authorizedFetch` retries with the same `init`, so its body must be re-sendable (not a stream).
 - Profile avatars are not handled: upload and link them through `authorizedFetch`.
-- Against strapi-php as camis generates it today, `saveProfile` cannot create a profile: the
-  server refuses the create with a `validation` error on `owner`, which its grant should fill from
-  the session (see Live contract). Updating an existing profile is unaffected.
 - `restore()` on a network failure leaves the state `unknown` and rejects, so the caller can retry.
 - Each cookie refresh costs one extra `GET /api/users/me` (the user check under Refresh).
 - Without Web Locks (older browsers, sandboxed frames) cookie requests from several tabs can be in
@@ -409,23 +420,24 @@ sign in from the token answer); see `src/passkeys.ts`.
   token), to find any session the cookie still names; refreshes count against the CMS's refresh
   throttle (`CAMIS_REFRESH_THROTTLE_PER_MINUTE`, 60 a minute by default).
 
-Gaps in strapi-php as camis generates it today, besides the ones the live contract pins (below).
-They are not tested, as no test of them would be deterministic or they change nothing the SDK
-does:
+What strapi-php still lets a caller tell apart, by its generated DEPLOY.md, with accounts hidden
+(none of it is tested here, as no test of it would be deterministic or it changes nothing the
+SDK does):
 
-- Mail is sent inside the request. With a real mailer, forgot-password, the confirmation resend and
-  a registration of a taken address with confirmation on take longer for an existing account than
-  for an unknown one, so the response time tells whether an account exists, though the SDK makes
-  the answers alike. (The live backend logs mail, which hides this.)
-- `SANCTUM_TOKEN_EXPIRATION` is not read: the generated `config/sanctum.php` has
-  `'expiration' => null`. Access tokens end by `CAMIS_ACCESS_TOKEN_LIFESPAN` alone.
-- The guest routes (sign-in, registration, recovery, reset, resend, refresh) read a JSON body sent
-  as `text/plain`, which a page of any site can send without a CORS preflight. The answer stays
-  unreadable to that page, and the refresh cookie is `SameSite=Strict` and refused from an
-  unlisted `Origin`, but such a request still takes throttle turns and sends mail.
-- Token answers carry no `expiresIn`, and the access tokens are opaque Sanctum tokens with no
-  `exp` to read, so this client knows an access token's lifetime only from
-  `accessTokenLifetimeSeconds`, which must match `CAMIS_ACCESS_TOKEN_LIFESPAN`.
+- Without email confirmation a taken address or username answers Strapi's 400, since a new
+  account is signed in at once. Keep confirmation on.
+- A person registering with their own address learns that a username is taken from the notice
+  that arrives in place of a confirmation mail; unique usernames make this inherent.
+- Accounts imported from Strapi (bcryptjs cost 10) take another time to check until their first
+  sign-in stores the password again at the configured cost (`BCRYPT_ROUNDS=10` closes it at once).
+- Mail is sent after the answer, but only PHP-FPM and LiteSpeed finish the response first: under
+  mod_php or `php artisan serve` (and so the live backend) the client waits for the mail, and its
+  time shows whether one was sent.
+- A new registration's insert takes a few milliseconds more; the blocked and unconfirmed errors
+  come only after a correct password, as in Strapi.
+
+Apart from that list, `SANCTUM_TOKEN_EXPIRATION` is still not read: access token lifetimes come
+from `CAMIS_JWT_LIFESPAN` and `CAMIS_ACCESS_TOKEN_LIFESPAN`, and each answer's `expiresIn` says it.
 
 ## Testing
 
@@ -448,8 +460,13 @@ browser would leave waiting forever, throws and fails the test run, tracked with
 `AsyncLocalStorage`, which before Node 24 is cheap only with `--experimental-async-context-frame`
 (Node 22.7 or later), as this package's tests run; `detectNested: false` turns the check off, and `onNestedRequest`
 receives the error instead). Pass `api.fetch`, `api.baseUrl` and the clock to the client. The fake
-issues opaque tokens by default, living 600 seconds in refresh mode and 30 days in legacy mode
-(`accessTokens: "jwt"`, `accessTokenLifetimeSeconds` and `reportExpiresIn` change that), and
+issues opaque tokens by default, living 600 seconds in refresh mode and 30 days in legacy mode,
+with `expiresIn` in refresh mode as camis answers (`accessTokens: "jwt"`,
+`accessTokenLifetimeSeconds` and `reportExpiresIn` change that). As camis, it hides account
+existence by default: with email confirmation on, every registration and confirmation resend is
+answered `{email, sent: true}`, and a username naming another address is refused;
+`hideAccountExistence: false` gives Strapi's disclosing answers. An auth write whose body is not
+JSON is refused with 415. And
 `api.holdNext(method, path)` holds the next such request until the returned function is called, to
 interleave tabs and races. `api.restorableSession()` tells whether the cookie names a session a
 reload could resume and `api.restorableUser()` whose it is, `api.setRefreshCookie(value)` plants a
@@ -497,28 +514,32 @@ only exposed response headers visible, and an unfollowed redirect answered as an
 (status 0). They cover:
 
 - `sdk.live.test.ts`: registration with and without email confirmation, sign-in and the cookie's
-  attributes, the current user, restoring from the cookie in a fresh client, a scheduled refresh
-  rotating the cookie, an expired access token (the short-lived server's, 2 seconds) answered
-  401 and refreshed, the profile, password change, forgot and reset password with the mailed
-  code, confirmation with the mailed token, listing and revoking sessions, sign-out and sign-out
-  everywhere, and that a wrong password, an unknown account, a taken registration and every
-  resend answer alike;
+  attributes, the current user, restoring from the cookie in a fresh client, on the short-lived
+  server (access tokens of 2 seconds) a refresh scheduled by the answer's `expiresIn` rather than
+  the configured lifetime and rotating the cookie, an expired token refreshed before it is sent and
+  a 401 answered by a refresh and a retry, creating and updating the profile, password change,
+  forgot and reset password with the mailed code, confirmation with the mailed token, listing and
+  revoking sessions, sign-out and sign-out everywhere, that a wrong password and an unknown account
+  answer alike, and, against a server hiding accounts and one showing them as Strapi does, that a
+  new, a registered and a taken-username registration and every resend answer alike, and how a
+  username naming another address is answered;
 - `protections.live.test.ts`: throttling (a 429 with `Retry-After` read through CORS becomes
   `throttled`, per name given; failed refreshes fill the refresh bucket while a good cookie still
   rotates), the refresh cookie not sent from another site (a check of the simulated browser, as
   `SameSite` is the browser's to enforce), refused (403) from an unlisted page or without the
   client's headers, logout needing the access token, CORS refusing a foreign page and allowing
-  every header the SDK sends;
+  every header the SDK sends, and, below the SDK, registration of a new address, a registered one
+  and a taken username answered alike in status, body and headers and within half again in time
+  (the fastest of five tries each), every resend alike, an unknown account's sign-in as slow as a
+  wrong password (the fastest of ten tries each, within half again), and the server showing
+  accounts telling them apart;
 - `fake-agreement.live.test.ts`: the same raw requests and failures sent to the real server and
   to `createFakeIdentityApi` set up alike, comparing status, error name, error fields and the body
-  as the SDK's readers see it, step by step.
+  as the SDK's readers see it, with the values the SDK acts on (`expiresIn`, `sent`, which session
+  is current), step by step, on every server but the short-lived one, a JSON body sent as
+  `text/plain` and a form body (415 on both) and a body-less logout among the steps; none is an
+  expected failure.
 
-Where the backend is wrong, one test pins what it answers today and an expected failure
-(`it.fails`) asserts only the behaviour wanted, both naming the camis gap; their setup runs in a
-`beforeAll`, so a failure there fails both rather than passing the expected failure. Once camis is
-fixed the pin turns red, as a reminder to drop it and the marker. The gaps: creating a profile is
-refused (400 `ValidationError` on `owner`, which the grant's `assign` should fill from the
-session); and below the SDK a taken registration answers 400 `ApplicationError`, a resend for a
-confirmed address 400 "Already confirmed", and an unknown account's sign-in is refused in under
-half the time of a wrong password (the fastest of ten tries each, on a server no other test there
-uses), each telling whether an account exists.
+The gaps the first live run found (a profile create refused on `owner`; a taken registration, a
+confirmed resend and the sign-in time telling accounts apart; JSON read from `text/plain`; no
+`expiresIn`) are fixed in camis and tested above as the behaviour wanted.

@@ -92,6 +92,19 @@ const reissue = (context: RouteContext, user: FakeUser): FakeResponse => {
   return ok({ ...tokens, ...wire });
 };
 
+/**
+ * camis' StrapiRateLimits::folded: PHP's trim, compatibility decomposition, combining marks
+ * stripped, case folded (upper then lower stands in for PHP's full case folding, ß to ss).
+ * A fullwidth or small "@" folds to "@".
+ */
+const folded = (name: string): string =>
+  name
+    .replace(/^[ \t\n\r\0\v]+|[ \t\n\r\0\v]+$/g, "")
+    .normalize("NFKD")
+    .replace(/\p{Mn}+/gu, "")
+    .toUpperCase()
+    .toLowerCase();
+
 const byEmail = (context: RouteContext, email: unknown): FakeUser | undefined =>
   context.store.findUser((user) => user.email === text(email).toLowerCase());
 
@@ -117,10 +130,29 @@ const register: FakeRoute = {
     if (failure !== undefined) return failure;
     const email = text(body.email).toLowerCase();
     const username = text(body.username);
+    const foldedUsername = folded(username);
+    if (
+      settings.hideAccountExistence &&
+      foldedUsername.includes("@") &&
+      foldedUsername !== folded(email)
+    ) {
+      return strapiError(
+        400,
+        "ValidationError",
+        "username must not be an email address other than the one registering",
+      );
+    }
     const taken = store.findUser((user) =>
       [email, username].some((name) => user.email === name || user.username === name),
     );
-    if (taken !== undefined) return applicationError("Email or Username are already taken");
+    // With confirmation on a new account's answer carries nothing of it, so a taken one can be
+    // answered alike (and told by mail); without it the new account's session cannot be faked.
+    const hidden = settings.emailConfirmation && settings.hideAccountExistence;
+    if (taken !== undefined) {
+      return hidden
+        ? ok({ email, sent: true })
+        : applicationError("Email or Username are already taken");
+    }
     const user = store.addUser({
       username,
       email,
@@ -131,7 +163,7 @@ const register: FakeRoute = {
     });
     if (settings.emailConfirmation) {
       user.confirmationCode = `confirm${String(store.next())}`;
-      return ok({ user: store.wire(user) });
+      return hidden ? ok({ email, sent: true }) : ok({ user: store.wire(user) });
     }
     if (settings.sessions === "legacy") {
       return ok({ jwt: store.lastingToken(user.id), user: store.wire(user) });
@@ -238,6 +270,12 @@ const sendEmailConfirmation: FakeRoute = {
   handle: (context) => {
     const body = context.jsonBody();
     const user = byEmail(context, body.email);
+    if (context.settings.hideAccountExistence) {
+      if (user !== undefined && !user.confirmed && !user.blocked) {
+        user.confirmationCode = `confirm${String(context.store.next())}`;
+      }
+      return ok({ email: text(body.email).toLowerCase(), sent: true });
+    }
     if (user === undefined) return ok({ email: body.email, sent: true });
     if (user.confirmed) return applicationError("Already confirmed");
     if (user.blocked) return applicationError("User blocked");

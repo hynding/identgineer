@@ -58,6 +58,8 @@ const wire = (profile: FakeProfile) => ({
   ...profile.values,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
+  // Strapi 5 dates every entry's publication, draft and publish or not.
+  publishedAt: "2026-01-01T00:00:00.000Z",
 });
 
 const list: FakeRoute = {

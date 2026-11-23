@@ -13,7 +13,7 @@ import {
   requireObject,
   requireValid,
 } from "./input-checks.ts";
-import { readAuthResponse } from "./shapes.ts";
+import { readAuthResponse, readErrorEnvelope } from "./shapes.ts";
 import type { ApiResponse } from "./transport.ts";
 import type { IdentityUser } from "./types.ts";
 
@@ -66,6 +66,17 @@ const REGISTER_FIELDS = ["username", "email", "password"] as const;
 const isApplicationError = (response: ApiResponse): boolean =>
   response.status === 400 && errorName(response) === "ApplicationError";
 
+// camis refuses a username naming another address (looked up as one) by message alone.
+const USERNAME_IS_ADDRESS = "username must not be an email address other than the one registering";
+
+/** camis' answer to every registration with accounts hidden and confirmation on. */
+const isNeutralRegistration = (body: unknown): boolean =>
+  typeof body === "object" &&
+  body !== null &&
+  (body as { sent?: unknown }).sent === true &&
+  !Object.hasOwn(body, "jwt") &&
+  !Object.hasOwn(body, "user");
+
 /** A validation error without field errors is the backend refusing a code or a password. */
 const isRefusedSecret = (response: ApiResponse): boolean =>
   response.status === 400 &&
@@ -90,9 +101,18 @@ export const register =
         path: "/api/auth/local/register",
         body: { username: input.username, email: input.email, password: input.password },
       });
-      // users-permissions answers a taken address or username with an ApplicationError, and so
-      // does a failed confirmation email: both become the neutral answer.
+      // With accounts hidden camis answers every address `{email, sent: true}`. Without, Strapi's
+      // answers: a taken address or username, or a failed confirmation email, is an
+      // ApplicationError, which becomes the same neutral answer.
+      if (response.ok && isNeutralRegistration(response.body)) return CHECK_EMAIL;
       if (isApplicationError(response)) return CHECK_EMAIL;
+      if (
+        response.status === 400 &&
+        errorName(response) === "ValidationError" &&
+        readErrorEnvelope(response.body)?.message === USERNAME_IS_ADDRESS
+      ) {
+        throw new IdentityError("validation", { fields: ["username"] });
+      }
       if (!response.ok) throw failureOf(response, context.clock.now(), REGISTER_FIELDS);
       const auth = readAuthResponse(response.body);
       if (tokensOf(context, auth) === undefined) return CHECK_EMAIL;

@@ -300,97 +300,144 @@ describe.skipIf(liveBackend === undefined)(
     });
 
     describe("account enumeration below the SDK", () => {
-      type Answer = Awaited<ReturnType<typeof post>>;
-      const seen: {
-        registerNew?: Answer;
-        registerTaken?: Answer;
-        resendConfirmed?: Answer;
-        resendUnknown?: Answer;
-        signInKnown: number[];
-        signInUnknown: number[];
-      } = { signInKnown: [], signInUnknown: [] };
+      interface Seen {
+        readonly status: number;
+        readonly body: unknown;
+        readonly headers: Readonly<Record<string, string>>;
+        readonly ms: number;
+      }
+
+      /** An answer as a caller of the API sees it, timed; the Date header aside. */
+      const send = async (server: LiveServer, path: string, body: unknown): Promise<Seen> => {
+        const start = performance.now();
+        const response = await fetch(`${server.url}${path}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(body),
+        });
+        const text = await response.text();
+        const ms = performance.now() - start;
+        const headers = Object.fromEntries(
+          [...response.headers].filter(([name]) => name !== "date"),
+        );
+        return { status: response.status, body: JSON.parse(text) as unknown, headers, ms };
+      };
+
+      /** Within half again of each other: the hash check is the same work on every path. */
+      const alike = (a: number, b: number): void => {
+        expect(a / b).toBeGreaterThan(2 / 3);
+        expect(a / b).toBeLessThan(3 / 2);
+      };
+
+      const ROUNDS = 5;
+      const server = () => backend.servers.confirmation;
+      const register = (account: { username: string; email: string; password: string }) =>
+        send(server(), "/api/auth/local/register", account);
+
+      const registration: { fresh: Seen[]; registered: Seen[]; username: Seen[] } = {
+        fresh: [],
+        registered: [],
+        username: [],
+      };
+      const resend: { pending?: Seen; confirmed?: Seen; unknown?: Seen } = {};
+      const signIn: { known: number[]; unknown: number[] } = { known: [], unknown: [] };
 
       beforeAll(async () => {
-        const server = backend.servers.confirmation;
-        const taken = freshAccount("enumerate");
-        seen.registerNew = await post(server, "/api/auth/local/register", taken);
-        seen.registerTaken = await post(server, "/api/auth/local/register", taken);
+        const existing = [];
+        for (let round = 0; round < ROUNDS; round += 1) {
+          const account = freshAccount("existing");
+          const made = await register(account);
+          if (made.status !== 200) throw new Error(`registration answered ${String(made.status)}`);
+          existing.push(account);
+        }
+        // Each kind in turn, so a slow moment of the server falls on all three alike.
+        for (const account of existing) {
+          registration.fresh.push(await register(freshAccount("fresh")));
+          registration.registered.push(
+            await register({ ...account, username: `${account.username}-2` }),
+          );
+          registration.username.push(
+            await register({ ...account, email: freshAccount("other").email }),
+          );
+        }
 
-        const account = freshAccount("resend");
-        await post(server, "/api/auth/local/register", account);
-        const confirmation = await linkParameter(backend, account.email, "confirmation");
-        const confirmed = await fetch(
-          `${server.url}/api/auth/email-confirmation?confirmation=${confirmation}`,
+        const pending = freshAccount("pending");
+        const confirmed = freshAccount("confirmed");
+        await register(pending);
+        await register(confirmed);
+        const confirmation = await linkParameter(backend, confirmed.email, "confirmation");
+        const answer = await fetch(
+          `${server().url}/api/auth/email-confirmation?confirmation=${confirmation}`,
           { redirect: "manual" },
         );
-        if (confirmed.status !== 302)
-          throw new Error(`confirmation answered ${String(confirmed.status)}`);
-        seen.resendConfirmed = await post(server, "/api/auth/send-email-confirmation", {
-          email: account.email,
-        });
-        seen.resendUnknown = await post(server, "/api/auth/send-email-confirmation", {
-          email: freshAccount("nobody").email,
-        });
+        if (answer.status !== 302)
+          throw new Error(`confirmation answered ${String(answer.status)}`);
+        const resendTo = (email: string) =>
+          send(server(), "/api/auth/send-email-confirmation", { email });
+        resend.pending = await resendTo(pending.email);
+        resend.confirmed = await resendTo(confirmed.email);
+        resend.unknown = await resendTo(freshAccount("nobody").email);
 
         const known = await registered(backend.servers.shortLived, "timing");
         for (let round = 0; round < 10; round += 1) {
-          seen.signInKnown.push(await timeSignIn(known.email));
-          seen.signInUnknown.push(await timeSignIn(freshAccount("nobody").email));
+          signIn.known.push(await timeSignIn(known.email));
+          signIn.unknown.push(await timeSignIn(freshAccount("nobody").email));
         }
       }, 60_000);
 
-      const keys = (answer: Answer | undefined): string[] => Object.keys(answer?.body ?? {}).sort();
+      /** The answer with its address replaced, which each caller already knows. */
+      const anonymous = (answer: Seen | undefined) =>
+        answer === undefined
+          ? undefined
+          : {
+              status: answer.status,
+              body: { ...(answer.body as object), email: "(the address given)" },
+              headers: answer.headers,
+            };
 
-      // camis gap: POST /api/auth/local/register answers a taken username or email with 400
-      // ApplicationError "Email or Username are already taken" (and at once, without hashing the
-      // password), and a new one with 200, so a caller of the API learns that an account exists.
-      // Strapi does the same; the SDK hides it with email confirmation on. Responsible:
-      // users-permissions/auth.ts in camis' adapter-filament strapi-api (AuthController::register).
-      it("answers a registration of a taken address with 400 ApplicationError today, a new one with 200 (camis gap: register discloses accounts)", () => {
-        expect(seen.registerNew?.status).toBe(200);
-        expect(seen.registerTaken).toMatchObject({
+      it("answers a registration of a new address, a registered one and a taken username alike", () => {
+        const [fresh] = registration.fresh;
+        expect(fresh).toMatchObject({ status: 200, body: { sent: true } });
+        for (const answer of [...registration.registered, ...registration.username]) {
+          expect(anonymous(answer)).toEqual(anonymous(fresh));
+        }
+      });
+
+      it("carries only the address given and that mail was sent, whatever account it names", () => {
+        for (const kind of [registration.fresh, registration.registered, registration.username]) {
+          for (const answer of kind) {
+            expect(Object.keys(answer.body as object).sort()).toEqual(["email", "sent"]);
+          }
+        }
+      });
+
+      it("takes as long to answer a registered address or a taken username as a new address", () => {
+        const fresh = fastest(registration.fresh.map(({ ms }) => ms));
+        alike(fastest(registration.registered.map(({ ms }) => ms)), fresh);
+        alike(fastest(registration.username.map(({ ms }) => ms)), fresh);
+      });
+
+      it("answers a resend for a pending, a confirmed and an unknown address alike", () => {
+        expect(resend.unknown).toMatchObject({ status: 200, body: { sent: true } });
+        for (const answer of [resend.pending, resend.confirmed]) {
+          expect(anonymous(answer)).toEqual(anonymous(resend.unknown));
+        }
+      });
+
+      it("takes as long to refuse an unknown account's sign-in as a wrong password", () => {
+        alike(fastest(signIn.unknown), fastest(signIn.known));
+      });
+
+      it("tells a taken registration and a confirmed resend apart where account existence is shown, which the SDK reads as neutral", async () => {
+        const disclosing = backend.servers.disclosing;
+        const account = freshAccount("shown");
+        expect((await send(disclosing, "/api/auth/local/register", account)).status).toBe(200);
+        expect(await send(disclosing, "/api/auth/local/register", account)).toMatchObject({
           status: 400,
-          body: {
-            error: { name: "ApplicationError", message: "Email or Username are already taken" },
-          },
+          body: { error: { name: "ApplicationError" } },
         });
-      });
-
-      it.fails("answers a registration of a taken address as one of a new address", () => {
-        expect(seen.registerTaken?.status).toBe(seen.registerNew?.status);
-        expect(keys(seen.registerTaken)).toEqual(keys(seen.registerNew));
-      });
-
-      // camis gap: POST /api/auth/send-email-confirmation answers an unknown address with 200
-      // { email, sent: true } but a confirmed one with 400 ApplicationError "Already confirmed"
-      // (and a blocked one with "User blocked"), so a caller learns that the account exists.
-      // Strapi does the same; the SDK hides it. Responsible: users-permissions/auth.ts in camis'
-      // adapter-filament strapi-api (AuthController::sendEmailConfirmation).
-      it("answers a resend for a confirmed address with 400 Already confirmed today, an unknown one with 200 (camis gap: resend discloses accounts)", () => {
-        expect(seen.resendUnknown).toMatchObject({ status: 200, body: { sent: true } });
-        expect(seen.resendConfirmed).toMatchObject({
-          status: 400,
-          body: { error: { name: "ApplicationError", message: "Already confirmed" } },
-        });
-      });
-
-      it.fails("answers a resend for a confirmed address as for an unknown one", () => {
-        expect(seen.resendConfirmed?.status).toBe(seen.resendUnknown?.status);
-        expect(keys(seen.resendConfirmed)).toEqual(keys(seen.resendUnknown));
-      });
-
-      // camis gap: POST /api/auth/local hashes the password only when the account exists, so a
-      // wrong password for an existing account takes a bcrypt verification (about 0.2 s at
-      // BCRYPT_ROUNDS=12) and an unknown account answers at once: the response time tells
-      // whether an account exists. Strapi has the same flaw. Responsible: users-permissions/
-      // auth.ts in camis' adapter-filament strapi-api (AuthController::login, the
-      // `$user === null || … Hash::check` line).
-      it("refuses an unknown account in under half the time of a wrong password today (camis gap: sign-in timing)", () => {
-        expect(fastest(seen.signInUnknown)).toBeLessThan(fastest(seen.signInKnown) * 0.5);
-      });
-
-      it.fails("takes as long to refuse an unknown account as a wrong password", () => {
-        expect(fastest(seen.signInUnknown)).toBeGreaterThan(fastest(seen.signInKnown) * 0.5);
+        const tab = openTab(disclosing, createBrowser(backend));
+        expect(await tab.register(account)).toEqual({ outcome: "check-email" });
       });
     });
   },

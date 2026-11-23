@@ -38,6 +38,58 @@ describe("register", () => {
     ).rejects.toMatchObject({ code: "validation", fields: ["password"] });
   });
 
+  it("names the username when the backend refuses one that is another address", async () => {
+    const { client } = setup({ emailConfirmation: true });
+    await expect(
+      client.register({ ...NEW_ACCOUNT, username: "someone@elsewhere.example" }),
+    ).rejects.toMatchObject({ code: "validation", fields: ["username"] });
+  });
+
+  it("takes a username that is the address registering", async () => {
+    const { client } = setup({ emailConfirmation: true });
+    expect(await client.register({ ...NEW_ACCOUNT, username: NEW_ACCOUNT.email })).toEqual({
+      outcome: "check-email",
+    });
+  });
+
+  it.each([true, false])(
+    "asks to check email for a new, a registered and a taken-username account (hideAccountExistence %s)",
+    async (hideAccountExistence) => {
+      const { client } = setup({ emailConfirmation: true, hideAccountExistence });
+      for (const account of [
+        NEW_ACCOUNT,
+        EXISTING_ACCOUNT,
+        { username: "ada", email: "other@example.com", password: PASSWORD },
+      ]) {
+        expect(await client.register(account)).toEqual({ outcome: "check-email" });
+      }
+      expect(client.getState()).toEqual({ status: "unknown" });
+    },
+  );
+
+  it("refuses an ok registration answer that is neither a session nor the neutral one", async () => {
+    const { api, client } = setup({ emailConfirmation: true });
+    api.respondNext("POST", "/api/auth/local/register", { status: 200, body: { sent: false } });
+    await expect(client.register(NEW_ACCOUNT)).rejects.toMatchObject({ code: "unknown" });
+  });
+
+  it("reports a 415, which only a broken proxy or client could cause, as unknown", async () => {
+    const { api, client } = setup();
+    api.respondNext("POST", "/api/auth/local/register", {
+      status: 415,
+      body: {
+        data: null,
+        error: {
+          status: 415,
+          name: "UnsupportedMediaTypeError",
+          message: "JSON only",
+          details: {},
+        },
+      },
+    });
+    await expect(client.register(NEW_ACCOUNT)).rejects.toMatchObject({ code: "unknown" });
+  });
+
   it("passes on the field names of a server-side validation error", async () => {
     const { api, client } = setup();
     api.respondNext("POST", "/api/auth/local/register", {
@@ -109,23 +161,26 @@ describe("enumeration resistance (acceptance)", () => {
     expect(shape(unknown)).toBe(shape(known));
   });
 
-  it("gives the same resend result for unknown, unconfirmed, confirmed and blocked accounts", async () => {
-    const { api, client } = setup({ emailConfirmation: true });
-    api.addUser({ username: "u", email: "u@example.com", password: PASSWORD, confirmed: false });
-    api.addUser({
-      username: "b",
-      email: "b@example.com",
-      password: PASSWORD,
-      blocked: true,
-      confirmed: false,
-    });
-    const results = await Promise.all(
-      ["nobody@example.com", "u@example.com", "ada@example.com", "b@example.com"].map((email) =>
-        client.resendConfirmation({ email }),
-      ),
-    );
-    for (const result of results) expect(shape(result)).toBe(shape({ outcome: "accepted" }));
-  });
+  it.each([true, false])(
+    "gives the same resend result for unknown, unconfirmed, confirmed and blocked accounts (hideAccountExistence %s)",
+    async (hideAccountExistence) => {
+      const { api, client } = setup({ emailConfirmation: true, hideAccountExistence });
+      api.addUser({ username: "u", email: "u@example.com", password: PASSWORD, confirmed: false });
+      api.addUser({
+        username: "b",
+        email: "b@example.com",
+        password: PASSWORD,
+        blocked: true,
+        confirmed: false,
+      });
+      const results = await Promise.all(
+        ["nobody@example.com", "u@example.com", "ada@example.com", "b@example.com"].map((email) =>
+          client.resendConfirmation({ email }),
+        ),
+      );
+      for (const result of results) expect(shape(result)).toBe(shape({ outcome: "accepted" }));
+    },
+  );
 });
 
 describe("resetPassword", () => {

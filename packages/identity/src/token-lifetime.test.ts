@@ -24,6 +24,25 @@ describe("tokenLifetime", () => {
     });
   });
 
+  it("takes an expiresIn of up to a year, in whole seconds", () => {
+    expect(tokenLifetime({ accessToken: "1|o", expiresIn: 1 }, FALLBACK)).toEqual({
+      ms: 1_000,
+      known: true,
+    });
+    expect(tokenLifetime({ accessToken: "1|o", expiresIn: 31_536_000 }, FALLBACK)).toEqual({
+      ms: 31_536_000_000,
+      known: true,
+    });
+  });
+
+  it("falls through an unusable expiresIn to the token's own times", () => {
+    const token = jwt({ iat: seconds(NOW), exp: seconds(NOW) + 60 });
+    expect(tokenLifetime({ accessToken: token, expiresIn: 2.5 }, FALLBACK)).toEqual({
+      ms: 60_000,
+      known: true,
+    });
+  });
+
   it("reads an expiresAt date against the local clock", () => {
     const expiresAt = new Date(NOW + 120_000).toISOString();
     expect(tokenLifetime({ accessToken: "1|opaque", expiresAt }, FALLBACK)).toEqual({
@@ -53,6 +72,9 @@ describe("tokenLifetime", () => {
     ["a negative expiresIn", { accessToken: "1|o", expiresIn: -5 }],
     ["a zero expiresIn", { accessToken: "1|o", expiresIn: 0 }],
     ["an infinite expiresIn", { accessToken: "1|o", expiresIn: Number.POSITIVE_INFINITY }],
+    ["a fractional expiresIn", { accessToken: "1|o", expiresIn: 1.5 }],
+    ["an expiresIn of more than a year", { accessToken: "1|o", expiresIn: 31_536_001 }],
+    ["a NaN expiresIn", { accessToken: "1|o", expiresIn: Number.NaN }],
     [
       "an expiresAt in the past",
       { accessToken: "1|o", expiresAt: new Date(NOW - 1).toISOString() },

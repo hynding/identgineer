@@ -29,18 +29,7 @@ const compare = (name: string, scenario: () => Scenario) => {
 
     const steps = liveBackend === undefined ? [] : stepsOf(scenario());
     steps.forEach((step, index) => {
-      if (step.gap === undefined) {
-        it(step.name, () => {
-          expect(observed.real[index]).toEqual(observed.fake[index]);
-        });
-        return;
-      }
-      const { description, today } = step.gap;
-      it(`${step.name}: strapi-php answers as it does today (camis gap: ${description})`, () => {
-        expect(observed.real[index]).toEqual(today);
-        expect(observed.fake[index]).not.toEqual(today);
-      });
-      it.fails(`${step.name} (camis gap: ${description})`, () => {
+      it(step, () => {
         expect(observed.real[index]).toEqual(observed.fake[index]);
       });
     });
@@ -52,6 +41,7 @@ describe.skipIf(liveBackend === undefined)(
   () => {
     compare("without email confirmation", () => scenarios(backend).main);
     compare("with email confirmation", () => scenarios(backend).confirmation);
+    compare("with email confirmation and accounts shown", () => scenarios(backend).disclosing);
     compare("over the throttle", () => scenarios(backend).throttled);
   },
 );
