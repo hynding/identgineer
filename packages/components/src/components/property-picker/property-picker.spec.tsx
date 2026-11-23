@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { h } from "@stencil/vitest";
-import { MARK } from "../../utils/untrusted-text";
 import { renderWithInternals } from "../../testing/form-internals";
 import "../field/field";
 import "../select/select";
 import "./property-picker";
+
+const MARK = "\uFFFD";
 
 const PROPERTIES = [
   { id: "p1", name: "Docs", origin: "https://docs.example.com" },

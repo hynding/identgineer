@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { MARK, displayText, neutraliseText, truncateText } from "./untrusted-text";
+import { displayText, neutraliseText } from "./untrusted-text";
+
+const MARK = "\uFFFD";
 
 describe("neutraliseText: characters that draw nothing", () => {
   it.each([
@@ -123,25 +125,25 @@ describe("neutraliseText", () => {
 
 describe("truncateText", () => {
   it("leaves text at or under the limit alone", () => {
-    expect(truncateText("abc", 3)).toBe("abc");
+    expect(displayText("abc", 3)).toBe("abc");
   });
 
   it("cuts at the limit and marks the cut with an ellipsis that counts toward it", () => {
-    expect(truncateText("abcdef", 4)).toBe("abc…");
+    expect(displayText("abcdef", 4)).toBe("abc…");
   });
 
   it("counts characters and not code units, so it never cuts an emoji in half", () => {
-    expect(truncateText("😀😀😀😀", 3)).toBe("😀😀…");
-    expect(truncateText("😀😀😀", 3)).toBe("😀😀😀");
+    expect(displayText("😀😀😀😀", 3)).toBe("😀😀…");
+    expect(displayText("😀😀😀", 3)).toBe("😀😀😀");
   });
 
   it("does not leave a joiner dangling before the ellipsis", () => {
-    expect(truncateText("👨‍💻xxxx", 3)).toBe("👨…");
+    expect(displayText("👨‍💻xxxx", 3)).toBe("👨…");
   });
 
   it("stays quick and bounded for text that is a million characters long", () => {
     const start = performance.now();
-    const cut = truncateText("x".repeat(1_000_000), 10);
+    const cut = displayText("x".repeat(1_000_000), 10);
     expect(cut).toBe("xxxxxxxxx…");
     expect(performance.now() - start).toBeLessThan(200);
   });

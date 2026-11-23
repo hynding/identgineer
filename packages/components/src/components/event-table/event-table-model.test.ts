@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { TrackedEvent } from "../../dashboard/dashboard-types";
-import { MARK } from "../../utils/untrusted-text";
 import {
   EVENT_TABLE_LIMITS,
   displayedProperties,
@@ -9,6 +8,8 @@ import {
   pageCountOf,
   sortEvents,
 } from "./event-table-model";
+
+const MARK = "\uFFFD";
 
 const event = (id: string, name: string, occurredAt: string): TrackedEvent => ({
   id,

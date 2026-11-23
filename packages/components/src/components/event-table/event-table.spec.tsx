@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { h, render } from "@stencil/vitest";
-import { MARK } from "../../utils/untrusted-text";
 import "../alert/alert";
 import "../pagination/pagination";
 import "../skeleton/skeleton";
 import "../table/table";
 import "./event-table";
+
+const MARK = "\uFFFD";
 
 interface TableElement extends HTMLElement {
   events?: unknown;

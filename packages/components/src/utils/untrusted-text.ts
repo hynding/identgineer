@@ -1,5 +1,5 @@
 /** Shown in place of a character that is not allowed to show as itself. */
-export const MARK = "�";
+const MARK = "�";
 
 const ZERO_WIDTH_JOINER = 0x200d;
 const ELLIPSIS = "…";
@@ -98,7 +98,7 @@ export function neutraliseText(value: unknown): string {
  * At most `limit` characters (not code units, so an emoji is never cut in half), the last of them
  * an ellipsis when something was cut. Only as much of the text as the limit asks for is read.
  */
-export function truncateText(value: unknown, limit: number): string {
+function truncateText(value: unknown, limit: number): string {
   const characters: string[] = [];
   let cut = false;
   for (const character of asText(value)) {
