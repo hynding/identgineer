@@ -1,9 +1,17 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { outputName, sdkModules, transpileSdkModule } from "./sdk-fixture-modules";
+import {
+  DASHBOARD_FIXTURE_ONLY,
+  outputName,
+  sdkModules,
+  transpileSdkModule,
+} from "./sdk-fixture-modules";
 
 const IDENTITY = fileURLToPath(new URL("../../identity/src", import.meta.url));
 const TRACKING = fileURLToPath(new URL("../../tracking/src", import.meta.url));
+const COMPONENTS = fileURLToPath(new URL("../src", import.meta.url));
 
 describe("the identity fixture's modules", () => {
   const modules = sdkModules(IDENTITY, ["testing/memory-locks.ts", "testing/index.ts"]).map(
@@ -31,6 +39,30 @@ describe("the consent fixture's modules", () => {
     expect(modules).toContain("testing/index.js");
     expect(modules).not.toContain("test-harness.js");
     expect(modules.some((name) => name.endsWith(".test.js"))).toBe(false);
+  });
+});
+
+describe("the dashboard fixture's modules", () => {
+  const paths = sdkModules(COMPONENTS, [], DASHBOARD_FIXTURE_ONLY);
+  const modules = paths.map((path) => outputName(COMPONENTS, path));
+
+  it("take the seam and its fake and nothing else of the components, without tests", () => {
+    expect(modules).toContain("dashboard/validated-source.js");
+    expect(modules).toContain("dashboard/dashboard-types.js");
+    expect(modules).toContain("testing/fake-dashboard-source.js");
+    expect(modules.some((name) => name.endsWith(".test.js"))).toBe(false);
+    expect(modules.some((name) => name.startsWith("components/sign-in"))).toBe(false);
+  });
+
+  it("include every module they import, so the page never asks for one that is missing", () => {
+    const available = new Set(paths);
+    const missing = paths.flatMap((path) =>
+      [...readFileSync(path, "utf8").matchAll(/from\s+["'](\.[^"']+)["']/g)]
+        .map((match) => join(dirname(path), `${match[1] ?? ""}.ts`))
+        .filter((target) => !available.has(target))
+        .map((target) => `${outputName(COMPONENTS, path)} needs ${outputName(COMPONENTS, target)}`),
+    );
+    expect(missing).toEqual([]);
   });
 });
 
