@@ -470,6 +470,12 @@ describe("sanitiseSvgLogo, document type declarations", () => {
     expect(refused(`${doctype}${EMPTY}`).code).toBe("doctype");
   });
 
+  it("holds its name to the name length limit", () => {
+    const longest = "s".repeat(SVG_LOGO_LIMITS.nameLength);
+    expect(accepted(`<!DOCTYPE ${longest}>${EMPTY}`).svg).toBe(EMPTY);
+    expect(refused(`<!DOCTYPE ${longest}s>${EMPTY}`).code).toBe("doctype");
+  });
+
   it("refuses one after the root or inside it, and one before the XML declaration", () => {
     expect(refused(`${EMPTY}<!DOCTYPE svg>`).code).toBe("doctype");
     expect(refused(svg("<!DOCTYPE svg>")).code).toBe("doctype");
