@@ -247,4 +247,6 @@ export const SVG_GRAMMARS: Readonly<Record<string, SvgGrammar>> = {
   clipPathUnits: enumeration("userSpaceOnUse", "objectBoundingBox"),
   maskUnits: enumeration("userSpaceOnUse", "objectBoundingBox"),
   maskContentUnits: enumeration("userSpaceOnUse", "objectBoundingBox"),
+  // Figma writes `style="mask-type:alpha"`; without it an alpha mask is read for its luminance.
+  "mask-type": enumeration("luminance", "alpha"),
 };

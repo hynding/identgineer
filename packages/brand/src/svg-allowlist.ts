@@ -32,6 +32,7 @@ export const STYLE_PROPERTIES: ReadonlySet<string> = new Set([
   ...PRESENTATION,
   "stop-color",
   "stop-opacity",
+  "mask-type",
 ]);
 
 const GRADIENT_CHILDREN = ["stop"] as const;
@@ -100,7 +101,7 @@ export const SVG_ELEMENT_RULES: Readonly<Record<SvgElementName, SvgElementRule>>
   g: container(),
   defs: container(),
   clipPath: container("clipPathUnits"),
-  mask: container("x", "y", "width", "height", "maskUnits", "maskContentUnits"),
+  mask: container("x", "y", "width", "height", "maskUnits", "maskContentUnits", "mask-type"),
   path: shape("d"),
   rect: shape("x", "y", "width", "height", "rx", "ry"),
   circle: shape("cx", "cy", "r"),

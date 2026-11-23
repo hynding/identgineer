@@ -39,7 +39,7 @@ const ALLOWED: Readonly<Record<string, readonly string[]>> = {
   g: DRAWN,
   defs: DRAWN,
   clipPath: [...DRAWN, "clipPathUnits"],
-  mask: [...DRAWN, "x", "y", "width", "height", "maskUnits", "maskContentUnits"],
+  mask: [...DRAWN, "x", "y", "width", "height", "maskUnits", "maskContentUnits", "mask-type"],
   path: [...DRAWN, "d"],
   rect: [...DRAWN, "x", "y", "width", "height", "rx", "ry"],
   circle: [...DRAWN, "cx", "cy", "r"],
