@@ -136,6 +136,7 @@ export function sanitiseSvgLogoWithLimits(
       ok: true,
       svg: serialiseSvg(root, renamed) as SanitisedSvg,
       ...size,
+      drawingCost: 0,
       removed: removals.list,
       removedCount: removals.count,
     };

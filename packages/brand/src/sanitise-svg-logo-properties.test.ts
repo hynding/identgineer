@@ -305,6 +305,12 @@ function checkAccepted(result: SvgLogoResult, input: string | Uint8Array, where:
   const again = sanitiseSvgLogo(result.svg);
   expect(again.ok && again.svg, `${where}: idempotence`).toBe(result.svg);
   expect(again.ok && again.removedCount, `${where}: nothing left to remove`).toBe(0);
+  expect(result.drawingCost, `${where}: within the cost limit`).toBeLessThanOrEqual(
+    SVG_LOGO_LIMITS.drawingCost,
+  );
+  expect(again.ok && again.drawingCost, `${where}: the same cost read again`).toBe(
+    result.drawingCost,
+  );
   const repeat = sanitiseSvgLogo(input);
   expect(repeat.ok && repeat.svg, `${where}: determinism`).toBe(result.svg);
   return true;
@@ -423,6 +429,8 @@ describe("sanitiseSvgLogo, linear time", () => {
     textLength: 2 * 1024 * 1024,
     ids: 1_000_000,
     renderedElements: 10_000_000,
+    drawingCost: Number.MAX_SAFE_INTEGER,
+    maskApplications: Number.MAX_SAFE_INTEGER,
   };
   const MEGABYTE = 1024 * 1024;
   const fill = (unit: string): string => unit.repeat(Math.ceil(MEGABYTE / unit.length));
@@ -452,6 +460,16 @@ describe("sanitiseSvgLogo, linear time", () => {
     ["a long transform", root(`<g transform="${fill("scale(1)")}"/>`)],
     ["a long point list", root(`<polygon points="${fill("1,2 ")}"/>`)],
     ["many uses of one group", root(`<g id="g"/>${fill('<use href="#g"/>')}`)],
+    [
+      "many uses of one masked path",
+      root(
+        `<mask id="m"/><path id="p" d="M0 0 1 1" mask="url(#m)" stroke-dasharray="1"/>${fill('<use href="#p"/>')}`,
+      ),
+    ],
+    [
+      "one long path of arcs, dashed",
+      root(`<path d="M0 0${fill("A1 2 3 0 1 4 5")}" stroke-dasharray="0.1"/>`),
+    ],
     ["unclosed tags", fill("<g>")],
     ["a run of less-than signs", fill("<")],
     ["a run of greater-than signs", root(fill(">"))],

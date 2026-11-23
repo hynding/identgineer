@@ -31,6 +31,15 @@ export interface SvgLogoLimits {
   readonly referenceDepth: number;
   /** Elements drawn once every reference is expanded, so `use` cannot multiply the work. */
   readonly renderedElements: number;
+  /**
+   * What drawing the logo costs once every reference is expanded, in units of about one stroked
+   * line segment (see `SVG_DRAWING_WEIGHTS`), so a logo cannot hang the page that shows it.
+   */
+  readonly drawingCost: number;
+  /** Masks and clip paths applied once every reference is expanded. */
+  readonly maskApplications: number;
+  /** Masks and clip paths applied inside one another, in a row. */
+  readonly maskDepth: number;
   /** Elements with an id the sanitiser keeps. */
   readonly ids: number;
 }
@@ -50,5 +59,8 @@ export const SVG_LOGO_LIMITS: SvgLogoLimits = Object.freeze({
   gradientStops: 64,
   referenceDepth: 8,
   renderedElements: 20_000,
+  drawingCost: 200_000,
+  maskApplications: 128,
+  maskDepth: 4,
   ids: 1024,
 });

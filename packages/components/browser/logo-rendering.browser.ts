@@ -1,6 +1,12 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { logoDataUrl, parseBrandKit, sanitiseSvgLogo } from "@identgineer/brand";
+import {
+  logoDataUrl,
+  parseBrandKit,
+  sanitiseSvgLogo,
+  SVG_LOGO_LIMITS,
+  type SvgLogoErrorCode,
+} from "@identgineer/brand";
 import { test as base, type Page } from "@playwright/test";
 import { CONTENT_SECURITY_POLICY } from "./content-security-policy";
 import { expect, test } from "./fixtures";
@@ -221,4 +227,120 @@ base.describe("the checks themselves", () => {
       expect((await report(page)).violations).not.toEqual([]);
     },
   );
+});
+
+// The costliest logos the sanitiser still accepts, one for each kind of work a renderer does: long
+// paths, curves, copies through use, masks inside masks, and dashes. Each is the largest of its
+// family that is accepted (the next one up is refused for its cost), and must be drawn, as an image
+// and inline, well within the budget. The 120 KB path the review found drawn a thousand times
+// took over 40 seconds to the next frame.
+const SIZE = 600;
+const RENDER_BUDGET_MS = 15_000;
+
+function costlyLogo(body: string): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="${String(SIZE)}" height="${String(SIZE)}">${body}</svg>`;
+}
+
+function zigzag(segments: number, command: (index: number) => string): string {
+  let data = "M0 0";
+  for (let index = 0; index < segments; index += 1) data += command(index);
+  return data;
+}
+
+const point = (index: number): string =>
+  `${String((index * 37) % 1000)} ${String((index * 91) % 1000)}`;
+
+/** `count` uses of `#p` in the root, after the definitions. */
+const copies = (definitions: string) => (count: number) =>
+  costlyLogo(`<defs>${definitions}</defs>${'<use href="#p"/>'.repeat(count)}`);
+
+const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoErrorCode])[] = [
+  [
+    "a stroked path of 15,000 lines",
+    copies(
+      `<path id="p" d="${zigzag(15_000, (index) => `L${point(index)}`)}" fill="#0f766e" stroke="#000" stroke-width="3" stroke-linejoin="round"/>`,
+    ),
+    "drawing-too-costly",
+  ],
+  [
+    "a stroked path of 4,000 arcs",
+    copies(
+      `<path id="p" d="${zigzag(4_000, (index) => `A400 300 ${String(index % 90)} 1 ${String(index % 2)} ${point(index)}`)}" fill="none" stroke="#000" stroke-width="30"/>`,
+    ),
+    "drawing-too-costly",
+  ],
+  [
+    "a hundred gradient circles in each of many copies",
+    (count) =>
+      costlyLogo(
+        '<defs><radialGradient id="r"><stop offset="0" stop-color="#f00"/><stop offset="1" stop-color="#00f"/></radialGradient>' +
+          '<circle id="c" cx="500" cy="500" r="500" fill="url(#r)" stroke="#000" stroke-width="20"/>' +
+          `<g id="g1">${'<use href="#c"/>'.repeat(10)}</g><g id="p">${'<use href="#g1"/>'.repeat(10)}</g></defs>` +
+          '<use href="#p"/>'.repeat(count),
+      ),
+    "drawing-too-costly",
+  ],
+  [
+    `masks nested ${String(SVG_LOGO_LIMITS.maskDepth)} deep`,
+    (count) => {
+      let body = "<defs>";
+      for (let index = 0; index < SVG_LOGO_LIMITS.maskDepth; index += 1) {
+        const inner = index === 0 ? "" : ` mask="url(#m${String(index - 1)})"`;
+        body += `<mask id="m${String(index)}"><rect width="1000" height="1000" fill="#fff"${inner}/></mask>`;
+      }
+      body += `<rect id="p" width="1000" height="1000" mask="url(#m${String(SVG_LOGO_LIMITS.maskDepth - 1)})"/></defs>`;
+      return costlyLogo(body + '<use href="#p"/>'.repeat(count));
+    },
+    "too-many-masks",
+  ],
+  [
+    "dashes a tenth of a unit long, round-capped",
+    copies(
+      '<path id="p" d="M0 0L1000 1000L0 1000L1000 0" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-dasharray="0.1"/>',
+    ),
+    "drawing-too-costly",
+  ],
+];
+
+/** The largest member of the family the sanitiser accepts; the next is refused with `code`. */
+function costliest(family: (count: number) => string, code: SvgLogoErrorCode): Logo {
+  const accepts = (count: number): boolean => sanitiseSvgLogo(family(count)).ok;
+  if (!accepts(1)) throw new Error("the smallest member of the family is refused");
+  let low = 1;
+  let high = 2;
+  while (accepts(high)) {
+    low = high;
+    high *= 2;
+    if (high > 100_000) throw new Error("nothing in the family is refused");
+  }
+  while (high - low > 1) {
+    const middle = Math.floor((low + high) / 2);
+    if (accepts(middle)) low = middle;
+    else high = middle;
+  }
+  const over = sanitiseSvgLogo(family(high));
+  if (over.ok || over.errors[0]?.code !== code) {
+    throw new Error(
+      `one more is refused for ${over.ok ? "nothing" : String(over.errors[0]?.code)}`,
+    );
+  }
+  const result = sanitiseSvgLogo(family(low));
+  if (!result.ok) throw new Error("the costliest member was refused");
+  return { name: `${String(low)} copies`, svg: result.svg, dataUrl: logoDataUrl(result.svg) };
+}
+
+test.describe("the costliest logos the sanitiser accepts", () => {
+  test.describe.configure({ timeout: 120_000 });
+
+  for (const [label, family, code] of FAMILIES) {
+    test(`draws ${label}, as an image and inline, within the budget`, async ({ page }) => {
+      const logo = costliest(family, code);
+      const started = Date.now();
+      await render(page, [logo], LOGO_POLICY);
+      // A screenshot waits for the frame that paints both, so the drawing itself is timed.
+      await page.screenshot({ timeout: RENDER_BUDGET_MS });
+      expect(Date.now() - started, logo.name).toBeLessThan(RENDER_BUDGET_MS);
+      expect(await report(page)).toEqual({ violations: [], broken: [] });
+    });
+  }
 });

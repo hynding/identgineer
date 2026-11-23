@@ -632,10 +632,9 @@ describe("sanitiseSvgLogo, refusals", () => {
   });
 
   it("counts every drawn copy, so use cannot multiply the work past the limit", () => {
+    // Empty groups, which cost next to nothing to draw, so the element count is what refuses.
     const copies = (count: number): string =>
-      svg(
-        `<defs><g id="p">${'<path d="M0 0H1"/>'.repeat(9)}</g></defs>${'<use href="#p"/>'.repeat(count)}`,
-      );
+      svg(`<defs><g id="p">${"<g/>".repeat(9)}</g></defs>${'<use href="#p"/>'.repeat(count)}`);
     // Each use draws itself and the group of ten; the root, defs and group draw twelve.
     const fits = Math.floor((SVG_LOGO_LIMITS.renderedElements - 12) / 11);
     accepted(copies(fits));
