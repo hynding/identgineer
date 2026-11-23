@@ -49,7 +49,9 @@ export const MAX_REPORTED_ERRORS = 50;
 // character) is refused rather than escaped.
 const TEXT = /^[\p{L}\p{M}\p{N} .,'’&!?-]+$/u;
 // Scripts need a few combining marks on one letter; a long stack only smears over the text around it.
-const MARK_STACK = /\p{M}{5}/u;
+// Spacing marks (Burmese and Indic vowel signs) take their own room, so only marks drawn over or
+// around the letter count.
+const MARK_STACK = /[\p{Mn}\p{Me}]{5}/u;
 const SHOWABLE_KEY = /^[A-Za-z0-9_$-]{1,40}$/;
 
 const KIT_KEYS = ["id", "name", "tagline", "colors", "typography", "corners", "tone"] as const;
@@ -156,7 +158,7 @@ function readText(value: unknown, path: string, max: number, errors: Errors): st
     errors.add(
       path,
       "invalid-text",
-      "takes letters, digits, at most four combining marks in a row, single inner spaces and . , ' ’ & ! ? - only",
+      "takes letters, digits, at most four stacked combining marks in a row, single inner spaces and . , ' ’ & ! ? - only",
     );
     return undefined;
   }
