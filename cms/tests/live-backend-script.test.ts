@@ -199,11 +199,13 @@ describe("cms/scripts/live-backend.js", () => {
       const marks = join(setup.root, "marks");
       const command = [
         "const fs = require('node:fs');",
-        `process.on('SIGTERM', () => { fs.writeFileSync(${JSON.stringify(marks)} + '.term', ''); setTimeout(() => process.exit(0), 300); });`,
-        `fs.writeFileSync(${JSON.stringify(marks)} + '.ready', '');`,
+        // The path arrives as an argument, so no value is ever spliced into the code.
+        "const marks = process.argv[1];",
+        "process.on('SIGTERM', () => { fs.writeFileSync(marks + '.term', ''); setTimeout(() => process.exit(0), 300); });",
+        "fs.writeFileSync(marks + '.ready', '');",
         "setTimeout(() => {}, 25000);",
       ].join(" ");
-      const child = spawn(NODE, [SCRIPT, "--", NODE, "-e", command], {
+      const child = spawn(NODE, [SCRIPT, "--", NODE, "-e", command, marks], {
         env: setup.env,
         stdio: "ignore",
       });
