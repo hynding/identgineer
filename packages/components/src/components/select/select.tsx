@@ -131,15 +131,14 @@ export class IdgSelect {
   }
 
   // An option the author marked selected, or the first one, is the value when none is given. A
-  // value that matches no option (yet: a list that arrives later has none to match) is left as it
-  // is and is not forced onto the select, which would blank it; the mirror applies it again when
-  // its option arrives.
+  // value that matches no option while there are no options at all (a list that arrives later) is
+  // kept, and the mirror applies it when its option arrives. Once there are options, a value that
+  // matches none gives way to what the select shows, so the value, the form value and the option
+  // shown always agree.
   private selectCurrentValue(native: HTMLSelectElement): void {
-    const matches = Array.from(native.querySelectorAll("option")).some(
-      (option) => optionValue(option) === this.value,
-    );
-    if (matches) native.value = this.value;
-    else if (this.value === "" && native.value !== this.value) this.value = native.value;
+    const options = Array.from(native.querySelectorAll("option"));
+    if (options.some((option) => optionValue(option) === this.value)) native.value = this.value;
+    else if (options.length > 0 && native.value !== this.value) this.value = native.value;
   }
 
   private syncForm(): void {
@@ -161,8 +160,10 @@ export class IdgSelect {
     this.idgChange.emit({ value: this.value });
   };
 
+  // The options are copied before the value is applied: a page that sets a value and its options in
+  // one go would otherwise have the value judged against the options of a moment ago.
   componentDidUpdate(): void {
-    if (this.native) this.selectCurrentValue(this.native);
+    this.mirror();
   }
 
   render() {
