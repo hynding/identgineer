@@ -14,19 +14,40 @@ const SPACING_CONTROLS = new Set([0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x85, 0x2028, 0x
 // the musical symbol beginning of beam are not ignorable, and draw as nothing.
 const INVISIBLE = /^[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Default_Ignorable_Code_Point}\u2800\u{1D159}]$/u;
 const COMBINING_MARK = /^\p{M}$/u;
-const LETTER_OR_MARK = /^[\p{L}\p{M}]$/u;
 const EMOJI = /^\p{Emoji}$/u;
 const EMOJI_BEFORE_JOINER = /^[\p{Extended_Pictographic}\p{Emoji_Modifier}]$/u;
 const EMOJI_AFTER_JOINER = /^\p{Extended_Pictographic}$/u;
 const HAN = /^\p{Script=Han}$/u;
-const MONGOLIAN_LETTER = /^[\p{L}]$/u;
 
 // The scripts in which a zero width joiner or non-joiner changes how letters join or which form
 // they take. In any other script, such as Latin, it draws nothing and only makes two strings that
-// look the same differ.
-const JOINING_SCRIPT =
-  /^[\p{Script_Extensions=Arabic}\p{Script_Extensions=Syriac}\p{Script_Extensions=Nko}\p{Script_Extensions=Mongolian}\p{Script_Extensions=Phags_Pa}\p{Script_Extensions=Mandaic}\p{Script_Extensions=Adlam}\p{Script_Extensions=Devanagari}\p{Script_Extensions=Bengali}\p{Script_Extensions=Gurmukhi}\p{Script_Extensions=Gujarati}\p{Script_Extensions=Oriya}\p{Script_Extensions=Tamil}\p{Script_Extensions=Telugu}\p{Script_Extensions=Kannada}\p{Script_Extensions=Malayalam}\p{Script_Extensions=Sinhala}\p{Script_Extensions=Khmer}\p{Script_Extensions=Myanmar}\p{Script_Extensions=Tibetan}\p{Script_Extensions=Thaana}]$/u;
-const MONGOLIAN = /^\p{Script_Extensions=Mongolian}$/u;
+// look the same differ. A joiner is kept only between letters of one of these, the same one on
+// both sides: a joiner between two scripts joins nothing.
+const JOINING_SCRIPTS: readonly RegExp[] = [
+  "Arabic",
+  "Syriac",
+  "Nko",
+  "Mongolian",
+  "Phags_Pa",
+  "Mandaic",
+  "Adlam",
+  "Devanagari",
+  "Bengali",
+  "Gurmukhi",
+  "Gujarati",
+  "Oriya",
+  "Tamil",
+  "Telugu",
+  "Kannada",
+  "Malayalam",
+  "Sinhala",
+  "Khmer",
+  "Myanmar",
+  "Tibetan",
+  "Thaana",
+].map((script) => new RegExp(`^\\p{Script=${script}}$`, "u"));
+const LETTER = /^\p{L}$/u;
+const MONGOLIAN = /^\p{Script=Mongolian}$/u;
 
 /**
  * The most combining marks kept on one character. Real text stacks several (Hebrew with points and
@@ -37,8 +58,8 @@ const MAX_COMBINING_MARKS = 8;
 const ZERO_WIDTH_NON_JOINER = 0x200c;
 const BLACK_FLAG = 0x1f3f4;
 const TAG_END = 0xe007f;
-/** The most tag letters or digits in a flag's tag sequence (the longest real one has six). */
-const MAX_TAG_LETTERS = 10;
+/** The tag sequences that are flags of their own: England, Scotland and Wales. */
+const FLAG_TAGS = new Set(["gbeng", "gbsct", "gbwls"]);
 
 // Text and emoji presentation selectors only mean something after a character that has an emoji form.
 const EMOJI_PRESENTATION_SELECTORS = new Set([0xfe0e, 0xfe0f]);
@@ -46,8 +67,6 @@ const EMOJI_PRESENTATION_SELECTORS = new Set([0xfe0e, 0xfe0f]);
 const isIdeographicVariationSelector = (code: number) => code >= 0xe0100 && code <= 0xe01ef;
 const isMongolianFreeVariationSelector = (code: number) =>
   (code >= 0x180b && code <= 0x180d) || code === 0x180f;
-const isTagLetterOrDigit = (code: number) =>
-  (code >= 0xe0030 && code <= 0xe0039) || (code >= 0xe0061 && code <= 0xe007a);
 
 function isLoneSurrogate(character: string): boolean {
   const code = character.codePointAt(0) ?? 0;
@@ -59,16 +78,38 @@ function asText(value: unknown): string {
   return typeof value === "number" || typeof value === "boolean" ? String(value) : "";
 }
 
-// A joiner is kept where it does something: between letters or marks of a script that joins, or
-// in an emoji sequence, where an emoji's own presentation selector or skin tone may come before it.
-function joinerMeans(before: string | undefined, after: string | undefined, code: number): boolean {
+// The script a letter belongs to, among the joining ones.
+function joiningScript(letter: string): number {
+  return JOINING_SCRIPTS.findIndex((script) => script.test(letter));
+}
+
+// The letter a character is part of: itself, or for a combining mark the letter it is on.
+function baseLetter(output: readonly string[], at: number): string | undefined {
+  for (let index = at; index >= 0; index -= 1) {
+    const character = output[index] ?? "";
+    if (COMBINING_MARK.test(character)) continue;
+    return LETTER.test(character) ? character : undefined;
+  }
+  return undefined;
+}
+
+// What a joiner is judged against is what is already drawn on its left (so a character that was
+// replaced is not a neighbour) and, on its right, a letter that would be drawn: a letter that is
+// not itself an invisible one. That makes the result a fixed point of this function.
+function joinerMeans(output: readonly string[], after: string | undefined, code: number): boolean {
+  const before = output[output.length - 1];
   if (before === undefined || after === undefined) return false;
-  if (LETTER_OR_MARK.test(before) && LETTER_OR_MARK.test(after)) {
-    if (JOINING_SCRIPT.test(before) && JOINING_SCRIPT.test(after)) return true;
+  if (LETTER.test(after) && !INVISIBLE.test(after)) {
+    const left = baseLetter(output, output.length - 1);
+    const script = left === undefined ? -1 : joiningScript(left);
+    if (script >= 0 && script === joiningScript(after)) return true;
   }
   if (code !== ZERO_WIDTH_JOINER) return false;
-  const selector = EMOJI_PRESENTATION_SELECTORS.has(before.codePointAt(0) ?? 0);
-  return (selector || EMOJI_BEFORE_JOINER.test(before)) && EMOJI_AFTER_JOINER.test(after);
+  return (
+    (EMOJI_BEFORE_JOINER.test(before) ||
+      (EMOJI_PRESENTATION_SELECTORS.has(before.codePointAt(0) ?? 0) && output.length > 1)) &&
+    EMOJI_AFTER_JOINER.test(after)
+  );
 }
 
 // A variation selector is kept after the kind of character it varies: an ideograph for the
@@ -76,23 +117,25 @@ function joinerMeans(before: string | undefined, after: string | undefined, code
 function selectorMeans(code: number, before: string | undefined): boolean {
   if (before === undefined) return false;
   if (isIdeographicVariationSelector(code)) return HAN.test(before);
-  if (isMongolianFreeVariationSelector(code)) {
-    return MONGOLIAN.test(before) && MONGOLIAN_LETTER.test(before);
-  }
+  if (isMongolianFreeVariationSelector(code)) return MONGOLIAN.test(before) && LETTER.test(before);
   if (EMOJI_PRESENTATION_SELECTORS.has(code)) return EMOJI.test(before);
   return false;
 }
 
 /**
- * The characters of a flag's tag sequence that start at `from` (the black flag), kept as they are
- * when it is well formed: the flag, one to ten tag letters or digits and the end tag.
+ * Where the flag's tag sequence that starts at `from` (the black flag) ends, when it is one of the
+ * three real ones: the flag, `gbeng`, `gbsct` or `gbwls` as tag letters, and the end tag.
  */
 function tagSequenceEnd(characters: readonly string[], from: number): number | undefined {
+  let letters = "";
   let at = from + 1;
-  while (at < characters.length && isTagLetterOrDigit(characters[at]?.codePointAt(0) ?? 0)) at += 1;
-  const letters = at - from - 1;
-  const ends = characters[at]?.codePointAt(0) === TAG_END;
-  return ends && letters >= 1 && letters <= MAX_TAG_LETTERS ? at : undefined;
+  while (at < characters.length && letters.length <= 5) {
+    const code = characters[at]?.codePointAt(0) ?? 0;
+    if (code < 0xe0061 || code > 0xe007a) break;
+    letters += String.fromCharCode(code - 0xe0000);
+    at += 1;
+  }
+  return FLAG_TAGS.has(letters) && characters[at]?.codePointAt(0) === TAG_END ? at : undefined;
 }
 
 function hidesItself(character: string, before: string | undefined): boolean {
@@ -115,11 +158,14 @@ function hidesItself(character: string, before: string | undefined): boolean {
  * as `payexe.pdf`), the other control, invisible and ignorable characters (the Hangul fillers, the
  * braille blank, stray tag characters) and lone surrogates. Line breaks and tabs become a space.
  * Some invisible characters mean something in some text and are kept only there: a zero width
- * joiner or non-joiner between letters or marks of a script that joins (Arabic, Syriac, Mongolian,
- * the Indic scripts, Sinhala, Khmer, Myanmar and others) and a joiner inside an emoji sequence; an
+ * joiner or non-joiner between letters of one script that joins (Arabic, Syriac, Mongolian, the
+ * Indic scripts, Sinhala, Khmer, Myanmar and others; a combining mark counts as the letter it is
+ * on, and the same script is needed on both sides) and a joiner inside an emoji sequence; an
  * ideographic variation selector directly after an ideograph; a Mongolian free variation selector
- * directly after a Mongolian letter; an emoji presentation selector after an emoji; and a
- * well-formed flag tag sequence. Between Latin letters a joiner is marked. More than eight
+ * directly after a Mongolian letter; an emoji presentation selector after an emoji; and the three
+ * flag tag sequences (England, Scotland, Wales). Between Latin letters a joiner is marked. Each
+ * decision is made against what is already drawn on the left, so the result is a fixed point. More
+ * than eight
  * combining marks on a character are cut, and a mark shows that. Text that would draw as nothing
  * (only white space or combining marks) is one mark. Everything else, in any script, is kept.
  */
@@ -141,8 +187,8 @@ export function neutraliseText(value: unknown): string {
     }
     if (SPACING_CONTROLS.has(code)) shown = " ";
     else if (code === ZERO_WIDTH_JOINER || code === ZERO_WIDTH_NON_JOINER) {
-      shown = joinerMeans(characters[index - 1], characters[index + 1], code) ? character : MARK;
-    } else if (hidesItself(character, characters[index - 1])) shown = MARK;
+      shown = joinerMeans(neutralised, characters[index + 1], code) ? character : MARK;
+    } else if (hidesItself(character, neutralised[neutralised.length - 1])) shown = MARK;
     if (COMBINING_MARK.test(shown)) {
       marks += 1;
       if (marks > MAX_COMBINING_MARKS) {

@@ -348,7 +348,9 @@ describe("neutraliseText on random strings from the awkward characters", () => {
       (text) => neutraliseText(neutraliseText(text)) !== neutraliseText(text),
     );
     expect(
-      changed.slice(0, 5).map((text) => [...text].map((c) => c.codePointAt(0)?.toString(16))),
+      changed
+        .slice(0, 5)
+        .map((text) => Array.from(text).map((c) => c.codePointAt(0)?.toString(16))),
     ).toEqual([]);
   });
 
@@ -376,7 +378,12 @@ describe("neutraliseText on random strings from the awkward characters", () => {
           const run = out.join("");
           fine = /\u{1F3F4}[\u{E0061}-\u{E007A}]{5}\u{E007F}/u.test(run);
         }
-        if (!fine) bad.push([...text].map((c) => c.codePointAt(0)?.toString(16)).join(" "));
+        if (!fine)
+          bad.push(
+            Array.from(text)
+              .map((c) => c.codePointAt(0)?.toString(16))
+              .join(" "),
+          );
       });
     }
     expect(bad.slice(0, 5)).toEqual([]);

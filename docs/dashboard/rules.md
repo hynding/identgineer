@@ -56,8 +56,9 @@ people typed or that a page on the public internet sent. The elements:
   `pay<RLO>fdp.exe` does not draw as `payexe.pdf` and a reader can see that something was there.
   Line breaks and tabs become a space;
 - keep an invisible character only where it means something, and mark it everywhere else:
-  - a zero width joiner or non-joiner (U+200D, U+200C) with a letter or combining mark of a script
-    that joins on both sides: Arabic, Syriac, N'Ko, Mongolian, Phags-pa, Mandaic, Adlam, Thaana,
+  - a zero width joiner or non-joiner (U+200D, U+200C) between two letters of one script that joins
+    (a combining mark counts as the letter it is on; the script must be the same on both sides, so
+    an Arabic letter joined to a Devanagari one is marked): Arabic, Syriac, N'Ko, Mongolian, Phags-pa, Mandaic, Adlam, Thaana,
     Tibetan, Myanmar, Khmer, Sinhala and the Indic scripts (Devanagari, Bengali, Gurmukhi,
     Gujarati, Oriya, Tamil, Telugu, Kannada, Malayalam). Persian "ثبت‌نام" is kept. Between Latin
     letters, or Hebrew, or at an edge, a joiner is marked: it draws nothing there, and only makes
@@ -70,9 +71,9 @@ people typed or that a page on the public internet sent. The elements:
     letter;
   - an emoji presentation selector (U+FE0E, U+FE0F) directly after an emoji, so keycaps and hearts
     draw as they should. Any other variation selector (U+FE00 to U+FE0D) is marked;
-  - a well-formed flag tag sequence: the black flag U+1F3F4, one to ten tag letters or digits and
-    the cancel tag U+E007F (the flags of England, Scotland and Wales). Any other tag character is
-    marked;
+  - one of the three flag tag sequences: the black flag U+1F3F4, the tag letters `gbeng`, `gbsct`
+    or `gbwls` and the cancel tag U+E007F (the flags of England, Scotland and Wales). Any other tag
+    character or tag sequence is marked;
 - show text that would draw as nothing (only white space, or only combining marks) as one mark,
   and cut a run of combining marks after the eighth on one character, with a mark where the rest
   was: real text stacks several (Hebrew with points and a cantillation mark, Vietnamese, Thai,
