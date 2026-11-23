@@ -252,15 +252,18 @@ base.describe("the checks themselves", () => {
 // and over; gradients at the stop limit, opaque and translucent; a fill under a very wide stroke;
 // group opacity layers; masks inside masks; a clip path of crowded edges with the even-odd rule; a
 // view box far wider than tall; dashes, round dots and round joins on a stroke as wide as the
-// image; clip paths of shapes that cross one another or themselves, of a clipped shape and of 43
-// shapes; a mask holding a clipped shape; and a shape scaled as far as a transform may go. Each is
-// the largest of its family that is accepted (the next one up is refused, for the drawing cost or
-// the overdraw), and must be drawn as an image and inline, rasterised in full at 600 CSS pixels and
-// at 2000 with a device scale factor of 2, and drawn inline at 600, each within its budget (the
-// budgets cover inline logos up to 600 CSS pixels only: see the brand README). On a loaded
-// four-core machine the slowest took about 0.35 seconds at 600 and 1.8 at 2000 (see the brand
-// README), so the budgets leave room for a slow runner, yet a limit raised tenfold would blow
-// through them.
+// image; clip paths of near-coincident zigzags, which a renderer combining them took minutes over,
+// each written as a mask, and of one such zigzag in every form a clip path of one shape is kept
+// (alone, transformed, through a use, under the clip path's transform, even-odd, one inside another,
+// each at 30,000 and at 100,000, and in the box of a unit square); clip paths of a clipped shape and
+// of 43 shapes; a mask holding a clipped shape; and a shape scaled as far as a transform may go.
+// Each is the largest of its family that is accepted (the next one up is refused, for the drawing
+// cost or the overdraw), and must be drawn as an image and inline, rasterised in full at 600 CSS
+// pixels and at 2000 with a device scale factor of 2, and drawn inline at 600, each within its
+// budget (the budgets cover inline logos up to 600 CSS pixels only: see the brand README). On a
+// loaded four-core machine the slowest took about 0.35 seconds at 600 and 1.8 at 2000 (see the
+// brand README), so the budgets leave room for a slow runner, yet a limit raised tenfold would
+// blow through them.
 const SIZE = 600;
 const LARGE_SIZE = 2000;
 const RENDER_BUDGET_MS = 15_000;
@@ -291,6 +294,95 @@ function stops(count: number, translucent: boolean): string {
     const opacity = translucent ? ` stop-opacity="${(0.1 + (index % 9) / 10).toFixed(1)}"` : "";
     return `<stop offset="${(index / (count - 1)).toFixed(3)}" stop-color="#${colour}"${opacity}/>`;
   }).join("");
+}
+
+/**
+ * A zigzag of `segments` edges between two lines `width` apart at `base`, its rows `step` apart
+ * (moved down by `shift`), as a path: each edge all but on top of the next, the geometry that made
+ * a renderer combining the shapes of a clip path take minutes.
+ */
+function nearZigzag(segments: number, base: number, step: number, shift = 0, width = 100): string {
+  let data = `M${String(base)} ${(base + shift).toFixed(6)}`;
+  for (let index = 1; index < segments; index += 1) {
+    data += `L${String(index % 2 === 1 ? base + width : base)} ${(base + shift + index * step).toFixed(6)}`;
+  }
+  return `<path d="${data}Z"/>`;
+}
+
+const SQUARE = '<rect width="1" height="1"/>';
+/** Edges in a clip path of one shape: what the length of a path's data allows, and then some. */
+const SHAPE_SEGMENTS = 6000;
+
+/** `count` uses of a half-transparent square clipped to `clip(segments)`, in a view box at `base`. */
+const clipCopies =
+  (segments: number, clip: (segments: number) => string, base = 100000) =>
+  (count: number) =>
+    costlyLogo(
+      `<defs><clipPath id="c">${clip(segments)}</clipPath><rect id="p" width="${String(2 * base)}" height="${String(2 * base)}" fill="#0f766e" fill-opacity="0.5" clip-path="url(#c)"/></defs>${'<use href="#p"/>'.repeat(count)}`,
+      `viewBox="0 0 ${String(2 * base)} ${String(2 * base)}"`,
+    );
+
+/** Ways a clip path of one shape is written, each kept as a clip path, and the code past its size. */
+const ONE_SHAPE_CLIPS: readonly (readonly [string, (base: number) => string, SvgLogoErrorCode])[] =
+  [
+    ["alone", (base) => clipOf(nearZigzag(SHAPE_SEGMENTS, base, 0.001)), "drawing-too-costly"],
+    [
+      "turned by a transform of its own",
+      (base) =>
+        clipOf(
+          nearZigzag(SHAPE_SEGMENTS, base, 0.001).replace(
+            "/>",
+            ` transform="rotate(0.5 ${String(base)} ${String(base)})"/>`,
+          ),
+        ),
+      "drawing-too-costly",
+    ],
+    [
+      "drawn by a use",
+      (base) =>
+        nearZigzag(SHAPE_SEGMENTS, base, 0.001).replace("<path", '<path id="t"') +
+        clipOf('<use href="#t" x="0.0005"/>'),
+      "drawing-too-costly",
+    ],
+    [
+      "turned by the clip path's transform",
+      (base) =>
+        clipOf(nearZigzag(SHAPE_SEGMENTS, base, 0.001)).replace(
+          '<clipPath id="c">',
+          `<clipPath id="c" transform="rotate(0.5 ${String(base)} ${String(base)})">`,
+        ),
+      "drawing-too-costly",
+    ],
+    [
+      "by the even-odd rule",
+      (base) =>
+        clipOf(nearZigzag(SHAPE_SEGMENTS, base, 0.001).replace("/>", ' clip-rule="evenodd"/>')),
+      "drawing-too-costly",
+    ],
+    [
+      "inside another such clip path",
+      (base) =>
+        nearZigzag(SHAPE_SEGMENTS, base, 0.001, 0.0003).replace("<path", '<clipPath id="a"><path') +
+        "</clipPath>" +
+        clipOf(nearZigzag(SHAPE_SEGMENTS, base, 0.001), 'clip-path="url(#a)"'),
+      "drawing-too-costly",
+    ],
+    [
+      "drawn by a use of a shape clipped in turn, so drawn as a mask",
+      (base) =>
+        `<clipPath id="a">${nearZigzag(SHAPE_SEGMENTS, base, 0.001, 0.0003)}</clipPath>` +
+        nearZigzag(SHAPE_SEGMENTS, base, 0.001).replace(
+          "<path",
+          '<path id="t" clip-path="url(#a)"',
+        ) +
+        clipOf('<use href="#t"/>'),
+      "overdraw-too-large",
+    ],
+  ];
+
+/** A clip path `c` of `shapes`, and a half-transparent square `#p` it clips, inside `wrapper`. */
+function clipOf(shapes: string, wrapper = ""): string {
+  return `<clipPath id="c">${shapes}</clipPath><g id="p" ${wrapper}><rect width="200000" height="200000" fill="#0f766e" fill-opacity="0.5" clip-path="url(#c)"/></g>`;
 }
 
 const FULL = 'width="1000" height="1000"';
@@ -433,76 +525,59 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
       ),
     "overdraw-too-large",
   ],
+  ...(
+    [
+      [
+        "two near-coincident zigzags",
+        30000,
+        (n: number) => nearZigzag(n, 30000, 0.001) + nearZigzag(n, 30000, 0.001, 0.000333),
+        "overdraw-too-large",
+      ],
+      [
+        "a zigzag crossing itself, beside a square",
+        100000,
+        (n: number) =>
+          nearZigzag(n, 100000, 0.003).replace('"/>', "") +
+          nearZigzag(n, 100000, 0.003, 0.001).replace('<path d="', "") +
+          SQUARE,
+        "overdraw-too-large",
+      ],
+      [
+        "five near-coincident zigzags",
+        100000,
+        (n: number) =>
+          [0, 1, 2, 3, 4].map((k) => nearZigzag(n, 100000, 0.003, k * 0.0006)).join(""),
+        "drawing-too-costly",
+      ],
+    ] as const
+  ).map(
+    ([shapes, base, clip, code]) =>
+      [
+        `a clip path of ${shapes}, drawn as a mask`,
+        clipCopies(SHAPE_SEGMENTS / 2, clip, base),
+        code,
+      ] as const,
+  ),
+  ...ONE_SHAPE_CLIPS.flatMap(([form, clip, code]) =>
+    [30000, 100000].map(
+      (base) =>
+        [
+          `a clip path of one near-coincident zigzag at ${base.toLocaleString("en")}, ${form}`,
+          (count: number) =>
+            costlyLogo(
+              `<defs>${clip(base)}</defs>${'<use href="#p"/>'.repeat(count)}`,
+              `viewBox="0 0 ${String(2 * base)} ${String(2 * base)}"`,
+            ),
+          code,
+        ] as const,
+    ),
+  ),
   [
-    "a clip path of two zigzags crossing each other",
-    (count) => {
-      const zigzagAt = (across: boolean): string =>
-        Array.from({ length: count - 1 }, (_, index) => {
-          const at = (100000 + index * 0.01).toFixed(2);
-          const far = index % 2 === 0 ? "100100" : "100000";
-          return across ? `L${far} ${at}` : `L${at} ${far}`;
-        }).join("");
-      return costlyLogo(
-        `<defs><clipPath id="c"><path d="M100000 100000${zigzagAt(true)}Z"/><path d="M100000 100000${zigzagAt(false)}Z"/></clipPath></defs><rect width="200000" height="200000" fill="#0f766e" clip-path="url(#c)"/>`,
-        'viewBox="0 0 200000 200000"',
-      );
-    },
-    "drawing-too-costly",
-  ],
-  [
-    "a clip path of one shape crossing itself, beside a square",
-    (count) => {
-      const zigzagAt = (across: boolean): string =>
-        Array.from({ length: count - 2 }, (_, index) => {
-          const at = (100000 + index * 0.01).toFixed(2);
-          const far = index % 2 === 0 ? "100100" : "100000";
-          return across ? `L${far} ${at}` : `L${at} ${far}`;
-        }).join("");
-      return costlyLogo(
-        `<defs><clipPath id="c"><path d="M100000 100000${zigzagAt(true)}ZM100000 100000${zigzagAt(false)}Z"/><rect width="1" height="1"/></clipPath></defs><rect width="200000" height="200000" fill="#0f766e" clip-path="url(#c)"/>`,
-        'viewBox="0 0 200000 200000"',
-      );
-    },
-    "drawing-too-costly",
-  ],
-  [
-    "a clip path of five zigzags crossing one another",
-    (count) => {
-      const zigzagAt = (across: boolean, offset: number): string =>
-        `M${(100000 + offset).toFixed(3)} 100000` +
-        Array.from({ length: count - 2 }, (_, index) => {
-          const at = (100000 + index * 0.01).toFixed(2);
-          const far = index % 2 === 0 ? "100100" : "100000";
-          return across ? `L${far} ${at}` : `L${at} ${far}`;
-        }).join("") +
-        "Z";
-      const shapes = [0, 1, 2, 3, 4]
-        .map((index) => `<path d="${zigzagAt(index % 2 === 0, index * 0.003)}"/>`)
-        .join("");
-      return costlyLogo(
-        `<defs><clipPath id="c">${shapes}</clipPath></defs><rect width="200000" height="200000" fill="#0f766e" clip-path="url(#c)"/>`,
-        'viewBox="0 0 200000 200000"',
-      );
-    },
-    "drawing-too-costly",
-  ],
-  [
-    "a clip path of two cubic waves crossing each other",
-    (count) => {
-      const wave = (down: boolean): string =>
-        Array.from({ length: count }, (_, index) => {
-          const [from, to] = [100 + (index * 800) / count, 100 + ((index + 1) * 800) / count];
-          const turn = from + 400 / count;
-          const end = index % 2 === 0 ? 1000 : 0;
-          return down
-            ? `C${from.toFixed(3)} 0 ${turn.toFixed(3)} 1000 ${to.toFixed(3)} ${String(end)}`
-            : `C0 ${from.toFixed(3)} 1000 ${turn.toFixed(3)} ${String(end)} ${to.toFixed(3)}`;
-        }).join("");
-      return costlyLogo(
-        `<defs><clipPath id="c"><path d="M100 0${wave(true)}Z"/><path d="M0 100${wave(false)}Z"/></clipPath></defs><rect ${FULL} fill="#0f766e" clip-path="url(#c)"/>`,
-      );
-    },
-    "drawing-too-costly",
+    "a clip path of one near-coincident zigzag in the box of a unit square drawn at full size",
+    copies(
+      `<clipPath id="c" clipPathUnits="objectBoundingBox">${nearZigzag(9000, 0.5, 0.000001, 0, 0.1)}</clipPath><rect id="p" width="1" height="1" transform="scale(1000)" fill="#0f766e" fill-opacity="0.5" clip-path="url(#c)"/>`,
+    ),
+    "overdraw-too-large",
   ],
   [
     "a clip path of a shape clipped in turn, drawn as a mask",
