@@ -151,6 +151,11 @@ table.addEventListener("idgSort", (event) => {
 });
 ```
 
+`page` follows the pages there are: a page past the last, or one the events shrank out from under,
+is set to the last page that exists (the property changes; no event is fired, as `idgPageChange` is
+for the reader's choices), and nothing is changed while `loading`, on error or before any events
+were given.
+
 Without `total`, the table keeps all the events it was given and sorts and pages them itself, which
 suits a short list. With `total`, the server pages and sorts and the table draws what it is given.
 
@@ -174,17 +179,17 @@ value that is not a finite number is dropped, and a long series is thinned to it
 
 ## 6. Properties
 
-| Element               | Property                                         | What it does                                                         |
-| --------------------- | ------------------------------------------------ | -------------------------------------------------------------------- |
-| `idg-property-picker` | `properties`, `value`, `label`                   | The choices (`TrackedProperty[]`), the chosen id, its name           |
-| `idg-property-picker` | `loading`, `disabled`, `name`                    | A loading state, off, and the name it submits under in a form        |
-| `idg-property-picker` | `setFocus()`                                     | Focus the select                                                     |
-| `idg-event-table`     | `events`, `caption`, `loading`, `error`          | The rows, the table's name, a loading state, an error message        |
-| `idg-event-table`     | `page`, `pageSize`, `total`                      | The page from 1, the rows per page (at most 100), the server's count |
-| `idg-event-table`     | `sortable`, `sortKey`, `sortDirection`           | Header buttons, and the order that is shown                          |
-| `idg-event-table`     | `timeZone`                                       | An IANA zone for the time column, the viewer's by default            |
-| `idg-sparkline`       | `values`, `label`, `area`                        | The series, its name, a filled area under the line                   |
-| `idg-stat`            | `label`, `value`, `delta`, `direction`, `period` | The figure and its change (`period` is new)                          |
+| Element               | Property                                         | What it does                                                                   |
+| --------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `idg-property-picker` | `properties`, `value`, `label`                   | The choices (`TrackedProperty[]`), the chosen id, its name                     |
+| `idg-property-picker` | `loading`, `disabled`, `name`                    | A loading state, off, and the name it submits under in a form                  |
+| `idg-property-picker` | `setFocus()`                                     | Focus the select                                                               |
+| `idg-event-table`     | `events`, `caption`, `loading`, `error`          | The rows, the table's name, a loading state, an error message                  |
+| `idg-event-table`     | `page`, `pageSize`, `total`                      | The page from 1, the rows per page (at most 100), the server's count           |
+| `idg-event-table`     | `sortable`, `sortKey`, `sortDirection`           | Header buttons, and the order that is shown                                    |
+| `idg-event-table`     | `timeZone`                                       | An IANA zone for the time column, named with the time; the viewer's by default |
+| `idg-sparkline`       | `values`, `label`, `area`                        | The series, its name, a filled area under the line                             |
+| `idg-stat`            | `label`, `value`, `delta`, `direction`, `period` | The figure and its change (`period` is new)                                    |
 
 Every element also takes `labels`, a partial object of its strings merged over the English
 defaults (`PropertyPickerLabels`, `EventTableLabels`, `SparklineLabels`). See

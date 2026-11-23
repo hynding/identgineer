@@ -1434,7 +1434,11 @@ A table of events in an `idg-table`, with a status region and an `idg-pagination
 (`TrackedEvent[]`), `caption`, `loading`, `error`, `page` (from 1), `pageSize` (default 10, at most
 100), `total` (server mode: events are drawn as given, with no sorting or paging of their own),
 `sortable`, `sortKey` (`time` or `name`), `sortDirection`, `timeZone` (an IANA zone) and `labels`
-(`EventTableLabels`). Without `total` the table sorts and pages the events it has. Events
+(`EventTableLabels`). Without `total` the table sorts and pages the events it has. The time is shown
+with its zone name. `page` follows the pages there are (a page past the last becomes the last, with
+no event; nothing changes while `loading`, on error or before events are given). While `loading`
+after rows were shown, the table and pager stay (dimmed, `aria-busy`, presses ignored) so focus
+stays; a first load is a skeleton, and an error replaces the rows and takes focus. Events
 `idgPageChange` (`{ page }`, cancelable) and `idgSort` (`{ key, direction }`). Columns are Event
 (the row header), Time (a `<time>`), Path and Properties (at most ten, then "+N more"). Parts
 `group`, `caption`, `table`, `status`, `pagination`.

@@ -47,10 +47,19 @@ people typed or that a page on the public internet sent. The elements:
 - draw it as text only, through the framework's text nodes. Nothing is written with `innerHTML`,
   no value becomes an `href`, `src` or inline style, and a path such as `javascript:alert(1)` is
   shown as the characters it is and is never a link;
-- replace every control character, bidirectional control, zero width and invisible format
-  character and lone surrogate with a visible mark (U+FFFD), one for one, so
-  that an event named `pay<RLO>fdp.exe` does not draw as `payexe.pdf` and a reader can see that
-  something was there;
+- replace, one for one, with a visible mark (U+FFFD): control characters, bidirectional controls,
+  zero width and other invisible format characters, every character Unicode says is ignored when
+  drawn (the Hangul fillers U+115F, U+1160, U+3164 and U+FFA0, variation selectors, U+034F, the
+  Mongolian selectors, tag characters), the braille blank U+2800, line and paragraph separators and
+  lone surrogates, so that an event named `pay<RLO>fdp.exe` does not draw as `payexe.pdf` and a
+  reader can see that something was there. Two things stay where they mean something: a zero width
+  joiner between two plain characters, and an emoji presentation selector (U+FE0E, U+FE0F) after
+  an emoji, so joined emoji and keycaps draw as they should. A variation selector after an
+  ideograph is replaced too: it is rare, and it is how a blank hides in a name;
+- show text that would draw as nothing (only white space, or only combining marks) as one mark,
+  and cut a run of combining marks after the third on one character, with a mark where the rest
+  was, so that no name draws as an empty cell and no stack of marks draws over the lines around it.
+  Line breaks and tabs become a space;
 - isolate each value in a `<bdi>`, so right to left text cannot reorder what is next to it;
 - cut a value at a fixed length, by code point, with an ellipsis, and count the properties beyond
   the first ten as "+N more", so no record makes a row taller or wider than a page can hold;
@@ -76,11 +85,18 @@ leaves the page.
 
 ## Requests and races
 
+While a page is on its way the table keeps the rows it shows, and its pager and sort buttons stay
+where they are, so keyboard focus stays on the control that was pressed; they are dimmed, `aria-busy`,
+and "Loading events" is said in the status region, and a press asks for nothing more until the answer
+arrives. The first load, with no rows yet, is a skeleton. When the answer is an error the rows make
+way for the message, and focus moves to it.
+
 A page that asks the source on every choice, page and sort must drop an answer that arrives after
 a newer request was made (a counter, as the guides do), or the table shows the events of a
 property the picker no longer shows. While a request is out, set `loading`; when it fails, set
 `error` to a sentence for people, and write the reason to the console, never to the page.
-`idg-event-table` shows `error` in a quiet alert inside its status region.
+`idg-event-table` shows `error` in a quiet alert inside its status region, which is the one live
+region, so an error is announced once.
 
 ## Accessibility
 
@@ -102,7 +118,9 @@ is merged over the defaults, so only the strings you give change. The strings wi
 (`{from}`, `{to}`, `{total}`, `{count}`, `{page}`, `{column}`, `{direction}`, `{label}`,
 `{summary}`, `{first}`, `{last}`, `{lowest}`, `{highest}`, `{trend}`, `{value}`) keep them. Times
 and numbers follow the `lang` of the page (or of the nearest ancestor with one) through `Intl`,
-and the time column uses `timeZone`, an IANA zone, or else the viewer's own.
+and the time column uses `timeZone`, an IANA zone, or else the viewer's own. The zone is always
+named with the time ("12:30:45 PM UTC"). A zone name the browser does not know falls back to the
+viewer's own, which the name shown makes evident.
 
 ```ts
 import type {
