@@ -87,6 +87,9 @@
   "cdata-unclosed.svg": {
     "outcome": "reject:malformed"
   },
+  "clip-path-crossing-zigzags.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
   "clip-path-cycle-through-use.svg": {
     "outcome": "reject:reference-cycle"
   },
@@ -111,7 +114,7 @@
     ]
   },
   "clip-path-of-43-shapes.svg": {
-    "outcome": "reject:overdraw-too-large"
+    "outcome": "reject:drawing-too-costly"
   },
   "comment-double-hyphen.svg": {
     "outcome": "reject:invalid-comment"

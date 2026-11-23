@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { sanitiseSvgLogo } from "./sanitise-svg-logo.ts";
 import { dashPeriod, measurePathData, SVG_DRAWING_WEIGHTS } from "./svg-drawing-cost.ts";
@@ -246,6 +247,62 @@ describe("the drawing cost limit", () => {
   it("accepts masks nested to the depth limit and refuses one more", () => {
     expect(accepted(nestedMasks(SVG_LOGO_LIMITS.maskDepth, 1)).ok).toBe(true);
     expect(refusal(nestedMasks(SVG_LOGO_LIMITS.maskDepth + 1, 1))).toBe("masks-too-deep");
+  });
+
+  it("bounds how often the shapes of clip paths could cross one another", () => {
+    expect(SVG_LOGO_LIMITS.clipCrossings).toBe(10_000);
+    // Two shapes in one clip path are combined into one outline, work that grows with how often
+    // they cross: at most the product of their segments, each weighted by its degree.
+    const lines = (count: number): string =>
+      `M0 0${Array.from({ length: count - 1 }, (_, index) => `L${String(index % 2 === 0 ? 10 : 0)} ${String(index / count)}`).join("")}Z`;
+    const clipped = (shapes: string, defs = ""): string =>
+      svg(
+        `<defs>${defs}</defs><clipPath id="c">${shapes}</clipPath><rect width="10" height="10" clip-path="url(#c)"/>`,
+      );
+    const pair = (count: number): string =>
+      clipped(`<path d="${lines(count)}"/><path d="${lines(count)}" transform="rotate(90 5 5)"/>`);
+    expect(accepted(pair(100)).ok).toBe(true);
+    expect(refusal(pair(101))).toBe("drawing-too-costly");
+    // One shape alone is not combined with anything, however many segments it has.
+    expect(accepted(clipped(`<path d="${lines(5000)}"/>`)).ok).toBe(true);
+    // A cubic crosses a line up to three times, a quadratic or an arc twice; a circle or ellipse
+    // is four arcs, a rounded rectangle four lines and four arcs.
+    const cubics = `M0 0${" C1 1 2 2 3 3".repeat(34)}`;
+    expect(accepted(clipped(`<path d="${cubics}"/><path d="${lines(98)}"/>`)).ok).toBe(true);
+    expect(refusal(clipped(`<path d="${cubics}"/><path d="${lines(99)}"/>`))).toBe(
+      "drawing-too-costly",
+    );
+    const circles = (count: number): string => '<circle r="5"/>'.repeat(count);
+    // n circles: n(n - 1)/2 pairs of 8 by 8.
+    expect(accepted(clipped(circles(18))).ok).toBe(true);
+    expect(refusal(clipped(circles(19)))).toBe("drawing-too-costly");
+    expect(
+      accepted(clipped(`<path d="${lines(833)}"/><rect width="1" height="1" rx="0.5"/>`)).ok,
+    ).toBe(true);
+    expect(
+      refusal(
+        clipped(
+          `<path d="${lines(833)}"/><rect width="1" height="1" rx="0.5"/>` +
+            '<path d="M0 0Q1 1 2 0"/>',
+        ),
+      ),
+    ).toBe("drawing-too-costly");
+    // A use counts what it draws; the counts of every clip path add up.
+    expect(
+      refusal(clipped(`<use href="#p"/><use href="#p"/>`, `<path id="p" d="${lines(101)}"/>`)),
+    ).toBe("drawing-too-costly");
+    const two = (id: string, count: number): string =>
+      `<clipPath id="${id}"><path d="${lines(count)}"/><path d="${lines(count)}"/></clipPath>`;
+    expect(accepted(svg(two("a", 70) + two("b", 70))).ok).toBe(true);
+    expect(refusal(svg(two("a", 71) + two("b", 71)))).toBe("drawing-too-costly");
+  });
+
+  it("refuses the reviewer's clip path of two zigzags crossing 40,000 times", () => {
+    const payload = readFileSync(
+      new URL("./__fixtures__/hostile-svg/clip-path-crossing-zigzags.svg", import.meta.url),
+      "utf8",
+    );
+    expect(refusal(payload)).toBe("drawing-too-costly");
   });
 
   it("accepts masks applied up to the limit and refuses one more", () => {
