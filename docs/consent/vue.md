@@ -63,7 +63,7 @@ import type { ConsentChangeDetail } from "@identgineer/components";
 import { onBeforeUnmount, ref } from "vue";
 import { tracker } from "./tracking";
 
-const dialog = ref<(HTMLElement & { open: () => Promise<void> }) | null>(null);
+const dialog = ref<(HTMLElement & { open: () => Promise<boolean> }) | null>(null);
 
 function chose(event: Event) {
   const { state } = (event as CustomEvent<ConsentChangeDetail>).detail;

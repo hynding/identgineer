@@ -99,7 +99,6 @@ the last child of the root layout, outside any element with `overflow`:
 
 ```tsx
 import type { ConsentChangeDetail } from "@identgineer/components";
-import { useRef } from "react";
 import { useConsentElement } from "./use-consent-element";
 
 export function ConsentBanner() {
@@ -122,14 +121,13 @@ export function ConsentBanner() {
 }
 
 export function PrivacySettings() {
-  const dialog = useRef<(HTMLElement & { open: () => Promise<void> }) | null>(null);
   const inline = useConsentElement<HTMLElement>({ headingLevel: 3 });
-  const modal = useConsentElement<HTMLElement>({});
+  const dialog = useConsentElement<HTMLElement & { open: () => Promise<boolean> }>({});
   return (
     <section aria-labelledby="privacy-title">
       <h2 id="privacy-title">Your privacy settings</h2>
       <idg-consent-preferences ref={inline} />
-      <idg-consent-preferences id="preferences-dialog" ref={modal} modal />
+      <idg-consent-preferences id="preferences-dialog" ref={dialog} modal />
       <button type="button" onClick={() => void dialog.current?.open()}>
         Open the settings in a dialog
       </button>

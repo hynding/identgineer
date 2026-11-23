@@ -127,14 +127,14 @@ document.getElementById("banner").addEventListener("idgConsentChange", (event) =
 
 ## 5. Methods and properties
 
-| Element                   | Member                 | What it does                                                    |
-| ------------------------- | ---------------------- | --------------------------------------------------------------- |
-| `idg-consent-banner`      | `placement`            | `bottom` (default), `top` or `inline`                           |
-| `idg-consent-banner`      | `announce-signal`      | Under GPC or DNT, say in one line that it is respected          |
-| `idg-consent-banner`      | `preferences`          | The id of the panel "Choose" opens                              |
-| `idg-consent-preferences` | `modal`                | Draw the panel in an `idg-dialog`                               |
-| `idg-consent-preferences` | `heading-level`        | 2 to 6, to fit the page's outline                               |
-| `idg-consent-preferences` | `open()` and `close()` | Open and close the dialog; inline, `open()` focuses the heading |
+| Element                   | Member                 | What it does                                                                                   |
+| ------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------- |
+| `idg-consent-banner`      | `placement`            | `bottom` (default, sticks), `top` or `inline` (in the flow)                                    |
+| `idg-consent-banner`      | `announce-signal`      | Under GPC or DNT, say in one line that it is respected                                         |
+| `idg-consent-banner`      | `preferences`          | The id of the panel "Choose" opens                                                             |
+| `idg-consent-preferences` | `modal`                | Draw the panel in an `idg-dialog`                                                              |
+| `idg-consent-preferences` | `heading-level`        | 2 to 6, to fit the page's outline                                                              |
+| `idg-consent-preferences` | `open()` and `close()` | Open and close the dialog (`open()` says whether it did); inline, `open()` focuses the heading |
 
 A page that already has a button for the privacy settings opens the dialog itself:
 

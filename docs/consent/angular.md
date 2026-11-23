@@ -88,7 +88,7 @@ export class AppComponent {
     console.debug("the visitor chose", state);
   }
 
-  protected openDialog(dialog: HTMLElement & { open: () => Promise<void> }): void {
+  protected openDialog(dialog: HTMLElement & { open: () => Promise<boolean> }): void {
     void dialog.open();
   }
 }

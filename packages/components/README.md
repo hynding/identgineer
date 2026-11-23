@@ -1352,30 +1352,33 @@ or slotted as `slot="preferences"`, which a non-modal panel draws only then). Sl
 `policy`, `preferences`; parts `banner`, `message`, `choices`, `decline`, `accept`, `choose`,
 `preferences`, `error`, `signal-note`, `status`.
 
-**Placement.** `bottom` and `top` make the host `position: sticky` to that edge, so it keeps its
-place in the page's flow and never covers the end of the page: put a bottom banner last in its
-parent, a top banner first, and no `overflow` between it and the page. While drawn, it keeps the
-root's `scroll-padding-block-end` (`-start` for the top) as tall as itself, added to the page's
-own value and given back after, so a focused element is scrolled clear of it (WCAG 2.4.11). A bar
-holds to half the window and scrolls inside itself, so large text on a small screen leaves the
-page readable. The padding is set through the root's style object, which the strict policy allows.
+**Placement.** `bottom` makes the host `position: sticky` to the bottom edge, so it keeps its place
+in the page's flow and never covers the end of the page: put it last in its parent, with no
+`overflow` between it and the page. While drawn and sticking, it keeps the root's
+`scroll-padding-block-end` as tall as itself, added to the page's own value (stylesheet or inline)
+and given back exactly after, so a focused element is scrolled clear of it (WCAG 2.4.11). A bar
+holds to half the window and scrolls inside itself, and in a window under 32rem tall it joins the
+page's flow instead. `top` and `inline` are in the flow where the element is (a top bar goes first
+in the body and scrolls away, so it never covers a sticky header). The padding is set through the
+root's style object, which the strict policy allows.
 
 ### `idg-consent-preferences`
 
 A `section` named by its heading (`heading-level`, 2 to 6, default 2) with two rows: "Necessary",
-an on, disabled `idg-switch` with its explanation (the SDK does not track it), and "Analytics",
+the words "Always on" with no control, and its explanation (the SDK does not track it), and "Analytics",
 an `idg-switch` that shows the current state and is off when nothing was chosen. Nothing changes
 until "Save preferences" (part `save`), which calls `grant()` or `deny()`; "Withdraw consent and
 erase" (part `erase`) asks inline (part `confirm`, never `window.confirm`) and calls `reset()`.
 While a signal is set the switch is off and disabled, a note names the signal (part `signal`),
 and saving can only record a denial. It follows changes made elsewhere through `onChange`: if the
 stored state changes under an unsaved edit, the edit is dropped and a note says so (part
-`changed`). When the consent object has a `decidedAt()` that returns milliseconds, the time of
-the choice is shown (part `decided`), formatted with `Intl.DateTimeFormat` in the language of the
-nearest `lang`; the tracker's consent has none.
+`changed`). The time of the choice, `decidedAt` in the status (milliseconds, `null` if none), is
+shown (part `decided`), formatted with `Intl.DateTimeFormat` in the language of the nearest `lang`,
+looked for through shadow roots.
 
 `modal` draws it in an `idg-dialog` (which holds and restores focus and closes on Escape,
-dropping an unsaved edit); `open()` and `close()` control the dialog. Not modal, `open()` moves
+dropping an unsaved edit, which the live region says politely); `open()` (resolves `true`, or
+`false` without a consent object) and `close()` control the dialog. Not modal, `open()` moves
 focus to the heading and `close()` does nothing. A successful save or erase in a dialog closes it
 and is said politely (part `status`). Props `consent`, `labels` (`ConsentPreferencesLabels`),
 `modal`, `heading-level`. Event `idgConsentChange` (`{ state }`, after a save or an erase made
