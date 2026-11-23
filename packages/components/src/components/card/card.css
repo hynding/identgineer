@@ -42,6 +42,8 @@
   backdrop-filter: var(--idg-surface-backdrop-filter);
   box-shadow: var(--_shadow);
   color: var(--idg-color-text);
+  /* A word wider than the card breaks, so the card holds its text however large the type. */
+  overflow-wrap: anywhere;
   font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
   line-height: var(--idg-font-body-line-height);
   letter-spacing: var(--idg-font-body-letter-spacing);
@@ -167,7 +169,9 @@
 .body,
 .footer {
   min-inline-size: 0;
-  padding-inline: var(--_pad);
+  /* The padding of a roomy density is bounded by the card's width, so a narrow card at a large
+     type size keeps room for its text. */
+  padding-inline: min(var(--_pad), 10%);
 }
 
 .header {
