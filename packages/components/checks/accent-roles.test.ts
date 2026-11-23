@@ -28,6 +28,21 @@ describe("findAccentUses", () => {
   });
 });
 
+describe("findAccentUses, var() spellings", () => {
+  it.each([
+    ["a fallback", "a { color: var(--idg-color-accent, #000); }"],
+    ["inner spaces", "a { color: var( --idg-color-accent ); }"],
+    ["a fallback after a space", "a { color: var(--idg-color-accent , currentcolor); }"],
+    ["a line break", "a { color: var(\n    --idg-color-accent\n  ); }"],
+  ])("finds a role read with %s", (_label, css) => {
+    expect(findAccentUses(css)).toEqual([{ property: "color", token: "accent" }]);
+  });
+
+  it("does not take a longer role name for a shorter one", () => {
+    expect(findAccentUses("a { color: var(--idg-color-accent-strong); }")).toEqual([]);
+  });
+});
+
 describe("accent roles in the component stylesheets", () => {
   const actual = listFiles(SRC)
     .filter((file) => file.endsWith(".css"))
