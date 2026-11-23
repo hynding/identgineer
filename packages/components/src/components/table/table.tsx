@@ -81,8 +81,18 @@ export class IdgTable {
   @Prop({ mutable: true, reflect: true, attribute: "sort-direction" })
   sortDirection: SortDirection = "ascending";
 
-  /** Only marks the sorted column and reports the sort. Use it when you sort the rows yourself, such as on a server. */
+  /**
+   * For when you sort the rows yourself, such as on a server. A press only reports `idgSort` with
+   * the sort it asks for; the sort that is marked and announced is the one you set in `sortKey` and
+   * `sortDirection`, so a header never shows an order the rows are not in.
+   */
   @Prop({ attribute: "manual-sort" }) manualSort = false;
+
+  /**
+   * Whether the owner of the rows is busy, such as while it fetches a sorted page. The sort buttons
+   * are marked `aria-disabled` and presses on them do nothing and say nothing.
+   */
+  @Prop({ reflect: true }) busy = false;
 
   /** Announced after a sort, where `{column}` is the column and `{direction}` is ascending or descending. */
   @Prop({ attribute: "sort-status" }) sortStatus = "Sorted by {column}, {direction}";
@@ -139,8 +149,34 @@ export class IdgTable {
   @Watch("sortKey")
   @Watch("sortDirection")
   @Watch("manualSort")
+  @Watch("busy")
   sortChanged(): void {
     this.refresh();
+  }
+
+  // The words after a sort, said politely when the region's text changes.
+  private statusFor(key: string, direction: SortDirection): string {
+    const table = slottedTable(this.host);
+    const header = table
+      ? sortableHeaders(table).find((cell) => sortKeyOf(cell) === key)
+      : undefined;
+    if (!header) return "";
+    return this.sortStatus
+      .split("{column}")
+      .join(textOf(header).trim())
+      .split("{direction}")
+      .join(direction === "ascending" ? this.sortAscendingLabel : this.sortDescendingLabel);
+  }
+
+  // With manual-sort the owner's `sortKey` is what is said, whoever changed it.
+  @Watch("sortKey")
+  @Watch("sortDirection")
+  ownerSorted(): void {
+    if (!this.manualSort || this.sortKey === "") return;
+    this.status = this.statusFor(
+      this.sortKey,
+      oneOf(SORT_DIRECTIONS, this.sortDirection, "ascending"),
+    );
   }
 
   @Listen("click")
@@ -150,16 +186,15 @@ export class IdgTable {
     const table = slottedTable(this.host);
     // A table nested in a cell has sort buttons of its own, which this table does not answer to.
     if (!button || !header || !table?.contains(button) || button.closest("table") !== table) return;
+    if (this.busy) return;
     const key = sortKeyOf(header);
     const direction: SortDirection =
       this.sortKey === key && this.sortDirection === "ascending" ? "descending" : "ascending";
-    this.sortKey = key;
-    this.sortDirection = direction;
-    this.status = this.sortStatus
-      .split("{column}")
-      .join(textOf(header).trim())
-      .split("{direction}")
-      .join(direction === "ascending" ? this.sortAscendingLabel : this.sortDescendingLabel);
+    if (!this.manualSort) {
+      this.sortKey = key;
+      this.sortDirection = direction;
+      this.status = this.statusFor(key, direction);
+    }
     this.idgSort.emit({ key, direction });
   }
 
@@ -321,6 +356,11 @@ export class IdgTable {
     for (const header of headers) {
       if (header === active) header.setAttribute("aria-sort", direction);
       else header.removeAttribute("aria-sort");
+      const button = Array.from(header.children).find((child) =>
+        child.classList.contains("idg-table-sort"),
+      );
+      if (this.busy) button?.setAttribute("aria-disabled", "true");
+      else button?.removeAttribute("aria-disabled");
     }
     if (!this.manualSort) this.arrangeRows(table, active, direction);
   }

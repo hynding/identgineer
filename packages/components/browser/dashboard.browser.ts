@@ -198,7 +198,7 @@ test.describe("the event table", () => {
     const announcement = table(page).locator("idg-table").locator("[role='status']");
     await expect(announcement).toHaveText("Sorted by Event, ascending");
     await expect(button).toHaveAttribute("aria-disabled", "true");
-    await button.click();
+    await button.click({ force: true });
     await page.keyboard.press("Enter");
     await expect(table(page).locator("th[aria-sort]")).toHaveAttribute("aria-sort", "ascending");
     await expect(announcement).toHaveText("Sorted by Event, ascending");

@@ -1797,11 +1797,16 @@ export namespace Components {
      */
     interface IdgTable {
         /**
+          * Whether the owner of the rows is busy, such as while it fetches a sorted page. The sort buttons are marked `aria-disabled` and presses on them do nothing and say nothing.
+          * @default false
+         */
+        "busy": boolean;
+        /**
           * The scroll region's accessible name, when the table is wider than the page. The caption is used without it.
          */
         "label"?: string;
         /**
-          * Only marks the sorted column and reports the sort. Use it when you sort the rows yourself, such as on a server.
+          * For when you sort the rows yourself, such as on a server. A press only reports `idgSort` with the sort it asks for; the sort that is marked and announced is the one you set in `sortKey` and `sortDirection`, so a header never shows an order the rows are not in.
           * @default false
          */
         "manualSort": boolean;
@@ -5025,11 +5030,16 @@ declare namespace LocalJSX {
      */
     interface IdgTable {
         /**
+          * Whether the owner of the rows is busy, such as while it fetches a sorted page. The sort buttons are marked `aria-disabled` and presses on them do nothing and say nothing.
+          * @default false
+         */
+        "busy"?: boolean;
+        /**
           * The scroll region's accessible name, when the table is wider than the page. The caption is used without it.
          */
         "label"?: string;
         /**
-          * Only marks the sorted column and reports the sort. Use it when you sort the rows yourself, such as on a server.
+          * For when you sort the rows yourself, such as on a server. A press only reports `idgSort` with the sort it asks for; the sort that is marked and announced is the one you set in `sortKey` and `sortDirection`, so a header never shows an order the rows are not in.
           * @default false
          */
         "manualSort"?: boolean;
@@ -5702,6 +5712,7 @@ declare namespace LocalJSX {
         "sortKey": string;
         "sortDirection": SortDirection;
         "manualSort": boolean;
+        "busy": boolean;
         "sortStatus": string;
         "sortAscendingLabel": string;
         "sortDescendingLabel": string;

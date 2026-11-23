@@ -295,6 +295,7 @@ export class IdgEventTable {
         part="table"
         label={caption}
         manualSort
+        busy={this.loading}
         sortKey={active}
         sortDirection={direction}
         sortStatus={labels.sortStatus}

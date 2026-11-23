@@ -797,7 +797,7 @@ stylesheet in the `idg.components` layer, built from the `--idg-*` tokens, is ad
 document or shadow root the table is in; no inline styles are used, so the strict CSP holds.
 
 Props: `label`, `stickyHeader` (`sticky-header`), `striped`, `maxHeight` (`max-height`), `minWidth`
-(`min-width`), `sortKey`, `sortDirection`, `manualSort`, `sortStatus` (the live-region text pattern, with `{column}` and `{direction}`), `sortAscendingLabel`
+(`min-width`), `sortKey`, `sortDirection`, `manualSort`, `busy`, `sortStatus` (the live-region text pattern, with `{column}` and `{direction}`), `sortAscendingLabel`
 and `sortDescendingLabel` (the words for `{direction}`, default "ascending" and "descending"; set
 them with `sortStatus` to translate the announcement).
 Event `idgSort` (`{ key, direction }`); parts `scroller`, `status`.
@@ -809,7 +809,10 @@ Event `idgSort` (`{ key, direction }`); parts `scroller`, `status`.
   unless it reads as a plain number) or dates written as words.
 - **Spanning cells.** A table whose body has a cell with `rowspan` or `colspan` is not sortable: no
   sort buttons are drawn and `sortKey` does nothing, since moving its rows would break it. With
-  `manual-sort` the table moves no rows, only reports `idgSort` and marks the column, so the buttons
+  `manual-sort` the table moves no rows and a press only reports `idgSort` with the sort it asks for:
+  the column marked and the sort announced are the ones the owner sets in `sortKey` and
+  `sortDirection`, so a header never shows an order the rows are not in. `busy` marks the buttons
+  `aria-disabled` and swallows presses while the owner loads. The buttons
   stay and the page may swap the body, for a loading row for instance. Focus on a button that is
   taken away goes to its header cell.
 - **Nested tables.** A table nested in a cell, whether another `idg-table` or a plain `<table>`, is
