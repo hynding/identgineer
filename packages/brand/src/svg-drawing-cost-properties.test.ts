@@ -43,12 +43,15 @@ interface Paint {
   readonly box: Box;
 }
 
-/** What a shape paints: its fill, at most the whole image, and its edges. */
-function filled(area: number, segments: number, length: number, box: Box): Paint {
+/**
+ * What a shape paints: its fill, at most the whole image, and its edges, as long as its outline or
+ * as `visible`, the most of it the image can show, whichever is less.
+ */
+function filled(area: number, visible: number, length: number, box: Box): Paint {
   return {
     overdraw:
       Math.min(1, area / (SIDE * SIDE)) * PAINT.solid +
-      Math.min(Math.SQRT2 * segments, length / SIDE) * PAINT.edge,
+      Math.min(visible, length / SIDE) * PAINT.edge,
     box,
   };
 }
@@ -171,7 +174,10 @@ class LogoGraph {
     }
     const geometry = count * (curves ? WEIGHT.cubic : WEIGHT.line);
     const boxArea = (box.maxX - box.minX) * (box.maxY - box.minY);
-    const painted = filled(Math.min(area, boxArea), count, length, box);
+    // A straight edge shows at most the image's diagonal; a cubic, three convex pieces, at most
+    // three times its perimeter.
+    const visible = count * (curves ? 12 : Math.SQRT2);
+    const painted = filled(Math.min(area, boxArea), visible, length, box);
     return {
       id,
       markup: `<path id="${id}" d="${data}"${this.dash()}/>`,

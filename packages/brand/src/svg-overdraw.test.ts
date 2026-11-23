@@ -68,10 +68,25 @@ describe("the overdraw of a logo", () => {
   });
 
   it("charges an instance at most the whole image, however far it reaches", () => {
+    // A rectangle is convex: no more of its outline than the image's perimeter can be seen.
     expect(overdraw('<rect x="-500" y="-500" width="5000" height="5000"/>')).toBeCloseTo(
-      W.solid + 4 * Math.SQRT2 * W.edge,
+      W.solid + 4 * W.edge,
       9,
     );
+  });
+
+  it("bounds how much of each segment's edge can be seen by its kind", () => {
+    const hairline = 'fill="none" stroke="#000" stroke-width="0.000001"';
+    const edges = (data: string): number => overdraw(`<path d="${data}" ${hairline}/>`);
+    // A straight segment shows at most the image's diagonal.
+    expect(edges("M-1000 -1000L1000 1000")).toBeCloseTo(Math.SQRT2 * W.edge, 6);
+    // A quadratic curve or an arc is convex: at most the image's perimeter.
+    expect(edges("M-1000 0Q50 5000 1000 0")).toBeCloseTo(4 * W.edge, 6);
+    expect(edges("M0 0A1000 1000 0 1 1 1 0")).toBeCloseTo(4 * W.edge, 6);
+    // A cubic bends at most twice: three convex pieces.
+    expect(edges("M-1000 0C3000 5000 -3000 5000 1000 0")).toBeCloseTo(12 * W.edge, 6);
+    // Short of those, the outline's own length.
+    expect(edges("M0 0Q50 50 100 0")).toBeCloseTo(Math.SQRT2 * W.edge, 6);
   });
 
   it("carries the area through transforms, ancestors' and use's included", () => {
