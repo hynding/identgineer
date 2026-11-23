@@ -17,6 +17,11 @@ import { removeItemIfPresent } from "./storage.ts";
 import { STORAGE_KEYS } from "./storage-keys.ts";
 import type { ConsentStatus, Tracker, TrackerOptions } from "./tracker-types.ts";
 import { IDENTIFIER_PATTERN } from "./wire-format.ts";
+import type { ConsentReading } from "./consent-controller.ts";
+
+function withDecisionTime(reading: ConsentReading): ConsentStatus {
+  return { ...reading.status, decidedAt: reading.decidedAt ?? null };
+}
 
 const buildTracker = (options: ResolvedOptions): Tracker => {
   const { page, localStorage, crossTab } = options;
@@ -35,7 +40,7 @@ const buildTracker = (options: ResolvedOptions): Tracker => {
   });
 
   const first = controller.read();
-  let status: ConsentStatus = first.status;
+  let status: ConsentStatus = withDecisionTime(first);
   // The decision this tab has acted on; a different one under a standing grant is a revocation.
   let decidedAt = first.decidedAt;
   let disposed = false;
@@ -93,7 +98,7 @@ const buildTracker = (options: ResolvedOptions): Tracker => {
   const refresh = (ownDecision = false): ConsentStatus => {
     if (disposed) return status;
     const reading = controller.read();
-    const next = reading.status;
+    const next = withDecisionTime(reading);
     const previous = status;
     const seen = decidedAt;
     status = next;

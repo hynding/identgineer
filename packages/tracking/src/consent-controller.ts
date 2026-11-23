@@ -18,7 +18,7 @@ export interface ConsentControllerDeps {
 
 export interface ConsentReading {
   /** The effective consent right now, read afresh from the signals and from storage. */
-  readonly status: ConsentStatus;
+  readonly status: Omit<ConsentStatus, "decidedAt">;
   /**
    * When the stored decision was made. A change of it, with the state still granted, means the
    * visitor denied and granted again somewhere this tab did not hear of.

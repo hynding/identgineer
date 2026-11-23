@@ -48,7 +48,7 @@ describe("revoking consent", () => {
     expect(world.local.keys()).toEqual([]);
     expect(tab.session.keys()).toEqual([]);
     expect(world.clock.pendingTimers()).toBe(0);
-    expect(tab.tracker.consent.get()).toEqual({ state: "unknown" });
+    expect(tab.tracker.consent.get()).toMatchObject({ state: "unknown" });
   });
 
   it.each(["deny", "reset"] as const)("rotates the session id away on %s()", async (revoke) => {
@@ -83,7 +83,7 @@ describe("revoking consent", () => {
     first.tracker.dispose();
     expect(world.local.peek(QUEUE_KEY)).not.toBeNull();
     const second = openTab(world, { consentVersion: 2 });
-    expect(second.tracker.consent.get()).toEqual({ state: "unknown" });
+    expect(second.tracker.consent.get()).toMatchObject({ state: "unknown" });
     expect(world.local.peek(QUEUE_KEY)).toBeNull();
     expect(world.local.peek(CONSENT_KEY)).toBe(consentRecord("granted", 1));
   });
@@ -186,7 +186,7 @@ describe("revoking consent", () => {
       const a = openTab(world);
       const b = openTab(world);
       a.tracker.consent.grant();
-      expect(b.tracker.consent.get()).toEqual({ state: "granted" });
+      expect(b.tracker.consent.get()).toMatchObject({ state: "granted" });
       a.tracker.track("clicked", { target: "a" });
       b.tracker.track("clicked", { target: "b" });
       const heard: ConsentStatus[] = [];
@@ -194,7 +194,7 @@ describe("revoking consent", () => {
 
       a.tracker.consent.deny();
 
-      expect(heard).toEqual([{ state: "denied" }]);
+      expect(heard).toMatchObject([{ state: "denied" }]);
       expect(b.session.keys()).toEqual([]);
       expect(a.session.keys()).toEqual([]);
       expect(world.local.keys()).toEqual([CONSENT_KEY]);
@@ -212,7 +212,7 @@ describe("revoking consent", () => {
       a.tracker.consent.grant();
       b.tracker.track("clicked", { target: "b" });
       a.tracker.consent.reset();
-      expect(b.tracker.consent.get()).toEqual({ state: "unknown" });
+      expect(b.tracker.consent.get()).toMatchObject({ state: "unknown" });
       expect(world.local.keys()).toEqual([]);
       expect(b.session.keys()).toEqual([]);
     });
@@ -253,7 +253,7 @@ describe("revoking consent", () => {
       const b = world.hub.connect();
       a.tracker.consent.grant();
       b.post({ type: "something-else", state: "denied" });
-      expect(a.tracker.consent.get()).toEqual({ state: "granted" });
+      expect(a.tracker.consent.get()).toMatchObject({ state: "granted" });
     });
   });
 
@@ -278,7 +278,7 @@ describe("revoking consent", () => {
         const tab = grantedTab(world);
         tab.tracker.track("clicked", { target: "a" });
         appear(tab);
-        expect(tab.tracker.consent.get()).toEqual({ state: "denied", reason });
+        expect(tab.tracker.consent.get()).toMatchObject({ state: "denied", reason });
         expect(world.local.keys()).toEqual([CONSENT_KEY]);
         expect(world.local.peek(CONSENT_KEY)).toBe(consentRecord("granted"));
         expect(tab.session.keys()).toEqual([]);

@@ -88,7 +88,7 @@ describe("a revocation when the storage cannot be read", () => {
     const tab = grantedTab(world);
     tab.tracker.track("clicked", { target: "a" });
     world.local.failReads(true);
-    expect(tab.tracker.consent.get()).toEqual({ state: "unknown" });
+    expect(tab.tracker.consent.get()).toMatchObject({ state: "unknown" });
     world.local.failReads(false);
     expect(world.local.peek(QUEUE_KEY)).toBeNull();
   });

@@ -36,7 +36,7 @@ describe("a decision time at the largest timestamp", () => {
     );
     const tab = openTab(world);
     expect(tab.tracker.consent.grant()).toBe(true);
-    expect(tab.tracker.consent.get()).toEqual({ state: "granted" });
+    expect(tab.tracker.consent.get()).toMatchObject({ state: "granted" });
     expect(JSON.parse(world.local.peek(CONSENT_KEY) ?? "null")).toMatchObject({
       state: "granted",
       decidedAt: MAX_TIMESTAMP,

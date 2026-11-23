@@ -90,13 +90,13 @@ was attached to, until they are delivered.
 The consent state is `unknown` (the default), `granted` or `denied`. Only `analytics` is
 this SDK's category; strictly necessary storage is not tracked at all.
 
-| Method                       | Effect                                                                                                               |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `consent.get()`              | `{ state, reason? }`: the effective consent, read afresh from storage and the browser                                |
-| `consent.grant()`            | Stores `granted`; returns whether it could be stored. Refused (`false`, nothing written) while GPC or DNT is set     |
-| `consent.deny()`             | Stores `denied` and revokes (below)                                                                                  |
-| `consent.reset()`            | Removes the choice and every key the SDK wrote: the visitor is asked again                                           |
-| `consent.onChange(listener)` | Calls `listener(status)` when the effective consent changes, here or in another tab; returns an unsubscribe function |
+| Method                       | Effect                                                                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `consent.get()`              | `{ state, reason?, decidedAt }`: the effective consent, read afresh; `decidedAt` is the time of the stored decision, `null` while none is stored |
+| `consent.grant()`            | Stores `granted`; returns whether it could be stored. Refused (`false`, nothing written) while GPC or DNT is set                                 |
+| `consent.deny()`             | Stores `denied` and revokes (below)                                                                                                              |
+| `consent.reset()`            | Removes the choice and every key the SDK wrote: the visitor is asked again                                                                       |
+| `consent.onChange(listener)` | Calls `listener(status)` when the effective consent changes, here or in another tab; returns an unsubscribe function                             |
 
 **The record.** One key holds `{ state, version, decidedAt }`. Raising `consentVersion` makes an
 older record count as `unknown`, so visitors are asked again after a change to what you collect.
