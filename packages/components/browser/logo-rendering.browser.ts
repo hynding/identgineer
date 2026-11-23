@@ -210,12 +210,20 @@ test.describe("sanitised logos in a browser", () => {
 // an image is the second layer, and why it cannot be the control for the first.
 base.describe("the checks themselves", () => {
   // Only the files the sanitiser accepts (after removing their payload): those it refuses include
-  // the resource attacks (billions of drawn copies), which would only hang the page.
+  // the resource attacks (billions of drawn copies), which would only hang the page. So would those
+  // whose clip paths it writes as masks: unsanitised, a renderer combining their shapes can take
+  // minutes, and none holds a script or a load.
   const expectations = JSON.parse(
     readFileSync(new URL("hostile-svg/expectations.json", BRAND_FIXTURES), "utf8"),
-  ) as Record<string, { outcome: string }>;
+  ) as Record<string, { outcome: string; removed?: { reason: string }[] }>;
   const raw = corpus("hostile-svg")
-    .filter(({ name }) => expectations[name.replace("hostile-svg/", "")]?.outcome === "accept")
+    .filter(({ name }) => {
+      const expected = expectations[name.replace("hostile-svg/", "")];
+      return (
+        expected?.outcome === "accept" &&
+        !(expected.removed ?? []).some(({ reason }) => reason === "rewritten")
+      );
+    })
     .map(({ name, bytes }) => ({ name, svg: new TextDecoder().decode(bytes) }));
 
   base("catch a script and an external load in the unsanitised corpus", async ({ page }) => {
