@@ -330,8 +330,102 @@ describe("idg-table sortable headers", () => {
     sortButton(root, 0).click();
     await waitForChanges();
     expect(names(root)).toEqual(["b", "a"]);
-    expect(header(root, 0).getAttribute("aria-sort")).toBe("ascending");
     expect(spy.lastEvent?.detail).toEqual({ key: "name", direction: "ascending" });
+    // The owner of the rows says what is sorted: until it does, nothing is shown or announced.
+    expect(header(root, 0).hasAttribute("aria-sort")).toBe(false);
+    expect(root.shadowRoot?.querySelector('[role="status"]')?.textContent).toBe("");
+    (root as TableElement).sortKey = "name";
+    await waitForChanges();
+    expect(header(root, 0).getAttribute("aria-sort")).toBe("ascending");
+    expect(root.shadowRoot?.querySelector('[role="status"]')?.textContent).toBe(
+      "Sorted by Name, ascending",
+    );
+  });
+
+  it("with manual-sort stops announcing a sort when the owner clears it", async () => {
+    const { root, waitForChanges } = await render(
+      <idg-table manualSort>
+        <table>
+          <thead>
+            <tr>
+              <th data-sortable="name">Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>a</td>
+            </tr>
+          </tbody>
+        </table>
+      </idg-table>,
+    );
+    (root as TableElement).sortKey = "name";
+    await waitForChanges();
+    const region = () => root.shadowRoot?.querySelector('[role="status"]')?.textContent;
+    expect(region()).toBe("Sorted by Name, ascending");
+    (root as TableElement).sortKey = "";
+    await waitForChanges();
+    expect(region()).toBe("");
+    expect(header(root, 0).hasAttribute("aria-sort")).toBe(false);
+  });
+
+  it("with manual-sort proposes the opposite direction on the next press, from what the owner set", async () => {
+    const { root, spyOnEvent, waitForChanges } = await render(
+      <idg-table manualSort sortKey="name" sortDirection="ascending">
+        <table>
+          <thead>
+            <tr>
+              <th data-sortable="name">Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>a</td>
+            </tr>
+          </tbody>
+        </table>
+      </idg-table>,
+    );
+    const spy = spyOnEvent("idgSort");
+    sortButton(root, 0).click();
+    sortButton(root, 0).click();
+    await waitForChanges();
+    // Nobody set the direction, so both presses ask for the same change.
+    expect(spy.events.map((event) => event.detail)).toEqual([
+      { key: "name", direction: "descending" },
+      { key: "name", direction: "descending" },
+    ]);
+    expect(header(root, 0).getAttribute("aria-sort")).toBe("ascending");
+  });
+
+  it("swallows presses and marks the buttons aria-disabled while busy", async () => {
+    const { root, spyOnEvent, waitForChanges } = await render(
+      <idg-table manualSort busy>
+        <table>
+          <thead>
+            <tr>
+              <th data-sortable="name">Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>a</td>
+            </tr>
+          </tbody>
+        </table>
+      </idg-table>,
+    );
+    const spy = spyOnEvent("idgSort");
+    expect(sortButton(root, 0).getAttribute("aria-disabled")).toBe("true");
+    sortButton(root, 0).click();
+    await waitForChanges();
+    expect(spy.events).toHaveLength(0);
+    (root as TableElement & { busy: boolean }).busy = false;
+    await waitForChanges();
+    expect(sortButton(root, 0).hasAttribute("aria-disabled")).toBe(false);
+    sortButton(root, 0).click();
+    await waitForChanges();
+    expect(spy.events).toHaveLength(1);
   });
 
   it("announces a sort a user made, from its template", async () => {

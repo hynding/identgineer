@@ -1,0 +1,60 @@
+:host {
+  /* The line, the mark and the fill all read this colour: an indicator, so 3:1 on the page. */
+  display: inline-block;
+  box-sizing: border-box;
+  inline-size: var(--idg-size-xs);
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  color: var(--idg-color-accent-indicator);
+  line-height: 0;
+  vertical-align: middle;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.chart {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  overflow: visible;
+}
+
+.line {
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* Drawn the same thickness however far the view box is scaled. */
+  stroke-width: 0.125rem;
+  vector-effect: non-scaling-stroke;
+}
+
+.area {
+  fill: color-mix(in srgb, currentcolor 18%, transparent);
+  stroke: none;
+}
+
+.end {
+  fill: currentcolor;
+  stroke: var(--idg-color-surface);
+  stroke-width: 0.0625rem;
+  vector-effect: non-scaling-stroke;
+}
+
+@media (forced-colors: active) {
+  .line,
+  .end {
+    stroke: CanvasText;
+  }
+
+  .end {
+    fill: CanvasText;
+  }
+
+  .area {
+    fill: Canvas;
+    stroke: none;
+  }
+}

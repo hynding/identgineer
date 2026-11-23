@@ -45,6 +45,16 @@ Track, gives "Decline" and "Accept analytics" the same weight, and never blocks 
 [Vue](docs/consent/vue.md) and [Angular](docs/consent/angular.md), and
 [the rules the banner follows and why](docs/consent/rules.md).
 
+## Dashboard components
+
+A property picker, stat and sparkline figures, and a paged, sortable event table are web
+components that take their data as properties and never fetch: the page asks a `DashboardSource`
+(the typed seam a server implements over the authenticated API, which enforces who owns what) and
+hands the answers over. Everything they show from the public internet is drawn as neutralised
+text. Guides: [plain HTML](docs/dashboard/plain-html.md), [React](docs/dashboard/react.md),
+[Vue](docs/dashboard/vue.md) and [Angular](docs/dashboard/angular.md), and
+[what the source must enforce and how text is treated](docs/dashboard/rules.md).
+
 ## Brand themes
 
 A brand kit (name, colours, a font pairing, corners and tone) becomes a theme of its own:

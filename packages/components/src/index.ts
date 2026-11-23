@@ -20,6 +20,32 @@ export type {
   ConsentStateView,
   ConsentStatusView,
 } from "./consent/consent-types";
+export { DashboardError, EVENT_SORT_KEYS, STAT_RANGES } from "./dashboard/dashboard-types";
+export type {
+  DashboardErrorCode,
+  DashboardSource,
+  EventPage,
+  EventPropertyValue,
+  EventQuery,
+  EventSort,
+  EventSortDirection,
+  EventSortKey,
+  StatMetric,
+  StatRange,
+  StatSummary,
+  TrackedEvent,
+  TrackedProperty,
+} from "./dashboard/dashboard-types";
+export {
+  parseEventPage,
+  parseStatSummary,
+  parseTrackedEvents,
+  parseTrackedProperties,
+} from "./dashboard/parse-dashboard-data";
+export { validatedSource } from "./dashboard/validated-source";
+export type { EventTableLabels } from "./components/event-table/event-table-labels";
+export type { PropertyPickerLabels } from "./components/property-picker/property-picker-labels";
+export type { SparklineLabels } from "./components/sparkline/sparkline-labels";
 export type { IconName } from "./components/icon/icon-paths";
 export type { IdentityUserDetail, SignedInDetail, SignedOutDetail } from "./identity/event-details";
 export type {

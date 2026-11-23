@@ -1,6 +1,6 @@
 import { Component, Element, Event, h, Prop, type EventEmitter } from "@stencil/core";
 import { pageHref } from "../../utils/page-href";
-import { paginationRange } from "../../utils/pagination-range";
+import { MAX_PAGE_COUNT, paginationRange } from "../../utils/pagination-range";
 import type { PageChangeDetail } from "./pagination-options";
 
 // Typed explicitly because Stencil's DOM typings allow null here and the editor's do not.
@@ -34,7 +34,7 @@ export class IdgPagination {
   /** The current page, from 1. */
   @Prop({ mutable: true, reflect: true }) page = 1;
 
-  /** How many pages there are. */
+  /** How many pages there are, up to ten million: more is held to that. */
   @Prop({ attribute: "page-count", reflect: true }) pageCount = 1;
 
   /** Pages shown on each side of the current one. */
@@ -105,7 +105,9 @@ export class IdgPagination {
   }
 
   private pageCountValue(): number {
-    return Number.isFinite(this.pageCount) ? Math.max(0, Math.trunc(this.pageCount)) : 0;
+    return Number.isFinite(this.pageCount)
+      ? Math.min(Math.max(0, Math.trunc(this.pageCount)), MAX_PAGE_COUNT)
+      : 0;
   }
 
   private currentPage(): number {

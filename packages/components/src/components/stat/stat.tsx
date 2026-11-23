@@ -16,6 +16,7 @@ import {
  * @part label - The label.
  * @part value - The figure.
  * @part delta - The change.
+ * @part period - What the change is measured against, when `period` is set.
  */
 @Component({
   tag: "idg-stat",
@@ -41,6 +42,12 @@ export class IdgStat {
    */
   @Prop() sentiment?: StatSentiment;
 
+  /**
+   * What the change is measured against, such as `vs previous 7 days`. It is seen beside the change
+   * and spoken with it, since a change with no basis is ambiguous. Without a change it is not shown.
+   */
+  @Prop() period?: string;
+
   /** Spoken before the change of a figure that rose. */
   @Prop({ attribute: "up-label" }) upLabel = "Increased by";
 
@@ -52,7 +59,7 @@ export class IdgStat {
 
   private spoken(direction: StatDirection): string {
     const lead = { up: this.upLabel, down: this.downLabel, flat: this.flatLabel }[direction];
-    return `${lead} ${this.delta ?? ""}`.trim();
+    return `${lead} ${this.delta ?? ""} ${this.period ?? ""}`.replace(/\s+/g, " ").trim();
   }
 
   render() {
@@ -68,12 +75,19 @@ export class IdgStat {
             {this.value}
           </div>
           {this.delta === undefined || this.delta === "" ? null : (
-            <div class={{ delta: true, [`sentiment-${sentiment}`]: true }} part="delta">
-              <idg-icon name={DIRECTION_ICONS[direction]} size="sm" aria-hidden="true" />
-              <span class="visually-hidden">{this.spoken(direction)}</span>
-              <span class="delta-text" aria-hidden="true">
-                {this.delta}
-              </span>
+            <div class="change">
+              <div class={{ delta: true, [`sentiment-${sentiment}`]: true }} part="delta">
+                <idg-icon name={DIRECTION_ICONS[direction]} size="sm" aria-hidden="true" />
+                <span class="visually-hidden">{this.spoken(direction)}</span>
+                <span class="delta-text" aria-hidden="true">
+                  {this.delta}
+                </span>
+              </div>
+              {this.period === undefined || this.period === "" ? null : (
+                <span class="period" part="period" aria-hidden="true">
+                  {this.period}
+                </span>
+              )}
             </div>
           )}
         </div>

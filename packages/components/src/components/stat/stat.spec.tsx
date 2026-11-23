@@ -89,3 +89,41 @@ describe("idg-stat delta", () => {
     );
   });
 });
+
+describe("idg-stat period", () => {
+  it("says what the change is measured against, seen and spoken with it", async () => {
+    const { root } = await render(
+      <idg-stat
+        label="Visitors"
+        value="1,204"
+        delta="12%"
+        direction="up"
+        period="vs previous 7 days"
+      />,
+    );
+    const delta = part(root, "delta");
+    expect(delta?.querySelector(".visually-hidden")?.textContent).toBe(
+      "Increased by 12% vs previous 7 days",
+    );
+    const period = part(root, "period");
+    expect(period?.textContent).toBe("vs previous 7 days");
+    expect(period?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("shows nothing of it without a change, or without text", async () => {
+    const none = await render(<idg-stat label="Visitors" value="1" period="vs last week" />);
+    expect(part(none.root, "period")).toBeNull();
+    const empty = await render(<idg-stat label="Visitors" value="1" delta="1%" period="" />);
+    expect(part(empty.root, "period")).toBeNull();
+    expect(part(empty.root, "delta")?.querySelector(".visually-hidden")?.textContent).toBe(
+      "No change 1%",
+    );
+  });
+
+  it("is text and never markup", async () => {
+    const { root } = await render(
+      <idg-stat label="V" value="1" delta="1%" period={"<img src=x onerror=alert(1)>"} />,
+    );
+    expect(root.shadowRoot?.querySelector("img")).toBeNull();
+  });
+});
