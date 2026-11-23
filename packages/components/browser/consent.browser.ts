@@ -559,3 +559,15 @@ test.describe("a double press", () => {
     await expect(banner(page).locator('[part="status"]')).toContainText("Analytics accepted");
   });
 });
+
+test.describe("printing", () => {
+  test("the banner is not printed", async ({ page }) => {
+    await openConsent(page);
+    await expect(bannerRegion(page)).toBeVisible();
+    await page.emulateMedia({ media: "print" });
+    expect(await banner(page).evaluate((element) => getComputedStyle(element).display)).toBe(
+      "none",
+    );
+    await expect(bannerRegion(page)).toBeHidden();
+  });
+});
