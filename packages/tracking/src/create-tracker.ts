@@ -28,8 +28,8 @@ export const createTracker = (trackerOptions: TrackerOptions): Tracker => {
   const controller = createConsentController({
     storage: localStorage,
     version: options.consentVersion,
-    now: options.clock.now,
-    signals: page.signals,
+    now: () => options.clock.now(),
+    signals: () => page.signals(),
   });
   const sessions = createSessionStore({
     storage: options.sessionStorage,

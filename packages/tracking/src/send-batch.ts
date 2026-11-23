@@ -31,8 +31,10 @@ export const sendByFetch = async (
   body: string,
   keepalive: boolean,
 ): Promise<SendOutcome> => {
+  // Called without a receiver, as `fetch` itself must be.
+  const { fetch } = sender;
   try {
-    const response = await sender.fetch(sender.endpoint, {
+    const response = await fetch(sender.endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Idg-Write-Key": sender.writeKey },
       body,

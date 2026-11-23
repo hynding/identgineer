@@ -127,7 +127,8 @@ way, cannot send after another tab revoked.
 | `dispose()`                | Removes every listener and timer and restores `history`; idempotent. Afterwards every method is a no-op                          |
 
 Event names match `^[a-z][a-z0-9_]{0,63}$` and must be declared in `options.events`, with each
-property's key and type (`"string"`, `"number"` or `"boolean"`). `page_view` is built in and is
+property's key and type (`"string"`, `"number"` or `"boolean"`; write the declarations inline or
+`as const`, so TypeScript keeps the literal types). `page_view` is built in and is
 only recorded by `page()`.
 
 `onDrop` receives `{ code, message }`; the message names an event or a property key, never a
@@ -285,6 +286,8 @@ format as JSON Schema (draft 2020-12); a test holds it to the validator.
   took the beacon.
 - Without readable and writable `localStorage` the choice cannot be recorded, so nothing is
   tracked. Without `BroadcastChannel` other tabs learn of a change at their next call.
+- There is no request timeout of the SDK's own: one request in flight at a time means a request
+  that never settles holds delivery until the browser gives up on it. The events stay queued.
 - Consent made in one browser or on one origin does not apply to another.
 - Properties are typed by declaration at run time; TypeScript does not narrow `track` by event
   name.

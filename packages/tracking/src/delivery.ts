@@ -142,7 +142,7 @@ export const createDelivery = (deps: DeliveryDeps): Delivery => {
       const ids = new Set(batch.map((entry) => entry.event.id));
       const startedIn = epoch;
       const outcome = await sendByFetch(
-        { fetch, endpoint: options.endpoint, writeKey: options.writeKey, now: clock.now },
+        { fetch, endpoint: options.endpoint, writeKey: options.writeKey, now: () => clock.now() },
         serialiseBatch(
           batch.map((entry) => entry.event),
           clock.now(),
