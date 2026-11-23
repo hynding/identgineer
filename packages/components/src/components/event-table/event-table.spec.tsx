@@ -106,6 +106,7 @@ describe("idg-event-table rendering", () => {
         dateStyle: "medium",
         timeStyle: "medium",
         timeZone: "UTC",
+        timeZoneName: "short",
       }).format(Date.parse("2026-03-01T10:30:45.000Z")),
     );
   });
@@ -352,6 +353,95 @@ describe("idg-event-table sorting", () => {
     await waitForChanges();
     expect(seen).toEqual([]);
     expect(root.sortKey ?? "").toBe("");
+  });
+});
+
+describe("idg-event-table: what a screen reader reads", () => {
+  it("reads a property's key and value with a separator that is read, so they do not run together", async () => {
+    const { root } = await mount({
+      events: [{ id: "a", name: "x", occurredAt: at(1), properties: { plan: "pro", seats: 0 } }],
+    });
+    const items = Array.from(shadow(root).querySelectorAll(".props li"));
+    expect(items.map((item) => item.textContent)).toEqual(["plan: pro", "seats: 0"]);
+    for (const item of items) expect(item.querySelector("[aria-hidden]")).toBeNull();
+  });
+});
+
+describe("idg-event-table: the page is held to the pages there are", () => {
+  it("draws, and reflects, the last page for a page beyond it", async () => {
+    const { root } = await mount({ events: events(25), pageSize: 10, page: 999 });
+    expect(root.page).toBe(3);
+    expect(root.getAttribute("page")).toBe("3");
+    expect(names(root)).toEqual(events(5, 20).map((event) => event.name));
+  });
+
+  it("moves back when the events shrink under the page, and says nothing of it", async () => {
+    const { root, waitForChanges } = await mount({ events: events(25), pageSize: 10, page: 3 });
+    const heardChanges: Event[] = [];
+    listen("idgPageChange", (event) => heardChanges.push(event));
+    root.events = events(5);
+    await waitForChanges();
+    expect(root.page).toBe(1);
+    expect(heardChanges).toEqual([]);
+  });
+
+  it("leaves the page alone while events are on their way", async () => {
+    const { root, waitForChanges } = await mount({
+      events: events(10),
+      total: 100,
+      pageSize: 10,
+      page: 4,
+    });
+    root.loading = true;
+    root.events = [];
+    root.total = 0;
+    await waitForChanges();
+    expect(root.page).toBe(4);
+    root.events = events(10, 30);
+    root.total = 100;
+    root.loading = false;
+    await waitForChanges();
+    expect(root.page).toBe(4);
+  });
+
+  it("leaves a page alone when no events were ever given", async () => {
+    const { root } = await mount({ page: 3 });
+    expect(root.page).toBe(3);
+  });
+});
+
+describe("idg-event-table: rows that are shown stay while the next page loads", () => {
+  it("keeps the table and the pager, busy, and the skeleton is for the first load only", async () => {
+    const { root, waitForChanges } = await mount({ events: events(30), pageSize: 10 });
+    root.loading = true;
+    await waitForChanges();
+    expect(shadow(root).querySelector("table")).not.toBeNull();
+    expect(pagination(root)).not.toBeNull();
+    expect(shadow(root).querySelector("idg-skeleton")).toBeNull();
+    expect(shadow(root).querySelector("[aria-busy='true']")).not.toBeNull();
+    expect(status(root)?.textContent).toBe("Loading events");
+  });
+
+  it("asks for nothing while it loads: a press on the pager says no event", async () => {
+    const { root, waitForChanges } = await mount({ events: events(30), pageSize: 10 });
+    root.loading = true;
+    await waitForChanges();
+    const heardChanges: Event[] = [];
+    listen("idgPageChange", (event) => heardChanges.push(event));
+    pagination(root)?.dispatchEvent(
+      new CustomEvent("idgPageChange", { detail: { page: 2 }, cancelable: true }),
+    );
+    await waitForChanges();
+    expect(heardChanges).toEqual([]);
+    expect(root.page).toBe(1);
+  });
+
+  it("goes back to a skeleton when the rows were gone before the load", async () => {
+    const { root, waitForChanges } = await mount({ events: [] });
+    root.loading = true;
+    await waitForChanges();
+    expect(shadow(root).querySelector("idg-skeleton")).not.toBeNull();
+    expect(shadow(root).querySelector("table")).toBeNull();
   });
 });
 

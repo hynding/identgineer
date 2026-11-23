@@ -5,7 +5,12 @@ const WHEN = "2026-03-01T12:30:45.000Z";
 
 describe("formatDateTime", () => {
   it("formats with Intl.DateTimeFormat in the language it is given, with the seconds", () => {
-    const options = { dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" } as const;
+    const options = {
+      dateStyle: "medium",
+      timeStyle: "medium",
+      timeZone: "UTC",
+      timeZoneName: "short",
+    } as const;
     expect(formatDateTime(WHEN, "en", "UTC")).toBe(
       new Intl.DateTimeFormat("en", options).format(Date.parse(WHEN)),
     );
@@ -21,6 +26,15 @@ describe("formatDateTime", () => {
   it("falls back to the browser's zone for a zone it does not know", () => {
     expect(formatDateTime(WHEN, "en", "Not/AZone")).not.toBe("");
     expect(formatDateTime(WHEN, "en", "")).not.toBe("");
+  });
+
+  it("says which zone the time is in, so a reader cannot take it for their own", () => {
+    expect(formatDateTime(WHEN, "en", "UTC")).toMatch(/12:30:45 PM UTC$/);
+    expect(formatDateTime(WHEN, "en", "Asia/Tokyo")).toMatch(/9:30:45 PM GMT\+9$/);
+  });
+
+  it("shows the reader's own zone, named, for a zone it does not know", () => {
+    expect(formatDateTime(WHEN, "en", "Not/AZone")).toMatch(/\d:\d\d:\d\d [AP]M \S+$/);
   });
 
   it("says nothing for a time that is not one", () => {
