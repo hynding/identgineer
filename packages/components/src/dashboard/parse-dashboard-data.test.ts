@@ -53,7 +53,12 @@ describe("parseTrackedProperty", () => {
   });
 
   it("copies the fields it knows, so extra fields and getters on the input go nowhere", () => {
-    const parsed = parseTrackedProperty({ id: "p1", name: "Docs", secret: "x", __proto__: { a: 1 } });
+    const parsed = parseTrackedProperty({
+      id: "p1",
+      name: "Docs",
+      secret: "x",
+      __proto__: { a: 1 },
+    });
     expect(Object.keys(parsed ?? {})).toEqual(["id", "name"]);
   });
 });
@@ -183,10 +188,16 @@ describe("parseTrackedEvent", () => {
       parseTrackedEvent({ id: "e", name: "x", occurredAt: 0, properties: ["a"] })?.properties,
     ).toBeUndefined();
     const many = Object.fromEntries(
-      Array.from({ length: DASHBOARD_LIMITS.properties + 5 }, (_, index) => [`k${String(index)}`, "v"]),
+      Array.from({ length: DASHBOARD_LIMITS.properties + 5 }, (_, index) => [
+        `k${String(index)}`,
+        "v",
+      ]),
     );
     expect(
-      Object.keys(parseTrackedEvent({ id: "e", name: "x", occurredAt: 0, properties: many })?.properties ?? {}),
+      Object.keys(
+        parseTrackedEvent({ id: "e", name: "x", occurredAt: 0, properties: many })?.properties ??
+          {},
+      ),
     ).toHaveLength(DASHBOARD_LIMITS.eventProperties);
   });
 });
