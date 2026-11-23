@@ -145,8 +145,8 @@ const REALISTIC: readonly (readonly [string, string, number, number])[] = [
   ["dashed rings", dashedRings("1 2"), 2, 1],
   ["finely dashed rings", dashedRings("0.25 0.5"), 7, 8],
   ["a Figma export with 8 alpha masks", figmaMasks(), 4, 60],
-  ["a wordmark of 8 outlined letters clipping a gradient", textClips(8, 1), 5, 10],
-  ["four such wordmarks in one logo", textClips(8, 4), 15, 40],
+  ["a wordmark of 8 outlined letters clipping a gradient", textClips(8, 1), 4, 8],
+  ["four such wordmarks in one logo", textClips(8, 4), 13, 31],
 ];
 
 describe("realistic logos", () => {
