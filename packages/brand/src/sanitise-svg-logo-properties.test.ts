@@ -6,6 +6,8 @@ import { seeded } from "./seeded-random.ts";
 import { SVG_LOGO_LIMITS } from "./svg-logo-limits.ts";
 import type { SvgLogoResult } from "./svg-logo-result.ts";
 import { findSanitisedSvgProblems } from "./svg-output-check.ts";
+import { SVG_ELEMENT_RULES, type SvgElementName } from "./svg-allowlist.ts";
+import { SVG_GRAMMARS } from "./svg-values.ts";
 
 const ELEMENTS = [
   // Allowed.
@@ -414,6 +416,197 @@ describe("sanitiseSvgLogo, random documents", () => {
       const where = `seed ${String(seed)}, run ${String(run)}`;
       checkAccepted(sanitiseOrFail(mutated, where), mutated, where);
     }
+  }, 60_000);
+});
+
+/**
+ * Values from just outside the grammars: keywords from neighbouring specifications or another
+ * attribute's list, case and spelling slips, units no grammar keeps, numbers and functions in forms
+ * no grammar reads. Whatever the sanitiser keeps must pass the independent check, so a grammar that
+ * starts accepting one of these (a unit, a keyword) is caught here even where no fixed test names it.
+ */
+const OUTSIDE_PIECES = [
+  // Keywords: valid for some attribute, or near a valid one, or from CSS and SVG 2.
+  "arcs",
+  "miter-clip",
+  "inherit",
+  "initial",
+  "unset",
+  "revert",
+  "auto",
+  "normal",
+  "context-fill",
+  "context-stroke",
+  "non-scaling-stroke",
+  "block",
+  "contents",
+  "optimizeQuality",
+  "fill-box",
+  "stroke-box",
+  "view-box",
+  "Round",
+  "MITER",
+  "EvenOdd",
+  "Butt",
+  "squared",
+  "round",
+  "bevel",
+  "miter",
+  "butt",
+  "square",
+  "evenodd",
+  "nonzero",
+  "inline",
+  "hidden",
+  "collapse",
+  "luminance",
+  "alpha",
+  "pad",
+  "reflect",
+  "repeat",
+  "userSpaceOnUse",
+  "objectBoundingBox",
+  "crispEdges",
+  "geometricPrecision",
+  "transparent",
+  "currentcolor",
+  // Lengths in units no grammar keeps, and in some it does.
+  "0.001em",
+  "1ex",
+  "2rem",
+  "3vw",
+  "4vh",
+  "5vmin",
+  "6vmax",
+  "7ch",
+  "8q",
+  "9Q",
+  "1lh",
+  "1cap",
+  "45deg",
+  "1s",
+  "1PX",
+  "1%",
+  "1px",
+  "1mm",
+  "1in",
+  // Numbers and functions no grammar reads.
+  "1e999",
+  "--1",
+  "1.2.3",
+  "Infinity",
+  "NaN",
+  "0x10",
+  "+-1",
+  ".",
+  "rgba(1,2,3,.5)",
+  "hsl(1,2%,3%)",
+  "#abcd",
+  "var(--x)",
+  "calc(1px + 1em)",
+  "attr(x)",
+  "env(x)",
+  "url(#a) red",
+  "url(#missing)",
+  "rotate(45deg)",
+  "translate(1px,2px)",
+  "translate3d(1,2,3)",
+  "perspective(1)",
+  "M0 0 X1 1",
+  "M0 0 L1",
+  "M0 0a1 1 0 2 0 1 1",
+  "xMidYMid meet slice",
+  "",
+  "1",
+  "0",
+  "-1",
+];
+
+/** Where each attribute may stand, so it is tried on an element that takes it. */
+function hostFor(attribute: string, value: string): string {
+  const on = `${attribute}="${value}"`;
+  const rootOf = (rootAttributes: string, body: string): string =>
+    `<svg xmlns="http://www.w3.org/2000/svg" ${rootAttributes}>${body}</svg>`;
+  const sized = 'viewBox="0 0 10 10" width="10" height="10"';
+  const drawn = (body: string): string => rootOf(sized, body);
+  const host = HOSTS.find((name) => SVG_ELEMENT_RULES[name].attributes.includes(attribute));
+  switch (host) {
+    case "svg": {
+      const others = sized.replace(new RegExp(`(^| )${attribute}="[^"]*"`), "");
+      return rootOf(`${others} ${on}`, '<path d="M0 0H9" stroke="red"/>');
+    }
+    case "linearGradient":
+    case "radialGradient":
+      return drawn(
+        `<defs><${host} id="g" ${on}><stop offset="0"/></${host}></defs><rect width="1" height="1" fill="url(#g)"/>`,
+      );
+    case "stop":
+      return drawn(
+        `<defs><linearGradient id="g"><stop ${on}/></linearGradient></defs><rect width="1" height="1" fill="url(#g)"/>`,
+      );
+    case "clipPath":
+    case "mask":
+      return drawn(
+        `<defs><${host} id="m" ${on}><rect width="1" height="1"/></${host}></defs><rect width="1" height="1" ${host === "mask" ? "mask" : "clip-path"}="url(#m)"/>`,
+      );
+    case "use":
+      return drawn(
+        `<defs><path id="p" d="M0 0H1"/></defs><use ${attribute === "href" ? "" : 'href="#p" '}${on}/>`,
+      );
+    case undefined:
+      throw new Error(`no element takes ${attribute}`);
+    default:
+      return drawn(attribute === "d" ? `<path ${on}/>` : `<${host} d="M0 0H9" ${on}/>`);
+  }
+}
+
+const HOSTS = [
+  "path",
+  "rect",
+  "circle",
+  "ellipse",
+  "line",
+  "polyline",
+  "svg",
+  "use",
+  "linearGradient",
+  "radialGradient",
+  "stop",
+  "clipPath",
+  "mask",
+  "g",
+] as const satisfies readonly SvgElementName[];
+
+describe("sanitiseSvgLogo, values from outside each grammar", () => {
+  it("drops and reports every value it does not keep, and keeps none the independent check refuses", () => {
+    const seed = 15_003;
+    const random = seeded(seed);
+    const pick = (): string => OUTSIDE_PIECES[Math.floor(random() * OUTSIDE_PIECES.length)] ?? "";
+    const separators = [" ", ",", ", ", ""];
+    let tried = 0;
+    let dropped = 0;
+    const combined = (): string => {
+      const count = 2 + Math.floor(random() * 2);
+      const separator = separators[Math.floor(random() * separators.length)] ?? " ";
+      return Array.from({ length: count }, pick).join(separator);
+    };
+    for (const attribute of Object.keys(SVG_GRAMMARS)) {
+      // Every piece alone, then pieces run together, for every attribute.
+      const values = [...OUTSIDE_PIECES, ...Array.from({ length: 100 }, combined)];
+      for (const value of values) {
+        const input = hostFor(attribute, value);
+        const where = `seed ${String(seed)}, ${attribute}="${value}"`;
+        const result = sanitiseOrFail(input, where);
+        tried += 1;
+        const reported = result.ok
+          ? result.removed.some((removal) => removal.attribute === attribute)
+          : result.errors.length > 0;
+        if (reported) dropped += 1;
+        else checkAccepted(result, input, where);
+      }
+    }
+    // Most are outside their grammar by construction; the few kept are valid by the check above.
+    expect(dropped).toBeGreaterThan(tried * 0.8);
   }, 60_000);
 });
 
