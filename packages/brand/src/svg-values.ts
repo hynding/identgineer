@@ -1,4 +1,4 @@
-import { trimXmlWhitespace } from "./svg-characters.ts";
+import { trimXmlWhitespace, XML_WHITESPACE } from "./svg-characters.ts";
 import { parseSvgColour } from "./svg-colour.ts";
 import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import { normaliseNumber } from "./svg-number.ts";
@@ -17,7 +17,11 @@ export type SvgGrammar = (input: string, limits: SvgLogoLimits) => SvgValue | un
 /** Ids the sanitiser keeps until it renames them: a letter or underscore, then word characters. */
 export const ID_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/;
 // url(#id), the id optionally quoted, with white space allowed inside the parentheses.
-const URL_REFERENCE = /^url\(\s*(["']?)#([A-Za-z_][A-Za-z0-9_-]{0,63})\1\s*\)$/;
+const URL_REFERENCE = new RegExp(
+  `^url\\(${XML_WHITESPACE}*(["']?)#([A-Za-z_][A-Za-z0-9_-]{0,63})\\1${XML_WHITESPACE}*\\)$`,
+);
+const LIST_SEPARATOR = new RegExp(`(?:${XML_WHITESPACE}|,)+`);
+const WHITESPACE_RUN = new RegExp(`${XML_WHITESPACE}+`);
 const LENGTH_UNITS = new Set(["", "px", "%", "em", "ex", "mm", "cm", "in", "pt", "pc"]);
 const ABSOLUTE_UNITS: Readonly<Record<string, number>> = {
   "": 1,
@@ -148,7 +152,7 @@ const viewBox: SvgGrammar = (input, limits) => {
 
 const dashArray: SvgGrammar = (input, limits) => {
   if (trimXmlWhitespace(input) === "none") return text("none");
-  const parts = trimXmlWhitespace(input).split(/[\s,]+/);
+  const parts = trimXmlWhitespace(input).split(LIST_SEPARATOR);
   if (parts.length > 64) return undefined;
   const lengths = parts.map((part) => length(part, limits, false));
   if (lengths.some((part) => part === undefined)) return undefined;
@@ -165,7 +169,7 @@ const ALIGNMENTS = ["xMin", "xMid", "xMax"].flatMap((x) =>
 );
 
 const preserveAspectRatio: SvgGrammar = (input) => {
-  const parts = trimXmlWhitespace(input).split(/[\s]+/);
+  const parts = trimXmlWhitespace(input).split(WHITESPACE_RUN);
   const [align, meet] = parts;
   if (parts.length > 2 || align === undefined) return undefined;
   if (align !== "none" && !ALIGNMENTS.includes(align)) return undefined;

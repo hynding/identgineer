@@ -32,6 +32,13 @@ export function findDisallowedCharacter(text: string): number {
   return -1;
 }
 
+/**
+ * XML's white space as a regular expression class, for grammars built from regular expressions:
+ * JavaScript's `\s` also matches a no-break space, line separators and more, which no SVG reader
+ * takes for white space.
+ */
+export const XML_WHITESPACE = "[\\t\\n\\r ]";
+
 /** XML's white space: space, tab, line feed and carriage return, and nothing else. */
 export function isXmlWhitespace(unit: number): boolean {
   return unit === 0x20 || unit === 0x9 || unit === 0xa || unit === 0xd;

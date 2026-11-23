@@ -1,4 +1,4 @@
-import { trimXmlWhitespace } from "./svg-characters.ts";
+import { trimXmlWhitespace, XML_WHITESPACE } from "./svg-characters.ts";
 
 // The CSS named colours. A name is kept as its lower-case keyword: it is a constant from this
 // list, never the input.
@@ -27,9 +27,16 @@ const NAMED_COLOURS: ReadonlySet<string> = new Set(
 
 const HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 // rgb() with three integers or three percentages, separated by commas or by spaces.
-const RGB_INTEGERS = /^rgb\(\s*(\d{1,3})\s*(?:,\s*|\s)(\d{1,3})\s*(?:,\s*|\s)(\d{1,3})\s*\)$/i;
-const RGB_PERCENTAGES =
-  /^rgb\(\s*(\d{1,3}(?:\.\d{1,4})?)%\s*(?:,\s*|\s)(\d{1,3}(?:\.\d{1,4})?)%\s*(?:,\s*|\s)(\d{1,3}(?:\.\d{1,4})?)%\s*\)$/i;
+function rgbPattern(channel: string): RegExp {
+  const S = XML_WHITESPACE;
+  const separator = `${S}*(?:,${S}*|${S})`;
+  return new RegExp(
+    `^rgb\\(${S}*${channel}${separator}${channel}${separator}${channel}${S}*\\)$`,
+    "i",
+  );
+}
+const RGB_INTEGERS = rgbPattern("(\\d{1,3})");
+const RGB_PERCENTAGES = rgbPattern("(\\d{1,3}(?:\\.\\d{1,4})?)%");
 const MAX_COLOUR_LENGTH = 64;
 
 function hex(channels: readonly number[]): string {
