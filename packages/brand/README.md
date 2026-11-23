@@ -254,7 +254,7 @@ if (result.ok && result.kit.logo) image.src = logoDataUrl(result.kit.logo);
 ```
 
 `sanitiseSvgLogo(input, { idPrefix })` never throws. It returns `{ ok: true, svg, width, height,
-viewBox, drawingCost, removed, removedCount }` or `{ ok: false, errors }`, with one located error
+viewBox, drawingCost, overdraw, removed, removedCount }` or `{ ok: false, errors }`, with one located error
 whose message never repeats the input. `svg` is a `SanitisedSvg`, a string branded for the type checker, so a
 plain string cannot reach `logoDataUrl` or a kit by accident; `isSanitisedSvgLogo(value)` checks
 any value at run time (it is a fixed point of the sanitiser), and `logoDataUrl` and `parseBrandKit`
@@ -412,7 +412,8 @@ Each is in `SVG_LOGO_LIMITS`; going over one refuses the document.
 | `gradientStops`        | 64            | Stops in one gradient                                                                   |
 | `referenceDepth`       | 8             | References followed in a row (`use`, gradient `href`, `clip-path`, `mask`)              |
 | `renderedElements`     | 20,000        | Elements once every `use`, clip path and mask is expanded: the copies a renderer builds |
-| `drawingCost`          | 200,000       | What drawing it costs once every reference is expanded; see below                       |
+| `drawingCost`          | 200,000       | What drawing its geometry costs once every reference is expanded; see below             |
+| `overdraw`             | 500           | What painting it costs, in images' worth of solid paint; see below                      |
 | `maskApplications`     | 128           | Masks and clip paths applied once every reference is expanded                           |
 | `maskDepth`            | 4             | Masks and clip paths applied inside one another, in a row                               |
 | `ids`                  | 1,024         | Elements with an id                                                                     |
@@ -427,16 +428,25 @@ regular expression with nested quantifiers on it; the tests read a megabyte of e
 shape (bare ampersands, unclosed comments and attributes, a megabyte of path data, sixty
 thousand uses of one group or of one masked, dashed path) with the limits raised, each in under a
 second on a laptop. The drawing cost is measured in the same pass over the expanded references,
-each element once, so it is linear too.
+each element once, so it is linear too. The overdraw walks every instance a renderer would draw,
+which `renderedElements` (checked first) bounds, reading each shape's geometry once.
 
-### Drawing cost
+### Drawing cost and overdraw
 
-A logo inside every structural limit could still hang the tab that draws it: the 120 KB path drawn
+A logo inside every structural limit could still hang the tab that draws it, in two ways that one
+number cannot bound. Its geometry can be costly whatever size it is shown at: the 120 KB path drawn
 a thousand times took from 20 to over 40 seconds to its first frame as an image, inline and opened
-as a document, and seven nested full-size masks applied 1,200 times from 9 seconds to over a
-minute. So every accepted logo has a `drawingCost`, the sum of the weights below over everything it
-draws once every `use`, mask and clip path is expanded (`SVG_DRAWING_WEIGHTS`), and a logo over
-200,000 is refused with `drawing-too-costly`. The unit is about one stroked straight segment.
+as a document. And its paint can be costly in proportion to the pixels it covers: 6 KB that fill and
+stroke the whole image 5,373 times with a 64-stop translucent radial gradient took 10.6 seconds at
+600 CSS pixels, and 231 seconds at 2000 with a device scale factor of 2. So every accepted logo has
+two budgets, measured independently over everything it draws once every `use`, mask and clip path
+is expanded: a `drawingCost` for its geometry and an `overdraw` for its paint. Over either, it is
+refused, with `drawing-too-costly` or `overdraw-too-large`.
+
+#### Drawing cost
+
+`drawingCost` is the sum of the weights below (`SVG_DRAWING_WEIGHTS`), at most 200,000. The unit
+is about one stroked straight segment.
 
 | What is drawn                                         | Weight                             |
 | ----------------------------------------------------- | ---------------------------------- |
@@ -460,21 +470,102 @@ its radii scaled up as SVG scales them), divided by the shortest dash period any
 since a dash array inherits, through `use` too. Dashing happens in the shape's own user space, so
 no transform changes the count; that is why `vector-effect` (whose non-scaling stroke is dashed
 after the transforms), percentage dashes and `em` and `ex` lengths, all of which depend on the page,
-are not kept.
+are not kept. The cost model reads back only the units a grammar keeps, and refuses anything else
+rather than reading it as zero.
 
 The weights were measured in Chromium, drawing at 600 CSS pixels on a loaded four-core machine:
 about 10 µs a unit for stroked lines, and the same per unit for curves (a stroked cubic took about
-ten times a stroked line, an arc about fourteen), a dash about one stroked line, a full-size
-gradient fill about 460 µs (hence 32 for any shape), a full-size mask 1.3 to 1.6 ms (hence 200), a
-group layer about 0.5 ms. A very wide stroke, a huge miter limit, extreme coordinates and large
-transforms changed nothing measurable, and filling is about a fifth the cost of stroking, so
-filled art is weighed as if stroked. The costliest logos the sanitiser accepts of each kind (15,000
-stroked lines drawn 13 times, 4,000 stroked arcs drawn 3 times, 2,700 full-size gradient circles,
-masks four deep applied 128 times, 190,000 round-capped dashes) each took under 2 seconds to draw,
-as an image, inline or as a document, on that machine; the browser test draws them under a 15
-second budget that the 120 KB path above would fail. A real logo is far below the limit: the
-logos in the clean corpus cost from 109 to 1,045, under 1% of it. A larger display costs more in
-proportion to its area, so show a logo at a logo's size.
+ten times a stroked line, an arc about fourteen), a dash about one stroked line, a full-size mask
+1.3 to 1.6 ms. The 32 for each shape covers setting it up, not painting it: what a fill or a stroke
+paints is the overdraw's to count. Geometry is weighed the same at every size, and filling is
+about a fifth the cost of stroking, so filled art is weighed as if stroked. A real logo is far
+below the limit: the logos in the clean corpus cost from 109 to 1,045, under 1% of it.
+
+The limit has little headroom over the busiest real logos: 300 uses of a 60-cubic symbol cost
+190,201, 95% of it, yet draw in 9 ms at 600 pixels and 85 ms at 2000 twice as dense, because a
+curve weighs ten lines however small it is drawn. Raising the limit is not the fix: the costliest
+geometry it accepts, 190,000 round-capped dashes, already takes 0.6 seconds at 600 pixels, and the
+drawing cost is the only bound on geometry at small sizes. Weighing a curve by its size would make
+room; it is left for when a real logo needs it.
+
+#### Overdraw
+
+`overdraw` bounds the pixels a logo paints, and how dear each one is, at most 500
+(`SVG_OVERDRAW_WEIGHTS`). The unit is the square on the larger side of the view box painted once in
+a solid colour: the whole image, when the logo is shown in a square. Each instance of each shape is
+charged on its own, with its own transform and the paint it inherits (from its ancestors, or from
+the `use` that draws it):
+
+- **Area.** A fill covers no more than the box of its points (control points included, an arc's
+  whole ellipse) and, path by path, no more than the triangles fanned from each subpath's start
+  over its control polygon plus each curve's hull. The area is carried through the transform by
+  its determinant, and never past the box the transformed box makes. A stroke reaches half its
+  width out, up to the miter limit times that at a miter join, and covers no more than its outline
+  times its width plus a join or cap at each vertex. Fill and stroke are charged separately, each
+  at most the whole image: nothing outside it is painted.
+- **Paint.** Each area is weighed by what paints it. Opacity on a shape with one paint is folded
+  into that paint; on a shape with two, or on a group or `use`, it takes a layer.
+- **Layers, masks and clip paths** are charged over the box of what they apply to, each time they
+  are applied, on top of what their content paints (a clip path's content as coverage only).
+- **Edges.** Rasterising costs per edge as well as per pixel: a path's edges are charged by their
+  length in sides of the image, each segment no more than the image can show (a straight edge its
+  diagonal; a quadratic, an arc or a whole shape its perimeter; a cubic three times that), a
+  stroke's outline twice over. Edges that cross every row crowd it, and a crowded row costs more
+  than in proportion: a path whose edges cross the image `edgesPerRow` times costs twice as much
+  per edge, and more beyond.
+
+| What is painted (once over the whole image)        | 600 px         | 2000 px, ×2      | Weight    |
+| -------------------------------------------------- | -------------- | ---------------- | --------- |
+| A solid colour                                     | 0.039 ms       | 3.1 ms           | 1         |
+| A translucent colour, or opacity on a shape        | 0.08–0.09 ms   | 10.3–10.8 ms     | 4         |
+| A gradient of 2, 4, 8 stops, opaque                | 0.39–1.07 ms   | 16–41 ms         | 6–14      |
+| A gradient of 16, 32, 64 stops, opaque             | 1.02–1.69 ms   | 43–69 ms         | 15–23     |
+| A gradient of 2 to 64 stops, translucent           | 0.48–1.92 ms   | 38–79 ms         | 14–26     |
+| Group opacity over two shapes (the layer alone)    | 0.87 ms        | 51 ms            | 16        |
+| A luminance mask, an alpha mask                    | 3.0 ms, 1.5 ms | 193 ms, 101 ms   | 64, 32    |
+| A clip path                                        | 0.04 ms        | 3.2–3.4 ms       | 1         |
+| An edge across the image, filled, stroked, clipped | 47, 6, 54 µs   | 29, 51, 77 µs    | 0.03      |
+| 1,500 and 3,000 such edges in one path, each       | 162 and 182 µs | 478 and 1,587 µs | ×4.5, ×15 |
+
+Gradients weigh by their stops, rounded up to the next of 2, 4, 8, 16, 32 and 64, linear and radial
+alike (radial measured a little dearer, so both take its figure). Each weight is the larger of what
+it measured at the two sizes once the limit is shared out as a second at 600 pixels and 1.75
+seconds at 2000 twice as dense, rounded up: 2 ms and 3.5 ms a unit. Paint is dearest at the large
+size, edges at the small one. Stops are not limited further than 64: a 64-stop gradient paints
+only about a fifth dearer than a 32-stop one, and the weight already charges for it.
+
+The costliest logos the sanitiser accepts of each kind, rasterised in full on that machine (load
+average about 8 on four cores), at 600 CSS pixels and at 2000 with a device scale factor of 2:
+
+| The costliest accepted                                      | `drawingCost` | `overdraw` | 600 px | 2000 px, ×2 |
+| ----------------------------------------------------------- | ------------- | ---------- | ------ | ----------- |
+| One path of 4,902 long stroked lines                        | 4,935         | 499.7      | 71 ms  | 0.31 s      |
+| One path of 399 wide stroked arcs                           | 5,619         | 497.9      | 19 ms  | 0.10 s      |
+| 190,000 round-capped dashes                                 | 191,791       | 2.4        | 580 ms | 0.97 s      |
+| 446 full-size solid fills                                   | 16,503        | 499.5      | 16 ms  | 1.26 s      |
+| 21 full-size 64-stop linear gradients                       | 778           | 485.5      | 35 ms  | 1.49 s      |
+| 19 full-size 64-stop translucent radial gradients           | 704           | 496.3      | 36 ms  | 1.60 s      |
+| 9 gradient fills under gradient strokes twice the image     | 334           | 471.2      | 35 ms  | 1.50 s      |
+| 29 full-size group opacity layers                           | 3,597         | 496.5      | 22 ms  | 1.19 s      |
+| Full-size masks four deep                                   | 986           | 261.6      | 14 ms  | 0.81 s      |
+| A clip path of 1,500 crowded edges, even-odd, applied twice | 3,543         | 412.9      | 330 ms | 0.76 s      |
+
+The two documents above that took 10.6 and 5.4 seconds at 600 pixels are now refused, as is a
+single path of 3,000 edges across the image, which took 4.8 seconds at 2000 twice as dense. The
+browser test rasterises each of these families under a budget of 3 seconds at 600 pixels and 6 at
+2000 twice as dense; with either limit raised tenfold, the families it governs blew through them
+(5.9 to 17 seconds). Real logos stay inside both budgets: a Figma export with eight full-size
+alpha masks and ten gradients under six clip paths come to about 59% of the overdraw (they take
+0.9 and 0.46 seconds themselves at 2000 twice as dense), emblems of 8,000 cubics to 9%, traced
+artwork near the input limit to under 1%.
+
+What the budgets do not bound: other renderers (Firefox, Safari, librsvg, a design tool), which
+were not measured; a GPU rasteriser, which is usually faster; and sizes beyond those measured,
+since paint costs in proportion to the pixels covered: a logo shown at 4000 CSS pixels twice as
+dense costs about four times what it does at 2000. A view box shown in a frame of another aspect
+with `slice` is magnified past the square the budget assumes. So show a logo at a logo's size: give
+the `<img>` a bounded width and height (a few hundred CSS pixels at most), and draw it once rather
+than at a size a page may grow without limit.
 
 ### Rendering: `<img>` first, sanitising always
 

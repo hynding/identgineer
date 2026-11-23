@@ -2,11 +2,12 @@ import type { CleanElement } from "./filter-svg-tree.ts";
 import type { SvgLengthUnit } from "./svg-values.ts";
 
 /**
- * What drawing each part of a logo costs, in units of about one stroked straight segment, measured
- * in Chromium at 600 CSS pixels (see the README). A curve is flattened and stroked as many lines,
- * an arc as several curves; each shape also costs a fixed amount to set up and fill, enough to
- * cover a full-size gradient fill; group opacity draws into a layer; a mask or clip path draws its
- * content into a layer each time it is applied; each dash is a segment of its own.
+ * What drawing each part of a logo's geometry costs, in units of about one stroked straight
+ * segment, measured in Chromium at 600 CSS pixels (see the README). A curve is flattened and
+ * stroked as many lines, an arc as several curves; each shape also costs a fixed amount to set up
+ * (what it paints is the overdraw's to count, see `SVG_OVERDRAW_WEIGHTS`); group opacity draws
+ * into a layer; a mask or clip path draws its content into a layer each time it is applied; each
+ * dash is a segment of its own.
  */
 export const SVG_DRAWING_WEIGHTS = Object.freeze({
   line: 1,
