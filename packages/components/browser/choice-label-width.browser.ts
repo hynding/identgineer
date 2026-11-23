@@ -1,3 +1,4 @@
+import { accessibleNode } from "./accessible-node";
 import { expect, test } from "./fixtures";
 
 const CASES = ["flex", "table"].flatMap((place) =>
@@ -36,5 +37,19 @@ for (const name of CASES) {
     expect(measured.width).toBeGreaterThanOrEqual(measured.longest - 1);
     // Not stacked letters: a short sentence in a 220px box is a few lines at most.
     expect(measured.height).toBeLessThan(200);
+  });
+}
+
+// A description kept inside the label is part of the label's text, so the control is named by it
+// and described by it, and a reader says it twice.
+for (const kind of ["switch", "checkbox"]) {
+  test(`the ${kind}'s description is the description, and not also part of its name`, async ({
+    page,
+  }) => {
+    await page.goto("/fixtures/choice-width.html");
+    await expect(page.locator(`#described-${kind}.hydrated`)).toHaveCount(1);
+    const node = await accessibleNode(page, `described-${kind}`, "input");
+    expect(node.name).toBe("Analytics");
+    expect(node.description).toBe("Counts page views.");
   });
 }
