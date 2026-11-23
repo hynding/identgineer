@@ -18,6 +18,22 @@ const parseWebUrl = (input: string, base: string | undefined): URL | undefined =
   }
 };
 
+/** What stands in for a path segment that looks like it holds an address or a nested URL. */
+const REDACTED_SEGMENT = "-";
+const IDENTIFYING_SEGMENT = /@|%40|%3F|%23/i;
+
+// Matrix parameters (`;jsessionid=...`) are cut, and a segment that holds an at sign or an encoded
+// `?` or `#` (a mail address, or a URL carried inside the path) is replaced whole. Other
+// identifiers in a path segment are not recognisable and stay: the page owns what its paths say.
+const scrubSegments = (pathname: string): string =>
+  pathname
+    .split("/")
+    .map((segment) => {
+      const cut = segment.split(";")[0] ?? "";
+      return IDENTIFYING_SEGMENT.test(cut) ? REDACTED_SEGMENT : cut;
+    })
+    .join("/");
+
 const cutPath = (pathname: string): string =>
   pathname.length <= MAX_PATH_SEGMENT_LENGTH
     ? pathname
@@ -40,7 +56,8 @@ const withAllowedQuery = (path: string, url: URL, options: PathOptions): string 
 
 /**
  * A URL, or a reference resolved against `base`, reduced to its origin-relative path. The host,
- * credentials, fragment and every query parameter the page did not allow are gone. Anything that
+ * credentials, fragment, matrix parameters and every query parameter the page did not allow are
+ * gone, and so is any path segment that holds an at sign or an encoded `?` or `#`. Anything that
  * is not an http(s) URL (`javascript:`, `data:`, `file:`) gives `undefined`.
  */
 export const minimisePath = (
@@ -50,7 +67,9 @@ export const minimisePath = (
 ): string | undefined => {
   if (input.trim() === "") return undefined;
   const url = parseWebUrl(input.trim(), base);
-  return url === undefined ? undefined : withAllowedQuery(cutPath(url.pathname), url, options);
+  return url === undefined
+    ? undefined
+    : withAllowedQuery(cutPath(scrubSegments(url.pathname)), url, options);
 };
 
 /** The referrer's origin and nothing else; none when it is the page's own origin or not a web URL. */
