@@ -134,20 +134,20 @@ test("a pager with an absurd page count does not widen a 320px page with the tex
     pager.setAttribute("page", "500000000000000");
     document.body.append(pager);
   });
-  await expect(page.locator("idg-pagination.hydrated").last()).toBeVisible();
+  // The dashboard has a pager of its own inside its event table, which locators reach through the
+  // shadow root; this is the one that was appended.
+  const absurd = page.locator('idg-pagination.hydrated[page-count="1000000000000000"]');
+  await expect(absurd).toBeVisible();
   await settle(page);
   expect(await overflow(page)).toBeLessThanOrEqual(0);
   // The count is held to ten million, so no page number has more than eight digits.
-  const longest = await page
-    .locator("idg-pagination")
-    .last()
-    .evaluate((pager) =>
-      Math.max(
-        ...Array.from(pager.shadowRoot?.querySelectorAll('[part="page"]') ?? []).map(
-          (control) => control.textContent.trim().length,
-        ),
+  const longest = await absurd.evaluate((pager) =>
+    Math.max(
+      ...Array.from(pager.shadowRoot?.querySelectorAll('[part="page"]') ?? []).map(
+        (control) => control.textContent.trim().length,
       ),
-    );
+    ),
+  );
   expect(longest).toBeLessThanOrEqual(8);
   expect(longest).toBeGreaterThanOrEqual(2);
 });
