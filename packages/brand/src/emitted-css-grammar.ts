@@ -33,6 +33,10 @@ function isFontList(value: string): boolean {
 
 const VALUE_RULES: readonly (readonly [RegExp, (value: string) => boolean])[] = [
   [/^color-scheme$/, (value) => value === "light" || value === "dark"],
+  [
+    /^--idg-color-accent-edge$/,
+    (value) => value === "transparent" || new RegExp(`^${HEX}$`).test(value),
+  ],
   [/^--idg-color-[a-z]+(?:-[a-z]+)*$/, (value) => new RegExp(`^${HEX}$`).test(value)],
   [
     /^--idg-gradient-brand$/,

@@ -17,6 +17,9 @@
     --idg-color-on-accent: #ffffff;
     --idg-color-accent-subtle: #e4e8ff;
     --idg-color-on-accent-subtle: #363b76;
+    --idg-color-accent-indicator: #4f46e5;
+    --idg-color-on-accent-indicator: #ffffff;
+    --idg-color-accent-border: #4f46e5;
     --idg-color-link: #4f46e5;
     --idg-color-focus-ring: #0f766e;
     --idg-color-success: #007835;
@@ -44,6 +47,7 @@
     --idg-font-display-line-height: 1.15;
     --idg-font-body-letter-spacing: 0em;
     --idg-font-body-line-height: 1.6;
+    --idg-color-accent-edge: transparent;
   }
 
   [data-theme="acme"][data-scheme="dark"] {
@@ -56,11 +60,14 @@
     --idg-color-text-muted: #b0b3c2;
     --idg-color-border: #353741;
     --idg-color-border-strong: #6e738e;
-    --idg-color-accent: #5a56f5;
+    --idg-color-accent: #4f46e5;
     --idg-color-accent-hover: #5e5bfa;
     --idg-color-on-accent: #ffffff;
     --idg-color-accent-subtle: #272b47;
     --idg-color-on-accent-subtle: #cdd5ff;
+    --idg-color-accent-indicator: #696dff;
+    --idg-color-on-accent-indicator: #131524;
+    --idg-color-accent-border: #5a56f5;
     --idg-color-link: #7e88ff;
     --idg-color-focus-ring: #24837a;
     --idg-color-success: #67d283;
@@ -80,6 +87,7 @@
     --idg-color-info-subtle: #182e4b;
     --idg-color-on-info-subtle: #bedaff;
     --idg-gradient-brand: linear-gradient(135deg, #4f46e5 0%, #0f766e 100%);
+    --idg-color-accent-edge: #5a56f5;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -93,11 +101,14 @@
       --idg-color-text-muted: #b0b3c2;
       --idg-color-border: #353741;
       --idg-color-border-strong: #6e738e;
-      --idg-color-accent: #5a56f5;
+      --idg-color-accent: #4f46e5;
       --idg-color-accent-hover: #5e5bfa;
       --idg-color-on-accent: #ffffff;
       --idg-color-accent-subtle: #272b47;
       --idg-color-on-accent-subtle: #cdd5ff;
+      --idg-color-accent-indicator: #696dff;
+      --idg-color-on-accent-indicator: #131524;
+      --idg-color-accent-border: #5a56f5;
       --idg-color-link: #7e88ff;
       --idg-color-focus-ring: #24837a;
       --idg-color-success: #67d283;
@@ -117,6 +128,7 @@
       --idg-color-info-subtle: #182e4b;
       --idg-color-on-info-subtle: #bedaff;
       --idg-gradient-brand: linear-gradient(135deg, #4f46e5 0%, #0f766e 100%);
+      --idg-color-accent-edge: #5a56f5;
     }
   }
 }

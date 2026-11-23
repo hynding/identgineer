@@ -180,6 +180,87 @@ describe("parseBrandKit, text", () => {
     expect(pathsOf({ ...VALID, tagline: name })).toEqual(["tagline"]);
   });
 
+  it.each([
+    [
+      "Burmese with three spacing marks",
+      String.fromCodePoint(0x101c, 0x103b, 0x103e, 0x1031, 0x102c, 0x1037),
+    ],
+    ["Burmese, another word", String.fromCodePoint(0x1019, 0x103b, 0x103e, 0x1031, 0x102c, 0x103a)],
+  ])("counts only non-spacing and enclosing marks towards a stack: %s", (_label, name) => {
+    expect(errorsOf({ ...VALID, name })).toEqual([]);
+  });
+
+  it("still refuses five non-spacing or enclosing marks in a row", () => {
+    const stack = `a${String.fromCodePoint(0x301, 0x302, 0x303, 0x20dd, 0x304)}`;
+    expect(pathsOf({ ...VALID, name: stack })).toEqual(["name"]);
+  });
+
+  it.each([
+    [
+      "Persian with a zero-width non-joiner",
+      String.fromCodePoint(0x645, 0x6cc, 0x200c, 0x62e, 0x648, 0x627, 0x647, 0x645),
+    ],
+    ["Sinhala with a zero-width joiner", String.fromCodePoint(0xdc1, 0xdca, 0x200d, 0xdbb, 0xdd3)],
+    ["Hebrew with a geresh", String.fromCodePoint(0x5e6, 0x5f3, 0x5d9, 0x5e4, 0x5e1)],
+    ["Hebrew with gershayim", String.fromCodePoint(0x5e6, 0x5d4, 0x5f4, 0x5dc)],
+    [
+      "a katakana middle dot",
+      String.fromCodePoint(0x30b8, 0x30e7, 0x30f3, 0x30fb, 0x30b9, 0x30df, 0x30b9),
+    ],
+    ["a middle dot", `Col${String.fromCodePoint(0xb7)}legi`],
+  ])("accepts characters real names need: %s", (_label, name) => {
+    expect(errorsOf({ ...VALID, name })).toEqual([]);
+  });
+
+  it.each([
+    ["a run of joiners", `a${String.fromCodePoint(0x200d, 0x200d)}b`],
+    ["a joiner and a non-joiner together", `a${String.fromCodePoint(0x200c, 0x200d)}b`],
+    ["a leading non-joiner", `${String.fromCodePoint(0x200c)}ab`],
+    ["a trailing joiner", `ab${String.fromCodePoint(0x200d)}`],
+    ["a joiner beside a space", `a ${String.fromCodePoint(0x200d)}b`],
+    ["a joiner beside a digit", `a${String.fromCodePoint(0x200d)}1`],
+    ["a right-to-left override", `a${String.fromCodePoint(0x202e)}b`],
+    ["a first-strong isolate", `a${String.fromCodePoint(0x2068)}b`],
+    ["a zero-width space", `a${String.fromCodePoint(0x200b)}b`],
+  ])("refuses %s", (_label, name) => {
+    expect(pathsOf({ ...VALID, name })).toEqual(["name"]);
+  });
+
+  it("counts combining marks across joiners, so joiners cannot reset a stack", () => {
+    const joined = `a${`${String.fromCodePoint(0x301)}${String.fromCodePoint(0x200d)}`.repeat(10)}b`;
+    expect(pathsOf({ ...VALID, name: joined })).toEqual(["name"]);
+    const joinedFour = `a${`${String.fromCodePoint(0x301)}${String.fromCodePoint(0x200d)}`.repeat(4)}b`;
+    expect(errorsOf({ ...VALID, name: joinedFour })).toEqual([]);
+  });
+
+  it.each([
+    ["Persian", "می‌خواهم"],
+    ["Sinhala", "ශ්‍රී"],
+    ["Hebrew geresh at the end of a word", "ג׳ורג׳"],
+    ["Hebrew gershayim", "צה״ל"],
+    ["a katakana middle dot", "東京タワー・カフェ"],
+    ["a Catalan middle dot", "Col·lecció"],
+  ])("accepts the real name %s", (_label, name) => {
+    expect(errorsOf({ ...VALID, name })).toEqual([]);
+    expect(errorsOf({ ...VALID, tagline: name })).toEqual([]);
+  });
+
+  it.each([
+    ["a run of katakana middle dots after a space", "Acme ・・・・・・"],
+    ["a middle dot between a space and a letter", "Acme ·a·"],
+    ["a trailing middle dot", "Acme·"],
+    ["a leading middle dot", "·Acme"],
+    ["a doubled middle dot", "Ac··me"],
+    ["a katakana middle dot ending a word", "カフェ・"],
+    ["a run of gereshim after a letter", "Acme א׳׳׳"],
+    ["a geresh after a space", "Acme ׳"],
+    ["a leading gershayim", "״Acme"],
+    ["a doubled gershayim", "צה״״ל"],
+    ["a geresh after a digit", "A1׳"],
+  ])("refuses %s", (_label, name) => {
+    expect(pathsOf({ ...VALID, name })).toEqual(["name"]);
+  });
+
   it("counts length in code points, so letters outside the BMP count once", () => {
     const letter = String.fromCodePoint(0x1d49c);
     expect(errorsOf({ ...VALID, name: letter.repeat(NAME_MAX_LENGTH) })).toEqual([]);

@@ -8,6 +8,7 @@ import {
   parseTheme,
   resolveThemeScheme,
   SHARED_SOURCES,
+  withAccentEdge,
   type ResolvedToken,
 } from "@identgineer/tokens/theme-pipeline";
 import { RADIUS_NAMES } from "./corner-radii.ts";
@@ -59,8 +60,8 @@ export function emitBrandThemeCss(theme: BrandTheme): string {
   const themeBody = emitThemeCss({
     id: trusted.id,
     isDefault: false,
-    light: resolveThemeScheme(SHARED, parsed, "light"),
-    dark: resolveThemeScheme(SHARED, parsed, "dark"),
+    light: withAccentEdge(resolveThemeScheme(SHARED, parsed, "light")),
+    dark: withAccentEdge(resolveThemeScheme(SHARED, parsed, "dark")),
   });
   const brandBody = [
     "@layer idg.brand {",

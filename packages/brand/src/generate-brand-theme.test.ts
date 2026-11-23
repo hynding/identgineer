@@ -3,6 +3,7 @@ import { findThemeProblems } from "@identgineer/tokens/theme-pipeline";
 import { describe, expect, it } from "vitest";
 import { emitBrandThemeCss } from "./emit-brand-theme.ts";
 import { fontPairingFor } from "./font-pairings.ts";
+import { ACCENT_BLENDS_WITH_PAGE } from "./generate-palette.ts";
 import { generateBrandTheme, type BrandTheme } from "./generate-brand-theme.ts";
 import { toOklab, toOklch } from "./oklch.ts";
 import { parseHexColor } from "./srgb.ts";
@@ -79,34 +80,81 @@ describe("generateBrandTheme", () => {
     expect(JSON.stringify(generateBrandTheme(kit))).toBe(JSON.stringify(generateBrandTheme(kit)));
   });
 
-  it("uses a primary that carries text and stands out from the page unchanged in both schemes", () => {
+  it("uses a primary that carries text unchanged in both schemes", () => {
     const theme = generateBrandTheme(kitFrom({ colors: { primary: "#2f9e44" } }));
     expect(resolvedColors(theme, "light").get("accent")).toBe("#2f9e44");
     expect(resolvedColors(theme, "dark").get("accent")).toBe("#2f9e44");
     expect(theme.adjustments.filter((entry) => entry.token === "color.accent")).toEqual([]);
   });
 
-  it("keeps the primary in the scheme where it stands out and moves it in the other", () => {
-    const theme = generateBrandTheme(kitFrom({ colors: { primary: "#1d4ed8" } }));
-    expect(resolvedColors(theme, "light").get("accent")).toBe("#1d4ed8");
-    const dark = theme.adjustments.find(
-      (entry) => entry.token === "color.accent" && entry.scheme === "dark",
-    );
-    expect(dark).toMatchObject({ origin: "primary", requested: "#1d4ed8", minimum: 3 });
-  });
+  it.each([
+    ["#facc15", "light"],
+    ["#f59e0b", "light"],
+    ["#ffffff", "light"],
+    ["#111827", "dark"],
+    ["#000000", "dark"],
+    ["#1d4ed8", "dark"],
+    ["#10b981", "light"],
+    ["#0000ff", "dark"],
+  ] as const)(
+    "keeps %s as the %s accent fill and marks state with an indicator that reaches 3:1",
+    (primary, scheme) => {
+      const theme = generateBrandTheme(kitFrom({ colors: { primary } }));
+      const colors = resolvedColors(theme, scheme);
+      expect(colors.get("accent")).toBe(primary);
+      for (const background of ["bg", "bg-subtle", "surface", "surface-raised", "accent-subtle"]) {
+        for (const role of ["accent-indicator", "accent-border"]) {
+          if (role === "accent-border" && background === "accent-subtle") continue;
+          expect(
+            contrastRatio(colors.get(role) ?? "", colors.get(background) ?? ""),
+            `${role} on ${background}`,
+          ).toBeGreaterThanOrEqual(3);
+        }
+      }
+      expect(
+        contrastRatio(
+          colors.get("on-accent-indicator") ?? "",
+          colors.get("accent-indicator") ?? "",
+        ),
+      ).toBeGreaterThanOrEqual(4.5);
+      const indicator = theme.adjustments.find(
+        (entry) => entry.token === "color.accent-indicator" && entry.scheme === scheme,
+      );
+      // Whichever check bound the move: 3:1 on a page background or the accent-subtle tint, or the
+      // text on the indicator at 4.5:1 where the tint pushes the indicator towards the text colour.
+      expect(indicator).toMatchObject({ origin: "primary", requested: primary });
+      expect([3, 4.5]).toContain(indicator?.minimum);
+      expect(indicator?.contrastAfter).toBeGreaterThanOrEqual(indicator?.minimum ?? 0);
+    },
+  );
 
   it.each([
-    ["#111827", "dark"],
     ["#ffffff", "light"],
+    ["#fafafa", "light"],
+    ["#111827", "dark"],
     ["#000000", "dark"],
-    ["#fefce8", "light"],
-  ] as const)("moves %s off the %s page: at least 3:1 on every background", (primary, scheme) => {
-    const colors = resolvedColors(generateBrandTheme(kitFrom({ colors: { primary } })), scheme);
-    for (const background of ["bg", "bg-subtle", "surface", "surface-raised"]) {
+  ] as const)("notes that %s blends with the %s page, for the brand guide", (primary, scheme) => {
+    const theme = generateBrandTheme(kitFrom({ colors: { primary } }));
+    const notes = theme.notes.filter((note) => note.kind === "accent-blends-with-page");
+    expect(notes).toEqual([
+      {
+        scheme,
+        kind: "accent-blends-with-page",
+        token: "color.accent",
+        against: "color.bg",
+        contrast: contrastRatio(primary, resolvedColors(theme, scheme).get("bg") ?? ""),
+      },
+    ]);
+    expect(notes[0]?.contrast).toBeLessThan(ACCENT_BLENDS_WITH_PAGE);
+  });
+
+  it("does not note an accent that stands apart from the page, even below 3:1", () => {
+    for (const primary of ["#4f46e5", "#f59e0b", "#0ea5e9"]) {
+      const theme = generateBrandTheme(kitFrom({ colors: { primary } }));
       expect(
-        contrastRatio(colors.get("accent") ?? "", colors.get(background) ?? ""),
-        background,
-      ).toBeGreaterThanOrEqual(3);
+        theme.notes.filter((note) => note.kind === "accent-blends-with-page"),
+        primary,
+      ).toEqual([]);
     }
   });
 
@@ -124,18 +172,14 @@ describe("generateBrandTheme", () => {
     expect(indigo.notes.filter((note) => note.token === "color.danger")).toEqual([]);
   });
 
-  it("adjusts a primary that cannot carry text either way, and reports it", () => {
+  it("keeps a mid grey that neither white nor near-black text passes on, with black text", () => {
     const theme = generateBrandTheme(kitFrom({ colors: { primary: "#777777" } }));
-    const accent = theme.adjustments.find(
-      (entry) => entry.token === "color.accent" && entry.scheme === "light",
-    );
-    expect(accent).toMatchObject({
-      origin: "primary",
-      requested: "#777777",
-      against: "color.on-accent",
-      minimum: 4.5,
-    });
-    expect(accent?.contrastBefore).toBeLessThan(4.5);
+    for (const scheme of ["light", "dark"] as const) {
+      const colors = resolvedColors(theme, scheme);
+      expect(colors.get("accent")).toBe("#777777");
+      expect(colors.get("on-accent")).toBe("#000000");
+    }
+    expect(theme.adjustments.filter((entry) => entry.token === "color.accent")).toEqual([]);
   });
 
   it("moves an adjusted accent in lightness only, keeping its hue", () => {

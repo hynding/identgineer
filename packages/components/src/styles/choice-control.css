@@ -27,8 +27,8 @@
   --_box: calc(var(--_font-size) * 1.25);
   --_edge: var(--idg-color-border-strong);
   --_ring-width: 1px;
-  --_mark: var(--idg-color-on-accent);
-  --_fill: var(--idg-color-accent);
+  --_mark: var(--idg-color-on-accent-indicator);
+  --_fill: var(--idg-color-accent-indicator);
 
   position: relative;
   box-sizing: border-box;

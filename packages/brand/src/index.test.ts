@@ -5,6 +5,7 @@ describe("the public API", () => {
   it("exports the documented surface and nothing else", () => {
     expect(Object.keys(brand).sort()).toEqual(
       [
+        "ACCENT_BLENDS_WITH_PAGE",
         "BRAND_ID_MAX_LENGTH",
         "BRAND_ID_MIN_LENGTH",
         "CORNERS",

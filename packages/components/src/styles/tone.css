@@ -1,39 +1,33 @@
 /* The colour roles of a status variant, shared by idg-badge and idg-alert. Each pair is the
    theme's subtle background and its on-subtle text, which the token build guarantees at 4.5:1 in
-   both schemes. `--_tone-solid` is the saturated colour, for edges and not for text. */
+   both schemes. */
 
 .variant-neutral {
   --_tone-background: var(--idg-color-bg-subtle);
   --_tone-text: var(--idg-color-text);
-  --_tone-solid: var(--idg-color-text-muted);
 }
 
 .variant-accent {
   --_tone-background: var(--idg-color-accent-subtle);
   --_tone-text: var(--idg-color-on-accent-subtle);
-  --_tone-solid: var(--idg-color-accent);
 }
 
 .variant-success {
   --_tone-background: var(--idg-color-success-subtle);
   --_tone-text: var(--idg-color-on-success-subtle);
-  --_tone-solid: var(--idg-color-success);
 }
 
 .variant-warning {
   --_tone-background: var(--idg-color-warning-subtle);
   --_tone-text: var(--idg-color-on-warning-subtle);
-  --_tone-solid: var(--idg-color-warning);
 }
 
 .variant-danger {
   --_tone-background: var(--idg-color-danger-subtle);
   --_tone-text: var(--idg-color-on-danger-subtle);
-  --_tone-solid: var(--idg-color-danger);
 }
 
 .variant-info {
   --_tone-background: var(--idg-color-info-subtle);
   --_tone-text: var(--idg-color-on-info-subtle);
-  --_tone-solid: var(--idg-color-info);
 }

@@ -104,12 +104,38 @@
   box-shadow: none;
 }
 
-/* Designs without control borders (soft, elevated) would leave a quiet variant with no edge. */
+/* Designs without control borders (soft, elevated) would leave the secondary with no edge. */
 @container style(--idg-border-control-style: none) {
   .variant-secondary {
     box-shadow:
       inset 0 0 0 1px var(--idg-color-border-strong),
       var(--idg-elevation-sm);
+  }
+}
+
+/* An accent that does not stand out on the page would leave the primary looking like the
+   secondary. accent-edge is the accent border there and transparent where the accent stands out,
+   so this outline, drawn outside whatever border the design gives every control, adds 2px only
+   where it is needed. Focus replaces it with the focus ring. Even a transparent outline shifts the
+   anti-aliasing of a faded (disabled or busy) button by a step, so where the edge is transparent
+   it is not drawn at all. */
+.variant-primary {
+  outline: 2px solid var(--idg-color-accent-edge);
+  outline-offset: 0;
+}
+
+@container style(--idg-color-accent-edge: transparent) {
+  .variant-primary {
+    outline-style: none;
+  }
+}
+
+/* In forced colours the preferences layer gives every control a solid 1px ButtonText border, the
+   borderless designs (soft, elevated) included, so the outline would add nothing but a second
+   frame. browser/accent-indicator.browser.ts holds that for every design. */
+@media (forced-colors: active) {
+  .variant-primary {
+    outline-style: none;
   }
 }
 

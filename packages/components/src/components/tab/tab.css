@@ -51,7 +51,7 @@
   inset-block-end: 0;
   block-size: 3px;
   border-radius: var(--idg-shape-radius-sm);
-  background: var(--idg-color-accent);
+  background: var(--idg-color-accent-indicator);
   transform: scaleX(0);
   transition-property: transform;
   transition-duration: var(--idg-motion-duration-base);
