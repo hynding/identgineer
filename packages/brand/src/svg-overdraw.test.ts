@@ -257,6 +257,40 @@ describe("the overdraw of a logo", () => {
     expect(refusal(wide(turns, 'stroke-linejoin="round"'))).toBe("overdraw-too-large");
   });
 
+  it("charges the caps of dashes closer together than the stroke is wide as crowding every row", () => {
+    const dashed = (width: number, dash: number): number =>
+      overdraw(
+        `<path d="M0 500H1000" fill="none" stroke="#000" stroke-width="${String(width)}" stroke-dasharray="${String(dash)}"/>`,
+        "0 0 1000 1000",
+      );
+    // Along a level line every cap of every dash crosses the same rows; where the stroke is wider
+    // than the dashes are apart, some line of the path holds that many on a row of the stroke.
+    const area = (width: number, pieces: number): number =>
+      Math.min(
+        (1000 + 2 * width * 2) * (width * 4),
+        1000 * width + 2 * (4 * width) ** 2 + pieces * width ** 2,
+      ) / 1e6;
+    const ends = (width: number, pieces: number): number => (4 * width + 2 * pieces * width) / 1000;
+    const crowded = (sides: number, crossings: number): number =>
+      sides * W.edge * (1 + (Math.max(sides, crossings) / W.edgesPerRow) ** 2);
+    // Dashes 1 long every 2 on a stroke 3 wide: 501 dashes, 1,002 caps on a row.
+    expect(dashed(3, 1)).toBeCloseTo(
+      Math.min(1, area(3, 501)) * W.solid + crowded(2 + ends(3, 501), 1002),
+      9,
+    );
+    // Dashes 2 apart on a stroke 2 wide do not crowd: charged by their length alone.
+    expect(dashed(2, 1)).toBeCloseTo(area(2, 501) * W.solid + strokeEdges(1, ends(2, 501)), 9);
+    // The reviewer's ten thousand dashes on a stroke a tenth as wide as the image are refused.
+    expect(
+      refusal(
+        svg(
+          '<path d="M0 500H1000" fill="none" stroke="#000" stroke-width="100" stroke-dasharray="0.0476"/>',
+          "0 0 1000 1000",
+        ),
+      ),
+    ).toBe("overdraw-too-large");
+  });
+
   it("inherits paint and stroke width from ancestors and from the use that draws a definition", () => {
     const defs = '<defs><rect id="a" width="10" height="10" fill="none"/></defs>';
     const wide = 10 + 2 * 4 * 2;
