@@ -8,6 +8,7 @@ import {
   type Dashing,
 } from "./svg-drawing-cost.ts";
 import { measureOverdraw } from "./svg-overdraw.ts";
+import { rewriteClipPaths, type Viewport } from "./rewrite-clip-paths.ts";
 import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 import type { Removals } from "./svg-removals.ts";
@@ -110,12 +111,12 @@ function unusableUses(
   return new Set([...known].filter(([, usable]) => !usable).map(([use]) => use));
 }
 
-/** Drops what refers to nothing it may use, and returns the `use` elements removed. */
+/** Drops what refers to nothing it may use. */
 function dropDangling(
   elements: readonly CleanElement[],
   ids: ReadonlyMap<string, CleanElement>,
   removals: Removals,
-): Set<CleanElement> {
+): void {
   const unusable = unusableUses(elements, ids);
   for (const element of elements) {
     if (unusable.has(element)) {
@@ -138,7 +139,6 @@ function dropDangling(
       else element.attributes.delete(attribute);
     }
   }
-  return unusable;
 }
 
 interface Target {
@@ -197,12 +197,17 @@ function densestDashing(elements: readonly CleanElement[]): Dashing {
   return { period, perPeriod };
 }
 
-/** The larger side of the root's view box (at least 1), which bounds a percentage from above. */
-function percentBase(root: CleanElement): number {
+/** The root's view box, the viewport percentages are taken of (1 by 1 without one). */
+function viewportOf(root: CleanElement): Viewport {
   const viewBox = root.attributes.get("viewBox");
   const [, , width = 1, height = 1] =
     viewBox !== undefined && "text" in viewBox ? viewBox.text.split(" ").map(Number) : [];
-  return Math.max(width, height, 1);
+  return { width, height, base: Math.max(width, height, 1) };
+}
+
+/** The larger side of the root's view box (at least 1), which bounds a percentage from above. */
+function percentBase(root: CleanElement): number {
+  return viewportOf(root).base;
 }
 
 /**
@@ -321,62 +326,6 @@ function checkExpansion(
   return total.cost;
 }
 
-/** What a clip path draws, once every use is expanded: how many shapes, and their degrees added up. */
-interface ClipShapes {
-  readonly count: number;
-  readonly degree: number;
-}
-
-/**
- * Refuses clip paths whose shapes could cross more than `limits.clipCrossings` times in all. A clip
- * path of more than one shape is combined into one outline, and its edges, each shape's own among
- * them, could cross up to half the square of their degrees added up (see `Geometry.degree`); one
- * shape alone clips by its outline and crosses nothing. Run after the expansion limits, so no use
- * comes back on itself.
- */
-function checkClipCrossings(
-  elements: readonly CleanElement[],
-  ids: ReadonlyMap<string, CleanElement>,
-  base: number,
-  limits: SvgLogoLimits,
-): void {
-  const known = new Map<CleanElement, ClipShapes>();
-  const add = (left: ClipShapes, right: ClipShapes): ClipShapes => ({
-    count: left.count + right.count,
-    degree: left.degree + right.degree,
-  });
-  const none: ClipShapes = { count: 0, degree: 0 };
-  const shapes = (element: CleanElement): ClipShapes => {
-    const found = known.get(element);
-    if (found !== undefined) return found;
-    let drawn = none;
-    if (element.name === "use") {
-      const reference = referenceOf(element, "href");
-      const target = reference === undefined ? undefined : ids.get(reference);
-      if (target !== undefined) drawn = shapes(target);
-    } else if (element.name === "g") {
-      drawn = element.children.reduce((total, child) => add(total, shapes(child)), none);
-    } else {
-      const geometry = measureShape(element, base);
-      if (geometry !== undefined) drawn = { count: 1, degree: geometry.degree };
-    }
-    known.set(element, drawn);
-    return drawn;
-  };
-  let crossings = 0;
-  for (const clip of elements) {
-    if (clip.name !== "clipPath") continue;
-    const drawn = clip.children.reduce((total, child) => add(total, shapes(child)), none);
-    if (drawn.count > 1) crossings += (drawn.degree * drawn.degree) / 2;
-  }
-  if (!(crossings <= limits.clipCrossings)) {
-    throw new SvgLogoRejection(
-      "drawing-too-costly",
-      `has clip paths whose shapes could cross more than ${String(limits.clipCrossings)} times`,
-    );
-  }
-}
-
 /**
  * Settles every same-document reference: a reference to an id that does not exist, or to the
  * wrong kind of element, is dropped (a `use` with it); duplicate ids, cycles and expansions beyond
@@ -395,11 +344,11 @@ export function settleSvgReferences(
   readonly overdraw: number;
 } {
   const all = walk(root);
-  const dropped = dropDangling(all, collectIds(all, limits), removals);
-  const elements = dropped.size === 0 ? all : all.filter((element) => !dropped.has(element));
+  dropDangling(all, collectIds(all, limits), removals);
+  rewriteClipPaths(root, collectIds(walk(root), limits), viewportOf(root), limits, removals);
+  const elements = walk(root);
   const ids = collectIds(elements, limits);
   const drawingCost = checkExpansion(root, elements, ids, limits);
-  checkClipCrossings(elements, ids, percentBase(root), limits);
   const overdraw = measureOverdraw(root, ids, limits);
   const referenced = new Set<string>();
   for (const element of elements) {

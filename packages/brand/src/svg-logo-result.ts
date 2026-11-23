@@ -70,7 +70,12 @@ export type SvgLogoRemovalReason =
    * Valid, but able to make the logo far costlier to draw than its budgets can see; dropped where
    * the picture stays the same or close to it (see the README).
    */
-  | "render-cost";
+  | "render-cost"
+  /**
+   * A clip path of more than one shape, or of one clipped in turn, written as an alpha mask of the
+   * same shapes: the picture is the same, and no renderer has to combine the shapes (see the README).
+   */
+  | "rewritten";
 
 /**
  * One thing the sanitiser dropped. `element` and `attribute` are names as written (names only ever

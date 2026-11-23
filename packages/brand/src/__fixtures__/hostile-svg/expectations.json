@@ -371,13 +371,7 @@
     ]
   },
   "clip-path-of-43-shapes.svg": {
-    "outcome": "accept",
-    "removed": [
-      {
-        "element": "clipPath",
-        "reason": "rewritten"
-      }
-    ]
+    "outcome": "reject:overdraw-too-large"
   },
   "clip-path-of-crossing-subpaths.svg": {
     "outcome": "accept",

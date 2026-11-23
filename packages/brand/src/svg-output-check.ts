@@ -308,6 +308,20 @@ const GRAMMARS: Readonly<Record<string, Grammar>> = {
   "mask-type": oneOf("luminance", "alpha"),
 };
 
+const BASIC_SHAPES = new Set(["path", "rect", "circle", "ellipse", "line", "polyline", "polygon"]);
+
+/** What a clip path holds: shapes drawn in it, and the ids its uses point at. */
+interface ClipContent {
+  shapes: number;
+  readonly uses: string[];
+}
+
+/** What an element with an id is, for checking the uses in clip paths. */
+interface Identified {
+  readonly name: string;
+  readonly clipped: boolean;
+}
+
 interface Reference {
   readonly id: string;
   readonly where: string;
@@ -349,6 +363,8 @@ export function findSanitisedSvgProblems(svg: string): string[] {
   const references: Reference[] = [];
   let roots = 0;
   let position = 0;
+  const clips: ClipContent[] = [];
+  const identified = new Map<string, Identified>();
   while (position < svg.length) {
     const rest = svg.slice(position);
     if (rest.startsWith("</")) {
@@ -389,6 +405,18 @@ export function findSanitisedSvgProblems(svg: string): string[] {
           ids.add(value);
         }
       }
+      const attributes = new Map(
+        [...(start[2] ?? "").matchAll(ATTRIBUTE)].map(([, key = "", value = ""]) => [key, value]),
+      );
+      const id = attributes.get("id");
+      if (id !== undefined) identified.set(id, { name, clipped: attributes.has("clip-path") });
+      if (name === "clipPath") clips.push({ shapes: 0, uses: [] });
+      const clip = clips.at(-1);
+      if (parent === "clipPath" && clip !== undefined && name !== "title" && name !== "desc") {
+        clip.shapes += 1;
+        const href = attributes.get("href");
+        if (name === "use" && href !== undefined) clip.uses.push(href.slice(1));
+      }
       if (name === "svg" && open.length === 0 && !seen.has("viewBox"))
         problems.push("a root without viewBox");
       if (start[3] !== "/") open.push(name);
@@ -409,6 +437,17 @@ export function findSanitisedSvgProblems(svg: string): string[] {
   }
   if (open.length > 0) problems.push("unclosed elements");
   if (roots !== 1) problems.push(`${String(roots)} root elements`);
+  // A clip path of more than one shape, or of one clipped in turn, makes a renderer combine shapes;
+  // the sanitiser writes those as masks.
+  for (const clip of clips) {
+    if (clip.shapes > 1) problems.push("a clip path of more than one shape");
+    for (const id of clip.uses) {
+      const target = identified.get(id);
+      if (target !== undefined && !BASIC_SHAPES.has(target.name))
+        problems.push(`a use in a clip path of a ${target.name}`);
+      if (target?.clipped === true) problems.push("a use in a clip path of a clipped shape");
+    }
+  }
   for (const target of references) {
     if (!ids.has(target.id)) problems.push(`${target.where}: a reference to a missing id`);
   }
