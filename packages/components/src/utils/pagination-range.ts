@@ -13,8 +13,15 @@ export interface PaginationRangeOptions {
 const DEFAULT_SIBLINGS = 1;
 const DEFAULT_BOUNDARIES = 1;
 
+// More slots than this do not fit a row, and past 2 ** 53 adding one to a page number changes
+// nothing, so a loop over pages would never end.
+const MAX_SLOTS = 10;
+const MAX_PAGE_COUNT = Number.MAX_SAFE_INTEGER - 1;
+
 function wholeNumber(value: number | undefined, fallback: number, minimum: number): number {
-  return value !== undefined && Number.isInteger(value) && value >= minimum ? value : fallback;
+  return value !== undefined && Number.isInteger(value) && value >= minimum
+    ? Math.min(value, MAX_SLOTS)
+    : fallback;
 }
 
 function range(start: number, end: number): number[] {
@@ -30,7 +37,10 @@ function range(start: number, end: number): number[] {
  * shown instead.
  */
 export function paginationRange(options: PaginationRangeOptions): PaginationToken[] {
-  const count = Math.max(0, Math.trunc(Number.isFinite(options.pageCount) ? options.pageCount : 0));
+  const count = Math.min(
+    Math.max(0, Math.trunc(Number.isFinite(options.pageCount) ? options.pageCount : 0)),
+    MAX_PAGE_COUNT,
+  );
   const siblings = wholeNumber(options.siblings, DEFAULT_SIBLINGS, 0);
   const boundaries = wholeNumber(options.boundaries, DEFAULT_BOUNDARIES, 0);
   const current = Number.isFinite(options.page)

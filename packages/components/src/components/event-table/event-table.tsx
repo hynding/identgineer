@@ -6,7 +6,7 @@ import {
   type EventSortKey,
   type TrackedEvent,
 } from "../../dashboard/dashboard-types";
-import { parseTrackedEvents } from "../../dashboard/parse-dashboard-data";
+import { DASHBOARD_LIMITS, parseTrackedEvents } from "../../dashboard/parse-dashboard-data";
 import { fillTemplate, mergeLabels } from "../../identity/labels";
 import { oneOf } from "../../utils/choice";
 import { formatDateTime } from "../../utils/format-date-time";
@@ -137,7 +137,9 @@ export class IdgEventTable {
     const all = this.list();
     const stated = this.total;
     const served = typeof stated === "number" && Number.isFinite(stated) && stated >= 0;
-    const total = served ? Math.max(Math.trunc(stated), all.length) : all.length;
+    const total = served
+      ? Math.min(Math.max(Math.trunc(stated), all.length), DASHBOARD_LIMITS.total)
+      : all.length;
     const pageCount = pageCountOf(total, size);
     const page = normalisePage(this.page, pageCount);
     const first = (page - 1) * size;
