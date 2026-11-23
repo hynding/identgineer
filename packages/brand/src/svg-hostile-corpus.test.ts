@@ -85,7 +85,21 @@ const KEPT_AS_TEXT_OR_RENAMED = new Set([
 
 // Files whose payload is work a renderer does cheaply, so they are accepted as they are.
 const WITHIN_BUDGET = new Set([
+  "clip-path-cal-eoclip.svg",
+  "clip-path-e2-alone-30000.svg",
   "clip-path-of-one-self-crossing-path.svg",
+  "review-cal-radial.svg",
+  "review-da-ellipse-scaled.svg",
+  "review-da-group-circles.svg",
+  "review-da-mask-dash.svg",
+  "review-da-poly-style.svg",
+  "review-da-wide-round-64.svg",
+  "review-da-wide-square-burst.svg",
+  "review-da-zero-sub-round.svg",
+  "review-g-conical-out.svg",
+  "review-g-focal-edge.svg",
+  "review-g-focal-repeat.svg",
+  "review-g-skew.svg",
   "serpentine-of-25000-segments-drawn-seven-times.svg",
 ]);
 

@@ -35,9 +35,11 @@ describe("the clean SVG corpus", () => {
     expect(FILES).toEqual([
       "figma-alpha-mask.svg",
       "figma-export.svg",
+      "illustrator-clip-of-dots.svg",
       "illustrator-internal-css.svg",
       "illustrator-presentation-attributes.svg",
       "illustrator-svg11-doctype.svg",
+      "illustrator-text-clip.svg",
       "inkscape-export.svg",
       "mask-and-use.svg",
       "simple-mark.svg",
@@ -72,9 +74,13 @@ describe("the clean SVG corpus", () => {
       /inkscape|sodipodi|sketch|rdf|<!--|xml:space|enable-background|Layer_1|SVGID/,
     );
     for (const removal of result.removed) {
-      expect(["editor-metadata", "unsupported-attribute", "styling", "document-type"]).toContain(
-        removal.reason,
-      );
+      expect([
+        "editor-metadata",
+        "unsupported-attribute",
+        "styling",
+        "document-type",
+        "rewritten",
+      ]).toContain(removal.reason);
     }
     const again = sanitiseSvgLogo(result.svg);
     expect(again.ok && again.svg).toBe(result.svg);

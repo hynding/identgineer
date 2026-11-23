@@ -100,6 +100,29 @@ function figmaMasks(): string {
   return logo(body, definitions);
 }
 
+/**
+ * Outlined lettering as a clip path over a gradient, as Illustrator writes text made into a clip:
+ * one shape a letter, each an outline of 60 cubics, every other letter with a counter (a hole)
+ * of 20 more, and `clips` such words in one logo.
+ */
+function textClips(letters: number, clips: number): string {
+  let definitions =
+    '<linearGradient id="g" x2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f00"/><stop offset="1" stop-color="#00f"/></linearGradient>';
+  let body = "";
+  const width = 480 / letters;
+  for (let clip = 0; clip < clips; clip += 1) {
+    const y = 64 + clip * (384 / Math.max(1, clips - 1 || 1));
+    const shapes = Array.from({ length: letters }, (_, index) => {
+      const x = 16 + width * (index + 0.5);
+      const counter = index % 2 === 0 ? blob(20, x, y, width * 0.15) : "";
+      return `<path d="${blob(60, x, y, width * 0.45)}${counter}" clip-rule="evenodd"/>`;
+    });
+    definitions += `<clipPath id="t${String(clip)}">${shapes.join("")}</clipPath>`;
+    body += `<g clip-path="url(#t${String(clip)})"><rect width="512" height="512" fill="url(#g)"/></g>`;
+  }
+  return logo(body, definitions);
+}
+
 /** Each logo with the most of each budget, in percent, it may use. */
 const REALISTIC: readonly (readonly [string, string, number, number])[] = [
   ["an emblem of 4,000 cubics, filled and stroked", emblem(40, 6), 21, 5],
@@ -122,6 +145,8 @@ const REALISTIC: readonly (readonly [string, string, number, number])[] = [
   ["dashed rings", dashedRings("1 2"), 2, 1],
   ["finely dashed rings", dashedRings("0.25 0.5"), 7, 8],
   ["a Figma export with 8 alpha masks", figmaMasks(), 4, 60],
+  ["a wordmark of 8 outlined letters clipping a gradient", textClips(8, 1), 5, 10],
+  ["four such wordmarks in one logo", textClips(8, 4), 15, 40],
 ];
 
 describe("realistic logos", () => {

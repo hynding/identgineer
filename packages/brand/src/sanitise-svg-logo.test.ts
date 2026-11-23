@@ -451,6 +451,7 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
       { element: "rect", attribute: "clip-path", property: undefined, reason: "render-cost" },
       { element: "rect", attribute: "mask", property: undefined, reason: "render-cost" },
       { element: "use", attribute: "style", property: "clip-path", reason: "render-cost" },
+      { element: "clipPath", attribute: undefined, property: undefined, reason: "rewritten" },
     ]);
   });
 

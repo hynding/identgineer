@@ -87,8 +87,180 @@
   "cdata-unclosed.svg": {
     "outcome": "reject:malformed"
   },
+  "clip-path-a-clipapp-120.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-a2-clipuse-120.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-a3-clipingroup-120.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-a4-cliprot-120.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-arcs.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-arcs1.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-circles.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-dup.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-ellipses.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-loops.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-loops1.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-many.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-near.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-rrects.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-star.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-zz.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-cal-eoclip.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "clip-path-cal-zz-small.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-cal-zz.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
   "clip-path-crossing-zigzags.svg": {
-    "outcome": "reject:drawing-too-costly"
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
   },
   "clip-path-cycle-through-use.svg": {
     "outcome": "reject:reference-cycle"
@@ -103,6 +275,82 @@
       }
     ]
   },
+  "clip-path-d-cz-1e5-01-100.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-d-zz-1e3-00001-1.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-d-zz-1e5-001-100.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-d-zz-1e5-01-100.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-d-zzp-1e5-01-100.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-e-zzp-1e5-0-003-100.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-e2-alone-30000.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "clip-path-e2-square-100000.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-e2-square-30000.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
   "clip-path-inside-clip-path.svg": {
     "outcome": "accept",
     "removed": [
@@ -113,18 +361,63 @@
       }
     ]
   },
+  "clip-path-near-coincident-zigzags.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
   "clip-path-of-43-shapes.svg": {
-    "outcome": "reject:drawing-too-costly"
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
   },
   "clip-path-of-crossing-subpaths.svg": {
-    "outcome": "reject:drawing-too-costly"
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
   },
   "clip-path-of-one-self-crossing-path.svg": {
     "outcome": "accept",
     "removed": []
   },
+  "clip-path-sc-zzp-n60.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
   "clip-path-self-crossing-beside-a-square.svg": {
-    "outcome": "reject:drawing-too-costly"
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-small-zzp-n10-b100000-0-003.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
   },
   "comment-double-hyphen.svg": {
     "outcome": "reject:invalid-comment"
@@ -1156,6 +1449,54 @@
   },
   "relative-size-only.svg": {
     "outcome": "reject:missing-size"
+  },
+  "review-cal-radial.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-da-ellipse-scaled.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-da-group-circles.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-da-mask-dash.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-da-poly-style.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-da-wide-round-64.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-da-wide-square-burst.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-da-zero-sub-round.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-g-conical-out.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-g-focal-edge.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-g-focal-repeat.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-g-skew.svg": {
+    "outcome": "accept",
+    "removed": []
   },
   "root-not-svg.svg": {
     "outcome": "reject:not-svg"
