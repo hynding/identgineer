@@ -54,6 +54,14 @@ describe.skipIf(!existsSync(TYPES))("the built declarations, once built", () => 
     expect(files.some((file) => file.endsWith("consent-preferences.d.ts"))).toBe(true);
   });
 
+  it("have the dashboard components and the seam that feeds them", () => {
+    for (const name of ["event-table", "property-picker", "sparkline", "dashboard-types"])
+      expect(
+        files.some((file) => file.endsWith(`${name}.d.ts`)),
+        name,
+      ).toBe(true);
+  });
+
   it("never import from @identgineer/variations", () => {
     const leaking = files.filter((file) =>
       /from\s+["']@identgineer\/variations|import\(["']@identgineer\/variations/.test(
