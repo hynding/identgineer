@@ -84,7 +84,10 @@ export class IdgConsentBanner {
   /** The id of an `idg-consent-preferences` elsewhere in the page that "Choose" opens. */
   @Prop() preferences?: string;
 
-  /** Fires when the consent state changes, here or elsewhere, with the state it is in now. */
+  /**
+   * Fires when the user chooses here, with the state that is now stored. A change made elsewhere
+   * (another tab, the preferences) is not announced by it: subscribe with `consent.onChange`.
+   */
   @Event() idgConsentChange!: EventEmitter<ConsentChangeDetail>;
 
   /** Fires when "Choose" is pressed. Call `preventDefault()` to open the preferences yourself. */
@@ -96,7 +99,6 @@ export class IdgConsentBanner {
   @State() private announcement: Announcement = NO_ANNOUNCEMENT;
   @State() private preferencesShown = false;
 
-  private reported?: ConsentStatusView["state"];
   private focusInside = false;
   private returnTarget?: EventTarget;
   private openAfterRender?: PreferencesPanel;
@@ -105,11 +107,6 @@ export class IdgConsentBanner {
     (status) => {
       this.status = status;
       this.unavailable = false;
-      const previous = this.reported;
-      this.reported = status.state;
-      if (previous !== undefined && previous !== status.state) {
-        this.idgConsentChange.emit({ state: status.state });
-      }
     },
     () => {
       this.unavailable = true;
@@ -131,10 +128,8 @@ export class IdgConsentBanner {
     this.bind();
   }
 
-  // The first state a consent object reports is no change, and what was said about the last one
-  // is no longer true.
+  // What was said about the last consent object is no longer true.
   private bind(): void {
-    this.reported = undefined;
     this.status = undefined;
     this.unavailable = false;
     this.saveFailed = false;
@@ -198,6 +193,7 @@ export class IdgConsentBanner {
       return;
     }
     const labels = mergeLabels(CONSENT_BANNER_LABELS, this.labels);
+    this.idgConsentChange.emit({ state: choice === "accept" ? "granted" : "denied" });
     this.announcement = announce(
       this.announcement,
       choice === "accept" ? labels.acceptedAnnouncement : labels.declinedAnnouncement,

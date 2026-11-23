@@ -13,7 +13,6 @@ import {
   recordedEvents,
   switchIn,
   trackAndFlush,
-  withFixture,
 } from "./consent-page";
 
 const GRANTED = "idg.tracking.consent.v1";
@@ -274,9 +273,9 @@ test.describe("the consent components in more than one tab", () => {
   test("a change in another tab drops an unsaved edit and says so", async ({ context }) => {
     const first = await context.newPage();
     const second = await context.newPage();
-    await openConsent(first, { query: "?granted" });
-    await openConsent(second, { query: "?granted" });
-    await switchIn(inlinePanel(second), "analytics").uncheck();
+    await openConsent(first);
+    await openConsent(second);
+    await switchIn(inlinePanel(second), "analytics").check();
     await first.evaluate(`window.consentFixture.tracker.consent.deny()`);
     await expect(inlinePanel(second).locator('[part="changed"]')).toContainText("discarded");
     await expect(switchIn(inlinePanel(second), "analytics")).not.toBeChecked();
@@ -298,7 +297,9 @@ test.describe("the consent banner stays out of the way", () => {
     if (!viewport) throw new Error("no viewport");
     const atTop = await box();
     expect(Math.abs(atTop.y + atTop.height - viewport.height)).toBeLessThan(1.5);
-    await page.evaluate(() => window.scrollTo(0, 400));
+    await page.evaluate(() => {
+      window.scrollTo(0, 400);
+    });
     const scrolled = await box();
     expect(Math.abs(scrolled.y + scrolled.height - viewport.height)).toBeLessThan(1.5);
     // The root's scroll padding is as tall as the bar, so a focused link is scrolled clear of it.
@@ -306,7 +307,9 @@ test.describe("the consent banner stays out of the way", () => {
       () => getComputedStyle(document.documentElement).scrollPaddingBlockEnd,
     );
     expect(Math.abs(Number.parseFloat(padding) - scrolled.height)).toBeLessThan(1.5);
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+    });
     await page.locator("#low-link").focus();
     const link = await page.locator("#low-link").boundingBox();
     const bar = await box();
@@ -324,10 +327,14 @@ test.describe("the consent banner stays out of the way", () => {
 
   test("a top bar sticks to the top and reserves scroll padding there", async ({ page }) => {
     await openConsent(page);
+    // A bar at the top sticks there from the start of the body, as one at the bottom does from the end.
     await banner(page).evaluate((element) => {
+      document.body.prepend(element);
       element.setAttribute("placement", "top");
     });
-    await page.evaluate(() => window.scrollTo(0, 300));
+    await page.evaluate(() => {
+      window.scrollTo(0, 300);
+    });
     const box = await bannerRegion(page).boundingBox();
     if (!box) throw new Error("the banner is not laid out");
     expect(Math.abs(box.y)).toBeLessThan(1.5);
@@ -342,8 +349,9 @@ test.describe("the consent banner stays out of the way", () => {
     await banner(page).evaluate((element) => {
       element.setAttribute("placement", "inline");
     });
-    const padding = await page.evaluate(() => document.documentElement.style.scrollPaddingBlockEnd);
-    expect(padding).toBe("");
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.style.scrollPaddingBlockEnd))
+      .toBe("");
     const position = await banner(page).evaluate((element) => getComputedStyle(element).position);
     expect(position).toBe("static");
   });
@@ -362,14 +370,15 @@ test.describe("the consent banner stays out of the way", () => {
     ]);
   });
 
-  test("a consent object taken away leaves nothing behind", async ({ page }) => {
+  test("a consent object taken away leaves nothing behind, and its space is given back", async ({
+    page,
+  }) => {
     await openConsent(page);
     await banner(page).evaluate((element) => {
       (element as unknown as { consent?: unknown }).consent = undefined;
     });
     await expect(bannerRegion(page)).toHaveCount(0);
-    expect(
-      await withFixture<number>(page, () => document.querySelectorAll("[role=region]").length),
-    ).toBeGreaterThanOrEqual(0);
+    const padding = await page.evaluate(() => document.documentElement.style.scrollPaddingBlockEnd);
+    expect(padding).toBe("");
   });
 });

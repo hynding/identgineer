@@ -23,7 +23,7 @@
     "./docs.json": "./dist/docs.json"
   },
   "scripts": {
-    "build": "stencil build --prod && node scripts/build-identity-fixture.ts",
+    "build": "stencil build --prod && node scripts/build-sdk-fixtures.ts",
     "dev": "stencil build --dev --watch --serve",
     "typecheck": "tsc -p tsconfig.json",
     "test:browser": "playwright test --trace off"

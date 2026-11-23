@@ -271,7 +271,7 @@ describe("idg-consent-preferences reflecting changes made elsewhere", () => {
     await waitForChanges();
     expect(analytics(root)?.checked).toBe(true);
     expect(alert(root, "changed")).toBeNull();
-    expect(events.seen).toEqual([{ type: "idgConsentChange", detail: { state: "granted" } }]);
+    expect(events.seen).toEqual([]);
   });
 
   it("says so, and drops the edit, when the stored state changes under an unsaved edit", async () => {
@@ -286,6 +286,22 @@ describe("idg-consent-preferences reflecting changes made elsewhere", () => {
     await flip(root, true, waitForChanges);
     await waitForChanges();
     expect(alert(root, "changed")).toBeNull();
+  });
+
+  it("sets the switch back even when the change arrives before the render of the user's click", async () => {
+    const fake = createFakeConsent();
+    const { root, waitForChanges } = await mount(fake.consent);
+    const element = analytics(root);
+    if (!element) throw new Error("no analytics switch");
+    // The click and the other tab's change land in one frame: the render shows only the second.
+    element.checked = true;
+    element.dispatchEvent(
+      new CustomEvent("idgChange", { detail: { checked: true, value: "on" }, bubbles: true }),
+    );
+    fake.set({ state: "denied" });
+    await waitForChanges();
+    expect(analytics(root)?.checked).toBe(false);
+    expect(textOf(root, "idg-alert.changed")).toContain("discarded");
   });
 
   it("needs no note when the other change is what the edit asked for", async () => {

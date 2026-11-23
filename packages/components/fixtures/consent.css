@@ -1,0 +1,48 @@
+/* The consent fixture: a header, a column of content that is long enough to scroll, and the
+   banner as the last thing in the body. */
+body {
+  margin: 0;
+}
+
+.consent-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--idg-space-s);
+  padding: var(--idg-space-s) var(--idg-space-m);
+  border-block-end: var(--idg-border-width) var(--idg-border-style) var(--idg-border-color);
+}
+
+.consent-brand {
+  margin: 0;
+  font-weight: var(--idg-font-weight-bold);
+}
+
+.consent-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--idg-space-l);
+  max-inline-size: var(--idg-size-xl);
+  margin-inline: auto;
+  padding: var(--idg-space-m);
+  box-sizing: border-box;
+}
+
+.consent-main section {
+  min-inline-size: 0;
+}
+
+.consent-main h2 {
+  margin-block: 0 var(--idg-space-s);
+}
+
+.consent-filler {
+  block-size: 60rem;
+}
+
+/* The documented rule: hide the elements until they have hydrated. */
+idg-consent-banner:not(.hydrated),
+idg-consent-preferences:not(.hydrated) {
+  display: none;
+}

@@ -84,7 +84,10 @@ export class IdgConsentPreferences {
   /** The level of the heading, 2 to 6, to fit the page's outline. */
   @Prop({ attribute: "heading-level" }) headingLevel = MIN_HEADING_LEVEL;
 
-  /** Fires when the consent state changes, here or elsewhere, with the state it is in now. */
+  /**
+   * Fires when the user saves or erases here, with the state that is now stored. A change made
+   * elsewhere (another tab, the banner) is not announced by it: subscribe with `consent.onChange`.
+   */
   @Event() idgConsentChange!: EventEmitter<ConsentChangeDetail>;
 
   @State() private status?: ConsentStatusView;
@@ -102,6 +105,7 @@ export class IdgConsentPreferences {
   /** Set while this panel's own save or erase runs, so its change is not "elsewhere". */
   private acting = false;
   private focusNext?: "confirm-no" | "erase";
+  private analyticsSwitch?: HTMLIdgSwitchElement;
   private readonly binding = new ConsentBinding(
     (status) => {
       this.take(status);
@@ -180,9 +184,6 @@ export class IdgConsentPreferences {
     } else if (status.reason !== undefined) {
       this.draft = false;
     }
-    if (previous !== undefined && previous !== status.state) {
-      this.idgConsentChange.emit({ state: status.state });
-    }
   }
 
   private readDecidedAt(): void {
@@ -214,6 +215,7 @@ export class IdgConsentPreferences {
     }
     const labels = mergeLabels(CONSENT_PREFERENCES_LABELS, this.labels);
     const on = this.reported === "granted";
+    this.idgConsentChange.emit({ state: this.reported ?? "unknown" });
     this.draft = on;
     this.announcement = announce(this.announcement, on ? labels.savedOn : labels.savedOff);
     this.isOpen = false;
@@ -243,6 +245,7 @@ export class IdgConsentPreferences {
     const labels = mergeLabels(CONSENT_PREFERENCES_LABELS, this.labels);
     this.draft = false;
     this.changedElsewhere = false;
+    this.idgConsentChange.emit({ state: this.reported ?? "unknown" });
     this.announcement = announce(this.announcement, labels.erased);
     this.isOpen = false;
     this.focusNext = "erase";
@@ -266,11 +269,21 @@ export class IdgConsentPreferences {
   };
 
   componentDidRender(): void {
+    this.syncSwitch();
     const target = this.focusNext;
     if (target === undefined) return;
     this.focusNext = undefined;
     const element = this.host.shadowRoot?.querySelector<HTMLElement>(`idg-button.${target}`);
     if (element) focusInto(element);
+  }
+
+  // The switch has a state of its own that the user changes. When the draft is reset before the
+  // render that would show the user's change (a change in another tab, a moment after a click),
+  // the render finds nothing to patch, so the switch is set to what is shown after every render.
+  private syncSwitch(): void {
+    const element = this.analyticsSwitch;
+    const shown = this.status?.reason === undefined && this.draft;
+    if (element && element.checked !== shown) element.checked = shown;
   }
 
   private locale(): string | undefined {
@@ -295,6 +308,7 @@ export class IdgConsentPreferences {
         <li class="category" part="analytics">
           <idg-switch
             class="analytics"
+            ref={(element) => (this.analyticsSwitch = element)}
             checked={reason === undefined && this.draft}
             disabled={reason !== undefined}
             accessibleDescription={analyticsDescription}

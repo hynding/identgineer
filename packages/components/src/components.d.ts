@@ -3487,7 +3487,7 @@ declare namespace LocalJSX {
          */
         "labels"?: Partial<ConsentBannerLabels>;
         /**
-          * Fires when the consent state changes, here or elsewhere, with the state it is in now.
+          * Fires when the user chooses here, with the state that is now stored. A change made elsewhere (another tab, the preferences) is not announced by it: subscribe with `consent.onChange`.
          */
         "onIdgConsentChange"?: (event: IdgConsentBannerCustomEvent<ConsentChangeDetail>) => void;
         /**
@@ -3535,7 +3535,7 @@ declare namespace LocalJSX {
          */
         "modal"?: boolean;
         /**
-          * Fires when the consent state changes, here or elsewhere, with the state it is in now.
+          * Fires when the user saves or erases here, with the state that is now stored. A change made elsewhere (another tab, the banner) is not announced by it: subscribe with `consent.onChange`.
          */
         "onIdgConsentChange"?: (event: IdgConsentPreferencesCustomEvent<ConsentChangeDetail>) => void;
     }

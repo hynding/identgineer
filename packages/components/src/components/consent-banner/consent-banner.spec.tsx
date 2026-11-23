@@ -146,7 +146,7 @@ describe("idg-consent-banner asking", () => {
     fake.set({ state: "unknown" });
     await waitForChanges();
     expect(banner(root)).not.toBeNull();
-    expect(events.seen).toEqual([{ type: "idgConsentChange", detail: { state: "unknown" } }]);
+    expect(events.seen).toEqual([]);
   });
 });
 
@@ -206,7 +206,7 @@ describe("idg-consent-banner choices", () => {
     expect(focus).toHaveBeenCalledTimes(1);
   });
 
-  it("takes no focus when it appears, or when the choice is made somewhere else", async () => {
+  it("takes no focus when it appears, and says nothing of a choice made somewhere else", async () => {
     const before = document.createElement("button");
     const main = document.createElement("main");
     document.body.append(before, main);
@@ -217,7 +217,7 @@ describe("idg-consent-banner choices", () => {
     await waitForChanges();
     for (const spy of focuses) expect(spy).not.toHaveBeenCalled();
     expect(banner(root)).toBeNull();
-    expect(events.seen).toEqual([{ type: "idgConsentChange", detail: { state: "granted" } }]);
+    expect(events.seen).toEqual([]);
     expect(status(root)).toBe("");
   });
 });

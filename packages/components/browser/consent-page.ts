@@ -54,17 +54,17 @@ type Handle = (fixture: Fixture) => unknown;
 
 /** Runs `script` in the page with the fixture's tracker and recorded events. */
 export function withFixture<T = unknown>(page: Page, script: Handle): Promise<T> {
-  return page.evaluate(`(${script.toString()})(window.consentFixture)`) as Promise<T>;
+  return page.evaluate<T>(`(${script.toString()})(window.consentFixture)`);
 }
 
 /** What the tracker would do for a page that tracks: an event and a page view, then a flush. */
-export function trackAndFlush(page: Page): Promise<void> {
-  return page.evaluate(`(async () => {
+export async function trackAndFlush(page: Page): Promise<void> {
+  await page.evaluate(`(async () => {
     const { tracker } = window.consentFixture;
     tracker.track("clicked");
     tracker.page();
     await tracker.flush();
-  })()`) as Promise<void>;
+  })()`);
 }
 
 export function consentState(page: Page): Promise<{ state: string; reason?: string }> {
@@ -95,7 +95,16 @@ export function activeName(page: Page): Promise<string> {
     let element: Element | null = document.activeElement;
     while (element?.shadowRoot?.activeElement) element = element.shadowRoot.activeElement;
     if (!element || element === document.body) return "body";
-    const label = element.getAttribute("aria-label") ?? element.textContent;
-    return (label ?? "").replace(/\s+/g, " ").trim() || element.localName;
+    // A button inside idg-button has its words in the host's light DOM, so look outward through
+    // the shadow roots for the first words there are.
+    for (let current: Element | null = element; current;) {
+      const label = (current.getAttribute("aria-label") ?? current.textContent)
+        .replace(/\s+/g, " ")
+        .trim();
+      if (label !== "") return label;
+      const root: Node = current.getRootNode();
+      current = root instanceof ShadowRoot ? root.host : null;
+    }
+    return element.localName;
   });
 }
