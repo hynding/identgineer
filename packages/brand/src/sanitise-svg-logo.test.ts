@@ -276,6 +276,34 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
   });
 
   it.each([
+    ['d="M0 0 L url(#a)"', "d", "invalid-value"],
+    ['transform="url(#a)"', "transform", "invalid-value"],
+    ['stroke-width="url(https://example.com/)"', "stroke-width", "invalid-value"],
+    ['d="javascript:alert(1)"', "d", "invalid-value"],
+    ['mask="url(https://example.com/#m)"', "mask", "external-reference"],
+    ['clip-path="https://example.com/#c"', "clip-path", "external-reference"],
+    ['stroke="url(data:image/svg+xml,x)"', "stroke", "external-reference"],
+  ])(
+    "calls %s an external reference only where the attribute takes a reference",
+    (attribute, name, reason) => {
+      expect(removals(`<path ${attribute}/>`)).toEqual([
+        expect.objectContaining({ element: "path", attribute: name, reason }),
+      ]);
+    },
+  );
+
+  it("calls a style declaration an external reference only where the property takes a reference", () => {
+    expect(
+      removals(
+        '<path style="stroke-width:url(https://example.com/);fill:url(https://example.com/)"/>',
+      ),
+    ).toEqual([
+      expect.objectContaining({ property: "stroke-width", reason: "invalid-value" }),
+      expect.objectContaining({ property: "fill", reason: "external-reference" }),
+    ]);
+  });
+
+  it.each([
     ['href="https://example.com/a.svg#x"', "external-reference"],
     ['href="data:image/svg+xml,x"', "external-reference"],
     ['href="#missing"', "dangling-reference"],
