@@ -93,7 +93,7 @@ export function focusedControl(page: Page): Promise<string> {
     let active: Element | null = document.activeElement;
     while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
     if (!active || active === document.body) return "none";
-    return active.getAttribute("aria-label") ?? (active.textContent ?? "").trim();
+    return active.getAttribute("aria-label") ?? active.textContent.trim();
   });
 }
 

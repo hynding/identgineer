@@ -13,6 +13,7 @@ interface TableElement extends HTMLElement {
   page?: number;
   pageSize?: number;
   total?: number;
+  loading?: boolean;
   sortKey?: string;
   sortDirection?: string;
 }

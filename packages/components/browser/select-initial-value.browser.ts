@@ -12,6 +12,10 @@ async function build(
   steps: { value?: string; before?: boolean; options: string[] },
 ): Promise<{ value: string; native: string; form: string }> {
   return page.evaluate(async ({ value, before, options }) => {
+    const submitted = (target: HTMLFormElement): string => {
+      const entry = new FormData(target).get("choice");
+      return typeof entry === "string" ? entry : "none";
+    };
     const select = document.createElement("idg-select") as HTMLElement & { value: string };
     const form = document.createElement("form");
     select.setAttribute("name", "choice");
@@ -32,7 +36,7 @@ async function build(
     return {
       value: select.value,
       native,
-      form: String(new FormData(form).get("choice")),
+      form: submitted(form),
     };
   }, steps);
 }

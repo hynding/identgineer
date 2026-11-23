@@ -110,7 +110,7 @@ const ISO_WITH_ZONE =
 function isCalendarTime(parts: RegExpExecArray): boolean {
   const [year, month, day, hour, minute, second, offsetHour, offsetMinute] = parts
     .slice(1)
-    .map((part) => (part === undefined ? 0 : Number(part)));
+    .map((part: string | undefined) => (part === undefined ? 0 : Number(part)));
   const daysInMonth = new Date(Date.UTC(year ?? 0, month ?? 0, 0)).getUTCDate();
   return (
     (month ?? 0) >= 1 &&
