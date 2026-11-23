@@ -108,7 +108,7 @@ Wherever the accent already reaches 3:1 against all four page backgrounds, a the
 `accent-indicator` and `accent-border` to the accent and `on-accent-indicator` to `on-accent`, so
 nothing changes visually (the theme tests check this for every built-in theme). Among the built-in
 themes only citrus light differs: its indicator is a darker lime, `#5c7d00` with white on it, and
-its fill edge is its strong border colour, `#7f8c2a`. Which component reads which role is listed
+the same colour edges its fill, so the lime has one darker partner. Which component reads which role is listed
 in the [components README](../components/README.md#accent-fills-and-state-indicators).
 
 ## Design languages, layouts and UX modes
