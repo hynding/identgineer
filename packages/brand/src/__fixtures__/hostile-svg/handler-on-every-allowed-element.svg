@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
+  <rect id="a" width="10" height="10" fill="#123456"/>
+  <defs onload="alert(1)"><linearGradient id="g" onload="alert(1)"><stop offset="0" onload="alert(1)"/></linearGradient><clipPath id="c" onclick="alert(1)"><circle r="1" onclick="alert(1)"/></clipPath></defs>
+  <g onclick="alert(1)"><use href="#a" onload="alert(1)"/><title onclick="alert(1)">x</title></g>
+</svg>

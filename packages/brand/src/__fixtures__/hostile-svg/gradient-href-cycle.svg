@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
+  <rect id="a" width="10" height="10" fill="#123456"/>
+  <linearGradient id="g1" href="#g2"/>
+  <linearGradient id="g2" href="#g1"/>
+  <rect width="1" height="1" fill="url(#g1)"/>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
+  <rect id="a" width="10" height="10" fill="#123456"/>
+  <foo d="M0 0H10" fill="red"/>
+  <pattern id="p"><rect width="1" height="1"/></pattern>
+  <symbol id="s"><path d="M0 0"/></symbol>
+  <marker id="m"/>
+  <switch><rect width="1" height="1"/></switch>
+  <view viewBox="0 0 1 1"/>
+</svg>

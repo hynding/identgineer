@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" xmlns:a="http://www.w3.org/1999/xlink" xmlns:b="http://www.w3.org/1999/xlink">
+  <rect id="a" width="10" height="10" fill="#123456"/>
+  <use a:href="#a" b:href="javascript:alert(1)"/>
+</svg>
