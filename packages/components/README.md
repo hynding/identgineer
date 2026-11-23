@@ -23,23 +23,22 @@ The accent appears in three ways, and each reads its own colour role:
 Every use in the component stylesheets, checked by `checks/accent-roles.test.ts` so a new one has
 to be classified:
 
-| Where                    | What                                            | Role                                      | Use        |
-| ------------------------ | ----------------------------------------------- | ----------------------------------------- | ---------- |
-| `idg-checkbox`           | checked or mixed box, and its check             | `accent-indicator`, `on-accent-indicator` | indicator  |
-| `idg-radio`              | checked dot                                     | `accent-indicator`                        | indicator  |
-| `idg-switch`             | track and thumb when on                         | `accent-indicator`, `on-accent-indicator` | indicator  |
-| `idg-progress`           | fill and indeterminate band                     | `accent-indicator`                        | indicator  |
-| `idg-pagination`         | current page and its number                     | `accent-indicator`, `on-accent-indicator` | indicator  |
-| `idg-tab`                | selected tab marker                             | `accent-indicator`                        | indicator  |
-| `idg-card`               | outlined interactive card, hovered ring         | `accent-indicator`                        | indicator  |
-| `idg-button`             | primary fill, label and hover                   | `accent`, `on-accent`, `accent-hover`     | fill       |
-| `idg-button`             | primary edge in designs without control borders | `accent-edge`                             | fill       |
-| `idg-card`               | accent variant and everything on it             | `accent`, `on-accent`                     | fill       |
-| `idg-avatar`             | first colour pair of the initials               | `accent`, `on-accent`                     | fill       |
-| `idg-layout`             | skip link                                       | `accent`, `on-accent`                     | fill       |
-| `idg-layout`             | hero glow                                       | `accent`                                  | decoration |
-| `idg-badge`, `idg-alert` | accent tone's solid edge colour                 | `accent`                                  | decoration |
-| demo page                | background glow                                 | `accent`                                  | decoration |
+| Where            | What                                            | Role                                      | Use        |
+| ---------------- | ----------------------------------------------- | ----------------------------------------- | ---------- |
+| `idg-checkbox`   | checked or mixed box, and its check             | `accent-indicator`, `on-accent-indicator` | indicator  |
+| `idg-radio`      | checked dot                                     | `accent-indicator`                        | indicator  |
+| `idg-switch`     | track and thumb when on                         | `accent-indicator`, `on-accent-indicator` | indicator  |
+| `idg-progress`   | fill and indeterminate band                     | `accent-indicator`                        | indicator  |
+| `idg-pagination` | current page and its number                     | `accent-indicator`, `on-accent-indicator` | indicator  |
+| `idg-tab`        | selected tab marker                             | `accent-indicator`                        | indicator  |
+| `idg-card`       | outlined interactive card, hovered ring         | `accent-indicator`                        | indicator  |
+| `idg-button`     | primary fill, label and hover                   | `accent`, `on-accent`, `accent-hover`     | fill       |
+| `idg-button`     | primary edge in designs without control borders | `accent-edge`                             | fill       |
+| `idg-card`       | accent variant and everything on it             | `accent`, `on-accent`                     | fill       |
+| `idg-avatar`     | first colour pair of the initials               | `accent`, `on-accent`                     | fill       |
+| `idg-layout`     | skip link                                       | `accent`, `on-accent`                     | fill       |
+| `idg-layout`     | hero glow                                       | `accent`                                  | decoration |
+| demo page        | background glow                                 | `accent`                                  | decoration |
 
 Links use `link`, and the focus ring uses `focus-ring`; neither is part of this table.
 
