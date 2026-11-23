@@ -237,7 +237,11 @@ test.describe("the event table", () => {
     const region = status(page);
     await expect(region.locator("idg-alert")).toContainText("Events could not be loaded");
     await expect(table(page).locator("table")).toHaveCount(0);
-    await expect(table(page).locator("[role='alert']")).toHaveCount(0);
+    // One announcement: the polite region says it, and nothing inside it is live on its own.
+    await expect(table(page).locator("[role='alert'], [aria-live], [role='status']")).toHaveCount(
+      2,
+    );
+    await expect(region.locator("[role='alert'], [aria-live], [role='status']")).toHaveCount(0);
     await pickerSelect(page).selectOption("p-shop");
     await expect(rows(page)).toHaveCount(4);
     await expect(region.locator("idg-alert")).toHaveCount(0);

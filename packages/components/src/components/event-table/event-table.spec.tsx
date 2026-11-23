@@ -104,9 +104,8 @@ describe("idg-event-table rendering", () => {
     expect(time?.textContent).toBe(
       new Intl.DateTimeFormat("de", {
         dateStyle: "medium",
-        timeStyle: "medium",
+        timeStyle: "long",
         timeZone: "UTC",
-        timeZoneName: "short",
       }).format(Date.parse("2026-03-01T10:30:45.000Z")),
     );
   });
@@ -160,12 +159,13 @@ describe("idg-event-table paging in the browser's own list", () => {
     expect(status(root)?.textContent).toBe("Showing 21–25 of 25 events");
   });
 
-  it("holds a page that is out of range to the pages there are, and leaves the prop as it was", async () => {
+  it("holds a page that is out of range to the pages there are, and the prop follows", async () => {
     const { root } = await mount({ events: events(25), pageSize: 10, page: 99 });
     expect(names(root)[0]).toBe("event_20");
-    expect(root.page).toBe(99);
+    expect(root.page).toBe(3);
     const low = await mount({ events: events(25), pageSize: 10, page: -4 });
     expect(names(low.root)[0]).toBe("event_0");
+    expect(low.root.page).toBe(1);
   });
 
   it("holds the page size to what it will draw", async () => {

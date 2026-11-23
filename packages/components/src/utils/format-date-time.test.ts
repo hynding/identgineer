@@ -7,9 +7,8 @@ describe("formatDateTime", () => {
   it("formats with Intl.DateTimeFormat in the language it is given, with the seconds", () => {
     const options = {
       dateStyle: "medium",
-      timeStyle: "medium",
+      timeStyle: "long",
       timeZone: "UTC",
-      timeZoneName: "short",
     } as const;
     expect(formatDateTime(WHEN, "en", "UTC")).toBe(
       new Intl.DateTimeFormat("en", options).format(Date.parse(WHEN)),

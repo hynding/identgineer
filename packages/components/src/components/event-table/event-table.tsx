@@ -112,6 +112,12 @@ export class IdgEventTable {
   /** Fires when the user sorts a column, with `{ key, direction }`. */
   @Event() idgSort!: EventEmitter<EventSort>;
 
+  // Whether the last render settled on rows: only then does a load keep them under it, and only a
+  // first load is a skeleton.
+  private hadRows = false;
+  // Whether focus was in the table or the pager before this render drew.
+  private hadFocus = false;
+
   private parsedFrom?: unknown;
   private parsed: TrackedEvent[] = [];
 
@@ -130,6 +136,30 @@ export class IdgEventTable {
 
   private direction(): EventSortDirection {
     return oneOf(SORT_DIRECTIONS, this.sortDirection, "ascending");
+  }
+
+  componentWillRender(): void {
+    this.hadFocus = this.host.shadowRoot?.activeElement != null;
+    this.reconcilePage();
+  }
+
+  // A page past the last, or one the events shrank out from under, is brought back to the last
+  // page that exists, so the reflected `page` is the one that is drawn. It says nothing: this is
+  // the page being corrected, not a choice, and `idgPageChange` is the reader's. Nothing is
+  // changed while events are on their way or when none were given, as the total is not known yet.
+  private reconcilePage(): void {
+    const failed = typeof this.error === "string" && this.error !== "";
+    if (this.loading || failed || this.events === undefined) return;
+    const { page } = this.view();
+    if (this.page !== page) this.page = page;
+  }
+
+  componentDidRender(): void {
+    const root = this.host.shadowRoot;
+    if (!this.hadFocus || !root || root.activeElement) return;
+    // What had focus is gone (the rows made way for a message), so focus goes to the message
+    // instead of falling to the top of the page.
+    root.querySelector<HTMLElement>(".status")?.focus();
   }
 
   private view(): View {
@@ -152,11 +182,14 @@ export class IdgEventTable {
     return { shown, total, page, pageCount, first };
   }
 
+  // While a page is on its way the controls stay where they are, so focus stays on them, and a
+  // press asks for nothing more.
   private handlePageChange = (event: CustomEvent<PageChangeDetail>): void => {
     // The pagination's own event stays inside, and its own change is withheld: what the page
     // hears is this element's, and the page this element draws is the one it is told to.
     event.stopPropagation();
     event.preventDefault();
+    if (this.loading) return;
     const { page, pageCount } = this.view();
     const target = normalisePage(event.detail.page, pageCount);
     if (target === page) return;
@@ -165,6 +198,7 @@ export class IdgEventTable {
 
   private handleSort = (event: CustomEvent<TableSortDetail>): void => {
     event.stopPropagation();
+    if (this.loading) return;
     const key = EVENT_SORT_KEYS.find((candidate) => candidate === event.detail.key);
     const direction = SORT_DIRECTIONS.find((candidate) => candidate === event.detail.direction);
     if (key === undefined || direction === undefined) return;
@@ -189,7 +223,8 @@ export class IdgEventTable {
           {entries.map(({ key, value }, index) => (
             <li key={index}>
               <bdi class="key">{key}</bdi>
-              <span aria-hidden="true">: </span>
+              {/* Read, so a key and its value are not run together as "planpro". */}
+              <span class="separator">: </span>
               <bdi class="value">{value}</bdi>
             </li>
           ))}
@@ -293,7 +328,9 @@ export class IdgEventTable {
     const failed = typeof this.error === "string" && this.error !== "";
     const empty = view.shown.length === 0;
     const caption = this.caption ?? "";
-    const showsTable = !this.loading && !failed && !empty;
+    const keepsRows = this.loading && this.hadRows && !failed && !empty;
+    const showsTable = (!this.loading && !failed && !empty) || keepsRows;
+    if (!this.loading) this.hadRows = showsTable;
 
     let status: unknown = fillTemplate(labels.summary, {
       from: format(view.first + 1),
@@ -311,7 +348,7 @@ export class IdgEventTable {
 
     return (
       <div
-        class="events"
+        class={{ events: true, busy: keepsRows }}
         part="group"
         role="group"
         aria-label={caption === "" ? undefined : caption}
@@ -322,13 +359,13 @@ export class IdgEventTable {
             {caption}
           </p>
         )}
-        {this.loading ? (
+        {this.loading && !keepsRows ? (
           <div class="skeleton">
             <idg-skeleton variant="text" lines={5} />
           </div>
         ) : null}
         {showsTable ? this.renderTable(view, labels, format, language) : null}
-        <div class="status" part="status" role="status">
+        <div class="status" part="status" role="status" tabindex="-1">
           {status}
         </div>
         {showsTable && view.pageCount > 1 ? (

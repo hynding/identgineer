@@ -1,4 +1,6 @@
-const OPTIONS = { dateStyle: "medium", timeStyle: "medium" } as const;
+// The long time style names the zone (and cannot be combined with `timeZoneName`). It is always named, so a time is never taken for the reader's own, and a zone the browser
+// refuses (which falls back to the reader's) shows by its name that it did.
+const OPTIONS = { dateStyle: "medium", timeStyle: "long" } as const;
 
 function format(
   date: Date,
