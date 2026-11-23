@@ -16,7 +16,8 @@
     "build": "pnpm -r --if-present build",
     "cms:validate": "node cms/scripts/camis.js validate camis.json",
     "cms:generate": "node cms/scripts/camis.js generate --config camis.config.json",
-    "cms:build": "node cms/scripts/camis.js build --config camis.config.json"
+    "cms:build": "node cms/scripts/camis.js build --config camis.config.json",
+    "contract:live": "node cms/scripts/live-backend.js -- vitest run --project identity-live"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

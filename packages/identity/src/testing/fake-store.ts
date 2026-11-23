@@ -14,13 +14,20 @@ export interface FakeUser {
   confirmationCode?: string;
 }
 
+/** A session's recorded device name, and its sign-in time (now when not given). */
+export interface SessionMetadata {
+  readonly deviceName: string | null;
+  readonly loginAt?: string | undefined;
+}
+
 interface FakeSession {
   readonly sessionId: string;
   readonly userId: number;
   readonly secret: string;
   readonly deviceId: string | null;
   readonly deviceName: string | null;
-  readonly loginAt: string;
+  /** When the session's sign-in happened; none for one a password change or reset opened. */
+  readonly loginAt: string | null;
   readonly createdAt: string;
   status: "active" | "rotated";
 }
@@ -81,10 +88,15 @@ export const createFakeStore = (options: FakeStoreOptions) => {
     return token;
   };
 
+  /**
+   * As camis' StrapiSessions::open: a sign-in or registration records its device name and time
+   * (`metadata`), a password change or reset records none (null), and a rotation carries its
+   * predecessor's on.
+   */
   const openSession = (
     userId: number,
     deviceId: string | null,
-    deviceName: string | null,
+    metadata: SessionMetadata | null,
   ): IssuedTokens => {
     const sessionId = next().toString(16).padStart(32, "0");
     const secret = `secret${String(next())}`;
@@ -93,8 +105,8 @@ export const createFakeStore = (options: FakeStoreOptions) => {
       userId,
       secret,
       deviceId,
-      deviceName,
-      loginAt: stamp(),
+      deviceName: metadata?.deviceName ?? null,
+      loginAt: metadata === null ? null : (metadata.loginAt ?? stamp()),
       createdAt: stamp(),
       status: "active",
     });
@@ -155,7 +167,13 @@ export const createFakeStore = (options: FakeStoreOptions) => {
       const current = usableSession(refreshToken);
       if (current === undefined) return undefined;
       current.status = "rotated";
-      const successor = openSession(current.userId, current.deviceId, current.deviceName);
+      const successor = openSession(
+        current.userId,
+        current.deviceId,
+        current.loginAt === null && current.deviceName === null
+          ? null
+          : { deviceName: current.deviceName, loginAt: current.loginAt ?? undefined },
+      );
       const successorId = successor.refreshToken.split(".")[0] ?? "";
       for (const record of accessTokens.values()) {
         if (record.sessionId === current.sessionId) record.sessionId = successorId;

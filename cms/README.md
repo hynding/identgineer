@@ -12,15 +12,16 @@ strapi-php answers the same REST API as Strapi (`{ data }` envelope, `/api/<plur
 `/api/auth/local`), so a client written against local Strapi works unchanged against the deployed
 CMS. `generated/` is git-ignored and rebuilt from the files below; never edit it.
 
-| File                | What it is                                                                   |
-| ------------------- | ---------------------------------------------------------------------------- |
-| `camis.json`        | The content model (camis IR, version 1)                                      |
-| `roles.json`        | Roles and their grants                                                       |
-| `camis.config.json` | The two targets and where each is generated                                  |
-| `protected/`        | Hand-written code mirrored into both targets ([README](protected/README.md)) |
-| `.env.example`      | Placeholder environment for both targets                                     |
-| `tests/`            | Vitest checks of the security properties of the files above                  |
-| `scripts/camis.js`  | Runs a local camis checkout against this directory                           |
+| File                      | What it is                                                                   |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| `camis.json`              | The content model (camis IR, version 1)                                      |
+| `roles.json`              | Roles and their grants                                                       |
+| `camis.config.json`       | The two targets and where each is generated                                  |
+| `protected/`              | Hand-written code mirrored into both targets ([README](protected/README.md)) |
+| `.env.example`            | Placeholder environment for both targets                                     |
+| `tests/`                  | Vitest checks of the security properties of the files above                  |
+| `scripts/camis.js`        | Runs a local camis checkout against this directory                           |
+| `scripts/live-backend.js` | Generates and boots strapi-php for the identity SDK's live contract test     |
 
 ## Content model
 
@@ -139,7 +140,7 @@ What is configuration (done):
   anonymously.
 - Property carries the public `ingestKey` (unique, `pk_` prefix, issued by the `IssueIngestKey`
   `beforeCreate` hook) and `allowedOrigins`.
-- strapi-php's upload types, CORS origins and auth throttle are set in `.env` (`.env.example`).
+- strapi-php's upload types, CORS origins and auth throttles are set in `.env` (`.env.example`).
 
 What is hand-written (not done yet, Feature 9): the two handlers and the hook and schedule bodies,
 in `protected/`, following the rules in [protected/README.md](protected/README.md): property lookup
@@ -163,6 +164,56 @@ pnpm cms:build      # write both targets into cms/generated/
 ```
 
 `pnpm test` checks the files without camis.
+
+### Deployment settings for sign-in
+
+The strapi-php section of [`.env.example`](.env.example) lists every setting the identity SDK
+(`packages/identity`) needs to work safely, each with a one-line reason: refresh sessions
+(`CAMIS_JWT_MANAGEMENT=refresh`) and their lifespans, the refresh cookie (`Secure`,
+`SameSite=Strict`, `Path=/api/auth`), CORS (the site's origin, never `*`; the SDK's headers;
+`Retry-After` exposed), the throttles and account email. `tests/deployment-env.test.ts` fails if
+one goes missing or changes away from what the SDK needs (confirmation on, positive throttles,
+ordered session lifespans, https links to the site, placeholders for every secret), if a setting
+lacks its reason, or if the live contract's server runs with other values for the SDK's settings.
+
+### Live contract test
+
+`pnpm contract:live` (from the repository root) runs the identity SDK against a real strapi-php
+backend generated from this directory. It needs `CAMIS_DIR` and PHP 8.3 or newer with the
+extensions Laravel and Filament need (it names the PHP it found when older); the first run also
+needs Composer, as it scaffolds the Laravel app with `camis scaffold filament`, which downloads
+packages from Packagist. `scripts/live-backend.js` then, on every run:
+
+1. writes `generated/live/camis.config.json` (the filament target only, into
+   `generated/live/strapi-php`) and runs `camis build` with it;
+2. writes the app's `.env` with a fresh `APP_KEY` and salts and the SDK's settings from
+   `.env.example`, with sqlite, mail to the `log` driver and `APP_ENV=production`; PHP gets only
+   the shell's path, home, temp, locale, Composer, proxy and CA variables plus these settings, so
+   nothing exported in the shell changes the backend under test;
+3. migrates and seeds a fresh sqlite database for each of four servers that differ only in email
+   confirmation, throttle rate and access token lifespan (`main`: off, relaxed; `confirmation`:
+   on, relaxed; `throttled`: off, 3 a minute for every group, refresh included; `shortLived`: off,
+   relaxed, access tokens living 2 seconds), and serves each with PHP's built-in server on a free
+   port of 127.0.0.1 only, logging to `generated/live/<server>.server.log`;
+4. writes `generated/live/backend.json` describing them, runs the command after `--` with
+   `IDENTITY_LIVE_BACKEND` set to its path, and stops the servers.
+
+A server that exits stops the run at once, with the end of its log. SIGINT, SIGTERM and SIGHUP are
+passed on to the command; the script waits for it, stops the servers and exits with 128 plus the
+signal's number. `IDENTITY_LIVE_DIR` puts everything under another directory (the script's own
+tests use it).
+
+Without a command (`CAMIS_DIR=../camis node cms/scripts/live-backend.js`) it serves until
+interrupted, so the suite can be run repeatedly with
+`IDENTITY_LIVE_BACKEND=cms/generated/live/backend.json pnpm vitest run --project identity-live`.
+Each boot starts with fresh databases and throttle buckets; servers kept up keep both between
+runs, so a rerun within a minute may wait out the throttled server's register window.
+Everything it writes is under the git-ignored `generated/live`, one scaffold only; delete that
+directory to scaffold again. A scaffold counts as done only once `generated/live/strapi-php.scaffolded`
+is written, after it has finished, so one interrupted is started again from nothing. After
+scaffolding it removes the VCS checkouts Composer leaves in
+`vendor` when it clones packages rather than downloading their archives, which can take
+gigabytes. It is not part of `pnpm test` or CI, which have no camis checkout.
 
 Running the generated projects needs each target's own tooling, which this repository does not
 install:
