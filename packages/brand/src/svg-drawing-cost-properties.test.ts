@@ -48,10 +48,13 @@ interface Paint {
  * as `visible`, the most of it the image can show, whichever is less.
  */
 function filled(area: number, visible: number, length: number, box: Box): Paint {
+  // Edges laid end to end across the image that many times put about that many on every row,
+  // and each costs more the more there are.
+  const sides = Math.min(visible, length / SIDE);
   return {
     overdraw:
       Math.min(1, area / (SIDE * SIDE)) * PAINT.solid +
-      Math.min(visible, length / SIDE) * PAINT.edge,
+      sides * PAINT.edge * (1 + (sides / PAINT.edgesPerRow) ** 2),
     box,
   };
 }

@@ -116,12 +116,12 @@ const REALISTIC: readonly (readonly [string, string, number, number])[] = [
     5,
     1,
   ],
-  ["10 gradients under 6 clip paths", gradientsUnderClips(), 8, 50],
+  ["10 gradients under 6 clip paths", gradientsUnderClips(), 8, 60],
   ["300 uses of a 20-cubic symbol", pattern(20), 36, 1],
   ["300 uses of a 60-cubic symbol", pattern(60), 96, 1],
   ["dashed rings", dashedRings("1 2"), 2, 1],
   ["finely dashed rings", dashedRings("0.25 0.5"), 7, 1],
-  ["a Figma export with 8 alpha masks", figmaMasks(), 4, 50],
+  ["a Figma export with 8 alpha masks", figmaMasks(), 4, 60],
 ];
 
 describe("realistic logos", () => {
