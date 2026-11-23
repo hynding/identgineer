@@ -47,12 +47,16 @@ export function describeSparkline(
   if (summary?.count === 1)
     sentence = fillTemplate(labels.single, { value: format(summary.first) });
   else if (summary) {
+    const first = format(summary.first);
+    const last = format(summary.last);
+    // Two numbers that are written the same did not, as far as this says, rise or fall.
+    const shown: Trend = first === last ? "steady" : summary.trend;
     sentence = fillTemplate(labels.summary, {
-      first: format(summary.first),
-      last: format(summary.last),
+      first,
+      last,
       lowest: format(summary.lowest),
       highest: format(summary.highest),
-      trend: trend[summary.trend],
+      trend: trend[shown],
     });
   }
   return label === "" ? sentence : fillTemplate(labels.named, { label, summary: sentence });

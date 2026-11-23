@@ -13,7 +13,6 @@ describe("describeSparkline", () => {
   });
 
   it("does not claim a trend that the written numbers contradict", () => {
-    expect(say([5e-324, 0])).not.toContain("falling");
     expect(say([100, 100.001])).toBe("From 100 to 100, lowest 100, highest 100, steady.");
     expect(say([5e-324, 0])).toBe("From 5E-324 to 0, lowest 0, highest 5E-324, falling.");
   });
