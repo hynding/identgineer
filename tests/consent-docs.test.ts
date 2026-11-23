@@ -33,6 +33,18 @@ const EVENTS = new Set(
   ),
 );
 
+/** The methods `idg-consent-preferences` has, from its generated declarations. */
+const PREFERENCES_METHODS = new Set(
+  [
+    ...(
+      GENERATED.split("interface IdgConsentPreferences {")[1]?.split(/^ {4}\}/m)[0] ?? ""
+    ).matchAll(/^\s+"(\w+)": \(/gm),
+  ].map((match) => match[1] ?? ""),
+);
+
+/** What any element has, and so what a guide may call on one without it being a component method. */
+const DOM_METHODS = new Set(["addEventListener", "removeEventListener", "focus", "setAttribute"]);
+
 const TRACKING_TYPES = namesIn(
   read(join(ROOT, "packages", "tracking", "src", "index.ts")),
   /export type \{([^}]*)\}/g,
@@ -107,6 +119,50 @@ describe("the consent components guides", () => {
       );
       expect(used.length).toBeGreaterThan(0);
       expect(used.filter((event) => !EVENTS.has(event))).toEqual([]);
+    });
+
+    it("attaches every ref it declares, so a method called on one has an element to reach", () => {
+      const text = code(markdown);
+      const declared = [
+        ...[...text.matchAll(/const (\w+) = (?:useRef|useConsentElement)\b/g)].map((match) => ({
+          name: match[1] ?? "",
+          attached: (name: string) => `ref={${name}}`,
+        })),
+        ...[...text.matchAll(/^const (\w+) = ref<.*\(null\);?$/gm)].map((match) => ({
+          name: match[1] ?? "",
+          attached: (name: string) => `ref="${name}"`,
+        })),
+        ...[...text.matchAll(/\s#(\w+)\b/g)].map((match) => ({
+          name: match[1] ?? "",
+          attached: (name: string) => `(${name})`,
+        })),
+      ];
+      const loose = declared
+        .filter(({ name, attached }) => !text.includes(attached(name)))
+        .map(({ name }) => name);
+      expect(loose).toEqual([]);
+    });
+
+    it("calls only methods the preferences element has, on the elements it reaches", () => {
+      expect(PREFERENCES_METHODS).toContain("open");
+      expect(PREFERENCES_METHODS).toContain("close");
+      const text = code(markdown);
+      const refNames = [...text.matchAll(/(?:const |\s#)(\w+)\b/g)].map((match) => match[1] ?? "");
+      const calls = [
+        ...text.matchAll(/getElementById\([^)]*\)\??\.(\w+)\(/g),
+        ...refNames.flatMap((name) => [
+          ...text.matchAll(
+            new RegExp(
+              String.raw`\b${name}(?:\.current)?\??\.(open|close|show|hide|toggle)\(`,
+              "g",
+            ),
+          ),
+        ]),
+      ]
+        .map((match) => match[1] ?? "")
+        .filter((method) => !DOM_METHODS.has(method));
+      expect(calls.length).toBeGreaterThan(0);
+      expect(calls.filter((method) => !PREFERENCES_METHODS.has(method))).toEqual([]);
     });
 
     it("places the banner last in the body or says where it goes, and links the rules", () => {
