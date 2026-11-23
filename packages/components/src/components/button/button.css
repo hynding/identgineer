@@ -104,31 +104,29 @@
   box-shadow: none;
 }
 
-/* Designs without control borders (soft, elevated) would leave a quiet variant with no edge, and
-   a light accent fill with none the page can tell apart. accent-edge is the accent border where
-   the accent does not stand out on the page, and transparent where it does, so the ring is drawn
-   only where it is needed. */
+/* Designs without control borders (soft, elevated) would leave the secondary with no edge. */
 @container style(--idg-border-control-style: none) {
   .variant-secondary {
     box-shadow:
       inset 0 0 0 1px var(--idg-color-border-strong),
       var(--idg-elevation-sm);
   }
+}
 
+/* An accent that does not stand out on the page would leave the primary looking like the
+   secondary. accent-edge is the accent border there and transparent where the accent stands out,
+   so this outline, drawn outside whatever border the design gives every control, adds 2px only
+   where it is needed and paints nothing otherwise. Focus replaces it with the focus ring. */
+.variant-primary {
+  outline: 2px solid var(--idg-color-accent-edge);
+  outline-offset: 0;
+}
+
+/* Forced colours draw every button's border in the system colour; the outline would add nothing
+   but a second frame. */
+@media (forced-colors: active) {
   .variant-primary {
-    box-shadow:
-      inset 0 0 0 1px var(--idg-color-accent-edge),
-      var(--idg-elevation-sm);
-  }
-
-  .variant-primary:not(:disabled):not([aria-disabled="true"]):hover {
-    box-shadow:
-      inset 0 0 0 1px var(--idg-color-accent-edge),
-      var(--idg-elevation-md);
-  }
-
-  .variant-primary:not(:disabled):not([aria-disabled="true"]):active {
-    box-shadow: inset 0 0 0 1px var(--idg-color-accent-edge);
+    outline-style: none;
   }
 }
 

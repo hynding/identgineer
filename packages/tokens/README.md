@@ -100,7 +100,7 @@ The accent has three roles, because WCAG asks different things of them:
   the page. It must reach 3:1 against every page background.
 - `accent-edge` is derived by the build, never authored: `accent-border` where the accent is below
   3:1 against any page background, and `transparent` where it is not. Components draw it as the
-  ring of an accent fill. Drawing the accent itself would still darken a fill's anti-aliased
+  edge of an accent fill. Drawing the accent itself would still darken a fill's anti-aliased
   corners, so a theme whose accent stands out paints no edge at all and renders exactly as before.
   The base layer declares it as `transparent`.
 

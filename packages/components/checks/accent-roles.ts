@@ -55,24 +55,10 @@ export const ACCENT_ROLE_USES: readonly AccentRoleEntry[] = [
   },
   {
     file: "components/button/button.css",
-    property: "box-shadow",
+    property: "outline",
     token: "accent-edge",
     use: "fill",
-    what: "primary button edge in designs without control borders",
-  },
-  {
-    file: "components/button/button.css",
-    property: "box-shadow",
-    token: "accent-edge",
-    use: "fill",
-    what: "primary button edge, hovered",
-  },
-  {
-    file: "components/button/button.css",
-    property: "box-shadow",
-    token: "accent-edge",
-    use: "fill",
-    what: "primary button edge, pressed",
+    what: "primary button edge where the accent does not stand out on the page",
   },
   {
     file: "components/card/card.css",
