@@ -21,7 +21,16 @@
 :host(:not([placement="top"]):not([placement="inline"])) {
   position: sticky;
   inset-block-end: 0;
-  z-index: 10;
+  /* Over the layout's own sticky chrome (z-index 1 to 3), under its skip link (10): the skip link
+     is the first control on the page and is seen whenever it has focus. */
+  z-index: 5;
+}
+
+/* A choice is asked for on the screen; it is not part of what is printed. */
+@media print {
+  :host {
+    display: none;
+  }
 }
 
 /* The surface of the design language, as the card draws it. Text on it keeps the guaranteed

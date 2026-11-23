@@ -67,6 +67,8 @@ its place in the page's flow, it reserves its own space: it can never cover the 
 - `placement="top"` is **not** sticky. It is in the page's flow where the element is (put it first
   in the `<body>`), scrolls away with the page and reserves nothing. A bar that stuck to the top
   would sit over a header the layout keeps in view and over what has focus.
+- The banner is not printed, and it is painted over a layout's sticky chrome (`z-index` 1 to 3) and
+  under the layout's skip link (10), so the skip link is seen whenever it has focus.
 - `placement="inline"` is an ordinary block in the page's flow and reserves nothing.
 - Under 32rem of window height a bottom banner is not sticky either, and reserves nothing: half of
   such a window would be a box that scrolls inside itself.
