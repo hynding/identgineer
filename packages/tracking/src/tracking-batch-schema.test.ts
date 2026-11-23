@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseTrackingBatch } from "./parse-tracking-batch.ts";
 import { TRACKING_BATCH_JSON_SCHEMA } from "./tracking-batch-schema.ts";
 
-type Schema = {
+interface Schema {
   readonly $ref?: string;
   readonly type?: string | readonly string[];
   readonly properties?: Readonly<Record<string, Schema>>;
@@ -21,7 +21,7 @@ type Schema = {
   readonly maxProperties?: number;
   readonly const?: unknown;
   readonly $defs?: Readonly<Record<string, Schema>>;
-};
+}
 
 const ROOT = TRACKING_BATCH_JSON_SCHEMA as unknown as Schema;
 
@@ -162,12 +162,14 @@ const CORPUS: readonly [string, unknown][] = [
 
 describe("TRACKING_BATCH_JSON_SCHEMA", () => {
   it("is plain JSON", () => {
-    expect(JSON.parse(JSON.stringify(TRACKING_BATCH_JSON_SCHEMA))).toEqual(TRACKING_BATCH_JSON_SCHEMA);
+    expect(JSON.parse(JSON.stringify(TRACKING_BATCH_JSON_SCHEMA))).toEqual(
+      TRACKING_BATCH_JSON_SCHEMA,
+    );
   });
 
   it("names the draft and the wire version", () => {
     expect(TRACKING_BATCH_JSON_SCHEMA.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
-    expect(ROOT.properties?.["v"]?.const).toBe(1);
+    expect(ROOT.properties?.v?.const).toBe(1);
   });
 
   it.each(CORPUS)("agrees with the validator on %s", (_label, input) => {

@@ -54,7 +54,7 @@ describe("parseTrackingBatch", () => {
     ["an array", [batch()]],
     ["a number", 1],
     ["a Map", new Map()],
-    ["a class instance", new (class Batch {})()],
+    ["a class instance", new URL("https://example.com")],
   ])("rejects %s", (_label, input) => {
     expect(parseTrackingBatch(input).ok).toBe(false);
   });
@@ -170,15 +170,15 @@ describe("parseTrackingEvent", () => {
     it("keeps constructor as an ordinary property key and pollutes nothing", () => {
       const result = parseTrackingEvent(event({ properties: { constructor: "x", prototype: 1 } }));
       expect(result.ok).toBe(true);
-      expect(({} as Record<string, unknown>)["constructor"]).toBe(Object);
-      expect(Object.getPrototypeOf((result as { value: { properties: object } }).value.properties)).toBe(
-        Object.prototype,
-      );
+      expect(({} as Record<string, unknown>).constructor).toBe(Object);
+      expect(
+        Object.getPrototypeOf((result as { value: { properties: object } }).value.properties),
+      ).toBe(Object.prototype);
     });
 
     it("rejects a prototype-less record's inherited surprises", () => {
       const properties = Object.create(null) as Record<string, unknown>;
-      properties["a"] = 1;
+      properties.a = 1;
       expect(parseTrackingEvent(event({ properties })).ok).toBe(true);
     });
   });
