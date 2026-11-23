@@ -137,6 +137,8 @@ export function sanitiseSvgLogoWithLimits(
       idPrefix,
       removals,
     );
+    const reported = [size.width, size.height, ...size.viewBox, drawingCost, overdraw];
+    if (!reported.every(Number.isFinite)) throw new Error("a reported number is not finite");
     return {
       ok: true,
       svg: serialiseSvg(root, renamed) as SanitisedSvg,

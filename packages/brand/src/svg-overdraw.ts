@@ -63,15 +63,35 @@ const NOT_DRAWN_IN_PLACE: ReadonlySet<string> = new Set([
 type Matrix = readonly [number, number, number, number, number, number];
 const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0];
 
+/**
+ * The most any entry of a composed matrix may be: a million times a million. No logo needs to
+ * magnify further, and every product the walk forms from such a matrix and a coordinate (under a
+ * million) stays far inside a double, so no number it reports can overflow to an infinity or to
+ * one that is not a number.
+ */
+const MATRIX_BOUND = 1e12;
+
+/** `m`, refused when any entry is past `MATRIX_BOUND` or not a number. */
+function bounded(m: Matrix): Matrix {
+  if (!m.every((entry) => Math.abs(entry) <= MATRIX_BOUND)) {
+    throw new SvgLogoRejection(
+      "number-out-of-range",
+      `composes transforms past ${String(MATRIX_BOUND)} times`,
+    );
+  }
+  return m;
+}
+
+/** `m` then `n`, refused past `MATRIX_BOUND`. */
 function multiply(m: Matrix, n: Matrix): Matrix {
-  return [
+  return bounded([
     m[0] * n[0] + m[2] * n[1],
     m[1] * n[0] + m[3] * n[1],
     m[0] * n[2] + m[2] * n[3],
     m[1] * n[2] + m[3] * n[3],
     m[0] * n[4] + m[2] * n[5] + m[4],
     m[1] * n[4] + m[3] * n[5] + m[5],
-  ];
+  ]);
 }
 
 function transformFunction(name: string, values: readonly number[]): Matrix {
@@ -102,7 +122,7 @@ function transformFunction(name: string, values: readonly number[]): Matrix {
 function parseTransform(text: string): Matrix {
   let matrix = IDENTITY;
   for (const [, name = "", values = ""] of text.matchAll(/([A-Za-z]+)\(([^)]*)\)/g)) {
-    matrix = multiply(matrix, transformFunction(name, values.split(" ").map(Number)));
+    matrix = multiply(matrix, bounded(transformFunction(name, values.split(" ").map(Number))));
   }
   return matrix;
 }
@@ -351,7 +371,7 @@ class OverdrawWalk {
   ): Matrix {
     if (textOf(definition, units) !== "objectBoundingBox") return matrix;
     if (box.minX > box.maxX) return [0, 0, 0, 0, 0, 0];
-    return [box.maxX - box.minX, 0, 0, box.maxY - box.minY, box.minX, box.minY];
+    return bounded([box.maxX - box.minX, 0, 0, box.maxY - box.minY, box.minX, box.minY]);
   }
 
   /** What a mask's content inherits: from the mask's own ancestors, not from what it masks. */
@@ -430,7 +450,8 @@ class OverdrawWalk {
 
   private charge(amount: number): void {
     this.total += amount;
-    if (this.total > this.limit) {
+    // Written so that a total that is not a number is refused too.
+    if (!(this.total <= this.limit)) {
       throw new SvgLogoRejection(
         "overdraw-too-large",
         `would paint more than ${String(this.limit)} times its view box (see SVG_OVERDRAW_WEIGHTS)`,
@@ -455,5 +476,6 @@ export function measureOverdraw(
   const viewBox = (textOf(root, "viewBox") ?? "0 0 1 1").split(" ").map(Number);
   const walk = new OverdrawWalk(root, ids, limits, viewBox);
   walk.draw(root, IDENTITY, ROOT_INHERITED, false);
+  if (!Number.isFinite(walk.total)) throw new Error("the overdraw is not a finite number");
   return walk.total;
 }

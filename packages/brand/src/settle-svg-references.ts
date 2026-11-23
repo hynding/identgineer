@@ -227,7 +227,8 @@ function checkExpansion(
   const visiting = new Set<CleanElement>();
   const period = shortestDashPeriod(elements);
   const base = percentBase(root);
-  // Totals stop just over their limit, so no sum grows without bound.
+  // Totals stop just over their limit, so no sum grows without bound; each limit below is checked
+  // so that a total that is not a number is refused too.
   const capped = (value: number, limit: number): number => Math.min(value, limit + 1);
   const tooDeep = (element: CleanElement): SvgLogoRejection =>
     new SvgLogoRejection(
@@ -282,25 +283,25 @@ function checkExpansion(
     return expansion;
   };
   const total = visit(root, 0);
-  if (total.size > limits.renderedElements) {
+  if (!(total.size <= limits.renderedElements)) {
     throw new SvgLogoRejection(
       "expansion-too-large",
       `draws more than ${String(limits.renderedElements)} elements once references are expanded`,
     );
   }
-  if (total.maskDepth > limits.maskDepth) {
+  if (!(total.maskDepth <= limits.maskDepth)) {
     throw new SvgLogoRejection(
       "masks-too-deep",
       `applies more than ${String(limits.maskDepth)} masks or clip paths inside one another`,
     );
   }
-  if (total.masks > limits.maskApplications) {
+  if (!(total.masks <= limits.maskApplications)) {
     throw new SvgLogoRejection(
       "too-many-masks",
       `applies masks or clip paths more than ${String(limits.maskApplications)} times`,
     );
   }
-  if (total.cost > limits.drawingCost) {
+  if (!(total.cost <= limits.drawingCost)) {
     throw new SvgLogoRejection(
       "drawing-too-costly",
       `would cost more than ${String(limits.drawingCost)} to draw (see SVG_DRAWING_WEIGHTS)`,
