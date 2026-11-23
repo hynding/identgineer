@@ -117,7 +117,7 @@
 
 .text {
   min-inline-size: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .invalid-mark {

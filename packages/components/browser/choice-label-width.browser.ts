@@ -25,7 +25,7 @@ for (const name of CASES) {
         if (!context) throw new Error("no canvas");
         context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
         const longest = Math.max(
-          ...(host.textContent ?? "").split(/\s+/).map((word) => context.measureText(word).width),
+          ...host.textContent.split(/\s+/).map((word) => context.measureText(word).width),
         );
         return {
           width: text.getBoundingClientRect().width,

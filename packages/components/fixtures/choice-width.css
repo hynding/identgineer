@@ -10,7 +10,6 @@
 
 .fixed {
   flex: none;
-  inline-size: 96px;
 }
 
 .cell-table {
