@@ -128,8 +128,7 @@ for (const address of PAGES) {
               failures.push(`${where}: scrolls sideways by ${String(found.sideways)}px`);
             if (found.outside.length > 0)
               failures.push(`${where}: text outside the window: ${found.outside.join(", ")}`);
-            // One word wider than the window may break once; a letter a line is a collapsed column.
-            if (found.brandLines > 2)
+            if (found.brandLines > 1)
               failures.push(`${where}: brand on ${String(found.brandLines)} lines`);
           }
         }
