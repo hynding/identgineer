@@ -24,6 +24,8 @@ export interface MemoryStorage extends StorageLike {
   readonly failAll: (failing: boolean) => void;
   /** Every write throws a QuotaExceededError; reads and removals still work. */
   readonly failWrites: (failing: boolean) => void;
+  /** Every `getItem` throws; writes and removals still work. */
+  readonly failReads: (failing: boolean) => void;
 }
 
 export const createMemoryStorage = (options: MemoryStorageOptions = {}): MemoryStorage => {
@@ -32,6 +34,7 @@ export const createMemoryStorage = (options: MemoryStorageOptions = {}): MemoryS
   const observers = new Set<(call: StorageCall) => void>();
   let allFail = false;
   let writesFail = false;
+  let readsFail = false;
 
   const record = (method: StorageCall["method"], key: string): void => {
     const call = { method, key };
@@ -61,8 +64,12 @@ export const createMemoryStorage = (options: MemoryStorageOptions = {}): MemoryS
     failWrites: (failing) => {
       writesFail = failing;
     },
+    failReads: (failing) => {
+      readsFail = failing;
+    },
     getItem: (key) => {
       record("getItem", key);
+      if (readsFail) throw new DOMException("Storage cannot be read", "SecurityError");
       return values.get(key) ?? null;
     },
     setItem: (key, value) => {

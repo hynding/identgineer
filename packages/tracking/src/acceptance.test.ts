@@ -237,23 +237,20 @@ describe("nothing is sent or stored without effective consent", () => {
   it.each([
     ["Global Privacy Control", { gpc: true }],
     ["Do Not Track", { dnt: "1" }],
-  ])(
-    "writes the consent record alone when a grant meets %s, and still sends nothing",
-    async (_label, signal) => {
-      const world = createWorld();
-      const tab = openTab(world, { autoPageViews: true, ...signal });
-      tab.tracker.consent.grant();
-      tab.tracker.track("clicked", { target: "x" });
-      tab.tracker.page();
-      await tab.tracker.flush();
-      tab.page.hide();
-      world.clock.advance(10 * MINUTE);
-      await settle();
-      expect(world.collector.requests).toEqual([]);
-      expect(changesSince(world.local, 0)).toEqual([`setItem ${CONSENT_KEY}`]);
-      expect(changesSince(tab.session, 0)).toEqual([]);
-    },
-  );
+  ])("writes nothing at all when a grant meets %s, and sends nothing", async (_label, signal) => {
+    const world = createWorld();
+    const tab = openTab(world, { autoPageViews: true, ...signal });
+    tab.tracker.consent.grant();
+    tab.tracker.track("clicked", { target: "x" });
+    tab.tracker.page();
+    await tab.tracker.flush();
+    tab.page.hide();
+    world.clock.advance(10 * MINUTE);
+    await settle();
+    expect(world.collector.requests).toEqual([]);
+    expect(changesSince(world.local, 0)).toEqual([]);
+    expect(changesSince(tab.session, 0)).toEqual([]);
+  });
 
   it("is not vacuous: with consent granted the same calls send and store", async () => {
     const world = createWorld();

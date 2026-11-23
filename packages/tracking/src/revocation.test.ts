@@ -28,7 +28,10 @@ describe("revoking consent", () => {
     tab.tracker.consent.deny();
 
     expect(world.local.keys()).toEqual([CONSENT_KEY]);
-    expect(world.local.peek(CONSENT_KEY)).toBe(consentRecord("denied"));
+    expect(JSON.parse(world.local.peek(CONSENT_KEY) ?? "null")).toMatchObject({
+      state: "denied",
+      version: 1,
+    });
     expect(tab.session.keys()).toEqual([]);
     expect(world.clock.pendingTimers()).toBe(0);
     world.clock.advance(HOUR);

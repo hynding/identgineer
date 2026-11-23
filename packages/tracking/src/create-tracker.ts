@@ -38,7 +38,10 @@ export const createTracker = (trackerOptions: TrackerOptions): Tracker => {
     timeout: options.sessionTimeout,
   });
 
-  let status: ConsentStatus = controller.read();
+  const first = controller.read();
+  let status: ConsentStatus = first.status;
+  // The decision this tab has acted on; a different one under a standing grant is a revocation.
+  let decidedAt = first.decidedAt;
   let disposed = false;
   let userId: string | undefined;
   let documentReferrerPending = true;
@@ -76,12 +79,20 @@ export const createTracker = (trackerOptions: TrackerOptions): Tracker => {
 
   // Reads consent afresh, so a change made in another tab, or a browser signal that appeared,
   // takes effect at the next use even when no notice reached this tab.
-  const refresh = (): ConsentStatus => {
+  const refresh = (ownDecision = false): ConsentStatus => {
     if (disposed) return status;
-    const next = controller.read();
+    const reading = controller.read();
+    const next = reading.status;
     const previous = status;
+    const seen = decidedAt;
     status = next;
-    if (previous.state === "granted" && next.state !== "granted") discard();
+    decidedAt = reading.decidedAt;
+    const reGranted =
+      previous.state === "granted" &&
+      next.state === "granted" &&
+      !ownDecision &&
+      reading.decidedAt !== seen;
+    if ((previous.state === "granted" && next.state !== "granted") || reGranted) discard();
     if (previous.state !== next.state || previous.reason !== next.reason) notify(next);
     return next;
   };
@@ -160,7 +171,7 @@ export const createTracker = (trackerOptions: TrackerOptions): Tracker => {
     const before = status.state;
     const stored = write();
     if (revoking) discard();
-    const next = refresh();
+    const next = refresh(true);
     if (stored) announce();
     if (before !== "granted" && next.state === "granted") {
       delivery.loadStored();

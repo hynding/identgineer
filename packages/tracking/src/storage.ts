@@ -48,9 +48,15 @@ export const removeItem = (storage: StorageLike | undefined, key: string): boole
 
 /**
  * Removes a key only if it is there. A tracker that has nothing stored must not touch storage on
- * its own account, so even a removal of what was never written does not happen.
+ * its own account, so even a removal of what was never written does not happen. When the storage
+ * cannot even be read the key may be there, so the removal is attempted regardless.
  */
 export const removeItemIfPresent = (storage: StorageLike | undefined, key: string): boolean => {
-  if (readItem(storage, key) === undefined) return true;
+  if (storage === undefined) return true;
+  try {
+    if (storage.getItem(key) === null) return true;
+  } catch {
+    // Unreadable is not absent: try to remove it anyway.
+  }
   return removeItem(storage, key);
 };

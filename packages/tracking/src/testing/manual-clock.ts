@@ -3,6 +3,8 @@ import type { Clock } from "../clock.ts";
 export interface ManualClock extends Clock {
   /** Moves time forward, running every timer that comes due on the way, in order. */
   readonly advance: (ms: number) => void;
+  /** Sets the clock forward or back without running a timer, as a user or a sync does. */
+  readonly jump: (ms: number) => void;
   readonly pendingTimers: () => number;
 }
 
@@ -37,6 +39,9 @@ export const createManualClock = (start = 0): ManualClock => {
         timer.callback();
       }
       now = until;
+    },
+    jump: (ms) => {
+      now += ms;
     },
     pendingTimers: () => timers.length,
   };

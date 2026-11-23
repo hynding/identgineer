@@ -15,9 +15,19 @@ export interface ConsentControllerDeps {
   readonly signals: () => NavigatorSignals;
 }
 
-export interface ConsentController {
+export interface ConsentReading {
   /** The effective consent right now, read afresh from the signals and from storage. */
-  readonly read: () => ConsentStatus;
+  readonly status: ConsentStatus;
+  /**
+   * When the stored decision was made. A change of it, with the state still granted, means the
+   * visitor denied and granted again somewhere this tab did not hear of.
+   */
+  readonly decidedAt: number | undefined;
+}
+
+export interface ConsentController {
+  readonly read: () => ConsentReading;
+  /** Refused, and nothing is stored, while a browser signal is set. */
   readonly grant: () => boolean;
   readonly deny: () => boolean;
   readonly reset: () => boolean;
@@ -44,11 +54,19 @@ const readSignals = (signals: () => NavigatorSignals): NavigatorSignals => {
 export const createConsentController = (deps: ConsentControllerDeps): ConsentController => {
   let override: "denied" | "unknown" | undefined;
 
+  const readStored = () => {
+    const text = readItem(deps.storage, STORAGE_KEYS.consent);
+    return text === undefined ? undefined : parseConsentRecord(text, deps.version);
+  };
+
   const store = (choice: ConsentChoice): boolean => {
+    // Strictly after the decision it replaces, so that two decisions in one millisecond differ.
+    const previous = readStored()?.decidedAt ?? -1;
+    const decidedAt = Math.max(deps.now(), previous + 1);
     const stored = writeItem(
       deps.storage,
       STORAGE_KEYS.consent,
-      serialiseConsentRecord({ state: choice, version: deps.version, decidedAt: deps.now() }),
+      serialiseConsentRecord({ state: choice, version: deps.version, decidedAt }),
     );
     if (stored) override = undefined;
     return stored;
@@ -57,13 +75,16 @@ export const createConsentController = (deps: ConsentControllerDeps): ConsentCon
   return {
     read: () => {
       const reason = signalReason(readSignals(deps.signals));
-      if (reason !== undefined) return { state: "denied", reason };
-      const text = readItem(deps.storage, STORAGE_KEYS.consent);
-      const stored = text === undefined ? undefined : parseConsentRecord(text, deps.version);
+      const stored = readStored();
+      const decidedAt = stored?.decidedAt;
+      if (reason !== undefined) return { status: { state: "denied", reason }, decidedAt };
       const state: ConsentState = stored?.state ?? "unknown";
-      return { state: state === "granted" && override !== undefined ? override : state };
+      return {
+        status: { state: state === "granted" && override !== undefined ? override : state },
+        decidedAt,
+      };
     },
-    grant: () => store("granted"),
+    grant: () => signalReason(readSignals(deps.signals)) === undefined && store("granted"),
     deny: () => {
       const stored = store("denied");
       if (!stored) override = "denied";
