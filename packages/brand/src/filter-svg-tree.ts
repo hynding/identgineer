@@ -36,11 +36,21 @@ export interface CleanElement {
 
 const PROPERTY_NAME = /^-?[a-z][a-z0-9-]{0,63}$/;
 
-/** Why a value that failed its grammar was dropped: what it was trying to do, where that shows. */
-function invalidValueReason(value: string): SvgLogoRemovalReason {
-  const lower = value.toLowerCase();
+/** The attributes and properties whose value may refer to something (`href` is read apart). */
+const REFERENCE_TAKING: ReadonlySet<string> = new Set(["fill", "stroke", "clip-path", "mask"]);
+const SCHEME = /^[a-z][a-z0-9+.-]*:/;
+
+/**
+ * Why a value that failed its grammar was dropped: what it was trying to do, where that shows. A
+ * `url(` or a scheme is an external reference only where the attribute could have taken one; in
+ * path data, say, it is just not a valid value.
+ */
+function invalidValueReason(name: string, value: string): SvgLogoRemovalReason {
+  const lower = trimXmlWhitespace(value).toLowerCase();
   if (lower.includes("expression(")) return "active-content";
-  if (lower.includes("url(") || /^\s*[a-z][a-z0-9+.-]*:/.test(lower)) return "external-reference";
+  if (REFERENCE_TAKING.has(name) && (lower.includes("url(") || SCHEME.test(lower))) {
+    return "external-reference";
+  }
   return "invalid-value";
 }
 
@@ -200,7 +210,7 @@ class TreeFilter {
     const reason =
       name === "href" && !trimXmlWhitespace(attribute.value).startsWith("#")
         ? "external-reference"
-        : invalidValueReason(attribute.value);
+        : invalidValueReason(name, attribute.value);
     this.removals.add(
       { element: source.qualified, attribute: attribute.qualified },
       reason,
@@ -246,7 +256,11 @@ class TreeFilter {
       const value = declaration.slice(colon + 1);
       const parsed = this.parse(property, value);
       if (parsed === undefined) {
-        this.removals.add({ ...names, property }, invalidValueReason(value), attribute.offset);
+        this.removals.add(
+          { ...names, property },
+          invalidValueReason(property, value),
+          attribute.offset,
+        );
         continue;
       }
       kept.set(property, parsed);
