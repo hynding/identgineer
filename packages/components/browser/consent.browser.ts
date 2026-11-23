@@ -359,7 +359,11 @@ test.describe("the consent banner stays out of the way", () => {
       const style = getComputedStyle(document.documentElement);
       return [style.scrollPaddingBlockStart, style.scrollPaddingBlockEnd];
     });
-    expect(padding.map((value) => Number.parseFloat(value) || 0)).toEqual([0, 0]);
+    // The fixture's own 5rem at the top for its sticky header, and nothing added by the banner.
+    const rem = await page.evaluate(() =>
+      Number.parseFloat(getComputedStyle(document.documentElement).fontSize),
+    );
+    expect(padding.map((value) => Number.parseFloat(value) || 0)).toEqual([5 * rem, 0]);
   });
 
   test("a bottom bar adds to the scroll padding a stylesheet gives the page, and gives it back", async ({

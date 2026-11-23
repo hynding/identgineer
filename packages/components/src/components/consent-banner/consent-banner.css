@@ -45,7 +45,9 @@
   border-width: var(--idg-surface-border-width);
   border-style: var(--idg-surface-border-style);
   border-color: var(--idg-surface-border-color);
-  background: var(--idg-surface-background);
+  /* Over the page's own colour, so that a design whose surface is translucent (glass) still has the
+     colour its text was checked against under it, whatever scrolls behind a bar that sticks. */
+  background: linear-gradient(var(--idg-surface-background) 0 0), var(--idg-color-bg);
   backdrop-filter: var(--idg-surface-backdrop-filter);
   box-shadow: var(--idg-elevation-md);
   color: var(--idg-color-text);

@@ -15,7 +15,8 @@ html {
   position: sticky;
   inset-block-start: 0;
   z-index: 3;
-  background: var(--idg-surface-background);
+  /* Opaque even where a design's surface is translucent, as a header that sticks over the page is. */
+  background: linear-gradient(var(--idg-surface-background) 0 0), var(--idg-color-bg);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
