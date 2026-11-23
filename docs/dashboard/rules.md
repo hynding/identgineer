@@ -56,13 +56,19 @@ people typed or that a page on the public internet sent. The elements:
   `pay<RLO>fdp.exe` does not draw as `payexe.pdf` and a reader can see that something was there.
   Line breaks and tabs become a space;
 - keep an invisible character only where it means something, and mark it everywhere else:
-  - a zero width joiner or non-joiner (U+200D, U+200C) between two letters of one script that joins
-    (a combining mark counts as the letter it is on; the script must be the same on both sides, so
-    an Arabic letter joined to a Devanagari one is marked): Arabic, Syriac, N'Ko, Mongolian, Phags-pa, Mandaic, Adlam, Thaana,
+  - a zero width joiner or non-joiner (U+200D, U+200C) next to letters of a script that joins. On
+    its left is a letter, or a mark on one (a virama, a vowel sign), of that script. On its right is
+    a letter of the same script, or a mark that the same script uses (the Arabic vowel signs, the
+    Bengali "র‍্যাব", which has the joiner before the virama). After a mark it may also end the text
+    or come before white space or punctuation, as in a Devanagari "क्‍" or a Malayalam chillu
+    ("ന്‍"). The scripts are Arabic, Syriac, N'Ko, Mongolian, Phags-pa, Mandaic, Adlam, Thaana,
     Tibetan, Myanmar, Khmer, Sinhala and the Indic scripts (Devanagari, Bengali, Gurmukhi,
-    Gujarati, Oriya, Tamil, Telugu, Kannada, Malayalam). Persian "ثبت‌نام" is kept. Between Latin
-    letters, or Hebrew, or at an edge, a joiner is marked: it draws nothing there, and only makes
-    two names that look alike differ;
+    Gujarati, Oriya, Tamil, Telugu, Kannada, Malayalam). Persian "ثبت‌نام" is kept. The script must
+    be the same on both sides, so an Arabic letter joined to a Devanagari one is marked. Between
+    Latin letters, or Hebrew, at the start of the text, directly after a letter with no mark (at
+    the end of an Arabic word), before a letter or mark of another script, or before another
+    invisible character (so every joiner in a run of them) a joiner is marked: it draws nothing
+    there, and only makes two names that look alike differ;
   - a zero width joiner in an emoji sequence (after an emoji, an emoji's skin tone or its
     presentation selector, and before an emoji), so families and "technologist" emoji stay whole;
   - an ideographic variation selector (U+E0100 to U+E01EF) directly after a Han ideograph, as in

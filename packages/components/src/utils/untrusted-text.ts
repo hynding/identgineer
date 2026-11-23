@@ -23,7 +23,7 @@ const HAN = /^\p{Script=Han}$/u;
 // they take. In any other script, such as Latin, it draws nothing and only makes two strings that
 // look the same differ. A joiner is kept only between letters of one of these, the same one on
 // both sides: a joiner between two scripts joins nothing.
-const JOINING_SCRIPTS: readonly RegExp[] = [
+const JOINING_SCRIPT_NAMES = [
   "Arabic",
   "Syriac",
   "Nko",
@@ -45,7 +45,16 @@ const JOINING_SCRIPTS: readonly RegExp[] = [
   "Myanmar",
   "Tibetan",
   "Thaana",
-].map((script) => new RegExp(`^\\p{Script=${script}}$`, "u"));
+] as const;
+const JOINING_SCRIPTS: readonly RegExp[] = JOINING_SCRIPT_NAMES.map(
+  (script) => new RegExp(`^\\p{Script=${script}}$`, "u"),
+);
+// Marks such as the Arabic vowel signs belong to no script of their own, and are used by several:
+// they are judged by the scripts that use them.
+const JOINING_SCRIPT_USERS: readonly RegExp[] = JOINING_SCRIPT_NAMES.map(
+  (script) => new RegExp(`^\\p{Script_Extensions=${script}}$`, "u"),
+);
+const PUNCTUATION_OR_SPACE = /^[\s\p{P}]$/u;
 const LETTER = /^\p{L}$/u;
 const MONGOLIAN = /^\p{Script=Mongolian}$/u;
 
@@ -94,22 +103,32 @@ function baseLetter(output: readonly string[], at: number): string | undefined {
 }
 
 // What a joiner is judged against is what is already drawn on its left (so a character that was
-// replaced is not a neighbour) and, on its right, a letter that would be drawn: a letter that is
-// not itself an invisible one. That makes the result a fixed point of this function.
+// replaced is not a neighbour) and, on its right, what would be drawn: not an invisible character,
+// which would be replaced. That makes the result a fixed point of this function. On the left is a
+// letter, or a mark on one (the virama of a conjunct, a vowel sign), of a script that joins. On the
+// right is a letter or a mark of that same script, or, when the left is a mark, the end of the
+// text, white space or punctuation, as at the end of a word that ends in a virama and a joiner.
 function joinerMeans(output: readonly string[], after: string | undefined, code: number): boolean {
   const before = output[output.length - 1];
-  if (before === undefined || after === undefined) return false;
-  if (LETTER.test(after) && !INVISIBLE.test(after)) {
-    const left = baseLetter(output, output.length - 1);
-    const script = left === undefined ? -1 : joiningScript(left);
-    if (script >= 0 && script === joiningScript(after)) return true;
-  }
-  if (code !== ZERO_WIDTH_JOINER) return false;
+  if (before === undefined) return false;
+  const left = baseLetter(output, output.length - 1);
+  const script = left === undefined ? -1 : joiningScript(left);
+  if (script >= 0 && joinsInScript(after, script, COMBINING_MARK.test(before))) return true;
+  if (code !== ZERO_WIDTH_JOINER || after === undefined) return false;
   return (
     (EMOJI_BEFORE_JOINER.test(before) ||
       (EMOJI_PRESENTATION_SELECTORS.has(before.codePointAt(0) ?? 0) && output.length > 1)) &&
     EMOJI_AFTER_JOINER.test(after)
   );
+}
+
+function joinsInScript(after: string | undefined, script: number, onMark: boolean): boolean {
+  if (after === undefined) return onMark;
+  if (SPACING_CONTROLS.has(after.codePointAt(0) ?? 0)) return onMark;
+  if (INVISIBLE.test(after) || isLoneSurrogate(after)) return false;
+  if (LETTER.test(after)) return script === joiningScript(after);
+  if (COMBINING_MARK.test(after)) return JOINING_SCRIPT_USERS[script]?.test(after) === true;
+  return onMark && PUNCTUATION_OR_SPACE.test(after);
 }
 
 // A variation selector is kept after the kind of character it varies: an ideograph for the
@@ -160,12 +179,13 @@ function hidesItself(character: string, before: string | undefined): boolean {
  * Some invisible characters mean something in some text and are kept only there: a zero width
  * joiner or non-joiner between letters of one script that joins (Arabic, Syriac, Mongolian, the
  * Indic scripts, Sinhala, Khmer, Myanmar and others; a combining mark counts as the letter it is
- * on, and the same script is needed on both sides) and a joiner inside an emoji sequence; an
+ * on, and the same script is needed on both sides; after a virama or another mark a joiner may also
+ * end a word or stand before white space or punctuation) and a joiner inside an emoji sequence; an
  * ideographic variation selector directly after an ideograph; a Mongolian free variation selector
  * directly after a Mongolian letter; an emoji presentation selector after an emoji; and the three
  * flag tag sequences (England, Scotland, Wales). Between Latin letters a joiner is marked. Each
- * decision is made against what is already drawn on the left, so the result is a fixed point. More
- * than eight
+ * decision is made against what is already drawn on the left, so the result is a fixed point; a
+ * joiner followed by another invisible character, or by a second joiner, is marked. More than eight
  * combining marks on a character are cut, and a mark shows that. Text that would draw as nothing
  * (only white space or combining marks) is one mark. Everything else, in any script, is kept.
  */
