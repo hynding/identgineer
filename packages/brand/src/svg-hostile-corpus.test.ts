@@ -81,7 +81,6 @@ const KEPT_AS_TEXT_OR_RENAMED = new Set([
   "mxss-xmp.svg",
   "polyglot-js-comment.svg",
   "utf7-payload-undeclared.svg",
-  "utf8-bom.svg",
 ]);
 
 function withoutPlace(removal: SvgLogoRemoval): ExpectedRemoval {
