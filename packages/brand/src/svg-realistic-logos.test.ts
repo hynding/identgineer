@@ -102,8 +102,8 @@ function figmaMasks(): string {
 
 /** Each logo with the most of each budget, in percent, it may use. */
 const REALISTIC: readonly (readonly [string, string, number, number])[] = [
-  ["an emblem of 4,000 cubics, filled and stroked", emblem(40, 6), 21, 4],
-  ["an emblem of 8,000 cubics, filled and stroked", emblem(80, 3), 42, 8],
+  ["an emblem of 4,000 cubics, filled and stroked", emblem(40, 6), 21, 5],
+  ["an emblem of 8,000 cubics, filled and stroked", emblem(80, 3), 42, 9],
   ["traced artwork of 470 KB", traced(470_000), 61, 1],
   [
     "a wordmark of 20 glyphs",

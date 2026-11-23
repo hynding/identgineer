@@ -13,12 +13,12 @@ import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 import type { SvgValue } from "./svg-values.ts";
 
 /**
- * What painting costs per unit of area, where one unit is the square on the larger side of the
- * view box painted once in a solid colour: the image a logo fills when shown in a square. Measured
- * in Chromium as a full raster at 2000 CSS pixels and a device scale factor of 2, where painting
- * costs the most, against a solid fill (see the README); edges, which cost the most at small sizes,
- * at 600 pixels. A gradient weighs by how many stops it has, rounded up to the next tier, and more
- * when it is translucent; so does a solid colour.
+ * What painting costs, in units of the square on the larger side of the view box painted once in
+ * a solid colour: the image a logo fills when shown in a square. Measured in Chromium as a full
+ * raster at 600 CSS pixels and at 2000 with a device scale factor of 2, each weight the larger of
+ * the two once the limit is shared out as a second at 600 and 1.75 seconds at 2000 (see the
+ * README). A gradient weighs by how many stops it has, rounded up to the next tier, and more when
+ * it is translucent, as a solid colour does.
  */
 export const SVG_OVERDRAW_WEIGHTS = Object.freeze({
   solid: 1,
@@ -26,15 +26,26 @@ export const SVG_OVERDRAW_WEIGHTS = Object.freeze({
   gradient: Object.freeze({ 2: 6, 4: 13, 8: 14, 16: 15, 32: 19, 64: 23 }),
   translucentGradient: Object.freeze({ 2: 14, 4: 19, 8: 19, 16: 21, 32: 22, 64: 26 }),
   /** Group opacity: a layer the size of what the group draws, composited once. */
-  layer: 3,
+  layer: 16,
   /** A luminance mask, over the box of what it masks, on top of what its content paints. */
   mask: 64,
   alphaMask: 32,
   /** A clip path, over the box of what it clips, on top of the coverage of what it holds. */
   clip: 1,
-  /** An edge as long as the larger side of the view box, filled or stroked once. */
-  edge: 0.04,
+  /** An edge as long as the larger side of the view box, filled or as coverage. */
+  edge: 0.03,
+  /**
+   * A path whose edges, laid end to end, cross the image this many times costs twice as much per
+   * edge, and more beyond: each row of pixels holds about that many edges, and a crowded row costs
+   * more than in proportion to them.
+   */
+  edgesPerRow: 800,
 });
+
+/** What edges as long as `sides` sides of the image cost, within one path. */
+function edgeCost(sides: number): number {
+  return sides * SVG_OVERDRAW_WEIGHTS.edge * (1 + (sides / SVG_OVERDRAW_WEIGHTS.edgesPerRow) ** 2);
+}
 
 const STOP_TIERS = [2, 4, 8, 16, 32, 64] as const;
 type StopTier = (typeof STOP_TIERS)[number];
@@ -260,9 +271,7 @@ class OverdrawWalk {
     if (clipping) {
       // A clip path is drawn as coverage: its shapes' geometry, never their paint or stroke.
       if (fillable) {
-        this.charge(
-          Math.min(1, fillArea()) * SVG_OVERDRAW_WEIGHTS.solid + edges * SVG_OVERDRAW_WEIGHTS.edge,
-        );
+        this.charge(Math.min(1, fillArea()) * SVG_OVERDRAW_WEIGHTS.solid + edgeCost(edges));
       }
       return mapBox(matrix, geometry.box);
     }
@@ -275,7 +284,7 @@ class OverdrawWalk {
     if (fills) {
       this.charge(
         Math.min(1, fillArea()) * this.paintWeight(paint.fill, paint.fillOpacity * alpha) +
-          edges * SVG_OVERDRAW_WEIGHTS.edge,
+          edgeCost(edges),
       );
     }
     if (strokes) {
@@ -296,7 +305,8 @@ class OverdrawWalk {
       const area = Math.min(scale * local, boxArea(mapBox(matrix, outer))) / this.square;
       this.charge(
         Math.min(1, area) * this.paintWeight(paint.stroke, paint.strokeOpacity * alpha) +
-          edges * SVG_OVERDRAW_WEIGHTS.edge,
+          // A stroke's outline runs along both sides of the path.
+          edgeCost(2 * edges),
       );
       box = mapBox(matrix, outer);
     }

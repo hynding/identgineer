@@ -67,7 +67,7 @@ export const SVG_LOGO_LIMITS: SvgLogoLimits = Object.freeze({
   referenceDepth: 8,
   renderedElements: 20_000,
   drawingCost: 200_000,
-  overdraw: 600,
+  overdraw: 500,
   maskApplications: 128,
   maskDepth: 4,
   ids: 1024,

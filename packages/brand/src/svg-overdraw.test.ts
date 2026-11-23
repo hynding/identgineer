@@ -117,7 +117,7 @@ describe("the overdraw of a logo", () => {
 
   it("carries the area through transforms, ancestors' and use's included", () => {
     expect(overdraw(`<rect ${SQUARE} transform="scale(2 0.5)"/>`)).toBeCloseTo(
-      QUARTER * W.solid + 2 * edges(SQUARE_EDGES),
+      QUARTER * W.solid + edges(2 * SQUARE_EDGES),
       9,
     );
     // Rotation keeps the area; the outline is no longer.
@@ -218,7 +218,7 @@ describe("the overdraw of a logo", () => {
       9,
     );
     // A shape with both a fill and a stroke under opacity is drawn into a layer as well.
-    const both = `<rect ${SQUARE} stroke="#000" stroke-width="0.0001"`;
+    const both = `<rect ${SQUARE} stroke="#000" stroke-width="0.000001"`;
     expect(overdraw(`${both} opacity="0.5"/>`) - overdraw(`${both}/>`)).toBeCloseTo(
       QUARTER * W.layer,
       4,
