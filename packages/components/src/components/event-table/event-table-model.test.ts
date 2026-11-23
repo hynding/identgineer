@@ -67,7 +67,7 @@ describe("sortEvents", () => {
 
   it("sorts by time, and keeps the order of events at one time", () => {
     expect(ids(sortEvents(EVENTS, "time", "ascending", "en"))).toBe("bdac");
-    expect(ids(sortEvents(EVENTS, "time", "descending", "en"))).toBe("cadb");
+    expect(ids(sortEvents(EVENTS, "time", "descending", "en"))).toBe("cabd");
   });
 
   it("sorts by name the way the language does, without regard to case, and keeps the order of equal names", () => {
