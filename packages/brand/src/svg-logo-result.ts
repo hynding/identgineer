@@ -30,6 +30,7 @@ export type SvgLogoErrorCode =
   | "reference-too-deep"
   | "expansion-too-large"
   | "drawing-too-costly"
+  | "overdraw-too-large"
   | "too-many-masks"
   | "masks-too-deep"
   | "missing-size"
@@ -92,6 +93,11 @@ export interface SvgLogoAccepted {
   readonly viewBox: readonly [number, number, number, number];
   /** What drawing it costs, within `SVG_LOGO_LIMITS.drawingCost`; see `SVG_DRAWING_WEIGHTS`. */
   readonly drawingCost: number;
+  /**
+   * What painting it costs, within `SVG_LOGO_LIMITS.overdraw`: in squares on the larger side of the
+   * view box painted once in a solid colour; see `SVG_OVERDRAW_WEIGHTS`.
+   */
+  readonly overdraw: number;
   /** The first `MAX_REPORTED_REMOVALS`, in document order. */
   readonly removed: readonly SvgLogoRemoval[];
   /** Every removal, reported or not. */

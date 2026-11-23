@@ -25,6 +25,42 @@ export interface Geometry {
   readonly weight: number;
   /** An upper bound of the outline's length in its own user units, which is what dashes follow. */
   readonly length: number;
+  /** Segments drawn: each an edge to fill and to stroke. */
+  readonly segments: number;
+  /** The box of every point, control points included; an arc's box holds its whole ellipse. */
+  readonly box: SvgBox;
+  /** An upper bound of the area a fill covers, in square user units, never more than the box. */
+  readonly area: number;
+}
+
+/** An axis-aligned box; empty when `minX > maxX`. */
+export interface SvgBox {
+  readonly minX: number;
+  readonly minY: number;
+  readonly maxX: number;
+  readonly maxY: number;
+}
+
+export const EMPTY_BOX: SvgBox = Object.freeze({
+  minX: Infinity,
+  minY: Infinity,
+  maxX: -Infinity,
+  maxY: -Infinity,
+});
+
+export function boxArea(box: SvgBox): number {
+  return box.minX > box.maxX ? 0 : (box.maxX - box.minX) * (box.maxY - box.minY);
+}
+
+function triangleArea(
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  cx: number,
+  cy: number,
+): number {
+  return Math.abs((bx - ax) * (cy - ay) - (cx - ax) * (by - ay)) / 2;
 }
 
 const ARITY: Readonly<Record<string, number>> = {
@@ -41,7 +77,12 @@ const ARITY: Readonly<Record<string, number>> = {
 };
 const SEGMENT = /([A-Za-z])([^A-Za-z]*)/g;
 
-/** The current point and what the next smooth curve reflects. */
+/**
+ * The current point and what the next smooth curve reflects, with what has been drawn so far. The
+ * area a fill covers is bounded subpath by subpath: by the subpath's box, and by the triangles
+ * fanned from its start over its control polygon plus the hull of each curve (a point the fill
+ * covers is inside one or the other), whichever is smaller.
+ */
 class Pen {
   x = 0;
   y = 0;
@@ -51,14 +92,81 @@ class Pen {
   controlY = 0;
   weight = 0;
   length = 0;
+  segments = 0;
   /** The letter, in upper case, of the segment just drawn. */
   previous = "";
+  box: SvgBox = EMPTY_BOX;
+  area = 0;
+  private subpathBox: SvgBox = EMPTY_BOX;
+  private fan = 0;
+  private hulls = 0;
 
-  to(x: number, y: number, weight: number, length: number): void {
+  /** Starts a subpath at the current point. */
+  begin(): void {
+    this.end();
+    this.startX = this.x;
+    this.startY = this.y;
+    this.include(this.x, this.y, 0);
+  }
+
+  /** Closes the bound of the subpath being drawn, if any. */
+  end(): void {
+    this.area += Math.min(boxArea(this.subpathBox), this.fan + this.hulls);
+    this.subpathBox = EMPTY_BOX;
+    this.fan = 0;
+    this.hulls = 0;
+  }
+
+  /**
+   * Draws a segment from the current point through `points` (its control points, then its end).
+   * `hull` bounds the area between the segment and its control polygon; `reach` grows the box
+   * around the current point by that much, for an arc, which may bulge anywhere within it.
+   */
+  to(points: readonly number[], weight: number, length: number, hull = 0, reach = 0): void {
+    let fromX = this.x;
+    let fromY = this.y;
+    this.include(fromX, fromY, reach);
+    for (let index = 0; index + 1 < points.length; index += 2) {
+      const toX = points[index] ?? 0;
+      const toY = points[index + 1] ?? 0;
+      this.fan += triangleArea(this.startX, this.startY, fromX, fromY, toX, toY);
+      this.include(toX, toY, 0);
+      fromX = toX;
+      fromY = toY;
+    }
+    this.hulls += hull;
     this.weight += weight;
     this.length += length;
-    this.x = x;
-    this.y = y;
+    this.segments += 1;
+    this.x = fromX;
+    this.y = fromY;
+  }
+
+  private include(x: number, y: number, reach: number): void {
+    const grown = {
+      minX: Math.min(this.subpathBox.minX, x - reach),
+      minY: Math.min(this.subpathBox.minY, y - reach),
+      maxX: Math.max(this.subpathBox.maxX, x + reach),
+      maxY: Math.max(this.subpathBox.maxY, y + reach),
+    };
+    this.subpathBox = grown;
+    this.box = {
+      minX: Math.min(this.box.minX, grown.minX),
+      minY: Math.min(this.box.minY, grown.minY),
+      maxX: Math.max(this.box.maxX, grown.maxX),
+      maxY: Math.max(this.box.maxY, grown.maxY),
+    };
+  }
+
+  geometry(): Geometry {
+    this.end();
+    return {
+      weight: this.weight,
+      length: this.length,
+      segments: this.segments,
+      box: this.box,
+      area: Math.min(this.area, boxArea(this.box)),
+    };
   }
 
   /** The first control point of a smooth curve: the last one reflected, or the current point. */
@@ -70,13 +178,13 @@ class Pen {
 }
 
 /**
- * The longest an arc can be: its whole ellipse, with the radii scaled up as SVG scales radii too
- * small to reach the end point (SVG 1.1, F.6.6). A zero radius draws a straight line.
+ * The larger radius of an arc's ellipse, scaled up as SVG scales radii too small to reach the end
+ * point (SVG 1.1, F.6.6); 0 for a zero radius, which draws a straight line.
  */
-function arcLength(pen: Pen, values: readonly number[], x: number, y: number): number {
+function arcRadius(pen: Pen, values: readonly number[], x: number, y: number): number {
   let rx = Math.abs(values[0] ?? 0);
   let ry = Math.abs(values[1] ?? 0);
-  if (rx === 0 || ry === 0) return Math.hypot(x - pen.x, y - pen.y);
+  if (rx === 0 || ry === 0) return 0;
   const angle = ((values[2] ?? 0) * Math.PI) / 180;
   const dx = (pen.x - x) / 2;
   const dy = (pen.y - y) / 2;
@@ -87,7 +195,7 @@ function arcLength(pen: Pen, values: readonly number[], x: number, y: number): n
     rx *= Math.sqrt(lambda);
     ry *= Math.sqrt(lambda);
   }
-  return 2 * Math.PI * Math.max(rx, ry);
+  return Math.max(rx, ry);
 }
 
 function drawSegment(pen: Pen, command: string, values: readonly number[], first: boolean): void {
@@ -98,17 +206,17 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
   const { x, y } = pen;
   const weights = SVG_DRAWING_WEIGHTS;
   if (upper === "M" && first) {
-    pen.to(at(0, x), at(1, y), 0, 0);
-    pen.startX = pen.x;
-    pen.startY = pen.y;
+    pen.x = at(0, x);
+    pen.y = at(1, y);
+    pen.begin();
   } else if (upper === "M" || upper === "L") {
-    pen.to(at(0, x), at(1, y), weights.line, Math.hypot(at(0, x) - x, at(1, y) - y));
+    pen.to([at(0, x), at(1, y)], weights.line, Math.hypot(at(0, x) - x, at(1, y) - y));
   } else if (upper === "H") {
-    pen.to(at(0, x), y, weights.line, Math.abs(at(0, x) - x));
+    pen.to([at(0, x), y], weights.line, Math.abs(at(0, x) - x));
   } else if (upper === "V") {
-    pen.to(x, at(0, y), weights.line, Math.abs(at(0, y) - y));
+    pen.to([x, at(0, y)], weights.line, Math.abs(at(0, y) - y));
   } else if (upper === "Z") {
-    pen.to(pen.startX, pen.startY, weights.line, Math.hypot(pen.startX - x, pen.startY - y));
+    pen.to([pen.startX, pen.startY], weights.line, Math.hypot(pen.startX - x, pen.startY - y));
   } else if (upper === "C" || upper === "S") {
     const [x1, y1] = upper === "C" ? [at(0, x), at(1, y)] : pen.reflected("C");
     const offset = upper === "C" ? 2 : 0;
@@ -118,10 +226,16 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
       at(offset + 2, x),
       at(offset + 3, y),
     ];
-    // A Bézier curve is never longer than the lines through its control points.
+    // A Bézier curve is never longer than the lines through its control points, and stays inside
+    // their hull, which the four triangles on them cover.
     const length =
       Math.hypot(x1 - x, y1 - y) + Math.hypot(x2 - x1, y2 - y1) + Math.hypot(endX - x2, endY - y2);
-    pen.to(endX, endY, weights.cubic, length);
+    const hull =
+      triangleArea(x, y, x1, y1, x2, y2) +
+      triangleArea(x, y, x2, y2, endX, endY) +
+      triangleArea(x, y, x1, y1, endX, endY) +
+      triangleArea(x1, y1, x2, y2, endX, endY);
+    pen.to([x1, y1, x2, y2, endX, endY], weights.cubic, length, hull);
     pen.controlX = x2;
     pen.controlY = y2;
   } else if (upper === "Q" || upper === "T") {
@@ -129,16 +243,29 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
     const offset = upper === "Q" ? 2 : 0;
     const [endX, endY] = [at(offset, x), at(offset + 1, y)];
     pen.to(
-      endX,
-      endY,
+      [x1, y1, endX, endY],
       weights.quadratic,
       Math.hypot(x1 - x, y1 - y) + Math.hypot(endX - x1, endY - y1),
+      triangleArea(x, y, x1, y1, endX, endY),
     );
     pen.controlX = x1;
     pen.controlY = y1;
   } else {
+    // An arc is no longer than its whole ellipse and bulges no further from its chord than the
+    // ellipse's area; the ellipse lies within a diameter of the current point.
     const [endX, endY] = [at(5, x), at(6, y)];
-    pen.to(endX, endY, weights.arc, arcLength(pen, values, endX, endY));
+    const radius = arcRadius(pen, values, endX, endY);
+    if (radius === 0) {
+      pen.to([endX, endY], weights.arc, Math.hypot(endX - x, endY - y));
+    } else {
+      pen.to(
+        [endX, endY],
+        weights.arc,
+        2 * Math.PI * radius,
+        Math.PI * radius * radius,
+        2 * radius,
+      );
+    }
   }
   pen.previous = upper;
 }
@@ -157,7 +284,7 @@ export function measurePathData(data: string): Geometry {
       drawSegment(pen, command, numbers.slice(index, index + arity), index === 0);
     }
   }
-  return { weight: pen.weight, length: pen.length };
+  return pen.geometry();
 }
 
 const KEPT_LENGTH = /^(-?[0-9.]+)([a-z%]*)$/;
@@ -209,7 +336,7 @@ function readKeptLength(text: string, what: string): { amount: number; unit: Svg
 }
 
 /** A kept length in user units, a percentage taken of `percentBase`; 0 when there is none. */
-function userUnits(text: string | undefined, percentBase: number): number {
+export function userUnits(text: string | undefined, percentBase: number): number {
   if (text === undefined) return 0;
   const { amount, unit } = readKeptLength(text, "length");
   return amount * unitSize(unit, percentBase);
@@ -230,28 +357,31 @@ export function dashPeriod(value: string): number {
   return lengths.length % 2 === 1 ? 2 * sum : sum;
 }
 
-function pointsOf(text: string): [number, number][] {
-  return text.split(" ").map((pair) => {
+function polyline(text: string, closed: boolean): Geometry {
+  const pen = new Pen();
+  const pairs = text.split(" ");
+  for (const [index, pair] of pairs.entries()) {
     const [x = 0, y = 0] = pair.split(",").map(Number);
-    return [x, y];
-  });
+    if (index === 0) {
+      pen.x = x;
+      pen.y = y;
+      pen.begin();
+    } else {
+      pen.to([x, y], SVG_DRAWING_WEIGHTS.line, Math.hypot(x - pen.x, y - pen.y));
+    }
+  }
+  if (closed) {
+    pen.to(
+      [pen.startX, pen.startY],
+      SVG_DRAWING_WEIGHTS.line,
+      Math.hypot(pen.startX - pen.x, pen.startY - pen.y),
+    );
+  }
+  return pen.geometry();
 }
 
-function polyline(text: string, closed: boolean): Geometry {
-  const points = pointsOf(text);
-  let length = 0;
-  for (let index = 1; index < points.length; index += 1) {
-    const [x0 = 0, y0 = 0] = points[index - 1] ?? [];
-    const [x1 = 0, y1 = 0] = points[index] ?? [];
-    length += Math.hypot(x1 - x0, y1 - y0);
-  }
-  const [firstX = 0, firstY = 0] = points[0] ?? [];
-  const [lastX = 0, lastY = 0] = points.at(-1) ?? [];
-  const segments = points.length - 1 + (closed ? 1 : 0);
-  return {
-    weight: segments * SVG_DRAWING_WEIGHTS.line,
-    length: length + (closed ? Math.hypot(firstX - lastX, firstY - lastY) : 0),
-  };
+function boxOf(x: number, y: number, width: number, height: number): SvgBox {
+  return { minX: x, minY: y, maxX: x + width, maxY: y + height };
 }
 
 /**
@@ -270,20 +400,42 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
       return measurePathData(text("d") ?? "");
     case "rect": {
       const rounded = length("rx") > 0 || length("ry") > 0;
+      const [width, height] = [length("width"), length("height")];
       return {
         weight: 4 * line + (rounded ? 4 * cubic : 0),
-        length: 2 * (length("width") + length("height")),
+        length: 2 * (width + height),
+        segments: rounded ? 8 : 4,
+        box: boxOf(length("x"), length("y"), width, height),
+        area: width * height,
       };
     }
     case "circle":
-      return { weight: 4 * cubic, length: 2 * Math.PI * length("r") };
-    case "ellipse":
-      return { weight: 4 * cubic, length: 2 * Math.PI * Math.max(length("rx"), length("ry")) };
-    case "line":
+    case "ellipse": {
+      const [rx, ry] =
+        element.name === "circle" ? [length("r"), length("r")] : [length("rx"), length("ry")];
+      return {
+        weight: 4 * cubic,
+        length: 2 * Math.PI * Math.max(rx, ry),
+        segments: 4,
+        box: boxOf(length("cx") - rx, length("cy") - ry, 2 * rx, 2 * ry),
+        area: Math.PI * rx * ry,
+      };
+    }
+    case "line": {
+      const [x1, y1, x2, y2] = [length("x1"), length("y1"), length("x2"), length("y2")];
       return {
         weight: line,
-        length: Math.hypot(length("x2") - length("x1"), length("y2") - length("y1")),
+        length: Math.hypot(x2 - x1, y2 - y1),
+        segments: 1,
+        box: {
+          minX: Math.min(x1, x2),
+          minY: Math.min(y1, y2),
+          maxX: Math.max(x1, x2),
+          maxY: Math.max(y1, y2),
+        },
+        area: 0,
       };
+    }
     case "polyline":
     case "polygon":
       return polyline(text("points") ?? "", element.name === "polygon");

@@ -36,6 +36,13 @@ export interface SvgLogoLimits {
    * line segment (see `SVG_DRAWING_WEIGHTS`), so a logo cannot hang the page that shows it.
    */
   readonly drawingCost: number;
+  /**
+   * What painting the logo costs once every reference is expanded, in units of the square on the
+   * larger side of its view box painted once in a solid colour (see `SVG_OVERDRAW_WEIGHTS`), so a
+   * logo cannot hang the page that shows it however large it is shown. Apart from `drawingCost`,
+   * which bounds the geometry whatever the size.
+   */
+  readonly overdraw: number;
   /** Masks and clip paths applied once every reference is expanded. */
   readonly maskApplications: number;
   /** Masks and clip paths applied inside one another, in a row. */
@@ -60,6 +67,7 @@ export const SVG_LOGO_LIMITS: SvgLogoLimits = Object.freeze({
   referenceDepth: 8,
   renderedElements: 20_000,
   drawingCost: 200_000,
+  overdraw: 600,
   maskApplications: 128,
   maskDepth: 4,
   ids: 1024,

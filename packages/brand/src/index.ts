@@ -26,6 +26,7 @@ export type { SanitisedSvg } from "./sanitised-svg.ts";
 export type { Rgb } from "./srgb.ts";
 export { SVG_DRAWING_WEIGHTS } from "./svg-drawing-cost.ts";
 export { SVG_LOGO_LIMITS } from "./svg-logo-limits.ts";
+export { SVG_OVERDRAW_WEIGHTS } from "./svg-overdraw.ts";
 export type { SvgLogoLimits } from "./svg-logo-limits.ts";
 export { MAX_REPORTED_REMOVALS } from "./svg-logo-result.ts";
 export type {

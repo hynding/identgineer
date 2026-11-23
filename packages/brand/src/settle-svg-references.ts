@@ -1,6 +1,7 @@
 import type { CleanElement } from "./filter-svg-tree.ts";
 import { GRADIENTS, USABLE } from "./svg-allowlist.ts";
 import { dashPeriod, measureShape, SVG_DRAWING_WEIGHTS } from "./svg-drawing-cost.ts";
+import { measureOverdraw } from "./svg-overdraw.ts";
 import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 import type { Removals } from "./svg-removals.ts";
@@ -320,12 +321,17 @@ export function settleSvgReferences(
   limits: SvgLogoLimits,
   idPrefix: string,
   removals: Removals,
-): { readonly renamed: Map<string, string>; readonly drawingCost: number } {
+): {
+  readonly renamed: Map<string, string>;
+  readonly drawingCost: number;
+  readonly overdraw: number;
+} {
   const all = walk(root);
   const dropped = dropDangling(all, collectIds(all, limits), removals);
   const elements = dropped.size === 0 ? all : all.filter((element) => !dropped.has(element));
   const ids = collectIds(elements, limits);
   const drawingCost = checkExpansion(root, elements, ids, limits);
+  const overdraw = measureOverdraw(root, ids, limits);
   const referenced = new Set<string>();
   for (const element of elements) {
     for (const attribute of ["href", "fill", "stroke", "clip-path", "mask"]) {
@@ -340,5 +346,5 @@ export function settleSvgReferences(
       renamed.set(id.text, `${idPrefix}${String(renamed.size)}`);
     }
   }
-  return { renamed, drawingCost };
+  return { renamed, drawingCost, overdraw };
 }

@@ -131,12 +131,18 @@ export function sanitiseSvgLogoWithLimits(
     }
     const root = filterSvgTree(resolveSvgNamespaces(document.root), limits, removals);
     const size = settleSize(root, limits);
-    const { renamed, drawingCost } = settleSvgReferences(root, limits, idPrefix, removals);
+    const { renamed, drawingCost, overdraw } = settleSvgReferences(
+      root,
+      limits,
+      idPrefix,
+      removals,
+    );
     return {
       ok: true,
       svg: serialiseSvg(root, renamed) as SanitisedSvg,
       ...size,
       drawingCost,
+      overdraw,
       removed: removals.list,
       removedCount: removals.count,
     };
