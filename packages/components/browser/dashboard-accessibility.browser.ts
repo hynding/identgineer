@@ -137,6 +137,19 @@ test("a pager with an absurd page count does not widen a 320px page with the tex
   await expect(page.locator("idg-pagination.hydrated").last()).toBeVisible();
   await settle(page);
   expect(await overflow(page)).toBeLessThanOrEqual(0);
+  // The count is held to ten million, so no page number has more than eight digits.
+  const longest = await page
+    .locator("idg-pagination")
+    .last()
+    .evaluate((pager) =>
+      Math.max(
+        ...Array.from(pager.shadowRoot?.querySelectorAll('[part="page"]') ?? []).map(
+          (control) => (control.textContent ?? "").trim().length,
+        ),
+      ),
+    );
+  expect(longest).toBeLessThanOrEqual(8);
+  expect(longest).toBeGreaterThanOrEqual(2);
 });
 
 test.describe("dashboard components at larger and wider text", () => {
