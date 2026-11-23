@@ -130,14 +130,16 @@ export class IdgSelect {
     this.selectCurrentValue(native);
   }
 
-  // An option the author marked selected, or the first one, is the value when none is given; a
-  // value that matches no option is not forced onto the select, which would blank it.
+  // An option the author marked selected, or the first one, is the value when none is given. A
+  // value that matches no option (yet: a list that arrives later has none to match) is left as it
+  // is and is not forced onto the select, which would blank it; the mirror applies it again when
+  // its option arrives.
   private selectCurrentValue(native: HTMLSelectElement): void {
     const matches = Array.from(native.querySelectorAll("option")).some(
       (option) => optionValue(option) === this.value,
     );
     if (matches) native.value = this.value;
-    else if (native.value !== this.value) this.value = native.value;
+    else if (this.value === "" && native.value !== this.value) this.value = native.value;
   }
 
   private syncForm(): void {

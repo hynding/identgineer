@@ -93,16 +93,6 @@ export class IdgPropertyPicker {
   componentDidRender(): void {
     const selected = this.selectedId();
     this.internals.setFormValue(selected === "" ? null : selected);
-    this.holdValue(this.loading ? "" : selected);
-  }
-
-  // The select copies its options from the ones drawn here a moment after they change, and a value
-  // it is given before the copy is finished is one it takes for unknown and replaces with the first
-  // option. So once that moment has passed, the value is given again if the select lost it.
-  private holdValue(wanted: string): void {
-    void Promise.resolve().then(() => {
-      if (this.select && this.select.value !== wanted) this.select.value = wanted;
-    });
   }
 
   /** Focuses the select. */
