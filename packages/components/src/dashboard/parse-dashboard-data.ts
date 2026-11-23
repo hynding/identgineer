@@ -18,6 +18,8 @@ export const DASHBOARD_LIMITS = {
   /** Properties kept on one event. */
   eventProperties: 50,
   series: 400,
+  /** The most events asked for or drawn in one page. */
+  pageSize: 100,
   idLength: 200,
   textLength: 10_000,
 } as const;

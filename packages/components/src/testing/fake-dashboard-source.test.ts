@@ -20,11 +20,7 @@ const EVENTS = {
 };
 
 function fake() {
-  return createFakeDashboardSource({
-    properties: MINE,
-    events: EVENTS,
-    foreignPropertyIds: ["stranger"],
-  });
+  return createFakeDashboardSource({ properties: MINE, events: EVENTS });
 }
 
 describe("createFakeDashboardSource", () => {

@@ -80,6 +80,8 @@ export type DashboardErrorCode =
   | "forbidden"
   | "not-found"
   | "unavailable"
+  /** The call itself made no sense, such as a page below 1. The source was not asked. */
+  | "invalid-request"
   | "invalid-response";
 
 /** Why a source could not answer. The message is for a developer, not for the page to show. */

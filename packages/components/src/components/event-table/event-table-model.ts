@@ -4,6 +4,7 @@ import type {
   EventSortKey,
   TrackedEvent,
 } from "../../dashboard/dashboard-types";
+import { DASHBOARD_LIMITS } from "../../dashboard/parse-dashboard-data";
 import { displayText } from "../../utils/untrusted-text";
 
 /** What is drawn of an event, so no record can make a row taller or wider than a page can hold. */
@@ -14,7 +15,7 @@ export const EVENT_TABLE_LIMITS = {
   propertyValue: 120,
   /** Properties shown for one event; the rest are counted. */
   properties: 10,
-  pageSize: 100,
+  pageSize: DASHBOARD_LIMITS.pageSize,
   defaultPageSize: 10,
 } as const;
 
