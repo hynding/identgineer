@@ -159,9 +159,8 @@ export class IdgSelect {
     if (!native) return;
     // A disabled select is not validated, as a native one is not, and its native validity can say
     // missing with no message, which setValidity refuses.
-    // (Typed optional: a test DOM may not have it.)
-    const validates: boolean | undefined = native.willValidate;
-    if (validates === false) {
+    // (A test DOM may not have willValidate, and then there is nothing to ask.)
+    if ("willValidate" in native && !native.willValidate) {
       this.internals.setValidity({});
       return;
     }

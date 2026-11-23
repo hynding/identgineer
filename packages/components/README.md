@@ -291,6 +291,15 @@ same as native HTML, works in plain HTML and in any framework, and needs no data
 attribute. Anything that is not an option or optgroup is ignored. The trigger is styled and the popup
 is the browser's native one. A placeholder is an `<option value="">`.
 
+The options are copied only when the slotted ones differ from the last copy (compared as text), so
+a render for another reason, such as `invalid` or `disabled` changing or a new value, leaves the
+native options, and a choice being made among them, alone. A `value` that matches no option is kept
+only while there are no options at all (a list that arrives later, which the mirror applies when its
+option arrives). Once there are options, a value that matches none gives way to the option shown,
+so the value, the submitted form value and the option shown always agree. The validity follows the
+value that is chosen after the options are copied, including when it was set from script; a
+disabled select is not validated, as a native one is not.
+
 ### `idg-checkbox` and `idg-switch`
 
 Props `name`, `value` (submitted while on, default `on`), `checked`, `required`, `disabled`,
