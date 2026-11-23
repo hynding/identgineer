@@ -5,7 +5,7 @@ import { resolveOptions } from "./resolve-options.ts";
 const WRITE_KEY = "wk_0123456789abcdef";
 const base = { endpoint: "https://collect.example.com/v1/events", writeKey: WRITE_KEY, events: {} };
 const resolve = (overrides: Record<string, unknown> = {}) =>
-  resolveOptions({ ...base, ...overrides } as never);
+  resolveOptions({ ...base, ...overrides });
 
 describe("resolveOptions", () => {
   it("fills every default", () => {
@@ -143,12 +143,13 @@ describe("resolveOptions", () => {
   });
 
   it("takes the allowed query parameters as a set and checks each name", () => {
-    expect([...resolve({ allowedQueryParameters: ["utm_source", "ref"] }).allowedQueryParameters]).toEqual([
-      "utm_source",
-      "ref",
-    ]);
+    expect([
+      ...resolve({ allowedQueryParameters: ["utm_source", "ref"] }).allowedQueryParameters,
+    ]).toEqual(["utm_source", "ref"]);
     for (const bad of [["a b"], [""], ["a".repeat(65)], [5], "utm_source", ["a=b"], ["a&b"]]) {
-      expect(() => resolve({ allowedQueryParameters: bad })).toThrow(/options\.allowedQueryParameters/);
+      expect(() => resolve({ allowedQueryParameters: bad })).toThrow(
+        /options\.allowedQueryParameters/,
+      );
     }
   });
 
@@ -159,7 +160,13 @@ describe("resolveOptions", () => {
 
   it("uses what is injected and treats null as switched off", () => {
     const fetch = () => Promise.reject(new Error("unused"));
-    const resolved = resolve({ fetch, sendBeacon: null, localStorage: null, crypto: null, crossTab: null });
+    const resolved = resolve({
+      fetch,
+      sendBeacon: null,
+      localStorage: null,
+      crypto: null,
+      crossTab: null,
+    });
     expect(resolved.fetch).toBe(fetch);
     expect(resolved.sendBeacon).toBeUndefined();
     expect(resolved.localStorage).toBeUndefined();

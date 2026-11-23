@@ -3,15 +3,18 @@ import { parseConsentRecord, serialiseConsentRecord } from "./consent-record.ts"
 
 describe("consent record", () => {
   it("is written as one small JSON object", () => {
-    expect(serialiseConsentRecord({ state: "granted", version: 3, decidedAt: 1_700_000_000_000 })).toBe(
-      '{"state":"granted","version":3,"decidedAt":1700000000000}',
-    );
+    expect(
+      serialiseConsentRecord({ state: "granted", version: 3, decidedAt: 1_700_000_000_000 }),
+    ).toBe('{"state":"granted","version":3,"decidedAt":1700000000000}');
   });
 
-  it.each(["granted", "denied"] as const)("reads back a %s record of the current version", (state) => {
-    const text = serialiseConsentRecord({ state, version: 2, decidedAt: 5 });
-    expect(parseConsentRecord(text, 2)).toEqual({ state, version: 2, decidedAt: 5 });
-  });
+  it.each(["granted", "denied"] as const)(
+    "reads back a %s record of the current version",
+    (state) => {
+      const text = serialiseConsentRecord({ state, version: 2, decidedAt: 5 });
+      expect(parseConsentRecord(text, 2)).toEqual({ state, version: 2, decidedAt: 5 });
+    },
+  );
 
   it("counts a record of another version as none", () => {
     const text = serialiseConsentRecord({ state: "granted", version: 1, decidedAt: 5 });
@@ -43,7 +46,10 @@ describe("consent record", () => {
   });
 
   it("pollutes nothing while reading a hostile record", () => {
-    parseConsentRecord('{"__proto__":{"polluted":true},"state":"granted","version":1,"decidedAt":5}', 1);
+    parseConsentRecord(
+      '{"__proto__":{"polluted":true},"state":"granted","version":1,"decidedAt":5}',
+      1,
+    );
     expect(({} as { polluted?: boolean }).polluted).toBeUndefined();
   });
 });

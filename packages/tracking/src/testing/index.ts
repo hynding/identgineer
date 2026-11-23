@@ -13,3 +13,5 @@ export { createManualClock } from "./manual-clock.ts";
 export type { ManualClock } from "./manual-clock.ts";
 export { createMemoryStorage } from "./memory-storage.ts";
 export type { MemoryStorage, MemoryStorageOptions, StorageCall } from "./memory-storage.ts";
+export { createSeededRandom } from "./seeded-random.ts";
+export type { SeededRandom } from "./seeded-random.ts";
