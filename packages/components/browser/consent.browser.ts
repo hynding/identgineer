@@ -139,6 +139,10 @@ test.describe("the consent banner by keyboard", () => {
     await expect(page.locator("#policy-link")).toBeVisible();
     await page.locator("#policy-link").focus();
     await expect(page.locator("#policy-link")).toBeFocused();
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    );
+    await expect(page.locator("#policy-link")).toBeFocused();
     const order: string[] = [];
     for (let index = 0; index < 3; index += 1) {
       await page.keyboard.press("Tab");
