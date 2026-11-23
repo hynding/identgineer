@@ -43,11 +43,15 @@ const HEX_MAX_LENGTH = 7;
 /** Reporting stops here, with one final error saying so, so hostile input cannot flood a response. */
 export const MAX_REPORTED_ERRORS = 50;
 
-// Letters, marks and digits of any script, single spaces and a little punctuation. Name and tagline
+// Letters, marks and digits of any script, single spaces and a little punctuation (with the Hebrew
+// geresh and gershayim and the katakana and Latin middle dots that names use). Name and tagline
 // never reach CSS, but they do reach the brand guide and the token JSON, so anything that is
 // markup, CSS or an escape anywhere (< > { } ; : \ " / ( ) @ and every control or format
-// character) is refused rather than escaped.
-const TEXT = /^[\p{L}\p{M}\p{N} .,'’&!?-]+$/u;
+// character but the two joiners below) is refused rather than escaped.
+const TEXT = /^(?:[\p{L}\p{M}\p{N} .,'’&!?\u05F3\u05F4\u30FB\u00B7-]|\u200C|\u200D)+$/u;
+// A zero-width non-joiner or joiner shapes the letters on either side (Persian, Sinhala), so it
+// is accepted only between two letters or marks: never at an edge, doubled or beside a space.
+const LOOSE_JOINER = /(?<![\p{L}\p{M}])(?:\u200C|\u200D)|(?:\u200C|\u200D)(?![\p{L}\p{M}])/u;
 // Scripts need a few combining marks on one letter; a long stack only smears over the text around it.
 // Spacing marks (Burmese and Indic vowel signs) take their own room, so only marks drawn over or
 // around the letter count.
@@ -154,7 +158,13 @@ function readText(value: unknown, path: string, max: number, errors: Errors): st
     errors.add(path, "too-long", `takes at most ${String(max)} characters`);
     return undefined;
   }
-  if (!TEXT.test(text) || MARK_STACK.test(text) || text.trim() !== text || text.includes("  ")) {
+  if (
+    !TEXT.test(text) ||
+    MARK_STACK.test(text) ||
+    LOOSE_JOINER.test(text) ||
+    text.trim() !== text ||
+    text.includes("  ")
+  ) {
     errors.add(
       path,
       "invalid-text",
