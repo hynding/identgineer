@@ -19,7 +19,7 @@ idg-layout > section.plain {
   align-items: start;
   margin-block-end: var(--idg-layout-section-gap);
   /* A word the window cannot hold at a large text size breaks, so the page never scrolls sideways. */
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 idg-layout h1,
@@ -97,7 +97,7 @@ idg-layout a:not(.brand, .hero-link) {
 
 .layout-buttons button {
   max-inline-size: 100%;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   min-block-size: var(--idg-density-target-size);
   padding-inline: var(--idg-space-s);
   border: var(--idg-border-control-width) var(--idg-border-control-style)
@@ -118,7 +118,7 @@ idg-layout a:not(.brand, .hero-link) {
 .footer-content {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   gap: var(--idg-space-xs);
 }
 
