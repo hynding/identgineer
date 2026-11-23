@@ -139,7 +139,7 @@ describe("createFakeDashboardSource", () => {
 
   it("hands out copies, so a caller that changes an answer changes nothing in the source", async () => {
     const { source } = fake();
-    const list = (await source.listProperties()) as { name: string }[];
+    const list = (await source.listProperties()) as unknown as { name: string }[];
     (list[0] as { name: string }).name = "changed";
     expect((await source.listProperties())[0]?.name).toBe("Docs");
   });

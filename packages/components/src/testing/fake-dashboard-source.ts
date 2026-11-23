@@ -119,12 +119,12 @@ export function createFakeDashboardSource(options: FakeDashboardOptions) {
     source,
     calls,
     /** The next call of `method` rejects with `error`, once. */
-    failNext(method: Method, error: DashboardError): void {
+    failNext: (method: Method, error: DashboardError): void => {
       failures.set(method, [...(failures.get(method) ?? []), error]);
     },
     /** Every call waits until the function this returns is called. */
-    hold(): () => void {
-      let release = () => {};
+    hold: (): (() => void) => {
+      let release = (): void => undefined;
       gate = new Promise<void>((resolve) => {
         release = () => {
           gate = undefined;

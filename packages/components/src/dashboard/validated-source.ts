@@ -58,10 +58,11 @@ function checkQuery(propertyId: unknown, query: EventQuery): DashboardError | un
       `the page size must be a whole number from 1 to ${String(DASHBOARD_LIMITS.pageSize)}`,
     );
   }
-  const sort: EventQuery["sort"] | undefined = query.sort;
+  // Typed as unknown: the call may come from script, which checks nothing.
+  const sort: { key?: unknown; direction?: unknown } | undefined = query.sort;
   if (
     sort !== undefined &&
-    (!EVENT_SORT_KEYS.includes(sort.key) ||
+    (!EVENT_SORT_KEYS.some((key) => key === sort.key) ||
       (sort.direction !== "ascending" && sort.direction !== "descending"))
   ) {
     return invalidRequest("listEvents", "the sort is not by time or name, ascending or descending");

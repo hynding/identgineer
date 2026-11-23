@@ -86,7 +86,7 @@ describe("validatedSource", () => {
       listEvents: () => {
         throw new Error("sync throw with a secret");
       },
-      summary: () => Promise.reject("a string"),
+      summary: () => Promise.reject(new RangeError("another kind of error")),
     });
     for (const call of [
       source.listProperties(),
@@ -94,8 +94,8 @@ describe("validatedSource", () => {
       source.summary("p1", "7d"),
     ]) {
       await expect(call).rejects.toMatchObject({ code: "unavailable" });
-      await call.catch((error: Error) => {
-        expect(error.message).not.toMatch(/abc123|secret/);
+      await call.catch((error: unknown) => {
+        expect((error as Error).message).not.toMatch(/abc123|secret/);
       });
     }
   });
