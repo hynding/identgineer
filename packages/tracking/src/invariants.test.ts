@@ -67,6 +67,8 @@ interface Scenario {
   readonly violations: string[];
   /** Every collector ever opened: a reloaded tab leaves its collector behind. */
   readonly collectors: FakeCollector[];
+  /** Every session id that any tab ever held or sent. */
+  readonly sessionIds: Set<string>;
   failingLocal: boolean;
   gpc: boolean;
   dnt: boolean;
@@ -127,8 +129,27 @@ const open = (
     }
     const parsed = parseTrackingBatch(JSON.parse(request.body));
     if (!parsed.ok) scenario.violations.push(`a batch that does not validate: ${parsed.error}`);
-    else if (parsed.value.events.length > config.maxBatchSize)
-      scenario.violations.push("a batch over maxBatchSize");
+    else {
+      if (parsed.value.events.length > config.maxBatchSize)
+        scenario.violations.push("a batch over maxBatchSize");
+      for (const event of parsed.value.events) {
+        if (event.session !== undefined) scenario.sessionIds.add(event.session);
+      }
+      // A beacon is fire-and-forget and does not count as a request in flight, but it must never
+      // repeat what a fetch of the same tab is still waiting on.
+      if (parsed.value.transport === "beacon") {
+        const waiting = new Set(
+          collector.requests
+            .filter((earlier) => earlier.via === "fetch" && earlier.pending)
+            .flatMap((earlier) => {
+              const batch = parseTrackingBatch(JSON.parse(earlier.body));
+              return batch.ok ? batch.value.events.map((event) => event.id) : [];
+            }),
+        );
+        if (parsed.value.events.some((event) => waiting.has(event.id)))
+          scenario.violations.push("a beacon repeats events of a fetch still in flight");
+      }
+    }
   });
   const watch = (storage: typeof world.local, name: string): void => {
     storage.observe((call) => {
@@ -387,6 +408,22 @@ const queueInvariants = (scenario: Scenario): string[] => {
       found.push("the stored queue is over its count cap");
     if (bytes > config.maxQueueBytes) found.push("the stored queue is over its byte cap");
   }
+  for (const { tab } of scenario.tabs) {
+    const held = tab.session.peek(SESSION_KEY);
+    if (held === null) continue;
+    try {
+      const { id } = JSON.parse(held) as { id?: unknown };
+      if (typeof id === "string") scenario.sessionIds.add(id);
+    } catch {
+      // A failing session storage may have left nothing readable.
+    }
+  }
+  for (const key of world.local.keys()) {
+    const value = world.local.peek(key) ?? "";
+    for (const id of scenario.sessionIds) {
+      if (value.includes(id)) found.push(`localStorage ${key} holds a session id`);
+    }
+  }
   const allowed = new Set<string>([CONSENT_KEY, QUEUE_KEY]);
   for (const key of world.local.keys())
     if (!allowed.has(key)) found.push(`unexpected localStorage key ${key}`);
@@ -406,6 +443,7 @@ const run = async (seed: number, steps: number): Promise<void> => {
     tabs: [],
     violations: [],
     collectors: [],
+    sessionIds: new Set(),
     failingLocal: false,
     gpc: false,
     dnt: false,
@@ -445,6 +483,7 @@ describe("invariants over random interleavings", () => {
         tabs: [],
         violations: [],
         collectors: [],
+        sessionIds: new Set(),
         failingLocal: false,
         gpc: false,
         dnt: false,
