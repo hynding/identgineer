@@ -182,32 +182,32 @@ given an id and `no-random-source` is reported: ids never come from `Math.random
 
 ## Options
 
-| Option                   | Default                                   | Meaning                                                                                                |
-| ------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `endpoint`               | required                                  | An absolute `https:` URL (or `http:` on `localhost` or `127.0.0.1`); no credentials, query or fragment |
-| `writeKey`               | required                                  | The public write key, `[A-Za-z0-9_-]{16,128}`                                                          |
-| `events`                 | required                                  | The declared events and the type of each property                                                      |
-| `consentVersion`         | `1`                                       | A positive whole number; raising it asks everyone again                                                |
-| `autoPageViews`          | `false`                                   | Record page views by itself                                                                            |
-| `allowedQueryParameters` | `[]`                                      | Query parameter names kept in the path, `[A-Za-z0-9_.~-]{1,64}` each                                   |
-| `maxStringLength`        | `256`                                     | UTF-16 units kept of a string (1 to 1024)                                                              |
-| `maxBatchSize`           | `20`                                      | Events that trigger a flush, and the most in one request (1 to 500)                                    |
-| `flushInterval`          | `5000`                                    | Milliseconds from the first waiting event to a flush                                                   |
-| `maxPayloadBytes`        | `32768`                                   | The most UTF-8 bytes of a request body (1024 to 65536, the limit of a beacon)                          |
-| `maxQueueEvents`         | `200`                                     | The most events kept for delivery; the oldest go first                                                 |
-| `maxQueueBytes`          | `102400`                                  | The most bytes of events kept for delivery                                                             |
-| `sessionTimeout`         | `1800000`                                 | Milliseconds of inactivity after which the session id changes (30 minutes)                             |
-| `requestTimeout`         | `30000`                                   | Milliseconds before a request with no answer is aborted and retried (1000 to 600000)                   |
-| `onDrop`                 | none                                      | Told why something was dropped; an exception from it is ignored                                        |
-| `fetch`                  | `globalThis.fetch`                        | `null` sends nothing                                                                                   |
-| `sendBeacon`             | `navigator.sendBeacon`                    | `null` falls back to a keepalive `fetch` when the page is hidden                                       |
-| `localStorage`           | `globalThis.localStorage`                 | Consent record and offline queue; `null`, or one that fails, means consent cannot be recorded          |
-| `sessionStorage`         | `globalThis.sessionStorage`               | The session id                                                                                         |
-| `clock`                  | `Date.now` and `setTimeout`               | `{ now, setTimeout, clearTimeout }`                                                                    |
-| `crypto`                 | `globalThis.crypto`                       | `getRandomValues` for ids                                                                              |
-| `random`                 | `Math.random`                             | Retry jitter only                                                                                      |
-| `page`                   | the browser's `window` and `document`     | Location, referrer, signals, and the hidden, online and navigation events                              |
-| `crossTab`               | a `BroadcastChannel` where there is a DOM | `{ post, subscribe }`; `null` turns it off                                                             |
+| Option                   | Default                                   | Meaning                                                                                                            |
+| ------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `endpoint`               | required                                  | An absolute `https:` URL (or `http:` on `localhost` or `127.0.0.1`); no credentials, query or fragment             |
+| `writeKey`               | required                                  | The public write key, `[A-Za-z0-9_-]{16,128}`                                                                      |
+| `events`                 | required                                  | The declared events and the type of each property                                                                  |
+| `consentVersion`         | `1`                                       | A positive whole number; raising it asks everyone again                                                            |
+| `autoPageViews`          | `false`                                   | Record page views by itself                                                                                        |
+| `allowedQueryParameters` | `[]`                                      | Query parameter names kept in the path, `[A-Za-z0-9_.~-]{1,64}` each                                               |
+| `maxStringLength`        | `256`                                     | UTF-16 units kept of a string (1 to 1024)                                                                          |
+| `maxBatchSize`           | `20`                                      | Events that trigger a flush, and the most in one request (1 to 500)                                                |
+| `flushInterval`          | `5000`                                    | Milliseconds from the first waiting event to a flush                                                               |
+| `maxPayloadBytes`        | `32768`                                   | The most UTF-8 bytes of a request body (1024 to 65536, the limit of a beacon)                                      |
+| `maxQueueEvents`         | `200`                                     | The most events kept for delivery; the oldest go first                                                             |
+| `maxQueueBytes`          | `102400`                                  | The most bytes of events kept for delivery                                                                         |
+| `sessionTimeout`         | `1800000`                                 | Milliseconds of inactivity after which the session id changes (30 minutes)                                         |
+| `requestTimeout`         | `30000`                                   | Milliseconds before a request with no answer is aborted and retried (1000 to 600000)                               |
+| `onDrop`                 | none                                      | Told why something was dropped; an exception from it is ignored                                                    |
+| `fetch`                  | `globalThis.fetch`                        | `null` sends nothing                                                                                               |
+| `sendBeacon`             | `navigator.sendBeacon`                    | `null` falls back to a keepalive `fetch` when the page is hidden                                                   |
+| `localStorage`           | `globalThis.localStorage`                 | Consent record, offline queue and delivered-id marker; `null`, or one that fails, means consent cannot be recorded |
+| `sessionStorage`         | `globalThis.sessionStorage`               | The session id                                                                                                     |
+| `clock`                  | `Date.now` and `setTimeout`               | `{ now, setTimeout, clearTimeout }`                                                                                |
+| `crypto`                 | `globalThis.crypto`                       | `getRandomValues` for ids                                                                                          |
+| `random`                 | `Math.random`                             | Retry jitter only                                                                                                  |
+| `page`                   | the browser's `window` and `document`     | Location, referrer, signals, and the hidden, online and navigation events                                          |
+| `crossTab`               | a `BroadcastChannel` where there is a DOM | `{ post, subscribe }`; `null` turns it off                                                                         |
 
 The numeric options are checked at creation and throw a `TypeError` naming the option.
 
@@ -254,9 +254,12 @@ The numeric options are checked at creation and throw a `TypeError` naming the o
   queue, so two tabs can both hold an event; the one that delivers it records its id in
   `idg.tracking.delivered.v1` (at most 200 ids, none older than 24 hours, written only while
   consent is granted and removed on revocation), and a tab drops any id it finds there from its
-  queue and from what it writes, so the event is not sent twice. The server still de-duplicates
-  by id. The read and the write
-  are not atomic across tabs, so two tabs writing in the same instant can still lose an event.
+  queue and from what it writes, so the event is not sent twice. Beyond 200 deliveries in 24 hours
+  the oldest ids leave that record, and a tab still holding such an event can send it again, so
+  the server still de-duplicates by id. The read and the write are not atomic across tabs, so two
+  tabs writing in the same instant can still lose an event. Every page of one origin should use
+  the same `maxQueueBytes`: a page with a smaller limit discards a stored queue written under a
+  larger one.
 
 ## Wire format
 
