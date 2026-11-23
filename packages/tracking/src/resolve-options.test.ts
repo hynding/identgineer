@@ -22,6 +22,7 @@ describe("resolveOptions", () => {
       maxQueueEvents: 200,
       maxQueueBytes: 102_400,
       sessionTimeout: 1_800_000,
+      requestTimeout: 30_000,
     });
     expect([...resolved.allowedQueryParameters]).toEqual([]);
   });
@@ -38,6 +39,7 @@ describe("resolveOptions", () => {
       maxQueueEvents: 200,
       maxQueueBytes: 102_400,
       sessionTimeout: 1_800_000,
+      requestTimeout: 30_000,
     });
   });
 
@@ -121,6 +123,9 @@ describe("resolveOptions", () => {
     ["maxQueueBytes", 4_194_305],
     ["sessionTimeout", 999],
     ["sessionTimeout", 86_400_001],
+    ["requestTimeout", 999],
+    ["requestTimeout", 600_001],
+    ["requestTimeout", 1.5],
     ["flushInterval", Number.NaN],
     ["flushInterval", Infinity],
   ])("throws for %s of %j", (name, value) => {
@@ -138,6 +143,7 @@ describe("resolveOptions", () => {
         maxQueueEvents: 10_000,
         maxQueueBytes: 4_194_304,
         sessionTimeout: 1000,
+        requestTimeout: 1000,
       }),
     ).not.toThrow();
   });

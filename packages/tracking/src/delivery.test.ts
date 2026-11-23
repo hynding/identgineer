@@ -447,7 +447,7 @@ describe("leaving the page", () => {
     expect(tab.world.collector.requests).toEqual([]);
   });
 
-  it("starts no second request when one is in flight, and keeps the events stored", async () => {
+  it("starts no second fetch when one is in flight: what is not in it goes by beacon", async () => {
     const tab = grantedTab(createWorld());
     tab.world.collector.answer("hang");
     trackMany(tab, 1);
@@ -456,8 +456,10 @@ describe("leaving the page", () => {
     tab.tracker.track("clicked", { target: "second" });
     tab.page.hide();
     await settle();
-    expect(tab.world.collector.requests).toHaveLength(1);
-    expect(tab.world.local.peek(QUEUE_KEY)).toContain("second");
+    const { requests } = tab.world.collector;
+    expect(requests.map((request) => request.via)).toEqual(["fetch", "beacon"]);
+    expect(tab.world.collector.maxInFlight).toBe(1);
+    expect(tab.world.local.peek(QUEUE_KEY)).not.toContain("second");
     tab.world.collector.releaseHanging();
   });
 
