@@ -1474,6 +1474,40 @@
   }
 }
 
+/* A container narrower than the medium size, which a small window or large text makes it, is too
+   narrow for the brand and the menu button side by side: the button takes the width of its padding
+   and its label, and the brand is left a letter a line. The button gets a row of its own, no wider
+   than the container, with its padding bounded by the room, and the actions are free to shrink.
+   It comes last so that it holds in every layout. */
+@container idg-shell (max-inline-size: 20rem) {
+  .header {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "brand"
+      "toggle"
+      "nav"
+      "actions";
+    row-gap: var(--idg-space-2xs);
+  }
+
+  .toggle {
+    justify-self: start;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    padding-inline: min(var(--idg-density-control-padding-inline), var(--idg-space-s));
+  }
+
+  /* A name sized for a wider container, or a masthead, would take the whole of this one a word at
+     a time, and a word that is wider than the container breaks anywhere. */
+  .brand {
+    font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  }
+
+  .actions {
+    min-inline-size: 0;
+  }
+}
+
 @media (forced-colors: active) {
   .toggle,
   .close {
