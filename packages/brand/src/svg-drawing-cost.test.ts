@@ -172,13 +172,31 @@ describe("the drawing cost of a logo", () => {
   });
 
   it("counts the dashes of every shape a dash array could reach, with the shortest period in the logo", () => {
-    expect(cost('<path d="M0 0H100" stroke-dasharray="1"/>')).toBe(84);
+    // Each subpath starts the pattern afresh, so up to one more repeat each.
+    expect(cost('<path d="M0 0H100" stroke-dasharray="1"/>')).toBe(85);
     expect(
       cost('<g stroke-dasharray="10"><path d="M0 0H100"/><rect width="10" height="10"/></g>'),
-    ).toBe(78);
-    expect(cost('<path d="M0 0H100"/><path d="M0 0H1" stroke-dasharray="1 1"/>')).toBe(118);
-    expect(cost('<rect width="100%" height="100%" stroke-dasharray="1"/>')).toBe(57);
+    ).toBe(80);
+    expect(cost('<path d="M0 0H100"/><path d="M0 0H1" stroke-dasharray="1 1"/>')).toBe(120);
+    expect(cost('<rect width="100%" height="100%" stroke-dasharray="1"/>')).toBe(58);
     expect(cost('<path d="M0 0H100" stroke-dasharray="0 0"/>')).toBe(34);
+    expect(cost('<path d="M0 0H100M0 10H100" stroke-dasharray="1"/>')).toBe(1 + 34 + 102);
+  });
+
+  it("counts every dash in each repeat of a dash array, an odd one repeated twice", () => {
+    // 64 lengths of 1: a period of 64 holding 32 dashes, (2 + 1) x 32 along 100.
+    const sixtyFour = Array.from({ length: 64 }, () => "1").join(" ");
+    expect(cost(`<path d="M0 0H100" stroke-dasharray="${sixtyFour}"/>`)).toBe(1 + 33 + 96);
+    // 1 2 3: a period of 12 holding 3 dashes, (9 + 1) x 3.
+    expect(cost('<path d="M0 0H100" stroke-dasharray="1 2 3"/>')).toBe(1 + 33 + 30);
+    // A dash array inherits, so every shape is counted at the shortest period and the most dashes
+    // in a repeat anywhere in the logo: a period of 20 holding 32 dashes here.
+    const long = Array.from({ length: 64 }, () => "5").join(" ");
+    expect(
+      cost(
+        `<path d="M0 0H100" stroke-dasharray="10"/><path d="M0 0H1" stroke-dasharray="${long}"/>`,
+      ),
+    ).toBe(1 + (33 + 6 * 32) + (33 + 2 * 32));
   });
 
   it("drops what would make the dash count depend on the page: em and ex lengths, percentage dashes, non-scaling strokes", () => {
@@ -214,6 +232,16 @@ describe("the drawing cost limit", () => {
       svg(
         '<path d="M0 0L999999 999999L0 999999L999999 0" stroke="#000" stroke-dasharray="0.000001"/>',
         "0 0 999999 999999",
+      ),
+    ],
+    [
+      "the reviewer's hairline path with a dash array of 64 lengths, drawn fourteen times",
+      readFileSync(
+        new URL(
+          "./__fixtures__/hostile-svg/dashes-of-64-lengths-on-a-hairline.svg",
+          import.meta.url,
+        ),
+        "utf8",
       ),
     ],
     [

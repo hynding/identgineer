@@ -75,7 +75,7 @@ interface Measure {
 interface Item {
   readonly id: string;
   readonly markup: string;
-  readonly measure: (period: number) => Measure;
+  readonly measure: (dashes: Dashes) => Measure;
   /** What it paints, drawn as itself or (`clipping`) as coverage inside a clip path. */
   readonly paint: (clipping: boolean) => Paint;
   /** Whether it has a clip path or mask of its own; for a clip path, whether what it holds has. */
@@ -92,9 +92,16 @@ function add(left: Measure, right: Measure): Measure {
   };
 }
 
-function shape(geometry: number, length: number, period: number): Measure {
-  const dashes = period > 0 ? Math.ceil(length / period) * WEIGHT.dash : 0;
-  return { cost: WEIGHT.shape + geometry + dashes, masks: 0, depth: 0 };
+/** The shortest dash period in a logo and the most dashes in one repeat, worked out separately. */
+interface Dashes {
+  readonly period: number;
+  readonly perPeriod: number;
+}
+
+function shape(geometry: number, length: number, dashes: Dashes): Measure {
+  // Every shape here is one subpath, which may start the pattern afresh: one more repeat.
+  const count = dashes.period > 0 ? (Math.ceil(length / dashes.period) + 1) * dashes.perPeriod : 0;
+  return { cost: WEIGHT.shape + geometry + count * WEIGHT.dash, masks: 0, depth: 0 };
 }
 
 class LogoGraph {
@@ -103,6 +110,7 @@ class LogoGraph {
   private readonly masks: Item[] = [];
   private readonly shapes: Item[] = [];
   private readonly periods: number[] = [];
+  private readonly perPeriods: number[] = [];
 
   constructor(random: () => number) {
     this.random = random;
@@ -119,8 +127,12 @@ class LogoGraph {
   private dash(): string {
     if (this.random() >= 0.2) return "";
     const length = (1 + this.integer(5000)) / 1000;
-    this.periods.push(2 * length);
-    return ` stroke-dasharray="${String(length)}"`;
+    // An odd array repeats twice over.
+    const entries = this.pick([1, 2, 3, 64]);
+    const odd = entries % 2 === 1;
+    this.periods.push((odd ? 2 : 1) * entries * length);
+    this.perPeriods.push(odd ? entries : entries / 2);
+    return ` stroke-dasharray="${Array.from({ length: entries }, () => String(length)).join(" ")}"`;
   }
 
   private path(id: string): Item {
@@ -186,7 +198,7 @@ class LogoGraph {
     return {
       id,
       markup: `<path id="${id}" d="${data}"${this.dash()}/>`,
-      measure: (period) => shape(geometry, length, period),
+      measure: (dashes) => shape(geometry, length, dashes),
       paint: () => painted,
       clipped: false,
     };
@@ -198,7 +210,7 @@ class LogoGraph {
       return {
         id,
         markup: `<rect id="${id}" width="${String(width)}" height="${String(height)}"${this.dash()}/>`,
-        measure: (period) => shape(4 * WEIGHT.line, 2 * (width + height), period),
+        measure: (dashes) => shape(4 * WEIGHT.line, 2 * (width + height), dashes),
         clipped: false,
         paint: () =>
           filled(width * height, 4, 2 * (width + height), {
@@ -213,7 +225,7 @@ class LogoGraph {
     return {
       id,
       markup: `<circle id="${id}" r="${String(radius)}"${this.dash()}/>`,
-      measure: (period) => shape(4 * WEIGHT.cubic, 2 * Math.PI * radius, period),
+      measure: (dashes) => shape(4 * WEIGHT.cubic, 2 * Math.PI * radius, dashes),
       clipped: false,
       paint: () =>
         filled(Math.PI * radius * radius, 4, 2 * Math.PI * radius, {
@@ -228,8 +240,8 @@ class LogoGraph {
   private use(target: Item): Omit<Item, "id"> {
     return {
       markup: `<use href="#${target.id}"/>`,
-      measure: (period) =>
-        add({ cost: WEIGHT.element, masks: 0, depth: 0 }, target.measure(period)),
+      measure: (dashes) =>
+        add({ cost: WEIGHT.element, masks: 0, depth: 0 }, target.measure(dashes)),
       paint: (clipping) => target.paint(clipping),
       clipped: target.clipped,
     };
@@ -237,7 +249,7 @@ class LogoGraph {
 
   private applied(mask: Item | undefined): {
     markup: string;
-    measure: (period: number) => Measure;
+    measure: (dashes: Dashes) => Measure;
     /** What applying it to a box paints; a mask inside a clip path is not applied. */
     paint: (box: Box, clipping: boolean) => number;
   } {
@@ -245,8 +257,8 @@ class LogoGraph {
     const clip = mask.id.startsWith("c");
     return {
       markup: ` ${clip ? "clip-path" : "mask"}="url(#${mask.id})"`,
-      measure: (period) => {
-        const inside = mask.measure(period);
+      measure: (dashes) => {
+        const inside = mask.measure(dashes);
         return {
           cost: WEIGHT.mask + inside.cost,
           masks: 1 + inside.masks,
@@ -277,8 +289,8 @@ class LogoGraph {
     return {
       id,
       markup: `<g id="${id}"${layer ? ' opacity="0.5"' : ""}${applied.markup}>${uses.map((use) => use.markup).join("")}</g>`,
-      measure: (period) =>
-        [applied.measure(period), ...uses.map((use) => use.measure(period))].reduce(add, {
+      measure: (dashes) =>
+        [applied.measure(dashes), ...uses.map((use) => use.measure(dashes))].reduce(add, {
           cost: WEIGHT.element + (layer ? WEIGHT.layer : 0),
           masks: 0,
           depth: 0,
@@ -307,8 +319,8 @@ class LogoGraph {
       return {
         id,
         markup: `<clipPath id="${id}">${content.markup}</clipPath>`,
-        measure: (period) =>
-          add({ cost: WEIGHT.element, masks: 0, depth: 0 }, content.measure(period)),
+        measure: (dashes) =>
+          add({ cost: WEIGHT.element, masks: 0, depth: 0 }, content.measure(dashes)),
         paint: (clipping) => content.paint(clipping),
         clipped: content.clipped,
       };
@@ -316,10 +328,10 @@ class LogoGraph {
     return {
       id,
       markup: `<mask id="${id}"><g${applied.markup}>${content.markup}</g></mask>`,
-      measure: (period) =>
+      measure: (dashes) =>
         add(
           { cost: 2 * WEIGHT.element, masks: 0, depth: 0 },
-          add(applied.measure(period), content.measure(period)),
+          add(applied.measure(dashes), content.measure(dashes)),
         ),
       // What its content paints each time it is applied.
       paint: (clipping) => {
@@ -355,9 +367,12 @@ class LogoGraph {
     const roots = Array.from({ length: 1 + this.integer(40) }, () =>
       this.use(this.pick(this.items)),
     );
-    const period = this.periods.length === 0 ? 0 : Math.min(...this.periods);
+    const dashes: Dashes = {
+      period: this.periods.length === 0 ? 0 : Math.min(...this.periods),
+      perPeriod: this.perPeriods.length === 0 ? 0 : Math.max(...this.perPeriods),
+    };
     const expected = roots
-      .map((root) => root.measure(period))
+      .map((root) => root.measure(dashes))
       .reduce(add, { cost: WEIGHT.element, masks: 0, depth: 0 });
     return {
       svg:

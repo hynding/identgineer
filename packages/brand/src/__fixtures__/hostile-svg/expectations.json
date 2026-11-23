@@ -352,6 +352,12 @@
       }
     ]
   },
+  "dashes-of-63-lengths-in-a-burst.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "dashes-of-64-lengths-on-a-hairline.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
   "dashes-on-a-wide-stroke.svg": {
     "outcome": "reject:overdraw-too-large"
   },
@@ -1254,6 +1260,10 @@
         "reason": "foreign-namespace"
       }
     ]
+  },
+  "serpentine-of-25000-segments-drawn-seven-times.svg": {
+    "outcome": "accept",
+    "removed": []
   },
   "smil-anchor-set-href.svg": {
     "outcome": "accept",

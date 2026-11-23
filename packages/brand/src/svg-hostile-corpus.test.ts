@@ -84,7 +84,10 @@ const KEPT_AS_TEXT_OR_RENAMED = new Set([
 ]);
 
 // Files whose payload is work a renderer does cheaply, so they are accepted as they are.
-const WITHIN_BUDGET = new Set(["clip-path-of-one-self-crossing-path.svg"]);
+const WITHIN_BUDGET = new Set([
+  "clip-path-of-one-self-crossing-path.svg",
+  "serpentine-of-25000-segments-drawn-seven-times.svg",
+]);
 
 function withoutPlace(removal: SvgLogoRemoval): ExpectedRemoval {
   const names: ExpectedRemoval = { element: removal.element, reason: removal.reason };
