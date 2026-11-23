@@ -1,6 +1,6 @@
 import { emitBrandThemeCss, generateBrandTheme, parseBrandKit } from "@identgineer/brand";
 import type { Page } from "@playwright/test";
-import { SCHEMES, THEMES, applyAxes } from "./axes";
+import { DESIGNS, SCHEMES, THEMES, applyAxes } from "./axes";
 import { contrastRatio } from "./contrast";
 import { expect, test } from "./fixtures";
 
@@ -102,42 +102,105 @@ async function hydrated(page: Page): Promise<void> {
   );
 }
 
-/** The primary submit button's fill, border or inset ring reaches 3:1 against what is behind it. */
-async function expectVisibleBoundary(page: Page): Promise<void> {
-  const { background, border, borderWidth, ring, behind } = await page.evaluate(() => {
-    const host = document.querySelector('idg-button[type="submit"]');
+interface Edge {
+  readonly kind: string;
+  readonly color: string;
+  /** Width in pixels, averaged over the four sides, halved for a broken (dashed or dotted) line. */
+  readonly width: number;
+}
+
+interface Control {
+  readonly fill: string;
+  readonly behind: string;
+  readonly edges: readonly Edge[];
+}
+
+/** What the browser draws around a button: its border, outline and zero-blur inset rings. */
+async function readControl(page: Page, selector: string): Promise<Control> {
+  return page.evaluate((hostSelector) => {
+    const host = document.querySelector(hostSelector);
     const control = host?.shadowRoot?.querySelector("button");
-    if (!host || !control) throw new Error("missing the submit button");
+    if (!host || !control) throw new Error(`missing ${hostSelector}`);
     let node: Node | null = host.parentNode;
-    let page = getComputedStyle(document.documentElement).backgroundColor;
+    let behind = getComputedStyle(document.documentElement).backgroundColor;
     while (node) {
       if (node instanceof Element) {
         const color = getComputedStyle(node).backgroundColor;
         if (color !== "rgba(0, 0, 0, 0)") {
-          page = color;
+          behind = color;
           break;
         }
       }
       node = node.parentNode instanceof ShadowRoot ? node.parentNode.host : node.parentNode;
     }
     const style = getComputedStyle(control);
-    const inset = /(rgba?\([^)]*\))[^,]*\binset\b|\binset\b[^,]*?(rgba?\([^)]*\))/.exec(
-      style.boxShadow,
-    );
-    return {
-      background: style.backgroundColor,
-      border: style.borderTopColor,
-      borderWidth: Number.parseFloat(style.borderTopWidth),
-      ring: inset?.[1] ?? inset?.[2] ?? "",
-      behind: page,
-    };
-  });
-  const edges = [background, ...(borderWidth > 0 ? [border] : []), ...(ring === "" ? [] : [ring])];
-  const best = Math.max(...edges.map((edge) => contrastRatio(edge, behind)));
+    const drawn = (lineStyle: string) =>
+      lineStyle === "none" || lineStyle === "hidden"
+        ? 0
+        : /dashed|dotted/.test(lineStyle)
+          ? 0.5
+          : 1;
+    const edges: Edge[] = [];
+    for (const side of ["Top", "Right", "Bottom", "Left"] as const) {
+      const width = Number.parseFloat(style.getPropertyValue(`border-${side.toLowerCase()}-width`));
+      const coverage = drawn(style.getPropertyValue(`border-${side.toLowerCase()}-style`));
+      if (width * coverage > 0) {
+        edges.push({
+          kind: `border ${side.toLowerCase()}`,
+          color: style.getPropertyValue(`border-${side.toLowerCase()}-color`),
+          width: (width * coverage) / 4,
+        });
+      }
+    }
+    const outline = Number.parseFloat(style.outlineWidth) * drawn(style.outlineStyle);
+    if (outline > 0) edges.push({ kind: "outline", color: style.outlineColor, width: outline });
+    for (const shadow of style.boxShadow.split(/,(?![^(]*\))/)) {
+      const ring = /(rgba?\([^)]*\)) 0px 0px 0px ([\d.]+)px inset/.exec(shadow.trim());
+      if (ring?.[1] && ring[2])
+        edges.push({ kind: "ring", color: ring[1], width: Number(ring[2]) });
+    }
+    return { fill: style.backgroundColor, behind, edges };
+  }, selector);
+}
+
+function describe(control: Control): string {
+  const edges = control.edges.map((edge) => `${edge.kind} ${edge.color} ${String(edge.width)}px`);
+  return `fill ${control.fill}, ${edges.join(", ") || "no edge"}, on ${control.behind}`;
+}
+
+/**
+ * How strongly a control is outlined against the page: the width of every edge that reaches 3:1,
+ * or 10 when an opaque fill itself does, since a fill that stands out needs no edge.
+ */
+function edgeStrength(control: Control): number {
+  const opaque = control.fill.startsWith("rgb(");
+  if (opaque && contrastRatio(control.fill, control.behind) >= 3) return 10;
+  return control.edges
+    .filter((edge) => contrastRatio(edge.color, control.behind) >= 3)
+    .reduce((total, edge) => total + edge.width, 0);
+}
+
+const PRIMARY = 'idg-button[type="submit"]';
+const SECONDARY = 'idg-button[type="reset"][variant="secondary"]';
+
+/** The primary submit button's fill or one of its edges reaches 3:1 against what is behind it. */
+async function expectVisibleBoundary(page: Page): Promise<void> {
+  const control = await readControl(page, PRIMARY);
+  const best = Math.max(
+    contrastRatio(control.fill, control.behind),
+    ...control.edges.map((edge) => contrastRatio(edge.color, control.behind)),
+  );
+  expect(best, describe(control)).toBeGreaterThanOrEqual(3);
+}
+
+/** The primary is outlined clearly more strongly than the secondary beside it, by 1px or more. */
+async function expectPrimaryStandsOut(page: Page): Promise<void> {
+  const primary = await readControl(page, PRIMARY);
+  const secondary = await readControl(page, SECONDARY);
   expect(
-    best,
-    `fill ${background}, border ${border} (${String(borderWidth)}px), ring ${ring}, on ${behind}`,
-  ).toBeGreaterThanOrEqual(3);
+    edgeStrength(primary) - edgeStrength(secondary),
+    `primary: ${describe(primary)}; secondary: ${describe(secondary)}`,
+  ).toBeGreaterThanOrEqual(1);
 }
 
 const FIXTURES = [
@@ -167,7 +230,7 @@ test.describe("accent state indicators", () => {
 });
 
 test.describe("primary button boundary", () => {
-  for (const design of ["flat", "soft", "elevated"]) {
+  for (const design of DESIGNS) {
     for (const theme of THEMES) {
       for (const scheme of SCHEMES) {
         test(`is visible against the page in ${design}, ${theme} ${scheme}`, async ({ page }) => {
@@ -200,32 +263,64 @@ async function adoptBrandTheme(page: Page, id: string, primary: string): Promise
   }, css);
 }
 
-test.describe("generated brand themes with a light accent", () => {
-  for (const [id, primary] of [
-    ["sunbeam", "#facc15"],
-    ["snowfall", "#ffffff"],
-  ] as const) {
-    for (const [kind, path] of FIXTURES) {
-      test(`${kind} marks state at 3:1 or more with ${primary} in light`, async ({ page }) => {
-        await page.goto(path);
+const BRANDS = [
+  ["sunbeam", "#facc15"],
+  ["snowfall", "#ffffff"],
+  ["midnight", "#111827"],
+] as const;
+
+test.describe("generated brand themes", () => {
+  for (const [id, primary] of BRANDS) {
+    for (const scheme of SCHEMES) {
+      for (const [kind, path] of FIXTURES) {
+        test(`${kind} marks state at 3:1 or more with ${primary} in ${scheme}`, async ({
+          page,
+        }) => {
+          await page.goto(path);
+          await hydrated(page);
+          await adoptBrandTheme(page, id, primary);
+          await applyAxes(page, { theme: id, scheme });
+          const accent = await page.evaluate(() =>
+            getComputedStyle(document.documentElement)
+              .getPropertyValue("--idg-color-accent")
+              .trim(),
+          );
+          expect(accent).toBe(primary);
+          if (kind === "forms") {
+            for (const design of DESIGNS) {
+              await applyAxes(page, { design });
+              await expectVisibleBoundary(page);
+            }
+            await applyAxes(page, { design: "flat" });
+          }
+          for (const { name, mark, against } of await measure(page, kind)) {
+            expect(
+              contrastRatio(mark, against),
+              `${name}: ${mark} on ${against}`,
+            ).toBeGreaterThanOrEqual(3);
+          }
+        });
+      }
+    }
+  }
+});
+
+/** Accents that blend with the page: the primary must still read as primary next to the secondary. */
+const BLENDING = [
+  { theme: "citrus", scheme: "light", primary: undefined },
+  { theme: "snowfall", scheme: "light", primary: "#ffffff" },
+  { theme: "midnight", scheme: "dark", primary: "#111827" },
+] as const;
+
+test.describe("primary next to secondary where the accent blends with the page", () => {
+  for (const { theme, scheme, primary } of BLENDING) {
+    for (const design of DESIGNS) {
+      test(`stands out in ${design}, ${theme} ${scheme}`, async ({ page }) => {
+        await page.goto("/fixtures/forms.html");
         await hydrated(page);
-        await adoptBrandTheme(page, id, primary);
-        await applyAxes(page, { theme: id, scheme: "light" });
-        const accent = await page.evaluate(() =>
-          getComputedStyle(document.documentElement).getPropertyValue("--idg-color-accent").trim(),
-        );
-        expect(accent).toBe(primary);
-        if (kind === "forms") {
-          await applyAxes(page, { design: "soft" });
-          await expectVisibleBoundary(page);
-          await applyAxes(page, { design: "flat" });
-        }
-        for (const { name, mark, against } of await measure(page, kind)) {
-          expect(
-            contrastRatio(mark, against),
-            `${name}: ${mark} on ${against}`,
-          ).toBeGreaterThanOrEqual(3);
-        }
+        if (primary) await adoptBrandTheme(page, theme, primary);
+        await applyAxes(page, { theme, scheme, design });
+        await expectPrimaryStandsOut(page);
       });
     }
   }
