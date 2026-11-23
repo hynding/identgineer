@@ -42,10 +42,6 @@
   backdrop-filter: var(--idg-surface-backdrop-filter);
   box-shadow: var(--_shadow);
   color: var(--idg-color-text);
-  /* A word wider than what the padding leaves the text, which the padding gives way to keep, breaks
-     rather than spill out of the card. Not `anywhere`, which would lower the minimum width of what
-     the page puts in the card, and a table in it would give up its scroller. */
-  overflow-wrap: break-word;
   font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
   line-height: var(--idg-font-body-line-height);
   letter-spacing: var(--idg-font-body-letter-spacing);
@@ -171,14 +167,7 @@
 .body,
 .footer {
   min-inline-size: 0;
-  /* The padding gives way in a card so narrow that the text would be left less than --idg-size-xs
-     (the smallest size of the scale, about a short word and a half of body text), down to the
-     smallest space. A card of at least twice the padding plus that is padded exactly as the
-     density says. */
-  padding-inline: min(
-    var(--_pad),
-    max(var(--idg-space-2xs), calc((100% - var(--idg-size-xs)) / 2))
-  );
+  padding-inline: var(--_pad);
 }
 
 .header {
@@ -252,5 +241,23 @@
 
   .stretch:focus-visible {
     outline: 2px solid Highlight;
+  }
+}
+
+/* In a narrow window the padding of a roomy density would leave the text a sliver of the card, and
+   a word wider than that leaves the window. The padding is capped and a word that still does not fit
+   breaks. This is the window, not the card: a percentage of the card's width would resolve to nothing
+   while a card is sized by its content, and make it narrower than it is anywhere else. A media query
+   counts rem at the browser's own size, so it does not follow the page's text size, which the
+   padding, being in rem, does. 28rem is --idg-size-l: a window narrower than a phone held upright. */
+@media (max-width: 28rem) {
+  .card {
+    overflow-wrap: break-word;
+  }
+
+  .header,
+  .body,
+  .footer {
+    padding-inline: min(var(--_pad), var(--idg-space-s));
   }
 }
