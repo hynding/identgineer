@@ -26,6 +26,6 @@ describe("formatDecidedAt", () => {
     expect(formatDecidedAt(Number.NaN, "en")).toBeUndefined();
     expect(formatDecidedAt(Number.POSITIVE_INFINITY, "en")).toBeUndefined();
     expect(formatDecidedAt(8.64e15 + 1, "en")).toBeUndefined();
-    expect(formatDecidedAt("yesterday" as never, "en")).toBeUndefined();
+    expect(formatDecidedAt("yesterday", "en")).toBeUndefined();
   });
 });

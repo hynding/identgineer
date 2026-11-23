@@ -43,7 +43,7 @@ beforeEach(() => {
 
 afterEach(() => {
   events.stop();
-  document.body.replaceChildren();
+  for (const child of Array.from(document.body.childNodes)) child.remove();
   vi.restoreAllMocks();
 });
 
@@ -75,7 +75,7 @@ describe("idg-consent-banner asking", () => {
   it("offers Decline, Accept analytics and Choose, in that order, and nothing pre-ticked", async () => {
     const { root } = await mount(createFakeConsent().consent);
     const order = Array.from(shadowOf(root).querySelectorAll("idg-button")).map((element) =>
-      (element.textContent ?? "").trim(),
+      element.textContent.trim(),
     );
     expect(order).toEqual(["Decline", "Accept analytics", "Choose"]);
     expect(shadowOf(root).querySelectorAll("input, idg-checkbox, idg-switch")).toHaveLength(0);
@@ -83,8 +83,10 @@ describe("idg-consent-banner asking", () => {
 
   it("gives Accept and Decline the same variant and size, and has no close control", async () => {
     const { root } = await mount(createFakeConsent().consent);
-    const decline = button(root, "idg-button.decline") as HTMLElement & Record<string, string>;
-    const accept = button(root, "idg-button.accept") as HTMLElement & Record<string, string>;
+    const decline = button(root, "idg-button.decline") as unknown as Record<string, string> &
+      HTMLElement;
+    const accept = button(root, "idg-button.accept") as unknown as Record<string, string> &
+      HTMLElement;
     expect(decline.variant).toBe(accept.variant);
     expect(decline.size).toBe(accept.size);
     expect(decline.hasAttribute("full-width")).toBe(accept.hasAttribute("full-width"));
@@ -221,24 +223,32 @@ describe("idg-consent-banner choices", () => {
 });
 
 describe("idg-consent-banner and the preferences", () => {
-  it("Choose tells the page, and opens the preferences the `preferences` id names", async () => {
+  // The render helper starts from an empty page, so the panel goes in after the banner.
+  function panelNamed(id: string) {
     const panel = document.createElement("div");
-    panel.id = "prefs";
+    panel.id = id;
     const open = vi.fn();
     Object.assign(panel, { open });
     document.body.append(panel);
+    return open;
+  }
+
+  it("Choose tells the page, and opens the preferences the `preferences` id names", async () => {
     const { root } = await mount(createFakeConsent().consent, { preferences: "prefs" });
+    const open = panelNamed("prefs");
     pressed(root, "idg-button.choose");
     expect(events.seen).toEqual([{ type: "idgConsentChoose", detail: undefined }]);
     expect(open).toHaveBeenCalledTimes(1);
   });
 
   it("opens a slotted preferences panel, drawing its slot only then if it is not modal", async () => {
-    const panel = document.createElement("div");
-    panel.setAttribute("slot", "preferences");
+    const { root, waitForChanges } = await mount(
+      createFakeConsent().consent,
+      {},
+      <div slot="preferences" />,
+    );
     const open = vi.fn();
-    Object.assign(panel, { open, modal: false });
-    const { root, waitForChanges } = await mount(createFakeConsent().consent, {}, panel);
+    Object.assign(root.querySelector('[slot="preferences"]') ?? {}, { open, modal: false });
     expect(shadowOf(root).querySelector('slot[name="preferences"]')).toBeNull();
     pressed(root, "idg-button.choose");
     await waitForChanges();
@@ -249,13 +259,17 @@ describe("idg-consent-banner and the preferences", () => {
     expect(open).toHaveBeenCalledTimes(1);
   });
 
-  it("leaves the preferences closed when a listener cancels idgConsentChoose", async () => {
-    const panel = document.createElement("div");
-    panel.id = "prefs";
+  it("draws the slot of a modal preferences panel at once, and opens it", async () => {
+    const { root } = await mount(createFakeConsent().consent, {}, <div slot="preferences" />);
     const open = vi.fn();
-    Object.assign(panel, { open });
-    document.body.append(panel);
+    Object.assign(root.querySelector('[slot="preferences"]') ?? {}, { open, modal: true });
+    pressed(root, "idg-button.choose");
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the preferences closed when a listener cancels idgConsentChoose", async () => {
     const { root } = await mount(createFakeConsent().consent, { preferences: "prefs" });
+    const open = panelNamed("prefs");
     const stop = (event: Event) => {
       event.preventDefault();
     };
@@ -275,10 +289,7 @@ describe("idg-consent-banner and the preferences", () => {
 });
 
 describe("idg-consent-banner under a browser privacy signal", () => {
-  it.each([
-    ["gpc", "Global Privacy Control"],
-    ["dnt", "Do Not Track"],
-  ] as const)("does not ask under %s, and renders nothing", async (reason) => {
+  it.each(["gpc", "dnt"] as const)("does not ask under %s, and renders nothing", async (reason) => {
     const fake = createFakeConsent({ state: "denied", reason });
     const { root } = await mount(fake.consent);
     expect(banner(root)).toBeNull();

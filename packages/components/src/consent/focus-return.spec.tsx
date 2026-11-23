@@ -10,7 +10,7 @@ function page(markup: { main?: boolean } = {}) {
 }
 
 afterEach(() => {
-  document.body.replaceChildren();
+  for (const child of Array.from(document.body.childNodes)) child.remove();
 });
 
 describe("returnFocus", () => {
@@ -57,6 +57,6 @@ describe("returnFocus", () => {
   });
 
   it("never throws, whatever it was given", () => {
-    expect(() => returnFocus({} as never, document)).not.toThrow();
+    expect(() => returnFocus({}, document)).not.toThrow();
   });
 });

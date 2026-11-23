@@ -61,7 +61,9 @@ describe("ConsentBinding", () => {
     const fake = createFakeConsent();
     fake.throwFrom("get");
     const { binding, seen, failures } = bound();
-    expect(() => binding.bind(fake.consent)).not.toThrow();
+    expect(() => {
+      binding.bind(fake.consent);
+    }).not.toThrow();
     expect(seen).toEqual([]);
     expect(failures).toEqual(["read"]);
     const odd = { ...createFakeConsent().consent, get: () => ({ state: "maybe" }) };
@@ -73,7 +75,9 @@ describe("ConsentBinding", () => {
     const fake = createFakeConsent({ state: "denied", reason: "dnt" });
     fake.throwFrom("onChange");
     const { binding, seen, failures } = bound();
-    expect(() => binding.bind(fake.consent)).not.toThrow();
+    expect(() => {
+      binding.bind(fake.consent);
+    }).not.toThrow();
     expect(seen).toEqual(["denied:dnt"]);
     expect(failures).toEqual([]);
   });
@@ -121,7 +125,9 @@ describe("ConsentBinding", () => {
     };
     const { binding } = bound();
     binding.bind(consent);
-    expect(() => binding.unbind()).not.toThrow();
+    expect(() => {
+      binding.unbind();
+    }).not.toThrow();
     expect(binding.current()).toBeUndefined();
   });
 });

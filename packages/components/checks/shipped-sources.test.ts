@@ -47,21 +47,26 @@ describe("shipped component sources", () => {
   );
 });
 
-// The identity components take the client the page creates; the SDK and its fake are only for
-// tests, so no shipped source may load them. A type import is erased, but none is needed either:
-// the components declare what they use in src/identity/identity-types.ts.
-describe("shipped component sources and the identity SDK", () => {
+// The identity components take the client the page creates, and the consent components the
+// tracker's consent object; the SDKs and their fakes are only for tests, so no shipped source may
+// load them. A type import is erased, but none is needed either: the components declare what they
+// use in src/identity/identity-types.ts and src/consent/consent-types.ts.
+describe.each([
+  { sdk: "identity", sample: "sign-in.tsx" },
+  { sdk: "tracking", sample: "consent-banner.tsx" },
+])("shipped component sources and the $sdk SDK", ({ sdk, sample }) => {
   // src/testing holds the unit tests' helpers, which the build leaves out.
   const shipped = sources.filter((file) => !relative(SRC, file).startsWith(`testing${sep}`));
+  const importsSdk = new RegExp(`["']@identgineer/${sdk}(?:/[^"']*)?["']`);
 
-  it("finds the identity components' sources, so the check cannot pass on nothing", () => {
-    expect(shipped.some((file) => file.endsWith("sign-in.tsx"))).toBe(true);
+  it(`finds the components that take the ${sdk} object, so the check cannot pass on nothing`, () => {
+    expect(shipped.some((file) => file.endsWith(sample))).toBe(true);
   });
 
   it.each(shipped.map((file) => [relative(SRC, file), file] as const))(
-    "%s does not import @identgineer/identity",
+    `%s does not import @identgineer/${sdk}`,
     (_name, file) => {
-      expect(readFileSync(file, "utf8")).not.toMatch(/["']@identgineer\/identity(?:\/[^"']*)?["']/);
+      expect(readFileSync(file, "utf8")).not.toMatch(importsSdk);
     },
   );
 });

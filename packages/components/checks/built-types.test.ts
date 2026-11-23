@@ -40,6 +40,20 @@ describe.skipIf(!existsSync(TYPES))("the built declarations, once built", () => 
     expect(leaking.map((file) => file.slice(TYPES.length + 1))).toEqual([]);
   });
 
+  it("never import from @identgineer/tracking, whose consent object the page hands to the consent components", () => {
+    const leaking = files.filter((file) =>
+      /from\s+["']@identgineer\/tracking|import\(["']@identgineer\/tracking/.test(
+        readFileSync(file, "utf8"),
+      ),
+    );
+    expect(leaking.map((file) => file.slice(TYPES.length + 1))).toEqual([]);
+  });
+
+  it("have the consent components", () => {
+    expect(files.some((file) => file.endsWith("consent-banner.d.ts"))).toBe(true);
+    expect(files.some((file) => file.endsWith("consent-preferences.d.ts"))).toBe(true);
+  });
+
   it("never import from @identgineer/variations", () => {
     const leaking = files.filter((file) =>
       /from\s+["']@identgineer\/variations|import\(["']@identgineer\/variations/.test(

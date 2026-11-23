@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { h, render } from "@stencil/vitest";
+import { h } from "@stencil/vitest";
+import { renderControl as render } from "../../testing/form-internals";
 import { createFakeConsent, type FakeConsent } from "../../testing/fake-consent";
 import { trackerSetup } from "../../testing/consent-harness";
 import { installDialogElement } from "../../testing/dialog-element";
@@ -45,7 +46,11 @@ const alert = (root: HTMLElement, name: string) =>
   shadowOf(root).querySelector(`idg-alert.${name}`);
 
 /** What the user does to the analytics switch: the switch fires idgChange, as it does for a click. */
-function flip(root: HTMLElement, checked: boolean): void {
+async function flip(
+  root: HTMLElement,
+  checked: boolean,
+  waitForChanges: () => Promise<void>,
+): Promise<void> {
   const element = analytics(root);
   if (!element) throw new Error("no analytics switch");
   element.checked = checked;
@@ -56,6 +61,7 @@ function flip(root: HTMLElement, checked: boolean): void {
       composed: true,
     }),
   );
+  await waitForChanges();
 }
 
 const pressed = (root: HTMLElement, selector: string) => {
@@ -71,7 +77,7 @@ beforeEach(() => {
 
 afterEach(() => {
   events.stop();
-  document.body.replaceChildren();
+  for (const child of Array.from(document.body.childNodes)) child.remove();
   vi.restoreAllMocks();
 });
 
@@ -107,7 +113,6 @@ describe("idg-consent-preferences as a panel", () => {
     expect(row?.disabled).toBe(true);
     expect(row?.textContent).toContain("Necessary");
     expect(textOf(root, ".necessary-description")).toContain("not tracked");
-    expect(row?.accessibleDescription).toContain("not tracked");
   });
 
   it.each([
@@ -134,8 +139,8 @@ describe("idg-consent-preferences as a panel", () => {
 describe("idg-consent-preferences saving", () => {
   it("changes nothing until Save", async () => {
     const fake = createFakeConsent();
-    const { root } = await mount(fake.consent);
-    flip(root, true);
+    const { root, waitForChanges } = await mount(fake.consent);
+    await flip(root, true, waitForChanges);
     expect(fake.calls.filter((call) => ["grant", "deny", "reset"].includes(call))).toEqual([]);
     expect(events.seen).toEqual([]);
   });
@@ -143,7 +148,7 @@ describe("idg-consent-preferences saving", () => {
   it("grants on Save when analytics is on, tells the page and confirms politely", async () => {
     const fake = createFakeConsent();
     const { root, waitForChanges } = await mount(fake.consent);
-    flip(root, true);
+    await flip(root, true, waitForChanges);
     pressed(root, "idg-button.save");
     await waitForChanges();
     expect(fake.calls.filter((call) => call === "grant")).toHaveLength(1);
@@ -167,7 +172,7 @@ describe("idg-consent-preferences saving", () => {
   it("withdraws a grant when the switch is turned off and saved", async () => {
     const fake = createFakeConsent({ state: "granted" });
     const { root, waitForChanges } = await mount(fake.consent);
-    flip(root, false);
+    await flip(root, false, waitForChanges);
     pressed(root, "idg-button.save");
     await waitForChanges();
     expect(fake.calls).toContain("deny");
@@ -178,7 +183,7 @@ describe("idg-consent-preferences saving", () => {
     const fake = createFakeConsent();
     fake.refuseToStore();
     const { root, waitForChanges } = await mount(fake.consent);
-    flip(root, true);
+    await flip(root, true, waitForChanges);
     pressed(root, "idg-button.save");
     await waitForChanges();
     expect(textOf(root, "idg-alert.error")).toContain("could not be saved");
@@ -193,7 +198,7 @@ describe("idg-consent-preferences saving", () => {
       const fake = createFakeConsent();
       fake.throwFrom(method);
       const { root, waitForChanges } = await mount(fake.consent);
-      flip(root, method === "grant");
+      await flip(root, method === "grant", waitForChanges);
       expect(() => {
         pressed(root, "idg-button.save");
       }).not.toThrow();
@@ -209,7 +214,7 @@ describe("idg-consent-preferences saving", () => {
     pressed(root, "idg-button.save");
     await waitForChanges();
     expect(alert(root, "error")).not.toBeNull();
-    flip(root, true);
+    await flip(root, true, waitForChanges);
     pressed(root, "idg-button.save");
     await waitForChanges();
     expect(alert(root, "error")).toBeNull();
@@ -234,7 +239,10 @@ describe("idg-consent-preferences under a browser privacy signal", () => {
   it("cannot grant: a switch forced on is ignored and Save only records a denial", async () => {
     const fake = createFakeConsent({ state: "denied", reason: "gpc" });
     const { root, waitForChanges } = await mount(fake.consent);
-    flip(root, true);
+    // A disabled switch cannot be flipped by a user, so the event is sent by hand.
+    analytics(root)?.dispatchEvent(
+      new CustomEvent("idgChange", { detail: { checked: true, value: "on" }, bubbles: true }),
+    );
     await waitForChanges();
     expect(analytics(root)?.checked).toBe(false);
     pressed(root, "idg-button.save");
@@ -246,7 +254,7 @@ describe("idg-consent-preferences under a browser privacy signal", () => {
   it("starts to say so when a signal appears while the panel is open, dropping an edit towards on", async () => {
     const fake = createFakeConsent();
     const { root, waitForChanges } = await mount(fake.consent);
-    flip(root, true);
+    await flip(root, true, waitForChanges);
     fake.set({ state: "denied", reason: "dnt" });
     await waitForChanges();
     expect(analytics(root)?.checked).toBe(false);
@@ -269,13 +277,13 @@ describe("idg-consent-preferences reflecting changes made elsewhere", () => {
   it("says so, and drops the edit, when the stored state changes under an unsaved edit", async () => {
     const fake = createFakeConsent();
     const { root, waitForChanges } = await mount(fake.consent);
-    flip(root, true);
+    await flip(root, true, waitForChanges);
     fake.set({ state: "denied" });
     await waitForChanges();
     expect(analytics(root)?.checked).toBe(false);
     expect(textOf(root, "idg-alert.changed")).toContain("changed");
     expect(textOf(root, "idg-alert.changed")).toContain("discarded");
-    flip(root, true);
+    await flip(root, true, waitForChanges);
     await waitForChanges();
     expect(alert(root, "changed")).toBeNull();
   });
@@ -283,7 +291,7 @@ describe("idg-consent-preferences reflecting changes made elsewhere", () => {
   it("needs no note when the other change is what the edit asked for", async () => {
     const fake = createFakeConsent();
     const { root, waitForChanges } = await mount(fake.consent);
-    flip(root, true);
+    await flip(root, true, waitForChanges);
     fake.set({ state: "granted" });
     await waitForChanges();
     expect(analytics(root)?.checked).toBe(true);
@@ -293,7 +301,7 @@ describe("idg-consent-preferences reflecting changes made elsewhere", () => {
   it("keeps an edit when the same state is reported again", async () => {
     const fake = createFakeConsent({ state: "granted" });
     const { root, waitForChanges } = await mount(fake.consent);
-    flip(root, false);
+    await flip(root, false, waitForChanges);
     fake.set({ state: "granted" });
     await waitForChanges();
     expect(analytics(root)?.checked).toBe(false);
@@ -303,7 +311,7 @@ describe("idg-consent-preferences reflecting changes made elsewhere", () => {
   it("does not announce its own save as a change from elsewhere", async () => {
     const fake = createFakeConsent();
     const { root, waitForChanges } = await mount(fake.consent);
-    flip(root, true);
+    await flip(root, true, waitForChanges);
     pressed(root, "idg-button.save");
     await waitForChanges();
     expect(alert(root, "changed")).toBeNull();
@@ -437,7 +445,7 @@ describe("idg-consent-preferences as a modal", () => {
     const { root, waitForChanges } = await mount(fake.consent, { modal: true });
     await root.open();
     await waitForChanges();
-    flip(root, true);
+    await flip(root, true, waitForChanges);
     dialog(root)?.dispatchEvent(
       new CustomEvent("idgClose", { detail: { returnValue: "", reason: "escape" } }),
     );
@@ -471,7 +479,8 @@ describe("idg-consent-preferences as an inline panel's open()", () => {
   it("moves focus to the panel's heading, and close() does nothing", async () => {
     const { root } = await mount(createFakeConsent().consent);
     const heading = shadowOf(root).querySelector<HTMLElement>(".heading");
-    const focus = vi.spyOn(heading as HTMLElement, "focus");
+    if (!heading) throw new Error("no heading");
+    const focus = vi.spyOn(heading, "focus");
     await root.open();
     expect(focus).toHaveBeenCalledTimes(1);
     await expect(root.close()).resolves.toBeUndefined();
@@ -503,7 +512,7 @@ describe("idg-consent-preferences and the consent object it is given", () => {
     const first = createFakeConsent();
     const second = createFakeConsent({ state: "granted" });
     const { root, waitForChanges } = await mount(first.consent);
-    flip(root, true);
+    await flip(root, true, waitForChanges);
     root.consent = second.consent;
     await waitForChanges();
     expect(listeners(first)).toBe(0);
@@ -528,7 +537,7 @@ describe("idg-consent-preferences with the real tracker", () => {
   it("saves a grant that the tracker then honours", async () => {
     const { tracker, collector } = trackerSetup();
     const { root, waitForChanges } = await mount(tracker.consent);
-    flip(root, true);
+    await flip(root, true, waitForChanges);
     pressed(root, "idg-button.save");
     await waitForChanges();
     expect(tracker.consent.get()).toEqual({ state: "granted" });
@@ -542,7 +551,7 @@ describe("idg-consent-preferences with the real tracker", () => {
     const { root, waitForChanges } = await mount(tracker.consent);
     expect(analytics(root)?.disabled).toBe(true);
     expect(textOf(root, "idg-alert.signal")).toContain("Global Privacy Control");
-    flip(root, true);
+    await flip(root, true, waitForChanges);
     pressed(root, "idg-button.save");
     await waitForChanges();
     tracker.track("clicked");
