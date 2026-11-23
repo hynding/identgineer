@@ -68,6 +68,20 @@ const REAL_TEXT: readonly (readonly [string, string])[] = [
   ["Hindi with a joiner after the virama", "क्\u200Dष"],
   ["Hindi", "नमस्ते दुनिया"],
   ["Bengali with a joiner after the virama", "র\u09CD\u200Dয"],
+  ["Bengali with a joiner before the virama (rab)", "র\u200D\u09CD\u09AF\u09BE\u09AC"],
+  ["Bengali with a joiner before the virama (rank)", "র\u200D\u09CD\u09AF\u09BE\u0999\u09CD\u0995"],
+  ["Bengali with a joiner before the virama (rally)", "র\u200D\u09CD\u09AF\u09BE\u09B2\u09BF"],
+  ["Bengali halant and joiner at the end of a word", "\u09A8\u09CD\u200D"],
+  ["Malayalam chillu at the end of a word", "\u0D28\u0D4D\u200D"],
+  ["Malayalam chillu before a space", "ന\u0D4D\u200D അ"],
+  ["Hindi halant and joiner at the end of a word", "क\u094D\u200D"],
+  ["Hindi halant and non-joiner at the end of a word", "क\u094D\u200C"],
+  ["Hindi halant and joiner before a space", "क\u094D\u200D ख"],
+  ["Hindi halant and non-joiner before punctuation", "क\u094D\u200C।"],
+  ["Hindi halant and joiner inside a word", "क\u094D\u200Dष"],
+  ["Hindi halant and non-joiner inside a word", "क\u094D\u200Cष"],
+  ["Hindi halant and joiner before a vowel sign", "क\u094D\u200D\u093E"],
+  ["Persian non-joiner before a vowel mark", "ب\u200C\u064E"],
   ["Tamil", "தமிழ் மொழி"],
   ["Sinhala with a joiner", "ශ්\u200Dරී ලංකා"],
   ["Khmer with a non-joiner", "ក\u200Cខ ភាសាខ្មែរ"],
@@ -130,6 +144,27 @@ const SPOOFS: readonly (readonly [string, string, string])[] = [
     "a Hindi joiner before an invisible selector",
     "क\u200C\u180B\u2800ज",
     `क${MARK}${MARK}${MARK}ज`,
+  ],
+  ["a joiner after a Hindi halant before a Latin letter", "क\u094D\u200Da", `क\u094D${MARK}a`],
+  ["a joiner after a Hindi halant before an Arabic letter", "क\u094D\u200Dب", `क\u094D${MARK}ب`],
+  [
+    "a joiner after a Hindi halant before an Arabic mark",
+    "क\u094D\u200D\u064E",
+    `क\u094D${MARK}\u064E`,
+  ],
+  ["a joiner after a Latin letter with a mark, at an edge", "a\u0301\u200D", `a\u0301${MARK}`],
+  ["a joiner between a Latin letter and a Hindi mark", "a\u200D\u093E", `a${MARK}\u093E`],
+  ["a joiner before an Arabic mark after a Hindi letter", "क\u200D\u064E", `क${MARK}\u064E`],
+  ["a joiner at the start before a Hindi mark", "\u200D\u093E", `${MARK}\u093E`],
+  [
+    "a run of joiners after a Hindi halant",
+    "क\u094D\u200D\u200D\u200C ",
+    `क\u094D${MARK}${MARK}${MARK} `,
+  ],
+  [
+    "a joiner after a Hindi halant before an invisible character",
+    "क\u094D\u200D\u2800",
+    `क\u094D${MARK}${MARK}`,
   ],
   ["a Hangul filler as a name", "\u3164", MARK],
   ["a name of white space", " \u00A0 ", MARK],
@@ -367,9 +402,12 @@ describe("neutraliseText on random strings from the awkward characters", () => {
         const after = out[index + 1] ?? "";
         let fine = false;
         if (code === 0x200c || code === 0x200d) {
+          const leftIsMark = /\p{M}/u.test(before);
+          const rightEnds = after === "" || /^[\s\p{P}]$/u.test(after);
           fine =
-            /[\p{L}\p{M}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F]/u.test(before) &&
-            /[\p{L}\p{Extended_Pictographic}]/u.test(after);
+            (/[\p{L}\p{M}\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F]/u.test(before) &&
+              /[\p{L}\p{M}\p{Extended_Pictographic}]/u.test(after)) ||
+            (leftIsMark && rightEnds);
         } else if (code === 0xfe0e || code === 0xfe0f) fine = /\p{Emoji}/u.test(before);
         else if (code >= 0xe0100 && code <= 0xe01ef) fine = /\p{Script=Han}/u.test(before);
         else if ((code >= 0x180b && code <= 0x180d) || code === 0x180f) {
