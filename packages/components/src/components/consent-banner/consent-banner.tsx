@@ -141,9 +141,9 @@ export class IdgConsentBanner {
     this.binding.bind(this.consent);
   }
 
-  // Where focus was before it came here, so that it can go back once the choice is made. An
-  // element removed while it has focus fires no event, so the flag is only a record of where the
-  // user came from.
+  // Where focus was before it came here, so that it can go back once the choice is made. The flag
+  // says whether focus is in the banner as far as the visitor is concerned, which an element
+  // removed while it has focus does not end.
   @Listen("focusin")
   handleFocusIn(event: globalThis.FocusEvent): void {
     if (this.focusInside) return;
@@ -155,7 +155,17 @@ export class IdgConsentBanner {
   handleFocusOut(event: globalThis.FocusEvent): void {
     const next = event.relatedTarget;
     if (next !== null && this.host.contains(next as Node)) return;
-    this.focusInside = false;
+    if (next !== null) {
+      this.focusInside = false;
+      return;
+    }
+    // Focus that names no new target is either the visitor moving off the page's controls or the
+    // browser letting go of an element that is being removed, and Chrome reports the second while
+    // the element is still attached. By the end of the task that removes it, it is not.
+    const origin = (event as Partial<Event>).composedPath?.()[0] as Partial<Node> | undefined;
+    queueMicrotask(() => {
+      if (origin?.isConnected !== false) this.focusInside = false;
+    });
   }
 
   componentDidRender(): void {
@@ -169,8 +179,8 @@ export class IdgConsentBanner {
 
   // A change made elsewhere (the preferences inside the banner or opened from it, another tab)
   // takes the question away, and with it every control inside the banner, including a panel in its
-  // slot. A browser lets go of focus on a hidden element only at its next frame, and fires no
-  // event for one removed, so focus that was inside is put back, as after a choice made here.
+  // slot. A browser lets go of focus on a hidden element only at its next frame, so focus that was
+  // inside is put back, as after a choice made here.
   private keepFocusThroughChange(): void {
     const asking = this.isAsking();
     const removed = this.wasAsking && !asking;
