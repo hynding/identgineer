@@ -47,9 +47,13 @@ export const SVG_OVERDRAW_WEIGHTS = Object.freeze({
 /** The most of a convex outline a square image shows: its perimeter, in sides. */
 const PERIMETER = 4;
 
-/** What edges as long as `sides` sides of the image cost, within one path. */
-function edgeCost(sides: number): number {
-  return sides * SVG_OVERDRAW_WEIGHTS.edge * (1 + (sides / SVG_OVERDRAW_WEIGHTS.edgesPerRow) ** 2);
+/**
+ * What edges as long as `sides` sides of the image cost, within one path, with `crossings` of them
+ * known to share a row (else as many as their length could put on every row).
+ */
+function edgeCost(sides: number, crossings = 0): number {
+  const onARow = Math.max(sides, crossings);
+  return sides * SVG_OVERDRAW_WEIGHTS.edge * (1 + (onARow / SVG_OVERDRAW_WEIGHTS.edgesPerRow) ** 2);
 }
 
 const STOP_TIERS = [2, 4, 8, 16, 32, 64] as const;
@@ -355,11 +359,14 @@ class OverdrawWalk {
       this.charge(
         Math.min(1, area) * this.paintWeight(paint.stroke, paint.strokeOpacity * alpha) +
           // A stroke's outline runs along both sides of the path, round each join (counted at
-          // every segment), and across both ends of every subpath or dash.
+          // every segment), and across both ends of every subpath or dash. Dashes closer together
+          // than the stroke is wide put the caps of all of them on the rows a level stretch of the
+          // path covers.
           edgeCost(
             2 * edges +
               geometry.segments * shown(joinLength(paint)) +
               2 * pieces.count * shown(capLength(paint)),
+            pieces.spacing < width ? 2 * pieces.count : 0,
           ),
       );
       box = mapBox(matrix, outer);
@@ -375,12 +382,15 @@ class OverdrawWalk {
   private strokePieces(
     geometry: Geometry,
     dasharray: string,
-  ): { readonly count: number; readonly dashed: boolean } {
+  ): { readonly count: number; readonly dashed: boolean; readonly spacing: number } {
     const period = dashPeriod(dasharray);
-    if (period === 0) return { count: geometry.subpaths, dashed: false };
+    if (period === 0) return { count: geometry.subpaths, dashed: false, spacing: Infinity };
+    const perPeriod = dashesPerPeriod(dasharray);
     return {
-      count: (Math.ceil(geometry.length / period) + geometry.subpaths) * dashesPerPeriod(dasharray),
+      count: (Math.ceil(geometry.length / period) + geometry.subpaths) * perPeriod,
       dashed: true,
+      // How far apart the dashes start, on average.
+      spacing: period / perPeriod,
     };
   }
 

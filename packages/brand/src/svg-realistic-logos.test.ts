@@ -120,7 +120,7 @@ const REALISTIC: readonly (readonly [string, string, number, number])[] = [
   ["300 uses of a 20-cubic symbol", pattern(20), 36, 1],
   ["300 uses of a 60-cubic symbol", pattern(60), 96, 2],
   ["dashed rings", dashedRings("1 2"), 2, 1],
-  ["finely dashed rings", dashedRings("0.25 0.5"), 7, 1],
+  ["finely dashed rings", dashedRings("0.25 0.5"), 7, 8],
   ["a Figma export with 8 alpha masks", figmaMasks(), 4, 60],
 ];
 

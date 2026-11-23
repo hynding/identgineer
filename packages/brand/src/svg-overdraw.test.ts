@@ -210,8 +210,11 @@ describe("the overdraw of a logo", () => {
       area(11 * 100) * W.solid + strokeEdges(1, (40 + 2 * 11 * 20) / 100),
       9,
     );
+    // Two dashes every 10 start 5 apart on average, closer than the stroke is wide: all 44 caps
+    // can share a row.
+    const sides = 2 + (40 + 2 * 22 * 10) / 100;
     expect(line('stroke-dasharray="1 2 3 4" stroke-dashoffset="3"')).toBeCloseTo(
-      area(22 * 100) * W.solid + strokeEdges(1, (40 + 2 * 22 * 10) / 100),
+      area(22 * 100) * W.solid + sides * W.edge * (1 + (44 / W.edgesPerRow) ** 2),
       9,
     );
     // A dash of no length still has its caps.
