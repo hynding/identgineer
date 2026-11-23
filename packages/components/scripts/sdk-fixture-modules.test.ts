@@ -79,11 +79,11 @@ describe("a module of an SDK", () => {
 
   it("has the extensionless imports of the components' own source name .js files too", () => {
     const code = transpileSdkModule(
-      'import { a } from "./a";\nimport { b } from "../utils/b";\nexport { c } from "./c";\nexport const d = a + b;\n',
+      'import { a } from "./a";\nimport { b } from "../../utils/b";\nexport { c } from "./c";\nexport const d = a + b;\n',
       "d.ts",
     );
     expect(code).toContain('from "./a.js"');
-    expect(code).toContain('from "../utils/b.js"');
+    expect(code).toContain('from "../../utils/b.js"');
     expect(code).toContain('from "./c.js"');
   });
 });

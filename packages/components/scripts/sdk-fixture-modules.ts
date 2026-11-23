@@ -49,7 +49,7 @@ export function sdkModules(
 
 // The components' own source imports without an extension (Bundler resolution), which a browser
 // cannot resolve. Only an import or export of a relative path with no extension is rewritten.
-const EXTENSIONLESS_IMPORT = /(\bfrom\s+["'])(\.{1,2}\/[^"'.]*(?:\.[^"'./]+)*?)(["'])/g;
+const EXTENSIONLESS_IMPORT = /(\bfrom\s+["'])(\.{1,2}\/[^"']*)(["'])/g;
 
 /**
  * One SDK module as browser JavaScript: types erased and `./x.ts` specifiers rewritten to
