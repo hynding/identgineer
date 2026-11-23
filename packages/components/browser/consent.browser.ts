@@ -497,6 +497,56 @@ test.describe("focus is never dropped on the body", () => {
     await expect.poll(() => onPage(page)).toBe(true);
   });
 
+  test("the choice is made elsewhere while a banner button has focus: focus goes back, not to the body", async ({
+    page,
+  }) => {
+    await openConsent(page);
+    await page.locator("#before").focus();
+    await bannerButton(page, "decline").focus();
+    await page.evaluate(`window.consentFixture.tracker.consent.grant()`);
+    await expect(bannerRegion(page)).toHaveCount(0);
+    await expect.poll(() => activeName(page)).toBe("Open menu");
+  });
+
+  test("the choice is made elsewhere while nothing was focused before the banner: focus goes to main", async ({
+    page,
+  }) => {
+    await openConsent(page);
+    await bannerButton(page, "accept").focus();
+    await page.evaluate(`window.consentFixture.tracker.consent.deny()`);
+    await expect(bannerRegion(page)).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => document.activeElement?.localName)).toBe("main");
+  });
+
+  test("focus is not taken from a field the visitor is typing in when the choice is made elsewhere", async ({
+    page,
+  }) => {
+    await openConsent(page);
+    await page.evaluate(() => {
+      const field = document.createElement("input");
+      field.id = "typing";
+      document.querySelector("main")?.append(field);
+    });
+    await page.locator("#typing").focus();
+    await page.keyboard.type("abc");
+    await page.evaluate(`window.consentFixture.tracker.consent.grant()`);
+    await expect(bannerRegion(page)).toHaveCount(0);
+    await expect(page.locator("#typing")).toBeFocused();
+    await page.keyboard.type("d");
+    await expect(page.locator("#typing")).toHaveValue("abcd");
+  });
+
+  test("the banner is left by the visitor to something else, and a later change elsewhere does not pull focus back", async ({
+    page,
+  }) => {
+    await openConsent(page);
+    await bannerButton(page, "decline").focus();
+    await page.locator("#before").focus();
+    await page.evaluate(`window.consentFixture.tracker.consent.grant()`);
+    await expect(bannerRegion(page)).toHaveCount(0);
+    expect(await activeName(page)).toBe("Open menu");
+  });
+
   test("the choice changes elsewhere while the erase confirmation has focus", async ({ page }) => {
     await openConsent(page, { query: "?granted" });
     await inlinePanel(page).locator("idg-button.erase button").click();
