@@ -250,21 +250,23 @@ base.describe("the checks themselves", () => {
 // The costliest logos the sanitiser still accepts, one for each kind of work a renderer does: long
 // edges, crowded on every row; arcs; dashes; solid paint over and over; gradients at the stop
 // limit, opaque and translucent; a fill under a very wide stroke; group opacity layers; masks
-// inside masks; and a clip path of crowded edges with the even-odd rule. Each is the largest of its
-// family that is accepted (the next one up is refused, for the drawing cost or the overdraw), and
-// must be drawn as an image and inline, and rasterised in full at 600 CSS pixels and at 2000 with
-// a device scale factor of 2, each within its budget. On a loaded four-core machine the slowest
-// took about 0.6 seconds at 600 and 1.6 at 2000 (see the brand README), so the budgets leave room
-// for a slow runner, yet a limit raised tenfold would blow through them: the drawing cost at 600,
-// the overdraw at 2000.
+// inside masks; a clip path of crowded edges with the even-odd rule; a view box far wider than
+// tall; dashes, round dots and round joins on a stroke as wide as the image; clip paths of shapes
+// that cross, of a clipped shape and of 43 shapes; a mask holding a clipped shape; and a shape
+// scaled as far as a transform may go. Each is the largest of its family that is accepted (the
+// next one up is refused, for the drawing cost or the overdraw), and must be drawn as an image and
+// inline, and rasterised in full at 600 CSS pixels and at 2000 with a device scale factor of 2,
+// each within its budget. On a loaded four-core machine the slowest took about 0.35 seconds at 600
+// and 1.7 at 2000 (see the brand README), so the budgets leave room for a slow runner, yet a limit
+// raised tenfold would blow through them.
 const SIZE = 600;
 const LARGE_SIZE = 2000;
 const RENDER_BUDGET_MS = 15_000;
 const RASTER_BUDGET_MS = 3_000;
 const LARGE_RASTER_BUDGET_MS = 6_000;
 
-function costlyLogo(body: string): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="${String(SIZE)}" height="${String(SIZE)}">${body}</svg>`;
+function costlyLogo(body: string, root = 'viewBox="0 0 1000 1000"'): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" ${root} width="${String(SIZE)}" height="${String(SIZE)}">${body}</svg>`;
 }
 
 function zigzag(segments: number, command: (index: number) => string): string {
@@ -312,7 +314,7 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
   [
     "dashes a tenth of a unit long, round-capped",
     copies(
-      '<path id="p" d="M0 0L1000 1000L0 1000L1000 0" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-dasharray="0.1"/>',
+      '<path id="p" d="M0 0L1000 1000L0 1000L1000 0" fill="none" stroke="#000" stroke-width="0.1" stroke-linecap="round" stroke-dasharray="0.1"/>',
     ),
     "drawing-too-costly",
   ],
@@ -356,6 +358,125 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
       body += `<rect id="p" ${FULL} mask="url(#m${String(SVG_LOGO_LIMITS.maskDepth - 1)})"/></defs>`;
       return costlyLogo(body + '<use href="#p"/>'.repeat(count));
     },
+    "overdraw-too-large",
+  ],
+  [
+    "a view box a thousand times wider than tall, of radial gradients, asked to stretch",
+    (count) =>
+      costlyLogo(
+        `<defs><radialGradient id="g">${stops(STOPS, true)}</radialGradient><rect id="p" width="1000" height="1" fill="url(#g)"/><g id="q">${'<use href="#p"/>'.repeat(10)}</g></defs>${'<use href="#q"/>'.repeat(count)}`,
+        'viewBox="0 0 1000 1" preserveAspectRatio="none"',
+      ),
+    "drawing-too-costly",
+  ],
+  ...(["butt", "round"] as const).map(
+    (cap) =>
+      [
+        `${cap} dashes on a stroke as wide as the image`,
+        (count: number) =>
+          costlyLogo(
+            `<path d="M0 500H1000" fill="none" stroke="#000" stroke-width="1000" stroke-linecap="${cap}" stroke-dasharray="${(500 / count).toFixed(6)}"/>`,
+          ),
+        "overdraw-too-large",
+      ] as const,
+  ),
+  [
+    "dashes on a stroke a tenth as wide as the image",
+    (count) =>
+      costlyLogo(
+        `<path d="M0 500H1000" fill="none" stroke="#000" stroke-width="100" stroke-dasharray="${(500 / count).toFixed(6)}"/>`,
+      ),
+    "overdraw-too-large",
+  ],
+  [
+    "dashes of four lengths on a stroke as wide as the image",
+    (count) =>
+      costlyLogo(
+        `<path d="M0 500H1000" fill="none" stroke="#000" stroke-width="1000" stroke-dasharray="${Array(
+          4,
+        )
+          .fill((250 / count).toFixed(6))
+          .join(" ")}"/>`,
+      ),
+    "overdraw-too-large",
+  ],
+  [
+    "short segments meeting in round joins as wide as the image",
+    (count) =>
+      costlyLogo(
+        `<path d="${zigzag(count, (index) => (index % 2 === 0 ? "l1 0.5" : "l-1 0.5")).replace("M0 0", "M500 500")}" fill="none" stroke="#000" stroke-width="1000" stroke-linejoin="round"/>`,
+      ),
+    "overdraw-too-large",
+  ],
+  [
+    "subpaths of no length, each a round dot as wide as the image",
+    (count) =>
+      costlyLogo(
+        `<path d="${Array.from({ length: count }, (_, index) => `M${((index * 1000) / count).toFixed(3)} 500h0`).join("")}" fill="none" stroke="#000" stroke-width="1000" stroke-linecap="round"/>`,
+      ),
+    "overdraw-too-large",
+  ],
+  [
+    "a clip path of two zigzags crossing each other",
+    (count) => {
+      const zigzagAt = (across: boolean): string =>
+        Array.from({ length: count - 1 }, (_, index) => {
+          const at = (100000 + index * 0.01).toFixed(2);
+          const far = index % 2 === 0 ? "100100" : "100000";
+          return across ? `L${far} ${at}` : `L${at} ${far}`;
+        }).join("");
+      return costlyLogo(
+        `<defs><clipPath id="c"><path d="M100000 100000${zigzagAt(true)}Z"/><path d="M100000 100000${zigzagAt(false)}Z"/></clipPath></defs><rect width="200000" height="200000" fill="#0f766e" clip-path="url(#c)"/>`,
+        'viewBox="0 0 200000 200000"',
+      );
+    },
+    "drawing-too-costly",
+  ],
+  [
+    "a clip path of two cubic waves crossing each other",
+    (count) => {
+      const wave = (down: boolean): string =>
+        Array.from({ length: count }, (_, index) => {
+          const [from, to] = [100 + (index * 800) / count, 100 + ((index + 1) * 800) / count];
+          const turn = from + 400 / count;
+          const end = index % 2 === 0 ? 1000 : 0;
+          return down
+            ? `C${from.toFixed(3)} 0 ${turn.toFixed(3)} 1000 ${to.toFixed(3)} ${String(end)}`
+            : `C0 ${from.toFixed(3)} 1000 ${turn.toFixed(3)} ${String(end)} ${to.toFixed(3)}`;
+        }).join("");
+      return costlyLogo(
+        `<defs><clipPath id="c"><path d="M100 0${wave(true)}Z"/><path d="M0 100${wave(false)}Z"/></clipPath></defs><rect ${FULL} fill="#0f766e" clip-path="url(#c)"/>`,
+      );
+    },
+    "drawing-too-costly",
+  ],
+  [
+    "a clip path of a shape clipped in turn, drawn as a mask",
+    copies(
+      `<clipPath id="c0"><circle cx="500" cy="500" r="499"/></clipPath><rect id="r" ${FULL} clip-path="url(#c0)"/><clipPath id="c1"><use href="#r"/></clipPath><rect id="p" ${FULL} fill="#0f766e" fill-opacity="0.5" clip-path="url(#c1)"/>`,
+    ),
+    "overdraw-too-large",
+  ],
+  [
+    "a clip path of 43 shapes, drawn as a mask",
+    copies(
+      `<clipPath id="c">${Array.from({ length: 43 }, (_, index) => `<polygon points="${String(index * 23)},0 ${String(index * 23 + 10)},0 ${String(index * 23 + 5)},1000"/>`).join("")}</clipPath><rect id="p" ${FULL} fill="#0f766e" fill-opacity="0.5" clip-path="url(#c)"/>`,
+    ),
+    "overdraw-too-large",
+  ],
+  [
+    "a mask holding a clipped shape",
+    copies(
+      `<clipPath id="c"><circle cx="500" cy="500" r="499"/></clipPath><mask id="m"><rect ${FULL} fill="#fff" clip-path="url(#c)"/></mask><rect id="p" ${FULL} fill="#0f766e" fill-opacity="0.5" mask="url(#m)"/>`,
+    ),
+    "overdraw-too-large",
+  ],
+  [
+    "a shape scaled a million million times, under full-size radial gradients",
+    (count) =>
+      costlyLogo(
+        `<defs><radialGradient id="g">${stops(STOPS, true)}</radialGradient><rect id="p" ${FULL} fill="url(#g)"/></defs><g transform="scale(999999) scale(999999)"><rect width="1" height="1"/></g>${'<use href="#p"/>'.repeat(count)}`,
+      ),
     "overdraw-too-large",
   ],
   [
@@ -420,6 +541,64 @@ async function rasterise(page: Page, logo: Logo, size: number): Promise<number> 
     { dataUrl: logo.dataUrl ?? "", size },
   );
 }
+
+// A kept logo is always drawn to fit: the sanitiser drops a preserveAspectRatio that would stretch
+// or crop it. The overdraw counts on that, so a page must not stretch it either; sizing an image or
+// an inline logo with CSS does not, while object-fit: cover, or drawing it on a canvas of another
+// shape, would.
+test.describe("a logo far wider than tall", () => {
+  const bar = sanitiseSvgLogo(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1" width="1000" height="1" preserveAspectRatio="none"><rect width="1000" height="1"/></svg>',
+  );
+  if (!bar.ok) throw new Error("the bar was refused");
+  const url = logoDataUrl(bar.svg);
+  const inline = bar.svg.replace('width="1000" height="1"', 'style="width:100%;height:100%"');
+
+  async function darkPixels(page: Page, html: string): Promise<number> {
+    await page.setViewportSize({ width: 700, height: 700 });
+    await page.setContent(`<!doctype html><body style="margin:0;background:#fff">${html}</body>`);
+    const shot = await page.screenshot({ clip: { x: 0, y: 0, width: 600, height: 600 } });
+    return page.evaluate(async (png) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${png}`;
+      await image.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = 600;
+      canvas.height = 600;
+      const context = canvas.getContext("2d");
+      if (context === null) throw new Error("no 2D context");
+      context.drawImage(image, 0, 0);
+      const data = context.getImageData(0, 0, 600, 600).data;
+      let dark = 0;
+      for (let index = 0; index < data.length; index += 4)
+        if ((data[index] ?? 255) < 250) dark += 1;
+      return dark;
+    }, shot.toString("base64"));
+  }
+
+  test("is drawn to fit in a square image or inline logo sized by CSS, at most a thin bar", async ({
+    page,
+  }) => {
+    for (const html of [
+      `<img src="${url}" style="width:600px;height:600px">`,
+      `<img src="${url}" style="width:600px;height:600px;object-fit:fill">`,
+      `<img src="${url}" style="width:600px;height:600px;object-fit:contain">`,
+      `<div style="width:600px;height:600px">${inline}</div>`,
+    ]) {
+      // A bar 600 pixels long and under a pixel thick touches at most two rows.
+      expect(await darkPixels(page, html), html.slice(0, 60)).toBeLessThanOrEqual(1200);
+    }
+  });
+
+  test("fills the image only when the page itself crops it", async ({ page }) => {
+    expect(
+      await darkPixels(
+        page,
+        `<img src="${url}" style="width:600px;height:600px;object-fit:cover">`,
+      ),
+    ).toBe(360_000);
+  });
+});
 
 test.describe("the costliest logos the sanitiser accepts", () => {
   test.describe.configure({ timeout: 120_000 });
