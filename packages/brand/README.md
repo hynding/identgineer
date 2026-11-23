@@ -6,7 +6,8 @@ next to the eight built-in themes of [`@identgineer/tokens`](../tokens/README.md
 the same checks they are.
 
 Pure TypeScript: no DOM, no network, no dependency besides `@identgineer/tokens`. It runs in Node
-and in browsers. Logos are not part of a kit yet.
+and in browsers. A kit can also carry a logo and a mark, as SVG that has been through the
+[logo sanitiser](#logos).
 
 ## Use
 
@@ -66,6 +67,8 @@ listed, followed by one `too-many-errors` entry. Lengths are counted in code poi
 | `typography`         | One of `TYPOGRAPHY_IDS`: `system`, `geometric`, `humanist`, `grotesque`, `classic-serif`, `book`, `technical`                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `corners`            | `sharp`, `soft` or `round`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `tone`               | `calm`, `balanced` or `vivid`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `logo` (optional)    | An SVG exactly as `sanitiseSvgLogo` returned it (see [Logos](#logos)): one the sanitiser refuses is `invalid-logo`, with its reason and line; one it would still change (an editor's file, or a hostile one) is `unsanitised-logo`                                                                                                                                                                                                                                                                                          |
+| `mark` (optional)    | The same, for the compact symbol (a favicon, an avatar)                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 Unknown keys are refused at every level, `__proto__`, `constructor` and `prototype` included.
 Colours are kept as numbers (`kit.colors.primary` is `[79, 70, 229]`); no colour string survives
@@ -232,6 +235,227 @@ Colour and font inputs only ever become CSS custom property values, never raw CS
   long strings and prototype keys to every field and check that parsing refuses them; for valid
   kits, a strict reader of the emitted grammar checks that the CSS holds exactly the expected custom
   properties under the expected selectors and nothing else.
+
+## Logos
+
+A brand's logo and mark are SVG files from the brand's owner: untrusted input that a browser will
+draw, and that can carry script, event handlers, links, external loads and denial of service.
+`sanitiseSvgLogo` turns an upload into a small, canonical, inert SVG or refuses it:
+
+```ts
+import { logoDataUrl, parseBrandKit, sanitiseSvgLogo } from "@identgineer/brand";
+
+const upload = sanitiseSvgLogo(bytes); // a string, or bytes that must be UTF-8
+if (!upload.ok) return respond(422, upload.errors); // [{ code: "doctype", message, line, column }]
+upload.removed; // what was dropped and why, to show the owner: [{ element, attribute, reason, line, column }]
+
+const result = parseBrandKit({ ...kitFields, logo: upload.svg }); // stored exactly as returned
+if (result.ok && result.kit.logo) image.src = logoDataUrl(result.kit.logo);
+```
+
+`sanitiseSvgLogo(input, { idPrefix })` never throws. It returns `{ ok: true, svg, width, height,
+viewBox, removed, removedCount }` or `{ ok: false, errors }`, with one located error whose message
+never repeats the input. `svg` is a `SanitisedSvg`, a string branded for the type checker, so a
+plain string cannot reach `logoDataUrl` or a kit by accident; `isSanitisedSvgLogo(value)` checks
+any value at run time (it is a fixed point of the sanitiser), and `logoDataUrl` and `parseBrandKit`
+both do.
+
+### How it works
+
+Nothing from the input is passed through. A strict reader written for this package (no DOM, no
+`DOMParser`, no XML library, so Node and every browser give the same answer) reads the text into a
+tree; namespaces are resolved by the rules of Namespaces in XML; every element and attribute is
+held to the allowlist and every value to a grammar of its own, which parses it into numbers and
+keywords; references between elements are checked; and the SVG is written again from that tree.
+The output is always the same for the same input, has the SVG namespace on the root and nowhere
+else, attributes in a fixed order, numbers in one form, ids renamed, no comments, no declaration,
+no white space between elements and every character of text escaped. Sanitising it again returns
+it unchanged, and it reads back through the same reader without loss.
+
+### Refuse or drop
+
+The rule: **anything that makes the document ambiguous is refused; anything that is merely not
+allowed is dropped and reported.**
+
+Refused, as the whole document (each with its own `code`):
+
+- anything the strict reader does not understand: a `DOCTYPE` of any kind (so no entity
+  expansion, no billion laughs, no external entities), a processing instruction (an
+  `xml-stylesheet` included) other than a leading XML declaration, which must say version 1.0 and,
+  if it names one, encoding UTF-8; an entity other than `&lt; &gt; &amp; &quot; &apos;`; a
+  character reference that is malformed, longer than 7 decimal or 6 hex digits, or names a
+  character not allowed; a bare `&` or `<`; `]]>` in text; CDATA outside the root; an unclosed,
+  mismatched or second root element; an unquoted, valueless or repeated attribute (also the same
+  attribute through two prefixes, and `href` with `xlink:href`); attributes not separated by white
+  space; a name outside ASCII or with more than one colon; a comment holding `--`, ending in `-` or
+  starting with `>` or `->` (which HTML would close at once);
+- text that is not UTF-8 (UTF-16 with either byte order mark, invalid UTF-8 bytes) and any
+  character that is not allowed, written or as a reference: NUL and the other C0 controls but tab,
+  line feed and carriage return, DEL and the C1 controls, an unpaired surrogate, U+FFFE and U+FFFF,
+  the bidirectional embedding, override and isolate controls, and a byte order mark anywhere but at
+  the very start (one there is removed);
+- a namespace declaration XML forbids (rebinding `xml` or `xmlns`, an empty prefix binding), an
+  undeclared prefix, and a root that is not `svg` in the SVG namespace;
+- duplicate ids, a reference cycle (a `use` of itself or an ancestor, gradients that inherit from
+  each other, a clip path or mask that uses itself), and a root with no size (neither a view box
+  nor a width and height in absolute units);
+- going over any limit below.
+
+Dropped (and listed in `removed`, with the element, attribute or style property, a reason and a
+line and column): an element not on the allowlist, together with everything inside it (children
+are never lifted out of a dropped element); an attribute not on the element's list; a value that
+fails its grammar; a `use` or a reference whose target is missing or the wrong kind (a missing
+paint server becomes `none`, which is what a browser draws, rather than black); character data
+outside `title` and `desc`. The reasons are `active-content`, `event-handler`,
+`external-reference`, `styling`, `editor-metadata`, `text`, `filter`, `foreign-namespace`,
+`unsupported-element`, `unsupported-attribute`, `invalid-value`, `misplaced`, `dangling-reference`
+and `character-data`. Script, handlers and external references can be dropped rather than refused
+because the output is built only from what passed, so it is inert whatever the input tried. The
+first 100 removals are listed and `removedCount` counts them all.
+
+### The allowlist
+
+Elements, all in the SVG namespace (a prefix bound to it works; an element in any other namespace
+is dropped), and the attributes each keeps besides `id`:
+
+| Element                            | Attributes                                                                                                                                   |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `svg` (the root only)              | `viewBox`, `width`, `height`, `preserveAspectRatio`, presentation                                                                            |
+| `g`, `defs`                        | `transform`, presentation                                                                                                                    |
+| `path`                             | `d`, `transform`, presentation                                                                                                               |
+| `rect`                             | `x`, `y`, `width`, `height`, `rx`, `ry`, `transform`, presentation                                                                           |
+| `circle`, `ellipse`                | `cx`, `cy`, `r` / `rx`, `ry`, `transform`, presentation                                                                                      |
+| `line`, `polyline`, `polygon`      | `x1`, `y1`, `x2`, `y2` / `points`, `transform`, presentation                                                                                 |
+| `use`                              | `href` (or `xlink:href`) to `#id` in the same document, `x`, `y`, `width`, `height`, `transform`, presentation                               |
+| `linearGradient`, `radialGradient` | `href` to another gradient, `x1`, `y1`, `x2`, `y2` / `cx`, `cy`, `r`, `fx`, `fy`, `fr`, `gradientUnits`, `gradientTransform`, `spreadMethod` |
+| `stop` (in a gradient only)        | `offset`, `stop-color`, `stop-opacity`                                                                                                       |
+| `clipPath`, `mask`                 | `clipPathUnits` / `x`, `y`, `width`, `height`, `maskUnits`, `maskContentUnits`, `transform`, presentation                                    |
+| `title`, `desc`                    | none; their text is kept and escaped                                                                                                         |
+
+Presentation attributes: `fill`, `fill-opacity`, `fill-rule`, `stroke`, `stroke-width`,
+`stroke-opacity`, `stroke-linecap`, `stroke-linejoin`, `stroke-miterlimit`, `stroke-dasharray`,
+`stroke-dashoffset`, `opacity`, `color`, `clip-path`, `clip-rule`, `mask`, `display`,
+`visibility`, `vector-effect`, `shape-rendering`.
+
+Each value has a grammar: numbers and lengths (`px`, `%`, `em`, `ex`, `mm`, `cm`, `in`, `pt`, `pc`);
+colours (`#rgb`, `#rrggbb`, `rgb()`, the CSS named colours, `currentColor`, written back as
+`#rrggbb` or the keyword); paint (`none`, a colour or `url(#id)` to a gradient); `clip-path` and
+`mask` (`none` or `url(#id)` to a clip path or mask); transform lists (`matrix`, `translate`,
+`scale`, `rotate`, `skewX`, `skewY`, at most 16); path data (every command, arc flags included);
+points, `viewBox` (positive width and height), `preserveAspectRatio`, dash arrays (at most 64
+lengths) and the enumerations. A reference is only ever to an id in the same document, which must
+match `[A-Za-z_][A-Za-z0-9_-]{0,63}` and exist: no URL scheme, no other file, no `data:` URL.
+
+Decisions, with the reason for each:
+
+- **No `script`, `foreignObject`, `image`, `feImage`, `a`, `iframe`, `video`, `audio`, `object`,
+  `embed`, `cursor`, animation (`animate`, `set`, `animateTransform`, `animateMotion`,
+  `animateColor`, `discard`) or event handler of any casing.** They run code, load other
+  resources, navigate or change attributes after the check; SMIL can set `href` or an event
+  attribute.
+- **No text (`text`, `tspan`, `textPath`).** An image cannot load web fonts, so text in a logo
+  draws in whatever font the viewer has; `textPath` adds another reference. Convert text to
+  outlines ("Object to Path" in Inkscape, "Create Outlines" in Illustrator) before uploading.
+- **No filters.** Filter primitives are a known source of runaway rendering cost (a huge blur, deep
+  turbulence) and `feImage` loads other documents; a logo does not need them.
+- **No `pattern`, `marker`, `symbol`, `switch`, nested `svg` or `foreignObject`.** Less surface,
+  and nothing a logo needs that a group and `use` cannot do.
+- **No CSS.** The `style` element and `class` are dropped, with any selector, `@import`,
+  `@font-face`, `url()`, `expression()` or `-moz-binding` in them. A `style` attribute is read as
+  declarations, each held to the presentation allowlist and the same grammar as the attribute of
+  its name (so `fill:url(https://…)` fails like the attribute would), and written out as that
+  attribute; the output never holds a style attribute. Inkscape writes colours this way, so they
+  survive; a logo coloured only by a stylesheet (Illustrator's default "Internal CSS") comes out
+  black: export with "Presentation Attributes" instead.
+- **No DOCTYPE, even the public SVG 1.1 one.** Older Illustrator files carry it; save again
+  without it ("SVG 1.1" profile off, or File > Export As > SVG).
+- **Editor metadata goes.** Inkscape, Sodipodi, RDF, Creative Commons, Dublin Core, Adobe, Sketch
+  and Serif namespaces, `metadata`, `xml:space`, `version`, the root's `x` and `y`.
+- **`xml:base` goes**, so it cannot redirect a fragment reference to another document.
+- **Ids are renamed** to `idPrefix` and a number (default `logo-`), in document order, and ids
+  nothing refers to are dropped: an inlined logo cannot clobber a page's ids or globals
+  (`id="location"`) or collide with another logo's gradient. Give a mark a different prefix if both
+  are inlined.
+- **An element without a namespace declaration is read as SVG**, as a browser reads inline SVG in
+  HTML; an element whose default namespace is changed (to XHTML, MathML, or nothing) is dropped.
+
+### Limits
+
+Each is in `SVG_LOGO_LIMITS`; going over one refuses the document.
+
+| Limit                  | Value         | Why                                                                                      |
+| ---------------------- | ------------- | ---------------------------------------------------------------------------------------- |
+| `inputBytes`           | 512 KiB UTF-8 | Larger than any reasonable logo; checked before anything is read                         |
+| `elements`             | 4,096         | Start tags in the input, dropped ones included                                           |
+| `depth`                | 32            | Elements open at once; also bounds every walk of the tree                                |
+| `attributesPerElement` | 64            | Editors write about 20 on a busy element                                                 |
+| `attributeValueLength` | 4,096         | One value as written, other than path data                                               |
+| `pathDataLength`       | 128 KiB       | One `d` or `points`; traced artwork is long, but not unbounded                           |
+| `textLength`           | 2,048         | One run of text, and a whole `title` or `desc`                                           |
+| `nameLength`           | 64            | An element or attribute name                                                             |
+| `numberLength`         | 32            | One number as written; exponents take at most 3 digits                                   |
+| `integerDigits`        | 6             | Every number is below 1,000,000 in magnitude                                             |
+| `fractionDigits`       | 6             | Kept after the point, rounded half away from zero (exact, in decimal, never a float)     |
+| `gradientStops`        | 64            | Stops in one gradient                                                                    |
+| `referenceDepth`       | 8             | References followed in a row (`use`, gradient `href`, `clip-path`, `mask`)               |
+| `renderedElements`     | 20,000        | Elements drawn once every `use`, clip path and mask is expanded: billion laughs by `use` |
+| `ids`                  | 1,024         | Elements with an id                                                                      |
+
+The reader works in one pass, in time linear in the input, with no recursion over the input and no
+regular expression with nested quantifiers on it; the tests read a megabyte of each adversarial
+shape (bare ampersands, unclosed comments and attributes, a megabyte of path data, sixty
+thousand uses of one group) with the limits raised, each in under a second on a laptop.
+
+### Rendering: `<img>` first, sanitising always
+
+Show a logo through `<img src>` (or a CSS background), never inline. `logoDataUrl(svg)` returns a
+`data:image/svg+xml;charset=utf-8,` URL, percent-encoded: smaller than base64 for SVG's mostly
+ASCII text, and free of quotes, angle brackets, ampersands, white space and `#` (which would end
+the data), so it is safe in any attribute or CSS string. A page's Content-Security-Policy must allow
+it: `img-src 'self' data:` (the strict policy the components are tested under,
+`default-src 'self'`, does not). Allowing `data:` for images lets no script run; the choice of
+percent-encoding or base64 makes no difference to the policy, which matches the scheme only. If a
+policy may not allow `data:`, serve the sanitised SVG as a file from your own origin instead, with
+`Content-Type: image/svg+xml`, `X-Content-Type-Options: nosniff` and
+`Content-Security-Policy: default-src 'none'` on that response (so it is inert even when opened
+directly), and `img-src 'self'` is enough.
+
+An SVG drawn as an image is the second layer: browsers run no script in it, fire no events, follow
+no links and load nothing external, whatever it holds. Sanitising is still required, because the
+image context is not the only place a logo ends up: it may be downloaded and opened directly (as a
+document, where script runs on the origin it is served from), served from a URL someone visits,
+inlined into a page by a consumer who wants to style it, pasted into an email or a design tool, or
+read by an older or unusual renderer. The sanitised output is inert in all of these: the browser
+test renders every accepted output of the hostile corpus and every clean logo both through `<img>`
+and inline through `innerHTML`, with no policy at all and under the strict one, and checks that no
+script ran, nothing was fetched and no policy violation fired (and, as a control, that the same
+checks catch the unsanitised corpus).
+
+### Threat model
+
+It protects against: script and event handlers in any form (elements, attributes, SMIL, CSS,
+`javascript:`, `vbscript:` and `data:` URLs, with entities, control characters, case and white
+space used to hide them); external loads and references of every kind (`href`, `url()`, `@import`,
+`xml:base`, entities, `xml-stylesheet`); XML attacks (entity expansion, external entities,
+encoding confusion); parser differentials (namespace tricks, comments and CDATA HTML reads
+differently, markup that changes meaning when re-parsed as HTML, since the output holds nothing but
+allowlisted markup and escaped text); DOM clobbering through ids; and denial of service through
+size, nesting, numbers, `use` expansion and reference cycles.
+
+It does not judge what a logo shows: trademark, offensive or misleading content, a logo that
+imitates another brand, or visual spoofing inside the logo's box (a drawn "verified" badge, a fake
+button) are out of scope, as is anything a page does with a logo outside it (a logo is drawn where
+the page puts it, at the size the page gives it). Text in a `title` or `desc` is kept as escaped
+text, so a consumer that shows it must still treat it as text. The geometry is kept to six
+decimals; colours set only by CSS are lost (see above).
+
+The tests hold it to that: a hostile corpus of 166 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`) and generated oversized inputs,
+each refused or accepted with an output an independent checker (its own tokeniser and its own copy
+of the allowlist) finds inert; a clean corpus of logos as Inkscape, Illustrator, Figma and Sketch
+export them, with golden outputs and geometry compared number by number; and 35,000 seeded random
+documents, strings, byte arrays and mutated logos, checking that it never throws and that every
+output is valid, idempotent and deterministic.
 
 ## Commands
 
