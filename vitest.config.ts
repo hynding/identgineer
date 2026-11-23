@@ -17,6 +17,12 @@ export default defineConfig({
       },
       {
         test: {
+          name: "variations",
+          include: ["packages/variations/src/**/*.test.ts"],
+        },
+      },
+      {
+        test: {
           name: "cms",
           include: ["cms/tests/**/*.test.ts"],
         },

@@ -4,9 +4,19 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./bootstrap-tag": "./src/bootstrap-tag.ts",
+    "./bootstrap.js": "./dist/bootstrap.js",
+    "./bootstrap.sri.json": "./dist/bootstrap.sri.json"
   },
   "scripts": {
+    "generate": "node scripts/generate.ts",
+    "build": "node scripts/build.ts",
     "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@identgineer/tokens": "workspace:*",
+    "happy-dom": "21.0.4",
+    "prettier": "3.10.1"
   }
 }
