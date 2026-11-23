@@ -77,7 +77,7 @@ describe("a callback that calls the tracker back", () => {
     tab.tracker.consent.deny();
     expect(first).toEqual(["denied", "granted"]);
     expect(second).toEqual(["denied", "granted"]);
-    expect(tab.tracker.consent.get()).toEqual({ state: "granted" });
+    expect(tab.tracker.consent.get()).toMatchObject({ state: "granted" });
   });
 
   it("survives a listener that disposes the tracker, calls track() or denies again", async () => {

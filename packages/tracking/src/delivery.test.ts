@@ -527,7 +527,7 @@ describe("dispose", () => {
     expect(tab.tracker.consent.grant()).toBe(false);
     expect(tab.tracker.consent.reset()).toBe(false);
     tab.tracker.consent.onChange(() => undefined)();
-    expect(tab.tracker.consent.get()).toEqual({ state: "granted" });
+    expect(tab.tracker.consent.get()).toMatchObject({ state: "granted" });
     tab.page.hide();
     world.clock.advance(3600 * SECOND);
     await settle();

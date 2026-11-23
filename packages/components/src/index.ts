@@ -10,6 +10,16 @@ export type {
   DialogOpenDetail,
   DialogSize,
 } from "./components/dialog/dialog-options";
+export type { ConsentBannerLabels } from "./components/consent-banner/consent-banner-labels";
+export type { ConsentPlacement } from "./components/consent-banner/consent-banner-options";
+export type { ConsentPreferencesLabels } from "./components/consent-preferences/consent-preferences-labels";
+export type {
+  ConsentChangeDetail,
+  ConsentClient,
+  ConsentSignal,
+  ConsentStateView,
+  ConsentStatusView,
+} from "./consent/consent-types";
 export type { IconName } from "./components/icon/icon-paths";
 export type { IdentityUserDetail, SignedInDetail, SignedOutDetail } from "./identity/event-details";
 export type {

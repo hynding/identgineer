@@ -15,6 +15,10 @@ import { CardPadding, CardVariant } from "./components/card/card-options";
 import { CheckedDetail, ValueDetail } from "./utils/event-details";
 import { GapStep, SizeStep } from "./utils/layout-steps";
 import { ClusterAlignment, ClusterJustification } from "./components/cluster/cluster-options";
+import { ConsentChangeDetail, ConsentClient } from "./consent/consent-types";
+import { ConsentBannerLabels } from "./components/consent-banner/consent-banner-labels";
+import { ConsentPlacement } from "./components/consent-banner/consent-banner-options";
+import { ConsentPreferencesLabels } from "./components/consent-preferences/consent-preferences-labels";
 import { CoverHeight } from "./components/cover/cover-options";
 import { DialogCancelDetail, DialogCloseDetail, DialogOpenDetail, DialogSize } from "./components/dialog/dialog-options";
 import { DividerOrientation } from "./components/divider/divider-options";
@@ -62,6 +66,10 @@ export { CardPadding, CardVariant } from "./components/card/card-options";
 export { CheckedDetail, ValueDetail } from "./utils/event-details";
 export { GapStep, SizeStep } from "./utils/layout-steps";
 export { ClusterAlignment, ClusterJustification } from "./components/cluster/cluster-options";
+export { ConsentChangeDetail, ConsentClient } from "./consent/consent-types";
+export { ConsentBannerLabels } from "./components/consent-banner/consent-banner-labels";
+export { ConsentPlacement } from "./components/consent-banner/consent-banner-options";
+export { ConsentPreferencesLabels } from "./components/consent-preferences/consent-preferences-labels";
 export { CoverHeight } from "./components/cover/cover-options";
 export { DialogCancelDetail, DialogCloseDetail, DialogOpenDetail, DialogSize } from "./components/dialog/dialog-options";
 export { DividerOrientation } from "./components/divider/divider-options";
@@ -498,6 +506,86 @@ export namespace Components {
           * @default "start"
          */
         "justify": ClusterJustification;
+    }
+    /**
+     * Asks once whether analytics may be switched on, for the consent object it is given in `consent`
+     * (the tracker's `tracker.consent`). It is a region of the page, not a dialog: it never blocks
+     * anything, takes no focus when it appears, and ignoring it, or pressing Escape, means no consent.
+     * It asks only while the state is `unknown` and no browser privacy signal is set. Under Global
+     * Privacy Control or Do Not Track it does not ask at all, since asking would invite a choice the
+     * browser has already made: it draws nothing, or, with `announce-signal`, one line saying the
+     * signal is respected. "Decline" comes first and has the same variant and size as "Accept
+     * analytics". After a choice, focus goes back to what had it before the banner, else to the main
+     * landmark, and a polite live region confirms it.
+     * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
+     * natural place is further on, so it keeps its space in the page's flow and never covers the end
+     * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
+     * element is scrolled clear of it. In a window too short for both, it joins the page's flow
+     * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
+     * is: a bar at the top scrolls away with the page and never covers a header that sticks.
+     */
+    interface IdgConsentBanner {
+        /**
+          * Under a browser privacy signal, say in one line that it is respected, instead of nothing.
+          * @default false
+         */
+        "announceSignal": boolean;
+        /**
+          * The tracker's consent object, `tracker.consent` (a JavaScript property).
+         */
+        "consent"?: ConsentClient;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<ConsentBannerLabels>;
+        /**
+          * `bottom` (the default): a bar that stays in view; `top` and `inline`: in the page's flow.
+          * @default "bottom"
+         */
+        "placement": ConsentPlacement;
+        /**
+          * The id of an `idg-consent-preferences` elsewhere in the page that "Choose" opens.
+         */
+        "preferences"?: string;
+    }
+    /**
+     * The visitor's choices about analytics, for the consent object it is given in `consent` (the
+     * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
+     * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
+     * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
+     * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
+     * the switch is disabled with the signal named, and saving can only record a denial.
+     * It follows changes made elsewhere (another tab, the banner). If the stored state changes under
+     * an unsaved edit, the edit is dropped and a note says so. With `modal` it is drawn inside an
+     * `idg-dialog` that `open()` and `close()` control; the dialog holds and restores focus.
+     */
+    interface IdgConsentPreferences {
+        /**
+          * Closes the dialog when `modal`, dropping an unsaved edit; does nothing otherwise.
+         */
+        "close": () => Promise<void>;
+        /**
+          * The tracker's consent object, `tracker.consent` (a JavaScript property).
+         */
+        "consent"?: ConsentClient;
+        /**
+          * The level of the heading, 2 to 6, to fit the page's outline.
+          * @default 2
+         */
+        "headingLevel": number;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<ConsentPreferencesLabels>;
+        /**
+          * Draws the panel inside an `idg-dialog`, opened with `open()` and closed with `close()`.
+          * @default false
+         */
+        "modal": boolean;
+        /**
+          * Opens the dialog when `modal`; otherwise moves focus to the panel's heading. Without a consent object there is nothing to choose, so it does nothing and says `false`.
+         */
+        "open": () => Promise<boolean>;
     }
     /**
      * A block at least as tall as `min-height` that centres its content, with optional regions pinned
@@ -1883,6 +1971,14 @@ export interface IdgCheckboxCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgCheckboxElement;
 }
+export interface IdgConsentBannerCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgConsentBannerElement;
+}
+export interface IdgConsentPreferencesCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgConsentPreferencesElement;
+}
 export interface IdgDialogCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgDialogElement;
@@ -2117,6 +2213,69 @@ declare global {
     var HTMLIdgClusterElement: {
         prototype: HTMLIdgClusterElement;
         new (): HTMLIdgClusterElement;
+    };
+    interface HTMLIdgConsentBannerElementEventMap {
+        "idgConsentChange": ConsentChangeDetail;
+        "idgConsentChoose": void;
+    }
+    /**
+     * Asks once whether analytics may be switched on, for the consent object it is given in `consent`
+     * (the tracker's `tracker.consent`). It is a region of the page, not a dialog: it never blocks
+     * anything, takes no focus when it appears, and ignoring it, or pressing Escape, means no consent.
+     * It asks only while the state is `unknown` and no browser privacy signal is set. Under Global
+     * Privacy Control or Do Not Track it does not ask at all, since asking would invite a choice the
+     * browser has already made: it draws nothing, or, with `announce-signal`, one line saying the
+     * signal is respected. "Decline" comes first and has the same variant and size as "Accept
+     * analytics". After a choice, focus goes back to what had it before the banner, else to the main
+     * landmark, and a polite live region confirms it.
+     * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
+     * natural place is further on, so it keeps its space in the page's flow and never covers the end
+     * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
+     * element is scrolled clear of it. In a window too short for both, it joins the page's flow
+     * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
+     * is: a bar at the top scrolls away with the page and never covers a header that sticks.
+     */
+    interface HTMLIdgConsentBannerElement extends Components.IdgConsentBanner, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgConsentBannerElementEventMap>(type: K, listener: (this: HTMLIdgConsentBannerElement, ev: IdgConsentBannerCustomEvent<HTMLIdgConsentBannerElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgConsentBannerElementEventMap>(type: K, listener: (this: HTMLIdgConsentBannerElement, ev: IdgConsentBannerCustomEvent<HTMLIdgConsentBannerElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgConsentBannerElement: {
+        prototype: HTMLIdgConsentBannerElement;
+        new (): HTMLIdgConsentBannerElement;
+    };
+    interface HTMLIdgConsentPreferencesElementEventMap {
+        "idgConsentChange": ConsentChangeDetail;
+    }
+    /**
+     * The visitor's choices about analytics, for the consent object it is given in `consent` (the
+     * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
+     * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
+     * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
+     * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
+     * the switch is disabled with the signal named, and saving can only record a denial.
+     * It follows changes made elsewhere (another tab, the banner). If the stored state changes under
+     * an unsaved edit, the edit is dropped and a note says so. With `modal` it is drawn inside an
+     * `idg-dialog` that `open()` and `close()` control; the dialog holds and restores focus.
+     */
+    interface HTMLIdgConsentPreferencesElement extends Components.IdgConsentPreferences, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgConsentPreferencesElementEventMap>(type: K, listener: (this: HTMLIdgConsentPreferencesElement, ev: IdgConsentPreferencesCustomEvent<HTMLIdgConsentPreferencesElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgConsentPreferencesElementEventMap>(type: K, listener: (this: HTMLIdgConsentPreferencesElement, ev: IdgConsentPreferencesCustomEvent<HTMLIdgConsentPreferencesElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgConsentPreferencesElement: {
+        prototype: HTMLIdgConsentPreferencesElement;
+        new (): HTMLIdgConsentPreferencesElement;
     };
     /**
      * A block at least as tall as `min-height` that centres its content, with optional regions pinned
@@ -2850,6 +3009,8 @@ declare global {
         "idg-card": HTMLIdgCardElement;
         "idg-checkbox": HTMLIdgCheckboxElement;
         "idg-cluster": HTMLIdgClusterElement;
+        "idg-consent-banner": HTMLIdgConsentBannerElement;
+        "idg-consent-preferences": HTMLIdgConsentPreferencesElement;
         "idg-cover": HTMLIdgCoverElement;
         "idg-dialog": HTMLIdgDialogElement;
         "idg-divider": HTMLIdgDividerElement;
@@ -3299,6 +3460,90 @@ declare namespace LocalJSX {
           * @default "start"
          */
         "justify"?: ClusterJustification;
+    }
+    /**
+     * Asks once whether analytics may be switched on, for the consent object it is given in `consent`
+     * (the tracker's `tracker.consent`). It is a region of the page, not a dialog: it never blocks
+     * anything, takes no focus when it appears, and ignoring it, or pressing Escape, means no consent.
+     * It asks only while the state is `unknown` and no browser privacy signal is set. Under Global
+     * Privacy Control or Do Not Track it does not ask at all, since asking would invite a choice the
+     * browser has already made: it draws nothing, or, with `announce-signal`, one line saying the
+     * signal is respected. "Decline" comes first and has the same variant and size as "Accept
+     * analytics". After a choice, focus goes back to what had it before the banner, else to the main
+     * landmark, and a polite live region confirms it.
+     * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
+     * natural place is further on, so it keeps its space in the page's flow and never covers the end
+     * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
+     * element is scrolled clear of it. In a window too short for both, it joins the page's flow
+     * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
+     * is: a bar at the top scrolls away with the page and never covers a header that sticks.
+     */
+    interface IdgConsentBanner {
+        /**
+          * Under a browser privacy signal, say in one line that it is respected, instead of nothing.
+          * @default false
+         */
+        "announceSignal"?: boolean;
+        /**
+          * The tracker's consent object, `tracker.consent` (a JavaScript property).
+         */
+        "consent"?: ConsentClient;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<ConsentBannerLabels>;
+        /**
+          * Fires when the user chooses here, with the state that is now stored. A change made elsewhere (another tab, the preferences) is not announced by it: subscribe with `consent.onChange`.
+         */
+        "onIdgConsentChange"?: (event: IdgConsentBannerCustomEvent<ConsentChangeDetail>) => void;
+        /**
+          * Fires when "Choose" is pressed. Call `preventDefault()` to open the preferences yourself.
+         */
+        "onIdgConsentChoose"?: (event: IdgConsentBannerCustomEvent<void>) => void;
+        /**
+          * `bottom` (the default): a bar that stays in view; `top` and `inline`: in the page's flow.
+          * @default "bottom"
+         */
+        "placement"?: ConsentPlacement;
+        /**
+          * The id of an `idg-consent-preferences` elsewhere in the page that "Choose" opens.
+         */
+        "preferences"?: string;
+    }
+    /**
+     * The visitor's choices about analytics, for the consent object it is given in `consent` (the
+     * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
+     * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
+     * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
+     * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
+     * the switch is disabled with the signal named, and saving can only record a denial.
+     * It follows changes made elsewhere (another tab, the banner). If the stored state changes under
+     * an unsaved edit, the edit is dropped and a note says so. With `modal` it is drawn inside an
+     * `idg-dialog` that `open()` and `close()` control; the dialog holds and restores focus.
+     */
+    interface IdgConsentPreferences {
+        /**
+          * The tracker's consent object, `tracker.consent` (a JavaScript property).
+         */
+        "consent"?: ConsentClient;
+        /**
+          * The level of the heading, 2 to 6, to fit the page's outline.
+          * @default 2
+         */
+        "headingLevel"?: number;
+        /**
+          * The text, merged over the English defaults. Assign a new object to change it.
+         */
+        "labels"?: Partial<ConsentPreferencesLabels>;
+        /**
+          * Draws the panel inside an `idg-dialog`, opened with `open()` and closed with `close()`.
+          * @default false
+         */
+        "modal"?: boolean;
+        /**
+          * Fires when the user saves or erases here, with the state that is now stored. A change made elsewhere (another tab, the banner) is not announced by it: subscribe with `consent.onChange`.
+         */
+        "onIdgConsentChange"?: (event: IdgConsentPreferencesCustomEvent<ConsentChangeDetail>) => void;
     }
     /**
      * A block at least as tall as `min-height` that centres its content, with optional regions pinned
@@ -4808,6 +5053,15 @@ declare namespace LocalJSX {
         "justify": ClusterJustification;
         "align": ClusterAlignment;
     }
+    interface IdgConsentBannerAttributes {
+        "placement": ConsentPlacement;
+        "announceSignal": boolean;
+        "preferences": string;
+    }
+    interface IdgConsentPreferencesAttributes {
+        "modal": boolean;
+        "headingLevel": number;
+    }
     interface IdgCoverAttributes {
         "minHeight": CoverHeight;
         "gap": GapStep;
@@ -5104,6 +5358,8 @@ declare namespace LocalJSX {
         "idg-card": Omit<IdgCard, keyof IdgCardAttributes> & { [K in keyof IdgCard & keyof IdgCardAttributes]?: IdgCard[K] } & { [K in keyof IdgCard & keyof IdgCardAttributes as `attr:${K}`]?: IdgCardAttributes[K] } & { [K in keyof IdgCard & keyof IdgCardAttributes as `prop:${K}`]?: IdgCard[K] };
         "idg-checkbox": Omit<IdgCheckbox, keyof IdgCheckboxAttributes> & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes]?: IdgCheckbox[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `attr:${K}`]?: IdgCheckboxAttributes[K] } & { [K in keyof IdgCheckbox & keyof IdgCheckboxAttributes as `prop:${K}`]?: IdgCheckbox[K] };
         "idg-cluster": Omit<IdgCluster, keyof IdgClusterAttributes> & { [K in keyof IdgCluster & keyof IdgClusterAttributes]?: IdgCluster[K] } & { [K in keyof IdgCluster & keyof IdgClusterAttributes as `attr:${K}`]?: IdgClusterAttributes[K] } & { [K in keyof IdgCluster & keyof IdgClusterAttributes as `prop:${K}`]?: IdgCluster[K] };
+        "idg-consent-banner": Omit<IdgConsentBanner, keyof IdgConsentBannerAttributes> & { [K in keyof IdgConsentBanner & keyof IdgConsentBannerAttributes]?: IdgConsentBanner[K] } & { [K in keyof IdgConsentBanner & keyof IdgConsentBannerAttributes as `attr:${K}`]?: IdgConsentBannerAttributes[K] } & { [K in keyof IdgConsentBanner & keyof IdgConsentBannerAttributes as `prop:${K}`]?: IdgConsentBanner[K] };
+        "idg-consent-preferences": Omit<IdgConsentPreferences, keyof IdgConsentPreferencesAttributes> & { [K in keyof IdgConsentPreferences & keyof IdgConsentPreferencesAttributes]?: IdgConsentPreferences[K] } & { [K in keyof IdgConsentPreferences & keyof IdgConsentPreferencesAttributes as `attr:${K}`]?: IdgConsentPreferencesAttributes[K] } & { [K in keyof IdgConsentPreferences & keyof IdgConsentPreferencesAttributes as `prop:${K}`]?: IdgConsentPreferences[K] };
         "idg-cover": Omit<IdgCover, keyof IdgCoverAttributes> & { [K in keyof IdgCover & keyof IdgCoverAttributes]?: IdgCover[K] } & { [K in keyof IdgCover & keyof IdgCoverAttributes as `attr:${K}`]?: IdgCoverAttributes[K] } & { [K in keyof IdgCover & keyof IdgCoverAttributes as `prop:${K}`]?: IdgCover[K] };
         "idg-dialog": Omit<IdgDialog, keyof IdgDialogAttributes> & { [K in keyof IdgDialog & keyof IdgDialogAttributes]?: IdgDialog[K] } & { [K in keyof IdgDialog & keyof IdgDialogAttributes as `attr:${K}`]?: IdgDialogAttributes[K] } & { [K in keyof IdgDialog & keyof IdgDialogAttributes as `prop:${K}`]?: IdgDialog[K] };
         "idg-divider": Omit<IdgDivider, keyof IdgDividerAttributes> & { [K in keyof IdgDivider & keyof IdgDividerAttributes]?: IdgDivider[K] } & { [K in keyof IdgDivider & keyof IdgDividerAttributes as `attr:${K}`]?: IdgDividerAttributes[K] } & { [K in keyof IdgDivider & keyof IdgDividerAttributes as `prop:${K}`]?: IdgDivider[K] };
@@ -5207,6 +5463,36 @@ declare module "@stencil/core" {
              * reading order.
              */
             "idg-cluster": LocalJSX.IntrinsicElements["idg-cluster"] & JSXBase.HTMLAttributes<HTMLIdgClusterElement>;
+            /**
+             * Asks once whether analytics may be switched on, for the consent object it is given in `consent`
+             * (the tracker's `tracker.consent`). It is a region of the page, not a dialog: it never blocks
+             * anything, takes no focus when it appears, and ignoring it, or pressing Escape, means no consent.
+             * It asks only while the state is `unknown` and no browser privacy signal is set. Under Global
+             * Privacy Control or Do Not Track it does not ask at all, since asking would invite a choice the
+             * browser has already made: it draws nothing, or, with `announce-signal`, one line saying the
+             * signal is respected. "Decline" comes first and has the same variant and size as "Accept
+             * analytics". After a choice, focus goes back to what had it before the banner, else to the main
+             * landmark, and a polite live region confirms it.
+             * `placement` `bottom` (the default) makes the host stick to the bottom edge of the window while its
+             * natural place is further on, so it keeps its space in the page's flow and never covers the end
+             * of the page, and the banner keeps the page's scroll padding as tall as itself, so a focused
+             * element is scrolled clear of it. In a window too short for both, it joins the page's flow
+             * instead and the page itself scrolls. `top` and `inline` are in the page's flow where the element
+             * is: a bar at the top scrolls away with the page and never covers a header that sticks.
+             */
+            "idg-consent-banner": LocalJSX.IntrinsicElements["idg-consent-banner"] & JSXBase.HTMLAttributes<HTMLIdgConsentBannerElement>;
+            /**
+             * The visitor's choices about analytics, for the consent object it is given in `consent` (the
+             * tracker's `tracker.consent`): "Necessary", plainly marked as always on and not tracked, and "Analytics", a switch
+             * that shows the current state. Nothing changes until "Save preferences", which calls `grant()` or
+             * `deny()`; "Withdraw consent and erase" calls `reset()` after a confirmation of its own. While a
+             * browser privacy signal (Global Privacy Control or Do Not Track) is set, analytics are off and
+             * the switch is disabled with the signal named, and saving can only record a denial.
+             * It follows changes made elsewhere (another tab, the banner). If the stored state changes under
+             * an unsaved edit, the edit is dropped and a note says so. With `modal` it is drawn inside an
+             * `idg-dialog` that `open()` and `close()` control; the dialog holds and restores focus.
+             */
+            "idg-consent-preferences": LocalJSX.IntrinsicElements["idg-consent-preferences"] & JSXBase.HTMLAttributes<HTMLIdgConsentPreferencesElement>;
             /**
              * A block at least as tall as `min-height` that centres its content, with optional regions pinned
              * to its top and bottom, such as a hero, a splash or a sign-in screen. It only arranges, so it

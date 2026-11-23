@@ -14,6 +14,8 @@ export interface ConsentStatus {
   readonly state: ConsentState;
   /** Set only while `state` is `denied` because of a browser signal. */
   readonly reason?: "gpc" | "dnt";
+  /** When the stored decision was made (milliseconds since the epoch); `null` while none is stored. */
+  readonly decidedAt: number | null;
 }
 
 export interface ConsentApi {

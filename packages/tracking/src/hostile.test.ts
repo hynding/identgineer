@@ -69,7 +69,7 @@ describe("hostile inputs", () => {
         '{"__proto__":{"polluted":true},"id":"AAAAAAAAAAAAAAAAAAAAAA","last":1}',
       );
       const tab = openTab(world, { session });
-      expect(tab.tracker.consent.get()).toEqual({ state: "unknown" });
+      expect(tab.tracker.consent.get()).toMatchObject({ state: "unknown" });
       tab.tracker.consent.grant();
       tab.tracker.track("clicked", { target: "x" });
       await tab.tracker.flush();
@@ -201,7 +201,7 @@ describe("hostile inputs", () => {
       world.local.failWrites(true);
       const tab = openTab(world);
       expect(tab.tracker.consent.grant()).toBe(false);
-      expect(tab.tracker.consent.get()).toEqual({ state: "unknown" });
+      expect(tab.tracker.consent.get()).toMatchObject({ state: "unknown" });
     });
   });
 

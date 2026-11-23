@@ -20,4 +20,10 @@ export interface PageEnvironment {
   readonly onOnline: (listener: () => void) => Unsubscribe;
   /** The URL changed without a load: `pushState`, `replaceState` or `popstate`. */
   readonly onNavigate: (listener: () => void) => Unsubscribe;
+  /**
+   * Another tab changed `localStorage`: the `storage` event, for `key` or for a `clear()` (which
+   * names no key). It reaches a tab by a path of its own, so it can come after a notice on the
+   * cross-tab channel, which is why the tracker listens to both.
+   */
+  readonly onStorage: (key: string, listener: () => void) => Unsubscribe;
 }

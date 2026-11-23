@@ -1,0 +1,66 @@
+/* The consent fixture: a header, a column of content that is long enough to scroll, and the
+   banner as the last thing in the body. */
+body {
+  margin: 0;
+}
+
+/* A header the page keeps in view, as a layout's chrome is: a banner that stuck to the top would
+   sit over it, and focus scrolled under either would be hidden. The root's scroll padding keeps
+   what is focused clear of the header, as a real page sets it. */
+html {
+  scroll-padding-block-start: 5rem;
+}
+
+.consent-header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 3;
+  /* Opaque even where a design's surface is translucent, as a header that sticks over the page is. */
+  background: linear-gradient(var(--idg-surface-background) 0 0), var(--idg-color-bg);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--idg-space-s);
+  padding: var(--idg-space-s) var(--idg-space-m);
+  border-block-end: var(--idg-border-width) var(--idg-border-style) var(--idg-border-color);
+}
+
+.consent-brand {
+  margin: 0;
+  font-weight: var(--idg-font-weight-bold);
+}
+
+.consent-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--idg-space-l);
+  max-inline-size: var(--idg-size-xl);
+  margin-inline: auto;
+  padding: var(--idg-space-m);
+  box-sizing: border-box;
+}
+
+.consent-main section {
+  min-inline-size: 0;
+}
+
+.consent-main h2 {
+  margin-block: 0 var(--idg-space-s);
+}
+
+.consent-filler {
+  block-size: 60rem;
+}
+
+/* The documented rule: hide the elements until they have hydrated. */
+idg-consent-banner:not(.hydrated),
+idg-consent-preferences:not(.hydrated) {
+  display: none;
+}
+
+/* Doubled text in a narrow column must break a long word rather than push the page sideways. */
+.consent-main h1,
+.consent-main h2 {
+  overflow-wrap: anywhere;
+}

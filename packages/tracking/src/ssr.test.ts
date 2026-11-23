@@ -13,7 +13,7 @@ describe("server-side rendering", () => {
     expect(typeof (globalThis as { window?: unknown }).window).toBe("undefined");
     expect(typeof (globalThis as { document?: unknown }).document).toBe("undefined");
     const tracker = createTracker({ ...OPTIONS, autoPageViews: true });
-    expect(tracker.consent.get()).toEqual({ state: "unknown" });
+    expect(tracker.consent.get()).toMatchObject({ state: "unknown" });
     expect(tracker.consent.grant()).toBe(false);
     expect(() => {
       tracker.track("clicked", { target: "x" });

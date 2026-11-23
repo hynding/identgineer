@@ -387,7 +387,7 @@ describe("automatic page views", () => {
     const tab = grantedTab(createWorld());
     tab.page.navigate("https://shop.example.com/cart");
     expect(await sent(tab)).toEqual([]);
-    expect(tab.page.listenerCount()).toBe(2);
+    expect(tab.page.listenerCount()).toBe(3);
   });
 
   it("record the page the visitor is on, then each navigation", async () => {
@@ -431,7 +431,7 @@ describe("automatic page views", () => {
 
   it("stop at dispose", async () => {
     const tab = grantedTab(createWorld(), { autoPageViews: true });
-    expect(tab.page.listenerCount()).toBe(3);
+    expect(tab.page.listenerCount()).toBe(4);
     tab.tracker.dispose();
     expect(tab.page.listenerCount()).toBe(0);
     tab.page.navigate("https://shop.example.com/after");

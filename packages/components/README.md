@@ -1310,6 +1310,81 @@ takes focus as it is, with the outcome said politely; or else to a hidden anchor
 whose text says the outcome as it takes focus. It writes no `tabindex` on the page's elements and
 adds no group to the accessibility tree.
 
+## Consent
+
+Two elements put the consent API of the tracker of `@identgineer/tracking` on a page: a banner
+that asks once, and a panel where the visitor changes or withdraws the choice. Each takes the
+tracker's consent object, `tracker.consent`, as a JavaScript property, `consent`, typed by a local
+structural interface (`ConsentClient`, with `ConsentStatusView`, `ConsentStateView`,
+`ConsentSignal` and `ConsentChangeDetail`, exported as types). The elements never create a
+tracker, never import the tracking package (it is a devDependency, for tests and the type check
+only; `checks/` holds that no shipped source, declaration or bundle carries it, nor its fakes) and
+store nothing: the tracker keeps the one record. Without a consent object both draw nothing and
+log nothing. An object assigned late or swapped is followed and the old one unsubscribed; so is
+every object when the element leaves the page, and an element moved in the page subscribes once.
+A consent object whose methods throw, or that cannot store the choice, gives an inline `idg-alert`
+and never an exception.
+
+Guides: [plain HTML](../../docs/consent/plain-html.md), [React](../../docs/consent/react.md),
+[Vue](../../docs/consent/vue.md), [Angular](../../docs/consent/angular.md), and
+[the rules the banner follows and why](../../docs/consent/rules.md), which also covers placement,
+localisation and what the site owner remains responsible for (their own legal assessment).
+
+### `idg-consent-banner`
+
+A `region` named "Analytics choice" (not a dialog): nothing behind it is inert, no focus is
+trapped and it takes none when it appears. It asks only while the state is `unknown` and no
+browser privacy signal is set. Under Global Privacy Control or Do Not Track it does not ask: it
+draws nothing, or, with `announce-signal`, one polite line (part `signal-note`) that the signal is
+respected and analytics are off. The choices are "Decline", "Accept analytics" (the same
+variant, size and look, in a row that shares its width equally or one to a line; Decline first in
+the DOM and the Tab order) and "Choose". No control closes it, and Escape or ignoring it means no
+consent. After a choice, focus goes back to the element that had it before the banner, else to
+the page's `<main>` (given `tabindex="-1"` only while it has focus), and a polite live region
+(part `status`) says "Analytics accepted." or "Analytics declined.".
+
+Props `consent`, `labels` (`ConsentBannerLabels`, every string, partial objects merged over the
+English defaults), `placement` (`bottom`, `top`, `inline`), `announce-signal`, `preferences` (the
+id of an `idg-consent-preferences` that "Choose" opens). Events `idgConsentChange` (`{ state }`,
+after a choice made here only; subscribe to `consent.onChange` for every change) and
+`idgConsentChoose` (cancelable; unless prevented, "Choose" opens the panel named by `preferences`
+or slotted as `slot="preferences"`, which a non-modal panel draws only then). Slots `message`,
+`policy`, `preferences`; parts `banner`, `message`, `choices`, `decline`, `accept`, `choose`,
+`preferences`, `error`, `signal-note`, `status`.
+
+**Placement.** `bottom` makes the host `position: sticky` to the bottom edge, so it keeps its place
+in the page's flow and never covers the end of the page: put it last in its parent, with no
+`overflow` between it and the page. While drawn and sticking, it keeps the root's
+`scroll-padding-block-end` as tall as itself, added to the page's own value (stylesheet or inline)
+and given back exactly after, so a focused element is scrolled clear of it (WCAG 2.4.11). A bar
+holds to half the window and scrolls inside itself, and in a window under 32rem tall it joins the
+page's flow instead. `top` and `inline` are in the flow where the element is (a top bar goes first
+in the body and scrolls away, so it never covers a sticky header). The padding is set through the
+root's style object, which the strict policy allows.
+
+### `idg-consent-preferences`
+
+A `section` named by its heading (`heading-level`, 2 to 6, default 2) with two rows: "Necessary",
+the words "Always on" with no control, and its explanation (the SDK does not track it), and "Analytics",
+an `idg-switch` that shows the current state and is off when nothing was chosen. Nothing changes
+until "Save preferences" (part `save`), which calls `grant()` or `deny()`; "Withdraw consent and
+erase" (part `erase`) asks inline (part `confirm`, never `window.confirm`) and calls `reset()`.
+While a signal is set the switch is off and disabled, a note names the signal (part `signal`),
+and saving can only record a denial. It follows changes made elsewhere through `onChange`: if the
+stored state changes under an unsaved edit, the edit is dropped and a note says so (part
+`changed`). The time of the choice, `decidedAt` in the status (milliseconds, `null` if none), is
+shown (part `decided`), formatted with `Intl.DateTimeFormat` in the language of the nearest `lang`,
+looked for through shadow roots.
+
+`modal` draws it in an `idg-dialog` (which holds and restores focus and closes on Escape,
+dropping an unsaved edit, which the live region says politely); `open()` (resolves `true`, or
+`false` without a consent object) and `close()` control the dialog. Not modal, `open()` moves
+focus to the heading and `close()` does nothing. A successful save or erase in a dialog closes it
+and is said politely (part `status`). Props `consent`, `labels` (`ConsentPreferencesLabels`),
+`modal`, `heading-level`. Event `idgConsentChange` (`{ state }`, after a save or an erase made
+here). Parts `panel`, `heading`, `categories`, `necessary`, `analytics`, `signal`, `decided`,
+`changed`, `error`, `actions`, `save`, `erase`, `confirm`, `status`.
+
 ## Strict CSP and Trusted Types
 
 Every component is verified in Chromium against
@@ -1395,7 +1470,7 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   package builds: copy the new value from `dist/bootstrap.sri.json`.
 - **The identity fixture.** `identity.html` wires every identity element to one real client on the
   identity package's fake API (`createFakeIdentityApi`), in the page. The build's second step,
-  `scripts/build-identity-fixture.ts`, transpiles that package's source and its fake into
+  `scripts/build-sdk-fixtures.ts`, transpiles that package's source and its fake into
   same-origin modules in `www/identity-sdk/`, so the fixture runs under the strict policy; they are
   never part of `dist`, which `checks/shipped-bundle.test.ts` holds. `?confirm` turns email
   confirmation on and `?hold-restore` keeps the first restore unanswered until the test lets it go.
@@ -1407,6 +1482,17 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   inline-size container; only when it is narrower than nine of its own ems (large text on a narrow
   screen) do its controls' inline padding (at most `4cqi`) and its gaps shrink. The primitives'
   own padding is never capped.
+- **The consent fixture.** `consent.html` wires both consent elements to one real tracker from
+  the tracking package, in the page: the same build step writes the tracker and its fakes to
+  `www/tracking-sdk/` (also never part of `dist`). The tracker really posts to `/collect`, which
+  the browser tests answer themselves, so every request is seen at the network level (`?fake-collector`
+  uses the SDK's fake collector instead). `?granted` and `?denied` stand for an earlier visit and
+  `?announce` sets `announce-signal`; a test sets Global Privacy Control or Do Not Track with an
+  init script. The consent browser tests (`consent*.browser.ts`) cover zero requests before Accept,
+  after Decline and under a signal, keyboard-only flows, focus, two tabs, the bar's place and
+  scroll padding, axe across every axis, equal prominence of Accept and Decline as numbers (same
+  variant, same computed look, size within a pixel) in every design, right to left, forced
+  colours, reduced motion, and 200% text at 320px in every UX mode.
 - `src/testing/` holds spec helpers (a recording `ElementInternals`, since the mock DOM has none) and
   is excluded from the Stencil build.
 - `tsconfig.json` is the strict config for tooling and editors. `tsconfig.build.json` is the one

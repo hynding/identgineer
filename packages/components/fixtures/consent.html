@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-layout="top-bar" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Consent components fixture</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/fixtures/consent.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+    <!-- Wires both consent components to one real tracker, in this page. -->
+    <script type="module" src="/fixtures/consent.js"></script>
+  </head>
+  <body>
+    <header class="consent-header">
+      <p class="consent-brand">Identgineer</p>
+      <button id="before" type="button">Open menu</button>
+    </header>
+    <main class="consent-main">
+      <h1>Consent</h1>
+
+      <section id="prefs-section" aria-labelledby="prefs-title">
+        <h2 id="prefs-title">Your privacy settings</h2>
+        <idg-consent-preferences id="prefs" heading-level="3"></idg-consent-preferences>
+      </section>
+
+      <section aria-labelledby="long-title">
+        <h2 id="long-title">A long page</h2>
+        <p>
+          The page is long enough to scroll, so a bar stuck to the bottom of the window has content
+          to cover.
+        </p>
+        <div class="consent-filler" aria-hidden="true"></div>
+        <p><a id="low-link" href="#low-link">A link far down the page</a></p>
+        <div class="consent-filler" aria-hidden="true"></div>
+        <p id="move-target"></p>
+      </section>
+    </main>
+
+    <idg-consent-preferences id="prefs-dialog" modal></idg-consent-preferences>
+
+    <!-- Last in the body, so a bottom bar keeps its place after the content and never covers it. -->
+    <idg-consent-banner id="banner" preferences="prefs-dialog">
+      <a id="policy-link" slot="policy" href="#policy">Privacy policy</a>
+    </idg-consent-banner>
+  </body>
+</html>

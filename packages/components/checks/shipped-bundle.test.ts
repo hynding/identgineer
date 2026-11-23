@@ -24,15 +24,33 @@ const SDK_MARKERS = [
   "createFakeIdentityApi",
 ];
 
+// The same for the tracking SDK and its fakes: the keys it stores under, its write-key header,
+// its factory and the fake collector, which only the tracker, a page or a test may carry.
+const TRACKING_MARKERS = [
+  "idg.tracking.consent.v1",
+  "idg.tracking.queue.v1",
+  "X-Idg-Write-Key",
+  "createTracker",
+  "createFakeCollector",
+  "createFakePage",
+  "createMemoryStorage",
+];
+
 // Reads the build output, so it needs the components built first (CI builds before it tests).
 describe.skipIf(!SHIPPED.every((directory) => existsSync(directory)))(
   "the shipped component bundles, once built",
   () => {
     const files = SHIPPED.flatMap(scripts);
 
-    it("are there, with the identity components in them", () => {
+    it("are there, with the identity and consent components in them", () => {
       expect(files.length).toBeGreaterThan(0);
       expect(files.some((file) => readFileSync(file, "utf8").includes("idg-sign-in"))).toBe(true);
+      expect(files.some((file) => readFileSync(file, "utf8").includes("idg-consent-banner"))).toBe(
+        true,
+      );
+      expect(
+        files.some((file) => readFileSync(file, "utf8").includes("idg-consent-preferences")),
+      ).toBe(true);
     });
 
     it("hold no browser fixture: the fixtures are test pages, served from www only", () => {
@@ -49,14 +67,22 @@ describe.skipIf(!SHIPPED.every((directory) => existsSync(directory)))(
       expect(fixtures).toEqual([]);
     });
 
-    it("contain no code of the identity SDK or its fake", () => {
+    it.each([
+      ["identity SDK or its fake", SDK_MARKERS],
+      ["tracking SDK or its fakes", TRACKING_MARKERS],
+    ])("contain no code of the %s", (_name, markers) => {
       const leaking = files.flatMap((file) => {
         const code = readFileSync(file, "utf8");
-        return SDK_MARKERS.filter((marker) => code.includes(marker)).map(
-          (marker) => `${file.slice(PACKAGE.length)}: ${marker}`,
-        );
+        return markers
+          .filter((marker) => code.includes(marker))
+          .map((marker) => `${file.slice(PACKAGE.length)}: ${marker}`);
       });
       expect(leaking).toEqual([]);
+    });
+
+    it("hold no browser fixture of the tracking SDK either: it is served from www only", () => {
+      const sdk = join(PACKAGE, "dist", "tracking-sdk");
+      expect(existsSync(sdk)).toBe(false);
     });
   },
 );
