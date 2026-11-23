@@ -59,12 +59,15 @@ export type SvgLogoRemovalReason =
   | "invalid-value"
   | "misplaced"
   | "dangling-reference"
-  | "character-data";
+  | "character-data"
+  /** A document type declaration with no internal subset: read, never honoured, not written. */
+  | "document-type";
 
 /**
  * One thing the sanitiser dropped. `element` and `attribute` are names as written (names only ever
- * hold ASCII name characters, so they are safe to show); `property` is a declaration of a `style`
- * attribute. A removed element takes everything inside it along.
+ * hold ASCII name characters, so they are safe to show), or `!DOCTYPE` for a skipped document type
+ * declaration; `property` is a declaration of a `style` attribute. A removed element takes
+ * everything inside it along.
  */
 export interface SvgLogoRemoval {
   readonly element: string;

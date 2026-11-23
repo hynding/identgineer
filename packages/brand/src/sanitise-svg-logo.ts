@@ -125,7 +125,11 @@ export function sanitiseSvgLogoWithLimits(
       );
     }
     const removals = new Removals(locator);
-    const root = filterSvgTree(resolveSvgNamespaces(parseSvgXml(text, limits)), limits, removals);
+    const document = parseSvgXml(text, limits);
+    if (document.doctype !== undefined) {
+      removals.add({ element: "!DOCTYPE" }, "document-type", document.doctype);
+    }
+    const root = filterSvgTree(resolveSvgNamespaces(document.root), limits, removals);
     const size = settleSize(root, limits);
     const renamed = settleSvgReferences(root, limits, idPrefix, removals);
     return {

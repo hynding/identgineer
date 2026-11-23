@@ -27,6 +27,12 @@ export interface XmlText {
 
 export type XmlNode = XmlElement | XmlText;
 
+export interface XmlDocument {
+  readonly root: XmlElement;
+  /** Where a document type declaration that was read and skipped begins, if there was one. */
+  readonly doctype: number | undefined;
+}
+
 interface OpenElement {
   readonly name: string;
   readonly attributes: readonly XmlAttribute[];
@@ -44,6 +50,11 @@ const PREDEFINED_ENTITIES: Readonly<Record<string, string>> = {
   quot: '"',
   apos: "'",
 };
+// XML's PubidChar, less the quote that delimits the literal (checked apart).
+const PUBLIC_ID = /^[ \r\na-zA-Z0-9'()+,./:=?;!*#@$_%-]*$/;
+// A system identifier may hold anything but its quote in XML; these four are refused as well, since
+// a reader that does not track quotes would end the declaration or open a subset at them.
+const SYSTEM_ID = /^[^<>[\]]*$/;
 const MAX_DECIMAL_DIGITS = 7;
 const MAX_HEX_DIGITS = 6;
 
@@ -66,16 +77,18 @@ function isLocalPathValue(name: string): boolean {
 
 /**
  * A strict reader for the subset of XML 1.0 a logo needs: an optional XML declaration (version
- * 1.0, UTF-8), comments, one root element, elements with quoted attributes, character data, CDATA
- * sections, the five predefined entities and character references. A document type declaration,
- * a processing instruction, an unknown entity, a malformed or overlong character reference, an
- * unquoted or repeated attribute, a stray `<` or `]]>`, an unclosed or mismatched tag, or anything
- * else outside that subset refuses the whole document. It works in one pass, in time linear in the
- * input, and never recurses.
+ * 1.0, UTF-8), comments, an optional document type declaration with no internal subset (read and
+ * skipped: no DTD is fetched and nothing it declares is honoured), one root element, elements with
+ * quoted attributes, character data, CDATA sections, the five predefined entities and character
+ * references. A document type declaration with an internal subset, a processing instruction, an
+ * unknown entity, a malformed or overlong character reference, an unquoted or repeated attribute, a
+ * stray `<` or `]]>`, an unclosed or mismatched tag, or anything else outside that subset refuses
+ * the whole document. It works in one pass, in time linear in the input, and never recurses.
  */
 class Reader {
   private position = 0;
   private elementCount = 0;
+  private doctype: number | undefined;
 
   private readonly text: string;
   private readonly limits: SvgLogoLimits;
@@ -85,20 +98,20 @@ class Reader {
     this.limits = limits;
   }
 
-  readDocument(): XmlElement {
+  readDocument(): XmlDocument {
     if (this.text.startsWith("<?xml") && isXmlWhitespace(this.text.charCodeAt(5))) {
       this.readDeclaration();
     }
-    this.skipMisc();
+    this.skipMisc(true);
     if (this.text.charCodeAt(this.position) !== 0x3c) {
       this.fail("malformed", "must start with the root element");
     }
     const root = this.readElement();
-    this.skipMisc();
+    this.skipMisc(false);
     if (this.position < this.text.length) {
       this.fail("malformed", "has content after the root element");
     }
-    return root;
+    return { root, doctype: this.doctype };
   }
 
   private fail(code: SvgLogoRejection["code"], message: string, at = this.position): never {
@@ -166,12 +179,16 @@ class Reader {
     if (next === 0) this.fail("invalid-declaration", "has a malformed XML declaration", start);
   }
 
-  /** White space and comments, before and after the root. */
-  private skipMisc(): void {
+  /** White space and comments, before and after the root, and one document type before it. */
+  private skipMisc(beforeRoot: boolean): void {
     for (;;) {
       this.skipWhitespace();
       if (this.startsWith("<!--")) {
         this.skipComment();
+        continue;
+      }
+      if (beforeRoot && this.doctype === undefined && this.startsWith("<!DOCTYPE")) {
+        this.readDoctype();
         continue;
       }
       if (this.startsWith("<![CDATA[")) {
@@ -192,6 +209,58 @@ class Reader {
     if (this.startsWith("<!") && !this.startsWith("<![CDATA[")) {
       this.fail("malformed", "has a markup declaration that is not allowed");
     }
+  }
+
+  /**
+   * `<!DOCTYPE` name, then optionally `SYSTEM "system id"` or `PUBLIC "public id" "system id"`,
+   * then `>`, exactly as XML spells it. An internal subset (`[`) refuses the document: that is where
+   * entities are declared. The identifiers are read only to find the end; nothing is fetched.
+   */
+  private readDoctype(): void {
+    const start = this.position;
+    const refuse = (): never =>
+      this.fail("doctype", "has a malformed document type declaration", start);
+    this.position += "<!DOCTYPE".length;
+    if (!this.skipWhitespace()) refuse();
+    const nameStart = this.position;
+    while (
+      this.position - nameStart <= this.limits.nameLength &&
+      isNameUnit(this.text.charCodeAt(this.position))
+    ) {
+      this.position += 1;
+    }
+    if (!NAME.test(this.text.slice(nameStart, this.position))) refuse();
+    if (this.skipWhitespace() && (this.startsWith("SYSTEM") || this.startsWith("PUBLIC"))) {
+      const isPublic = this.startsWith("PUBLIC");
+      this.position += "SYSTEM".length;
+      if (!this.skipWhitespace()) refuse();
+      if (isPublic) {
+        if (!PUBLIC_ID.test(this.readDoctypeLiteral(refuse))) refuse();
+        if (!this.skipWhitespace()) refuse();
+      }
+      if (!SYSTEM_ID.test(this.readDoctypeLiteral(refuse))) refuse();
+      this.skipWhitespace();
+    }
+    if (this.startsWith("[")) {
+      this.fail(
+        "doctype",
+        "may not hold a document type declaration with an internal subset",
+        start,
+      );
+    }
+    if (!this.startsWith(">")) refuse();
+    this.position += 1;
+    this.doctype = start;
+  }
+
+  private readDoctypeLiteral(refuse: () => never): string {
+    const quote = this.text[this.position];
+    if (quote !== '"' && quote !== "'") refuse();
+    const end = this.text.indexOf(quote, this.position + 1);
+    if (end === -1) refuse();
+    const value = this.text.slice(this.position + 1, end);
+    this.position = end + 1;
+    return value;
   }
 
   private skipComment(): void {
@@ -473,6 +542,6 @@ function close(element: OpenElement): XmlElement {
 }
 
 /** Reads normalised text (see `decodeSvgInput`) into a tree, or throws an `SvgLogoRejection`. */
-export function parseSvgXml(text: string, limits: SvgLogoLimits): XmlElement {
+export function parseSvgXml(text: string, limits: SvgLogoLimits): XmlDocument {
   return new Reader(text, limits).readDocument();
 }
