@@ -1,11 +1,13 @@
 import { contrastRatio } from "@identgineer/tokens";
 import { findThemeProblems } from "@identgineer/tokens/theme-pipeline";
 import { describe, expect, it } from "vitest";
-import { emitBrandThemeCss } from "./emit-brand-theme.ts";
+import { emitBrandThemeCss, emitBrandThemeTokens } from "./emit-brand-theme.ts";
 import { fontPairingFor } from "./font-pairings.ts";
 import { ACCENT_BLENDS_WITH_PAGE } from "./generate-palette.ts";
 import { generateBrandTheme, type BrandTheme } from "./generate-brand-theme.ts";
 import { toOklab, toOklch } from "./oklch.ts";
+import { sanitiseSvgLogo } from "./sanitise-svg-logo.ts";
+import type { SanitisedSvg } from "./sanitised-svg.ts";
 import { parseHexColor } from "./srgb.ts";
 import {
   contrastProblems,
@@ -339,5 +341,28 @@ describe("generateBrandTheme", () => {
   it("refuses a hand-built kit whose id is not a valid brand id", () => {
     expect(() => generateBrandTheme({ ...kitFrom(), id: 'x"]' })).toThrow(/brand id/);
     expect(() => generateBrandTheme({ ...kitFrom(), id: "aurora" })).toThrow(/brand id/);
+  });
+
+  it("refuses a hand-built kit whose logo is not a sanitised logo", () => {
+    const forged = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1" onload="alert(1)"/>';
+    expect(() => generateBrandTheme({ ...kitFrom(), logo: forged as SanitisedSvg })).toThrow(
+      /sanitis/,
+    );
+    expect(() => generateBrandTheme({ ...kitFrom(), mark: forged as SanitisedSvg })).toThrow(
+      /sanitis/,
+    );
+  });
+
+  it("keeps a kit's logo and mark, and generates the same theme with or without them", () => {
+    const logo = sanitiseSvgLogo(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 1"><rect width="2" height="1"/></svg>',
+    );
+    if (!logo.ok) throw new Error("expected a logo");
+    const withLogo = generateBrandTheme(kitFrom({ logo: logo.svg, mark: logo.svg }));
+    const without = generateBrandTheme(kitFrom());
+    expect(withLogo.kit.logo).toBe(logo.svg);
+    expect(withLogo.kit.mark).toBe(logo.svg);
+    expect(emitBrandThemeCss(withLogo)).toBe(emitBrandThemeCss(without));
+    expect(emitBrandThemeTokens(withLogo)).toBe(emitBrandThemeTokens(without));
   });
 });

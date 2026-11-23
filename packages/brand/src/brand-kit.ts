@@ -1,4 +1,5 @@
 import type { TypographyId } from "./font-pairings.ts";
+import type { SanitisedSvg } from "./sanitised-svg.ts";
 import type { Rgb } from "./srgb.ts";
 
 /** Corner styles; each maps to a set of radius tokens. */
@@ -26,4 +27,8 @@ export interface BrandKit {
   readonly typography: TypographyId;
   readonly corners: Corners;
   readonly tone: Tone;
+  /** The full logo, exactly as `sanitiseSvgLogo` returned it. Render it through `<img>`. */
+  readonly logo?: SanitisedSvg;
+  /** The compact symbol (a favicon, an avatar), held to the same rules as the logo. */
+  readonly mark?: SanitisedSvg;
 }
