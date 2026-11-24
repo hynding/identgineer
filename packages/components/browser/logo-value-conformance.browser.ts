@@ -1,6 +1,7 @@
 import { sanitiseSvgLogo } from "@identgineer/brand";
 // The base test, not the strict fixture: Chromium logs each value it rejects, as it should here.
 import { expect, test, type Page } from "@playwright/test";
+import { seeded } from "./seeded";
 
 // The sanitiser keeps a value only in a form it has checked Chromium reads the same way, and
 // drops anything else. This test holds it to that on the keep side, with spellings no list would
@@ -385,18 +386,6 @@ const JUNK = [
   "#",
 ];
 const UNITS = ["px", "PX", "em", "%", "mm", "Q", "e0", "e39", "E+1"];
-
-/** A seeded generator (mulberry32), so a failing spelling can be replayed. */
-function seeded(seed: number): () => number {
-  let state = seed >>> 0;
-  return (): number => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let value = state;
-    value = Math.imul(value ^ (value >>> 15), value | 1);
-    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
-    return ((value ^ (value >>> 14)) >>> 0) / 4_294_967_296;
-  };
-}
 
 function mutate(value: string, random: () => number): string {
   const pick = <T>(choices: readonly T[]): T => choices[Math.floor(random() * choices.length)] as T;
