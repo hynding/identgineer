@@ -245,21 +245,29 @@ interface Comparison {
   readonly painted: number;
 }
 
-/** Draws both as images on canvases and counts the pixels that differ, and those painted. */
-async function compare(page: Page, before: string, after: string): Promise<Comparison> {
+/**
+ * Draws both as images on canvases, `SIZE` square unless a frame is given, and counts the pixels
+ * that differ, and those painted.
+ */
+async function compare(
+  page: Page,
+  before: string,
+  after: string,
+  frame: { readonly width: number; readonly height: number } = { width: SIZE, height: SIZE },
+): Promise<Comparison> {
   return page.evaluate(
-    async ({ before, after, size, tolerance }) => {
+    async ({ before, after, frame, tolerance }) => {
       const pixels = async (url: string): Promise<Uint8ClampedArray> => {
         const image = new Image();
         image.src = url;
         await image.decode();
         const canvas = document.createElement("canvas");
-        canvas.width = size;
-        canvas.height = size;
+        canvas.width = Math.ceil(frame.width);
+        canvas.height = Math.ceil(frame.height);
         const context = canvas.getContext("2d", { willReadFrequently: true });
         if (context === null) throw new Error("no 2D context");
-        context.drawImage(image, 0, 0, size, size);
-        return context.getImageData(0, 0, size, size).data;
+        context.drawImage(image, 0, 0, frame.width, frame.height);
+        return context.getImageData(0, 0, canvas.width, canvas.height).data;
       };
       const [first, second] = [await pixels(before), await pixels(after)];
       let differing = 0;
@@ -279,7 +287,7 @@ async function compare(page: Page, before: string, after: string): Promise<Compa
       }
       return { differing, foreign, painted };
     },
-    { before, after, size: SIZE, tolerance: CHANNEL_TOLERANCE },
+    { before, after, frame, tolerance: CHANNEL_TOLERANCE },
   );
 }
 
@@ -397,5 +405,33 @@ test.describe("paint order", () => {
       ),
       "same",
     );
+  });
+});
+
+test.describe("a slice of an elongated view box", () => {
+  // A crop of a fifth of a pixel on the short side; fitted instead, the long side would be
+  // letterboxed by five device pixels at each end, showing the green the crop hid.
+  test("crops a wordmark of 20 to 1 as it was drawn, at 4000 device pixels across", async ({
+    page,
+  }) => {
+    const input =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 50" width="1000" height="49.88" preserveAspectRatio="xMidYMid slice">' +
+      '<rect x="-200" y="-100" width="1400" height="300" fill="#0c0"/><rect width="1000" height="50" fill="#f00"/></svg>';
+    const result = sanitiseSvgLogo(input);
+    if (!result.ok) throw new Error(JSON.stringify(result.errors));
+    await page.setContent("<!doctype html><body>");
+    const { differing, foreign } = await compare(
+      page,
+      `data:image/svg+xml;charset=utf-8,${encodeURIComponent(input)}`,
+      logoDataUrl(result.svg),
+      { width: 4000, height: 199.52 },
+    );
+    // One column of antialiasing at each end, where a fitted edge meets a cropped one; letterboxed,
+    // five columns of green showed at each end.
+    const edges = 2 * 200;
+    expect(foreign, "nothing shown that the original did not show there").toBeLessThanOrEqual(
+      edges,
+    );
+    expect(differing).toBeLessThanOrEqual(edges);
   });
 });
