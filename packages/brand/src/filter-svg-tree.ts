@@ -332,6 +332,12 @@ class TreeFilter {
         "has a width or height in a unit of the viewport, which an image has none of; give it in pixels or an absolute unit",
       );
     }
+    if (problem === "unread") {
+      throw new SvgLogoRejection(
+        "unsupported-feature",
+        "has a width or height Chromium reads as CSS the sanitiser does not take; give it as a number of pixels or in an absolute unit",
+      );
+    }
     if (pixels === undefined) return undefined;
     if (name === "width" || name === "height") this.exactSize[name] = pixels.exact;
     return { text: pixels.text };

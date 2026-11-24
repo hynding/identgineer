@@ -2238,6 +2238,18 @@
       }
     ]
   },
+  "review-root-width-0e39.svg": {
+    "outcome": "reject:missing-size"
+  },
+  "review-root-width-1e-39.svg": {
+    "outcome": "reject:missing-size"
+  },
+  "review-root-width-calc-0px.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-root-width-max-0px-0px.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
   "root-not-svg.svg": {
     "outcome": "reject:not-svg"
   },

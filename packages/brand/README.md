@@ -428,8 +428,9 @@ lengths, in absolute units only) and the enumerations. The rule throughout is st
 the keep side: a value is kept only in a spelling Chromium has been checked to read the same way,
 and anything else is dropped and reported (`invalid-value`), never read leniently into a valid
 value. A number must be one Chromium's SVG number reader takes: a point must have a digit after it (`100.` and `1.e2` are no numbers to Chromium, so
-they are dropped, not read as 100), its exponent may not pass 38 either way (Chromium takes no
-`0e39`, even as zero), and in path data only white space comes between a command
+they are dropped, not read as 100), its exponent may not pass 38 either way (Chromium's SVG
+number reader takes no `0e39`, even as zero, though its CSS reader, which reads the root's width
+and height, takes it as zero), and in path data only white space comes between a command
 and its first number, with at most one comma between two numbers (a comma before the next
 command is taken, as Chromium takes it); a dash array likewise takes at most one comma between
 lengths, and a transform list white space with at most one comma between functions, none before
@@ -438,12 +439,15 @@ The keywords of attributes that are not CSS properties (`gradientUnits`, `spread
 `clipPathUnits`, `maskUnits`, `maskContentUnits`) are taken exactly as written, since Chromium
 does not trim them, and so is an `href`, which must be `#` and an id with nothing around it
 (Chromium does not resolve `" #a"` in an image); CSS properties and `preserveAspectRatio`,
-`offset`, `viewBox` and lengths are trimmed, as Chromium trims them. A root width or height of
-zero or less in any unit but a percentage (`0`, `-1mm`, `0em`, `0Q`), which Chromium draws at no
-size, is refused (`missing-size`), and so is one in a unit of the viewport (`1vw`), which an image
-has none of (`unsupported-feature`); one in another unit the sanitiser does not take (`2em`, which
-Chromium draws at 32 pixels, or `4Q`) is dropped and reported, and the logo is then sized from its
-view box. Path data outside its grammar is dropped whole, where Chromium would draw it up to
+`offset`, `viewBox` and lengths are trimmed, as Chromium trims them. A root width or height is kept only as a positive number of pixels or in an absolute unit
+(`100`, `100px`, `1e2`, `10mm`), and dropped and reported as a percentage, which an image takes as
+no size given, so the logo is sized from its view box. Chromium reads anything else there as a CSS
+length, so it is refused rather than dropped: zero or less in any unit, or a number that rounds to
+zero (`0`, `-1mm`, `0em`, `0e39`, `1e-39`), which Chromium draws at no size, is `missing-size`; a
+unit of the viewport (`1vw`), which an image has none of, a unit the sanitiser does not take
+(`2em`, which Chromium draws at 32 pixels, or `4Q`), a calculation (`calc(0px)`,
+`max(0px,0px)`), a variable or environment value, a keyword (`auto`, `inherit`) or any other
+spelling (`10 px`, `5.`) is `unsupported-feature`. Path data outside its grammar is dropped whole, where Chromium would draw it up to
 the first error: the output shows less. A browser test draws 45 spellings of a number (signs,
 points, exponents, leading zeros, hexadecimal, `Infinity`, `NaN`, stray white space and commas) in
 each of a length, a plain number, a transform, a view box, path data, points, a dash array and the

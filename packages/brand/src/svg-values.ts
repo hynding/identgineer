@@ -140,24 +140,27 @@ const VIEWPORT_UNITS: ReadonlySet<string> = new Set([
   "cqmin",
   "cqmax",
 ]);
-const NUMBER_AND_UNIT = /^(.*?)(%|[a-zA-Z]*)$/;
+const NUMBER_AND_UNIT = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?)(%|[a-zA-Z]*)$/;
 
 /**
- * What is wrong with a root width or height that Chromium draws at no size: a number of zero or
- * less in any unit but a percentage (`no-size`), or a positive one in a unit of the viewport
- * (`viewport`). `undefined` for anything else, which is kept or dropped by its grammar.
+ * What is wrong with a root width or height that is not a positive length in an absolute unit (or
+ * none): a percentage, which an image takes as no size given (`undefined`: dropped, and the size
+ * read from the view box); a number that is zero or less, or rounds to zero, in any other unit,
+ * which Chromium draws at no size (`no-size`); a positive one in a unit of the viewport, which an
+ * image has none of (`viewport`); anything else, which Chromium reads as CSS (a calculation, a
+ * variable, a keyword, a unit the sanitiser does not take) in ways it does not (`unread`).
  */
 export function rootSizeProblem(
   input: string,
   limits: SvgLogoLimits,
-): "no-size" | "viewport" | undefined {
+): "no-size" | "viewport" | "unread" | undefined {
   const match = NUMBER_AND_UNIT.exec(trimXmlWhitespace(input));
-  const unit = (match?.[2] ?? "").toLowerCase();
+  if (match === null) return "unread";
+  const unit = (match[2] ?? "").toLowerCase();
   if (unit === "%") return undefined;
-  const normalised = normaliseNumber(match?.[1] ?? "", limits);
-  if (normalised === undefined) return undefined;
-  if (Number(normalised) <= 0) return "no-size";
-  return VIEWPORT_UNITS.has(unit) ? "viewport" : undefined;
+  const amount = Number(match[1]);
+  if (amount <= 0 || amount < 10 ** -limits.fractionDigits / 2) return "no-size";
+  return VIEWPORT_UNITS.has(unit) ? "viewport" : "unread";
 }
 
 function clampUnit(normalised: string): string {

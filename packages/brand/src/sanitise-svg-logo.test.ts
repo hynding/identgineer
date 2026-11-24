@@ -88,14 +88,20 @@ describe("sanitiseSvgLogo, output", () => {
     ]);
   });
 
-  it.each([
-    ["a view box", 'viewBox="0. 0 10 10" width="10" height="10"', "viewBox"],
-    ["the root's width", 'viewBox="0 0 10 10" width="5." height="10"', "width"],
-  ])("drops a number ending in a point on the root, in %s", (_, root, name) => {
-    const result = accepted(svg('<rect width="5" height="5"/>', root));
+  it("drops a number ending in a point in a view box", () => {
+    const result = accepted(
+      svg('<rect width="5" height="5"/>', 'viewBox="0. 0 10 10" width="10" height="10"'),
+    );
     expect(result.removed).toEqual([
-      expect.objectContaining({ attribute: name, reason: "invalid-value" }),
+      expect.objectContaining({ attribute: "viewBox", reason: "invalid-value" }),
     ]);
+  });
+
+  it("refuses a root width of a number ending in a point, which Chromium reads as CSS", () => {
+    expect(
+      refused(svg('<rect width="5" height="5"/>', 'viewBox="0 0 10 10" width="5." height="10"'))
+        .code,
+    ).toBe("unsupported-feature");
   });
 
   it.each([
@@ -537,7 +543,7 @@ describe("sanitiseSvgLogo, size", () => {
       96,
     ],
     [
-      'viewBox="0 0 3 1" width="100%" height="1em"',
+      'viewBox="0 0 3 1" width="100%" height="50%"',
       'viewBox="0 0 3 1" width="3" height="1"',
       [0, 0, 3, 1],
       3,
@@ -554,7 +560,7 @@ describe("sanitiseSvgLogo, size", () => {
   it.each([
     ["no size at all", ""],
     ["only a width", 'width="10"'],
-    ["relative units only", 'width="50%" height="2em"'],
+    ["percentages only", 'width="50%" height="100%"'],
     ["a view box with no area", 'viewBox="0 0 0 10"'],
     ["a negative view box", 'viewBox="0 0 -1 10"'],
   ])("refuses a root with %s", (_label, root) => {
