@@ -113,6 +113,17 @@ describe("clip paths of more than one shape", () => {
     );
   });
 
+  it("keep a use in a clip path that a use elsewhere draws, as a definition with its id", () => {
+    const masked = inner(
+      accepted(
+        '<defs><rect id="r" width="40" height="40"/></defs><clipPath id="c"><use id="u" href="#r" x="5"/><circle cx="60" cy="60" r="20"/></clipPath>' +
+          '<rect width="100" height="100" clip-path="url(#c)"/><use href="#u" fill="blue"/>',
+      ),
+    );
+    expect(masked).toContain('<use id="logo-1" href="#logo-0" x="5"/>');
+    expect(masked).toContain('<use href="#logo-1" fill="blue"/>');
+  });
+
   it("keep a hidden clip child that a use elsewhere draws", () => {
     const masked = inner(
       accepted(

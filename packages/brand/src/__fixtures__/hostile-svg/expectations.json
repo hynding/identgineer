@@ -464,6 +464,15 @@
       }
     ]
   },
+  "clip-path-use-child-drawn-by-a-use-elsewhere.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
   "comment-double-hyphen.svg": {
     "outcome": "reject:invalid-comment"
   },
