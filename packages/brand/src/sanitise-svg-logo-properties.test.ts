@@ -718,6 +718,12 @@ describe("sanitiseSvgLogo, linear time", () => {
     ],
     ["an unclosed attribute", (fill) => root(`<g fill="${fill("a")}`), 32, "malformed"],
     ["a long style attribute", (fill) => root(`<g style="${fill("fill:red;")}"/>`), 4, "accepted"],
+    [
+      "a style of one url of white space",
+      (fill) => root(`<g style="url(${fill(" ")}#("/>`),
+      4,
+      "accepted",
+    ],
     ["a long transform", (fill) => root(`<g transform="${fill("scale(1)")}"/>`), 8, "accepted"],
     ["a long point list", (fill) => root(`<polygon points="${fill("1,2 ")}"/>`), 1, "accepted"],
     [
