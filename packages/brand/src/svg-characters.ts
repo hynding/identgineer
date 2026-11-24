@@ -17,6 +17,20 @@ export function isAllowedCodePoint(codePoint: number): boolean {
   return codePoint <= 0x10ffff;
 }
 
+/**
+ * How many characters text holds, in code points: an astral character, two UTF-16 units, is one.
+ * Text that has passed `findDisallowedCharacter` has no lone surrogate, so each low surrogate ends a
+ * pair.
+ */
+export function codePointLength(text: string): number {
+  let length = text.length;
+  for (let index = 0; index < text.length; index += 1) {
+    const unit = text.charCodeAt(index);
+    if (unit >= 0xdc00 && unit <= 0xdfff) length -= 1;
+  }
+  return length;
+}
+
 /** The offset of the first character that is not allowed (a lone surrogate included), or -1. */
 export function findDisallowedCharacter(text: string): number {
   for (let index = 0; index < text.length; index += 1) {

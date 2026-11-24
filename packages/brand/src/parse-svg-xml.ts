@@ -1,4 +1,4 @@
-import { isAllowedCodePoint, isXmlWhitespace } from "./svg-characters.ts";
+import { codePointLength, isAllowedCodePoint, isXmlWhitespace } from "./svg-characters.ts";
 import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 
@@ -432,22 +432,27 @@ class Reader {
     if (end === -1) end = this.text.length;
     const raw = this.text.slice(start, end);
     if (raw.includes("]]>")) this.fail("malformed", "has ]]> in text", start + raw.indexOf("]]>"));
-    // Measured in the characters it reads as, not as written: the writer escapes `>` and `"`, so a
-    // limit on the written form would refuse what it writes from text read within the limit.
+    // Measured in the code points it reads as, not as written: the writer escapes `>` and `"`, so
+    // a limit on the written form would refuse what it writes from text read within the limit.
     let text = "";
+    let length = 0;
     while (this.position < end) {
-      if (text.length > this.limits.textLength) {
+      if (length > this.limits.textLength) {
         this.fail("too-long", `has a run of text longer than ${String(this.limits.textLength)}`);
       }
       if (this.text.charCodeAt(this.position) === 0x26) {
-        text += this.readReference();
+        const character = this.readReference();
+        text += character;
+        length += codePointLength(character);
         if (this.position > end) this.fail("malformed", "has a malformed reference", start);
         continue;
       }
+      const unit = this.text.charCodeAt(this.position);
       text += this.text.charAt(this.position);
+      if (!(unit >= 0xdc00 && unit <= 0xdfff)) length += 1;
       this.position += 1;
     }
-    if (text.length > this.limits.textLength) {
+    if (length > this.limits.textLength) {
       this.fail("too-long", `has a run of text longer than ${String(this.limits.textLength)}`);
     }
     this.appendText(stack, text, start);
@@ -457,10 +462,11 @@ class Reader {
     const start = this.position;
     const end = this.text.indexOf("]]>", start + 9);
     if (end === -1) this.fail("malformed", "has an unclosed CDATA section", start);
-    if (end - start - 9 > this.limits.textLength) {
+    const text = this.text.slice(start + 9, end);
+    if (codePointLength(text) > this.limits.textLength) {
       this.fail("too-long", `has a run of text longer than ${String(this.limits.textLength)}`);
     }
-    this.appendText(stack, this.text.slice(start + 9, end), start);
+    this.appendText(stack, text, start);
     this.position = end + 3;
   }
 
@@ -469,7 +475,7 @@ class Reader {
     if (parent === undefined || text === "") return;
     const last = parent.children.at(-1);
     if (last?.kind === "text") {
-      if (last.text.length + text.length > this.limits.textLength) {
+      if (codePointLength(last.text) + codePointLength(text) > this.limits.textLength) {
         this.fail("too-long", `has a run of text longer than ${String(this.limits.textLength)}`);
       }
       parent.children[parent.children.length - 1] = {

@@ -8,7 +8,11 @@ import { resolveSvgNamespaces } from "./resolve-svg-namespaces.ts";
 import type { SanitisedSvg } from "./sanitised-svg.ts";
 import { serialiseSvg } from "./serialise-svg.ts";
 import { isSettledOutput } from "./settled-output.ts";
-import { dropDanglingReferences, settleSvgReferences } from "./settle-svg-references.ts";
+import {
+  dropDanglingReferences,
+  pruneDefinitions,
+  settleSvgReferences,
+} from "./settle-svg-references.ts";
 import { findDisallowedCharacter } from "./svg-characters.ts";
 import { SVG_LOGO_LIMITS, type SvgLogoLimits } from "./svg-logo-limits.ts";
 import type { SvgLogoError, SvgLogoResult } from "./svg-logo-result.ts";
@@ -51,7 +55,10 @@ interface Size {
   readonly viewBox: readonly [number, number, number, number];
   /** A stretched view box, which the content must be clipped to once references are settled. */
   readonly clipTo: ViewBox | undefined;
-  /** Whether the view box became the part a crop showed, which percentages of it must not see. */
+  /**
+   * Whether the view box became the part a crop showed, which percentages of it must not see; a
+   * slice that showed the whole view box, to within half a pixel, keeps it and crops nothing.
+   */
   readonly cropped: boolean;
 }
 
@@ -129,10 +136,11 @@ type ViewBox = readonly [number, number, number, number];
  */
 function cropped(
   size: { readonly width: number; readonly height: number },
-  [minX, minY, boxWidth, boxHeight]: ViewBox,
+  box: ViewBox,
   align: string,
   limits: SvgLogoLimits,
 ): ViewBox {
+  const [minX, minY, boxWidth, boxHeight] = box;
   const scale = Math.max(size.width / boxWidth, size.height / boxHeight);
   const [width, height] = [size.width / scale, size.height / scale];
   const share = (part: string): number => (part === "Min" ? 0 : part === "Mid" ? 0.5 : 1);
@@ -142,8 +150,12 @@ function cropped(
     width,
     height,
   ] as const;
-  const written = exact.map((value) => Number(value.toFixed(limits.fractionDigits)));
   const span = Math.max(width, height);
+  // A slice that shows the whole view box, to within half a pixel, crops nothing: it is the default.
+  if (exact.every((value, index) => !movesMoreThanHalfAPixel(box[index] ?? NaN, value, span))) {
+    return box;
+  }
+  const written = exact.map((value) => Number(value.toFixed(limits.fractionDigits)));
   if (exact.some((value, index) => movesMoreThanHalfAPixel(value, written[index] ?? NaN, span))) {
     throw new SvgLogoRejection(
       "unsupported-feature",
@@ -306,7 +318,11 @@ function sanitiseOnce(input: unknown, options: unknown, limits: SvgLogoLimits): 
     const size = settleSize(root, limits);
     dropDanglingReferences(root, limits, removals);
     if (size.clipTo !== undefined) clipToViewBox(root, size.clipTo, limits);
-    if (size.cropped) refuseViewBoxPercentages(root);
+    if (size.cropped) {
+      // Over what is drawn: a definition nothing uses changes nothing a crop could move.
+      pruneDefinitions(root, limits);
+      refuseViewBoxPercentages(root);
+    }
     const { renamed, drawingCost, overdraw } = settleSvgReferences(
       root,
       limits,

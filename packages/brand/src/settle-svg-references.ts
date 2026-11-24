@@ -171,7 +171,7 @@ const NOT_DRAWN_IN_PLACE: ReadonlySet<string> = new Set([
  * whatever it held can cost no work or output later on. A definition is kept with everything that
  * holds what is drawn; a `defs` element stays where it is unless nothing is left in it.
  */
-function pruneDefinitions(root: CleanElement, limits: SvgLogoLimits): void {
+export function pruneDefinitions(root: CleanElement, limits: SvgLogoLimits): void {
   const ids = collectIds(walk(root), limits);
   const parents = new Map<CleanElement, CleanElement>();
   const kept = new Set<CleanElement>();

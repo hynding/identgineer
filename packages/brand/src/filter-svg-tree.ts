@@ -9,7 +9,7 @@ import {
   type SvgElementName,
   type SvgElementRule,
 } from "./svg-allowlist.ts";
-import { isXmlWhitespaceOnly, trimXmlWhitespace } from "./svg-characters.ts";
+import { codePointLength, isXmlWhitespaceOnly, trimXmlWhitespace } from "./svg-characters.ts";
 import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import type { SvgLogoRemovalReason } from "./svg-logo-result.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
@@ -142,7 +142,7 @@ class TreeFilter {
       const kept = this.child(child, rule, name === "clipPath");
       if (kept !== undefined) children.push(kept);
     }
-    if (text.length > this.limits.textLength) {
+    if (codePointLength(text) > this.limits.textLength) {
       throw new SvgLogoRejection(
         "too-long",
         "has a title or description that is too long",
