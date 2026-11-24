@@ -219,8 +219,11 @@ const ASPECTS: readonly (readonly [string, string, Outcome])[] = [
 interface Comparison {
   /** Pixels that differ in any channel. */
   readonly differing: number;
-  /** Pixels more opaque after than before: what sanitising would show that the original did not. */
-  readonly revealed: number;
+  /**
+   * Pixels painted after in a colour that is neither the original's there nor the transparent
+   * background: what sanitising would show that the original did not, opaque or not.
+   */
+  readonly foreign: number;
   /** Pixels painted before. */
   readonly painted: number;
 }
@@ -243,7 +246,7 @@ async function compare(page: Page, before: string, after: string): Promise<Compa
       };
       const [first, second] = [await pixels(before), await pixels(after)];
       let differing = 0;
-      let revealed = 0;
+      let foreign = 0;
       let painted = 0;
       for (let index = 0; index < first.length; index += 4) {
         let most = 0;
@@ -254,10 +257,10 @@ async function compare(page: Page, before: string, after: string): Promise<Compa
           );
         }
         if (most > tolerance) differing += 1;
-        if ((second[index + 3] ?? 0) - (first[index + 3] ?? 0) > tolerance) revealed += 1;
+        if (most > tolerance && (second[index + 3] ?? 0) > tolerance) foreign += 1;
         if ((first[index + 3] ?? 0) > 0) painted += 1;
       }
-      return { differing, revealed, painted };
+      return { differing, foreign, painted };
     },
     { before, after, size: SIZE, tolerance: CHANNEL_TOLERANCE },
   );
@@ -274,9 +277,10 @@ async function check(page: Page, input: string, outcome: Outcome): Promise<Compa
     logoDataUrl(result.svg),
   );
   expect(comparison.painted, "the original paints something").toBeGreaterThan(SIZE * 10);
-  expect(comparison.revealed, "nothing shown that the original hid").toBeLessThanOrEqual(
-    DIFFERING_PIXELS,
-  );
+  expect(
+    comparison.foreign,
+    "nothing shown that the original did not show there",
+  ).toBeLessThanOrEqual(DIFFERING_PIXELS);
   if (outcome === "same") expect(comparison.differing).toBeLessThanOrEqual(DIFFERING_PIXELS);
   return comparison;
 }
@@ -300,6 +304,25 @@ test.describe("a clip path written as a mask", () => {
       await check(page, input, outcome);
     });
   }
+
+  // Two opaque pictures, the second showing in red what the first hid under its root clip path (as
+  // an earlier version wrote a stretched view box beside one): the alpha is the same everywhere,
+  // so only a comparison of colour sees what was shown.
+  test("counts what is shown in another colour as shown, though nothing grows more opaque", async ({
+    page,
+  }) => {
+    const before =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="200" height="200" preserveAspectRatio="none" clip-path="url(#c)">' +
+      '<clipPath id="c"><rect y="90" width="200" height="20"/></clipPath><rect width="100" height="100" fill="red"/><rect y="45" width="100" height="10" fill="lime"/></svg>';
+    const after =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="200" height="200" clip-path="url(#c)">' +
+      '<clipPath id="c"><rect y="90" width="200" height="20"/></clipPath><rect width="100" height="100" fill="red"/><rect y="40" width="100" height="10" fill="lime"/></svg>';
+    await page.setContent("<!doctype html><body>");
+    const url = (svg: string): string =>
+      `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    const { foreign } = await compare(page, url(before), url(after));
+    expect(foreign).toBeGreaterThan(DIFFERING_PIXELS);
+  });
 
   // Chromium (153 here) clips to less than the union when a shape with a hole comes before one
   // that overlaps it, and to the union when the order is turned round. The mask draws the union the
