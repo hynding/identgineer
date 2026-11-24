@@ -476,6 +476,14 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
     },
   );
 
+  it("refuses an output with path data longer than an input may have, as numbers are written out in full", () => {
+    // `1e-6` is written `0.000001`: 120 KB of path data comes to more than the 128 KB limit.
+    const result = sanitiseSvgLogo(
+      `<svg ${NS} viewBox="0 0 1 1"><path d="M0 0${"l1e-6 1e-6".repeat(12000)}"/></svg>`,
+    );
+    expect(result.ok || result.errors[0]?.code).toBe("too-long");
+  });
+
   it("reports a reference to a name the sanitiser gives what it adds as dangling, never resolved to what it adds", () => {
     const result = accepted(
       `<svg ${NS} viewBox="0 0 100 100" width="200" height="100" preserveAspectRatio="none"><rect width="100" height="100" fill="red" clip-path="url(#_0)"/></svg>`,
