@@ -253,7 +253,12 @@ const result = parseBrandKit({ ...kitFields, logo: upload.svg }); // stored exac
 if (result.ok && result.kit.logo) image.src = logoDataUrl(result.kit.logo);
 ```
 
-`sanitiseSvgLogo(input, { idPrefix })` never throws. It returns `{ ok: true, svg, width, height,
+`sanitiseSvgLogo(input, { idPrefix })` never throws, whatever it is handed: bytes are measured
+and copied through the language's own typed array getters (`byteLength`, `buffer`, `byteOffset`),
+never through anything a subclass or proxy overrides, so a `length` that lies or throws changes
+nothing; anything that is not a string or a `Uint8Array`, a proxy or revoked proxy included, is
+`wrong-type`; and the options are read once, an `idPrefix` getter that throws or a revoked proxy
+being `invalid-option`. It returns `{ ok: true, svg, width, height,
 viewBox, drawingCost, overdraw, removed, removedCount }` or `{ ok: false, errors }`, with one located error
 whose message never repeats the input. Before it is returned, every output is checked: the
 independent checker (below) must find nothing in it, and sanitising it again must give it back
@@ -313,10 +318,16 @@ Refused, as the whole document (each with its own `code`):
   path of its own; a stretching `preserveAspectRatio="none"` (one whose width and height differ in
   proportion from the view box by more than half a device pixel at 4000, so a size worked out to six
   decimals from the other is no stretch) beside a clip path or mask on the
-  root; a cropping `slice`, or the position of a `use` moved onto a group (below), that six decimals
-  cannot hold (to half a device pixel at 4000 device pixels, 2000 CSS pixels twice as dense, for the
-  crop, both each edge of the part shown and its proportions, which the fitted drawing would
-  otherwise letterbox; exactly for the position); a cropping `slice` beside any length taken as a percentage of
+  root; a view box and size, after any crop, that six decimals cannot hold: the output draws its
+  view box fitted into its width and height as written, and where any edge of what that shows
+  would lie more than half a device pixel (at 4000 device pixels, 2000 CSS pixels twice as dense,
+  along the longer side) from the edge of what the original showed (the part a `slice` showed, the
+  whole view box under `none`, or the view box fitted into the original's frame, a missing width
+  or height following from the view box exactly), the logo is refused. That one rule covers a crop
+  of a view box a few thousandths of a unit across, whose far edges take two roundings, and a
+  width or height worked out from the other and written to six decimals on a frame a fraction of
+  a unit across; ordinary logos are far from it. The position of a `use` moved onto a group
+  (below) is refused unless six decimals hold it exactly; a cropping `slice` beside any length taken as a percentage of
   the view box in what is drawn (a size, position, radius or stroke width of a shape, a `use`
   position, the region of a mask in user units, written or by default, which is -10% and 120%, and
   a coordinate of a painted gradient in user units, written, inherited through `href` or by
@@ -506,12 +517,16 @@ before a cost was counted) can fail to parse afterwards. That is intended; the o
 again, or a simpler one.
 
 The reader works in one pass, in time linear in the input, with no recursion over the input and no
-regular expression with nested quantifiers on it; the tests read each adversarial shape (bare
-ampersands, unclosed comments and attributes, long path data, many uses of one group or of one
-masked, dashed path) at 64 and 256 KiB with the limits raised, and hold four times the input to
-less than eight times as long, the fastest of five runs of each (linear is about four, quadratic
-sixteen; each run takes under 0.4 seconds on a laptop). A ratio, unlike a time, holds on a slow or
-busy machine; a deliberately quadratic stage in the reader fails it. The drawing cost is measured in the same pass over the expanded references,
+regular expression with nested quantifiers on it. The tests read each of 24 adversarial shapes
+(comments, unclosed comments, CDATA sections and attributes, character references, a title split
+by comments, long path data, deep and unclosed nesting, a long element name, many uses of one
+group or of one masked, dashed path) at two sizes, the larger four times the smaller, with the
+limits raised so each is read to its end and accepted or refused only there, and hold the larger
+to less than eight times as long, the fastest of five runs of each (linear is about four,
+quadratic sixteen). Each shape is sized so its smaller run takes about 10 ms or more on a laptop,
+from 64 KiB to 2 MiB, the larger 20 ms to 0.35 seconds; a run under 5 ms is counted as 5 ms, so
+noise in one too short to time cannot fail it. A ratio, unlike a time, holds on a slow or busy
+machine; a deliberately quadratic stage in the reader fails it. The drawing cost is measured in the same pass over the expanded references,
 each element once, so it is linear too. The overdraw walks every instance a renderer would draw,
 which `renderedElements` (checked first) bounds, reading each shape's geometry once.
 
@@ -874,7 +889,10 @@ sized by CSS (with the default `object-fit: fill`, or `contain`) or inline sized
 1,000 wide and 1 tall stays one line in Chromium; `object-fit: cover`, or a canvas `drawImage`
 into a box of another shape, stretches it over the whole box. So show a logo at a logo's size: give
 the `<img>` a bounded width and height (a few hundred CSS pixels at most), never `object-fit: cover`
-or a stretched canvas, and draw it once rather than at a size a page may grow without limit.
+or a stretched canvas, and draw it once rather than at a size a page may grow without limit. Size it
+by one dimension, letting the other follow, or keep the frame's proportions (`width` and `height`
+from the result): a box of other proportions stretches or letterboxes the logo, which is the host's
+choice and outside what the sanitiser promises.
 
 ### Rendering: `<img>` first, sanitising always
 
@@ -923,8 +941,8 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. The geometry is kept to six
 decimals; colours set only by CSS are lost (see above).
 
-The tests hold it to that: a hostile corpus of 282 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 126
+The tests hold it to that: a hostile corpus of 284 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 128
 refused, and every removal, by element, attribute and reason, for each of the 156 accepted, 40 of
 them with a clip path written as a mask) and
 generated oversized inputs, each refused or accepted with an output an independent checker finds
@@ -940,7 +958,9 @@ random graphs of definitions, uses, masks, layers and dashes whose cost a separa
 checking the sanitiser measures the same cost and refuses exactly what goes over a limit; and 4,000
 random chains of linear and radial gradients and masks beside a crop or a slice that crops nothing,
 checking the sanitiser refuses exactly those a separate model, resolving `href` and defaults its own
-way, finds taking a percentage of the view box.
+way, finds taking a percentage of the view box; and 12,000 random slices and stretches, half of
+view boxes a fraction of a unit across, checking against a separate geometric model of what a
+browser shows that no output shows more than half a device pixel past what the original showed.
 
 ## Commands
 
