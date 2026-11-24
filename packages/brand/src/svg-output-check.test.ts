@@ -15,6 +15,28 @@ describe("findSanitisedSvgProblems", () => {
     expect(findSanitisedSvgProblems(svg)).toEqual([]);
   });
 
+  // A number is written as it was given, so every spelling the sanitiser keeps passes.
+  it.each([
+    [
+      "path data of exponents, signs and touching numbers",
+      'd="M0 0L1 1"',
+      'd="M+.5-1e-7.5,1E2 L1 1,L2 2a1 1 0 00 1 1"',
+    ],
+    ["path data of many places", 'd="M0 0L1 1"', 'd="M0.5000004999 0L0.5000005001 1"'],
+    ["a transform with commas and spaces", "scale(2)", "scale (2 , 1e0),translate(1)rotate( 5 )"],
+    ["an opacity over one", "<path ", '<path opacity="1.5" '],
+    ["an opacity in percent", "<path ", '<path opacity="50%" '],
+    ["a stop offset over one", 'offset="0"', 'offset="2"'],
+    ["a length in upper-case pixels", "<use ", '<use x="1.50PX" '],
+    ["a root width in millimetres", 'width="10"', 'width="10mm"'],
+    ["a view box with commas", 'viewBox="0 0 10 10"', 'viewBox="0,0, 1e1 10"'],
+    ["a dash array with commas", "<path ", '<path stroke-dasharray="1, 2 ,3" '],
+  ])("passes %s", (_, from, to) => {
+    const changed = svg.replace(from, to);
+    expect(changed).not.toBe(svg);
+    expect(findSanitisedSvgProblems(changed)).toEqual([]);
+  });
+
   it.each([
     ["a tab between attributes", '<path d="M0 0L1 1"\tfill="url(#logo-0)"/>'],
     ["a line feed between attributes", '<path d="M0 0L1 1"\nfill="url(#logo-0)"/>'],
@@ -156,10 +178,36 @@ describe("findSanitisedSvgProblems", () => {
     ],
     ["an arc flag of 2", (text: string) => text.replace('d="M0 0L1 1"', 'd="M0 0A1 1 0 2 1 1 1"')],
     [
-      "a number with a trailing zero",
-      (text: string) => text.replace('d="M0 0L1 1"', 'd="M0 0L1.50 1"'),
+      "a number with a point and no digit after it",
+      (text: string) => text.replace('d="M0 0L1 1"', 'd="M0 0L1. 1"'),
     ],
-    ["a number with an exponent", (text: string) => text.replace('d="M0 0L1 1"', 'd="M0 0L1e1 1"')],
+    [
+      "a number with an exponent past 38",
+      (text: string) => text.replace('d="M0 0L1 1"', 'd="M0 0L1e39 1"'),
+    ],
+    [
+      "a number of 26 characters",
+      (text: string) => text.replace('d="M0 0L1 1"', `d="M0 0L1.${"0".repeat(23)}1 1"`),
+    ],
+    ["a number of a million", (text: string) => text.replace('d="M0 0L1 1"', 'd="M0 0L1e6 1"')],
+    ["path data with two commas", (text: string) => text.replace('d="M0 0L1 1"', 'd="M0 0L1,,1"')],
+    [
+      "path data with a comma after a command",
+      (text: string) => text.replace('d="M0 0L1 1"', 'd="M0 0L,1 1"'),
+    ],
+    [
+      "path data ending in a comma",
+      (text: string) => text.replace('d="M0 0L1 1"', 'd="M0 0L1 1,"'),
+    ],
+    [
+      "path data starting with a space",
+      (text: string) => text.replace('d="M0 0L1 1"', 'd=" M0 0L1 1"'),
+    ],
+    ["a transform ending in a comma", (text: string) => text.replace("scale(2)", "scale(2),")],
+    [
+      "a transform with a comma before a number",
+      (text: string) => text.replace("scale(2)", "scale(,2)"),
+    ],
     [
       "a colour as rgb()",
       (text: string) => text.replace('stop-color="red"', 'stop-color="rgb(1,2,3)"'),
@@ -169,7 +217,7 @@ describe("findSanitisedSvgProblems", () => {
       "an upper-case hex colour",
       (text: string) => text.replace('stop-color="red"', 'stop-color="#FFFFFF"'),
     ],
-    ["an opacity over one", (text: string) => text.replace("<path ", '<path opacity="1.5" ')],
+    ["an opacity in em", (text: string) => text.replace("<path ", '<path opacity="1em" ')],
     ["a negative width", (text: string) => text.replace('width="10"', 'width="-10"')],
     [
       "a view box with no area",
@@ -183,7 +231,7 @@ describe("findSanitisedSvgProblems", () => {
     ],
     ["a dash in percent", (text: string) => text.replace("<path ", '<path stroke-dasharray="1%" ')],
     ["a length in em", (text: string) => text.replace("<use ", '<use x="1em" ')],
-    ["a stop offset over one", (text: string) => text.replace('offset="0"', 'offset="2"')],
+    ["a stop offset in pixels", (text: string) => text.replace('offset="0"', 'offset="2px"')],
     [
       "a mask type that is not one",
       (text: string) => text.replace("<title>", '<mask id="m" mask-type="both"/><title>'),

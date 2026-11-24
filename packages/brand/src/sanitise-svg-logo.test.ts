@@ -43,13 +43,13 @@ function removals(body: string): readonly SvgLogoRemoval[] {
 }
 
 describe("sanitiseSvgLogo, output", () => {
-  it("rebuilds a logo canonically: namespace, view box, size, normalised values", () => {
+  it("rebuilds a logo: namespace, view box, size, colours in one form, numbers as given", () => {
     expect(
       output(
-        '<rect  x = "1.50"\n y="+2" width="3e0" height=\'4.000\' fill="#ABC" stroke="RED" stroke-width="0.5px"/>',
+        '<rect  x = "1.50"\n y="+2" width="3e0" height=\'4.000\' fill="#ABC" stroke="RED" stroke-width=" 0.5PX"/>',
       ),
     ).toBe(
-      `${ROOT}<rect x="1.5" y="2" width="3" height="4" fill="#aabbcc" stroke="red" stroke-width="0.5"/></svg>`,
+      `${ROOT}<rect x="1.50" y="+2" width="3e0" height="4.000" fill="#aabbcc" stroke="red" stroke-width="0.5PX"/></svg>`,
     );
   });
 
@@ -59,14 +59,57 @@ describe("sanitiseSvgLogo, output", () => {
     );
   });
 
-  it("writes path data and transforms canonically", () => {
+  it("writes path data and transforms as given, trimmed, each line feed and tab a space", () => {
     expect(
       output(
-        '<path d="M1,2L3-4.5e1zm.5.5 1 1a1 1 0 00 2 2" transform=" translate( 1 , 2 )scale(2) rotate(45 1 1)"/>',
+        '<path d=" M1,2L3-4.5e1zm.5.5&#10;1 1a1 1 0 00 2 2&#9;" transform=" translate( 1 , 2 )scale(2) rotate(45 1 1)"/>',
       ),
     ).toBe(
-      `${ROOT}<path d="M1 2L3 -45zm0.5 0.5 1 1a1 1 0 0 0 2 2" transform="translate(1 2) scale(2) rotate(45 1 1)"/></svg>`,
+      `${ROOT}<path d="M1,2L3-4.5e1zm.5.5 1 1a1 1 0 00 2 2" transform="translate( 1 , 2 )scale(2) rotate(45 1 1)"/></svg>`,
     );
+  });
+
+  // Chromium reads numbers in single precision, by readers of its own: a number rewritten in another
+  // spelling, however close, can be read as another number, and ends that meet or a radius that is
+  // zero in one reading need not be in the other. Each is written exactly as it was given.
+  it.each([
+    ["arc ends Chromium reads in the other order", "M0.5000004999 0A0.5 0.5 0 1 1 0.5000005001 0"],
+    ["a radius far below any pixel", "M0 0A0.0000006 7 0 0 1 100 0Z"],
+    ["an exponent", "M1e-7 0H1.5E+1"],
+    ["more digits than any reader keeps", "M0.12345678901234567 0H99.99999999999999"],
+  ])("keeps %s exactly as written", (_, d) => {
+    expect(output(`<path d="${d}"/>`)).toBe(`${ROOT}<path d="${d}"/></svg>`);
+  });
+
+  it.each([
+    [
+      "a dash of a near zero length",
+      '<path d="M0 5H9" stroke="#000" stroke-linecap="square" stroke-dasharray="0.0000004 10"/>',
+    ],
+    [
+      "a scale magnifying a rounded translation",
+      '<g transform="scale(999999 1) translate(0.0000004)"><rect width="1" height="1"/></g>',
+    ],
+    [
+      "a stop offset of many places",
+      '<linearGradient id="g"><stop offset="0.50000049" stop-color="#000"/></linearGradient><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    ["a view box of many places", undefined],
+  ])("keeps %s exactly as written", (_, body) => {
+    const input =
+      body === undefined
+        ? svg(
+            '<rect width="9" height="9"/>',
+            'viewBox="0.0000004 0 10.0000004 10" width="10" height="10"',
+          )
+        : svg(body);
+    const result = accepted(input);
+    expect(result.removed).toEqual([]);
+    const values = (text: string): string[] =>
+      [...text.matchAll(/ (?:d|transform|offset|viewBox|stroke-dasharray)="([^"]*)"/g)].map(
+        ([, value = ""]) => value,
+      );
+    expect(values(result.svg)).toEqual(values(input));
   });
 
   it.each([
@@ -86,6 +129,36 @@ describe("sanitiseSvgLogo, output", () => {
     expect(result.removed).toEqual([
       expect.objectContaining({ attribute: name, reason: "invalid-value" }),
     ]);
+  });
+
+  const LONG = `0.${"1".repeat(SVG_LOGO_LIMITS.numberLength - 1)}`;
+
+  it.each([
+    ["a length", `<rect width="${LONG}" height="5"/>`, "width"],
+    ["a plain number", `<rect width="5" height="5" opacity="${LONG}"/>`, "opacity"],
+    ["a transform", `<rect width="5" height="5" transform="translate(${LONG})"/>`, "transform"],
+    ["path data", `<path d="M0 0H${LONG}V5H0Z"/>`, "d"],
+    ["points", `<polygon points="0,0 ${LONG},0 5,5"/>`, "points"],
+    [
+      "a dash array",
+      `<path d="M0 0H5" stroke="#000" stroke-dasharray="${LONG} 2"/>`,
+      "stroke-dasharray",
+    ],
+  ])(
+    "drops a number of more characters than numberLength in %s, rather than round it",
+    (_, body, name) => {
+      expect(accepted(svg(body)).removed).toEqual([
+        expect.objectContaining({ attribute: name, reason: "invalid-value" }),
+      ]);
+    },
+  );
+
+  it("refuses a root width of more characters than numberLength, which Chromium reads as CSS", () => {
+    expect(
+      refused(
+        svg('<rect width="5" height="5"/>', `viewBox="0 0 10 10" width="${LONG}0" height="10"`),
+      ).code,
+    ).toBe("unsupported-feature");
   });
 
   it("drops a number ending in a point in a view box", () => {
@@ -114,7 +187,9 @@ describe("sanitiseSvgLogo, output", () => {
   });
 
   it("keeps path data with a comma before a command, which Chromium takes", () => {
-    expect(output('<path d="M0 0,L5 5,5 0, Z"/>')).toBe(`${ROOT}<path d="M0 0L5 5 5 0Z"/></svg>`);
+    expect(output('<path d="M0 0,L5 5,5 0, Z"/>')).toBe(
+      `${ROOT}<path d="M0 0,L5 5,5 0, Z"/></svg>`,
+    );
   });
 
   it.each([",1 2", "1,,2", "1 2,"])(
@@ -140,7 +215,7 @@ describe("sanitiseSvgLogo, output", () => {
   });
 
   it("keeps a width of one pixel written in millimetres, to the floating point", () => {
-    expect(accepted(svg("", 'viewBox="0 0 1 1" width="0.264583333333mm"')).width).toBe(1);
+    expect(accepted(svg("", 'viewBox="0 0 1 1" width="0.264583333333mm"')).width).toBeCloseTo(1, 9);
   });
 
   it("refuses a view box under a pixel with no size, advising a larger one", () => {
@@ -664,15 +739,17 @@ describe("sanitiseSvgLogo, output", () => {
   });
 
   it.each([
-    ["100", "100"],
-    ["100px", "100"],
-    [" 100 ", "100"],
-    ["1e2", "100"],
-    ["10mm", "37.795276"],
-  ])("keeps a root width of %j", (width, written) => {
-    expect(
-      accepted(svg('<rect width="5" height="5"/>', `viewBox="0 0 10 10" width="${width}"`)).svg,
-    ).toContain(`width="${written}"`);
+    ["100", "100", 100],
+    ["100px", "100px", 100],
+    [" 100 ", "100", 100],
+    ["1e2", "1e2", 100],
+    ["10mm", "10mm", 10 * (96 / 25.4)],
+  ])("keeps a root width of %j as written, read as its pixels", (width, written, pixels) => {
+    const result = accepted(
+      svg('<rect width="5" height="5"/>', `viewBox="0 0 10 10" width="${width}"`),
+    );
+    expect(result.svg).toContain(` width="${written}"`);
+    expect(result.width).toBe(pixels);
   });
 
   it("drops a root size in percent, which an image reads as no size given, and reports it", () => {
@@ -682,21 +759,12 @@ describe("sanitiseSvgLogo, output", () => {
     expect(result.removed).toContainEqual(expect.objectContaining({ attribute: "width" }));
   });
 
-  // An arc's radii, when too small for the arc, are scaled up to fit it, keeping their ratio: a
-  // radius rounded to zero draws a line instead.
-  it("drops path data with an arc whose radius rounds to zero", () => {
-    expect(removals('<path d="M0 0A0.0000003 7 0 0 1 100 0A0.0000003 7 0 0 1 0 0Z"/>')).toEqual([
-      expect.objectContaining({ attribute: "d", reason: "invalid-value" }),
-    ]);
-  });
-
-  // The scaling magnifies a change of the ratio up to the arc's size: by how much is measured.
-  it("refuses an arc whose scaled-up radii rounding moves past half a device pixel", () => {
-    const result = sanitiseSvgLogo(`${ROOT}<path d="M0 0A0.0000006 7 0 0 1 100 0Z"/></svg>`);
-    expect(result.ok ? "accept" : result.errors[0]?.code).toBe("unsupported-feature");
-  });
-
   it.each([
+    [
+      "an arc whose radius is far below a millionth",
+      "M0 0A0.0000003 7 0 0 1 100 0A0.0000003 7 0 0 1 0 0Z",
+    ],
+    ["an arc whose radii, scaled up to fit, magnify their ratio", "M0 0A0.0000006 7 0 0 1 100 0Z"],
     [
       "a circle as two arcs",
       "M0 0A0.26458333 0.26458333 0 0 1 0.52916666 0A0.26458333 0.26458333 0 0 1 0 0Z",
@@ -716,9 +784,9 @@ describe("sanitiseSvgLogo, output", () => {
     expect(removals(`<path d="${d}"/>`)).toEqual([]);
   });
 
-  it("rounds numbers to six decimals, half away from zero, exactly", () => {
+  it("keeps numbers of any number of places, rounding none", () => {
     expect(output('<path d="M0.1234565 -0.1234565L999999.9999994 0.0000005"/>')).toBe(
-      `${ROOT}<path d="M0.123457 -0.123457L999999.999999 0.000001"/></svg>`,
+      `${ROOT}<path d="M0.1234565 -0.1234565L999999.9999994 0.0000005"/></svg>`,
     );
   });
 
@@ -867,7 +935,7 @@ describe("sanitiseSvgLogo, size", () => {
     ],
     [
       'width="1in" height="72pt"',
-      'viewBox="0 0 96 96" width="96" height="96"',
+      'viewBox="0 0 96 96" width="1in" height="72pt"',
       [0, 0, 96, 96],
       96,
       96,
@@ -1021,7 +1089,7 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
       output(
         '<clipPath id="c"/><rect height="1" stroke-dasharray="1\t,\n2" fill="rgb(1,\t2 ,3)" clip-path="url( #c )"/>',
       ),
-    ).toContain('fill="#010203" stroke-dasharray="1 2" clip-path="url(#logo-0)"');
+    ).toContain('fill="#010203" stroke-dasharray="1 , 2" clip-path="url(#logo-0)"');
   });
 
   it.each(["0.001em", "1ex", "1%", "1rem", "1vw", "1vh", "1ch", "1q", "1zz", "1 0.001em"])(
@@ -1375,10 +1443,14 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
     },
   );
 
-  it("refuses an output with path data longer than an input may have, as numbers are written out in full", () => {
-    // `1e-6` is written `0.000001`: 120 KB of path data comes to more than the 128 KB limit.
+  it("refuses an output with a transform longer than an input may have, joined from a use's own and its position", () => {
+    // A use with a mask of its own, clipped by a clip path written as a mask, moves into a group
+    // that takes its transform and its position as one list.
+    const transform = `translate(1${" ".repeat(SVG_LOGO_LIMITS.attributeValueLength - 13)})`;
     const result = sanitiseSvgLogo(
-      `<svg ${NS} viewBox="0 0 1 1"><path d="M0 0${"l1e-6 1e-6".repeat(12000)}"/></svg>`,
+      svg(
+        `<defs><rect id="r" width="1" height="1"/></defs><clipPath id="c"><rect width="5" height="5"/><rect x="6" width="1" height="1"/></clipPath><mask id="m"><rect width="9" height="9" fill="#fff"/></mask><use href="#r" x="1" y="1" transform="${transform}" clip-path="url(#c)" mask="url(#m)"/>`,
+      ),
     );
     expect(result.ok || result.errors[0]?.code).toBe("too-long");
   });
@@ -1820,11 +1892,6 @@ describe("sanitiseSvgLogo, refusals", () => {
     [
       "a number",
       svg(`<rect width="1${"0".repeat(SVG_LOGO_LIMITS.integerDigits)}" height="1"/>`),
-      "number-out-of-range",
-    ],
-    [
-      "a number's length",
-      svg(`<rect width="0.${"1".repeat(SVG_LOGO_LIMITS.numberLength)}" height="1"/>`),
       "number-out-of-range",
     ],
     [

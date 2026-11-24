@@ -112,10 +112,38 @@ const WITHIN_BUDGET = new Set([
   "serpentine-of-25000-segments-drawn-seven-times.svg",
 ]);
 
-// Files whose numbers rounding moves what shows by less than half a device pixel, so they are kept.
-const ROUNDED_WITHIN_HALF_A_PIXEL = new Set([
+// Files whose payload is numbers Chromium reads in single precision by readers of its own (ends that
+// meet in one reading and not another, radii that barely fit, magnified places): each is written
+// exactly as it was given, so the output draws as the original, and they are kept.
+const NUMBERS_KEPT_AS_WRITTEN = new Set([
+  "review-arc-coincident-mask.svg",
+  "review-arc-coincident-rel.svg",
+  "review-arc-coincident.svg",
+  "review-arc-coincident0-rel.svg",
+  "review-arc-coincident0.svg",
+  "review-arc-float-coincide-10-rel.svg",
+  "review-arc-float-coincide-10.svg",
+  "review-arc-float-coincide-50.svg",
+  "review-arc-float-near-coincident-100.svg",
+  "review-arc-float-near-coincident.svg",
+  "review-arc-float-radii-scaled-10.svg",
+  "review-arc-float-reverse.svg",
   "review-arc-near-fit-24.svg",
+  "review-arc-near-fit-endpoint.svg",
+  "review-arc-near-fit-mask.svg",
+  "review-arc-near-fit-reveal.svg",
+  "review-arc-near-fit-vb1.svg",
+  "review-arc-near-fit-vb1b.svg",
+  "review-arc-near-fit.svg",
+  "review-arc-radius-ratio-mask.svg",
+  "review-arc-tiny-radius-mask.svg",
+  "review-dash-zero-square-cap.svg",
   "review-dash-zero2.svg",
+  "review-float-coincide.svg",
+  "review-float-coincide2.svg",
+  "review-gradient-repeat-rounded.svg",
+  "review-gradient-rounded-to-a-point.svg",
+  "review-magnified-shift.svg",
 ]);
 
 function withoutPlace(removal: SvgLogoRemoval): ExpectedRemoval {
@@ -158,6 +186,17 @@ describe("the hostile SVG corpus", () => {
     expect(outcome(sanitiseSvgLogo(text))).toBe(EXPECTATIONS[file]?.outcome);
   });
 
+  it.each([...NUMBERS_KEPT_AS_WRITTEN])("writes every number of %s as it was given", (file) => {
+    const input = readFileSync(new URL(file, CORPUS), "utf8");
+    const result = sanitiseSvgLogo(input);
+    if (!result.ok) throw new Error(file);
+    const numbered =
+      / (d|points|transform|gradientTransform|x|y|x1|y1|x2|y2|cx|cy|r|rx|ry|fx|fy|fr|offset|stroke-width|stroke-dasharray|stroke-dashoffset)="([^"]*)"/g;
+    for (const [, name = "", value = ""] of result.svg.matchAll(numbered)) {
+      expect(input, `${file}: ${name}`).toContain(value);
+    }
+  });
+
   it.each(GENERATED)("refuses %s", (_label, input, code) => {
     expect(outcome(sanitiseSvgLogo(input))).toBe(`reject:${code}`);
   });
@@ -171,7 +210,7 @@ describe("the hostile SVG corpus", () => {
       expect(expectation.removed?.length === 0, file).toBe(
         KEPT_AS_TEXT_OR_RENAMED.has(file) ||
           WITHIN_BUDGET.has(file) ||
-          ROUNDED_WITHIN_HALF_A_PIXEL.has(file),
+          NUMBERS_KEPT_AS_WRITTEN.has(file),
       );
     }
   });

@@ -1413,10 +1413,24 @@
     "outcome": "reject:number-out-of-range"
   },
   "huge-number-precision.svg": {
-    "outcome": "reject:number-out-of-range"
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "path",
+        "attribute": "d",
+        "reason": "invalid-value"
+      }
+    ]
   },
   "huge-number.svg": {
-    "outcome": "reject:number-out-of-range"
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "width",
+        "reason": "invalid-value"
+      }
+    ]
   },
   "id-dom-clobbering.svg": {
     "outcome": "accept",
@@ -1708,54 +1722,88 @@
     "outcome": "reject:missing-size"
   },
   "review-arc-coincident-mask.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "accept",
+    "removed": []
   },
   "review-arc-coincident-rel.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "accept",
+    "removed": []
   },
   "review-arc-coincident.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "accept",
+    "removed": []
   },
   "review-arc-coincident0-rel.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "accept",
+    "removed": []
   },
   "review-arc-coincident0.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-float-coincide-10-rel.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-float-coincide-10.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-float-coincide-50.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-float-near-coincident-100.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-float-near-coincident.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-float-radii-scaled-10.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-float-reverse.svg": {
+    "outcome": "accept",
+    "removed": []
   },
   "review-arc-near-fit-24.svg": {
     "outcome": "accept",
     "removed": []
   },
   "review-arc-near-fit-endpoint.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "accept",
+    "removed": []
   },
   "review-arc-near-fit-mask.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "accept",
+    "removed": []
   },
   "review-arc-near-fit-reveal.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "accept",
+    "removed": []
   },
   "review-arc-near-fit-vb1.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "accept",
+    "removed": []
   },
   "review-arc-near-fit-vb1b.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "accept",
+    "removed": []
   },
   "review-arc-near-fit.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "accept",
+    "removed": []
   },
   "review-arc-radius-ratio-mask.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "accept",
+    "removed": []
   },
   "review-arc-tiny-radius-mask.svg": {
     "outcome": "accept",
-    "removed": [
-      {
-        "element": "path",
-        "attribute": "d",
-        "reason": "invalid-value"
-      }
-    ]
+    "removed": []
   },
   "review-cal-radial.svg": {
     "outcome": "accept",
@@ -1831,13 +1879,25 @@
       }
     ]
   },
+  "review-dash-zero-square-cap.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
   "review-dash-zero.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "reject:overdraw-too-large"
   },
   "review-dash-zero1.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "reject:drawing-too-costly"
   },
   "review-dash-zero2.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-float-coincide.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-float-coincide2.svg": {
     "outcome": "accept",
     "removed": []
   },
@@ -1858,13 +1918,16 @@
     "removed": []
   },
   "review-gradient-repeat-rounded.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "accept",
+    "removed": []
   },
   "review-gradient-rounded-to-a-point.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "accept",
+    "removed": []
   },
   "review-magnified-shift.svg": {
-    "outcome": "reject:unsupported-feature"
+    "outcome": "accept",
+    "removed": []
   },
   "review-redos-style-url-spaces.svg": {
     "outcome": "accept",

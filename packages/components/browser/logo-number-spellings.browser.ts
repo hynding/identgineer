@@ -1,9 +1,9 @@
 import { sanitiseSvgLogo } from "@identgineer/brand";
 import { expect, test } from "./fixtures";
 
-// The sanitiser reads every number by its own grammar and writes it back canonically, so a
-// spelling Chromium does not take must not be taken by the sanitiser either, or the output could
-// draw what the original never did. Each spelling below stands in each kind of place a number can,
+// The sanitiser reads every number by its own grammar and writes a number it keeps exactly as it
+// was given, so a spelling Chromium does not take must not be taken by the sanitiser either, or
+// the output could draw what the original never did. Each spelling below stands in each kind of place a number can,
 // in a probe whose picture shows whether and how Chromium read it. The original, the sanitised
 // output and a control with the number replaced by a token no renderer takes are each drawn as an
 // image: the output must draw what the original drew, so a spelling the sanitiser keeps must be one
@@ -130,18 +130,18 @@ const refusedThoughIgnored = (spelling: string): string =>
 
 /**
  * What the sanitiser drops or refuses although Chromium draws it, each listed in the README: a
- * number written with more characters than `numberLength` refuses the whole logo, a dash array
- * of numbers run together is dropped, and so are points of an odd count, which Chromium draws up to
+ * number written with more characters than `numberLength` is dropped with what holds it (and
+ * refuses the logo as the root's width), a dash array of numbers run together is dropped, and so are points of an odd count, which Chromium draws up to
  * the last whole pair; a root width Chromium ignores is refused rather than dropped.
  */
 const KNOWN: Readonly<Record<string, readonly string[]>> = {
-  "a length": [refused(LONG)],
-  "a plain number": [refused(LONG)],
-  "a transform argument": [refused(LONG)],
-  "a view box": [refused(LONG)],
-  "path data": [refused(LONG)],
-  points: [refused(LONG)],
-  "a dash array": [refused(LONG), dropped("50.5.5")],
+  "a length": [dropped(LONG)],
+  "a plain number": [dropped(LONG)],
+  "a transform argument": [dropped(LONG)],
+  "a view box": [dropped(LONG)],
+  "path data": [dropped(LONG)],
+  points: [dropped(LONG)],
+  "a dash array": [dropped(LONG), dropped("50.5.5")],
   // A root width Chromium does not read as a plain number in a kept unit is refused, never dropped:
   // it reads it as CSS, where the sanitiser cannot tell every spelling that draws nothing.
   "the root's width": [

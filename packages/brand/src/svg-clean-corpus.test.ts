@@ -132,7 +132,7 @@ describe("the clean SVG corpus", () => {
     expect(svg).toContain('<linearGradient id="logo-1" href="#logo-0"');
     expect(svg).toContain('fill="url(#logo-1)"');
     expect(svg).toContain('stop-color="#38bdf8" stop-opacity="0.85"');
-    expect([width, height]).toEqual([241.889764, 120.944882]);
+    expect([width, height]).toEqual([64 * (96 / 25.4), 32 * (96 / 25.4)]);
   });
 
   it("keeps the paint order Inkscape writes, which draws the stroke under the fill", () => {

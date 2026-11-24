@@ -710,12 +710,7 @@ describe("sanitiseSvgLogo, linear time", () => {
     ["unclosed tags", (fill) => root(fill("<g>")), 4, "mismatched-tag"],
     ["one long path", (fill) => root(`<path d="M0 0${fill(" 1.5-2.5e1")}"/>`), 1, "accepted"],
     ["one long path of bare signs", (fill) => root(`<path d="M0 0${fill("-")}"/>`), 8, "accepted"],
-    [
-      "one long attribute of digits",
-      (fill) => root(`<rect width="${fill("9")}"/>`),
-      8,
-      "number-out-of-range",
-    ],
+    ["one long attribute of digits", (fill) => root(`<rect width="${fill("9")}"/>`), 8, "accepted"],
     ["an unclosed attribute", (fill) => root(`<g fill="${fill("a")}`), 32, "malformed"],
     ["a long style attribute", (fill) => root(`<g style="${fill("fill:red;")}"/>`), 4, "accepted"],
     [
