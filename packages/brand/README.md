@@ -452,7 +452,20 @@ the first error: the output shows less. So is path data with an arc whose shape 
 changes beyond rounding: a radius that was not zero and rounds to zero (a line, where Chromium
 draws an ellipse scaled up to fit), or, where the radii are too small for the arc and Chromium
 scales them up keeping their ratio, a ratio rounding changes by more than a millionth, which the
-scaling magnifies to the size of the arc. A browser test draws 45 spellings of a number (signs,
+scaling magnifies to the size of the arc. Six decimals keep a number to within half a millionth,
+and a transform can magnify that: a logo is refused (`unsupported-feature`) where rounding a
+number it keeps can move what it shows by more than half a device pixel at 4000 device pixels
+along the longer side of the view box. Each number rounding changed counts its change times the
+magnification applied to it: a function of a transform list by the transforms before it (a
+changed scale, rotation or skew also by how far from the origin a point the view box shows can
+lie, mapped back through them); a coordinate, length or radius of a shape, the position of a
+`use`, the region of a mask and the numbers and transform of a gradient by everything they are
+drawn under; a stroke width and dash offset likewise, a dash length once for every repeat before
+the last dash, and a stop offset by the length of its gradient's vector. In relative path data
+each rounding carries on to every point after it, and the changes along the way to anything drawn
+(through groups, `use`s, clip paths and masks) add up. A number rounding did not change counts
+nothing however much it is magnified, so an exact `scale(999999)` is kept. A gradient whose vector
+or radius rounds to nothing, which paints its last colour everywhere, is refused too. A browser test draws 45 spellings of a number (signs,
 points, exponents, leading zeros, hexadecimal, `Infinity`, `NaN`, stray white space and commas) in
 each of a length, a plain number, a transform, a view box, path data, points, a dash array and the
 root's width, and 18 spellings of a pair in each list, in the original and the output, and holds
@@ -1037,9 +1050,9 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. The geometry is kept to six
 decimals; colours set only by CSS are lost (see above).
 
-The tests hold it to that: a hostile corpus of 284 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 128
-refused, and every removal, by element, attribute and reason, for each of the 156 accepted, 40 of
+The tests hold it to that: a hostile corpus of 303 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 135
+refused, and every removal, by element, attribute and reason, for each of the 168 accepted, 40 of
 them with a clip path written as a mask) and
 generated oversized inputs, each refused or accepted with an output an independent checker finds
 inert (its own tokeniser, its own copy of the allowlist, its own grammar for every value and its

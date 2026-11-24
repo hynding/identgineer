@@ -10,7 +10,17 @@ import { parseSvgTransform } from "./svg-transform.ts";
  * an id in the same document (written back once ids are renamed).
  */
 export type SvgValue =
-  { readonly text: string } | { readonly reference: string; readonly form: "url" | "fragment" };
+  | {
+      readonly text: string;
+      /**
+       * How far rounding to six decimals moved the value's numbers (or, for an arc, the shape they
+       * draw), in the units they are written in; absent where nothing rounded.
+       */
+      readonly roundingError?: number;
+      /** A transform list that rounding changed, with its numbers exactly as written. */
+      readonly exactTransform?: string;
+    }
+  | { readonly reference: string; readonly form: "url" | "fragment" };
 
 export type SvgGrammar = (input: string, limits: SvgLogoLimits) => SvgValue | undefined;
 
@@ -273,7 +283,10 @@ const paintOrder: SvgGrammar = (input) => {
 
 const transform: SvgGrammar = (input, limits) => {
   const parsed = parseSvgTransform(input, limits);
-  return parsed === undefined ? undefined : text(parsed);
+  if (parsed === undefined) return undefined;
+  return parsed.exact === parsed.text
+    ? text(parsed.text)
+    : { text: parsed.text, exactTransform: parsed.exact };
 };
 
 const ALIGNMENTS = ["xMin", "xMid", "xMax"].flatMap((x) =>

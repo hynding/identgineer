@@ -364,6 +364,21 @@ function unitSize(unit: SvgLengthUnit, percentBase: number): number {
 }
 
 /**
+ * The largest user units any of a kept value's space-separated parts is written in, a percentage
+ * taken of `percentBase`: what a number of the value moves by, in user units, when it moves by
+ * one. A part that is not a length (a path command, a pair of points) counts as user units.
+ */
+export function largestUnitSize(text: string, percentBase: number): number {
+  return Math.max(
+    1,
+    ...text.split(" ").map((part) => {
+      const unit = KEPT_LENGTH.exec(part)?.[2] ?? "";
+      return isKeptUnit(unit) ? unitSize(unit, percentBase) : 1;
+    }),
+  );
+}
+
+/**
  * A kept length read back. Anything a grammar would not have kept is a defect upstream, and is
  * refused rather than read as zero: a length that cost nothing would let its drawing cost nothing.
  */

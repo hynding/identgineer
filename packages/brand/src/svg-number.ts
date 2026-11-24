@@ -2,6 +2,32 @@ import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 
 const MAX_EXPONENT_DIGITS = 3;
+
+// The most any number read inside `withRoundingError` has moved in rounding, while one runs.
+let roundingSink: { error: number } | undefined;
+
+/**
+ * Reads with `read`, and says how far rounding moved any number it read (or any change it noted
+ * with `noteRoundingError`), in the units the numbers are written in: zero where nothing rounded.
+ */
+export function withRoundingError<T>(read: () => T): {
+  readonly result: T;
+  readonly error: number;
+} {
+  const outer = roundingSink;
+  const sink = { error: 0 };
+  roundingSink = sink;
+  try {
+    return { result: read(), error: sink.error };
+  } finally {
+    roundingSink = outer;
+  }
+}
+
+/** Counts a change rounding made, in the units of the numbers read, as if a number moved so far. */
+export function noteRoundingError(error: number): void {
+  if (roundingSink !== undefined && error > roundingSink.error) roundingSink.error = error;
+}
 const MAX_EXPONENT = 38;
 
 function isDigit(unit: number): boolean {
@@ -97,6 +123,7 @@ export function normaliseNumber(token: string, limits: SvgLogoLimits): string | 
   if (exponentTooLarge) return undefined;
   let whole = pointAt > 0 ? digits.slice(0, pointAt).padEnd(pointAt, "0") : "0";
   let fraction = pointAt >= 0 ? digits.slice(pointAt) : "0".repeat(-pointAt) + digits;
+  const rounds = /[1-9]/.test(fraction.slice(limits.fractionDigits));
   if (fraction.length > limits.fractionDigits) {
     const roundUp = fraction.charCodeAt(limits.fractionDigits) >= 0x35;
     fraction = fraction.slice(0, limits.fractionDigits);
@@ -111,6 +138,10 @@ export function normaliseNumber(token: string, limits: SvgLogoLimits): string | 
   if (whole.length > limits.integerDigits) {
     throw new SvgLogoRejection("number-out-of-range", "has a number too large in magnitude");
   }
-  if (whole === "0" && fraction === "") return "0";
-  return `${negative ? "-" : ""}${whole}${fraction === "" ? "" : `.${fraction}`}`;
+  const written =
+    whole === "0" && fraction === ""
+      ? "0"
+      : `${negative ? "-" : ""}${whole}${fraction === "" ? "" : `.${fraction}`}`;
+  if (rounds) noteRoundingError(Math.abs(Number(token) - Number(written)));
+  return written;
 }

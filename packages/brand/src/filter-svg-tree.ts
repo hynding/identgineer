@@ -22,6 +22,7 @@ import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import type { SvgLogoRemovalReason } from "./svg-logo-result.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 import { splitDeclarationList } from "./css-declaration-list.ts";
+import { withRoundingError } from "./svg-number.ts";
 import type { Removals } from "./svg-removals.ts";
 import {
   absolutePixels,
@@ -390,9 +391,13 @@ class TreeFilter {
     return { text: pixels.text };
   }
 
+  /** A value by its grammar, with how far rounding moved it where it did. */
   private parse(name: string, value: string): SvgValue | undefined {
     const grammar = Object.hasOwn(SVG_GRAMMARS, name) ? SVG_GRAMMARS[name] : undefined;
-    return grammar?.(value, this.limits);
+    if (grammar === undefined) return undefined;
+    const { result, error } = withRoundingError(() => grammar(value, this.limits));
+    if (result === undefined || error === 0 || !("text" in result)) return result;
+    return { ...result, roundingError: error };
   }
 
   /**

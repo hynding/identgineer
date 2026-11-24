@@ -20,12 +20,17 @@ function skipWhitespace(input: string, position: number): number {
 
 /**
  * An SVG transform list (`matrix`, `translate`, `scale`, `rotate`, `skewX`, `skewY`, as SVG spells
- * them), written back as `name(a b)` items separated by single spaces. At most 16 functions,
+ * them), written back as `name(a b)` items separated by single spaces, and in the same form with
+ * its numbers exactly as written (as JavaScript writes them). At most 16 functions,
  * separated as Chromium separates them: white space with at most one comma, none before the first
  * or after the last. Anything else, CSS units included, is `undefined`.
  */
-export function parseSvgTransform(input: string, limits: SvgLogoLimits): string | undefined {
+export function parseSvgTransform(
+  input: string,
+  limits: SvgLogoLimits,
+): { readonly text: string; readonly exact: string } | undefined {
   const items: string[] = [];
+  const exactItems: string[] = [];
   let position = skipWhitespace(input, 0);
   while (position < input.length) {
     const open = input.indexOf("(", position);
@@ -36,9 +41,11 @@ export function parseSvgTransform(input: string, limits: SvgLogoLimits): string 
     const name = input.slice(position, nameEnd);
     const arities = Object.hasOwn(ARITIES, name) ? ARITIES[name] : undefined;
     if (arities === undefined) return undefined;
-    const values = parseSvgNumberList(input.slice(open + 1, close), limits);
+    const exact: number[] = [];
+    const values = parseSvgNumberList(input.slice(open + 1, close), limits, exact);
     if (values === undefined || !arities.includes(values.length)) return undefined;
     items.push(`${name}(${values.join(" ")})`);
+    exactItems.push(`${name}(${exact.map(String).join(" ")})`);
     if (items.length > MAX_FUNCTIONS) return undefined;
     position = skipWhitespace(input, close + 1);
     if (input.charCodeAt(position) === 0x2c) {
@@ -46,5 +53,6 @@ export function parseSvgTransform(input: string, limits: SvgLogoLimits): string 
       if (position >= input.length) return undefined;
     }
   }
-  return items.length === 0 ? undefined : items.join(" ");
+  // Where JavaScript writes every number as the rounded one, nothing rounded and the two agree.
+  return items.length === 0 ? undefined : { text: items.join(" "), exact: exactItems.join(" ") };
 }

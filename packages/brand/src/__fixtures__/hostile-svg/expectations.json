@@ -1807,6 +1807,12 @@
     "outcome": "accept",
     "removed": []
   },
+  "review-gradient-rounded-to-a-point.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-magnified-shift.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
   "review-redos-style-url-spaces.svg": {
     "outcome": "accept",
     "removed": [

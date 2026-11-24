@@ -26,14 +26,19 @@ export function bounded(m: Matrix): Matrix {
 
 /** `m` then `n`, refused past `MATRIX_BOUND`. */
 export function multiply(m: Matrix, n: Matrix): Matrix {
-  return bounded([
+  return bounded(product(m, n));
+}
+
+/** `m` then `n`, unbounded: for a bound that is compared, never refused for being large. */
+export function product(m: Matrix, n: Matrix): Matrix {
+  return [
     m[0] * n[0] + m[2] * n[1],
     m[1] * n[0] + m[3] * n[1],
     m[0] * n[2] + m[2] * n[3],
     m[1] * n[2] + m[3] * n[3],
     m[0] * n[4] + m[2] * n[5] + m[4],
     m[1] * n[4] + m[3] * n[5] + m[5],
-  ]);
+  ];
 }
 
 function transformFunction(name: string, values: readonly number[]): Matrix {
@@ -60,13 +65,19 @@ function transformFunction(name: string, values: readonly number[]): Matrix {
   }
 }
 
+/** Each function of a kept transform list (`name(a b) name(c)`) as a matrix, in order. */
+export function transformFunctions(text: string): Matrix[] {
+  return [...text.matchAll(/([A-Za-z]+)\(([^)]*)\)/g)].map(([, name = "", values = ""]) =>
+    transformFunction(name, values.split(" ").map(Number)),
+  );
+}
+
 /** A kept transform list (`name(a b) name(c)`) as one matrix. */
 export function parseTransform(text: string): Matrix {
-  let matrix = IDENTITY;
-  for (const [, name = "", values = ""] of text.matchAll(/([A-Za-z]+)\(([^)]*)\)/g)) {
-    matrix = multiply(matrix, bounded(transformFunction(name, values.split(" ").map(Number))));
-  }
-  return matrix;
+  return transformFunctions(text).reduce(
+    (matrix, item) => multiply(matrix, bounded(item)),
+    IDENTITY,
+  );
 }
 
 /** The inverse of `m`, or `undefined` when it flattens the plane. */
