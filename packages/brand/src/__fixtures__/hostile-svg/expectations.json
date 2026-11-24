@@ -137,8 +137,41 @@
       }
     ]
   },
+  "aspect-ratio-slice-of-a-sliver-letterboxed-once-written.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-of-a-tall-sliver-cropping-a-fraction-of-a-pixel.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      }
+    ]
+  },
   "aspect-ratio-slice-of-a-tiny-view-box.svg": {
     "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-of-a-wide-sliver-cropping-a-fraction-of-a-pixel.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "aspect-ratio-slice-of-a-wordmark-cropping-a-fraction-of-a-pixel.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      }
+    ]
   },
   "attribute-quote-injection.svg": {
     "outcome": "accept",

@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest";
 import { sanitiseSvgLogo } from "./sanitise-svg-logo.ts";
 import { seeded } from "./seeded-random.ts";
 
-// An independent model of which lengths a crop would change: each gradient's attributes resolved
-// through the chain of gradients it takes them from, then the specification's defaults, and a mask's
-// region by its defaults. It shares no code with the sanitiser's check.
+// An independent model of when a slice crops and which lengths a crop would change. A slice crops
+// when its frame's proportions differ from the view box's by more than half a device pixel at 4000;
+// the crop is the part of the view box the frame shows, written to six decimals, and refused where
+// that moves an edge by more than half a pixel or leaves proportions a fitted drawing would
+// letterbox. Each gradient's attributes are resolved through the chain of gradients it takes them
+// from, then the specification's defaults, and a mask's region by its defaults. It shares no code
+// with the sanitiser.
 
 type Kind = "linearGradient" | "radialGradient";
 
@@ -19,11 +23,61 @@ interface Mask {
   readonly attributes: ReadonlyMap<string, string>;
 }
 
+type Box = readonly [number, number, number, number];
+
 interface Document {
   readonly gradients: readonly Gradient[];
   readonly painted: number | undefined;
   readonly mask: Mask | undefined;
-  readonly crops: boolean;
+  readonly box: Box;
+  readonly frame: { readonly width: number; readonly height: number };
+  readonly align: string;
+}
+
+const DEVICE_PIXELS = 4000;
+const ALIGNMENTS = ["Min", "Mid", "Max"].flatMap((x) =>
+  ["Min", "Mid", "Max"].map((y) => `x${x}Y${y}`),
+);
+
+function sixDecimals(value: number): number {
+  return Number(value.toFixed(6));
+}
+
+/** How far apart two proportions are, in device pixels across the larger side at 4000. */
+function letterbox(width: number, height: number, frameWidth: number, frameHeight: number): number {
+  const across = frameWidth / width;
+  const down = frameHeight / height;
+  return (Math.abs(across - down) / Math.max(across, down)) * DEVICE_PIXELS;
+}
+
+function crops(document: Document): boolean {
+  const [, , width, height] = document.box;
+  return letterbox(width, height, document.frame.width, document.frame.height) > 0.5;
+}
+
+/** The part of the view box the frame shows, exactly. */
+function shownPart(document: Document): Box {
+  const [x, y, width, height] = document.box;
+  const scale = Math.max(document.frame.width / width, document.frame.height / height);
+  const [shownWidth, shownHeight] = [document.frame.width / scale, document.frame.height / scale];
+  const share = (part: string): number => ["Min", "Mid", "Max"].indexOf(part) / 2;
+  return [
+    x + (width - shownWidth) * share(document.align.slice(1, 4)),
+    y + (height - shownHeight) * share(document.align.slice(5, 8)),
+    shownWidth,
+    shownHeight,
+  ];
+}
+
+function cannotBeWritten(document: Document): boolean {
+  const exact = shownPart(document);
+  const written = exact.map(sixDecimals);
+  const span = Math.max(exact[2], exact[3]);
+  const moved = exact.some(
+    (value, index) => (Math.abs((written[index] ?? NaN) - value) * DEVICE_PIXELS) / span > 0.5,
+  );
+  const [, , width = 1, height = 1] = written;
+  return moved || letterbox(width, height, document.frame.width, document.frame.height) > 0.5;
 }
 
 const COORDINATES: Readonly<Record<Kind, readonly string[]>> = {
@@ -76,8 +130,7 @@ function effective(chain: readonly Gradient[], name: string): string {
   return DEFAULTS[name] ?? "0";
 }
 
-function expectsRefusal(document: Document): boolean {
-  if (!document.crops) return false;
+function takesTheViewBox(document: Document): boolean {
   if (document.painted !== undefined) {
     const chain = chainOf(document, document.painted);
     const units =
@@ -123,7 +176,18 @@ function generate(random: () => number): Document {
     mask = { attributes };
   }
   const painted = random() < 0.85 ? Math.floor(random() * count) : undefined;
-  return { gradients, painted, mask, crops: random() < 0.7 };
+  // Up to 1000 to 1 either way, framed in its own proportions, nearly them or far from them.
+  const width = pick([200, 1000, 1, 37.5, 0.02]);
+  const height = Math.max(0.000001, sixDecimals(width / 10 ** (random() * 6 - 3)));
+  const box: Box = [pick([0, -37.5, 12.25, 0.000001]), pick([0, -1, 0.5]), width, height];
+  const frameWidth = pick([100, 1000, 7, 2000, 0.875]);
+  const off = pick([0, 0, 1e-7, -1e-7, 1e-5, -1e-5, 1e-3, -0.3, 0.5]);
+  const frameHeight = Math.min(
+    999_999,
+    Math.max(0.000001, sixDecimals(((frameWidth * height) / width) * (1 + off))),
+  );
+  const frame = { width: frameWidth, height: frameHeight };
+  return { gradients, painted, mask, box, frame, align: pick(ALIGNMENTS) };
 }
 
 function written(attributes: ReadonlyMap<string, string>): string {
@@ -143,23 +207,27 @@ function svgOf(document: Document): string {
       : `<mask id="m"${written(document.mask.attributes)}><rect width="200" height="100" fill="#fff"/></mask>`;
   const fill = document.painted === undefined ? "#0f766e" : `url(#g${String(document.painted)})`;
   const masked = document.mask === undefined ? "" : ' mask="url(#m)"';
-  const size = document.crops ? 'width="100" height="100"' : 'width="200" height="100"';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100" ${size} preserveAspectRatio="xMinYMid slice"><defs>${gradients}${mask}</defs><rect width="200" height="100" fill="${fill}"${masked}/></svg>`;
+  const frame = `width="${String(document.frame.width)}" height="${String(document.frame.height)}"`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${document.box.join(" ")}" ${frame} preserveAspectRatio="${document.align} slice"><defs>${gradients}${mask}</defs><rect width="200" height="100" fill="${fill}"${masked}/></svg>`;
 }
 
-describe("a crop beside percentages of the view box, against an independent model", () => {
-  it("refuses exactly the documents whose drawn gradients or masks resolve a percentage of the view box, over 4,000 random ones", () => {
+describe("a slice, against an independent model", () => {
+  it("crops exactly where dropping it would move anything by more than half a device pixel, and refuses a crop beside a percentage of the view box, over 6,000 random ones", () => {
     const seed = 2_026_112;
     const random = seeded(seed);
-    for (let run = 0; run < 4000; run += 1) {
+    for (let run = 0; run < 6000; run += 1) {
       const document = generate(random);
       const input = svgOf(document);
       const result = sanitiseSvgLogo(input);
       const where = `seed ${String(seed)}, run ${String(run)}: ${input}`;
-      if (expectsRefusal(document)) {
+      if (!crops(document)) {
+        expect(result.ok ? result.viewBox : result.errors, where).toEqual(document.box);
+      } else if (cannotBeWritten(document) || takesTheViewBox(document)) {
         expect(result.ok || result.errors[0]?.code, where).toBe("unsupported-feature");
       } else {
-        expect(result.ok ? true : result.errors, where).toBe(true);
+        expect(result.ok ? result.viewBox : result.errors, where).toEqual(
+          shownPart(document).map(sixDecimals),
+        );
       }
     }
   });

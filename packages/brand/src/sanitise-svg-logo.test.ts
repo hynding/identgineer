@@ -598,6 +598,38 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
   );
 
   it.each([
+    ["a wordmark of 20 to 1", "0 0 1000 50", ' width="1000" height="49.88"', "0 0.06 1000 49.88"],
+    [
+      "a sliver 1000 wide and 1 tall",
+      "0 0 1000 1",
+      ' width="1000" height="0.875"',
+      "0 0.0625 1000 0.875",
+    ],
+    [
+      "a sliver 1 wide and 1000 tall",
+      "0 0 1 1000",
+      ' width="0.875" height="1000"',
+      "0.0625 0 0.875 1000",
+    ],
+  ])(
+    "crops %s by a share of a pixel along its short side, which dropping the slice would letterbox along its long side",
+    (_, box, size, shown) => {
+      const result = accepted(
+        `<svg ${NS} viewBox="${box}"${size} preserveAspectRatio="xMidYMid slice"><rect width="1000" height="1000"/></svg>`,
+      );
+      expect(result.viewBox.join(" ")).toBe(shown);
+    },
+  );
+
+  it("refuses a crop whose part written to six decimals would be letterboxed along its long side", () => {
+    // The part shown is 1000 by 0.000285714…, written 0.000286: 0.1% taller, 4 device pixels at 4000.
+    const refused = sanitiseSvgLogo(
+      `<svg ${NS} viewBox="0 0 1000 1" width="7" height="0.000002" preserveAspectRatio="xMidYMid slice"><rect width="1000" height="1"/></svg>`,
+    );
+    expect(refused.ok || refused.errors[0]?.code).toBe("unsupported-feature");
+  });
+
+  it.each([
     ["a title", "😀"],
     ["a title by character references", "&#x1F600;"],
     ["a title of CDATA sections", "<![CDATA[😀]]>"],
