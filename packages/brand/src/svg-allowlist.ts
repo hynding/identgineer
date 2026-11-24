@@ -61,31 +61,24 @@ const SIZING = [
   "-webkit-logical-height",
 ] as const;
 
-// Margins and paddings of each side, logical and prefixed: on the root, they move what it draws.
-const ROOT_BOX = [
-  "margin",
-  "padding",
-  ...["margin", "padding"].flatMap((box) => [
-    ...["top", "left", "right", "bottom"].map((side) => `${box}-${side}`),
-    ...["block", "inline"].flatMap((axis) => [
-      `${box}-${axis}`,
-      `${box}-${axis}-start`,
-      `${box}-${axis}-end`,
-    ]),
-    ...["before", "after", "start", "end"].map((side) => `-webkit-${box}-${side}`),
-  ]),
-];
+/**
+ * On the root, every margin, padding, border and outline, logical and prefixed ones and every part
+ * of each included: each moves, insets, clips or covers what the root draws.
+ */
+export const ROOT_FRAME = /^(?:-webkit-)?(?:margin|padding|border|outline)(?:-|$)/;
 
 /**
  * Style properties Chromium reads as the geometry of an element, or as hiding it, which the
- * sanitiser keeps only as attributes or not at all: the browser tests set every property Chromium
+ * sanitiser keeps only as attributes or not at all (and, on the root, `ROOT_FRAME`; on anything,
+ * a `clip-path` of a shape or box rather than a reference): the browser tests set every property Chromium
  * has on each element and hold the sanitiser to this. Where one is set, dropping it alone would
  * draw the element other than either way, so the element goes with it (the root or a clip path,
  * which nothing could stand in for, is refused).
  */
 export const GEOMETRY_IN_STYLE: Readonly<Partial<Record<SvgElementName, ReadonlySet<string>>>> = {
-  svg: new Set(["width", "height", ...TRANSFORMING, ...ROOT_BOX]),
-  g: new Set(TRANSFORMING),
+  svg: new Set(["width", "height", "content-visibility", ...TRANSFORMING]),
+  g: new Set(["content-visibility", ...TRANSFORMING]),
+  defs: new Set(["content-visibility"]),
   path: new Set(["d", ...TRANSFORMING]),
   rect: new Set(["x", "y", ...SIZING, "rx", "ry", ...TRANSFORMING]),
   circle: new Set(["cx", "cy", "r", ...TRANSFORMING]),
@@ -119,7 +112,8 @@ const ZERO_LENGTH = /^[+-]?(?:0+(?:\.0*)?|\.0+)(?:[a-z]+|%)?$/;
 /**
  * Whether a declaration of a geometry property sets what the element has anyway: the property's
  * initial value, which draws the same picture. A transform of none does so only where there is no
- * transform attribute for it to undo.
+ * transform attribute for it to undo; a margin, padding, border or outline where every part of it
+ * is a zero length or `none`.
  */
 export function drawsAsInitial(
   property: string,
@@ -137,11 +131,14 @@ export function drawsAsInitial(
   }
   if (property === "content-visibility") return written === "visible";
   if (property === "display") return written === "inline";
-  if (property.includes("margin") || property.includes("padding")) {
-    return written.split(/\s+/).every((length) => ZERO_LENGTH.test(length));
+  if (ROOT_FRAME.test(property)) {
+    return written.split(/\s+/).every((part) => ZERO_LENGTH.test(part) || part === "none");
   }
   return false;
 }
+
+/** Style properties Chromium takes as another name for one the sanitiser keeps. */
+export const STYLE_ALIASES: Readonly<Record<string, string>> = { "-webkit-opacity": "opacity" };
 
 /**
  * The property a style property stands for, as Chromium cascades it: a prefixed alias, or a part

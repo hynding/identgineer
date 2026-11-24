@@ -8,6 +8,8 @@ import {
   cascadedAs,
   drawsAsInitial,
   GEOMETRY_IN_STYLE,
+  ROOT_FRAME,
+  STYLE_ALIASES,
   TRANSFORM_PLACING,
   SVG_ELEMENT_RULES,
   type SvgElementName,
@@ -428,18 +430,25 @@ class TreeFilter {
       list.push(declaration);
       cascades.set(property, list);
     };
-    for (const { property, value, important } of declarations) {
+    for (const { property: written, value, important } of declarations) {
       const mayBeImportant = important || value.includes("!");
-      if (!PROPERTY_NAME.test(property)) {
+      if (!PROPERTY_NAME.test(written)) {
         this.removals.add(names, "invalid-value", attribute.offset);
         continue;
       }
+      const property = Object.hasOwn(STYLE_ALIASES, written)
+        ? (STYLE_ALIASES[written] ?? written)
+        : written;
       if (this.setsGeometry(source, kept, property, value)) {
-        this.removals.add({ ...names, property }, "unsupported-attribute", attribute.offset);
+        this.removals.add(
+          { ...names, property: written },
+          "unsupported-attribute",
+          attribute.offset,
+        );
         if (source.local === "svg" || source.local === "clipPath") {
           throw new SvgLogoRejection(
             "unsupported-feature",
-            `has a style on its ${source.local} element that sets ${property}, which the sanitiser keeps only as an attribute; write it as one`,
+            `has a style on its ${source.local} element that sets ${property}, which moves, hides or clips what it draws and which the sanitiser keeps only as an attribute, if at all; write it as an attribute, or leave it out`,
             attribute.offset,
           );
         }
@@ -448,22 +457,30 @@ class TreeFilter {
       }
       const target = cascadedAs(property);
       if (target !== property) {
-        this.removals.add({ ...names, property }, "unsupported-attribute", attribute.offset);
+        this.removals.add(
+          { ...names, property: written },
+          "unsupported-attribute",
+          attribute.offset,
+        );
         cascade(target, { reason: "unsupported-attribute", mayBeImportant });
         continue;
       }
       if (clipping && IGNORED_WHEN_CLIPPING.has(property)) {
-        this.removals.add({ ...names, property }, "render-cost", attribute.offset);
+        this.removals.add({ ...names, property: written }, "render-cost", attribute.offset);
         continue;
       }
       if (!STYLE_PROPERTIES.has(property) || !rule.attributes.includes(property)) {
-        this.removals.add({ ...names, property }, propertyReason(property), attribute.offset);
+        this.removals.add(
+          { ...names, property: written },
+          propertyReason(property),
+          attribute.offset,
+        );
         continue;
       }
       const parsed = UNREAD_IN_A_VALUE.test(value) ? undefined : this.parse(property, value);
       if (parsed === undefined) {
         const reason = invalidValueReason(property, value);
-        this.removals.add({ ...names, property }, reason, attribute.offset);
+        this.removals.add({ ...names, property: written }, reason, attribute.offset);
         cascade(property, { reason, mayBeImportant });
         continue;
       }
@@ -483,8 +500,9 @@ class TreeFilter {
   }
 
   /**
-   * Whether a style property is one Chromium reads as the element's geometry, which the sanitiser
-   * keeps only as an attribute: a transform origin or box only where the element has a transform.
+   * Whether a style property is one Chromium reads as the element's geometry, or as hiding or
+   * clipping it, which the sanitiser keeps only as an attribute or not at all: a transform origin
+   * or box only where the element has a transform.
    */
   private setsGeometry(
     source: ResolvedElement,
@@ -493,17 +511,16 @@ class TreeFilter {
     value: string,
   ): boolean {
     if (!isAllowedSvgElement(source.local)) return false;
-    // A clip path Chromium clips by a shape in its style, which no clip path attribute can say.
-    if (
-      source.local === "clipPath" &&
-      cascadedAs(property) === "clip-path" &&
-      !/^\s*(?:url\(|none\s*$)/i.test(value)
-    ) {
+    // A clip by a shape or box in a style, which no clip path attribute can say.
+    if (cascadedAs(property) === "clip-path" && !/^\s*(?:url\(|none\s*$)/i.test(value)) {
       return true;
     }
     const geometry = GEOMETRY_IN_STYLE[source.local];
+    const framing = source.local === "svg" && ROOT_FRAME.test(property);
     if (geometry === undefined) return false;
-    if (geometry.has(property)) return !drawsAsInitial(property, value, new Set(kept.keys()));
+    if (framing || geometry.has(property)) {
+      return !drawsAsInitial(property, value, new Set(kept.keys()));
+    }
     const placed = Object.hasOwn(TRANSFORM_PLACING, property) ? TRANSFORM_PLACING[property] : [];
     return (placed ?? []).some((transform) => kept.has(transform));
   }

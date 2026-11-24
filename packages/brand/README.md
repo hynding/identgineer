@@ -281,6 +281,14 @@ else, attributes in a fixed order, numbers in one form, ids renamed, no comments
 no white space between elements and every character of text escaped. Sanitising it again returns
 it unchanged, and it reads back through the same reader without loss.
 
+What is promised of its size is exactly this: the output is never more than `inputBytes` (512 KiB
+of UTF-8), the most an input may be, so it can always be sanitised again; one that would be more
+is refused (`too-large`). It is not promised to be no larger than its own input: what the
+sanitiser adds can make it larger than the document it came from, by a few bytes or by more
+(a width, height or view box the root lacked, `fill="none"` for a paint that referred to nothing,
+a colour written out as `#rrggbb`, a quote or `>` escaped in text, a clip path rewritten as a
+mask, a stretched view box clipped to itself).
+
 ### Refuse or drop
 
 The rule: **anything that makes the document ambiguous is refused; anything that is merely not
@@ -542,22 +550,27 @@ Decisions, with the reason for each:
   on a `use`; `transform`, `-webkit-transform`, `translate`, `rotate`, `scale`, `offset` and the
   `offset-…` properties on anything drawn, on a gradient and on a clip path; `transform-origin`,
   `-webkit-transform-origin` and its `-x`, `-y` and `-z` parts where the element has a transform,
-  and `transform-box` where it has a `transform` attribute; `content-visibility` on a `use`, a
-  gradient, a clip path and a mask, and `display` on a gradient; on the root, every margin and
-  padding, logical and prefixed ones too, which move what it draws; on a clip path, a `clip-path`
-  of a shape rather than a reference) is never kept, since the sanitiser keeps geometry only as
+  and `transform-box` where it has a `transform` attribute; `content-visibility` on the root, a group,
+  `defs`, a `use`, a gradient, a clip path and a mask, and `display` on a gradient; on the root,
+  every margin, padding, border (its corners' radii and `border-shape` too) and outline, logical
+  and prefixed ones and every part of each included, which move, inset, clip or cover what it
+  draws; on anything, a `clip-path` or `-webkit-clip-path` of a shape or a box rather than a
+  reference, which no clip path attribute can say) is never kept, since the sanitiser keeps geometry only as
   attributes, and dropping it alone would draw the element as neither reading does: the element is
   dropped with it, both reported (a gradient dropped so leaves what it painted painting nothing);
   on the root or a clip path, which nothing could stand in for, the logo is refused
   (`unsupported-feature`). A value that draws as if unset is dropped like any other declaration:
   `none` for a transform where the element has no transform attribute for it to undo (and for
-  `translate`, `rotate`, `scale` and an offset path), `visible` content, an `inline` display and a
-  margin or padding of zero. A browser test sets every property Chromium's `CSSStyleDeclaration`
-  has, prefixed aliases and shorthands included, on each element the sanitiser keeps, with each of
-  forty values that would move, resize, hide or clip something wherever Chromium takes it, and
-  where Chromium then draws the logo otherwise and the element's box or transform has changed
-  (for a definition, which has neither, wherever it draws otherwise), requires the sanitiser to
-  refuse the logo, drop the element, or draw the output as the original. Only a list CSS would split by its error recovery
+  `translate`, `rotate`, `scale` and an offset path), `visible` content, an `inline` display, and a
+  margin, padding, border or outline every part of which is a zero length or `none`.
+  `-webkit-opacity` is read as the `opacity` it is another name for. A browser test sets every property Chromium's `CSSStyleDeclaration`
+  has, prefixed aliases and shorthands included, on each element the sanitiser keeps, and on
+  `defs`, a group holding definitions and a group in a mask, with each of 44 values that would
+  move, resize, hide, clip or border something wherever Chromium takes it, and wherever Chromium
+  then draws the logo otherwise, requires the sanitiser to refuse the logo, drop the element, or
+  draw the output as the original. Its only exceptions are named in it: an outline, which is not on
+  the allowlist and which Chromium paints around a shape or group, is dropped, and so is a dash
+  array in percentages, which leaves the stroke solid (see below). Only a list CSS would split by its error recovery
   (an unclosed comment, string, bracket or url, a string across a line, an escape, a stray or
   mismatched closing bracket, a brace or `@` outside every bracket, a declaration that is not
   `name: value`, an unquoted url holding a bracket, quote or inner space) is dropped whole, and
@@ -853,7 +866,8 @@ however many uses of however large a path it holds; a `defs` left empty goes too
 references are dropped and reported before the sanitiser adds anything with an id, and nothing it
 adds takes a name the input defines or refers to, so no reference can come to name what it adds.
 The output is never larger than an input may
-be (`inputBytes`): one that would be is refused (`too-large`) rather than returned. Nor may it have
+be (`inputBytes`; see what is promised of its size above): one that would be is refused
+(`too-large`) rather than returned. Nor may it have
 more elements, deeper nesting or a longer attribute value than an input may (the clip to a
 stretched view box adds three elements, a group taking a mask adds a level, and a number such as
 `1e-6` is written out as `0.000001`): those are refused as `too-many-elements`, `too-deep` and
@@ -1074,10 +1088,12 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. The geometry is kept to six
 decimals; colours set only by CSS are lost (see above).
 
-The tests hold it to that: a hostile corpus of 325 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 152
-refused, and every removal, by element, attribute and reason, for each of the 173 accepted, 40 of
-them with a clip path written as a mask) and
+The tests hold it to that: a hostile corpus of 329 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 155
+refused, and every removal, by element, attribute and reason, for each of the 174 accepted, 40 of
+them with a clip path rewritten as a mask, 39 of which keep that mask in the output: in the
+fortieth, the rewritten clip path was the clip path of another clip path that is then emptied, so
+nothing is left to use it) and
 generated oversized inputs, each refused or accepted with an output an independent checker finds
 inert (its own tokeniser, its own copy of the allowlist, its own grammar for every value and its
 own rules for where each element may stand); a clean corpus of logos as Inkscape, Illustrator,
