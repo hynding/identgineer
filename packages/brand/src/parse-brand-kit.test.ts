@@ -596,6 +596,18 @@ describe("parseBrandKit, logo and mark", () => {
     expect(error?.message).not.toMatch(/ENTITY|alert|Acme/);
   });
 
+  it("passes on what to change in a logo the sanitiser deliberately does not support", () => {
+    const [error] = errorsOf({
+      ...VALID,
+      logo:
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" width="10" height="40" preserveAspectRatio="none" mask="url(#m)">' +
+        '<mask id="m"><rect width="10" height="10" fill="#fff"/></mask></svg>',
+    });
+    expect(error).toEqual(expect.objectContaining({ path: "logo", code: "invalid-logo" }));
+    expect(error?.message).toContain("unsupported-feature");
+    expect(error?.message).toContain("preserveAspectRatio");
+  });
+
   it.each([[42], [null], [{ svg: LOGO }], [[LOGO]]])(
     "refuses the logo %j as the wrong type",
     (logo) => {

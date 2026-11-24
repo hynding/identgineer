@@ -12,6 +12,12 @@
       }
     ]
   },
+  "aspect-ratio-none-beside-a-root-clip-path.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-none-beside-a-root-mask.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
   "aspect-ratio-none-stretch.svg": {
     "outcome": "accept",
     "removed": [
@@ -24,6 +30,9 @@
   },
   "aspect-ratio-slice-crop.svg": {
     "outcome": "reject:overdraw-too-large"
+  },
+  "aspect-ratio-slice-of-a-tiny-view-box.svg": {
+    "outcome": "reject:unsupported-feature"
   },
   "attribute-quote-injection.svg": {
     "outcome": "accept",
@@ -365,10 +374,10 @@
     ]
   },
   "clip-path-in-box-units-rotated.svg": {
-    "outcome": "reject:drawing-too-costly"
+    "outcome": "reject:unsupported-feature"
   },
   "clip-path-in-box-units-with-transform.svg": {
-    "outcome": "reject:drawing-too-costly"
+    "outcome": "reject:unsupported-feature"
   },
   "clip-path-inside-clip-path.svg": {
     "outcome": "reject:overdraw-too-large"
@@ -399,7 +408,7 @@
     "removed": []
   },
   "clip-path-of-two-shapes-on-root-with-mask.svg": {
-    "outcome": "reject:drawing-too-costly"
+    "outcome": "reject:unsupported-feature"
   },
   "clip-path-on-a-clip-path.svg": {
     "outcome": "accept",
@@ -677,6 +686,21 @@
       {
         "element": "font-face",
         "reason": "unsupported-element"
+      }
+    ]
+  },
+  "dangling-reference-to-a-generated-name.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      },
+      {
+        "element": "rect",
+        "attribute": "clip-path",
+        "reason": "dangling-reference"
       }
     ]
   },

@@ -423,6 +423,47 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
     },
   );
 
+  it.each([
+    ["clip-path", '<clipPath id="c"><rect y="180" width="100" height="40"/></clipPath>'],
+    ["mask", '<mask id="c"><rect y="180" width="100" height="40" fill="#fff"/></mask>'],
+  ])(
+    "refuses preserveAspectRatio none beside a %s on the root, which works around the root and would cut another part",
+    (attribute, definition) => {
+      const logo = (height: number): string =>
+        `<svg ${NS} viewBox="0 0 100 100" width="100" height="${String(height)}" preserveAspectRatio="none" ${attribute}="url(#c)">` +
+        `${definition}<rect width="100" height="100" fill="red"/></svg>`;
+      const refused = sanitiseSvgLogo(logo(400));
+      expect(refused.ok || refused.errors[0]?.code).toBe("unsupported-feature");
+      // Where the frame has the view box's proportions, nothing is stretched or moved.
+      expect(sanitiseSvgLogo(logo(100)).ok).toBe(true);
+    },
+  );
+
+  it("refuses preserveAspectRatio slice where six decimals cannot hold the part that showed to half a pixel", () => {
+    const refused = sanitiseSvgLogo(
+      `<svg ${NS} viewBox="0 0 0.00001 0.00001" width="100" height="300" preserveAspectRatio="xMidYMid slice"><rect width="0.00001" height="0.00001"/></svg>`,
+    );
+    expect(refused.ok || refused.errors[0]?.code).toBe("unsupported-feature");
+    expect(
+      sanitiseSvgLogo(
+        `<svg ${NS} viewBox="0 0 0.00001 0.00001" width="100" height="200" preserveAspectRatio="xMinYMid slice"><rect width="0.00001" height="0.00001"/></svg>`,
+      ).ok,
+    ).toBe(true);
+  });
+
+  it("reports a reference to a name the sanitiser gives what it adds as dangling, never resolved to what it adds", () => {
+    const result = accepted(
+      `<svg ${NS} viewBox="0 0 100 100" width="200" height="100" preserveAspectRatio="none"><rect width="100" height="100" fill="red" clip-path="url(#_0)"/></svg>`,
+    );
+    expect(result.svg).toBe(
+      `<svg ${NS} viewBox="0 0 100 100" width="200" height="100"><clipPath id="logo-0"><rect width="100" height="100"/></clipPath><g clip-path="url(#logo-0)"><rect width="100" height="100" fill="red"/></g></svg>`,
+    );
+    expect(result.removed.map(({ attribute, reason }) => [attribute, reason])).toEqual([
+      ["preserveAspectRatio", "render-cost"],
+      ["clip-path", "dangling-reference"],
+    ]);
+  });
+
   it.each(["xMinYMin", "xMidYMid meet", "xMaxYMax meet"])(
     "keeps preserveAspectRatio %s, which fits the view box inside the image",
     (value) => {

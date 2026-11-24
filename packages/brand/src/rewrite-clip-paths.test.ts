@@ -324,7 +324,7 @@ describe("clip paths of more than one shape", () => {
         `<clipPath id="c">${TWO_CIRCLES}</clipPath><mask id="m"><rect width="100" height="50" fill="#fff"/></mask><rect width="100" height="100"/></svg>`,
     );
     expect(result.ok || result.errors[0]).toEqual(
-      expect.objectContaining({ code: "drawing-too-costly", line: 1, column: 1 }),
+      expect.objectContaining({ code: "unsupported-feature", line: 1, column: 1 }),
     );
   });
 
@@ -346,7 +346,7 @@ describe("clip paths of more than one shape", () => {
       `${ROOT}<clipPath id="c" clipPathUnits="objectBoundingBox" transform="translate(0.5 0)">` +
         '<rect width="0.5" height="1"/><rect width="0.5" height="0.5"/></clipPath><rect width="100" height="100" clip-path="url(#c)"/></svg>',
     );
-    expect(result.ok || result.errors[0]?.code).toBe("drawing-too-costly");
+    expect(result.ok || result.errors[0]?.code).toBe("unsupported-feature");
   });
 
   it("refuse a clip path in the box of what it clips that is clipped itself", () => {
@@ -355,7 +355,18 @@ describe("clip paths of more than one shape", () => {
         '<clipPath id="c" clipPathUnits="objectBoundingBox" clip-path="url(#d)"><rect width="1" height="1"/></clipPath>' +
         '<rect width="100" height="100" clip-path="url(#c)"/></svg>',
     );
-    expect(result.ok || result.errors[0]?.code).toBe("drawing-too-costly");
+    expect(result.ok || result.errors[0]?.code).toBe("unsupported-feature");
+  });
+
+  it("refuse moving a use by a position its six decimals cannot hold to half a pixel", () => {
+    const body =
+      '<mask id="m"><rect width="1" height="1" fill="#fff"/></mask><rect id="s" width="0.000001" height="0.000001"/>' +
+      `<clipPath id="c"><circle cx="0.000003" cy="0.000003" r="0.000002"/><circle cx="0.000007" cy="0.000003" r="0.000002"/></clipPath>`;
+    const logo = (x: string): string =>
+      `<svg ${NS} viewBox="0 0 0.00001 0.00001" width="100" height="100">${body}<use href="#s" x="${x}" mask="url(#m)" clip-path="url(#c)"/></svg>`;
+    const refused = sanitiseSvgLogo(logo("33.3333%"));
+    expect(refused.ok || refused.errors[0]?.code).toBe("unsupported-feature");
+    expect(sanitiseSvgLogo(logo("30%")).ok).toBe(true);
   });
 
   it("keep a clip path of one shape in the box of what it clips, transform and all", () => {
@@ -437,7 +448,7 @@ describe("clip paths of more than one shape", () => {
       `<defs><path id="p" d="M0 0L1 1"/><linearGradient id="g"/></defs><clipPath id="c">${TWO_CIRCLES}</clipPath>` +
         '<rect width="100" height="100"/>',
     );
-    expect(inner(result)).toBe('<defs/><rect width="100" height="100"/>');
+    expect(inner(result)).toBe('<rect width="100" height="100"/>');
     expect(result.removed).toEqual([]);
   });
 
