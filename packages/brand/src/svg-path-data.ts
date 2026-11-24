@@ -1,5 +1,6 @@
 import { isXmlWhitespace } from "./svg-characters.ts";
 import type { SvgLogoLimits } from "./svg-logo-limits.ts";
+import { arcRoundingError, type SvgArc } from "./svg-arc-rounding.ts";
 import { normaliseNumber, noteRoundingError, scanNumber } from "./svg-number.ts";
 
 const ARITY: Readonly<Record<string, number>> = {
@@ -67,6 +68,8 @@ class Cursor {
 interface PathNumber {
   readonly text: string;
   readonly exact: number;
+  /** The number as written out. */
+  readonly written: number;
 }
 
 function readArguments(
@@ -86,7 +89,7 @@ function readArguments(
       const value =
         arity === 7 && (index === 3 || index === 4) ? cursor.flag() : cursor.number(limits);
       if (value === undefined) return undefined;
-      values.push({ text: value, exact: cursor.exact });
+      values.push({ text: value, exact: cursor.exact, written: Number(value) });
     }
     cursor.skipWhitespace();
     const before = cursor.position;
@@ -102,6 +105,9 @@ function readArguments(
   }
 }
 
+const exactly = ({ exact }: PathNumber): number => exact;
+const asWritten = ({ written }: PathNumber): number => written;
+
 /** Where a path's pen is, from the numbers it is moved by, and where its subpath started. */
 class Pen {
   x = 0;
@@ -109,67 +115,109 @@ class Pen {
   private startX = 0;
   private startY = 0;
 
-  /** Moves the pen past one set of a command's arguments. */
-  move(command: string, values: readonly number[]): void {
-    const relative = command === command.toLowerCase();
-    const at = (index: number): number => values[index] ?? 0;
-    const [baseX, baseY] = relative ? [this.x, this.y] : [0, 0];
-    switch (command.toUpperCase()) {
-      case "Z":
-        [this.x, this.y] = [this.startX, this.startY];
-        return;
-      case "H":
-        this.x = baseX + at(0);
-        return;
-      case "V":
-        this.y = baseY + at(0);
-        return;
-      default: {
-        const last = values.length - 2;
-        [this.x, this.y] = [baseX + at(last), baseY + at(last + 1)];
-        if (command.toUpperCase() === "M") [this.startX, this.startY] = [this.x, this.y];
+  /** Moves the pen past one set of a command's arguments, each read by `read`. */
+  move(command: string, values: readonly PathNumber[], read: (value: PathNumber) => number): void {
+    const upper = command.toUpperCase();
+    const relative = command !== upper;
+    const first = values[0];
+    if (upper === "Z") {
+      this.x = this.startX;
+      this.y = this.startY;
+    } else if (upper === "H") {
+      this.x = (relative ? this.x : 0) + (first === undefined ? 0 : read(first));
+    } else if (upper === "V") {
+      this.y = (relative ? this.y : 0) + (first === undefined ? 0 : read(first));
+    } else {
+      const x = values[values.length - 2];
+      const y = values[values.length - 1];
+      this.x = (relative ? this.x : 0) + (x === undefined ? 0 : read(x));
+      this.y = (relative ? this.y : 0) + (y === undefined ? 0 : read(y));
+      if (upper === "M") {
+        this.startX = this.x;
+        this.startY = this.y;
       }
     }
   }
 }
 
-/**
- * How far rounding an arc's radii and angle to six decimals moves the arc it draws, or `undefined`
- * where it reshapes it beyond rounding: a radius that was not zero rounded to zero, which draws a
- * line; or, where the radii are too small for the arc and Chromium scales them up to fit it
- * (keeping their ratio, so the ratio alone sets the shape), a ratio changed by more than a
- * millionth, which the scaling magnifies up to the arc's size. What a smaller change moves the arc
- * by is that change times the radius drawn; rounding a radius that is drawn as written moves the
- * arc no more than it moves the radius, which rounding the number counts already.
- */
-function arcRoundingError(
+/** An arc's numbers, as given, drawn from where the pen is. */
+function arcFrom(
   pen: Pen,
   arc: readonly PathNumber[],
+  read: (value: PathNumber) => number,
   relative: boolean,
-): number | undefined {
-  const [rx, ry, angle, , , x, y] = arc.map(({ exact }) => exact);
-  const [writtenX = 0, writtenY = 0, writtenAngle = 0] = arc.map(({ text }) => Number(text));
-  const [radiusX, radiusY] = [Math.abs(rx ?? 0), Math.abs(ry ?? 0)];
-  if (radiusX === 0 || radiusY === 0) return 0;
-  if (writtenX === 0 || writtenY === 0) return undefined;
-  const [toX, toY] = relative ? [pen.x + (x ?? 0), pen.y + (y ?? 0)] : [x ?? 0, y ?? 0];
-  const radians = ((angle ?? 0) * Math.PI) / 180;
-  const [halfX, halfY] = [(pen.x - toX) / 2, (pen.y - toY) / 2];
-  const along = Math.cos(radians) * halfX + Math.sin(radians) * halfY;
-  const across = -Math.sin(radians) * halfX + Math.cos(radians) * halfY;
-  const lambda = (along / radiusX) ** 2 + (across / radiusY) ** 2;
-  const drawn = Math.max(radiusX, radiusY) * Math.sqrt(Math.max(1, lambda));
-  const ratio = lambda > 1 ? Math.abs(Math.abs(writtenX / writtenY) / (radiusX / radiusY) - 1) : 0;
-  if (ratio > 1e-6) return undefined;
-  const turn = (Math.abs(writtenAngle - (angle ?? 0)) * Math.PI) / 180;
-  return (ratio + turn) * drawn;
+): SvgArc {
+  const [rx = 0, ry = 0, angle = 0, large = 0, sweep = 0, x = 0, y = 0] = arc.map(read);
+  const [baseX, baseY] = relative ? [pen.x, pen.y] : [0, 0];
+  return {
+    x1: pen.x,
+    y1: pen.y,
+    rx,
+    ry,
+    angle,
+    large: large !== 0,
+    sweep: sweep !== 0,
+    x2: baseX + x,
+    y2: baseY + y,
+  };
+}
+
+/** A radius as written and, where rounding changed it, the other six-decimal number beside it. */
+function radiusChoices(radius: PathNumber, limits: SvgLogoLimits): PathNumber[] {
+  const { written } = radius;
+  if (written === radius.exact) return [radius];
+  const step = 10 ** -limits.fractionDigits;
+  const other = written + (radius.exact > written ? step : -step);
+  const text = normaliseNumber(other.toFixed(limits.fractionDigits), limits);
+  return text === undefined
+    ? [radius]
+    : [radius, { text, exact: radius.exact, written: Number(text) }];
+}
+
+/**
+ * An arc's numbers as written, and how far that moves the arc it draws (see `arcRoundingError`),
+ * or `undefined` where a radius that was not zero rounds to zero (a line, where Chromium draws an
+ * ellipse) or no bound is known. Where the radii barely fit between the ends, rounding a radius
+ * up can leave it too short, which moves the centre by the square root of the shortfall; so where
+ * the nearest six decimals move the arc further than its numbers moved, a radius may be written as
+ * the six-decimal number on the other side of it, whichever of them moves the arc least.
+ */
+function writeArc(
+  pen: Pen,
+  written: Pen,
+  arc: readonly PathNumber[],
+  relative: boolean,
+  limits: SvgLogoLimits,
+): { readonly arc: PathNumber[]; readonly error: number } | undefined {
+  const [rx, ry] = arc;
+  if (rx === undefined || ry === undefined) return undefined;
+  if ([rx, ry].some(({ written, exact }) => exact !== 0 && written === 0)) return undefined;
+  const exact = arcFrom(pen, arc, exactly, relative);
+  const errorOf = (numbers: readonly PathNumber[]): number | undefined =>
+    arcRoundingError(exact, arcFrom(written, numbers, asWritten, relative));
+  const nearest = errorOf(arc);
+  const moved =
+    Math.hypot(pen.x - written.x, pen.y - written.y) +
+    Math.max(...arc.map(({ written: number, exact: given }) => Math.abs(number - given)));
+  if (nearest !== undefined && nearest <= 2 * moved) return { arc: [...arc], error: nearest };
+  let best = nearest === undefined ? undefined : { arc: [...arc], error: nearest };
+  for (const radiusX of radiusChoices(rx, limits)) {
+    for (const radiusY of radiusChoices(ry, limits)) {
+      const choice = [radiusX, radiusY, ...arc.slice(2)];
+      const error = errorOf(choice);
+      if (error !== undefined && (best === undefined || error < best.error)) {
+        best = { arc: choice, error };
+      }
+    }
+  }
+  return best;
 }
 
 /**
  * Path data by the SVG grammar, written back canonically: each command letter as written, its
  * numbers normalised and separated by single spaces, repeated coordinate pairs kept under one
  * letter. It must start with a move; anything outside the grammar is `undefined`, and so is an arc
- * that rounding reshapes (see `arcRoundingError`).
+ * whose radius rounds to zero (see `writeArc`).
  */
 export function parseSvgPathData(input: string, limits: SvgLogoLimits): string | undefined {
   const cursor = new Cursor(input);
@@ -187,32 +235,29 @@ export function parseSvgPathData(input: string, limits: SvgLogoLimits): string |
     if (values === undefined) return undefined;
     const arity = ARITY[command.toUpperCase()] ?? 0;
     if (arity === 0) {
-      pen.move(command, []);
-      written.move(command, []);
+      pen.move(command, [], exactly);
+      written.move(command, [], asWritten);
     }
     for (let start = 0; start < values.length; start += arity) {
-      const set = values.slice(start, start + arity);
+      let set = values.slice(start, start + arity);
       if (arity === 7) {
-        const error = arcRoundingError(pen, set, command === "a");
-        if (error === undefined) return undefined;
-        noteRoundingError(error);
+        const chosen = writeArc(pen, written, set, command === "a", limits);
+        if (chosen === undefined) return undefined;
+        noteRoundingError(chosen.error);
+        set = chosen.arc;
+        values.splice(start, arity, ...set);
       }
       // After the first pair, a move's pairs are lines.
       const step =
         start > 0 && command.toUpperCase() === "M" ? (command === "m" ? "l" : "L") : command;
       // A point drawn relative to the pen moves as far as the pen has, and by its own rounding.
-      noteRoundingError(
-        Math.hypot(pen.x - written.x, pen.y - written.y) +
-          Math.max(0, ...set.map(({ text, exact }) => Math.abs(Number(text) - exact))),
-      );
-      pen.move(
-        step,
-        set.map(({ exact }) => exact),
-      );
-      written.move(
-        step,
-        set.map(({ text }) => Number(text)),
-      );
+      let rounding = 0;
+      for (const { written: number, exact } of set) {
+        rounding = Math.max(rounding, Math.abs(number - exact));
+      }
+      noteRoundingError(Math.hypot(pen.x - written.x, pen.y - written.y) + rounding);
+      pen.move(step, set, exactly);
+      written.move(step, set, asWritten);
     }
     segments.push(command + values.map(({ text }) => text).join(" "));
     cursor.skipWhitespace();

@@ -1707,15 +1707,45 @@
   "relative-size-only.svg": {
     "outcome": "reject:missing-size"
   },
-  "review-arc-radius-ratio-mask.svg": {
+  "review-arc-coincident-mask.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-arc-coincident-rel.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-arc-coincident.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-arc-coincident0-rel.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-arc-coincident0.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-arc-near-fit-24.svg": {
     "outcome": "accept",
-    "removed": [
-      {
-        "element": "path",
-        "attribute": "d",
-        "reason": "invalid-value"
-      }
-    ]
+    "removed": []
+  },
+  "review-arc-near-fit-endpoint.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-arc-near-fit-mask.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-arc-near-fit-reveal.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-arc-near-fit-vb1.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-arc-near-fit-vb1b.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-arc-near-fit.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-arc-radius-ratio-mask.svg": {
+    "outcome": "reject:unsupported-feature"
   },
   "review-arc-tiny-radius-mask.svg": {
     "outcome": "accept",

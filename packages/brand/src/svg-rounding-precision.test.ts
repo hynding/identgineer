@@ -298,9 +298,10 @@ describe("an arc as SVG draws it, from its numbers exactly and as written", () =
     const refused: string[] = [];
     for (let run = 0; run < 2000; run += 1) {
       const size = 0.1 * 10 ** (random() * 4);
-      const [rx, ry] = [size * (0.2 + random()), size * (0.2 + random())].map(significant);
+      const rx = significant(size * (0.2 + random()));
+      const ry = significant(size * (0.2 + random()));
       const side = 2.5 * Math.max(Number(rx), Number(ry)) * (1 + random() * 3);
-      const [x, y] = [side / 2 - Number(rx), side / 2].map(significant);
+      const [x, y] = [significant(side / 2 - Number(rx)), significant(side / 2)];
       const across = significant(2 * Number(rx));
       const unit = random() < 0.5 ? "mm" : "";
       const input = drawing(

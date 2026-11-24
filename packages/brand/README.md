@@ -448,11 +448,8 @@ unit of the viewport (`1vw`), which an image has none of, a unit the sanitiser d
 (`2em`, which Chromium draws at 32 pixels, or `4Q`), a calculation (`calc(0px)`,
 `max(0px,0px)`), a variable or environment value, a keyword (`auto`, `inherit`) or any other
 spelling (`10 px`, `5.`) is `unsupported-feature`. Path data outside its grammar is dropped whole, where Chromium would draw it up to
-the first error: the output shows less. So is path data with an arc whose shape rounding to six decimals
-changes beyond rounding: a radius that was not zero and rounds to zero (a line, where Chromium
-draws an ellipse scaled up to fit), or, where the radii are too small for the arc and Chromium
-scales them up keeping their ratio, a ratio rounding changes by more than a millionth, which the
-scaling magnifies to the size of the arc. Six decimals keep a number to within half a millionth,
+the first error: the output shows less. So is path data with an arc whose radius was not zero and
+rounds to zero (a line, where Chromium draws an ellipse scaled up to fit). Six decimals keep a number to within half a millionth,
 and a transform can magnify that: a logo is refused (`unsupported-feature`) where rounding a
 number it keeps can move what it shows by more than half a device pixel at 4000 device pixels
 along the longer side of the view box. Each number rounding changed counts its change times the
@@ -462,7 +459,17 @@ lie, mapped back through them); a coordinate, length or radius of a shape, the p
 `use`, the region of a mask and the numbers and transform of a gradient by everything they are
 drawn under; a stroke width and dash offset likewise, a dash length once for every repeat before
 the last dash, a stop offset by the length of its gradient's vector, and the vector of a
-repeated or reflected gradient once for every repeat the view box can show. In relative path data
+repeated or reflected gradient once for every repeat the view box can show. An arc is not moved
+in proportion to its numbers: where its radii barely fit between its ends, its centre lies the
+square root of the misfit away, and where its ends barely meet, it is drawn as nothing once they
+do. So each arc is drawn as SVG draws it (its radii scaled up where too small, its centre, the
+angles it starts at and sweeps through) from its numbers exactly and as written, from where the
+pen exactly and as written stands, and counts how far apart the points at the same fraction of
+the two arcs can be: the largest distance at 65 evenly spaced fractions plus the most it can grow
+between them, or, where its ends meet in one reading and not the other, how far the arc drawn
+reaches from its start. Where the nearest six decimals move an arc further than its numbers moved,
+a radius may be written as the six-decimal number on its other side, whichever moves the arc
+least, so that radii that fit before rounding still fit after it. In relative path data
 each rounding carries on to every point after it, and the changes along the way to anything drawn
 (through groups, `use`s, clip paths and masks) add up. A number rounding did not change counts
 nothing however much it is magnified, so an exact `scale(999999)` is kept. A gradient whose vector
@@ -1052,8 +1059,8 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. The geometry is kept to six
 decimals; colours set only by CSS are lost (see above).
 
-The tests hold it to that: a hostile corpus of 304 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 136
+The tests hold it to that: a hostile corpus of 316 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 148
 refused, and every removal, by element, attribute and reason, for each of the 168 accepted, 40 of
 them with a clip path written as a mask) and
 generated oversized inputs, each refused or accepted with an output an independent checker finds

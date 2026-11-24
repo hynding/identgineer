@@ -112,6 +112,9 @@ const WITHIN_BUDGET = new Set([
   "serpentine-of-25000-segments-drawn-seven-times.svg",
 ]);
 
+// Files whose numbers rounding moves what shows by less than half a device pixel, so they are kept.
+const ROUNDED_WITHIN_HALF_A_PIXEL = new Set(["review-arc-near-fit-24.svg"]);
+
 function withoutPlace(removal: SvgLogoRemoval): ExpectedRemoval {
   const names: ExpectedRemoval = { element: removal.element, reason: removal.reason };
   return {
@@ -163,7 +166,9 @@ describe("the hostile SVG corpus", () => {
         continue;
       }
       expect(expectation.removed?.length === 0, file).toBe(
-        KEPT_AS_TEXT_OR_RENAMED.has(file) || WITHIN_BUDGET.has(file),
+        KEPT_AS_TEXT_OR_RENAMED.has(file) ||
+          WITHIN_BUDGET.has(file) ||
+          ROUNDED_WITHIN_HALF_A_PIXEL.has(file),
       );
     }
   });
