@@ -315,18 +315,24 @@ Refused, as the whole document (each with its own `code`):
   more than the original (`unsupported-feature`, with a message saying what to change; a brand kit
   passes it on): a clip path that must be written as a mask on a root that has a mask of its own; a
   clip path in object-bounding-box units that must be written as a mask and has a transform or clip
-  path of its own; a stretching `preserveAspectRatio="none"` (one whose width and height differ in
-  proportion from the view box by more than half a device pixel at 4000, so a size worked out to six
-  decimals from the other is no stretch) beside a clip path or mask on the
-  root; a view box and size, after any crop, that six decimals cannot hold: the output draws its
-  view box fitted into its width and height as written, and where any edge of what that shows
-  would lie more than half a device pixel (at 4000 device pixels, 2000 CSS pixels twice as dense,
-  along the longer side) from the edge of what the original showed (the part a `slice` showed, the
-  whole view box under `none`, or the view box fitted into the original's frame, a missing width
-  or height following from the view box exactly), the logo is refused. That one rule covers a crop
-  of a view box a few thousandths of a unit across, whose far edges take two roundings, and a
-  width or height worked out from the other and written to six decimals on a frame a fraction of
-  a unit across; ordinary logos are far from it. The position of a `use` moved onto a group
+  path of its own; a stretching `preserveAspectRatio="none"` (one the view box fitted into its frame would not show
+  to within the half device pixel below, so it must be clipped to its view box) beside a clip path
+  or mask on the root; a width or height under one CSS pixel, given in any unit or worked out from
+  the view box (no logo has a natural size that small, and there six decimals are a large share of
+  it); a view box and size that six decimals cannot hold. One rule decides every view box: the
+  output draws its view box fitted into its width and height as written, and what that shows must
+  have every edge within half a device pixel (at 4000 device pixels, 2000 CSS pixels twice as
+  dense, along the longer side) of what the original showed when drawn at its exact size (the
+  width and height as given, converted from their unit before any rounding, a missing one in the
+  view box's proportions): the part a `slice` showed, the whole view box under `none`, or the
+  view box fitted into the frame with its alignment. With only one of width and height under
+  `none`, Chromium gives the original no proportions of its own, but it still shows the whole view
+  box, which is all the rule compares; the output is given the other side in the view box's
+  proportions. The sanitiser writes the first of these that passes: the view box kept whole; under
+  `none`, the view box clipped to itself; for a `slice`, the part it showed, each edge to six
+  decimals. Where none passes, the logo is refused. That covers a crop of a view box a few
+  thousandths of a unit across, whose far edges take two roundings; ordinary logos are far from
+  it. The position of a `use` moved onto a group
   (below) is refused unless six decimals hold it exactly; a cropping `slice` beside any length taken as a percentage of
   the view box in what is drawn (a size, position, radius or stroke width of a shape, a `use`
   position, the region of a mask in user units, written or by default, which is -10% and 120%, and
@@ -338,9 +344,8 @@ Refused, as the whole document (each with its own `code`):
   between), else the default. Percentages of a box (a gradient or mask region in
   object-bounding-box units) are unchanged by a crop, a length of 0% is 0 of anything, and a
   definition nothing draws is left out before the check; all three are kept. A `slice` crops
-  nothing only when its frame has the view box's proportions to within that half device pixel,
-  by the same rule as a stretch, so that fitting the view box instead letterboxes it by no more
-  along either side; it is then dropped, as the default it equals, and nothing is refused. On an
+  nothing when, by that one rule, the view box kept whole and fitted into the frame shows what it
+  showed; it is then dropped, as the default it equals, and nothing is refused. On an
   elongated view box a crop of a fraction of a pixel on the short side is a letterbox many times
   larger on the long one (a wordmark of 20 to 1 whose frame is 0.24% shorter, five device pixels
   at each end), so it is cropped, not dropped;
@@ -523,10 +528,12 @@ by comments, long path data, deep and unclosed nesting, a long element name, man
 group or of one masked, dashed path) at two sizes, the larger four times the smaller, with the
 limits raised so each is read to its end and accepted or refused only there, and hold the larger
 to less than eight times as long, the fastest of five runs of each (linear is about four,
-quadratic sixteen). Each shape is sized so its smaller run takes about 10 ms or more on a laptop,
-from 64 KiB to 2 MiB, the larger 20 ms to 0.35 seconds; a run under 5 ms is counted as 5 ms, so
-noise in one too short to time cannot fail it. A ratio, unlike a time, holds on a slow or busy
-machine; a deliberately quadratic stage in the reader fails it. The drawing cost is measured in the same pass over the expanded references,
+quadratic sixteen). Each shape is sized so its smaller run takes about 9 ms or more on an idle laptop
+(9 to 110 ms, from 64 KiB to 2 MiB), the larger 35 to 490 ms; a run under 5 ms is counted as
+5 ms, so noise in one too short to time cannot fail it. A ratio, unlike a time, holds on a slow or
+busy machine. It catches a quadratic stage costly enough to matter at these sizes, as a
+deliberately quadratic name reader is; a quadratic stage cheap enough per step, such as a search
+back through the input at `indexOf` speed, can stay under the bound (one gave 7.2) and pass. The drawing cost is measured in the same pass over the expanded references,
 each element once, so it is linear too. The overdraw walks every instance a renderer would draw,
 which `renderedElements` (checked first) bounds, reading each shape's geometry once.
 
@@ -755,17 +762,17 @@ drawing of the turned order.
 
 What each removal for drawing does to the picture, as drawn by Chromium 153.0.8010.12:
 
-| Removed                                                                                         | Reason                                                              | Drawn after                                                                                                                                                                                                              |
-| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `preserveAspectRatio` `slice` on the root                                                       | `render-cost`                                                       | The same: the view box becomes the part that showed (refused where six decimals cannot hold it, or beside a percentage of the view box); one whose frame has the view box's proportions to half a device pixel just goes |
-| `preserveAspectRatio` `none` (stretched) on the root                                            | `render-cost`                                                       | Less: drawn to fit, undistorted, clipped to the view box; refused beside a root clip or mask                                                                                                                             |
-| An element, attribute or style property not on the allowlist, a class or `style` rule, a filter | `unsupported-element`, `unsupported-attribute`, `styling`, `filter` | Not promised: reported, and may show what the original hid (a blend mode, filter, `display:none` rule or root `transform` that hid or moved a shape)                                                                     |
-| `mask` on a clip path or on a shape or `use` in one                                             | `render-cost`                                                       | The same: browsers ignore it                                                                                                                                                                                             |
-| A shape in a clip path not displayed or hidden                                                  | `render-cost`                                                       | The same: the clip path ignores it; kept as a definition where something else draws it                                                                                                                                   |
-| A clip path holding a `use` of anything but a shape (each child, `misplaced`)                   | `misplaced`                                                         | Less: the clip path is emptied, so what it clips draws nothing; its own clip path goes too                                                                                                                               |
-| A clip path of more than one shape, or clipped in turn or itself                                | `rewritten`                                                         | The same, but for Chromium's even-odd order quirk above, where the mask draws the full union                                                                                                                             |
-| Such a one in object-bounding-box units with its own transform or clip path                     | refused                                                             | `unsupported-feature`                                                                                                                                                                                                    |
-| One on a root that has a mask of its own                                                        | refused                                                             | `unsupported-feature`                                                                                                                                                                                                    |
+| Removed                                                                                         | Reason                                                              | Drawn after                                                                                                                                                                                                            |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `preserveAspectRatio` `slice` on the root                                                       | `render-cost`                                                       | The same: the view box becomes the part that showed (refused where six decimals cannot hold it, or beside a percentage of the view box); one whose view box kept whole shows the same to half a device pixel just goes |
+| `preserveAspectRatio` `none` (stretched) on the root                                            | `render-cost`                                                       | Less: drawn to fit, undistorted, clipped to the view box where fitting it alone would show more; refused then beside a root clip or mask                                                                               |
+| An element, attribute or style property not on the allowlist, a class or `style` rule, a filter | `unsupported-element`, `unsupported-attribute`, `styling`, `filter` | Not promised: reported, and may show what the original hid (a blend mode, filter, `display:none` rule or root `transform` that hid or moved a shape)                                                                   |
+| `mask` on a clip path or on a shape or `use` in one                                             | `render-cost`                                                       | The same: browsers ignore it                                                                                                                                                                                           |
+| A shape in a clip path not displayed or hidden                                                  | `render-cost`                                                       | The same: the clip path ignores it; kept as a definition where something else draws it                                                                                                                                 |
+| A clip path holding a `use` of anything but a shape (each child, `misplaced`)                   | `misplaced`                                                         | Less: the clip path is emptied, so what it clips draws nothing; its own clip path goes too                                                                                                                             |
+| A clip path of more than one shape, or clipped in turn or itself                                | `rewritten`                                                         | The same, but for Chromium's even-odd order quirk above, where the mask draws the full union                                                                                                                           |
+| Such a one in object-bounding-box units with its own transform or clip path                     | refused                                                             | `unsupported-feature`                                                                                                                                                                                                  |
+| One on a root that has a mask of its own                                                        | refused                                                             | `unsupported-feature`                                                                                                                                                                                                  |
 
 A clip path of one shape that is not clipped in turn is kept, however long or self-crossing: it
 clips by its outline, with no union. The browser test times the costliest of each form at both of
@@ -958,9 +965,13 @@ random graphs of definitions, uses, masks, layers and dashes whose cost a separa
 checking the sanitiser measures the same cost and refuses exactly what goes over a limit; and 4,000
 random chains of linear and radial gradients and masks beside a crop or a slice that crops nothing,
 checking the sanitiser refuses exactly those a separate model, resolving `href` and defaults its own
-way, finds taking a percentage of the view box; and 12,000 random slices and stretches, half of
-view boxes a fraction of a unit across, checking against a separate geometric model of what a
-browser shows that no output shows more than half a device pixel past what the original showed.
+way, finds taking a percentage of the view box; 12,000 random meets, slices and stretches, half of
+view boxes a fraction of a unit across, in every alignment and absolute unit, sized from a
+thousandth to a thousand times the view box and to six decimals or more, checking against a
+separate geometric model of what a browser shows that no output shows more than half a device
+pixel past what the original showed; and 6,000 logos as design tools export them (two or three
+decimals, ordinary sizes), checking none is refused that some view box written to six decimals
+could show.
 
 ## Commands
 
