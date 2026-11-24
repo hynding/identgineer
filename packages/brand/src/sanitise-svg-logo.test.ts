@@ -218,11 +218,11 @@ describe("sanitiseSvgLogo, output", () => {
     ["a comment", "opacity:0.5/*;display:inline;*/", "opacity"],
     ["a string", "font-family:';display:inline;'", "font-family"],
     ["a double-quoted string", "font-family:&quot;;display:inline;&quot;", "font-family"],
-    ["square brackets", "x:[;display:inline;]", "x"],
-    ["parentheses", "x:(;display:inline;)", "x"],
-    ["a function", "x:y(;display:inline;)", "x"],
-    ["an unquoted url", "x:url(a;display:inline;)", "x"],
-    ["braces inside brackets", "x:({;display:inline;});", "x"],
+    ["square brackets", "foo:[;display:inline;]", "foo"],
+    ["parentheses", "foo:(;display:inline;)", "foo"],
+    ["a function", "foo:y(;display:inline;)", "foo"],
+    ["an unquoted url", "foo:url(a;display:inline;)", "foo"],
+    ["braces inside brackets", "foo:({;display:inline;});", "foo"],
   ])("drops only the declaration that holds %s, and reports it", (_, style, property) => {
     const result = accepted(svg(`<rect width="9" height="9" display="none" style="${style}"/>`));
     expect(result.svg).toBe(`${ROOT}<rect width="9" height="9" display="none"/></svg>`);
@@ -235,7 +235,7 @@ describe("sanitiseSvgLogo, output", () => {
     ["a comment before the colon", "fill /**/ :red", "red"],
     ["a quoted font before it", "font-family:'A;B', Arial;fill:red", "red"],
     ["a bracket before it", "-x-y:(a;[b;{c}]);fill:red", "red"],
-    ["a less-than sign before it", "x:&lt;;fill:red", "red"],
+    ["a less-than sign before it", "foo:&lt;;fill:red", "red"],
   ])("keeps a declaration after %s", (_, style, fill) => {
     const result = accepted(svg(`<rect width="9" height="9" style="${style}"/>`));
     expect(result.svg).toBe(`${ROOT}<rect width="9" height="9" fill="${fill}"/></svg>`);
@@ -299,6 +299,7 @@ describe("sanitiseSvgLogo, output", () => {
     ["the last of two important ones", "fill:red!important;fill:blue ! IMPORTANT", "blue"],
     ["the style over the attribute", "fill:blue", "blue"],
     ["an important one alone", "fill:blue !important", "blue"],
+    ["a plain one after a dropped plain one", "fill:/**/red;fill:blue", "blue"],
     ["an important one before a dropped plain one", "fill:blue !important;fill:reddish", "blue"],
     [
       "an important one after a dropped important one",
@@ -320,7 +321,12 @@ describe("sanitiseSvgLogo, output", () => {
     ["r on a circle", '<circle cx="5" cy="5" r="3" style="r:0"/>', "circle", "r"],
     ["cy on an ellipse", '<ellipse rx="3" ry="2" style="cy:5px"/>', "ellipse", "cy"],
     ["d on a path", '<path d="M0 0H9V9Z" style="d:path(&quot;M0 0&quot;)"/>', "path", "d"],
-    ["y on a use", '<rect id="r" width="2" height="2"/><use href="#r" style="y:5px"/>', "use", "y"],
+    [
+      "y on a use",
+      '<defs><rect id="r" width="2" height="2"/></defs><use href="#r" style="y:5px"/>',
+      "use",
+      "y",
+    ],
     [
       "a transform on a group",
       '<g style="transform:scale(0)"><rect width="9" height="9"/></g>',
@@ -425,7 +431,6 @@ describe("sanitiseSvgLogo, output", () => {
     ["a colour CSS reads and the sanitiser does not", "fill:hsl(0, 100%, 50%)"],
     ["a value CSS does not read", "fill:reddish"],
     ["a dropped value after a kept one", "fill:red;fill:hsl(0, 100%, 50%)"],
-    ["a dropped value before a kept one", "fill:/**/blue;fill:red"],
     ["a dropped important value", "fill:red;fill:reddish !important"],
   ])("drops the property, attribute and all, for %s, and reports both", (_, style) => {
     const result = accepted(svg(`<rect width="9" height="9" fill="green" style="${style}"/>`));

@@ -496,10 +496,27 @@ Decisions, with the reason for each:
   (a font, `-inkscape-font-specification`) is dropped and reported, and so is a value outside its
   grammar or holding a comment, quote, escape or bracket the grammar does not take (`fill:/**/red`
   is dropped, not read past). Among declarations of one property the last marked `!important`
-  wins, else the last, as the cascade decides; but where any of them is dropped, CSS may or may not
-  have taken it (`fill:hsl(…)` is valid CSS the sanitiser does not read, and wins over the
-  attribute; `fill:reddish` is not, and leaves it), so the property goes entirely, the presentation
-  attribute of its name included, each reported. Only a list CSS would split by its error recovery
+  wins, else the last, as the cascade decides. A dropped one CSS may or may not have taken
+  (`fill:hsl(…)` is valid CSS the sanitiser does not read, and wins over the attribute;
+  `fill:reddish` is not, and leaves it), and may have taken as important where it holds a `!`
+  anywhere; so a read declaration is kept only where it wins even with every dropped one taken
+  (an important one after them, or any after dropped ones that cannot be important), and otherwise
+  the property goes entirely, the presentation attribute of its name included, each reported. An
+  alias counts as the property it stands for in this: `-webkit-clip-path` for `clip-path`, and
+  `-webkit-mask…` and every `mask-…` but `mask-type` for `mask` (the `mask` attribute sets the
+  whole mask shorthand), so one in a style takes the kept `clip-path` or `mask` with it. A dropped
+  `color` leaves `currentColor` on the element and inside it to the colour it inherits instead, the
+  one case of a drop that recolours what it does not name. A style property Chromium reads as the
+  geometry of the element (`x`, `y`, `width`, `height`, `rx`, `ry` on a rectangle; `cx`, `cy`, `r`
+  on a circle and `rx`, `ry` on an ellipse; `d` on a path; `x`, `y` on a `use`; `transform`,
+  `translate`, `rotate`, `scale` and the `offset-…` properties on anything drawn, on a gradient and
+  on a clip path; `transform-origin` where the element has a transform, and `transform-box` where
+  it has a `transform` attribute; each checked against Chromium by a browser test, which also checks
+  that Chromium reads none of them on a stop or a mask) is never kept, since the sanitiser keeps
+  geometry only as attributes, and dropping it alone would draw the element as neither reading
+  does: the element is dropped with it, both reported (a gradient dropped so leaves what it painted
+  painting nothing); on the root or a clip path, which nothing could stand in for, the logo is
+  refused (`unsupported-feature`). Only a list CSS would split by its error recovery
   (an unclosed comment, string, bracket or url, a string across a line, an escape, a stray or
   mismatched closing bracket, a brace or `@` outside every bracket, a declaration that is not
   `name: value`, an unquoted url holding a bracket, quote or inner space) is dropped whole, and
@@ -829,6 +846,7 @@ What each removal for drawing does to the picture, as drawn by Chromium 153.0.80
 | An element, attribute or style property not on the allowlist, a class or `style` rule, a filter    | `unsupported-element`, `unsupported-attribute`, `styling`, `filter` | Not promised: reported, and may show what the original hid (a blend mode, filter, `display:none` rule or root `transform` that hid or moved a shape)                                                                   |
 | A `style` attribute only CSS error recovery could split (an unclosed comment or string, an escape) | `invalid-value`                                                     | Not promised: reported, and may show what its declarations set or hid                                                                                                                                                  |
 | A style declaration outside its grammar, and every other one of its property, attribute included   | `invalid-value`, `external-reference`                               | Not promised: reported; the property takes its default (a paint that referred outside paints nothing)                                                                                                                  |
+| An element whose style sets geometry Chromium reads (a width, a transform), with the declaration   | `unsupported-attribute`                                             | Less: the element is not drawn (a gradient paints nothing); the root or a clip path is refused                                                                                                                         |
 | `mask` on a clip path or on a shape or `use` in one                                                | `render-cost`                                                       | The same: browsers ignore it                                                                                                                                                                                           |
 | `clip-path` of `none` on a clip path or on a shape or `use` in one                                 | `render-cost`                                                       | The same: it is what no clip path is                                                                                                                                                                                   |
 | A shape in a clip path not displayed or hidden                                                     | `render-cost`                                                       | The same: the clip path ignores it; kept as a definition where something else draws it                                                                                                                                 |

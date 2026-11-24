@@ -676,6 +676,10 @@
         "attribute": "style",
         "property": "fill",
         "reason": "active-content"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
       }
     ]
   },
@@ -2248,6 +2252,100 @@
     "outcome": "reject:unsupported-feature"
   },
   "review-root-width-max-0px-0px.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-alias.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "-webkit-clip-path",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "attribute": "clip-path",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-geo-d.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "path",
+        "attribute": "style",
+        "property": "d",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "path",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-geo-r.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "circle",
+        "attribute": "style",
+        "property": "r",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "circle",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-geo-transform.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "transform",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-geo-width.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "width",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-geo-x.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "x",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-root-style-width.svg": {
     "outcome": "reject:unsupported-feature"
   },
   "root-not-svg.svg": {

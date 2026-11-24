@@ -5,6 +5,9 @@ import {
   GRADIENTS,
   isAllowedSvgElement,
   STYLE_PROPERTIES,
+  cascadedAs,
+  GEOMETRY_IN_STYLE,
+  TRANSFORM_PLACING,
   SVG_ELEMENT_RULES,
   type SvgElementName,
   type SvgElementRule,
@@ -67,6 +70,40 @@ const SCHEME = /^[a-z][a-z0-9+.-]*:/;
  * so dropping it changes nothing. A clip path there is kept and written as a mask later on.
  */
 const IGNORED_WHEN_CLIPPING: ReadonlySet<string> = new Set(["mask"]);
+
+/** A style declaration of one property, read (its value) or dropped (why). */
+type Cascaded =
+  | { readonly value: SvgValue; readonly important: boolean }
+  | { readonly reason: SvgLogoRemovalReason; readonly mayBeImportant: boolean };
+
+/**
+ * The value the cascade gives a property from its declarations in one style: the last important
+ * one, else the last. A dropped declaration CSS may or may not take, and may take as important
+ * where it holds a `!` anywhere: the value is known only where a read declaration wins even with
+ * every dropped one taken so (it then wins with any of them left out too); otherwise `undefined`.
+ */
+function cascadeWinner(list: readonly Cascaded[]): SvgValue | undefined {
+  let winner: Cascaded | undefined;
+  let winnerImportant = false;
+  for (const declaration of list) {
+    const important = "value" in declaration ? declaration.important : declaration.mayBeImportant;
+    if (important || !winnerImportant) {
+      winner = declaration;
+      winnerImportant = important;
+    }
+  }
+  return winner !== undefined && "value" in winner ? winner.value : undefined;
+}
+
+/** Why a property whose cascade is unknown is dropped: an external reference first. */
+function unreadReason(list: readonly Cascaded[]): SvgLogoRemovalReason {
+  const reasons = list.flatMap((declaration) =>
+    "reason" in declaration ? [declaration.reason] : [],
+  );
+  return reasons.includes("external-reference")
+    ? "external-reference"
+    : (reasons[0] ?? "invalid-value");
+}
 
 /**
  * A clip path of `none` on or in a clip path, where the clip path is rewritten as a mask: it is what
@@ -142,6 +179,8 @@ class TreeFilter {
   private readonly limits: SvgLogoLimits;
   private readonly removals: Removals;
   private droppedAspect: string | undefined;
+  /** Set when the element just read has a style setting its geometry, so it goes. */
+  private styledGeometry = false;
   private readonly exactSize: { width?: number; height?: number } = {};
 
   constructor(limits: SvgLogoLimits, removals: Removals) {
@@ -153,7 +192,9 @@ class TreeFilter {
     if (source.namespace !== SVG_NAMESPACE || source.local !== "svg") {
       throw new SvgLogoRejection("not-svg", "must have an svg root element", source.offset);
     }
-    const root = { ...this.element(source, "svg", true), exactSize: this.exactSize };
+    const element = this.element(source, "svg", true);
+    if (element === undefined) throw new Error("the root was dropped, which only refusing may do");
+    const root = { ...element, exactSize: this.exactSize };
     return this.droppedAspect === undefined ? root : { ...root, droppedAspect: this.droppedAspect };
   }
 
@@ -163,9 +204,13 @@ class TreeFilter {
     name: SvgElementName,
     isRoot: boolean,
     clipping = false,
-  ): CleanElement {
+  ): CleanElement | undefined {
     const rule = SVG_ELEMENT_RULES[name];
     const attributes = this.attributes(source, rule, isRoot, clipping || name === "clipPath");
+    if (this.styledGeometry) {
+      this.styledGeometry = false;
+      return undefined;
+    }
     const children: CleanElement[] = [];
     let text = "";
     let reportedText = false;
@@ -215,7 +260,9 @@ class TreeFilter {
     } else if (!parent.children.includes(source.local)) {
       reason = "misplaced";
     } else {
-      return this.element(source, source.local, false, clipping);
+      const element = this.element(source, source.local, false, clipping);
+      if (element !== undefined) return element;
+      reason = "unsupported-attribute";
     }
     this.removals.add({ element: source.qualified }, reason, source.offset);
     return undefined;
@@ -369,11 +416,34 @@ class TreeFilter {
       this.removals.add(names, droppedStyleReason(attribute.value), attribute.offset);
       return;
     }
-    const read = new Map<string, { value: SvgValue; important: boolean }[]>();
-    const unread = new Map<string, SvgLogoRemovalReason>();
+    const cascades = new Map<string, Cascaded[]>();
+    const cascade = (property: string, declaration: Cascaded): void => {
+      const list = cascades.get(property) ?? [];
+      list.push(declaration);
+      cascades.set(property, list);
+    };
     for (const { property, value, important } of declarations) {
+      const mayBeImportant = important || value.includes("!");
       if (!PROPERTY_NAME.test(property)) {
         this.removals.add(names, "invalid-value", attribute.offset);
+        continue;
+      }
+      if (this.setsGeometry(source, kept, property)) {
+        this.removals.add({ ...names, property }, "unsupported-attribute", attribute.offset);
+        if (source.local === "svg" || source.local === "clipPath") {
+          throw new SvgLogoRejection(
+            "unsupported-feature",
+            `has a style on its ${source.local} element that sets ${property}, which the sanitiser keeps only as an attribute; write it as one`,
+            attribute.offset,
+          );
+        }
+        this.styledGeometry = true;
+        continue;
+      }
+      const target = cascadedAs(property);
+      if (target !== property) {
+        this.removals.add({ ...names, property }, "unsupported-attribute", attribute.offset);
+        cascade(target, { reason: "unsupported-attribute", mayBeImportant });
         continue;
       }
       if (clipping && IGNORED_WHEN_CLIPPING.has(property)) {
@@ -388,26 +458,39 @@ class TreeFilter {
       if (parsed === undefined) {
         const reason = invalidValueReason(property, value);
         this.removals.add({ ...names, property }, reason, attribute.offset);
-        if (unread.get(property) !== "external-reference") unread.set(property, reason);
+        cascade(property, { reason, mayBeImportant });
         continue;
       }
-      const values = read.get(property) ?? [];
-      values.push({ value: parsed, important });
-      read.set(property, values);
+      cascade(property, { value: parsed, important });
     }
-    for (const [property, reason] of unread) this.dropProperty(kept, source, property, reason);
-    for (const [property, values] of read) {
-      if (unread.has(property)) continue;
-      const important = values.filter((declaration) => declaration.important);
-      const winner = (important.length > 0 ? important : values).at(-1);
-      if (winner === undefined) continue;
-      if (clipping && isNoClip(property, winner.value)) {
+    for (const [property, list] of cascades) {
+      const winner = cascadeWinner(list);
+      if (winner === undefined) {
+        this.dropProperty(kept, source, property, unreadReason(list));
+      } else if (clipping && isNoClip(property, winner)) {
         this.removals.add({ ...names, property }, "render-cost", attribute.offset);
         this.dropProperty(kept, source, property, "render-cost");
       } else {
-        kept.set(property, winner.value);
+        kept.set(property, winner);
       }
     }
+  }
+
+  /**
+   * Whether a style property is one Chromium reads as the element's geometry, which the sanitiser
+   * keeps only as an attribute: a transform origin or box only where the element has a transform.
+   */
+  private setsGeometry(
+    source: ResolvedElement,
+    kept: ReadonlyMap<string, SvgValue>,
+    property: string,
+  ): boolean {
+    if (!isAllowedSvgElement(source.local)) return false;
+    const geometry = GEOMETRY_IN_STYLE[source.local];
+    if (geometry === undefined) return false;
+    if (geometry.has(property)) return true;
+    const placed = Object.hasOwn(TRANSFORM_PLACING, property) ? TRANSFORM_PLACING[property] : [];
+    return (placed ?? []).some((transform) => kept.has(transform));
   }
 
   /** Drops a presentation attribute a style declaration the sanitiser cannot read would outweigh. */

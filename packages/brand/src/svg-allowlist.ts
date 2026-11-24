@@ -35,6 +35,62 @@ export const STYLE_PROPERTIES: ReadonlySet<string> = new Set([
   "mask-type",
 ]);
 
+// Style properties Chromium reads as a transform of any element it transforms (checked in the
+// browser tests): the sanitiser keeps a transform only as an attribute.
+const TRANSFORMING = [
+  "transform",
+  "translate",
+  "rotate",
+  "scale",
+  "offset-path",
+  "offset-distance",
+  "offset-position",
+  "offset-anchor",
+  "offset-rotate",
+] as const;
+
+/**
+ * Style properties Chromium reads as the geometry of an element (checked in the browser tests),
+ * which the sanitiser keeps only as attributes. Where one is set, dropping it alone would draw the
+ * element other than either way, so the element goes with it (the root or a clip path, which
+ * nothing could stand in for, is refused).
+ */
+export const GEOMETRY_IN_STYLE: Readonly<Partial<Record<SvgElementName, ReadonlySet<string>>>> = {
+  svg: new Set(["width", "height", ...TRANSFORMING]),
+  g: new Set(TRANSFORMING),
+  path: new Set(["d", ...TRANSFORMING]),
+  rect: new Set(["x", "y", "width", "height", "rx", "ry", ...TRANSFORMING]),
+  circle: new Set(["cx", "cy", "r", ...TRANSFORMING]),
+  ellipse: new Set(["cx", "cy", "rx", "ry", ...TRANSFORMING]),
+  line: new Set(TRANSFORMING),
+  polyline: new Set(TRANSFORMING),
+  polygon: new Set(TRANSFORMING),
+  use: new Set(["x", "y", ...TRANSFORMING]),
+  linearGradient: new Set(TRANSFORMING),
+  radialGradient: new Set(TRANSFORMING),
+  clipPath: new Set(TRANSFORMING),
+};
+
+/**
+ * Style properties that change a transform only where the element has one, and the attributes
+ * that give it one: Chromium moves a gradient's transform by its origin, not by its box.
+ */
+export const TRANSFORM_PLACING: Readonly<Record<string, readonly string[]>> = {
+  "transform-origin": ["transform", "gradientTransform"],
+  "transform-box": ["transform"],
+};
+
+/**
+ * The property a style property stands for, as Chromium cascades it: a prefixed alias, or a part
+ * of the mask shorthand the `mask` attribute sets (all but `mask-type`, its own property).
+ */
+export function cascadedAs(property: string): string {
+  if (property === "-webkit-clip-path") return "clip-path";
+  if (property.startsWith("-webkit-mask")) return "mask";
+  if (property.startsWith("mask-") && property !== "mask-type") return "mask";
+  return property;
+}
+
 const GRADIENT_CHILDREN = ["stop"] as const;
 const DESCRIPTIVE = ["title", "desc"] as const;
 /**
