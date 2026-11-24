@@ -9,14 +9,19 @@ import {
   type SvgElementName,
   type SvgElementRule,
 } from "./svg-allowlist.ts";
-import { codePointLength, isXmlWhitespaceOnly, trimXmlWhitespace } from "./svg-characters.ts";
+import {
+  codePointLength,
+  isXmlWhitespaceOnly,
+  trimXmlWhitespace,
+  XML_WHITESPACE,
+} from "./svg-characters.ts";
 import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import type { SvgLogoRemovalReason } from "./svg-logo-result.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 import type { Removals } from "./svg-removals.ts";
 import {
   absolutePixels,
-  isNonPositiveAbsoluteLength,
+  rootSizeProblem,
   stretchesOrCrops,
   SVG_GRAMMARS,
   type SvgValue,
@@ -48,6 +53,47 @@ export interface CleanElement {
 }
 
 const PROPERTY_NAME = /^-?[a-z][a-z0-9-]{0,63}$/;
+// What CSS reads as a comment, string, block, escape or rule, inside which a `;` ends nothing.
+const OUTSIDE_A_DECLARATION_LIST = /\/\*|[\\'"[\]{}@<]/;
+// The only functions a kept style value holds; any other `(` may hide a `;` from CSS.
+const STYLE_FUNCTION = /(?:url|rgb)\([^();]*\)/gi;
+// `!important` changes nothing where the style attribute is the only rule, once no property is set
+// twice; any other `!` is not CSS the sanitiser has checked.
+const IMPORTANT = /^important$/i;
+
+/** A declaration's value without a final `!important`; `undefined` for any other `!`. */
+function withoutImportant(value: string): string | undefined {
+  const mark = value.indexOf("!");
+  if (mark === -1) return value;
+  return IMPORTANT.test(trimXmlWhitespace(value.slice(mark + 1)))
+    ? value.slice(0, mark)
+    : undefined;
+}
+
+/**
+ * The declarations of a style attribute exactly as CSS splits them, or `undefined` when the
+ * attribute is anything but a plain list of `name: value` declarations: a comment, string, bracket,
+ * escape or at-rule, a function other than `url()` and `rgb()`, a `!` other than a final
+ * `!important`, or a property set twice. CSS would read such a list in ways a split on `;` does
+ * not, so none of it is kept.
+ */
+function plainDeclarations(style: string): { property: string; value: string }[] | undefined {
+  if (OUTSIDE_A_DECLARATION_LIST.test(style)) return undefined;
+  if (/[()]/.test(style.replace(STYLE_FUNCTION, ""))) return undefined;
+  const declarations: { property: string; value: string }[] = [];
+  const seen = new Set<string>();
+  for (const declaration of style.split(";")) {
+    if (isXmlWhitespaceOnly(declaration)) continue;
+    const colon = declaration.indexOf(":");
+    const property =
+      colon === -1 ? "" : trimXmlWhitespace(declaration.slice(0, colon)).toLowerCase();
+    const value = withoutImportant(declaration.slice(colon + 1));
+    if (value === undefined || seen.has(property)) return undefined;
+    seen.add(property);
+    declarations.push({ property, value });
+  }
+  return declarations;
+}
 
 /** The attributes and properties whose value may refer to something (`href` is read apart). */
 const REFERENCE_TAKING: ReadonlySet<string> = new Set(["fill", "stroke", "clip-path", "mask"]);
@@ -72,6 +118,15 @@ function invalidValueReason(name: string, value: string): SvgLogoRemovalReason {
     return "external-reference";
   }
   return "invalid-value";
+}
+
+// A `url(` to anything but a fragment of this document.
+const EXTERNAL_URL = new RegExp(`url\\(${XML_WHITESPACE}*['"]?${XML_WHITESPACE}*[^#'"\\s]`, "i");
+
+/** Why a whole style was dropped: what the worst of it was trying to do. */
+function droppedStyleReason(style: string): SvgLogoRemovalReason {
+  const reason = invalidValueReason("style", style);
+  return reason === "invalid-value" && EXTERNAL_URL.test(style) ? "external-reference" : reason;
 }
 
 /**
@@ -279,11 +334,19 @@ class TreeFilter {
 
   private pixels(name: string, value: string): SvgValue | undefined {
     const pixels = absolutePixels(value, this.limits);
-    // Chromium draws a root of no width or height, or a negative one, at no size at all.
-    if (pixels === undefined && isNonPositiveAbsoluteLength(value, this.limits)) {
+    // Chromium draws a root of no width or height, a negative one, or one in a unit of the
+    // viewport, at no size at all.
+    const problem = pixels === undefined ? rootSizeProblem(value, this.limits) : undefined;
+    if (problem === "no-size") {
       throw new SvgLogoRejection(
         "missing-size",
         "has a width or height of zero or less, which draws nothing; give it a positive size",
+      );
+    }
+    if (problem === "viewport") {
+      throw new SvgLogoRejection(
+        "unsupported-feature",
+        "has a width or height in a unit of the viewport, which an image has none of; give it in pixels or an absolute unit",
       );
     }
     if (pixels === undefined) return undefined;
@@ -308,12 +371,17 @@ class TreeFilter {
     attribute: ResolvedAttribute,
     clipping: boolean,
   ): void {
-    for (const declaration of attribute.value.split(";")) {
-      if (isXmlWhitespaceOnly(declaration)) continue;
-      const colon = declaration.indexOf(":");
-      const property =
-        colon === -1 ? "" : trimXmlWhitespace(declaration.slice(0, colon)).toLowerCase();
-      const names = { element: source.qualified, attribute: attribute.qualified };
+    const names = { element: source.qualified, attribute: attribute.qualified };
+    const declarations = plainDeclarations(attribute.value);
+    if (declarations === undefined) {
+      // What CSS would make of it is unknown, so the element is not drawn (a stop is drawn clear):
+      // dropping the style alone could show what it hid.
+      this.removals.add(names, droppedStyleReason(attribute.value), attribute.offset);
+      if (rule.attributes.includes("display")) kept.set("display", { text: "none" });
+      else if (rule.attributes.includes("stop-opacity")) kept.set("stop-opacity", { text: "0" });
+      return;
+    }
+    for (const { property, value } of declarations) {
       if (!PROPERTY_NAME.test(property)) {
         this.removals.add(names, "invalid-value", attribute.offset);
         continue;
@@ -326,7 +394,6 @@ class TreeFilter {
         this.removals.add({ ...names, property }, propertyReason(property), attribute.offset);
         continue;
       }
-      const value = declaration.slice(colon + 1);
       const parsed = this.parse(property, value);
       if (parsed === undefined) {
         const reason = invalidValueReason(property, value);

@@ -229,7 +229,9 @@ describe("sanitiseSvgLogo, output", () => {
   });
 
   it("drops a view box whose zero has a large exponent, and reports it", () => {
-    const result = accepted(svg('<rect width="9" height="9"/>', 'viewBox="0e39 0 10 10"'));
+    const result = accepted(
+      svg('<rect width="9" height="9"/>', 'viewBox="0e39 0 10 10" width="10" height="10"'),
+    );
     expect(result.removed).toContainEqual(
       expect.objectContaining({ attribute: "viewBox", reason: "invalid-value" }),
     );

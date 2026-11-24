@@ -107,12 +107,57 @@ export function absolutePixels(
   return text === undefined ? undefined : { text, exact };
 }
 
-/** Whether a length in an absolute unit (or none) is a number, but zero or less. */
-export function isNonPositiveAbsoluteLength(input: string, limits: SvgLogoLimits): boolean {
-  const { amount, unit } = splitUnit(input);
-  if (!Object.hasOwn(ABSOLUTE_UNITS, unit)) return false;
-  const normalised = normaliseNumber(amount, limits);
-  return normalised !== undefined && Number(normalised) <= 0;
+// Units of the viewport, which an image has none of: Chromium draws a root sized in them at no size.
+const VIEWPORT_UNITS: ReadonlySet<string> = new Set([
+  "vw",
+  "vh",
+  "vi",
+  "vb",
+  "vmin",
+  "vmax",
+  "svw",
+  "svh",
+  "svi",
+  "svb",
+  "svmin",
+  "svmax",
+  "lvw",
+  "lvh",
+  "lvi",
+  "lvb",
+  "lvmin",
+  "lvmax",
+  "dvw",
+  "dvh",
+  "dvi",
+  "dvb",
+  "dvmin",
+  "dvmax",
+  "cqw",
+  "cqh",
+  "cqi",
+  "cqb",
+  "cqmin",
+  "cqmax",
+]);
+const NUMBER_AND_UNIT = /^(.*?)(%|[a-zA-Z]*)$/;
+
+/**
+ * What is wrong with a root width or height that Chromium draws at no size: a number of zero or
+ * less in any unit but a percentage (`no-size`), or a positive one in a unit of the viewport
+ * (`viewport`). `undefined` for anything else, which is kept or dropped by its grammar.
+ */
+export function rootSizeProblem(
+  input: string,
+  limits: SvgLogoLimits,
+): "no-size" | "viewport" | undefined {
+  const match = NUMBER_AND_UNIT.exec(trimXmlWhitespace(input));
+  const unit = (match?.[2] ?? "").toLowerCase();
+  if (unit === "%") return undefined;
+  const normalised = normaliseNumber(match?.[1] ?? "", limits);
+  if (normalised === undefined) return undefined;
+  if (Number(normalised) <= 0) return "no-size";
+  return VIEWPORT_UNITS.has(unit) ? "viewport" : undefined;
 }
 
 function clampUnit(normalised: string): string {
@@ -134,12 +179,19 @@ function urlReference(input: string): SvgValue | undefined {
   return id === undefined ? undefined : { reference: id, form: "url" };
 }
 
+/** A keyword of a CSS property, which CSS reads with white space around it. */
 const enumeration =
   (...choices: readonly string[]): SvgGrammar =>
   (input) => {
     const value = trimXmlWhitespace(input);
     return choices.includes(value) ? text(value) : undefined;
   };
+
+/** A keyword of an attribute that is no CSS property: Chromium takes it exactly as written. */
+const keyword =
+  (...choices: readonly string[]): SvgGrammar =>
+  (input) =>
+    choices.includes(input) ? text(input) : undefined;
 
 const paint: SvgGrammar = (input) => {
   const value = trimXmlWhitespace(input);
@@ -255,10 +307,10 @@ const preserveAspectRatio: SvgGrammar = (input) => {
   return text(trimXmlWhitespace(input).split(WHITESPACE_RUN).join(" "));
 };
 
+// Exactly `#id`: Chromium does not resolve a reference with white space around it as an image.
 const fragment: SvgGrammar = (input) => {
-  const value = trimXmlWhitespace(input);
-  const id = value.slice(1);
-  return value.startsWith("#") && ID_PATTERN.test(id)
+  const id = input.slice(1);
+  return input.startsWith("#") && ID_PATTERN.test(id)
     ? { reference: id, form: "fragment" }
     : undefined;
 };
@@ -320,11 +372,11 @@ export const SVG_GRAMMARS: Readonly<Record<string, SvgGrammar>> = {
   display: enumeration("inline", "none"),
   visibility: enumeration("visible", "hidden", "collapse"),
   "shape-rendering": enumeration("auto", "optimizeSpeed", "crispEdges", "geometricPrecision"),
-  gradientUnits: enumeration("userSpaceOnUse", "objectBoundingBox"),
-  spreadMethod: enumeration("pad", "reflect", "repeat"),
-  clipPathUnits: enumeration("userSpaceOnUse", "objectBoundingBox"),
-  maskUnits: enumeration("userSpaceOnUse", "objectBoundingBox"),
-  maskContentUnits: enumeration("userSpaceOnUse", "objectBoundingBox"),
+  gradientUnits: keyword("userSpaceOnUse", "objectBoundingBox"),
+  spreadMethod: keyword("pad", "reflect", "repeat"),
+  clipPathUnits: keyword("userSpaceOnUse", "objectBoundingBox"),
+  maskUnits: keyword("userSpaceOnUse", "objectBoundingBox"),
+  maskContentUnits: keyword("userSpaceOnUse", "objectBoundingBox"),
   // Figma writes `style="mask-type:alpha"`; without it an alpha mask is read for its luminance.
   "mask-type": enumeration("luminance", "alpha"),
 };

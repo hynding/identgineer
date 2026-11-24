@@ -668,13 +668,6 @@
       {
         "element": "rect",
         "attribute": "style",
-        "property": "width",
-        "reason": "unsupported-attribute"
-      },
-      {
-        "element": "rect",
-        "attribute": "style",
-        "property": "fill",
         "reason": "active-content"
       }
     ]
@@ -728,31 +721,7 @@
       {
         "element": "rect",
         "attribute": "style",
-        "property": "fill",
-        "reason": "invalid-value"
-      },
-      {
-        "element": "rect",
-        "attribute": "style",
-        "reason": "invalid-value"
-      },
-      {
-        "element": "rect",
-        "attribute": "style",
-        "property": "fill",
-        "reason": "invalid-value"
-      },
-      {
-        "element": "rect",
-        "attribute": "style",
-        "property": "stroke",
-        "reason": "invalid-value"
-      },
-      {
-        "element": "rect",
-        "attribute": "style",
-        "property": "background",
-        "reason": "unsupported-attribute"
+        "reason": "external-reference"
       }
     ]
   },
@@ -787,13 +756,6 @@
       {
         "element": "rect",
         "attribute": "style",
-        "property": "fill",
-        "reason": "external-reference"
-      },
-      {
-        "element": "rect",
-        "attribute": "style",
-        "property": "stroke",
         "reason": "external-reference"
       }
     ]
