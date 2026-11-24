@@ -783,6 +783,52 @@
   "duplicate-ids.svg": {
     "outcome": "reject:duplicate-id"
   },
+  "emptied-clip-path-in-box-units-keeps-its-clip-path.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "attribute": "clip-path",
+        "reason": "render-cost"
+      },
+      {
+        "element": "use",
+        "reason": "misplaced"
+      }
+    ]
+  },
+  "emptied-clip-path-keeps-a-clip-path-written-as-a-mask.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      },
+      {
+        "element": "clipPath",
+        "attribute": "clip-path",
+        "reason": "render-cost"
+      },
+      {
+        "element": "use",
+        "reason": "misplaced"
+      }
+    ]
+  },
+  "emptied-clip-path-keeps-its-clip-path.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "attribute": "clip-path",
+        "reason": "render-cost"
+      },
+      {
+        "element": "use",
+        "reason": "misplaced"
+      }
+    ]
+  },
   "end-tag-case-mismatch.svg": {
     "outcome": "reject:mismatched-tag"
   },

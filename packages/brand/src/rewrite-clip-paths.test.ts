@@ -81,9 +81,44 @@ describe("clip paths of more than one shape", () => {
     ]);
   });
 
+  it.each([
+    ["a clip path of one shape", '<rect width="60" height="60"/>', "", false],
+    [
+      // Written as a mask before the clip path using it is emptied, and then used by nothing.
+      "a clip path written as a mask",
+      '<rect width="60" height="60"/><rect x="70" width="9" height="9"/>',
+      "",
+      true,
+    ],
+    [
+      "a clip path of one shape, in the box of what it clips",
+      '<rect width="60" height="60"/>',
+      ' clipPathUnits="objectBoundingBox"',
+      false,
+    ],
+  ])(
+    "drop the clip path of an emptied clip path, which hides everything already: %s",
+    (_, k, units, rewritten) => {
+      const result = accepted(
+        `<g id="g"><rect width="50" height="50"/></g><clipPath id="k">${k}</clipPath>` +
+          `<clipPath id="c"${units} clip-path="url(#k)"><use href="#g"/></clipPath><rect width="100" height="100" clip-path="url(#c)"/>`,
+      );
+      expect(inner(result)).toBe(
+        `<g><rect width="50" height="50"/></g><clipPath id="logo-0"${units}/><rect width="100" height="100" clip-path="url(#logo-0)"/>`,
+      );
+      expect(
+        result.removed.map(({ element, attribute, reason }) => [element, attribute, reason]),
+      ).toEqual([
+        ...(rewritten ? [["clipPath", undefined, "rewritten"]] : []),
+        ["clipPath", "clip-path", "render-cost"],
+        ["use", undefined, "misplaced"],
+      ]);
+    },
+  );
+
   it("empty a clip path holding a use of anything but a shape, which browsers draw differently", () => {
-    // Chromium 153 clips to what the group draws; the specification calls it an error. An empty
-    // clip path draws less than either.
+    // The specification calls it an error; Chromium leaves the use out and clips to the rest. An
+    // empty clip path draws less than either.
     const result = accepted(
       '<g id="g"><rect width="5" height="5"/></g>' +
         `<clipPath id="c">${TWO_CIRCLES}<use href="#g"/></clipPath><rect width="100" height="100" clip-path="url(#c)"/>`,

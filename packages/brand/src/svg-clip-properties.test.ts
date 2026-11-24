@@ -50,7 +50,8 @@ class ClipGenerator {
   }
 
   private reference(): string {
-    return this.pick(["a", "b", "c", "d", "m", "s", "t", "logo-0", "logo-1"]);
+    // `_0` to `_2` are the names the sanitiser gives what it adds.
+    return this.pick(["a", "b", "c", "d", "m", "s", "t", "logo-0", "logo-1", "_0", "_1", "_2"]);
   }
 
   private transform(): string {
@@ -114,10 +115,11 @@ class ClipGenerator {
       ? `clipPathUnits="${this.pick(["objectBoundingBox", "userSpaceOnUse"])}"`
       : "";
     const transform = this.chance(0.3) ? `transform="${this.transform()}"` : "";
+    const clipped = this.chance(0.3) ? `clip-path="url(#${this.reference()})"` : "";
     const content = Array.from({ length: 1 + Math.floor(this.random() * 3) }, () =>
       this.chance(0.5) ? this.shape() : this.use(),
     ).join("");
-    return `<clipPath id="${this.reference()}" ${units} ${transform} ${this.attributes(Math.floor(this.random() * 2))}>${content}</clipPath>`;
+    return `<clipPath id="${this.reference()}" ${units} ${transform} ${clipped} ${this.attributes(Math.floor(this.random() * 2))}>${content}</clipPath>`;
   }
 
   private mask(depth: number): string {
@@ -149,6 +151,9 @@ class ClipGenerator {
       : this.chance(0.1)
         ? `mask="url(#${this.reference()})"`
         : "";
+    const aspect = this.chance(0.2)
+      ? `width="${this.pick(["100", "37", "300"])}" height="${this.pick(["100", "61", "20"])}" preserveAspectRatio="${this.pick(["none", "xMinYMax slice", "xMidYMid slice", "xMaxYMin slice"])}"`
+      : "";
     const content = Array.from({ length: 1 + Math.floor(this.random() * 7) }, () =>
       this.node(0),
     ).join("");
@@ -156,7 +161,7 @@ class ClipGenerator {
     const clipped = ["a", "b", "c", "d", "m", "s", "t"]
       .map((id) => `<rect width="40" height="40" clip-path="url(#${id})"/>`)
       .join("");
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box}" ${root}>${content}${clipped}<linearGradient id="g"><stop offset="0" stop-color="#00f"/><stop offset="1" stop-color="#0f0"/></linearGradient></svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box}" ${aspect} ${root}>${content}${clipped}<linearGradient id="g"><stop offset="0" stop-color="#00f"/><stop offset="1" stop-color="#0f0"/></linearGradient></svg>`;
   }
 }
 
