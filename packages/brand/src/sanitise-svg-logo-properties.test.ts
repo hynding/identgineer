@@ -172,6 +172,9 @@ const TEXTS = [
   " ",
   "\n  ",
   "x\ry",
+  // At the length limit in characters, and longer once escaped.
+  ">".repeat(2048),
+  '"Acme" & > '.repeat(186),
 ];
 
 interface Node {
