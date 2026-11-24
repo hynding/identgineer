@@ -348,6 +348,54 @@ describe("sanitiseSvgLogo, output", () => {
       "rect",
       "transform-origin",
     ],
+    [
+      "a prefixed transform",
+      '<rect width="6" height="6" style="-webkit-transform:translate(0px,5px)"/>',
+      "rect",
+      "-webkit-transform",
+    ],
+    [
+      "a prefixed transform origin beside a transform",
+      '<rect width="6" height="6" transform="rotate(180)" style="-webkit-transform-origin:5px 5px"/>',
+      "rect",
+      "-webkit-transform-origin",
+    ],
+    [
+      "one axis of a prefixed transform origin",
+      '<g transform="rotate(20)" style="-webkit-transform-origin-x:5px"><rect width="6" height="6"/></g>',
+      "g",
+      "-webkit-transform-origin-x",
+    ],
+    [
+      "the offset shorthand",
+      '<rect width="6" height="6" style="offset:path(&quot;M0 5h1&quot;) 0%"/>',
+      "rect",
+      "offset",
+    ],
+    [
+      "a logical width",
+      '<rect width="6" height="6" style="inline-size:1px"/>',
+      "rect",
+      "inline-size",
+    ],
+    [
+      "a prefixed logical height",
+      '<rect width="6" height="6" style="-webkit-logical-height:1px"/>',
+      "rect",
+      "-webkit-logical-height",
+    ],
+    [
+      "content visibility on a use",
+      '<rect id="r" width="2" height="2"/><use href="#r" style="content-visibility:hidden"/>',
+      "use",
+      "content-visibility",
+    ],
+    [
+      "a transform of none over a transform",
+      '<rect width="6" height="6" transform="rotate(20)" style="transform:none"/>',
+      "rect",
+      "transform",
+    ],
   ])("drops an element whose style sets %s, and reports both", (_, body, element, property) => {
     const result = accepted(svg(`${body}<rect width="1" height="1"/>`));
     expect(result.svg).toBe(`${ROOT}<rect width="1" height="1"/></svg>`);
@@ -357,6 +405,23 @@ describe("sanitiseSvgLogo, output", () => {
         { element, reason: "unsupported-attribute", line: 1, column: expect.any(Number) as number },
       ]),
     );
+  });
+
+  it.each([["display:none"], ["content-visibility:hidden"], ["-webkit-transform:rotate(90deg)"]])(
+    "drops a gradient whose style sets %s, so what it painted paints nothing",
+    (style) => {
+      expect(
+        output(
+          `<linearGradient id="g" style="${style}"><stop offset="0"/></linearGradient><rect width="9" height="9" fill="url(#g)"/>`,
+        ),
+      ).toBe(`${ROOT}<rect width="9" height="9" fill="none"/></svg>`);
+    },
+  );
+
+  it("keeps a root whose style sets a margin of nothing", () => {
+    expect(
+      accepted(svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="margin:0"')).svg,
+    ).toBe(`${ROOT}<rect width="9" height="9"/></svg>`);
   });
 
   it("drops a gradient whose style sets a transform, so what it painted paints nothing", () => {
@@ -373,6 +438,11 @@ describe("sanitiseSvgLogo, output", () => {
       '<rect width="6" height="6" style="transform-origin:center"/>',
     ],
     ["a width on a circle", '<circle cx="5" cy="5" r="3" style="width:0"/>'],
+    [
+      "a transform of none, with no transform to undo",
+      '<rect width="6" height="6" style="transform:none"/>',
+    ],
+    ["a translation of none", '<rect width="6" height="6" style="translate:none"/>'],
     ["an x on a group", '<g style="x:5px"><rect width="6" height="6"/></g>'],
   ])(
     "keeps an element whose style sets %s, which Chromium does not read as its geometry",
@@ -391,6 +461,33 @@ describe("sanitiseSvgLogo, output", () => {
     [
       "a root transformed in its style",
       svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="rotate:5deg"'),
+    ],
+    [
+      "a root moved by a prefixed transform",
+      svg(
+        '<rect width="9" height="9"/>',
+        'viewBox="0 0 10 10" style="-webkit-transform:translate(5px,0px)"',
+      ),
+    ],
+    [
+      "a root moved by its margin",
+      svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="margin-left:5px"'),
+    ],
+    [
+      "a root moved by a prefixed logical padding",
+      svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="-webkit-padding-start:5px"'),
+    ],
+    [
+      "a clip path moved by a prefixed transform",
+      svg(
+        '<clipPath id="c" style="-webkit-transform:translate(0px,5px)"><rect width="5" height="5"/></clipPath><rect width="9" height="9" clip-path="url(#c)"/>',
+      ),
+    ],
+    [
+      "a clip path clipped by a shape in its style",
+      svg(
+        '<clipPath id="c" style="clip-path:circle(1px)"><rect width="5" height="5"/></clipPath><rect width="9" height="9" clip-path="url(#c)"/>',
+      ),
     ],
     [
       "a clip path transformed in its style",
