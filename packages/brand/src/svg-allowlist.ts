@@ -113,6 +113,9 @@ export const TRANSFORM_PLACING: Readonly<Record<string, readonly string[]>> = {
   "transform-box": ["transform"],
 };
 
+/** One zero length. Each part can match in one way only, so a long value is read once. */
+const ZERO_LENGTH = /^[+-]?(?:0+(?:\.0*)?|\.0+)(?:[a-z]+|%)?$/;
+
 /**
  * Whether a declaration of a geometry property sets what the element has anyway: the property's
  * initial value, which draws the same picture. A transform of none does so only where there is no
@@ -135,7 +138,7 @@ export function drawsAsInitial(
   if (property === "content-visibility") return written === "visible";
   if (property === "display") return written === "inline";
   if (property.includes("margin") || property.includes("padding")) {
-    return /^(?:[+-]?(?:0+\.?0*|\.0+)(?:[a-z]+|%)?\s*)+$/.test(written);
+    return written.split(/\s+/).every((length) => ZERO_LENGTH.test(length));
   }
   return false;
 }
