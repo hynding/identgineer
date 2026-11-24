@@ -37,6 +37,8 @@ export interface CleanElement {
    * so the size can be settled to show what it showed.
    */
   readonly droppedAspect?: string;
+  /** On the root only: its width and height in CSS pixels exactly, before six decimals round them. */
+  readonly exactSize?: { readonly width?: number; readonly height?: number };
 }
 
 const PROPERTY_NAME = /^-?[a-z][a-z0-9-]{0,63}$/;
@@ -104,6 +106,7 @@ class TreeFilter {
   private readonly limits: SvgLogoLimits;
   private readonly removals: Removals;
   private droppedAspect: string | undefined;
+  private readonly exactSize: { width?: number; height?: number } = {};
 
   constructor(limits: SvgLogoLimits, removals: Removals) {
     this.limits = limits;
@@ -114,7 +117,7 @@ class TreeFilter {
     if (source.namespace !== SVG_NAMESPACE || source.local !== "svg") {
       throw new SvgLogoRejection("not-svg", "must have an svg root element", source.offset);
     }
-    const root = this.element(source, "svg", true);
+    const root = { ...this.element(source, "svg", true), exactSize: this.exactSize };
     return this.droppedAspect === undefined ? root : { ...root, droppedAspect: this.droppedAspect };
   }
 
@@ -246,7 +249,9 @@ class TreeFilter {
     name: string,
     absolute = false,
   ): void {
-    const parsed = absolute ? this.pixels(attribute.value) : this.parse(name, attribute.value);
+    const parsed = absolute
+      ? this.pixels(name, attribute.value)
+      : this.parse(name, attribute.value);
     if (parsed !== undefined) {
       kept.set(name, parsed);
       return;
@@ -266,9 +271,11 @@ class TreeFilter {
     paintNothingFor(kept, name, reason);
   }
 
-  private pixels(value: string): SvgValue | undefined {
+  private pixels(name: string, value: string): SvgValue | undefined {
     const pixels = absolutePixels(value, this.limits);
-    return pixels === undefined ? undefined : { text: pixels };
+    if (pixels === undefined) return undefined;
+    if (name === "width" || name === "height") this.exactSize[name] = pixels.exact;
+    return { text: pixels.text };
   }
 
   private parse(name: string, value: string): SvgValue | undefined {

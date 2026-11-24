@@ -1,7 +1,7 @@
 import { decodeSvgInput } from "./decode-svg-input.ts";
 import { filterSvgTree, type CleanElement } from "./filter-svg-tree.ts";
 import { freshIds } from "./fresh-ids.ts";
-import { proportionsDifferByMoreThanHalfAPixel, showsTheSameToHalfAPixel } from "./half-pixel.ts";
+import { showsTheSameToHalfAPixel } from "./half-pixel.ts";
 import { findViewBoxPercentage } from "./view-box-percentages.ts";
 import { isLocalPathValue, parseSvgXml } from "./parse-svg-xml.ts";
 import { resolveSvgNamespaces } from "./resolve-svg-namespaces.ts";
@@ -78,12 +78,23 @@ function textOf(root: CleanElement, name: string): string | undefined {
  * Gives the root an explicit view box, width and height: each one written is kept, a missing view
  * box is `0 0 width height`, and a missing width or height follows from the view box's proportions.
  * A root with neither a view box nor both a width and height has no size and is refused, and so is
- * one whose output, its view box fitted into its frame as written, would show other than what the
- * original showed by more than half a device pixel.
+ * one given a size under a pixel, and one whose output, its view box fitted into its frame as
+ * written, would show other than what the original showed by more than half a device pixel.
  */
 function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
   const givenWidth = textOf(root, "width");
   const givenHeight = textOf(root, "height");
+  const exactWidth =
+    givenWidth === undefined ? undefined : (root.exactSize?.width ?? Number(givenWidth));
+  const exactHeight =
+    givenHeight === undefined ? undefined : (root.exactSize?.height ?? Number(givenHeight));
+  // No logo has a natural size under a pixel, where six decimals are a large share of it.
+  if ((exactWidth ?? 1) < 1 || (exactHeight ?? 1) < 1) {
+    throw new SvgLogoRejection(
+      "unsupported-feature",
+      "has a width or height under one pixel; give the logo a size of at least one pixel, or leave the size out",
+    );
+  }
   let [width, height] = [givenWidth, givenHeight];
   let viewBox = textOf(root, "viewBox");
   if (viewBox === undefined) {
@@ -97,49 +108,59 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
   }
   const parts = viewBox.split(" ");
   const [minX = 0, minY = 0, boxWidth = 1, boxHeight = 1] = parts.map(Number);
+  const box = [minX, minY, boxWidth, boxHeight] as const;
+  // The frame a browser draws the original in: exactly as given, a missing side in proportion.
+  const frame =
+    exactWidth === undefined && exactHeight === undefined
+      ? { width: boxWidth, height: boxHeight }
+      : {
+          width: exactWidth ?? ((exactHeight ?? 0) * boxWidth) / boxHeight,
+          height: exactHeight ?? ((exactWidth ?? 0) * boxHeight) / boxWidth,
+        };
   const scaled = (value: number): string | undefined =>
     normaliseNumber(value.toFixed(limits.fractionDigits), limits);
   if (width === undefined && height === undefined) {
     width = parts[2];
     height = parts[3];
-  } else if (width === undefined && height !== undefined) {
-    width = scaled((Number(height) * boxWidth) / boxHeight);
-  } else if (height === undefined && width !== undefined) {
-    height = scaled((Number(width) * boxHeight) / boxWidth);
+  } else {
+    width ??= scaled(frame.width);
+    height ??= scaled(frame.height);
   }
   if (width === undefined || height === undefined || Number(width) <= 0 || Number(height) <= 0) {
     throw new SvgLogoRejection("missing-size", "has no usable width and height");
   }
+  const size = { width: Number(width), height: Number(height) };
+  if (size.width < 1 || size.height < 1) {
+    throw new SvgLogoRejection(
+      "unsupported-feature",
+      "comes to a width or height under one pixel from its view box; give the logo a width and a height of at least one pixel",
+    );
+  }
   root.attributes.set("width", { text: width });
   root.attributes.set("height", { text: height });
-  const size = { width: Number(width), height: Number(height) };
-  const box = [minX, minY, boxWidth, boxHeight] as const;
-  // The frame a browser draws the original in: as written, a missing side exactly in proportion.
-  const frame =
-    givenWidth === undefined && givenHeight === undefined
-      ? size
-      : {
-          width: givenWidth === undefined ? (size.height * boxWidth) / boxHeight : size.width,
-          height: givenHeight === undefined ? (size.width * boxHeight) / boxWidth : size.height,
-        };
   // Kept only when it fits the view box in (`meet`); a stretch or crop is drawn to fit, centred.
   const fit = textOf(root, "preserveAspectRatio") ?? "xMidYMid";
   const aspect = aspectRatio(root.droppedAspect ?? "");
-  const differs = proportionsDifferByMoreThanHalfAPixel(
-    { width: boxWidth, height: boxHeight },
-    frame,
-  );
-  const stretched = aspect?.align === "none" && differs;
   const sliced = aspect !== undefined && aspect.align !== "none";
+  const stretching = aspect?.align === "none";
   const original = sliced
     ? sliceRegion(frame, box, aspect.align)
-    : aspect?.align === "none"
+    : stretching
       ? box
       : fittedRegion(box, frame, fit);
-  // A slice whose frame has the view box's proportions, to within half a pixel, crops nothing.
-  const shown = sliced && differs ? sixDecimals(original, limits) : box;
-  const fitted = fittedRegion(shown, size, fit);
-  if (!showsTheSameToHalfAPixel(original, stretched ? within(fitted, box) : fitted)) {
+  // One rule decides: the first that shows what the original showed, to half a pixel, is written.
+  // The view box kept whole, unclipped; else, stretched, clipped to itself, or cropped, the part a
+  // slice showed, to six decimals.
+  const candidates: readonly { readonly shown: ViewBox; readonly clipped: boolean }[] = [
+    { shown: box, clipped: false },
+    ...(stretching ? [{ shown: box, clipped: true }] : []),
+    ...(sliced ? [{ shown: sixDecimals(original, limits), clipped: false }] : []),
+  ];
+  const chosen = candidates.find(({ shown, clipped }) => {
+    const fitted = fittedRegion(shown, size, fit);
+    return showsTheSameToHalfAPixel(original, clipped ? within(fitted, box) : fitted);
+  });
+  if (chosen === undefined) {
     throw new SvgLogoRejection(
       "unsupported-feature",
       sliced
@@ -147,8 +168,9 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
         : "has a width or height that six decimals cannot write in the view box's proportions; give both, or the view box in larger numbers",
     );
   }
+  const { shown, clipped } = chosen;
   root.attributes.set("viewBox", canonical("viewBox", shown.join(" "), limits));
-  return { ...size, viewBox: shown, clipTo: stretched ? box : undefined, cropped: shown !== box };
+  return { ...size, viewBox: shown, clipTo: clipped ? box : undefined, cropped: shown !== box };
 }
 
 function canonical(name: string, text: string, limits: SvgLogoLimits): SvgValue {

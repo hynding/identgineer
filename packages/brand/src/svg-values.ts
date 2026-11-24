@@ -88,14 +88,25 @@ function length(
   return normalised + (unit === "px" ? "" : unit);
 }
 
-/** A number of CSS pixels from a length in an absolute unit (or none); `undefined` otherwise. */
-export function absolutePixels(input: string, limits: SvgLogoLimits): string | undefined {
+/**
+ * A number of CSS pixels from a length in an absolute unit (or none), as written out and exactly, as
+ * a browser takes it before any rounding; `undefined` otherwise.
+ */
+export function absolutePixels(
+  input: string,
+  limits: SvgLogoLimits,
+): { readonly text: string; readonly exact: number } | undefined {
   const { amount, unit } = splitUnit(input);
   const factor = Object.hasOwn(ABSOLUTE_UNITS, unit) ? ABSOLUTE_UNITS[unit] : undefined;
   const normalised = factor === undefined ? undefined : normaliseNumber(amount, limits);
   if (factor === undefined || normalised === undefined || Number(normalised) <= 0) return undefined;
-  if (factor === 1) return normalised;
-  return normaliseNumber((Number(normalised) * factor).toFixed(limits.fractionDigits), limits);
+  const exact = Number(amount) * factor;
+  if (factor === 1) return { text: normalised, exact };
+  const text = normaliseNumber(
+    (Number(normalised) * factor).toFixed(limits.fractionDigits),
+    limits,
+  );
+  return text === undefined ? undefined : { text, exact };
 }
 
 function clampUnit(normalised: string): string {
