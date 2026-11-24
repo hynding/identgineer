@@ -2349,6 +2349,24 @@
       }
     ]
   },
+  "review-style-content-visibility-g.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "g",
+        "attribute": "style",
+        "property": "content-visibility",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "g",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-content-visibility-root.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
   "review-style-geo-d.svg": {
     "outcome": "accept",
     "removed": [
@@ -2438,6 +2456,12 @@
         "reason": "unsupported-attribute"
       }
     ]
+  },
+  "review-style-root-border-hide.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-root-border-left.svg": {
+    "outcome": "reject:unsupported-feature"
   },
   "review-style-root-style-width.svg": {
     "outcome": "reject:unsupported-feature"

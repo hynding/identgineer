@@ -396,6 +396,30 @@ describe("sanitiseSvgLogo, output", () => {
       "rect",
       "transform",
     ],
+    [
+      "hidden content on a group",
+      '<g style="content-visibility:hidden"><rect width="6" height="6"/></g>',
+      "g",
+      "content-visibility",
+    ],
+    [
+      "hidden content on the definitions",
+      '<defs style="content-visibility:hidden"><rect id="r" width="2" height="2"/></defs><use href="#r"/>',
+      "defs",
+      "content-visibility",
+    ],
+    [
+      "a clip path of a shape on a rectangle",
+      '<rect width="6" height="6" style="clip-path:circle(1px)"/>',
+      "rect",
+      "clip-path",
+    ],
+    [
+      "a prefixed clip path of a box on a use",
+      '<defs><rect id="r" width="2" height="2"/></defs><use href="#r" style="-webkit-clip-path:fill-box"/>',
+      "use",
+      "-webkit-clip-path",
+    ],
   ])("drops an element whose style sets %s, and reports both", (_, body, element, property) => {
     const result = accepted(svg(`${body}<rect width="1" height="1"/>`));
     expect(result.svg).toBe(`${ROOT}<rect width="1" height="1"/></svg>`);
@@ -417,6 +441,24 @@ describe("sanitiseSvgLogo, output", () => {
       ).toBe(`${ROOT}<rect width="9" height="9" fill="none"/></svg>`);
     },
   );
+
+  it.each([
+    ["border:none"],
+    ["border:0"],
+    ["border-left-width:0px"],
+    ["outline:none"],
+    ["border-radius:0"],
+  ])("keeps a root whose style sets %s, which draws no border", (style) => {
+    expect(
+      accepted(svg('<rect width="9" height="9"/>', `viewBox="0 0 10 10" style="${style}"`)).svg,
+    ).toBe(`${ROOT}<rect width="9" height="9"/></svg>`);
+  });
+
+  it("reads -webkit-opacity as the opacity it is an alias of, over the attribute", () => {
+    expect(output('<rect width="9" height="9" opacity="1" style="-webkit-opacity:0.5"/>')).toBe(
+      `${ROOT}<rect width="9" height="9" opacity="0.5"/></svg>`,
+    );
+  });
 
   it("keeps a root whose style sets a margin of nothing", () => {
     expect(
@@ -488,6 +530,44 @@ describe("sanitiseSvgLogo, output", () => {
       svg(
         '<clipPath id="c" style="clip-path:circle(1px)"><rect width="5" height="5"/></clipPath><rect width="9" height="9" clip-path="url(#c)"/>',
       ),
+    ],
+    [
+      "a root whose content is hidden in its style",
+      svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="content-visibility:hidden"'),
+    ],
+    [
+      "a root with a border",
+      svg(
+        '<rect width="9" height="9"/>',
+        'viewBox="0 0 10 10" style="border:50px solid transparent"',
+      ),
+    ],
+    [
+      "a root with a left border",
+      svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="border-left:20px solid"'),
+    ],
+    [
+      "a root with a prefixed logical border",
+      svg(
+        '<rect width="9" height="9"/>',
+        'viewBox="0 0 10 10" style="-webkit-border-start:2px solid"',
+      ),
+    ],
+    [
+      "a root with rounded corners",
+      svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="border-radius:50%"'),
+    ],
+    [
+      "a root with a border shape",
+      svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="border-shape:circle(1px)"'),
+    ],
+    [
+      "a root with an outline",
+      svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="outline:auto"'),
+    ],
+    [
+      "a root clipped by a shape in its style",
+      svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="clip-path:inset(1px)"'),
     ],
     [
       "a clip path transformed in its style",

@@ -2,14 +2,14 @@ import { sanitiseSvgLogo } from "@identgineer/brand";
 // The base test, not the strict fixture: Chromium logs each value it rejects, as it should here.
 import { expect, test, type Page } from "@playwright/test";
 
-// Which style properties move or resize an element is Chromium's to say, not a list's: every
-// property its CSSStyleDeclaration exposes, prefixed aliases and shorthands included, is set in
-// `style` on each element the sanitiser keeps, with each of a set of values that would move,
-// resize, hide or clip something, wherever Chromium takes the value. Where Chromium then draws
-// the logo otherwise (as an image) and the element's box or transform has changed (read from the
-// same document inline, where the box of a shape and its transform can be asked for; for a
-// definition, which has no box, any change to the drawing counts), the sanitiser must refuse the
-// logo, drop the element, or keep the declaration so the output draws as the original does.
+// Which style properties move, resize, hide or otherwise change what an element draws is Chromium's
+// to say, not a list's: every property its CSSStyleDeclaration exposes, prefixed aliases and
+// shorthands included, is set in `style` on each element the sanitiser keeps, with each of a set of
+// values that would move, resize, hide, clip or border something, wherever Chromium takes the value.
+// Wherever Chromium then draws the logo otherwise (as an image), the sanitiser must refuse the logo,
+// drop the element, or draw the output as the original does. The only exceptions are the paint-only
+// properties listed below, which are not on the allowlist and are dropped, changing the picture, as
+// the README says of every such drop.
 
 const svg = (body: string, root = ""): string =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"${root}>${body}</svg>`;
@@ -20,55 +20,34 @@ const STOPS = '<stop offset="0.5" stop-color="#0f0"/><stop offset="0.5" stop-col
 interface Probe {
   /** The probe with the style attribute written where `@` stands. */
   readonly template: string;
-  /** What to measure inline: the root's content, an element by name, or nothing (a definition). */
-  readonly measure: string | undefined;
   /** The element the style is on, as a removal names it. */
   readonly element: string;
 }
 
-const probe = (template: string, element: string, measure?: string): Probe => ({
-  template,
-  element,
-  measure,
-});
+const probe = (template: string, element: string): Probe => ({ template, element });
 
 const PROBES: Readonly<Record<string, Probe>> = {
-  root: probe(svg(RECT, "@"), "svg", "root"),
-  rect: probe(
-    svg('<rect x="10" y="10" width="50" height="50" rx="5" fill="#f00"@/>'),
-    "rect",
-    "rect",
-  ),
+  root: probe(svg(RECT, "@"), "svg"),
+  rect: probe(svg('<rect x="10" y="10" width="50" height="50" rx="5" fill="#f00"@/>'), "rect"),
   "rect with a transform": probe(
     svg('<rect x="10" y="10" width="50" height="50" fill="#f00" transform="rotate(20)"@/>'),
     "rect",
-    "rect",
   ),
-  circle: probe(svg('<circle cx="40" cy="40" r="20" fill="#f00"@/>'), "circle", "circle"),
-  ellipse: probe(
-    svg('<ellipse cx="40" cy="40" rx="20" ry="10" fill="#f00"@/>'),
-    "ellipse",
-    "ellipse",
-  ),
+  circle: probe(svg('<circle cx="40" cy="40" r="20" fill="#f00"@/>'), "circle"),
+  ellipse: probe(svg('<ellipse cx="40" cy="40" rx="20" ry="10" fill="#f00"@/>'), "ellipse"),
   line: probe(
     svg('<line x1="10" y1="10" x2="60" y2="60" stroke="#f00" stroke-width="5"@/>'),
     "line",
-    "line",
   ),
-  polyline: probe(
-    svg('<polyline points="10 10 60 10 60 60" fill="#f00"@/>'),
-    "polyline",
-    "polyline",
-  ),
-  polygon: probe(svg('<polygon points="10 10 60 10 60 60" fill="#f00"@/>'), "polygon", "polygon"),
-  path: probe(svg('<path d="M10 10H60V60Z" fill="#f00"@/>'), "path", "path"),
-  g: probe(svg(`<g@>${RECT}</g>`), "g", "rect"),
-  "g with a transform": probe(svg(`<g transform="rotate(20)"@>${RECT}</g>`), "g", "rect"),
+  polyline: probe(svg('<polyline points="10 10 60 10 60 60" fill="#f00"@/>'), "polyline"),
+  polygon: probe(svg('<polygon points="10 10 60 10 60 60" fill="#f00"@/>'), "polygon"),
+  path: probe(svg('<path d="M10 10H60V60Z" fill="#f00"@/>'), "path"),
+  g: probe(svg(`<g@>${RECT}</g>`), "g"),
+  "g with a transform": probe(svg(`<g transform="rotate(20)"@>${RECT}</g>`), "g"),
   use: probe(
     svg(
       '<defs><rect id="r" width="30" height="30" fill="#f00"/></defs><use href="#r" x="10" y="10"@/>',
     ),
-    "use",
     "use",
   ),
   "use with a transform": probe(
@@ -76,14 +55,12 @@ const PROBES: Readonly<Record<string, Probe>> = {
       '<defs><rect id="r" width="30" height="30" fill="#f00"/></defs><use href="#r" x="10" y="10" transform="rotate(20)"@/>',
     ),
     "use",
-    "use",
   ),
   "shape in a clip path": probe(
     svg(
       '<clipPath id="c"><rect x="10" y="10" width="50" height="50"@/></clipPath><rect width="100" height="100" fill="#f00" clip-path="url(#c)"/>',
     ),
     "rect",
-    "clipPath rect",
   ),
   linearGradient: probe(
     svg(
@@ -127,12 +104,50 @@ const PROBES: Readonly<Record<string, Probe>> = {
     ),
     "mask",
   ),
+  defs: probe(
+    svg(
+      `<defs@><linearGradient id="g" x2="1">${STOPS}</linearGradient><rect id="r" width="30" height="30" fill="#f00"/></defs><rect width="100" height="100" fill="url(#g)"/><use href="#r" x="10" y="10"/>`,
+    ),
+    "defs",
+  ),
+  "g holding definitions": probe(
+    svg(
+      `<g@><linearGradient id="g" x2="1">${STOPS}</linearGradient><clipPath id="c"><rect x="10" y="10" width="50" height="50"/></clipPath>${RECT}</g><rect width="100" height="100" fill="url(#g)" clip-path="url(#c)"/>`,
+    ),
+    "g",
+  ),
+  "mask holding a group": probe(
+    svg(
+      '<mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><g@><rect x="10" y="10" width="50" height="50" fill="#fff"/></g></mask><rect width="100" height="100" fill="#f00" mask="url(#m)"/>',
+    ),
+    "g",
+  ),
 };
+
+/**
+ * The declarations the sanitiser drops although Chromium draws them, each changing only how what is
+ * drawn is painted, never where or whether it is drawn, and each named in the README: an outline,
+ * which is not on the allowlist and which Chromium paints around a shape or group (on the root it
+ * is refused), and a dash array in percentages, which the dash grammar does not take, so the stroke
+ * is drawn solid.
+ */
+const PAINT_ONLY: ReadonlySet<string> = new Set([
+  "outline",
+  "outline-color",
+  "outline-offset",
+  "outline-style",
+  "outline-width",
+]);
+const PAINT_ONLY_DECLARATIONS: ReadonlySet<string> = new Set(["stroke-dasharray:50%"]);
 
 // Values that would move, resize, hide or clip something, for whichever properties take them.
 const VALUES = [
   "translate(20px, 20px)",
   "rotate(45deg)",
+  "20px solid",
+  "50px solid transparent",
+  "20px solid #00f",
+  "thick double",
   "scale(0.5)",
   "matrix(0.5, 0, 0, 0.5, 10, 10)",
   "rotateY(45deg)",
@@ -220,48 +235,10 @@ async function drawings(page: Page, sources: readonly string[]): Promise<number[
   }, sources);
 }
 
-/**
- * Each source's measured element inline: its box and transform (for the root, its content's box
- * within the page and the root's size), or `missing`.
- */
-async function measures(
-  page: Page,
-  sources: readonly string[],
-  measure: string,
-): Promise<string[]> {
-  return page.evaluate(
-    ([list, selector]) =>
-      list.map((source) => {
-        const holder = document.createElement("div");
-        holder.style.cssText = "position:absolute;left:0;top:0";
-        document.body.append(holder);
-        holder.innerHTML = source;
-        const root = holder.querySelector("svg");
-        const target =
-          selector === "root"
-            ? root?.querySelector("rect")
-            : root?.querySelector<SVGGraphicsElement>(`${selector}:not(defs *)`);
-        let read = "missing";
-        if (root !== null && target !== null && target !== undefined) {
-          const box = target.getBoundingClientRect();
-          const size = root.getBoundingClientRect();
-          const matrix = target instanceof SVGGraphicsElement ? target.getCTM() : null;
-          const numbers = [box.x, box.y, box.width, box.height, size.width, size.height];
-          if (matrix !== null)
-            numbers.push(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f);
-          read = numbers.map((number) => number.toFixed(2)).join(",");
-        }
-        holder.remove();
-        return read;
-      }),
-    [sources, measure] as const,
-  );
-}
-
 test.describe("every style property Chromium has, on each element the sanitiser keeps", () => {
   test.describe.configure({ timeout: 600_000 });
-  for (const [name, { template, measure, element }] of Object.entries(PROBES)) {
-    test(`is refused, drops the ${name}, or draws as the original where it moves it`, async ({
+  for (const [name, { template, element }] of Object.entries(PROBES)) {
+    test(`is refused, drops the ${name}, or draws as the original wherever its drawing changes`, async ({
       page,
     }) => {
       await page.setContent("<!doctype html><body></body>");
@@ -269,17 +246,13 @@ test.describe("every style property Chromium has, on each element the sanitiser 
       expect(list.length).toBeGreaterThan(1000);
       const originals = list.map((declaration) => withStyle(template, declaration));
       const [plain = 0, ...drawn] = await drawings(page, [withStyle(template, ""), ...originals]);
-      let changed = list.flatMap((declaration, index) =>
-        drawn[index] === plain ? [] : [{ declaration, original: originals[index] ?? "" }],
+      const changed = list.flatMap((declaration, index) =>
+        drawn[index] === plain ||
+        PAINT_ONLY.has(declaration.split(":")[0] ?? "") ||
+        PAINT_ONLY_DECLARATIONS.has(declaration)
+          ? []
+          : [{ declaration, original: originals[index] ?? "" }],
       );
-      if (measure !== undefined) {
-        const [before, ...after] = await measures(
-          page,
-          [withStyle(template, ""), ...changed.map(({ original }) => original)],
-          measure,
-        );
-        changed = changed.filter((_, index) => after[index] !== before);
-      }
       const kept = changed.flatMap(({ declaration, original }) => {
         const result = sanitiseSvgLogo(original);
         if (!result.ok) return [];
