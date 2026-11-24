@@ -1,4 +1,43 @@
 {
+  "allowlist-drop-blend-mode-hiding-a-shape.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "path",
+        "attribute": "style",
+        "property": "mix-blend-mode",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "allowlist-drop-class-rule-hiding-a-shape.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "style",
+        "reason": "styling"
+      },
+      {
+        "element": "rect",
+        "attribute": "class",
+        "reason": "styling"
+      }
+    ]
+  },
+  "allowlist-drop-filter-hiding-a-shape.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "filter",
+        "reason": "filter"
+      },
+      {
+        "element": "rect",
+        "attribute": "filter",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
   "anchor-element.svg": {
     "outcome": "accept",
     "removed": [
@@ -1577,6 +1616,10 @@
   },
   "overlong-decimal-reference.svg": {
     "outcome": "reject:invalid-entity"
+  },
+  "paint-order-hiding-a-stroke.svg": {
+    "outcome": "accept",
+    "removed": []
   },
   "polyglot-gif-header.svg": {
     "outcome": "reject:malformed"

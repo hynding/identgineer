@@ -593,6 +593,36 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
     ]);
   });
 
+  it.each([
+    ["stroke", "stroke"],
+    ["normal", "normal"],
+    ["  markers   stroke ", "markers stroke"],
+    ["stroke fill markers", "stroke fill markers"],
+  ])("keeps paint-order %j, written %j", (value, written) => {
+    const result = accepted(
+      svg(`<rect width="9" height="9" stroke="#000" paint-order="${value}"/>`),
+    );
+    expect(result.svg).toContain(`paint-order="${written}"`);
+    expect(
+      accepted(svg(`<rect width="9" height="9" style="paint-order:${value}"/>`)).svg,
+    ).toContain(`paint-order="${written}"`);
+  });
+
+  it.each([
+    "fill fill",
+    "stroke normal",
+    "normal stroke",
+    "stroke markers fill normal",
+    "",
+    "inherit",
+  ])("drops paint-order %j, outside its grammar", (value) => {
+    const result = accepted(svg(`<rect width="9" height="9" paint-order="${value}"/>`));
+    expect(result.svg).not.toContain("paint-order");
+    expect(result.removed).toEqual([
+      expect.objectContaining({ attribute: "paint-order", reason: "invalid-value" }),
+    ]);
+  });
+
   it.each(["xMinYMin", "xMidYMid meet", "xMaxYMax meet"])(
     "keeps preserveAspectRatio %s, which fits the view box inside the image",
     (value) => {

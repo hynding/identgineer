@@ -93,6 +93,7 @@ const KEPT_AS_TEXT_OR_RENAMED = new Set([
 
 // Files whose payload is work a renderer does cheaply, so they are accepted as they are.
 const WITHIN_BUDGET = new Set([
+  "paint-order-hiding-a-stroke.svg",
   "clip-path-cal-eoclip.svg",
   "clip-path-e2-alone-30000.svg",
   "clip-path-of-one-self-crossing-path.svg",

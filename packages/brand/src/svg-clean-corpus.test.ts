@@ -94,6 +94,12 @@ describe("the clean SVG corpus", () => {
     expect([width, height]).toEqual([241.889764, 120.944882]);
   });
 
+  it("keeps the paint order Inkscape writes, which draws the stroke under the fill", () => {
+    const { svg, removed } = sanitised("inkscape-export.svg");
+    expect(svg).toContain('paint-order="stroke fill markers"');
+    expect(removed.map(({ property }) => property)).not.toContain("paint-order");
+  });
+
   it("keeps the alpha mask type Figma writes in a style attribute, so the mask does not fade the logo", () => {
     const result = sanitised("figma-alpha-mask.svg");
     expect(result.svg).toContain(

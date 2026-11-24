@@ -15,6 +15,15 @@ describe("findSanitisedSvgProblems", () => {
     expect(findSanitisedSvgProblems(svg)).toEqual([]);
   });
 
+  it("takes a paint order only in its grammar", () => {
+    const withOrder = (value: string): string[] =>
+      findSanitisedSvgProblems(svg.replace("<path ", `<path paint-order="${value}" `));
+    expect(withOrder("stroke fill markers")).toEqual([]);
+    expect(withOrder("normal")).toEqual([]);
+    expect(withOrder("fill fill")).not.toEqual([]);
+    expect(withOrder("stroke  fill")).not.toEqual([]);
+  });
+
   it.each([
     [
       "a script element",
