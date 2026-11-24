@@ -16,6 +16,7 @@ const PRESENTATION = [
   "stroke-miterlimit",
   "stroke-dasharray",
   "stroke-dashoffset",
+  "paint-order",
   "opacity",
   "color",
   "clip-path",

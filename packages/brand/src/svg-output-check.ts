@@ -15,6 +15,7 @@ const PAINT_AND_PRESENTATION = [
   "stroke-miterlimit",
   "stroke-dasharray",
   "stroke-dashoffset",
+  "paint-order",
   "opacity",
   "color",
   "clip-path",
@@ -297,6 +298,10 @@ const GRAMMARS: Readonly<Record<string, Grammar>> = {
       return match !== null && Number(match[1]) >= 0;
     }),
   "stroke-dashoffset": length(false),
+  "paint-order": (value) =>
+    value === "normal" ||
+    (/^(?:fill|stroke|markers)(?: (?:fill|stroke|markers)){0,2}$/.test(value) &&
+      new Set(value.split(" ")).size === value.split(" ").length),
   display: oneOf("inline", "none"),
   visibility: oneOf("visible", "hidden", "collapse"),
   "shape-rendering": oneOf("auto", "optimizeSpeed", "crispEdges", "geometricPrecision"),

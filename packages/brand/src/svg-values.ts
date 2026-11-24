@@ -190,6 +190,15 @@ const dashArray: SvgGrammar = (input, limits) => {
   return text(lengths.join(" "));
 };
 
+// Either `normal` or the layers named first, each once; the ones left out follow in their usual order.
+const paintOrder: SvgGrammar = (input) => {
+  const value = trimXmlWhitespace(input);
+  if (value === "normal") return text("normal");
+  const layers = value.split(WHITESPACE_RUN);
+  const known = layers.every((layer) => ["fill", "stroke", "markers"].includes(layer));
+  return known && new Set(layers).size === layers.length ? text(layers.join(" ")) : undefined;
+};
+
 const transform: SvgGrammar = (input, limits) => {
   const parsed = parseSvgTransform(input, limits);
   return parsed === undefined ? undefined : text(parsed);
@@ -290,6 +299,7 @@ export const SVG_GRAMMARS: Readonly<Record<string, SvgGrammar>> = {
   "stroke-miterlimit": miterLimit,
   "stroke-dasharray": dashArray,
   "stroke-dashoffset": anyLength,
+  "paint-order": paintOrder,
   display: enumeration("inline", "none"),
   visibility: enumeration("visible", "hidden", "collapse"),
   "shape-rendering": enumeration("auto", "optimizeSpeed", "crispEdges", "geometricPrecision"),
