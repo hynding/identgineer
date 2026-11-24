@@ -376,6 +376,14 @@ class TreeFilter {
     if (declarations === undefined) {
       // What CSS would make of it is unknown, so the element is not drawn (a stop is drawn clear):
       // dropping the style alone could show what it hid.
+      // The root, a clip path or a mask is drawn whatever its display, so it cannot be hidden.
+      if (["svg", "clipPath", "mask"].includes(source.local)) {
+        throw new SvgLogoRejection(
+          "unsupported-feature",
+          `has a style on its ${source.local} element that CSS would read otherwise; write its properties as attributes`,
+          attribute.offset,
+        );
+      }
       this.removals.add(names, droppedStyleReason(attribute.value), attribute.offset);
       if (rule.attributes.includes("display")) kept.set("display", { text: "none" });
       else if (rule.attributes.includes("stop-opacity")) kept.set("stop-opacity", { text: "0" });

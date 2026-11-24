@@ -487,7 +487,8 @@ Decisions, with the reason for each:
   than a final `!important` (which outweighs nothing where the attribute is the only rule), or a
   property set twice, is one CSS would split otherwise, so the whole attribute is dropped and
   reported, and its element is not drawn (a stop is drawn clear), since dropping the style alone
-  could show what it hid. Inkscape writes colours this way, so they
+  could show what it hid; on the root, a clip path or a mask, which Chromium draws whatever their
+  `display`, the logo is refused (`unsupported-feature`). Inkscape writes colours this way, so they
   survive; a logo coloured only by a stylesheet (Illustrator's default "Internal CSS") comes out
   black: export with "Presentation Attributes" instead.
 - **A DOCTYPE is skipped only when it has no internal subset.** Older Illustrator files carry the
