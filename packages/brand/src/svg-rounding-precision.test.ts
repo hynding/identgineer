@@ -210,3 +210,107 @@ describe("a magnified rounding, at random", () => {
     expect(checked).toBeGreaterThan(1000);
   });
 });
+
+const drawing = (viewBox: string, size: string, body: string): string =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" ${size}>${body}</svg>`;
+
+// Where an arc's radii barely fit between its ends, its centre lies the square root of the
+// misfit away: a rounding far below a pixel can move it by many.
+describe("an arc as SVG draws it, from its numbers exactly and as written", () => {
+  it.each([
+    [
+      "radii that barely fit, rounded to fit exactly",
+      drawing(
+        "0 0 1 1",
+        'width="100" height="100"',
+        '<path fill="red" d="M0 0.9A0.5000004 0.5000004 0 0 1 1 0.9Z"/>',
+      ),
+    ],
+    [
+      "an end that rounding moves until the radii fit exactly",
+      drawing(
+        "0 0 1 1",
+        'width="100" height="100"',
+        '<path fill="red" d="M0 0.9A0.5 0.5 0 0 1 0.9999996 0.9Z"/>',
+      ),
+    ],
+    [
+      "radii that barely fit, magnified",
+      drawing(
+        "0 0 1 1",
+        'width="100" height="100"',
+        '<path fill="red" transform="scale(300)" d="M0 0.002A0.0016664 0.0016664 0 0 1 0.003332 0.002Z"/>',
+      ),
+    ],
+    [
+      "the larger arc of radii that barely fit, revealing what a mask hid",
+      drawing(
+        "0 0 1 1",
+        'width="100" height="100"',
+        '<rect x="0.3" y="0.05" width="0.4" height="0.1" fill="red"/><path fill="white" transform="scale(300)" d="M0 0.002A0.0016664 0.0016664 0 1 1 0.003332 0.002Z"/>',
+      ),
+    ],
+    [
+      "ends that rounding makes coincide, which draws nothing",
+      drawing(
+        "0 0 100 100",
+        'width="100" height="100"',
+        '<path fill="red" d="M10 50A40 40 0 1 0 10.0000004 50Z"/>',
+      ),
+    ],
+    [
+      "relative ends that rounding makes coincide",
+      drawing(
+        "0 0 100 100",
+        'width="100" height="100"',
+        '<path fill="red" d="M0 0a40 40 0 1 0 0.0000004 0z" transform="translate(50 10)"/>',
+      ),
+    ],
+  ])("refuses %s", (_, input) => {
+    expect(outcome(sanitiseSvgLogo(input))).toBe("unsupported-feature");
+  });
+
+  it.each([
+    [
+      "a half ellipse as Inkscape writes it, its radii scaled up by a hair",
+      drawing(
+        "0 0 20 10",
+        'width="20mm" height="10mm"',
+        '<path style="fill:#26a269" d="m 2.6458333,5.2916667 a 0.26458333,0.13229167 0 0 1 0.52916667,0 0.26458333,0.13229167 0 0 1 -0.52916667,0 z"/>',
+      ),
+    ],
+    [
+      "half arcs whose radius rounded up would no longer fit between their ends",
+      drawing(
+        "0 0 0.0629 0.0629",
+        'width="100" height="100"',
+        '<path d="m0.0091 0.03a0.022097741 0.024027239 0 0 1 0.044195482 0 0.022097741 0.024027239 0 0 1 -0.044195482 0z"/>',
+      ),
+    ],
+  ])("keeps %s", (_, input) => {
+    const result = sanitiseSvgLogo(input);
+    expect(result.ok && result.removed.filter(({ attribute }) => attribute === "d")).toEqual([]);
+  });
+
+  it("never drops or refuses circles and ellipses written as two half arcs, as Inkscape writes them", () => {
+    const random = seeded(2_026_161);
+    const significant = (value: number): string => String(Number(value.toPrecision(8)));
+    const refused: string[] = [];
+    for (let run = 0; run < 2000; run += 1) {
+      const size = 0.1 * 10 ** (random() * 4);
+      const [rx, ry] = [size * (0.2 + random()), size * (0.2 + random())].map(significant);
+      const side = 2.5 * Math.max(Number(rx), Number(ry)) * (1 + random() * 3);
+      const [x, y] = [side / 2 - Number(rx), side / 2].map(significant);
+      const across = significant(2 * Number(rx));
+      const unit = random() < 0.5 ? "mm" : "";
+      const input = drawing(
+        `0 0 ${significant(side)} ${significant(side)}`,
+        `width="${significant(side)}${unit}" height="${significant(side)}${unit}"`,
+        `<path d="m ${x},${y} a ${rx},${ry} 0 0 1 ${across},0 ${rx},${ry} 0 0 1 -${across},0 z"/>`,
+      );
+      const result = sanitiseSvgLogo(input);
+      if (!result.ok || result.removed.length > 0) refused.push(input);
+    }
+    expect(refused).toEqual([]);
+  });
+});

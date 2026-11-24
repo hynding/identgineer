@@ -506,15 +506,17 @@ describe("sanitiseSvgLogo, output", () => {
   });
 
   // An arc's radii, when too small for the arc, are scaled up to fit it, keeping their ratio: a
-  // radius rounded to zero draws a line instead, and a ratio rounding changes reshapes the arc.
-  it.each([
-    ["a radius rounded to zero", "M0 0A0.0000003 7 0 0 1 100 0A0.0000003 7 0 0 1 0 0Z"],
-    ["a ratio of radii rounding changes", "M0 0A0.0000006 7 0 0 1 100 0Z"],
-    ["a ratio changed by more than a millionth", "M0 0A0.1 0.2000004 0 0 1 100 0Z"],
-  ])("drops path data with an arc whose shape rounding changes: %s", (_, d) => {
-    expect(removals(`<path d="${d}"/>`)).toEqual([
+  // radius rounded to zero draws a line instead.
+  it("drops path data with an arc whose radius rounds to zero", () => {
+    expect(removals('<path d="M0 0A0.0000003 7 0 0 1 100 0A0.0000003 7 0 0 1 0 0Z"/>')).toEqual([
       expect.objectContaining({ attribute: "d", reason: "invalid-value" }),
     ]);
+  });
+
+  // The scaling magnifies a change of the ratio up to the arc's size: by how much is measured.
+  it("refuses an arc whose scaled-up radii rounding moves past half a device pixel", () => {
+    const result = sanitiseSvgLogo(`${ROOT}<path d="M0 0A0.0000006 7 0 0 1 100 0Z"/></svg>`);
+    expect(result.ok ? "accept" : result.errors[0]?.code).toBe("unsupported-feature");
   });
 
   it.each([
@@ -525,6 +527,10 @@ describe("sanitiseSvgLogo, output", () => {
     ["a half ellipse, radii in millimetres", "m0 0a0.26458333 0.52916667 0 0 1 0.52916666 0z"],
     ["an arc large enough for its radii", "M0 0A100.0000004 50.0000003 30.0000004 0 1 20 0"],
     ["a ratio rounding keeps", "M0 0A0.0000006 0.0000006 0 0 1 9 9"],
+    [
+      "a ratio changed by a millionth or two, scaled up by far less",
+      "M0 0A0.1 0.2000004 0 0 1 100 0Z",
+    ],
     [
       "a relative arc after other commands",
       "M1 1h2v2c1 1 2 2 3 3s1 1 2 2q1 1 2 2t1 1l1 1a0.1234567 0.1234567 0 1 0 3 3z",

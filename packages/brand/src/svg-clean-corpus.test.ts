@@ -41,6 +41,7 @@ describe("the clean SVG corpus", () => {
       "illustrator-svg11-doctype.svg",
       "illustrator-text-clip.svg",
       "inkscape-export.svg",
+      "inkscape-semi-ellipse.svg",
       "inkscape-text-to-path.svg",
       "mask-and-use.svg",
       "mixed-tool-styles.svg",
