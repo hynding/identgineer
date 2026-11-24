@@ -412,7 +412,8 @@ class ClipPathRewriter {
 
   /**
    * The mask's region: the box of every shape, grown by a tenth of its larger side all round so an
-   * antialiased edge is never cut, rounded outwards to the six decimals a number keeps.
+   * antialiased edge is never cut, rounded outwards to the six decimals a number keeps, and held
+   * within the largest number a value may be.
    */
   private region(box: SvgBox, attributes: Map<string, SvgValue>): void {
     const empty = box.minX > box.maxX;
@@ -421,10 +422,14 @@ class ClipPathRewriter {
     const around = grow(shapes, margin);
     // Settled to a thousandth of the last decimal first, so 1.2000000000000002 stays 1.2.
     const settled = (value: number): number => Math.round(value * SCALE * 1000) / 1000;
-    const x = Math.floor(settled(around.minX)) / SCALE;
-    const y = Math.floor(settled(around.minY)) / SCALE;
-    const width = Math.ceil(settled(around.maxX - x)) / SCALE;
-    const height = Math.ceil(settled(around.maxY - y)) / SCALE;
+    // Held to the largest number a value may be: the margin gives way first, and only shapes past
+    // it lose their edges, which shows less, never more.
+    const largest = 10 ** this.limits.integerDigits - 10 ** -this.limits.fractionDigits;
+    const held = (value: number): number => Math.min(largest, Math.max(-largest, value));
+    const x = held(Math.floor(settled(around.minX)) / SCALE);
+    const y = held(Math.floor(settled(around.minY)) / SCALE);
+    const width = held(Math.ceil(settled(around.maxX - x)) / SCALE);
+    const height = held(Math.ceil(settled(around.maxY - y)) / SCALE);
     for (const [name, value] of [
       ["x", x],
       ["y", y],
