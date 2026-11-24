@@ -452,6 +452,102 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
   });
 
   it.each([
+    ["greater-than signs", ">"],
+    ["quotation marks", '"'],
+    ["ampersands", "&amp;"],
+  ])(
+    "keeps a title of %s at the length limit, measured in characters however they are written",
+    (_, character) => {
+      const title = `<title>${character.repeat(SVG_LOGO_LIMITS.textLength)}</title>`;
+      expect(accepted(svg(title)).svg).toContain("<title>");
+    },
+  );
+
+  const SLICE = (body: string, box = "0 0 200 100"): string =>
+    `<svg ${NS} viewBox="${box}" width="100" height="100" preserveAspectRatio="xMinYMin slice">${body}</svg>`;
+  it.each([
+    ["a shape's position or size", '<rect width="50%" height="10"/>'],
+    ["a circle's radius", '<circle cx="10" cy="10" r="25%"/>'],
+    ["a stroke width", '<path d="M0 0H9" stroke="#000" stroke-width="30%"/>'],
+    [
+      "a dash offset",
+      '<path d="M0 0H9" stroke="#000" stroke-dasharray="1 1" stroke-dashoffset="5%"/>',
+    ],
+    [
+      "a use's position",
+      '<defs><rect id="r" width="9" height="9"/></defs><use href="#r" x="50%"/>',
+    ],
+    [
+      "a mask region in user space",
+      '<mask id="m" maskUnits="userSpaceOnUse" x="50%"><rect width="9" height="9" fill="#fff"/></mask><rect width="9" height="9" mask="url(#m)"/>',
+    ],
+    [
+      "a gradient in user space",
+      '<linearGradient id="g" gradientUnits="userSpaceOnUse" x2="50%"/><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    [
+      "a gradient in user space by the one it takes its stops from",
+      '<linearGradient id="a" gradientUnits="userSpaceOnUse"/><linearGradient id="g" href="#a" x2="50%"/><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    [
+      "a shape in a clip path in the box of what it clips, whose percentages Chromium takes of the view box",
+      '<clipPath id="c" clipPathUnits="objectBoundingBox"><rect width="50%" height="1"/></clipPath><rect width="9" height="9" clip-path="url(#c)"/>',
+    ],
+  ])(
+    "refuses preserveAspectRatio slice beside a percentage of the view box in %s, which the crop would change",
+    (_, body) => {
+      const refused = sanitiseSvgLogo(SLICE(body));
+      expect(refused.ok || refused.errors[0]?.code).toBe("unsupported-feature");
+    },
+  );
+
+  it.each([
+    [
+      "a mask region in the box of what it masks",
+      '<mask id="m" x="-10%" width="120%"><rect width="9" height="9" fill="#fff"/></mask><rect width="9" height="9" mask="url(#m)"/>',
+    ],
+    [
+      "a gradient in the box of what it paints",
+      '<linearGradient id="g" x2="50%"/><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    [
+      "a radial gradient's radius",
+      '<radialGradient id="g" r="50%"/><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    [
+      "a gradient in that box despite one in user space it does not take from",
+      '<linearGradient id="a" gradientUnits="userSpaceOnUse"/><linearGradient id="g" x2="50%"/><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    [
+      "a stop's offset",
+      '<linearGradient id="g"><stop offset="50%"/></linearGradient><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+  ])("keeps the crop beside a percentage of a box, not of the view box: %s", (_, body) => {
+    expect(sanitiseSvgLogo(SLICE(body)).ok).toBe(true);
+  });
+
+  it("measures a crop at 2000 CSS pixels twice as dense: 4000 device pixels", () => {
+    // Rounding moves this crop by 0.0000005 of 0.002: a quarter of a pixel at 2000, half at 4000.
+    const crop = (box: string): string =>
+      `<svg ${NS} viewBox="${box}" width="2000" height="2000" preserveAspectRatio="xMidYMid slice"><rect width="1" height="1"/></svg>`;
+    const refused = sanitiseSvgLogo(crop("0 0 0.003001 0.002"));
+    expect(refused.ok || refused.errors[0]?.code).toBe("unsupported-feature");
+  });
+
+  it("takes a size worked out to six decimals as the view box's proportions, not as a stretch", () => {
+    // The width follows from the height, 128.571429 for 128.5714…, which is no stretch at all.
+    const result = sanitiseSvgLogo(
+      `<svg ${NS} viewBox="0 0 100 70" height="90" preserveAspectRatio="none" clip-path="url(#c)"><clipPath id="c"><circle cx="50" cy="35" r="30"/></clipPath><rect width="100" height="70"/></svg>`,
+    );
+    if (!result.ok) throw new Error(JSON.stringify(result.errors));
+    expect(result.svg).not.toContain("<g");
+    const stretched = sanitiseSvgLogo(
+      `<svg ${NS} viewBox="0 0 100 70" width="129" height="90" preserveAspectRatio="none" clip-path="url(#c)"><clipPath id="c"><circle cx="50" cy="35" r="30"/></clipPath><rect width="100" height="70"/></svg>`,
+    );
+    expect(stretched.ok || stretched.errors[0]?.code).toBe("unsupported-feature");
+  });
+
+  it.each([
     [
       "more elements",
       `<svg ${NS} viewBox="0 0 100 50" width="100" height="100" preserveAspectRatio="none">${'<rect width="1" height="1"/>'.repeat(4094)}</svg>`,
@@ -774,6 +870,11 @@ describe("sanitiseSvgLogo, refusals", () => {
       "too-long",
     ],
     ["text", svg(`<title>${"a".repeat(SVG_LOGO_LIMITS.textLength + 1)}</title>`), "too-long"],
+    [
+      "text written with references",
+      svg(`<title>${"&#x41;".repeat(SVG_LOGO_LIMITS.textLength + 1)}</title>`),
+      "too-long",
+    ],
     [
       "title text split across CDATA",
       svg(`<title>${"a".repeat(SVG_LOGO_LIMITS.textLength)}<![CDATA[b]]></title>`),

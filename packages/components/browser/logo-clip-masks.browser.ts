@@ -214,6 +214,15 @@ const ASPECTS: readonly (readonly [string, string, Outcome])[] = [
       '<rect x="-40" y="-40" width="200" height="35" fill="#0f766e"/><circle cx="25" cy="25" r="25" fill="url(#g)"/></svg>',
     "less",
   ],
+  [
+    // Percentages of a box, not of the view box, are unchanged by a crop.
+    "a view box cropped to fill a square, with percentages of boxes",
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50" width="${String(SIZE)}" height="${String(SIZE)}" preserveAspectRatio="xMidYMid slice">` +
+      '<linearGradient id="h" x1="10%" x2="90%"><stop offset="0" stop-color="#e11d48"/><stop offset="1" stop-color="#2563eb"/></linearGradient>' +
+      '<mask id="m" x="-10%" y="-10%" width="60%" height="120%"><rect width="100" height="50" fill="#fff"/></mask>' +
+      '<rect width="100" height="50" fill="url(#h)" mask="url(#m)"/></svg>',
+    "same",
+  ],
 ];
 
 interface Comparison {
@@ -304,6 +313,30 @@ test.describe("a clip path written as a mask", () => {
       await check(page, input, outcome);
     });
   }
+
+  // Stretching keeps the view box, so percentages of it resolve as they did: drawn in a frame of
+  // the view box's proportions, where nothing is stretched, before and after are the same.
+  test("keeps percentages of a stretched view box where they were", async ({ page }) => {
+    const body =
+      '<mask id="m" maskUnits="userSpaceOnUse" x="25%" width="50%" height="100%"><rect width="200" height="100" fill="#fff"/></mask>' +
+      '<rect width="50%" height="100%" fill="#2563eb"/><circle cx="150" cy="50" r="20%" fill="#e11d48" mask="url(#m)"/>' +
+      '<path d="M0 50H200" stroke="#0f766e" stroke-width="10%"/>';
+    const logo = (height: number): string =>
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100" width="200" height="${String(height)}" preserveAspectRatio="none">${body}</svg>`;
+    const result = sanitiseSvgLogo(logo(200));
+    if (!result.ok) throw new Error(JSON.stringify(result.errors));
+    expect(result.svg).toContain('<rect width="50%" height="100%"');
+    await page.setContent("<!doctype html><body>");
+    const url = (svg: string): string =>
+      `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    const { differing, painted } = await compare(
+      page,
+      url(logo(100)),
+      url(result.svg.replace('height="200"', 'height="100"')),
+    );
+    expect(painted).toBeGreaterThan(SIZE * SIZE * 0.5);
+    expect(differing).toBeLessThanOrEqual(DIFFERING_PIXELS);
+  });
 
   // Two opaque pictures, the second showing in red what the first hid under its root clip path (as
   // an earlier version wrote a stretched view box beside one): the alpha is the same everywhere,

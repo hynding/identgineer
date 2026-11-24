@@ -28,6 +28,31 @@
       }
     ]
   },
+  "aspect-ratio-none-with-a-derived-width-beside-a-root-clip-path.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "aspect-ratio-slice-at-half-a-device-pixel.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-beside-a-percent-mask-region.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-beside-a-percent-use-position.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-beside-percent-radius-and-stroke.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-beside-percent-sizes.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
   "aspect-ratio-slice-crop.svg": {
     "outcome": "reject:overdraw-too-large"
   },
@@ -734,6 +759,10 @@
   },
   "deep-nesting.svg": {
     "outcome": "reject:too-deep"
+  },
+  "description-with-quotation-marks-near-the-limit.svg": {
+    "outcome": "accept",
+    "removed": []
   },
   "doctype-after-root.svg": {
     "outcome": "reject:doctype"
@@ -1805,6 +1834,10 @@
       }
     ]
   },
+  "title-of-greater-than-signs-at-the-limit.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
   "too-many-stops.svg": {
     "outcome": "reject:too-many-stops"
   },
@@ -1900,6 +1933,12 @@
         "reason": "dangling-reference"
       }
     ]
+  },
+  "use-position-in-millimetres-moved-onto-a-group.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "use-position-in-percent-of-a-fractional-view-box.svg": {
+    "outcome": "reject:unsupported-feature"
   },
   "use-relative-file.svg": {
     "outcome": "accept",
