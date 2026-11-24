@@ -2,6 +2,7 @@ import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 
 const MAX_EXPONENT_DIGITS = 3;
+const MAX_EXPONENT = 38;
 
 function isDigit(unit: number): boolean {
   return unit >= 0x30 && unit <= 0x39;
@@ -87,10 +88,13 @@ export function normaliseNumber(token: string, limits: SvgLogoLimits): string | 
   const leadingZeros = digits.length - digits.replace(/^0+/, "").length;
   digits = digits.slice(leadingZeros);
   pointAt -= leadingZeros;
-  if (digits === "") return "0";
+  // Chromium's SVG number reader takes no exponent beyond 38, even on zero.
+  const exponentTooLarge = Math.abs(Number(exponentText)) > MAX_EXPONENT;
+  if (digits === "") return exponentTooLarge ? undefined : "0";
   if (pointAt > limits.integerDigits) {
     throw new SvgLogoRejection("number-out-of-range", "has a number too large in magnitude");
   }
+  if (exponentTooLarge) return undefined;
   let whole = pointAt > 0 ? digits.slice(0, pointAt).padEnd(pointAt, "0") : "0";
   let fraction = pointAt >= 0 ? digits.slice(pointAt) : "0".repeat(-pointAt) + digits;
   if (fraction.length > limits.fractionDigits) {

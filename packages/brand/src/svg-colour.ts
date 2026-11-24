@@ -26,17 +26,21 @@ const NAMED_COLOURS: ReadonlySet<string> = new Set(
 );
 
 const HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
-// rgb() with three integers or three percentages, separated by commas or by spaces.
-function rgbPattern(channel: string): RegExp {
+// rgb() with three integers or three percentages, separated all by commas or all by white space:
+// Chromium takes no mixture.
+function rgbPattern(channel: string, separator: string): RegExp {
   const S = XML_WHITESPACE;
-  const separator = `${S}*(?:,${S}*|${S})`;
   return new RegExp(
     `^rgb\\(${S}*${channel}${separator}${channel}${separator}${channel}${S}*\\)$`,
     "i",
   );
 }
-const RGB_INTEGERS = rgbPattern("(\\d{1,3})");
-const RGB_PERCENTAGES = rgbPattern("(\\d{1,3}(?:\\.\\d{1,4})?)%");
+const COMMAS = `${XML_WHITESPACE}*,${XML_WHITESPACE}*`;
+const SPACES = `${XML_WHITESPACE}+`;
+const INTEGER = "(\\d{1,3})";
+const PERCENTAGE = "(\\d{1,3}(?:\\.\\d{1,4})?)%";
+const RGB_INTEGERS = [rgbPattern(INTEGER, COMMAS), rgbPattern(INTEGER, SPACES)];
+const RGB_PERCENTAGES = [rgbPattern(PERCENTAGE, COMMAS), rgbPattern(PERCENTAGE, SPACES)];
 const MAX_COLOUR_LENGTH = 64;
 
 function hex(channels: readonly number[]): string {
@@ -65,9 +69,13 @@ export function parseSvgColour(input: string): string | undefined {
     const full = short.length === 3 ? short.replace(/./g, "$&$&") : short;
     return `#${full.toLowerCase()}`;
   }
-  const integers = RGB_INTEGERS.exec(value);
-  if (integers) return hex(integers.slice(1).map(Number));
-  const percentages = RGB_PERCENTAGES.exec(value);
-  if (percentages) return hex(percentages.slice(1).map((part) => (Number(part) * 255) / 100));
+  for (const pattern of RGB_INTEGERS) {
+    const integers = pattern.exec(value);
+    if (integers) return hex(integers.slice(1).map(Number));
+  }
+  for (const pattern of RGB_PERCENTAGES) {
+    const percentages = pattern.exec(value);
+    if (percentages) return hex(percentages.slice(1).map((part) => (Number(part) * 255) / 100));
+  }
   return undefined;
 }
