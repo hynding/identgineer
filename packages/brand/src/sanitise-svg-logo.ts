@@ -186,6 +186,34 @@ function clipToViewBox(root: CleanElement, box: ViewBox, limits: SvgLogoLimits):
   ];
 }
 
+/**
+ * Refuses a tree with more elements, or nested deeper, than an input may have: what the sanitiser
+ * adds (a clip to the view box, a group taking a mask) could otherwise give an output the reader
+ * refuses, which could not be sanitised again.
+ */
+function checkWrittenTree(root: CleanElement, limits: SvgLogoLimits): void {
+  let count = 0;
+  const stack: (readonly [CleanElement, number])[] = [[root, 1]];
+  for (let entry = stack.pop(); entry !== undefined; entry = stack.pop()) {
+    const [element, depth] = entry;
+    count += 1;
+    if (depth > limits.depth) {
+      throw new SvgLogoRejection(
+        "too-deep",
+        `would be written with elements nested deeper than ${String(limits.depth)}`,
+        element.offset,
+      );
+    }
+    for (const child of element.children) stack.push([child, depth + 1]);
+  }
+  if (count > limits.elements) {
+    throw new SvgLogoRejection(
+      "too-many-elements",
+      `would be written with more than ${String(limits.elements)} elements`,
+    );
+  }
+}
+
 function toError(rejection: SvgLogoRejection, locator: TextLocator | undefined): SvgLogoError {
   const message = `the SVG ${rejection.message}`;
   if (rejection.offset === undefined || locator === undefined) {
@@ -248,6 +276,7 @@ function sanitiseOnce(input: unknown, options: unknown, limits: SvgLogoLimits): 
       idPrefix,
       removals,
     );
+    checkWrittenTree(root, limits);
     const reported = [size.width, size.height, ...size.viewBox, drawingCost, overdraw];
     if (!reported.every(Number.isFinite)) throw new Error("a reported number is not finite");
     const svg = serialiseSvg(root, renamed);
