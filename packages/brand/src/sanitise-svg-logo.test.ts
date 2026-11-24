@@ -332,22 +332,50 @@ describe("sanitiseSvgLogo, output", () => {
     ["minus one em", 'width="-1em"'],
     ["zero quarter-millimetres", 'width="0Q"'],
     ["zero viewport widths", 'width="0vw"'],
+    ["zero with a large exponent", 'width="0e39"'],
+    ["a number too small for Chromium", 'width="1e-39"'],
+    ["zero with a large negative exponent", 'width="0e-39"'],
+    ["minus zero", 'width="-0"'],
   ])("refuses a root whose size is %s, which Chromium draws at no size", (_, size) => {
     expect(
       refused(svg('<rect width="5" height="5"/>', `viewBox="0 0 10 10" ${size} height="10"`)).code,
     ).toBe("missing-size");
   });
 
-  it("refuses a root sized in a unit of the viewport, which Chromium draws at no size as an image", () => {
+  it.each([
+    ["in a unit of the viewport", 'width="1vw"'],
+    ["in ems", 'width="2em"'],
+    ["in quarter-millimetres", 'width="4Q"'],
+    ["a calculation", 'width="calc(0px)"'],
+    ["a calculation of no size", 'height="max(0px,0px)"'],
+    ["a variable", 'width="var(--x)"'],
+    ["an environment value", 'width="env(x)"'],
+    ["an attribute value", 'width="attr(x)"'],
+    ["auto", 'width="auto"'],
+    ["a keyword of CSS", 'width="inherit"'],
+    ["a number and a unit apart", 'width="10 px"'],
+  ])("refuses a root sized %s, which Chromium reads as CSS the sanitiser does not", (_, size) => {
+    const others = size.startsWith("height") ? 'width="10"' : 'height="10"';
     expect(
-      refused(svg('<rect width="5" height="5"/>', 'viewBox="0 0 10 10" width="1vw" height="10"'))
-        .code,
+      refused(svg('<rect width="5" height="5"/>', `viewBox="0 0 10 10" ${size} ${others}`)).code,
     ).toBe("unsupported-feature");
   });
 
-  it("drops a root size in ems, and reports it", () => {
+  it.each([
+    ["100", "100"],
+    ["100px", "100"],
+    [" 100 ", "100"],
+    ["1e2", "100"],
+    ["10mm", "37.795276"],
+  ])("keeps a root width of %j", (width, written) => {
+    expect(
+      accepted(svg('<rect width="5" height="5"/>', `viewBox="0 0 10 10" width="${width}"`)).svg,
+    ).toContain(`width="${written}"`);
+  });
+
+  it("drops a root size in percent, which an image reads as no size given, and reports it", () => {
     const result = accepted(
-      svg('<rect width="5" height="5"/>', 'viewBox="0 0 10 10" width="2em" height="10"'),
+      svg('<rect width="5" height="5"/>', 'viewBox="0 0 10 10" width="100%" height="10"'),
     );
     expect(result.removed).toContainEqual(expect.objectContaining({ attribute: "width" }));
   });
