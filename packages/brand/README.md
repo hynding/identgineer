@@ -315,7 +315,8 @@ Refused, as the whole document (each with its own `code`):
   decimals from the other is no stretch) beside a clip path or mask on the
   root; a cropping `slice`, or the position of a `use` moved onto a group (below), that six decimals
   cannot hold (to half a device pixel at 4000 device pixels, 2000 CSS pixels twice as dense, for the
-  crop; exactly for the position); a cropping `slice` beside any length taken as a percentage of
+  crop, both each edge of the part shown and its proportions, which the fitted drawing would
+  otherwise letterbox; exactly for the position); a cropping `slice` beside any length taken as a percentage of
   the view box in what is drawn (a size, position, radius or stroke width of a shape, a `use`
   position, the region of a mask in user units, written or by default, which is -10% and 120%, and
   a coordinate of a painted gradient in user units, written, inherited through `href` or by
@@ -325,9 +326,13 @@ Refused, as the whole document (each with its own `code`):
   it (units from either kind, a coordinate only from the same kind, past any of the other kind
   between), else the default. Percentages of a box (a gradient or mask region in
   object-bounding-box units) are unchanged by a crop, a length of 0% is 0 of anything, and a
-  definition nothing draws is left out before the check; all three are kept. A `slice` that shows
-  the whole view box to within that half device pixel crops nothing: it is dropped, as the
-  default it then equals, and nothing is refused;
+  definition nothing draws is left out before the check; all three are kept. A `slice` crops
+  nothing only when its frame has the view box's proportions to within that half device pixel,
+  by the same rule as a stretch, so that fitting the view box instead letterboxes it by no more
+  along either side; it is then dropped, as the default it equals, and nothing is refused. On an
+  elongated view box a crop of a fraction of a pixel on the short side is a letterbox many times
+  larger on the long one (a wordmark of 20 to 1 whose frame is 0.24% shorter, five device pixels
+  at each end), so it is cropped, not dropped;
 - going over any limit below.
 
 Dropped (and listed in `removed`, with the element, attribute or style property, a reason and a
@@ -350,7 +355,11 @@ made a shape vanish, a filter that blanked one, a `.st0{display:none}` rule in a
 and a `transform` on the root (which Chromium applies as a CSS transform of the whole image, so
 the content is drawn where it was before the move) are each dropped and listed, and the shapes they
 hid or moved are drawn plainly where they stand. Filters, blend modes and classes are still
-dropped rather than refused, since editors write them into ordinary logos. So a host should show the
+dropped rather than refused, since editors write them into ordinary logos. So is a value that fails
+its grammar (`invalid-value`): Chromium takes a gradient coordinate written but invalid (`fx="abc"`)
+as its initial value, which stops it being inherited through `href` or following the centre, while
+the sanitiser leaves it out, so the value is inherited or follows as though it had never been written.
+So a host should show the
 owner the sanitised preview, beside the list of removals, before saving it as their logo. The reasons are `active-content`,
 `event-handler`, `external-reference` (only on an attribute that takes a reference: a `url(` in
 path data is just an `invalid-value`), `styling`, `editor-metadata`, `text`, `filter`,
@@ -729,17 +738,17 @@ drawing of the turned order.
 
 What each removal for drawing does to the picture, as drawn by Chromium 153.0.8010.12:
 
-| Removed                                                                                         | Reason                                                              | Drawn after                                                                                                                                                               |
-| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `preserveAspectRatio` `slice` on the root                                                       | `render-cost`                                                       | The same: the view box becomes the part that showed (refused where six decimals cannot hold it, or beside a percentage of the view box); one that crops nothing just goes |
-| `preserveAspectRatio` `none` (stretched) on the root                                            | `render-cost`                                                       | Less: drawn to fit, undistorted, clipped to the view box; refused beside a root clip or mask                                                                              |
-| An element, attribute or style property not on the allowlist, a class or `style` rule, a filter | `unsupported-element`, `unsupported-attribute`, `styling`, `filter` | Not promised: reported, and may show what the original hid (a blend mode, filter, `display:none` rule or root `transform` that hid or moved a shape)                      |
-| `mask` on a clip path or on a shape or `use` in one                                             | `render-cost`                                                       | The same: browsers ignore it                                                                                                                                              |
-| A shape in a clip path not displayed or hidden                                                  | `render-cost`                                                       | The same: the clip path ignores it; kept as a definition where something else draws it                                                                                    |
-| A clip path holding a `use` of anything but a shape (each child, `misplaced`)                   | `misplaced`                                                         | Less: the clip path is emptied, so what it clips draws nothing; its own clip path goes too                                                                                |
-| A clip path of more than one shape, or clipped in turn or itself                                | `rewritten`                                                         | The same, but for Chromium's even-odd order quirk above, where the mask draws the full union                                                                              |
-| Such a one in object-bounding-box units with its own transform or clip path                     | refused                                                             | `unsupported-feature`                                                                                                                                                     |
-| One on a root that has a mask of its own                                                        | refused                                                             | `unsupported-feature`                                                                                                                                                     |
+| Removed                                                                                         | Reason                                                              | Drawn after                                                                                                                                                                                                              |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `preserveAspectRatio` `slice` on the root                                                       | `render-cost`                                                       | The same: the view box becomes the part that showed (refused where six decimals cannot hold it, or beside a percentage of the view box); one whose frame has the view box's proportions to half a device pixel just goes |
+| `preserveAspectRatio` `none` (stretched) on the root                                            | `render-cost`                                                       | Less: drawn to fit, undistorted, clipped to the view box; refused beside a root clip or mask                                                                                                                             |
+| An element, attribute or style property not on the allowlist, a class or `style` rule, a filter | `unsupported-element`, `unsupported-attribute`, `styling`, `filter` | Not promised: reported, and may show what the original hid (a blend mode, filter, `display:none` rule or root `transform` that hid or moved a shape)                                                                     |
+| `mask` on a clip path or on a shape or `use` in one                                             | `render-cost`                                                       | The same: browsers ignore it                                                                                                                                                                                             |
+| A shape in a clip path not displayed or hidden                                                  | `render-cost`                                                       | The same: the clip path ignores it; kept as a definition where something else draws it                                                                                                                                   |
+| A clip path holding a `use` of anything but a shape (each child, `misplaced`)                   | `misplaced`                                                         | Less: the clip path is emptied, so what it clips draws nothing; its own clip path goes too                                                                                                                               |
+| A clip path of more than one shape, or clipped in turn or itself                                | `rewritten`                                                         | The same, but for Chromium's even-odd order quirk above, where the mask draws the full union                                                                                                                             |
+| Such a one in object-bounding-box units with its own transform or clip path                     | refused                                                             | `unsupported-feature`                                                                                                                                                                                                    |
+| One on a root that has a mask of its own                                                        | refused                                                             | `unsupported-feature`                                                                                                                                                                                                    |
 
 A clip path of one shape that is not clipped in turn is kept, however long or self-crossing: it
 clips by its outline, with no union. The browser test times the costliest of each form at both of
