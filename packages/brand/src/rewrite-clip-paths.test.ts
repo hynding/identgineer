@@ -203,6 +203,25 @@ describe("clip paths of more than one shape", () => {
     );
   });
 
+  it("keep the region within the numbers a value may hold, the margin giving way first", () => {
+    const masked = inner(
+      accepted(
+        '<clipPath id="c"><rect width="10" height="10"/><rect x="900000" width="10" height="10"/></clipPath>' +
+          '<rect width="100" height="100" clip-path="url(#c)"/>',
+      ),
+    );
+    expect(masked).toContain(
+      '<mask id="logo-0" x="-90001" y="-90001" width="999999.999999" height="180012"',
+    );
+    const far = inner(
+      accepted(
+        '<clipPath id="c"><rect x="-999990" width="10" height="10"/><rect x="999990" width="10" height="10"/></clipPath>' +
+          '<rect width="100" height="100" clip-path="url(#c)"/>',
+      ),
+    );
+    expect(far).toContain('x="-999999.999999"');
+  });
+
   it("put a clip path's transform on a group in the mask, and map the region through it", () => {
     expect(
       inner(
