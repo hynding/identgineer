@@ -38,7 +38,14 @@ function readIdPrefix(options: unknown): string {
   if (typeof options !== "object" || options === null) {
     throw new SvgLogoRejection("invalid-option", "options must be an object");
   }
-  const prefix: unknown = "idPrefix" in options ? options.idPrefix : undefined;
+  // Read once, and whatever reading it does (a getter that throws, a revoked proxy) is the option's
+  // fault, not the sanitiser's.
+  let prefix: unknown;
+  try {
+    prefix = Reflect.get(options, "idPrefix");
+  } catch {
+    throw new SvgLogoRejection("invalid-option", "has options that could not be read");
+  }
   if (prefix === undefined) return DEFAULT_ID_PREFIX;
   if (typeof prefix !== "string" || !ID_PREFIX_PATTERN.test(prefix)) {
     throw new SvgLogoRejection(
@@ -334,19 +341,26 @@ export function sanitiseSvgLogoWithLimits(
   options: unknown,
   limits: SvgLogoLimits,
 ): SvgLogoResult {
-  const result = sanitiseOnce(input, options, limits);
+  let idPrefix: string;
+  try {
+    idPrefix = readIdPrefix(options);
+  } catch (error) {
+    if (error instanceof SvgLogoRejection)
+      return { ok: false, errors: [toError(error, undefined)] };
+    return UNSETTLED;
+  }
+  const result = sanitiseOnce(input, idPrefix, limits);
   if (!result.ok) return result;
   const again = (svg: string): string | undefined => {
-    const second = sanitiseOnce(svg, options, limits);
+    const second = sanitiseOnce(svg, idPrefix, limits);
     return second.ok ? second.svg : undefined;
   };
   return isSettledOutput(result.svg, again) ? result : UNSETTLED;
 }
 
-function sanitiseOnce(input: unknown, options: unknown, limits: SvgLogoLimits): SvgLogoResult {
+function sanitiseOnce(input: unknown, idPrefix: string, limits: SvgLogoLimits): SvgLogoResult {
   let locator: TextLocator | undefined;
   try {
-    const idPrefix = readIdPrefix(options);
     const text = decodeSvgInput(input, limits.inputBytes);
     locator = new TextLocator(text);
     const disallowed = findDisallowedCharacter(text);

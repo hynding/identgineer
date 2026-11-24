@@ -1,5 +1,39 @@
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 
+// The typed array getters, taken once from the language's own prototype, so that measuring and
+// reading bytes never calls anything a caller's subclass or proxy overrides.
+const TYPED_ARRAY_PROTOTYPE: object = Object.getPrototypeOf(Uint8Array.prototype) as object;
+const apply = Reflect.apply;
+
+function intrinsicGetter(name: string | symbol): (this: unknown) => unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(TYPED_ARRAY_PROTOTYPE, name) ?? {};
+  const getter: unknown = Reflect.get(descriptor, "get");
+  if (typeof getter !== "function") throw new Error(`no typed array getter ${String(name)}`);
+  return getter as (this: unknown) => unknown;
+}
+
+const TAG = intrinsicGetter(Symbol.toStringTag);
+const BUFFER = intrinsicGetter("buffer");
+const BYTE_OFFSET = intrinsicGetter("byteOffset");
+const BYTE_LENGTH = intrinsicGetter("byteLength");
+
+/**
+ * The bytes of a `Uint8Array` (or of a subclass) as a copy of its own, or undefined for anything
+ * else: a proxy, revoked or not, has no typed array inside and is not one.
+ */
+function copyOfBytes(input: object, maxBytes: number): Uint8Array | undefined {
+  if (apply(TAG, input, []) !== "Uint8Array") return undefined;
+  const length = apply(BYTE_LENGTH, input, []) as number;
+  if (length > maxBytes) {
+    throw new SvgLogoRejection("too-large", `takes at most ${String(maxBytes)} bytes`);
+  }
+  // A detached buffer has no bytes, and cannot be viewed again.
+  if (length === 0) return new Uint8Array(0);
+  const buffer = apply(BUFFER, input, []) as ArrayBufferLike;
+  const offset = apply(BYTE_OFFSET, input, []) as number;
+  return new Uint8Array(new Uint8Array(buffer, offset, length));
+}
+
 function utf8Length(text: string, stopAfter: number): number {
   let bytes = 0;
   for (let index = 0; index < text.length && bytes <= stopAfter; index += 1) {
@@ -37,13 +71,13 @@ export function decodeSvgInput(input: unknown, maxBytes: number): string {
       throw new SvgLogoRejection("too-large", `takes at most ${String(maxBytes)} bytes`);
     }
     text = input;
-  } else if (input instanceof Uint8Array) {
-    if (input.length > maxBytes) {
-      throw new SvgLogoRejection("too-large", `takes at most ${String(maxBytes)} bytes`);
-    }
-    text = decodeBytes(input);
   } else {
-    throw new SvgLogoRejection("wrong-type", "must be a string or UTF-8 bytes");
+    const bytes =
+      typeof input === "object" && input !== null ? copyOfBytes(input, maxBytes) : undefined;
+    if (bytes === undefined) {
+      throw new SvgLogoRejection("wrong-type", "must be a string or UTF-8 bytes");
+    }
+    text = decodeBytes(bytes);
   }
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
   return text.replace(/\r\n?/g, "\n");
