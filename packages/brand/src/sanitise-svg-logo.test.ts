@@ -386,7 +386,7 @@ describe("sanitiseSvgLogo, output", () => {
     ],
     [
       "content visibility on a use",
-      '<rect id="r" width="2" height="2"/><use href="#r" style="content-visibility:hidden"/>',
+      '<defs><rect id="r" width="2" height="2"/></defs><use href="#r" style="content-visibility:hidden"/>',
       "use",
       "content-visibility",
     ],

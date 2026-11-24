@@ -39,9 +39,11 @@ export const STYLE_PROPERTIES: ReadonlySet<string> = new Set([
 // browser tests): the sanitiser keeps a transform only as an attribute.
 const TRANSFORMING = [
   "transform",
+  "-webkit-transform",
   "translate",
   "rotate",
   "scale",
+  "offset",
   "offset-path",
   "offset-distance",
   "offset-position",
@@ -49,26 +51,53 @@ const TRANSFORMING = [
   "offset-rotate",
 ] as const;
 
+// A rectangle's width and height, by their logical names too.
+const SIZING = [
+  "width",
+  "height",
+  "inline-size",
+  "block-size",
+  "-webkit-logical-width",
+  "-webkit-logical-height",
+] as const;
+
+// Margins and paddings of each side, logical and prefixed: on the root, they move what it draws.
+const ROOT_BOX = [
+  "margin",
+  "padding",
+  ...["margin", "padding"].flatMap((box) => [
+    ...["top", "left", "right", "bottom"].map((side) => `${box}-${side}`),
+    ...["block", "inline"].flatMap((axis) => [
+      `${box}-${axis}`,
+      `${box}-${axis}-start`,
+      `${box}-${axis}-end`,
+    ]),
+    ...["before", "after", "start", "end"].map((side) => `-webkit-${box}-${side}`),
+  ]),
+];
+
 /**
- * Style properties Chromium reads as the geometry of an element (checked in the browser tests),
- * which the sanitiser keeps only as attributes. Where one is set, dropping it alone would draw the
- * element other than either way, so the element goes with it (the root or a clip path, which
- * nothing could stand in for, is refused).
+ * Style properties Chromium reads as the geometry of an element, or as hiding it, which the
+ * sanitiser keeps only as attributes or not at all: the browser tests set every property Chromium
+ * has on each element and hold the sanitiser to this. Where one is set, dropping it alone would
+ * draw the element other than either way, so the element goes with it (the root or a clip path,
+ * which nothing could stand in for, is refused).
  */
 export const GEOMETRY_IN_STYLE: Readonly<Partial<Record<SvgElementName, ReadonlySet<string>>>> = {
-  svg: new Set(["width", "height", ...TRANSFORMING]),
+  svg: new Set(["width", "height", ...TRANSFORMING, ...ROOT_BOX]),
   g: new Set(TRANSFORMING),
   path: new Set(["d", ...TRANSFORMING]),
-  rect: new Set(["x", "y", "width", "height", "rx", "ry", ...TRANSFORMING]),
+  rect: new Set(["x", "y", ...SIZING, "rx", "ry", ...TRANSFORMING]),
   circle: new Set(["cx", "cy", "r", ...TRANSFORMING]),
   ellipse: new Set(["cx", "cy", "rx", "ry", ...TRANSFORMING]),
   line: new Set(TRANSFORMING),
   polyline: new Set(TRANSFORMING),
   polygon: new Set(TRANSFORMING),
-  use: new Set(["x", "y", ...TRANSFORMING]),
-  linearGradient: new Set(TRANSFORMING),
-  radialGradient: new Set(TRANSFORMING),
-  clipPath: new Set(TRANSFORMING),
+  use: new Set(["x", "y", "content-visibility", ...TRANSFORMING]),
+  linearGradient: new Set(["display", "content-visibility", ...TRANSFORMING]),
+  radialGradient: new Set(["display", "content-visibility", ...TRANSFORMING]),
+  clipPath: new Set(["content-visibility", ...TRANSFORMING]),
+  mask: new Set(["content-visibility"]),
 };
 
 /**
@@ -77,8 +106,39 @@ export const GEOMETRY_IN_STYLE: Readonly<Partial<Record<SvgElementName, Readonly
  */
 export const TRANSFORM_PLACING: Readonly<Record<string, readonly string[]>> = {
   "transform-origin": ["transform", "gradientTransform"],
+  "-webkit-transform-origin": ["transform", "gradientTransform"],
+  "-webkit-transform-origin-x": ["transform", "gradientTransform"],
+  "-webkit-transform-origin-y": ["transform", "gradientTransform"],
+  "-webkit-transform-origin-z": ["transform", "gradientTransform"],
   "transform-box": ["transform"],
 };
+
+/**
+ * Whether a declaration of a geometry property sets what the element has anyway: the property's
+ * initial value, which draws the same picture. A transform of none does so only where there is no
+ * transform attribute for it to undo.
+ */
+export function drawsAsInitial(
+  property: string,
+  value: string,
+  attributes: ReadonlySet<string>,
+): boolean {
+  const written = value.trim().toLowerCase();
+  if (property === "transform" || property === "-webkit-transform") {
+    return (
+      written === "none" && !attributes.has("transform") && !attributes.has("gradientTransform")
+    );
+  }
+  if (["translate", "rotate", "scale", "offset", "offset-path"].includes(property)) {
+    return written === "none";
+  }
+  if (property === "content-visibility") return written === "visible";
+  if (property === "display") return written === "inline";
+  if (property.includes("margin") || property.includes("padding")) {
+    return /^(?:[+-]?(?:0+\.?0*|\.0+)(?:[a-z]+|%)?\s*)+$/.test(written);
+  }
+  return false;
+}
 
 /**
  * The property a style property stands for, as Chromium cascades it: a prefixed alias, or a part

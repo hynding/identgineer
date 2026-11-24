@@ -6,6 +6,7 @@ import {
   isAllowedSvgElement,
   STYLE_PROPERTIES,
   cascadedAs,
+  drawsAsInitial,
   GEOMETRY_IN_STYLE,
   TRANSFORM_PLACING,
   SVG_ELEMENT_RULES,
@@ -433,7 +434,7 @@ class TreeFilter {
         this.removals.add(names, "invalid-value", attribute.offset);
         continue;
       }
-      if (this.setsGeometry(source, kept, property)) {
+      if (this.setsGeometry(source, kept, property, value)) {
         this.removals.add({ ...names, property }, "unsupported-attribute", attribute.offset);
         if (source.local === "svg" || source.local === "clipPath") {
           throw new SvgLogoRejection(
@@ -489,11 +490,20 @@ class TreeFilter {
     source: ResolvedElement,
     kept: ReadonlyMap<string, SvgValue>,
     property: string,
+    value: string,
   ): boolean {
     if (!isAllowedSvgElement(source.local)) return false;
+    // A clip path Chromium clips by a shape in its style, which no clip path attribute can say.
+    if (
+      source.local === "clipPath" &&
+      cascadedAs(property) === "clip-path" &&
+      !/^\s*(?:url\(|none\s*$)/i.test(value)
+    ) {
+      return true;
+    }
     const geometry = GEOMETRY_IN_STYLE[source.local];
     if (geometry === undefined) return false;
-    if (geometry.has(property)) return true;
+    if (geometry.has(property)) return !drawsAsInitial(property, value, new Set(kept.keys()));
     const placed = Object.hasOwn(TRANSFORM_PLACING, property) ? TRANSFORM_PLACING[property] : [];
     return (placed ?? []).some((transform) => kept.has(transform));
   }

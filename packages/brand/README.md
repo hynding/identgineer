@@ -536,16 +536,28 @@ Decisions, with the reason for each:
   whole mask shorthand), so one in a style takes the kept `clip-path` or `mask` with it. A dropped
   `color` leaves `currentColor` on the element and inside it to the colour it inherits instead, the
   one case of a drop that recolours what it does not name. A style property Chromium reads as the
-  geometry of the element (`x`, `y`, `width`, `height`, `rx`, `ry` on a rectangle; `cx`, `cy`, `r`
-  on a circle and `rx`, `ry` on an ellipse; `d` on a path; `x`, `y` on a `use`; `transform`,
-  `translate`, `rotate`, `scale` and the `offset-…` properties on anything drawn, on a gradient and
-  on a clip path; `transform-origin` where the element has a transform, and `transform-box` where
-  it has a `transform` attribute; each checked against Chromium by a browser test, which also checks
-  that Chromium reads none of them on a stop or a mask) is never kept, since the sanitiser keeps
-  geometry only as attributes, and dropping it alone would draw the element as neither reading
-  does: the element is dropped with it, both reported (a gradient dropped so leaves what it painted
-  painting nothing); on the root or a clip path, which nothing could stand in for, the logo is
-  refused (`unsupported-feature`). Only a list CSS would split by its error recovery
+  geometry of the element, or as hiding it (`x`, `y`, `width`, `height` and their logical names
+  `inline-size`, `block-size`, `-webkit-logical-width` and `-webkit-logical-height`, `rx`, `ry` on
+  a rectangle; `cx`, `cy`, `r` on a circle and `rx`, `ry` on an ellipse; `d` on a path; `x`, `y`
+  on a `use`; `transform`, `-webkit-transform`, `translate`, `rotate`, `scale`, `offset` and the
+  `offset-…` properties on anything drawn, on a gradient and on a clip path; `transform-origin`,
+  `-webkit-transform-origin` and its `-x`, `-y` and `-z` parts where the element has a transform,
+  and `transform-box` where it has a `transform` attribute; `content-visibility` on a `use`, a
+  gradient, a clip path and a mask, and `display` on a gradient; on the root, every margin and
+  padding, logical and prefixed ones too, which move what it draws; on a clip path, a `clip-path`
+  of a shape rather than a reference) is never kept, since the sanitiser keeps geometry only as
+  attributes, and dropping it alone would draw the element as neither reading does: the element is
+  dropped with it, both reported (a gradient dropped so leaves what it painted painting nothing);
+  on the root or a clip path, which nothing could stand in for, the logo is refused
+  (`unsupported-feature`). A value that draws as if unset is dropped like any other declaration:
+  `none` for a transform where the element has no transform attribute for it to undo (and for
+  `translate`, `rotate`, `scale` and an offset path), `visible` content, an `inline` display and a
+  margin or padding of zero. A browser test sets every property Chromium's `CSSStyleDeclaration`
+  has, prefixed aliases and shorthands included, on each element the sanitiser keeps, with each of
+  forty values that would move, resize, hide or clip something wherever Chromium takes it, and
+  where Chromium then draws the logo otherwise and the element's box or transform has changed
+  (for a definition, which has neither, wherever it draws otherwise), requires the sanitiser to
+  refuse the logo, drop the element, or draw the output as the original. Only a list CSS would split by its error recovery
   (an unclosed comment, string, bracket or url, a string across a line, an escape, a stray or
   mismatched closing bracket, a brace or `@` outside every bracket, a declaration that is not
   `name: value`, an unquoted url holding a bracket, quote or inner space) is dropped whole, and
@@ -1062,9 +1074,9 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. The geometry is kept to six
 decimals; colours set only by CSS are lost (see above).
 
-The tests hold it to that: a hostile corpus of 320 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 150
-refused, and every removal, by element, attribute and reason, for each of the 170 accepted, 40 of
+The tests hold it to that: a hostile corpus of 325 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 152
+refused, and every removal, by element, attribute and reason, for each of the 173 accepted, 40 of
 them with a clip path written as a mask) and
 generated oversized inputs, each refused or accepted with an output an independent checker finds
 inert (its own tokeniser, its own copy of the allowlist, its own grammar for every value and its

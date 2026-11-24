@@ -2424,8 +2424,59 @@
       }
     ]
   },
+  "review-style-offset-short.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "offset",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
   "review-style-root-style-width.svg": {
     "outcome": "reject:unsupported-feature"
+  },
+  "review-style-root-webkit.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-webkit-origin.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "-webkit-transform-origin",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-webkit-transform-clip.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-webkit-transform.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "-webkit-transform",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
+      }
+    ]
   },
   "root-not-svg.svg": {
     "outcome": "reject:not-svg"

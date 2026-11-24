@@ -176,15 +176,10 @@ const VALUES = [
 /** Every style property Chromium exposes, as written in CSS, with each value it takes. */
 async function declarations(page: Page): Promise<string[]> {
   return page.evaluate((values) => {
-    const style = document.body.style;
+    const style = document.body.style as unknown as Record<string, unknown>;
     const names = new Set<string>();
     for (const key in style) {
-      if (
-        /^\d+$/.test(key) ||
-        typeof (style as unknown as Record<string, unknown>)[key] !== "string"
-      ) {
-        continue;
-      }
+      if (/^\d+$/.test(key) || typeof style[key] !== "string") continue;
       let name = key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
       if (name.startsWith("webkit-")) name = `-${name}`;
       if (CSS.supports(name, "initial")) names.add(name);
@@ -247,7 +242,7 @@ async function measures(
             ? root?.querySelector("rect")
             : root?.querySelector<SVGGraphicsElement>(`${selector}:not(defs *)`);
         let read = "missing";
-        if (root !== null && root !== undefined && target !== null && target !== undefined) {
+        if (root !== null && target !== null && target !== undefined) {
           const box = target.getBoundingClientRect();
           const size = root.getBoundingClientRect();
           const matrix = target instanceof SVGGraphicsElement ? target.getCTM() : null;
