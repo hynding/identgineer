@@ -1807,6 +1807,9 @@
     "outcome": "accept",
     "removed": []
   },
+  "review-gradient-repeat-rounded.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
   "review-gradient-rounded-to-a-point.svg": {
     "outcome": "reject:unsupported-feature"
   },

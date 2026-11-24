@@ -461,7 +461,8 @@ changed scale, rotation or skew also by how far from the origin a point the view
 lie, mapped back through them); a coordinate, length or radius of a shape, the position of a
 `use`, the region of a mask and the numbers and transform of a gradient by everything they are
 drawn under; a stroke width and dash offset likewise, a dash length once for every repeat before
-the last dash, and a stop offset by the length of its gradient's vector. In relative path data
+the last dash, a stop offset by the length of its gradient's vector, and the vector of a
+repeated or reflected gradient once for every repeat the view box can show. In relative path data
 each rounding carries on to every point after it, and the changes along the way to anything drawn
 (through groups, `use`s, clip paths and masks) add up. A number rounding did not change counts
 nothing however much it is magnified, so an exact `scale(999999)` is kept. A gradient whose vector
@@ -1050,8 +1051,8 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. The geometry is kept to six
 decimals; colours set only by CSS are lost (see above).
 
-The tests hold it to that: a hostile corpus of 303 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 135
+The tests hold it to that: a hostile corpus of 304 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 136
 refused, and every removal, by element, attribute and reason, for each of the 168 accepted, 40 of
 them with a clip path written as a mask) and
 generated oversized inputs, each refused or accepted with an output an independent checker finds

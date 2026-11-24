@@ -141,6 +141,8 @@ const GRADIENT_DEFAULTS: Readonly<Record<string, string>> = {
   y1: "0",
   x2: "100%",
   y2: "0",
+  cx: "50%",
+  cy: "50%",
   r: "50%",
   fr: "0",
 };
@@ -438,7 +440,10 @@ class OverdrawWalk {
         : base;
     const at = (name: string): number => {
       const value = own(name);
-      const written = value !== undefined && "text" in value ? value.text : GRADIENT_DEFAULTS[name];
+      // A focal point is the centre unless it is given.
+      const fallback = name === "fx" || name === "fy" ? own(name.replace("f", "c")) : undefined;
+      const given = value ?? fallback;
+      const written = given !== undefined && "text" in given ? given.text : GRADIENT_DEFAULTS[name];
       return userUnits(written, percentBase);
     };
     const vector =
@@ -456,9 +461,19 @@ class OverdrawWalk {
       0,
       ...this.stopsOf(first).map((stop) => valueError(stop.attributes.get("offset"), 1)),
     );
+    // Repeated or reflected, each repeat starts where the last ended, so a change to the vector
+    // moves the last repeat shown once for every repeat before it.
+    const spread = own("spreadMethod");
+    const repeating = spread !== undefined && "text" in spread && spread.text !== "pad";
+    const start =
+      first.name === "linearGradient"
+        ? Math.hypot(at("x1"), at("y1"))
+        : Math.max(Math.hypot(at("cx"), at("cy")), Math.hypot(at("fx"), at("fy")));
+    const repeats =
+      repeating && placing > 0 ? 1 + (this.precision.reach(placed) + start) / radius : 1;
     return (
       this.precision.transform(transform, base) +
-      this.precision.shift(placing + offsets * vector, placed)
+      this.precision.shift(placing * repeats + offsets * vector, placed)
     );
   }
 

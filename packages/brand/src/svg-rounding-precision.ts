@@ -70,7 +70,10 @@ export class RoundingPrecision {
       const offset = Math.hypot(original[4] - item[4], original[5] - item[5]);
       const linear = stretch(change);
       if (linear > 0 || offset > 0) {
-        const reach = linear > 0 ? this.reach(product(prefix, item), product(prefix, original)) : 0;
+        const reach =
+          linear > 0
+            ? Math.max(this.reach(product(prefix, item)), this.reach(product(prefix, original)))
+            : 0;
         moved += this.scale * stretch(prefix) * (linear * reach + offset);
       }
       prefix = product(prefix, item);
@@ -90,20 +93,14 @@ export class RoundingPrecision {
   }
 
   /**
-   * How far from where `mapped` and `original` take the origin a point either shows within the
-   * view box can lie, before them; unbounded where either flattens the plane.
+   * How far from the origin, before `matrix`, a point the view box shows can lie; unbounded where
+   * `matrix` flattens the plane.
    */
-  private reach(mapped: Matrix, original: Matrix): number {
-    return Math.max(
-      ...[mapped, original].map((matrix) => {
-        const back = invert(matrix);
-        if (back === undefined) return Infinity;
-        const far = Math.max(
-          ...this.corners.map(([x, y]) => Math.hypot(x - matrix[4], y - matrix[5])),
-        );
-        return stretch(back) * far;
-      }),
-    );
+  reach(matrix: Matrix): number {
+    const back = invert(matrix);
+    if (back === undefined) return Infinity;
+    const far = Math.max(...this.corners.map(([x, y]) => Math.hypot(x - matrix[4], y - matrix[5])));
+    return stretch(back) * far;
   }
 }
 
