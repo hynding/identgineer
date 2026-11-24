@@ -206,26 +206,117 @@ describe("sanitiseSvgLogo, output", () => {
     );
   });
 
-  // CSS swallows what follows a comment, string, bracket or escape, so the sanitiser cannot split
-  // such a style into declarations as CSS would: the whole attribute goes, and is reported.
+  // A declaration list is split as CSS splits it: a `;` inside a comment, string or bracket ends
+  // nothing. A declaration holding any of those is dropped on its own, and the rest is kept.
   it.each([
-    ["a comment", "opacity:1/*;display:inline;*/"],
-    ["an unclosed comment", "opacity:1/*;display:inline"],
-    ["parentheses", "--x:(;display:inline;)"],
-    ["a string", "font-family:';display:inline;'"],
-    ["a double-quoted string", "font-family:&quot;;display:inline;&quot;"],
-    ["square brackets", "x:[;display:inline;]"],
-    ["braces", "x:{;display:inline;}"],
-    ["an escaped semicolon", String.raw`opacity:1\;display:inline`],
-    ["an at-sign", "@x;display:inline"],
-    ["a less-than sign", "x:&lt;;display:inline"],
-    ["a property set twice", "display:inline;display:inline"],
-  ])("drops a whole style holding %s, and reports it", (_, style) => {
+    ["a comment", "opacity:0.5/*;display:inline;*/", "opacity"],
+    ["a string", "font-family:';display:inline;'", "font-family"],
+    ["a double-quoted string", "font-family:&quot;;display:inline;&quot;", "font-family"],
+    ["square brackets", "x:[;display:inline;]", "x"],
+    ["parentheses", "x:(;display:inline;)", "x"],
+    ["a function", "x:y(;display:inline;)", "x"],
+    ["an unquoted url", "x:url(a;display:inline;)", "x"],
+    ["braces inside brackets", "x:({;display:inline;});", "x"],
+  ])("drops only the declaration that holds %s, and reports it", (_, style, property) => {
     const result = accepted(svg(`<rect width="9" height="9" display="none" style="${style}"/>`));
     expect(result.svg).toBe(`${ROOT}<rect width="9" height="9" display="none"/></svg>`);
+    expect(result.removed).toEqual([expect.objectContaining({ attribute: "style", property })]);
+  });
+
+  it.each([
+    ["a comment before a name", "/* brand */fill:red", "red"],
+    ["a comment between declarations", "fill:blue;/* stroke:#000; */fill:red", "red"],
+    ["a comment before the colon", "fill /**/ :red", "red"],
+    ["a quoted font before it", "font-family:'A;B', Arial;fill:red", "red"],
+    ["a bracket before it", "-x-y:(a;[b;{c}]);fill:red", "red"],
+    ["a less-than sign before it", "x:&lt;;fill:red", "red"],
+  ])("keeps a declaration after %s", (_, style, fill) => {
+    const result = accepted(svg(`<rect width="9" height="9" style="${style}"/>`));
+    expect(result.svg).toBe(`${ROOT}<rect width="9" height="9" fill="${fill}"/></svg>`);
+  });
+
+  it.each([
+    ["a comment inside the value", "fill:/**/red"],
+    ["a comment after the value", "fill:red/**/"],
+    ["a quoted value", "fill:'red'"],
+    ["a quoted url", "fill:url('#a')"],
+  ])("drops a declaration with %s, which is not normalised", (_, style) => {
+    const result = accepted(svg(`<rect width="9" height="9" style="${style}"/>`));
+    expect(result.svg).toBe(`${ROOT}<rect width="9" height="9"/></svg>`);
+    expect(result.removed).toEqual([
+      expect.objectContaining({ attribute: "style", property: "fill" }),
+    ]);
+  });
+
+  // Where CSS error recovery decides what follows, the split is not certain: the whole style goes,
+  // reported, and nothing is put in its place.
+  it.each([
+    ["an unclosed comment", "opacity:1/*;display:inline"],
+    ["an unclosed string", "font-family:'a;display:inline"],
+    ["an unclosed bracket", "x:(;display:inline"],
+    ["a string across a line", "font-family:'a&#10;b';display:inline"],
+    ["an escaped semicolon", String.raw`opacity:1\;display:inline`],
+    ["an escape anywhere", String.raw`fill:red;x:\31`],
+    ["a stray closing bracket", "x:a);display:inline"],
+    ["a mismatched bracket", "x:(];display:inline"],
+    ["braces", "x:{;display:inline;}"],
+    ["a block after a name", "x{a:b}display:inline"],
+    ["an at-sign", "@x;display:inline"],
+    ["an unquoted url holding a bracket", "x:url(a(b);display:inline)"],
+    ["an unquoted url holding a space", "x:url(a b;display:inline)"],
+    ["a declaration without a colon", "display;opacity:1"],
+    ["a name that is not one word", "display inline:x;opacity:1"],
+  ])("drops a whole style holding %s, and reports it, putting nothing in its place", (_, style) => {
+    const result = accepted(svg(`<rect width="9" height="9" style="${style}"/>`));
+    expect(result.svg).toBe(`${ROOT}<rect width="9" height="9"/></svg>`);
     expect(result.removed).toEqual([
       expect.objectContaining({ attribute: "style", reason: "invalid-value" }),
     ]);
+  });
+
+  it.each([
+    ["the root", svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="opacity:0/*"')],
+    [
+      "a clip path",
+      svg('<clipPath id="c" style="clip-rule:evenodd/*"><rect width="9" height="9"/></clipPath>'),
+    ],
+    ["a mask", svg('<mask id="m" style="mask-type:alpha/*"><rect width="9" height="9"/></mask>')],
+  ])("drops such a style on %s, and keeps the logo", (_, input) => {
+    expect(accepted(input).removed).toEqual([
+      expect.objectContaining({ attribute: "style", reason: "invalid-value" }),
+    ]);
+  });
+
+  // Among the declarations of one property, the last marked important wins, else the last.
+  it.each([
+    ["the last of two", "fill:red;fill:blue", "blue"],
+    ["an important one before a plain one", "fill:red !important;fill:blue", "red"],
+    ["the last of two important ones", "fill:red!important;fill:blue ! IMPORTANT", "blue"],
+    ["the style over the attribute", "fill:blue", "blue"],
+    ["an important one alone", "fill:blue !important", "blue"],
+  ])("keeps %s", (_, style, fill) => {
+    expect(output(`<rect width="9" height="9" fill="green" style="${style}"/>`)).toBe(
+      `${ROOT}<rect width="9" height="9" fill="${fill}"/></svg>`,
+    );
+  });
+
+  // Whether CSS takes a value the sanitiser cannot read decides which declaration wins, and
+  // whether the attribute does: so none of them is kept.
+  it.each([
+    ["a colour CSS reads and the sanitiser does not", "fill:hsl(0, 100%, 50%)"],
+    ["a value CSS does not read", "fill:reddish"],
+    ["a dropped value after a kept one", "fill:red;fill:hsl(0, 100%, 50%)"],
+    ["a dropped value before a kept one", "fill:/**/blue;fill:red"],
+    ["a dropped important value", "fill:red;fill:reddish !important"],
+  ])("drops the property, attribute and all, for %s, and reports both", (_, style) => {
+    const result = accepted(svg(`<rect width="9" height="9" fill="green" style="${style}"/>`));
+    expect(result.svg).toBe(`${ROOT}<rect width="9" height="9"/></svg>`);
+    expect(result.removed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ attribute: "style", property: "fill" }),
+        expect.objectContaining({ attribute: "fill" }),
+      ]),
+    );
   });
 
   it("drops a view box whose zero has a large exponent, and reports it", () => {
@@ -234,23 +325,6 @@ describe("sanitiseSvgLogo, output", () => {
     );
     expect(result.removed).toContainEqual(
       expect.objectContaining({ attribute: "viewBox", reason: "invalid-value" }),
-    );
-  });
-
-  it.each([
-    ["the root", svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="opacity:0/**/"')],
-    [
-      "a clip path",
-      svg('<clipPath id="c" style="clip-rule:evenodd/**/"><rect width="9" height="9"/></clipPath>'),
-    ],
-    ["a mask", svg('<mask id="m" style="mask-type:alpha/**/"><rect width="9" height="9"/></mask>')],
-  ])("refuses such a style on %s, which is drawn whatever its display", (_, input) => {
-    expect(refused(input).code).toBe("unsupported-feature");
-  });
-
-  it("keeps a style declaration marked important, which no other rule can outweigh here", () => {
-    expect(output('<rect width="9" height="9" style="fill:red !important"/>')).toBe(
-      `${ROOT}<rect width="9" height="9" fill="red"/></svg>`,
     );
   });
 
@@ -1057,10 +1131,21 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
 
   it.each([
     ["attributes", 'fill="url(http://x/y)" stroke="url(data:image/svg+xml,x)"'],
-    ["style declarations", 'style="fill:url(http://x/y);stroke:javascript:x" fill="red"'],
+    ["style declarations", 'style="fill:url(http://x/y);stroke:javascript:x"'],
   ])("paints nothing for an external paint reference in %s, rather than black", (_l, paint) => {
     const result = accepted(svg(`<rect width="1" height="1" ${paint}/>`));
     expect(result.svg).toContain('fill="none" stroke="none"');
+    expect(result.removed.map(({ reason }) => reason)).toEqual([
+      "external-reference",
+      "external-reference",
+    ]);
+  });
+
+  it("paints nothing for an external paint reference in a style over a fill attribute", () => {
+    const result = accepted(
+      svg('<rect width="1" height="1" fill="red" style="fill:url(http://x/y)"/>'),
+    );
+    expect(result.svg).toContain('fill="none"');
     expect(result.removed.map(({ reason }) => reason)).toEqual([
       "external-reference",
       "external-reference",

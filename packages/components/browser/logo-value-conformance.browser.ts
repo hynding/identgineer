@@ -457,6 +457,56 @@ interface Case {
   readonly output: string;
 }
 
+// Declarations a style list holds around the one under test, as editors write them: properties the
+// sanitiser drops (and reports), whose values hide a `;` in strings, brackets and urls.
+const DECOYS = [
+  "font-family:'Open Sans;x'",
+  'font-family:"Helvetica Neue", Arial',
+  "-inkscape-font-specification:'Open Sans, Normal'",
+  "-x-pad:(a;[b;{c}])",
+  "-x-pad:[;]",
+  "-x-pad:url(a;b)",
+  "-x-pad:x(y;z)",
+  "font-size:40px",
+];
+const DECOY_PROPERTIES: ReadonlySet<string> = new Set([
+  "font-family",
+  "-inkscape-font-specification",
+  "-x-pad",
+  "font-size",
+]);
+const COMMENTS = ["/**/", "/*;*/", "/* fill:red; */", "/*'*/", "/*{*/"];
+const IMPORTANT = [" !important", "!important", "! IMPORTANT", "!Important "];
+
+/**
+ * The declaration in a list: maybe marked important, maybe beside another of the same property
+ * (itself maybe important), among decoys, with comments before names and separators of each kind.
+ */
+function styleList(declaration: string, sibling: string, random: () => number): string {
+  const pick = <T>(choices: readonly T[]): T => choices[Math.floor(random() * choices.length)] as T;
+  const parts = [random() < 0.3 ? declaration + pick(IMPORTANT) : declaration];
+  if (random() < 0.4) {
+    const duplicate = random() < 0.3 ? sibling + pick(IMPORTANT) : sibling;
+    if (random() < 0.5) parts.unshift(duplicate);
+    else parts.push(duplicate);
+  }
+  for (let decoy = 0; decoy < 2; decoy += 1) {
+    if (random() < 0.5) parts.splice(Math.floor(random() * (parts.length + 1)), 0, pick(DECOYS));
+  }
+  const commented = parts.map((part) => (random() < 0.3 ? pick(COMMENTS) : "") + part);
+  return commented.join(pick([";", "; ", " ;", ";;"])) + (random() < 0.3 ? ";" : "");
+}
+
+/** Kept, with nothing reported but the decoys a style list was given. */
+function keptClean(original: string): string | undefined {
+  const result = sanitiseSvgLogo(original);
+  if (!result.ok) return undefined;
+  const decoysOnly = result.removed.every(
+    ({ property }) => property !== undefined && DECOY_PROPERTIES.has(property),
+  );
+  return decoysOnly ? result.svg : undefined;
+}
+
 /** Every spelling of every value in a place the sanitiser keeps with nothing reported. */
 function keptCases(place: Place, random: () => number): Case[] {
   const name = attributeName(place);
@@ -467,18 +517,20 @@ function keptCases(place: Place, random: () => number): Case[] {
   ];
   for (const [index, form] of forms.entries()) {
     for (const value of place.values) {
-      const written = index === 0 ? value : `${name}:${value}`;
-      const spellings = [written];
-      for (let run = 0; run < SPELLINGS_PER_VALUE; run += 1)
-        spellings.push(mutate(written, random));
+      const plain = index === 0 ? value : `${name}:${value}`;
+      const spellings = [plain];
+      for (let run = 0; run < SPELLINGS_PER_VALUE; run += 1) spellings.push(mutate(plain, random));
       for (const spelling of spellings) {
-        const original = place.probe(form(spelling));
-        const result = sanitiseSvgLogo(original);
-        if (!result.ok || result.removed.length > 0) continue;
+        const sibling = `${name}:${place.values[Math.floor(random() * place.values.length)] ?? value}`;
+        const written =
+          index === 1 && random() < 0.6 ? styleList(spelling, sibling, random) : spelling;
+        const original = place.probe(form(written));
+        const output = keptClean(original);
+        if (output === undefined) continue;
         cases.push({
-          label: `${place.name}${index === 0 ? "" : " in style"}: ${JSON.stringify(spelling)}`,
+          label: `${place.name}${index === 0 ? "" : " in style"}: ${JSON.stringify(written)}`,
           original,
-          output: result.svg,
+          output,
         });
       }
     }
@@ -624,6 +676,52 @@ test.describe("a kept value, as Chromium reads it", () => {
             `${label} (image ${String(image)}, document ${String(document)})`,
         );
       expect(differing).toEqual([]);
+    });
+  }
+});
+
+/** The colour Chromium draws at the middle of a probe drawn as an image, as `r,g,b`. */
+async function middleColour(page: Page, original: string): Promise<string> {
+  return page.evaluate(async (source) => {
+    const image = new Image();
+    image.src = source;
+    await image.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = 100;
+    canvas.height = 100;
+    const context = canvas.getContext("2d");
+    if (context === null) throw new Error("no canvas");
+    context.drawImage(image, 0, 0);
+    return [...context.getImageData(50, 50, 1, 1).data.slice(0, 3)].join(",");
+  }, dataUrl(original));
+}
+
+// Why the sanitiser keeps none of a property whose style value it cannot read: Chromium's choice
+// between that value, the other declarations and the attribute turns on whether CSS takes it.
+test.describe("a style value, as Chromium weighs it", () => {
+  const probe = (attributes: string): string =>
+    svg(`<rect width="100" height="100" fill="#0f0"${attributes}/>`);
+  for (const [label, attributes, colour] of [
+    ["an invalid value leaves the attribute", ' style="fill:reddish"', "0,255,0"],
+    [
+      "a valid value the sanitiser does not read wins",
+      ' style="fill:hsl(240,100%,50%)"',
+      "0,0,255",
+    ],
+    [
+      "an invalid value leaves the declaration before it",
+      ' style="fill:#00f;fill:reddish"',
+      "0,0,255",
+    ],
+    [
+      "an important declaration wins over a later one",
+      ' style="fill:#00f!important;fill:red"',
+      "0,0,255",
+    ],
+  ] as const) {
+    test(label, async ({ page }) => {
+      await page.setContent("<!doctype html><body></body>");
+      expect(await middleColour(page, probe(attributes))).toBe(colour);
     });
   }
 });

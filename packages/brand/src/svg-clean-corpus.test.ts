@@ -41,7 +41,9 @@ describe("the clean SVG corpus", () => {
       "illustrator-svg11-doctype.svg",
       "illustrator-text-clip.svg",
       "inkscape-export.svg",
+      "inkscape-text-to-path.svg",
       "mask-and-use.svg",
+      "mixed-tool-styles.svg",
       "simple-mark.svg",
       "sketch-export.svg",
     ]);
@@ -84,6 +86,44 @@ describe("the clean SVG corpus", () => {
     }
     const again = sanitiseSvgLogo(result.svg);
     expect(again.ok && again.svg).toBe(result.svg);
+  });
+
+  it.each(FILES)("hides nothing in %s that the source draws", (file) => {
+    const input = readFileSync(new URL(file, CORPUS), "utf8");
+    const { svg } = sanitised(file);
+    expect(svg.split('display="none"').length).toBe(input.split('display="none"').length);
+    expect(svg.split('stop-opacity="0"').length).toBe(input.split('stop-opacity="0"').length);
+  });
+
+  it("keeps a wordmark Inkscape converted from text, dropping only the font its styles still name", () => {
+    const { svg, removed } = sanitised("inkscape-text-to-path.svg");
+    expect(svg).toContain('<g fill="#0f172a" stroke-width="1"><path d="');
+    expect(svg).toContain('fill="#0f766e"/>');
+    expect(svg).toContain('fill="#38bdf8" fill-opacity="1" stroke="none"');
+    const properties = new Set(removed.flatMap(({ property }) => property ?? []));
+    expect([...properties].sort()).toEqual([
+      "-inkscape-font-specification",
+      "font-family",
+      "font-size",
+      "font-weight",
+      "letter-spacing",
+      "line-height",
+      "word-spacing",
+    ]);
+  });
+
+  it("reads the styles other tools write: comments between declarations, important, a property set twice, quoted fonts", () => {
+    const { svg, removed } = sanitised("mixed-tool-styles.svg");
+    expect(svg).toContain('<rect width="40" height="40" fill="#cc0000" stroke="none"/>');
+    expect(svg).toContain('<rect x="50" width="40" height="40" fill="#00aa00"/>');
+    expect(svg).toContain('<circle cx="20" cy="45" r="4" fill="#0066cc" opacity="0.5"/>');
+    expect(svg).toContain('<path d="M60 42h30v6h-30z" fill="#333333"/>');
+    expect(svg).toContain('<path d="M30 42h25v6h-25z" fill="#666666"/>');
+    expect(removed.map(({ property }) => property)).toEqual([
+      "font-family",
+      "font-family",
+      "font-weight",
+    ]);
   });
 
   it("keeps the colours of a style attribute and a gradient chain, as Inkscape writes them", () => {

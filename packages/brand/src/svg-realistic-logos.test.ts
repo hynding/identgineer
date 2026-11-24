@@ -123,6 +123,27 @@ function textClips(letters: number, clips: number): string {
   return logo(body, definitions);
 }
 
+const FONT =
+  "font-size:40px;line-height:1.25;font-family:'Open Sans';-inkscape-font-specification:'Open Sans, Normal'";
+
+/**
+ * A wordmark Inkscape converted from text: the group and each glyph keep the font in their style,
+ * quoted, and so do the clip path and mask cut from the same lettering.
+ */
+function inkscapeWordmark(): string {
+  const glyphs = Array.from(
+    { length: 20 },
+    (_, index) =>
+      `<path d="${blob(40, 20 + index * 24, 256, 11)}" style="font-weight:bold;font-family:'Open Sans';-inkscape-font-specification:'Open Sans Bold';fill:${hex(index)}"/>`,
+  ).join("");
+  const cut = `<path d="${blob(40, 256, 256, 200)}" style="${FONT};fill:#ffffff"/>`;
+  return logo(
+    `<g aria-label="Wordmark" style="${FONT};letter-spacing:0px;fill:#111111;stroke-width:1">${glyphs}</g>` +
+      '<rect width="512" height="512" fill="#0a7" clip-path="url(#c)" mask="url(#m)" opacity="0.2"/>',
+    `<clipPath id="c" style="${FONT}">${cut}</clipPath><mask id="m" style="${FONT}">${cut}</mask>`,
+  );
+}
+
 /** Each logo with the most of each budget, in percent, it may use. */
 const REALISTIC: readonly (readonly [string, string, number, number])[] = [
   ["an emblem of 4,000 cubics, filled and stroked", emblem(40, 6), 21, 5],
@@ -147,6 +168,7 @@ const REALISTIC: readonly (readonly [string, string, number, number])[] = [
   ["a Figma export with 8 alpha masks", figmaMasks(), 4, 60],
   ["a wordmark of 8 outlined letters clipping a gradient", textClips(8, 1), 4, 8],
   ["four such wordmarks in one logo", textClips(8, 4), 13, 31],
+  ["an Inkscape wordmark of 20 glyphs converted from text", inkscapeWordmark(), 10, 10],
 ];
 
 describe("realistic logos", () => {
@@ -164,4 +186,25 @@ describe("realistic logos", () => {
       );
     },
   );
+});
+
+describe("a wordmark Inkscape converted from text", () => {
+  it("keeps every glyph drawn, dropping only the font its styles still name", () => {
+    const result = sanitiseSvgLogo(inkscapeWordmark());
+    if (!result.ok) throw new Error(JSON.stringify(result.errors));
+    expect(result.svg).not.toContain('display="none"');
+    expect(result.svg.match(/<path /g)).toHaveLength(22);
+    expect(result.svg).toContain('<g fill="#111111" stroke-width="1">');
+    expect(new Set(result.removed.map(({ property }) => property ?? "none"))).toEqual(
+      new Set([
+        "font-size",
+        "line-height",
+        "font-family",
+        "-inkscape-font-specification",
+        "font-weight",
+        "letter-spacing",
+        "none",
+      ]),
+    );
+  });
 });
