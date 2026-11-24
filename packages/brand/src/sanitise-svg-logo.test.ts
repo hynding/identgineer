@@ -451,6 +451,31 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
     ).toBe(true);
   });
 
+  it.each([
+    [
+      "more elements",
+      `<svg ${NS} viewBox="0 0 100 50" width="100" height="100" preserveAspectRatio="none">${'<rect width="1" height="1"/>'.repeat(4094)}</svg>`,
+      "too-many-elements",
+    ],
+    [
+      "deeper nesting",
+      `<svg ${NS} viewBox="0 0 100 50" width="100" height="100" preserveAspectRatio="none">${"<g>".repeat(30)}<rect width="1" height="1"/>${"</g>".repeat(30)}</svg>`,
+      "too-deep",
+    ],
+    [
+      "deeper nesting, by a group taking a mask",
+      `<svg ${NS} viewBox="0 0 100 100"><mask id="m"><rect width="9" height="9" fill="#fff"/></mask><clipPath id="c"><circle r="5"/><circle cx="9" r="5"/></clipPath>` +
+        `${"<g>".repeat(30)}<rect width="1" height="1" mask="url(#m)" clip-path="url(#c)"/>${"</g>".repeat(30)}</svg>`,
+      "too-deep",
+    ],
+  ])(
+    "refuses an output with %s than an input may have, which could not be read again",
+    (_, input, code) => {
+      const result = sanitiseSvgLogo(input);
+      expect(result.ok || result.errors[0]?.code).toBe(code);
+    },
+  );
+
   it("reports a reference to a name the sanitiser gives what it adds as dangling, never resolved to what it adds", () => {
     const result = accepted(
       `<svg ${NS} viewBox="0 0 100 100" width="200" height="100" preserveAspectRatio="none"><rect width="100" height="100" fill="red" clip-path="url(#_0)"/></svg>`,
