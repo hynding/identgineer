@@ -14,9 +14,10 @@ function digitsFrom(text: string, start: number): number {
 }
 
 /**
- * The end of the SVG number starting at `start` (`[+-]? (digits ('.' digits?)? | '.' digits)
+ * The end of the SVG number starting at `start` (`[+-]? (digits ('.' digits)? | '.' digits)
  * ([eE] [+-]? digits)?`), or -1 if none starts there. An `e` not followed by digits ends the number
- * before it, as in path data.
+ * before it, as in path data, and so does a point not followed by digits: Chromium takes neither
+ * `100.` nor `1.e2` as a number, anywhere.
  */
 export function scanNumber(text: string, start: number): number {
   let position = start;
@@ -26,9 +27,9 @@ export function scanNumber(text: string, start: number): number {
   let end = integerEnd;
   if (text.charCodeAt(end) === 0x2e) {
     const fractionEnd = digitsFrom(text, end + 1);
-    if (fractionEnd > end + 1 || integerEnd > position) end = fractionEnd;
+    if (fractionEnd > end + 1) end = fractionEnd;
   }
-  if (end === position || (end === position + 1 && text.charCodeAt(position) === 0x2e)) return -1;
+  if (end === position) return -1;
   const marker = text.charCodeAt(end);
   if (marker === 0x65 || marker === 0x45) {
     let exponent = end + 1;

@@ -23,12 +23,11 @@ class Cursor {
     this.text = text;
   }
 
-  skipSeparators(): void {
-    while (this.position < this.text.length) {
-      const unit = this.text.charCodeAt(this.position);
-      if (!isXmlWhitespace(unit) && unit !== 0x2c) return;
-      this.position += 1;
-    }
+  /** White space with at most one comma in it, as between two numbers. */
+  skipCommaWhitespace(): void {
+    this.skipWhitespace();
+    if (this.text.charCodeAt(this.position) === 0x2c) this.position += 1;
+    this.skipWhitespace();
   }
 
   skipWhitespace(): void {
@@ -70,7 +69,9 @@ function readArguments(
   if (arity === 0) return values;
   for (;;) {
     for (let index = 0; index < arity; index += 1) {
-      cursor.skipSeparators();
+      // Only white space between a command and its first number, as Chromium reads it.
+      if (index === 0) cursor.skipWhitespace();
+      else cursor.skipCommaWhitespace();
       // The two arc flags are single digits that may touch what follows: `a1 1 0 00 1 1`.
       const value =
         arity === 7 && (index === 3 || index === 4) ? cursor.flag() : cursor.number(limits);
@@ -82,7 +83,10 @@ function readArguments(
     if (cursor.text.charCodeAt(cursor.position) === 0x2c) cursor.position += 1;
     cursor.skipWhitespace();
     if (scanNumber(cursor.text, cursor.position) === -1) {
-      cursor.position = before;
+      // Chromium takes a comma after the last number before the next command, and so does this.
+      if (!Object.hasOwn(ARITY, (cursor.text[cursor.position] ?? "").toUpperCase())) {
+        cursor.position = before;
+      }
       return values;
     }
   }
