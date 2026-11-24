@@ -34,6 +34,11 @@ export type SvgLogoErrorCode =
   | "too-many-masks"
   | "masks-too-deep"
   | "missing-size"
+  /**
+   * A form the sanitiser deliberately does not support, since no rewrite of it is sure to show
+   * no more than the original; the message says what to change.
+   */
+  | "unsupported-feature"
   | "internal-error";
 
 /**

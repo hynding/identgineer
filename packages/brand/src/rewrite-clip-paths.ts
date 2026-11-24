@@ -101,6 +101,24 @@ function union(left: SvgBox, right: SvgBox): SvgBox {
 
 const SCALE = 1e6;
 
+/** A kept number (plain decimal, at most six places) in whole millionths. */
+function millionths(text: string): bigint {
+  const match = /^(-?)(\d*)(?:\.(\d{1,6}))?$/.exec(text);
+  if (match === null) throw new Error(`"${text}" is not a kept number`);
+  const [, sign = "", whole = "", fraction = ""] = match;
+  const value = BigInt(whole === "" ? "0" : whole) * 1_000_000n + BigInt(fraction.padEnd(6, "0"));
+  return sign === "-" ? -value : value;
+}
+
+/** Whole millionths as the shortest plain decimal. */
+function decimal(value: bigint): string {
+  const sign = value < 0n ? "-" : "";
+  const magnitude = value < 0n ? -value : value;
+  const fraction = (magnitude % 1_000_000n).toString().padStart(6, "0").replace(/0+$/, "");
+  const whole = (magnitude / 1_000_000n).toString();
+  return `${sign}${whole}${fraction === "" ? "" : `.${fraction}`}`;
+}
+
 /** What a rewritten clip path's mask paints its shapes with, inherited by each of them. */
 const MASK_PAINT = [
   ["fill", "#fff"],
@@ -319,9 +337,35 @@ class ClipPathRewriter {
     return userUnits(text, this.viewport.base);
   }
 
+  /**
+   * A use's `x` and `y` as a translation, for a group to take over. Written to six decimals, a
+   * position could move the use, so one that six decimals do not hold exactly is refused.
+   */
   private placement(use: CleanElement): string | undefined {
-    const [x, y] = [this.offset(use, "x"), this.offset(use, "y")];
-    return x === 0 && y === 0 ? undefined : `translate(${String(x)} ${String(y)})`;
+    const [x, y] = [this.exactOffset(use, "x"), this.exactOffset(use, "y")];
+    return x === "0" && y === "0" ? undefined : `translate(${x} ${y})`;
+  }
+
+  private exactOffset(use: CleanElement, name: "x" | "y"): string {
+    const text = textOf(use, name) ?? "0";
+    const refused = (): SvgLogoRejection =>
+      new SvgLogoRejection(
+        "unsupported-feature",
+        `has a use with a clip path and a mask whose ${name} cannot be written to six decimals; give it a position in plain numbers`,
+        use.offset,
+      );
+    if (text.endsWith("%")) {
+      // Worked in whole millionths, so the answer is exact or refused, never rounded.
+      const side = name === "x" ? this.viewport.width : this.viewport.height;
+      const product = millionths(text.slice(0, -1)) * millionths(side.toFixed(6));
+      const divisor = 100n * 1_000_000n;
+      if (product % divisor !== 0n) throw refused();
+      return decimal(product / divisor);
+    }
+    const value = userUnits(text, this.viewport.base);
+    const written = Number(value.toFixed(6));
+    if (Math.abs(written - value) > 1e-9) throw refused();
+    return decimal(millionths(written.toFixed(6)));
   }
 
   /** What a shape of a rewritten clip path is drawn as in its mask, and the box it can cover. */
@@ -375,8 +419,8 @@ class ClipPathRewriter {
       // Chromium applies these in user space, outside the box the content is drawn in: no mask
       // shared by everything that uses the clip path can stand in for them.
       throw new SvgLogoRejection(
-        "drawing-too-costly",
-        "has a clip path in object bounding box units with a transform or clip path of its own, which cannot be written as a mask",
+        "unsupported-feature",
+        "has a clip path in object bounding box units with a transform or clip path of its own that would have to be written as a mask, which cannot match it; use userSpaceOnUse units, or drop its transform or clip path",
         clip.offset,
       );
     }
@@ -472,8 +516,8 @@ class ClipPathRewriter {
         // The root's clip path and mask work in the space around it, in CSS pixels, which no
         // group inside it stands for at every size the logo is drawn.
         throw new SvgLogoRejection(
-          "drawing-too-costly",
-          "has a clip path of more than one shape on a root with a mask of its own, which cannot be written as a mask",
+          "unsupported-feature",
+          "has a clip path that must be written as a mask on a root with a mask of its own; move the clip path or the mask onto a group inside the root",
           node.offset,
         );
       }

@@ -1,12 +1,13 @@
 import { decodeSvgInput } from "./decode-svg-input.ts";
 import { filterSvgTree, type CleanElement } from "./filter-svg-tree.ts";
 import { freshIds } from "./fresh-ids.ts";
+import { movesMoreThanHalfAPixel } from "./half-pixel.ts";
 import { parseSvgXml } from "./parse-svg-xml.ts";
 import { resolveSvgNamespaces } from "./resolve-svg-namespaces.ts";
 import type { SanitisedSvg } from "./sanitised-svg.ts";
 import { serialiseSvg } from "./serialise-svg.ts";
 import { isSettledOutput } from "./settled-output.ts";
-import { settleSvgReferences } from "./settle-svg-references.ts";
+import { dropDanglingReferences, settleSvgReferences } from "./settle-svg-references.ts";
 import { findDisallowedCharacter } from "./svg-characters.ts";
 import { SVG_LOGO_LIMITS, type SvgLogoLimits } from "./svg-logo-limits.ts";
 import type { SvgLogoError, SvgLogoResult } from "./svg-logo-result.ts";
@@ -47,6 +48,8 @@ interface Size {
   readonly width: number;
   readonly height: number;
   readonly viewBox: readonly [number, number, number, number];
+  /** A stretched view box, which the content must be clipped to once references are settled. */
+  readonly clipTo: ViewBox | undefined;
 }
 
 function textOf(root: CleanElement, name: string): string | undefined {
@@ -91,9 +94,14 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
   root.attributes.set("height", { text: height });
   const size = { width: Number(width), height: Number(height) };
   const box = [minX, minY, boxWidth, boxHeight] as const;
-  const shown = root.droppedAspect === undefined ? box : showAsDrawn(root, size, box, limits);
+  const aspect = aspectRatio(root.droppedAspect ?? "");
+  const stretched = aspect?.align === "none" && boxWidth * size.height !== boxHeight * size.width;
+  const shown =
+    aspect === undefined || aspect.align === "none"
+      ? box
+      : cropped(size, box, aspect.align, limits);
   root.attributes.set("viewBox", canonical("viewBox", shown.join(" "), limits));
-  return { ...size, viewBox: shown };
+  return { ...size, viewBox: shown, clipTo: stretched ? box : undefined };
 }
 
 function canonical(name: string, text: string, limits: SvgLogoLimits): SvgValue {
@@ -110,38 +118,52 @@ function canonical(name: string, text: string, limits: SvgLogoLimits): SvgValue 
 type ViewBox = readonly [number, number, number, number];
 
 /**
- * Makes the view box show, drawn to fit, what the dropped `preserveAspectRatio` showed and nothing
- * more. A crop (`slice`) shows part of the view box: the view box becomes that part. A stretch
- * (`none`) shows the whole view box, distorted: the view box stays and its content is clipped to
- * it, since drawn to fit it leaves space round it where content beyond it would otherwise show.
+ * The part of the view box a crop (`slice`) showed, which becomes the view box: drawn to fit, it
+ * shows what the crop showed and nothing more. Refused where six decimals cannot hold that part to
+ * half a pixel at the largest size measured.
  */
-function showAsDrawn(
-  root: CleanElement,
+function cropped(
   size: { readonly width: number; readonly height: number },
   [minX, minY, boxWidth, boxHeight]: ViewBox,
+  align: string,
   limits: SvgLogoLimits,
 ): ViewBox {
-  const aspect = aspectRatio(root.droppedAspect ?? "");
-  const digits = (value: number): number => Number(value.toFixed(limits.fractionDigits));
-  if (aspect?.align === "none") {
-    if (boxWidth * size.height !== boxHeight * size.width)
-      clipToViewBox(root, [minX, minY, boxWidth, boxHeight], limits);
-    return [minX, minY, boxWidth, boxHeight];
-  }
   const scale = Math.max(size.width / boxWidth, size.height / boxHeight);
   const [width, height] = [size.width / scale, size.height / scale];
-  const align = aspect?.align ?? "xMidYMid";
   const share = (part: string): number => (part === "Min" ? 0 : part === "Mid" ? 0.5 : 1);
-  return [
-    digits(minX + (boxWidth - width) * share(align.slice(1, 4))),
-    digits(minY + (boxHeight - height) * share(align.slice(5, 8))),
-    digits(width),
-    digits(height),
-  ];
+  const exact = [
+    minX + (boxWidth - width) * share(align.slice(1, 4)),
+    minY + (boxHeight - height) * share(align.slice(5, 8)),
+    width,
+    height,
+  ] as const;
+  const written = exact.map((value) => Number(value.toFixed(limits.fractionDigits)));
+  const span = Math.max(width, height);
+  if (exact.some((value, index) => movesMoreThanHalfAPixel(value, written[index] ?? NaN, span))) {
+    throw new SvgLogoRejection(
+      "unsupported-feature",
+      "has a preserveAspectRatio slice that crops a part of its view box too small to write to six decimals; crop the view box itself instead",
+    );
+  }
+  const [x = 0, y = 0, w = 1, h = 1] = written;
+  return [x, y, w, h];
 }
 
-/** Moves everything drawn into a group clipped to the view box; a title or description stays. */
+/**
+ * Moves everything drawn into a group clipped to the view box; a title or description stays. A
+ * stretch (`none`) showed the whole view box, distorted; drawn to fit, the view box leaves space
+ * round it where content beyond it would otherwise show. The root's own clip path or mask works in
+ * the space around the root, which drawing to fit moves under the content, so with either the
+ * logo is refused.
+ */
 function clipToViewBox(root: CleanElement, box: ViewBox, limits: SvgLogoLimits): void {
+  if (root.attributes.has("clip-path") || root.attributes.has("mask")) {
+    throw new SvgLogoRejection(
+      "unsupported-feature",
+      "has preserveAspectRatio none beside a clip-path or mask on the root, which would then cut another part of the drawing; stretch the drawing itself, or move the clip path or mask onto a group inside the root",
+      root.offset,
+    );
+  }
   const [minX, minY, width, height] = box.map(String);
   const id = freshIds(root)();
   const rect = new Map<string, SvgValue>();
@@ -218,6 +240,8 @@ function sanitiseOnce(input: unknown, options: unknown, limits: SvgLogoLimits): 
     }
     const root = filterSvgTree(resolveSvgNamespaces(document.root), limits, removals);
     const size = settleSize(root, limits);
+    dropDanglingReferences(root, limits, removals);
+    if (size.clipTo !== undefined) clipToViewBox(root, size.clipTo, limits);
     const { renamed, drawingCost, overdraw } = settleSvgReferences(
       root,
       limits,
@@ -238,7 +262,9 @@ function sanitiseOnce(input: unknown, options: unknown, limits: SvgLogoLimits): 
     return {
       ok: true,
       svg: svg as SanitisedSvg,
-      ...size,
+      width: size.width,
+      height: size.height,
+      viewBox: size.viewBox,
       drawingCost,
       overdraw,
       removed: removals.list,

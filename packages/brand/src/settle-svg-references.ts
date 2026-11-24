@@ -169,7 +169,7 @@ const NOT_DRAWN_IN_PLACE: ReadonlySet<string> = new Set([
  * Drops every definition nothing drawn refers to, directly or through other definitions: such a
  * clip path, mask, gradient or `defs` child changes nothing drawn, so leaving it out is exact, and
  * whatever it held can cost no work or output later on. A definition is kept with everything that
- * holds what is drawn; `defs` elements themselves stay where they are.
+ * holds what is drawn; a `defs` element stays where it is unless nothing is left in it.
  */
 function pruneDefinitions(root: CleanElement, limits: SvgLogoLimits): void {
   const ids = collectIds(walk(root), limits);
@@ -196,9 +196,12 @@ function pruneDefinitions(root: CleanElement, limits: SvgLogoLimits): void {
     }
     for (const { element: target } of targetsOf(element, ids)) stack.push(target);
   }
-  for (const element of walk(root)) {
-    if (element.children.some((child) => !kept.has(child))) {
-      element.children = element.children.filter((child) => kept.has(child));
+  // From the leaves up, so a `defs` emptied by the pruning goes too.
+  for (const element of walk(root).reverse()) {
+    const drops = (child: CleanElement): boolean =>
+      !kept.has(child) || (child.name === "defs" && child.children.length === 0);
+    if (element.children.some(drops)) {
+      element.children = element.children.filter((child) => !drops(child));
     }
   }
 }
@@ -365,11 +368,25 @@ function checkExpansion(
 }
 
 /**
- * Settles every same-document reference: a reference to an id that does not exist, or to the
- * wrong kind of element, is dropped (a `use` with it); duplicate ids, cycles and expansions beyond
- * the limits refuse the document. Returns the drawing cost, and the new name of each id still
- * referenced, numbered in document order after `idPrefix`; every other id is dropped, so the output
- * names nothing a page could collide with by accident.
+ * Drops every reference to an id that does not exist or to the wrong kind of element (a `use` with
+ * it), reporting each; refuses duplicate ids and a `use` that refers back to itself. Run before the
+ * sanitiser adds anything with an id of its own, so nothing dangling can come to refer to it.
+ */
+export function dropDanglingReferences(
+  root: CleanElement,
+  limits: SvgLogoLimits,
+  removals: Removals,
+): void {
+  const all = walk(root);
+  dropDangling(all, collectIds(all, limits), removals);
+}
+
+/**
+ * Settles every same-document reference, once dangling ones are dropped: drops definitions nothing
+ * drawn refers to, writes clip paths that would make a renderer combine shapes as masks, and
+ * refuses cycles and expansions beyond the limits. Returns the drawing cost, and the new name of
+ * each id still referenced, numbered in document order after `idPrefix`; every other id is dropped,
+ * so the output names nothing a page could collide with by accident.
  */
 export function settleSvgReferences(
   root: CleanElement,
@@ -381,8 +398,6 @@ export function settleSvgReferences(
   readonly drawingCost: number;
   readonly overdraw: number;
 } {
-  const all = walk(root);
-  dropDangling(all, collectIds(all, limits), removals);
   pruneDefinitions(root, limits);
   rewriteClipPaths(root, collectIds(walk(root), limits), viewportOf(root), limits, removals);
   pruneDefinitions(root, limits);

@@ -260,10 +260,14 @@ function readLogo(value: unknown, path: string, errors: Errors): SanitisedSvg | 
       error?.line === undefined
         ? ""
         : ` at line ${String(error.line)}, column ${String(error.column)}`;
+    // What to change, for a form the sanitiser deliberately does not support; the message
+    // names the construct, never the logo's text.
+    const change =
+      error?.code === "unsupported-feature" ? `: ${error.message.replace(/^the SVG /, "it ")}` : "";
     errors.add(
       path,
       "invalid-logo",
-      `is not an SVG logo the sanitiser accepts (${error?.code ?? "malformed"}${where})`,
+      `is not an SVG logo the sanitiser accepts (${error?.code ?? "malformed"}${where})${change}`,
     );
     return undefined;
   }
