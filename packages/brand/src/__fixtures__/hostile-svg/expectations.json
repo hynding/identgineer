@@ -38,6 +38,16 @@
       }
     ]
   },
+  "allowlist-drop-root-transform-moving-a-shape.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "transform",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
   "anchor-element.svg": {
     "outcome": "accept",
     "removed": [

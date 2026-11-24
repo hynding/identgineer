@@ -901,9 +901,9 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. The geometry is kept to six
 decimals; colours set only by CSS are lost (see above).
 
-The tests hold it to that: a hostile corpus of 271 files (`src/__fixtures__/hostile-svg`, one
+The tests hold it to that: a hostile corpus of 272 files (`src/__fixtures__/hostile-svg`, one
 technique each, with the expected outcome in `expectations.json`: the error code for each of the 121
-refused, and every removal, by element, attribute and reason, for each of the 150 accepted, 40 of
+refused, and every removal, by element, attribute and reason, for each of the 151 accepted, 40 of
 them with a clip path written as a mask) and
 generated oversized inputs, each refused or accepted with an output an independent checker finds
 inert (its own tokeniser, its own copy of the allowlist, its own grammar for every value and its
