@@ -223,6 +223,14 @@ const ASPECTS: readonly (readonly [string, string, Outcome])[] = [
       '<rect width="100" height="50" fill="url(#h)" mask="url(#m)"/></svg>',
     "same",
   ],
+  [
+    // A slice that crops nothing is the default, so percentages of the view box stay as they were.
+    "a slice that crops nothing, with percentages of the view box",
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${String(SIZE)}" height="${String(SIZE)}" preserveAspectRatio="xMinYMin slice">` +
+      '<linearGradient id="h" gradientUnits="userSpaceOnUse" x2="100%"><stop offset="0" stop-color="#e11d48"/><stop offset="1" stop-color="#2563eb"/></linearGradient>' +
+      '<rect width="100%" height="100%" fill="url(#h)"/><circle cx="50%" cy="50%" r="25%" fill="#0f766e"/></svg>',
+    "same",
+  ],
 ];
 
 interface Comparison {
