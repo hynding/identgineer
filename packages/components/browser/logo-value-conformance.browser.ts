@@ -606,7 +606,8 @@ const SAME_DOCUMENT = 16;
 const SAME_IMAGE = 150;
 
 test.describe("a kept value, as Chromium reads it", () => {
-  test.describe.configure({ timeout: 600_000 });
+  // A larger run takes longer in proportion; the CI size finishes well inside ten minutes.
+  test.describe.configure({ timeout: Math.max(600_000, SPELLINGS_PER_VALUE * 15_000) });
   const groups = 6;
   for (let group = 0; group < groups; group += 1) {
     const places = PLACES.filter((_, index) => index % groups === group);
