@@ -602,13 +602,13 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
     [
       "a sliver 1000 wide and 1 tall",
       "0 0 1000 1",
-      ' width="1000" height="0.875"',
+      ' width="8000" height="7"',
       "0 0.0625 1000 0.875",
     ],
     [
       "a sliver 1 wide and 1000 tall",
       "0 0 1 1000",
-      ' width="0.875" height="1000"',
+      ' width="7" height="8000"',
       "0.0625 0 0.875 1000",
     ],
   ])(
@@ -637,6 +637,31 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
       expect(refused.ok || refused.errors[0]?.code).toBe("unsupported-feature");
     },
   );
+
+  it.each([
+    ["millimetres", 'width="0.003mm" height="0.001286mm"'],
+    ["pixels written to ten decimals", 'width="0.0113385827" height="0.0048605"'],
+    ["one side", 'width="0.5"'],
+  ])("refuses a logo whose width or height is under one pixel, in %s", (_, size) => {
+    const refused = sanitiseSvgLogo(
+      `<svg ${NS} viewBox="0 0 7 3" ${size} preserveAspectRatio="xMaxYMax slice"><rect width="7" height="3"/></svg>`,
+    );
+    expect(refused.ok || refused.errors[0]).toEqual(
+      expect.objectContaining({
+        code: "unsupported-feature",
+        message: expect.stringContaining("at least one pixel") as unknown,
+      }),
+    );
+  });
+
+  it("keeps a crop that shows what the original showed, even where its proportions are a share of a pixel off", () => {
+    // Off by less than half a device pixel in proportions, but aligned to one end, the view box kept
+    // whole would pass the far edge of what was shown; the crop to six decimals does not.
+    const result = accepted(
+      `<svg ${NS} viewBox="0 0 70.03 159.48" width="34.69" height="78.99" preserveAspectRatio="xMaxYMax slice"><rect width="70.03" height="159.48"/></svg>`,
+    );
+    expect(result.viewBox[3]).toBeLessThan(159.48);
+  });
 
   it("refuses a crop whose part written to six decimals would be letterboxed along its long side", () => {
     // The part shown is 1000 by 0.000285714…, written 0.000286: 0.1% taller, 4 device pixels at 4000.
