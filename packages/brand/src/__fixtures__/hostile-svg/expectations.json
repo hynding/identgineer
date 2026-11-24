@@ -1751,6 +1751,461 @@
     "outcome": "accept",
     "removed": []
   },
+  "review-redos-style-url-spaces.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      }
+    ]
+  },
   "root-not-svg.svg": {
     "outcome": "reject:not-svg"
   },

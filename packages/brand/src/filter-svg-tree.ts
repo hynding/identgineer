@@ -83,8 +83,12 @@ function invalidValueReason(name: string, value: string): SvgLogoRemovalReason {
   return "invalid-value";
 }
 
-// A `url(` to anything but a fragment of this document.
-const EXTERNAL_URL = new RegExp(`url\\(${XML_WHITESPACE}*['"]?${XML_WHITESPACE}*[^#'"\\s]`, "i");
+// A `url(` to anything but a fragment of this document. The white space after a quote is matched
+// only after one, so no two runs of it can split one run between them (which takes quadratic time).
+const EXTERNAL_URL = new RegExp(
+  `url\\(${XML_WHITESPACE}*(?:['"]${XML_WHITESPACE}*)?[^#'"\\s]`,
+  "i",
+);
 
 /** Why a whole style was dropped: what the worst of it was trying to do. */
 function droppedStyleReason(style: string): SvgLogoRemovalReason {
