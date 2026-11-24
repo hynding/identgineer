@@ -374,9 +374,7 @@ class ClipPathRewriter {
     }
     const clipMatrix =
       transform !== undefined && "text" in transform ? parseTransform(transform.text) : IDENTITY;
-    for (const { child } of shapes) {
-      if (child.name !== "use") this.keepIfReferenced(child, clip);
-    }
+    for (const { child } of shapes) this.keepIfReferenced(child, clip);
     const copies = shapes.map((shape) => this.drawn(shape, clip, clipMatrix));
     let content = copies.map(({ drawn }) => drawn);
     if (transform !== undefined) {
