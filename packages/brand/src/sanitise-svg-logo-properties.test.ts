@@ -637,55 +637,91 @@ describe("sanitiseSvgLogo, linear time", () => {
     drawingCost: Number.MAX_SAFE_INTEGER,
     maskApplications: Number.MAX_SAFE_INTEGER,
   };
-  const MEGABYTE = 1024 * 1024;
-  const fill = (unit: string): string => unit.repeat(Math.ceil(MEGABYTE / unit.length));
+  const FULL = 256 * 1024;
   const root = (body: string): string =>
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1">${body}</svg>`;
+  type Fill = (unit: string) => string;
 
-  it.each([
-    ["ampersands with no reference", root(`<title>${fill("&")}</title>`)],
-    ["unterminated references", root(`<title>${fill("&#x41")}</title>`)],
-    ["character references", root(`<title>${fill("&#x41;")}</title>`)],
-    ["an unclosed comment", root(`<!--${fill("- ")}`)],
-    ["comments", root(fill("<!-- x -->"))],
-    ["an unclosed CDATA section", root(`<title><![CDATA[${fill("]")}`)],
-    ["empty elements", root(fill('<path d="M0 0"/>'))],
-    [
-      "attributes",
-      root(
-        `<g ${Array.from({ length: MEGABYTE / 10 }, (_, index) => `a${String(index)}="1"`).join(" ")}/>`,
-      ),
-    ],
-    ["nesting at the depth limit, over and over", root(fill("<g>".repeat(30) + "</g>".repeat(30)))],
-    ["one long path", root(`<path d="M0 0${fill(" 1.5-2.5e1")}"/>`)],
-    ["one long path of bare signs", root(`<path d="M0 0${fill("-")}"/>`)],
-    ["one long attribute of digits", root(`<rect width="${fill("9")}"/>`)],
-    ["an unclosed attribute", root(`<g fill="${fill("a")}`)],
-    ["a long style attribute", root(`<g style="${fill("fill:red;")}"/>`)],
-    ["a long transform", root(`<g transform="${fill("scale(1)")}"/>`)],
-    ["a long point list", root(`<polygon points="${fill("1,2 ")}"/>`)],
-    ["many uses of one group", root(`<g id="g"/>${fill('<use href="#g"/>')}`)],
-    [
-      "many uses of one masked path",
-      root(
-        `<mask id="m"/><path id="p" d="M0 0 1 1" mask="url(#m)" stroke-dasharray="1"/>${fill('<use href="#p"/>')}`,
-      ),
-    ],
-    [
-      "one long path of arcs, dashed",
-      root(`<path d="M0 0${fill("A1 2 3 0 1 4 5")}" stroke-dasharray="0.1"/>`),
-    ],
-    ["unclosed tags", fill("<g>")],
-    ["a run of less-than signs", fill("<")],
-    ["a run of greater-than signs", root(fill(">"))],
-    ["one long name", `<${fill("a")}/>`],
-  ])("reads a megabyte of %s in linear time", (_label, input) => {
+  function timed(input: string): number {
     const started = performance.now();
     const result = sanitiseSvgLogoWithLimits(input, undefined, limits);
     const elapsed = performance.now() - started;
     expect(result.ok || result.errors[0]?.code).not.toBe("internal-error");
-    // About a second at most on a laptop, the output sanitised a second time to check it included;
-    // anything quadratic would take minutes.
-    expect(elapsed).toBeLessThan(6_000);
-  });
+    return elapsed;
+  }
+
+  /**
+   * The fastest of five runs of each, taken in turn, so a pause for garbage collection or another
+   * process counts less, and a busy spell slows both sizes alike.
+   */
+  function fastestOfEach(small: string, large: string): { small: number; large: number } {
+    let [fastestSmall, fastestLarge] = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
+    for (let run = 0; run < 5; run += 1) {
+      fastestSmall = Math.min(fastestSmall, timed(small));
+      fastestLarge = Math.min(fastestLarge, timed(large));
+    }
+    return { small: fastestSmall, large: fastestLarge };
+  }
+
+  it.each<readonly [string, (fill: Fill, bytes: number) => string]>([
+    ["ampersands with no reference", (fill) => root(`<title>${fill("&")}</title>`)],
+    ["unterminated references", (fill) => root(`<title>${fill("&#x41")}</title>`)],
+    ["character references", (fill) => root(`<title>${fill("&#x41;")}</title>`)],
+    ["an unclosed comment", (fill) => root(`<!--${fill("- ")}`)],
+    ["comments", (fill) => root(fill("<!-- x -->"))],
+    ["an unclosed CDATA section", (fill) => root(`<title><![CDATA[${fill("]")}`)],
+    ["empty elements", (fill) => root(fill('<path d="M0 0"/>'))],
+    [
+      "attributes",
+      (_, bytes) =>
+        root(
+          `<g ${Array.from({ length: bytes / 10 }, (_unused, index) => `a${String(index)}="1"`).join(" ")}/>`,
+        ),
+    ],
+    [
+      "nesting at the depth limit, over and over",
+      (fill) => root(fill("<g>".repeat(30) + "</g>".repeat(30))),
+    ],
+    ["one long path", (fill) => root(`<path d="M0 0${fill(" 1.5-2.5e1")}"/>`)],
+    ["one long path of bare signs", (fill) => root(`<path d="M0 0${fill("-")}"/>`)],
+    ["one long attribute of digits", (fill) => root(`<rect width="${fill("9")}"/>`)],
+    ["an unclosed attribute", (fill) => root(`<g fill="${fill("a")}`)],
+    ["a long style attribute", (fill) => root(`<g style="${fill("fill:red;")}"/>`)],
+    ["a long transform", (fill) => root(`<g transform="${fill("scale(1)")}"/>`)],
+    ["a long point list", (fill) => root(`<polygon points="${fill("1,2 ")}"/>`)],
+    ["many uses of one group", (fill) => root(`<g id="g"/>${fill('<use href="#g"/>')}`)],
+    [
+      "many uses of one masked path",
+      (fill) =>
+        root(
+          `<mask id="m"/><path id="p" d="M0 0 1 1" mask="url(#m)" stroke-dasharray="1"/>${fill('<use href="#p"/>')}`,
+        ),
+    ],
+    [
+      "one long path of arcs, dashed",
+      (fill) => root(`<path d="M0 0${fill("A1 2 3 0 1 4 5")}" stroke-dasharray="0.1"/>`),
+    ],
+    ["unclosed tags", (fill) => fill("<g>")],
+    ["a run of less-than signs", (fill) => fill("<")],
+    ["a run of greater-than signs", (fill) => root(fill(">"))],
+    ["one long name", (fill) => `<${fill("a")}/>`],
+  ])(
+    "reads %s in linear time: four times the input takes far less than sixteen times as long",
+    (_label, build) => {
+      const at = (bytes: number): string =>
+        build((unit) => unit.repeat(Math.ceil(bytes / unit.length)), bytes);
+      const [small, large] = [at(FULL / 4), at(FULL)];
+      // A ratio, not a time, so a slow machine cannot fail it: linear is about 4, quadratic 16. A
+      // floor of 5 ms keeps a run too short to time from making the ratio noise. Measured again up
+      // to twice, since a busy spell during one measurement can push a linear ratio past the bound
+      // where a quadratic one is past it every time.
+      let ratio = Number.POSITIVE_INFINITY;
+      for (let attempt = 0; attempt < 3 && !(ratio < 8); attempt += 1) {
+        const fastest = fastestOfEach(small, large);
+        ratio = fastest.large / Math.max(fastest.small, 5);
+      }
+      expect(ratio).toBeLessThan(8);
+    },
+    60_000,
+  );
 });
