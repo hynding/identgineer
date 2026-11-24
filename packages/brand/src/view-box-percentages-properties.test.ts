@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 import { sanitiseSvgLogo } from "./sanitise-svg-logo.ts";
 import { seeded } from "./seeded-random.ts";
 
-// An independent model of when a slice crops and which lengths a crop would change. A slice crops
-// when its frame's proportions differ from the view box's by more than half a device pixel at 4000;
-// the crop is the part of the view box the frame shows, written to six decimals, and refused where
-// that part, fitted into the frame and centred, would put any edge of what is shown more than half
-// a pixel from where the crop put it. Each gradient's attributes are resolved through the chain of gradients it takes them
-// from, then the specification's defaults, and a mask's region by its defaults. It shares no code
-// with the sanitiser.
+// An independent model of when a slice crops and which lengths a crop would change. A frame under
+// a pixel on either side is refused. A slice crops when the view box kept whole, fitted into the
+// frame and centred, would put any edge of what is shown more than half a device pixel at 4000 from
+// where the slice put it; the crop is the part of the view box the frame shows, written to six
+// decimals, and refused where that part, fitted and centred in the same way, would do the same.
+// Each gradient's attributes are resolved through the chain of gradients it takes them from, then
+// the specification's defaults, and a mask's region by its defaults. It shares no code with the
+// sanitiser.
 
 type Kind = "linearGradient" | "radialGradient";
 
@@ -43,16 +44,12 @@ function sixDecimals(value: number): number {
   return Number(value.toFixed(6));
 }
 
-/** How far apart two proportions are, in device pixels across the larger side at 4000. */
-function letterbox(width: number, height: number, frameWidth: number, frameHeight: number): number {
-  const across = frameWidth / width;
-  const down = frameHeight / height;
-  return (Math.abs(across - down) / Math.max(across, down)) * DEVICE_PIXELS;
+function underAPixel(document: Document): boolean {
+  return Math.min(document.frame.width, document.frame.height) < 1;
 }
 
 function crops(document: Document): boolean {
-  const [, , width, height] = document.box;
-  return letterbox(width, height, document.frame.width, document.frame.height) > 0.5;
+  return movesAnEdge(document, document.box);
 }
 
 /** The part of the view box the frame shows, exactly. */
@@ -69,10 +66,12 @@ function shownPart(document: Document): Box {
   ];
 }
 
-function cannotBeWritten(document: Document): boolean {
+/** Whether a view box, fitted into the frame and centred, moves an edge of what the slice showed. */
+function movesAnEdge(
+  document: Document,
+  [writtenX, writtenY, writtenWidth, writtenHeight]: Box,
+): boolean {
   const [x, y, width, height] = shownPart(document);
-  const [writtenX = 0, writtenY = 0, writtenWidth = 1, writtenHeight = 1] =
-    shownPart(document).map(sixDecimals);
   const fit = Math.min(document.frame.width / writtenWidth, document.frame.height / writtenHeight);
   const [fittedWidth, fittedHeight] = [document.frame.width / fit, document.frame.height / fit];
   const left = writtenX - (fittedWidth - writtenWidth) / 2;
@@ -84,6 +83,11 @@ function cannotBeWritten(document: Document): boolean {
     Math.abs(top + fittedHeight - (y + height)),
   );
   return (apart * DEVICE_PIXELS) / Math.max(width, height) > 0.5;
+}
+
+function cannotBeWritten(document: Document): boolean {
+  const [x = 0, y = 0, width = 1, height = 1] = shownPart(document).map(sixDecimals);
+  return movesAnEdge(document, [x, y, width, height]);
 }
 
 const COORDINATES: Readonly<Record<Kind, readonly string[]>> = {
@@ -226,7 +230,9 @@ describe("a slice, against an independent model", () => {
       const input = svgOf(document);
       const result = sanitiseSvgLogo(input);
       const where = `seed ${String(seed)}, run ${String(run)}: ${input}`;
-      if (!crops(document)) {
+      if (underAPixel(document)) {
+        expect(result.ok || result.errors[0]?.code, where).toBe("unsupported-feature");
+      } else if (!crops(document)) {
         expect(result.ok ? result.viewBox : result.errors, where).toEqual(document.box);
       } else if (cannotBeWritten(document) || takesTheViewBox(document)) {
         expect(result.ok || result.errors[0]?.code, where).toBe("unsupported-feature");

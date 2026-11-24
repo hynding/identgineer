@@ -231,6 +231,8 @@ function couldBeWritten(original: Case): boolean {
     width: six(original.given.width ?? ((original.given.height ?? height) * width) / height),
     height: six(original.given.height ?? ((original.given.width ?? width) * height) / width),
   };
+  // A frame under a pixel is out of scope, whatever six decimals could do.
+  if (Math.min(frame.width, frame.height) < 1) return false;
   const exact = shownByOriginal(original);
   const crop: Rectangle = [
     six(exact[0]),
