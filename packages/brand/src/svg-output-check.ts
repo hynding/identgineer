@@ -156,9 +156,6 @@ const REFERENCE_URL = new RegExp(`^url\\(#(${ID})\\)$`);
 const FRAGMENT = new RegExp(`^#(${ID})$`);
 const ID_ONLY = new RegExp(`^${ID}$`);
 const ENTITY = /^&(?:amp|lt|gt|quot|apos|#[0-9]{1,7}|#x[0-9A-Fa-f]{1,6});/;
-const START_TAG = /^<([A-Za-z]+)((?: [A-Za-z][A-Za-z0-9-]*="[^"<>&]*")*)(\/?)>/;
-const ATTRIBUTE = / ([A-Za-z][A-Za-z0-9-]*)="([^"]*)"/g;
-const END_TAG = /^<\/([A-Za-z]+)>/;
 const PATH_ARITY: Readonly<Record<string, number>> = {
   m: 2,
   l: 2,
@@ -356,6 +353,79 @@ function checkValue(
   if (id !== undefined) references.push({ id, where });
 }
 
+interface StartTag {
+  readonly name: string;
+  readonly attributes: readonly (readonly [string, string])[];
+  readonly selfClosing: boolean;
+  readonly length: number;
+}
+
+function isLetter(character: string | undefined): boolean {
+  return character !== undefined && /^[A-Za-z]$/.test(character);
+}
+
+function isNameCharacter(character: string | undefined): boolean {
+  return character !== undefined && /^[A-Za-z0-9-]$/.test(character);
+}
+
+/** The end of the run of characters from `at` that each pass `test`. */
+function runEnd(
+  text: string,
+  at: number,
+  test: (character: string | undefined) => boolean,
+): number {
+  let end = at;
+  while (test(text[end])) end += 1;
+  return end;
+}
+
+/**
+ * A start tag exactly as the sanitiser writes one, read character by character: `<`, a name of
+ * letters, then any number of one space, a name (a letter, then letters, digits and hyphens), `="`,
+ * a value with no `"`, `<`, `>` or `&`, and `"`; then an optional `/` and `>`. Anything else, white
+ * space of another kind or amount included, is no tag.
+ */
+function readStartTag(text: string, at: number): StartTag | undefined {
+  if (text[at] !== "<") return undefined;
+  const nameEnd = runEnd(text, at + 1, isLetter);
+  if (nameEnd === at + 1) return undefined;
+  const attributes: [string, string][] = [];
+  let position = nameEnd;
+  while (text[position] === " ") {
+    if (!isLetter(text[position + 1])) return undefined;
+    const attributeEnd = runEnd(text, position + 2, isNameCharacter);
+    if (text[attributeEnd] !== "=" || text[attributeEnd + 1] !== '"') return undefined;
+    const valueEnd = runEnd(
+      text,
+      attributeEnd + 2,
+      (character) => character !== undefined && !'"<>&'.includes(character),
+    );
+    if (text[valueEnd] !== '"') return undefined;
+    attributes.push([
+      text.slice(position + 1, attributeEnd),
+      text.slice(attributeEnd + 2, valueEnd),
+    ]);
+    position = valueEnd + 1;
+  }
+  const selfClosing = text[position] === "/";
+  if (selfClosing) position += 1;
+  if (text[position] !== ">") return undefined;
+  return {
+    name: text.slice(at + 1, nameEnd),
+    attributes,
+    selfClosing,
+    length: position + 1 - at,
+  };
+}
+
+/** An end tag exactly as the sanitiser writes one: `</`, a name of letters, `>`. */
+function readEndTag(text: string, at: number): { name: string; length: number } | undefined {
+  if (text[at] !== "<" || text[at + 1] !== "/") return undefined;
+  const nameEnd = runEnd(text, at + 2, isLetter);
+  if (nameEnd === at + 2 || text[nameEnd] !== ">") return undefined;
+  return { name: text.slice(at + 2, nameEnd), length: nameEnd + 1 - at };
+}
+
 /** Every way the text breaks the rules for sanitised output; empty when it keeps them all. */
 export function findSanitisedSvgProblems(svg: string): string[] {
   const problems: string[] = [];
@@ -371,23 +441,22 @@ export function findSanitisedSvgProblems(svg: string): string[] {
   const clips: ClipContent[] = [];
   const identified = new Map<string, Identified>();
   while (position < svg.length) {
-    const rest = svg.slice(position);
-    if (rest.startsWith("</")) {
-      const end = END_TAG.exec(rest);
-      if (!end?.[1] || open.pop() !== end[1]) {
+    if (svg.startsWith("</", position)) {
+      const end = readEndTag(svg, position);
+      if (end === undefined || open.pop() !== end.name) {
         problems.push(`a stray or mismatched end tag at ${String(position)}`);
         break;
       }
-      position += end[0].length;
+      position += end.length;
       continue;
     }
-    if (rest.startsWith("<")) {
-      const start = START_TAG.exec(rest);
-      const name = start?.[1];
-      if (!start || name === undefined) {
+    if (svg.startsWith("<", position)) {
+      const start = readStartTag(svg, position);
+      if (start === undefined) {
         problems.push(`a malformed tag at ${String(position)}`);
         break;
       }
+      const name = start.name;
       if (open.length === 0) roots += 1;
       const parent = open.at(-1);
       if (parent === undefined && name !== "svg") problems.push(`a ${name} root`);
@@ -398,7 +467,7 @@ export function findSanitisedSvgProblems(svg: string): string[] {
       const allowed = Object.hasOwn(ALLOWED, name) ? ALLOWED[name] : undefined;
       if (allowed === undefined) problems.push(`the element ${name}`);
       const seen = new Set<string>();
-      for (const [, attribute = "", value = ""] of (start[2] ?? "").matchAll(ATTRIBUTE)) {
+      for (const [attribute, value] of start.attributes) {
         if (seen.has(attribute)) problems.push(`${name}: ${attribute} twice`);
         seen.add(attribute);
         if (!allowed?.includes(attribute)) problems.push(`${name}: the attribute ${attribute}`);
@@ -413,9 +482,7 @@ export function findSanitisedSvgProblems(svg: string): string[] {
           ids.add(value);
         }
       }
-      const attributes = new Map(
-        [...(start[2] ?? "").matchAll(ATTRIBUTE)].map(([, key = "", value = ""]) => [key, value]),
-      );
+      const attributes = new Map(start.attributes);
       if (name === "use" && !attributes.has("href")) problems.push("a use with no reference");
       const id = attributes.get("id");
       if (id !== undefined) identified.set(id, { name, clipped: attributes.has("clip-path") });
@@ -428,8 +495,8 @@ export function findSanitisedSvgProblems(svg: string): string[] {
       }
       if (name === "svg" && open.length === 0 && !seen.has("viewBox"))
         problems.push("a root without viewBox");
-      if (start[3] !== "/") open.push(name);
-      position += start[0].length;
+      if (!start.selfClosing) open.push(name);
+      position += start.length;
       continue;
     }
     const next = svg.indexOf("<", position);
