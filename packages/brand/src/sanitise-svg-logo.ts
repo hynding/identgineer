@@ -1,7 +1,8 @@
 import { decodeSvgInput } from "./decode-svg-input.ts";
 import { filterSvgTree, type CleanElement } from "./filter-svg-tree.ts";
 import { freshIds } from "./fresh-ids.ts";
-import { movesMoreThanHalfAPixel } from "./half-pixel.ts";
+import { movesMoreThanHalfAPixel, stretchesByMoreThanHalfAPixel } from "./half-pixel.ts";
+import { findViewBoxPercentage } from "./view-box-percentages.ts";
 import { isLocalPathValue, parseSvgXml } from "./parse-svg-xml.ts";
 import { resolveSvgNamespaces } from "./resolve-svg-namespaces.ts";
 import type { SanitisedSvg } from "./sanitised-svg.ts";
@@ -50,6 +51,8 @@ interface Size {
   readonly viewBox: readonly [number, number, number, number];
   /** A stretched view box, which the content must be clipped to once references are settled. */
   readonly clipTo: ViewBox | undefined;
+  /** Whether the view box became the part a crop showed, which percentages of it must not see. */
+  readonly cropped: boolean;
 }
 
 function textOf(root: CleanElement, name: string): string | undefined {
@@ -95,13 +98,15 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
   const size = { width: Number(width), height: Number(height) };
   const box = [minX, minY, boxWidth, boxHeight] as const;
   const aspect = aspectRatio(root.droppedAspect ?? "");
-  const stretched = aspect?.align === "none" && boxWidth * size.height !== boxHeight * size.width;
+  const stretched =
+    aspect?.align === "none" &&
+    stretchesByMoreThanHalfAPixel({ width: boxWidth, height: boxHeight }, size);
   const shown =
     aspect === undefined || aspect.align === "none"
       ? box
       : cropped(size, box, aspect.align, limits);
   root.attributes.set("viewBox", canonical("viewBox", shown.join(" "), limits));
-  return { ...size, viewBox: shown, clipTo: stretched ? box : undefined };
+  return { ...size, viewBox: shown, clipTo: stretched ? box : undefined, cropped: shown !== box };
 }
 
 function canonical(name: string, text: string, limits: SvgLogoLimits): SvgValue {
@@ -147,6 +152,21 @@ function cropped(
   }
   const [x = 0, y = 0, w = 1, h = 1] = written;
   return [x, y, w, h];
+}
+
+/**
+ * Refuses a crop beside a length given as a percentage of the view box: the crop makes the part it
+ * showed the view box, which every such percentage would then be taken of.
+ */
+function refuseViewBoxPercentages(root: CleanElement): void {
+  const found = findViewBoxPercentage(root);
+  if (found !== undefined) {
+    throw new SvgLogoRejection(
+      "unsupported-feature",
+      "has a preserveAspectRatio slice beside a length given as a percentage of the view box, which cropping would change; give the length in user units, or crop the view box itself",
+      found.offset,
+    );
+  }
 }
 
 /**
@@ -286,6 +306,7 @@ function sanitiseOnce(input: unknown, options: unknown, limits: SvgLogoLimits): 
     const size = settleSize(root, limits);
     dropDanglingReferences(root, limits, removals);
     if (size.clipTo !== undefined) clipToViewBox(root, size.clipTo, limits);
+    if (size.cropped) refuseViewBoxPercentages(root);
     const { renamed, drawingCost, overdraw } = settleSvgReferences(
       root,
       limits,
