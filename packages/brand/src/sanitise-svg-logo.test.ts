@@ -237,6 +237,17 @@ describe("sanitiseSvgLogo, output", () => {
     );
   });
 
+  it.each([
+    ["the root", svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="opacity:0/**/"')],
+    [
+      "a clip path",
+      svg('<clipPath id="c" style="clip-rule:evenodd/**/"><rect width="9" height="9"/></clipPath>'),
+    ],
+    ["a mask", svg('<mask id="m" style="mask-type:alpha/**/"><rect width="9" height="9"/></mask>')],
+  ])("refuses such a style on %s, which is drawn whatever its display", (_, input) => {
+    expect(refused(input).code).toBe("unsupported-feature");
+  });
+
   it("keeps a style declaration marked important, which no other rule can outweigh here", () => {
     expect(output('<rect width="9" height="9" style="fill:red !important"/>')).toBe(
       `${ROOT}<rect width="9" height="9" fill="red"/></svg>`,
