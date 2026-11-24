@@ -950,6 +950,56 @@ describe("sanitiseSvgLogo, refusals", () => {
     expect(refused(new Uint8Array(SVG_LOGO_LIMITS.inputBytes + 1)).code).toBe("too-large");
   });
 
+  it("measures bytes by their own length, not by a length a subclass reports", () => {
+    class ShortLength extends Uint8Array {
+      override get length(): number {
+        return 10;
+      }
+    }
+    const bytes = new TextEncoder().encode(svg(`<!--${"x".repeat(SVG_LOGO_LIMITS.inputBytes)}-->`));
+    const lying = new ShortLength(bytes.length);
+    lying.set(bytes);
+    expect(refused(lying).code).toBe("too-large");
+  });
+
+  it("reads bytes without calling anything a subclass overrides", () => {
+    class ThrowingLength extends Uint8Array {
+      override get length(): number {
+        throw new Error("length");
+      }
+    }
+    const bytes = new TextEncoder().encode(svg('<rect width="1" height="1"/>'));
+    const throwing = new ThrowingLength(bytes.length);
+    throwing.set(bytes);
+    expect(sanitiseSvgLogo(throwing).ok).toBe(true);
+  });
+
+  it("refuses a revoked proxy as the wrong type, and as options as an invalid option", () => {
+    const { proxy, revoke } = Proxy.revocable({}, {});
+    revoke();
+    expect(refused(proxy).code).toBe("wrong-type");
+    const withOptions = sanitiseSvgLogo(svg(""), proxy);
+    expect(withOptions.ok || withOptions.errors[0]?.code).toBe("invalid-option");
+  });
+
+  it("refuses options whose idPrefix throws as an invalid option, and reads it once", () => {
+    const throwing = sanitiseSvgLogo(svg(""), {
+      get idPrefix(): string {
+        throw new Error("idPrefix");
+      },
+    });
+    expect(throwing.ok || throwing.errors[0]?.code).toBe("invalid-option");
+    let reads = 0;
+    const counted = sanitiseSvgLogo(svg('<rect id="a" width="1" height="1"/><use href="#a"/>'), {
+      get idPrefix(): string {
+        reads += 1;
+        return reads === 1 ? "brand-" : "<x>-";
+      },
+    });
+    expect(counted.ok && counted.svg).toContain('id="brand-0"');
+    expect(reads).toBe(1);
+  });
+
   it("counts the limit in UTF-8 bytes, not UTF-16 units", () => {
     const filler = "é".repeat(Math.ceil(SVG_LOGO_LIMITS.inputBytes / 2));
     expect(refused(svg(`<title>${filler}</title>`)).code).toBe("too-large");
