@@ -623,31 +623,32 @@ describe("sanitiseSvgLogo, values from outside each grammar", () => {
 });
 
 describe("sanitiseSvgLogo, linear time", () => {
-  // The public limit refuses these sizes outright; raising it shows the reader itself stays linear.
+  // The public limits refuse these sizes outright; raising them shows each stage stays linear on
+  // the whole input, not only up to the first limit.
   const limits = {
     ...SVG_LOGO_LIMITS,
-    inputBytes: 4 * 1024 * 1024,
+    inputBytes: 16 * 1024 * 1024,
     elements: 1_000_000,
+    depth: 1_000_000,
     attributesPerElement: 1_000_000,
-    attributeValueLength: 2 * 1024 * 1024,
-    pathDataLength: 2 * 1024 * 1024,
-    textLength: 2 * 1024 * 1024,
+    attributeValueLength: 16 * 1024 * 1024,
+    pathDataLength: 16 * 1024 * 1024,
+    textLength: 16 * 1024 * 1024,
+    nameLength: 16 * 1024 * 1024,
     ids: 1_000_000,
     renderedElements: 10_000_000,
     drawingCost: Number.MAX_SAFE_INTEGER,
     maskApplications: Number.MAX_SAFE_INTEGER,
   };
-  const FULL = 256 * 1024;
+  const QUARTER_MEGABYTE = 256 * 1024;
   const root = (body: string): string =>
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1">${body}</svg>`;
   type Fill = (unit: string) => string;
 
   function timed(input: string): number {
     const started = performance.now();
-    const result = sanitiseSvgLogoWithLimits(input, undefined, limits);
-    const elapsed = performance.now() - started;
-    expect(result.ok || result.errors[0]?.code).not.toBe("internal-error");
-    return elapsed;
+    sanitiseSvgLogoWithLimits(input, undefined, limits);
+    return performance.now() - started;
   }
 
   /**
@@ -663,54 +664,93 @@ describe("sanitiseSvgLogo, linear time", () => {
     return { small: fastestSmall, large: fastestLarge };
   }
 
-  it.each<readonly [string, (fill: Fill, bytes: number) => string]>([
-    ["ampersands with no reference", (fill) => root(`<title>${fill("&")}</title>`)],
-    ["unterminated references", (fill) => root(`<title>${fill("&#x41")}</title>`)],
-    ["character references", (fill) => root(`<title>${fill("&#x41;")}</title>`)],
-    ["an unclosed comment", (fill) => root(`<!--${fill("- ")}`)],
-    ["comments", (fill) => root(fill("<!-- x -->"))],
-    ["an unclosed CDATA section", (fill) => root(`<title><![CDATA[${fill("]")}`)],
-    ["empty elements", (fill) => root(fill('<path d="M0 0"/>'))],
+  // Each shape is read to its end, accepted or refused only there, and is as large as it takes for
+  // the smaller of its two sizes to run for about 10 ms or more on a laptop: a shape the reader
+  // gets through in a fraction of that is made larger rather than timed in the noise.
+  it.each<readonly [string, (fill: Fill, bytes: number) => string, number, string]>([
+    ["ampersands in a comment", (fill) => root(`<!--${fill("&")}-->`), 32, "accepted"],
+    [
+      "character references in an attribute",
+      (fill) => root(`<g fill="${fill("&#x41;")}"/>`),
+      8,
+      "accepted",
+    ],
+    ["character references", (fill) => root(`<title>${fill("&#x41;")}</title>`), 8, "accepted"],
+    ["an unclosed comment", (fill) => root(`<!--${fill("- ")}`), 16, "invalid-comment"],
+    ["comments", (fill) => root(fill("<!-- x -->")), 32, "accepted"],
+    [
+      "a title split by comments",
+      (fill) => root(`<title>${fill("a<!---->")}</title>`),
+      1,
+      "accepted",
+    ],
+    ["an unclosed CDATA section", (fill) => root(`<title><![CDATA[${fill("]")}`), 16, "malformed"],
+    [
+      "less-than signs in a CDATA section",
+      (fill) => root(`<title><![CDATA[${fill("<")}]]></title>`),
+      1,
+      "accepted",
+    ],
+    ["empty elements", (fill) => root(fill('<path d="M0 0"/>')), 1, "accepted"],
     [
       "attributes",
       (_, bytes) =>
         root(
           `<g ${Array.from({ length: bytes / 10 }, (_unused, index) => `a${String(index)}="1"`).join(" ")}/>`,
         ),
+      4,
+      "accepted",
     ],
     [
       "nesting at the depth limit, over and over",
       (fill) => root(fill("<g>".repeat(30) + "</g>".repeat(30))),
+      1,
+      "accepted",
     ],
-    ["one long path", (fill) => root(`<path d="M0 0${fill(" 1.5-2.5e1")}"/>`)],
-    ["one long path of bare signs", (fill) => root(`<path d="M0 0${fill("-")}"/>`)],
-    ["one long attribute of digits", (fill) => root(`<rect width="${fill("9")}"/>`)],
-    ["an unclosed attribute", (fill) => root(`<g fill="${fill("a")}`)],
-    ["a long style attribute", (fill) => root(`<g style="${fill("fill:red;")}"/>`)],
-    ["a long transform", (fill) => root(`<g transform="${fill("scale(1)")}"/>`)],
-    ["a long point list", (fill) => root(`<polygon points="${fill("1,2 ")}"/>`)],
-    ["many uses of one group", (fill) => root(`<g id="g"/>${fill('<use href="#g"/>')}`)],
+    ["unclosed tags", (fill) => root(fill("<g>")), 1, "mismatched-tag"],
+    ["one long path", (fill) => root(`<path d="M0 0${fill(" 1.5-2.5e1")}"/>`), 1, "accepted"],
+    ["one long path of bare signs", (fill) => root(`<path d="M0 0${fill("-")}"/>`), 8, "accepted"],
+    [
+      "one long attribute of digits",
+      (fill) => root(`<rect width="${fill("9")}"/>`),
+      8,
+      "number-out-of-range",
+    ],
+    ["an unclosed attribute", (fill) => root(`<g fill="${fill("a")}`), 32, "malformed"],
+    ["a long style attribute", (fill) => root(`<g style="${fill("fill:red;")}"/>`), 4, "accepted"],
+    ["a long transform", (fill) => root(`<g transform="${fill("scale(1)")}"/>`), 8, "accepted"],
+    ["a long point list", (fill) => root(`<polygon points="${fill("1,2 ")}"/>`), 1, "accepted"],
+    [
+      "many uses of one group",
+      (fill) => root(`<g id="g"/>${fill('<use href="#g"/>')}`),
+      1,
+      "accepted",
+    ],
     [
       "many uses of one masked path",
       (fill) =>
         root(
           `<mask id="m"/><path id="p" d="M0 0 1 1" mask="url(#m)" stroke-dasharray="1"/>${fill('<use href="#p"/>')}`,
         ),
+      1,
+      "overdraw-too-large",
     ],
     [
       "one long path of arcs, dashed",
       (fill) => root(`<path d="M0 0${fill("A1 2 3 0 1 4 5")}" stroke-dasharray="0.1"/>`),
+      1,
+      "overdraw-too-large",
     ],
-    ["unclosed tags", (fill) => fill("<g>")],
-    ["a run of less-than signs", (fill) => fill("<")],
-    ["a run of greater-than signs", (fill) => root(fill(">"))],
-    ["one long name", (fill) => `<${fill("a")}/>`],
+    ["greater-than signs in text", (fill) => root(fill(">")), 8, "accepted"],
+    ["one long element name", (fill) => root(`<${fill("a")}/>`), 16, "accepted"],
   ])(
     "reads %s in linear time: four times the input takes far less than sixteen times as long",
-    (_label, build) => {
+    (_label, build, scale, outcome) => {
       const at = (bytes: number): string =>
         build((unit) => unit.repeat(Math.ceil(bytes / unit.length)), bytes);
-      const [small, large] = [at(FULL / 4), at(FULL)];
+      const [small, large] = [at((QUARTER_MEGABYTE * scale) / 4), at(QUARTER_MEGABYTE * scale)];
+      const result = sanitiseSvgLogoWithLimits(large, undefined, limits);
+      expect(result.ok ? "accepted" : result.errors[0]?.code).toBe(outcome);
       // A ratio, not a time, so a slow machine cannot fail it: linear is about 4, quadratic 16. A
       // floor of 5 ms keeps a run too short to time from making the ratio noise. Measured again up
       // to twice, since a busy spell during one measurement can push a linear ratio past the bound
@@ -722,6 +762,6 @@ describe("sanitiseSvgLogo, linear time", () => {
       }
       expect(ratio).toBeLessThan(8);
     },
-    60_000,
+    120_000,
   );
 });
