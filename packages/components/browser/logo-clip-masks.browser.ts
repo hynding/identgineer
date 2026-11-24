@@ -379,3 +379,15 @@ test.describe("a clip path written as a mask", () => {
     expect(differing).toBeLessThanOrEqual(DIFFERING_PIXELS);
   });
 });
+
+test.describe("paint order", () => {
+  test("draws a stroke painted under its fill as it was", async ({ page }) => {
+    await check(
+      page,
+      logo(
+        '<circle cx="50" cy="50" r="30" fill="url(#g)" stroke="#e11d48" stroke-width="20" paint-order="stroke"/>',
+      ),
+      "same",
+    );
+  });
+});
