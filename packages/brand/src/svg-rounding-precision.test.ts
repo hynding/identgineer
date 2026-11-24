@@ -405,3 +405,47 @@ describe("an arc's rounding, at random", () => {
     expect(kept).toBeGreaterThan(300);
   });
 });
+
+describe("a dash array rounding changes", () => {
+  it.each([
+    [
+      "every length rounded to zero, which draws the stroke solid",
+      '<path d="M0 50h100" stroke="red" stroke-width="20" stroke-dasharray="0.0000004"/>',
+    ],
+    [
+      "every length rounded to zero, magnified",
+      '<path d="M0 0.05h0.1" stroke="red" stroke-width="0.02" stroke-dasharray="0.0000004" transform="scale(1000)"/>',
+    ],
+    [
+      "every length of a group's rounded to zero",
+      '<g stroke-dasharray="0.0000003 0.0000004"><path d="M0 50h100" stroke="red" stroke-width="20"/></g>',
+    ],
+  ])("refuses %s", (_, body) => {
+    expect(outcome(sanitiseSvgLogo(svg(body)))).toBe("unsupported-feature");
+  });
+
+  it.each([
+    [
+      "some lengths rounded to zero, the rest as long",
+      '<path d="M0 50h100" stroke="red" stroke-width="20" stroke-dasharray="0.0000004 0.0000004 10 0"/>',
+    ],
+    [
+      "an even list rounded, repeated along the stroke once a repeat",
+      '<path d="M0 50H100" stroke="#f00" stroke-width="0.001" stroke-dasharray="0.0040004 0.0040004"/>',
+    ],
+  ])("keeps %s", (_, body) => {
+    expect(outcome(sanitiseSvgLogo(svg(body)))).toBe("accept");
+  });
+
+  // Chromium takes a negative length as an error and ignores the declaration, as for any other.
+  it.each([
+    ["a dash length", 'stroke-dasharray="-0.0000004 5"', "stroke-dasharray"],
+    ["a stroke width", 'stroke-width="-0.0000004"', "stroke-width"],
+    ["a width", 'width="-0.0000004"', "width"],
+  ])("drops %s just below zero, which rounding alone would write as zero", (_, attribute, name) => {
+    const result = sanitiseSvgLogo(svg(`<rect height="10" ${attribute} stroke="red"/>`));
+    expect(result.ok && result.removed).toContainEqual(
+      expect.objectContaining({ attribute: name, reason: "invalid-value" }),
+    );
+  });
+});
