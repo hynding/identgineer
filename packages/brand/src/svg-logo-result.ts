@@ -67,13 +67,15 @@ export type SvgLogoRemovalReason =
   /** A document type declaration with no internal subset: read, never honoured, not written. */
   | "document-type"
   /**
-   * Valid, but able to make the logo far costlier to draw than its budgets can see; dropped where
-   * the picture stays the same or close to it (see the README).
+   * Valid, but able to make the logo far costlier to draw than its budgets can see, or ignored by
+   * browsers; dropped only where the picture stays the same or shows less, never more (see the
+   * README).
    */
   | "render-cost"
   /**
-   * A clip path of more than one shape, or of one clipped in turn, written as an alpha mask of the
-   * same shapes: the picture is the same, and no renderer has to combine the shapes (see the README).
+   * A clip path of more than one shape, or clipped in turn or itself, written as an alpha mask of
+   * the same shapes: the picture is the same, and no renderer has to combine the shapes (see the
+   * README).
    */
   | "rewritten";
 
