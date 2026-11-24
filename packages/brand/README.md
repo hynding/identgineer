@@ -674,8 +674,11 @@ however many uses of however large a path it holds; a `defs` left empty goes too
 references are dropped and reported before the sanitiser adds anything with an id, and nothing it
 adds takes a name the input defines or refers to, so no reference can come to name what it adds.
 The output is never larger than an input may
-be (`inputBytes`): one that would be is refused (`too-large`) rather than returned, so every output
-can be sanitised again and gives itself back.
+be (`inputBytes`): one that would be is refused (`too-large`) rather than returned. Nor may it have
+more elements, deeper nesting or a longer attribute value than an input may (the clip to a
+stretched view box adds three elements, a group taking a mask adds a level, and a number such as
+`1e-6` is written out as `0.000001`): those are refused as `too-many-elements`, `too-deep` and
+`too-long`. So every output can be sanitised again and gives itself back.
 
 Before and after are drawn as images in the browser test and compared pixel by pixel, for
 overlapping circles, compound shapes by the even-odd and the nonzero rule, a clip path with its own
