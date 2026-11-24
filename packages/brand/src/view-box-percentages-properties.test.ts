@@ -92,13 +92,10 @@ function expectsRefusal(document: Document): boolean {
       return true;
     }
   }
-  const mask = document.mask;
-  return (
-    mask !== undefined &&
-    mask.attributes.get("maskUnits") === "userSpaceOnUse" &&
-    Object.entries(MASK_DEFAULTS).some(([name, fallback]) =>
-      isViewBoxPercentage(mask.attributes.get(name) ?? fallback),
-    )
+  const mask = document.mask?.attributes;
+  if (mask?.get("maskUnits") !== "userSpaceOnUse") return false;
+  return Object.entries(MASK_DEFAULTS).some(([name, fallback]) =>
+    isViewBoxPercentage(mask.get(name) ?? fallback),
   );
 }
 
