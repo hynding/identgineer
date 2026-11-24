@@ -1101,6 +1101,48 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
     ]);
   });
 
+  it.each([
+    ["on a shape in a clip path", '<rect width="9" height="9" clip-path="none"/>', "", "attribute"],
+    [
+      "in a style on a shape in one",
+      '<rect width="9" height="9" style="clip-path:none"/>',
+      "",
+      "property",
+    ],
+    [
+      "in a style on the clip path",
+      '<rect width="9" height="9"/>',
+      ' style="clip-path:none"',
+      "property",
+    ],
+    ["on the clip path", '<rect width="9" height="9"/>', ' clip-path="none"', "attribute"],
+  ])("drops a clip path of none %s, which is what no clip path is", (_, content, own, form) => {
+    const result = accepted(
+      svg(
+        `<clipPath id="a"${own}>${content}</clipPath><rect width="9" height="9" clip-path="url(#a)"/>`,
+      ),
+    );
+    expect(result.removed[0]).toEqual(
+      expect.objectContaining(
+        form === "attribute"
+          ? { attribute: "clip-path", reason: "render-cost" }
+          : { attribute: "style", property: "clip-path", reason: "render-cost" },
+      ),
+    );
+  });
+
+  it("drops a clip path a style of none outweighs on a shape in a clip path, with the style", () => {
+    const dropped = removals(
+      '<clipPath id="k"><rect width="5" height="5"/></clipPath><clipPath id="a">' +
+        '<rect width="9" height="9" clip-path="url(#k)" style="clip-path:none"/></clipPath>' +
+        '<rect width="9" height="9" clip-path="url(#a)"/>',
+    );
+    expect(dropped.slice(0, 2)).toEqual([
+      expect.objectContaining({ property: "clip-path", reason: "render-cost" }),
+      expect.objectContaining({ attribute: "clip-path", reason: "render-cost" }),
+    ]);
+  });
+
   it("drops a group inside a clip path, which browsers leave out of the clip", () => {
     expect(
       removals(
