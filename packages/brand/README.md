@@ -439,7 +439,9 @@ The keywords of attributes that are not CSS properties (`gradientUnits`, `spread
 `clipPathUnits`, `maskUnits`, `maskContentUnits`) are taken exactly as written, since Chromium
 does not trim them, and so is an `href`, which must be `#` and an id with nothing around it
 (Chromium does not resolve `" #a"` in an image); CSS properties and `preserveAspectRatio`,
-`offset`, `viewBox` and lengths are trimmed, as Chromium trims them. A root width or height is kept only as a positive number of pixels or in an absolute unit
+`offset`, `viewBox` and lengths are trimmed, as Chromium trims them. A length that may not be
+negative (a width, radius, stroke width or dash length) is dropped when written negative, even
+just below zero where six decimals would write `0`: Chromium ignores it as an error. A root width or height is kept only as a positive number of pixels or in an absolute unit
 (`100`, `100px`, `1e2`, `10mm`), and dropped and reported as a percentage, which an image takes as
 no size given, so the logo is sized from its view box. Chromium reads anything else there as a CSS
 length, so it is refused rather than dropped: zero or less in any unit, or a number that rounds to
@@ -457,8 +459,9 @@ magnification applied to it: a function of a transform list by the transforms be
 changed scale, rotation or skew also by how far from the origin a point the view box shows can
 lie, mapped back through them); a coordinate, length or radius of a shape, the position of a
 `use`, the region of a mask and the numbers and transform of a gradient by everything they are
-drawn under; a stroke width and dash offset likewise, a dash length once for every repeat before
-the last dash, a stop offset by the length of its gradient's vector, and the vector of a
+drawn under; a stroke width and dash offset likewise, the changes of a dash array's lengths added
+up over one repeat (an odd list read twice) once for every repeat before the last dash (a dash
+array every length of which rounds to zero, which Chromium draws solid, is refused), a stop offset by the length of its gradient's vector, and the vector of a
 repeated or reflected gradient once for every repeat the view box can show. An arc is not moved
 in proportion to its numbers: where its radii barely fit between its ends, its centre lies the
 square root of the misfit away, and where its ends barely meet, it is drawn as nothing once they
@@ -1059,9 +1062,9 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. The geometry is kept to six
 decimals; colours set only by CSS are lost (see above).
 
-The tests hold it to that: a hostile corpus of 316 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 148
-refused, and every removal, by element, attribute and reason, for each of the 168 accepted, 40 of
+The tests hold it to that: a hostile corpus of 320 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 150
+refused, and every removal, by element, attribute and reason, for each of the 170 accepted, 40 of
 them with a clip path written as a mask) and
 generated oversized inputs, each refused or accepted with an output an independent checker finds
 inert (its own tokeniser, its own copy of the allowlist, its own grammar for every value and its

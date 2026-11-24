@@ -1,7 +1,7 @@
 import { trimXmlWhitespace, XML_WHITESPACE } from "./svg-characters.ts";
 import { parseSvgColour } from "./svg-colour.ts";
 import type { SvgLogoLimits } from "./svg-logo-limits.ts";
-import { normaliseNumber } from "./svg-number.ts";
+import { normaliseNumber, noteRoundingError } from "./svg-number.ts";
 import { parseSvgNumberList, parseSvgPathData } from "./svg-path-data.ts";
 import { parseSvgTransform } from "./svg-transform.ts";
 
@@ -94,6 +94,8 @@ function length(
 ): string | undefined {
   const { amount, unit } = splitUnit(input);
   if (!(units as ReadonlySet<string>).has(unit)) return undefined;
+  // A negative number Chromium takes as an error, even one that rounds to zero.
+  if (!allowNegative && Number(amount) < 0) return undefined;
   const normalised = normaliseNumber(amount, limits);
   if (normalised === undefined || (!allowNegative && normalised.startsWith("-"))) return undefined;
   return normalised + (unit === "px" ? "" : unit);
@@ -269,6 +271,16 @@ const dashArray: SvgGrammar = (input, limits) => {
   if (parts.length > 64) return undefined;
   const lengths = parts.map((part) => length(part, limits, false, DASH_UNITS));
   if (lengths.some((part) => part === undefined)) return undefined;
+  // What rounding moves a dash by, one repeat on: every length's change before it, an odd list
+  // read twice over. Where every length rounds to zero the stroke is drawn solid, however short
+  // the dashes were: no shift bounds that.
+  const changes = parts.map((part, index) =>
+    Math.abs(Number(splitUnit(part).amount) - Number(splitUnit(lengths[index] ?? "").amount)),
+  );
+  const written = lengths.some((part) => Number(splitUnit(part ?? "").amount) !== 0);
+  const given = parts.some((part) => Number(splitUnit(part).amount) !== 0);
+  const perRepeat = changes.reduce((sum, change) => sum + change, 0) * ((parts.length % 2) + 1);
+  noteRoundingError(given && !written ? Infinity : perRepeat);
   return text(lengths.join(" "));
 };
 

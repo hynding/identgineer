@@ -107,7 +107,7 @@ interface Inherited {
   readonly strokeMiterlimit: number;
   readonly strokeLinecap: string;
   readonly strokeDasharray: string;
-  /** How far rounding moved the stroke width, dash offset and each dash length, in user units. */
+  /** How far rounding moved the stroke width, the dash offset and a repeat of the dashes, in user units. */
   readonly strokeWidthError: number;
   readonly dashOffsetError: number;
   readonly dashArrayError: number;
@@ -632,11 +632,11 @@ function capLength(paint: Inherited): number {
  */
 function strokeError(geometry: Geometry, paint: Inherited): number {
   const { period } = dashingOf(paint.strokeDasharray);
-  if (period === 0) return paint.strokeWidthError;
-  // An odd list is read twice over in each repeat; every subpath starts the pattern afresh.
-  const lengths = 2 * paint.strokeDasharray.split(" ").length;
+  // A dash array rounded to all zeros counts without limit (see the dash array grammar).
+  if (period === 0) return paint.strokeWidthError + paint.dashArrayError;
+  // Every subpath starts the pattern afresh.
   const repeats = Math.ceil(geometry.length / period) + geometry.subpaths;
-  return paint.strokeWidthError + paint.dashOffsetError + paint.dashArrayError * lengths * repeats;
+  return paint.strokeWidthError + paint.dashOffsetError + paint.dashArrayError * repeats;
 }
 
 function isNone(paint: SvgValue): boolean {

@@ -1821,6 +1821,26 @@
     "outcome": "accept",
     "removed": []
   },
+  "review-dash-negative-rounding-to-zero.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "path",
+        "attribute": "stroke-dasharray",
+        "reason": "invalid-value"
+      }
+    ]
+  },
+  "review-dash-zero.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-dash-zero1.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-dash-zero2.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
   "review-g-conical-out.svg": {
     "outcome": "accept",
     "removed": []

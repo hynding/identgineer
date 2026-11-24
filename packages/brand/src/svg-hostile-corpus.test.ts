@@ -113,7 +113,10 @@ const WITHIN_BUDGET = new Set([
 ]);
 
 // Files whose numbers rounding moves what shows by less than half a device pixel, so they are kept.
-const ROUNDED_WITHIN_HALF_A_PIXEL = new Set(["review-arc-near-fit-24.svg"]);
+const ROUNDED_WITHIN_HALF_A_PIXEL = new Set([
+  "review-arc-near-fit-24.svg",
+  "review-dash-zero2.svg",
+]);
 
 function withoutPlace(removal: SvgLogoRemoval): ExpectedRemoval {
   const names: ExpectedRemoval = { element: removal.element, reason: removal.reason };
