@@ -678,7 +678,8 @@ describe("sanitiseSvgLogo, linear time", () => {
     const result = sanitiseSvgLogoWithLimits(input, undefined, limits);
     const elapsed = performance.now() - started;
     expect(result.ok || result.errors[0]?.code).not.toBe("internal-error");
-    // About half a second at most on a laptop; anything quadratic would take minutes.
-    expect(elapsed).toBeLessThan(3_000);
+    // About a second at most on a laptop, the output sanitised a second time to check it included;
+    // anything quadratic would take minutes.
+    expect(elapsed).toBeLessThan(6_000);
   });
 });
