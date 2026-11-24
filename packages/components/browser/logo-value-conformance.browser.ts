@@ -598,10 +598,12 @@ async function differences(page: Page, cases: readonly Case[]): Promise<Differen
 }
 
 /**
- * Antialiasing of the same geometry may differ by a few pixels from one drawing as an image to the
- * next, and nothing else may differ.
+ * How many pixels may differ for the same picture: as a document, a few of antialiasing; as an
+ * image, where Chromium rasterises the same hard edge a column either way from one drawing to the
+ * next, up to one column of a cell. A misread value moves whole shapes or colours: thousands.
  */
-const SAME = 16;
+const SAME_DOCUMENT = 16;
+const SAME_IMAGE = 150;
 
 test.describe("a kept value, as Chromium reads it", () => {
   test.describe.configure({ timeout: 600_000 });
@@ -615,7 +617,7 @@ test.describe("a kept value, as Chromium reads it", () => {
       const cases = places.flatMap((place) => keptCases(place, random));
       expect(cases.length).toBeGreaterThan(places.length);
       const differing = (await differences(page, cases))
-        .filter(({ image, document }) => image > SAME || document > SAME)
+        .filter(({ image, document }) => image > SAME_IMAGE || document > SAME_DOCUMENT)
         .map(
           ({ label, image, document }) =>
             `${label} (image ${String(image)}, document ${String(document)})`,
