@@ -457,7 +457,11 @@ property the allowlist keeps, it writes valid values in a probe where each shows
 random (white space of each kind before, after and inside, commas added, doubled and removed,
 case, quotes, comments, escapes, exponents, signs, units, trailing junk, nothing at all) and, for
 every spelling the sanitiser keeps with nothing reported, requires Chromium to draw the output as
-it draws the original, colour for colour, as an image and as a document. It runs six spellings of
+it draws the original, colour for colour, as an image and as a document. In a style it also sets
+the declaration among others: marked important or not, beside another of its property (itself
+important or not), after comments, and between decoys whose strings, brackets and urls hold a
+`;` (each decoy dropped and reported, and nothing else), so the split and the cascade are held to
+Chromium's too. It runs six spellings of
 each value in CI (`IDG_CONFORMANCE_SPELLINGS` raises it locally). White space inside a value is XML's: space,
 tab, line feed and carriage return; a no-break space or a line separator is not white space, and a
 value that leans on one is dropped. A reference is only ever to an id in the same document, which
@@ -481,14 +485,21 @@ Decisions, with the reason for each:
   `@font-face`, `url()`, `expression()` or `-moz-binding` in them. A `style` attribute is read as
   declarations, each held to the presentation allowlist and the same grammar as the attribute of
   its name (so `fill:url(https://…)` fails like the attribute would), and written out as that
-  attribute, overriding it as CSS does; the output never holds a style attribute. It is read only
-  as a plain list of `name: value` declarations split on `;`: one holding a comment, a string, a
-  bracket or brace, an escape, `@`, `<`, a function other than `url()` and `rgb()`, a `!` other
-  than a final `!important` (which outweighs nothing where the attribute is the only rule), or a
-  property set twice, is one CSS would split otherwise, so the whole attribute is dropped and
-  reported, and its element is not drawn (a stop is drawn clear), since dropping the style alone
-  could show what it hid; on the root, a clip path or a mask, which Chromium draws whatever their
-  `display`, the logo is refused (`unsupported-feature`). Inkscape writes colours this way, so they
+  attribute, overriding it as CSS does; the output never holds a style attribute. The list is
+  split as CSS Syntax splits it: comments are skipped, a string in either quote and a bracket
+  (`()`, `[]`, `{}` inside one of the others) hold a `;` without ending a declaration, and an
+  unquoted `url(` runs to its `)`. Each declaration then stands or falls alone: an unknown property
+  (a font, `-inkscape-font-specification`) is dropped and reported, and so is a value outside its
+  grammar or holding a comment, quote, escape or bracket the grammar does not take (`fill:/**/red`
+  is dropped, not read past). Among declarations of one property the last marked `!important`
+  wins, else the last, as the cascade decides; but where any of them is dropped, CSS may or may not
+  have taken it (`fill:hsl(…)` is valid CSS the sanitiser does not read, and wins over the
+  attribute; `fill:reddish` is not, and leaves it), so the property goes entirely, the presentation
+  attribute of its name included, each reported. Only a list CSS would split by its error recovery
+  (an unclosed comment, string, bracket or url, a string across a line, an escape, a stray or
+  mismatched closing bracket, a brace or `@` outside every bracket, a declaration that is not
+  `name: value`, an unquoted url holding a bracket, quote or inner space) is dropped whole, and
+  reported; nothing is put in its place, so like any other drop it may show what it hid. Inkscape writes colours this way, so they
   survive; a logo coloured only by a stylesheet (Illustrator's default "Internal CSS") comes out
   black: export with "Presentation Attributes" instead.
 - **A DOCTYPE is skipped only when it has no internal subset.** Older Illustrator files carry the
@@ -807,18 +818,19 @@ drawing of the turned order.
 
 What each removal for drawing does to the picture, as drawn by Chromium 153.0.8010.12:
 
-| Removed                                                                                                  | Reason                                                              | Drawn after                                                                                                                                                                                                            |
-| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `preserveAspectRatio` `slice` on the root                                                                | `render-cost`                                                       | The same: the view box becomes the part that showed (refused where six decimals cannot hold it, or beside a percentage of the view box); one whose view box kept whole shows the same to half a device pixel just goes |
-| `preserveAspectRatio` `none` (stretched) on the root                                                     | `render-cost`                                                       | Less: drawn to fit, undistorted, clipped to the view box where fitting it alone would show more; refused then beside a root clip or mask                                                                               |
-| An element, attribute or style property not on the allowlist, a class or `style` rule, a filter          | `unsupported-element`, `unsupported-attribute`, `styling`, `filter` | Not promised: reported, and may show what the original hid (a blend mode, filter, `display:none` rule or root `transform` that hid or moved a shape)                                                                   |
-| A `style` attribute CSS would split otherwise (a comment, string, bracket, escape, a property set twice) | `invalid-value`                                                     | Less: the element is not drawn (a stop is drawn clear)                                                                                                                                                                 |
-| `mask` on a clip path or on a shape or `use` in one                                                      | `render-cost`                                                       | The same: browsers ignore it                                                                                                                                                                                           |
-| A shape in a clip path not displayed or hidden                                                           | `render-cost`                                                       | The same: the clip path ignores it; kept as a definition where something else draws it                                                                                                                                 |
-| A clip path holding a `use` of anything but a shape (each child, `misplaced`)                            | `misplaced`                                                         | Less: the clip path is emptied, so what it clips draws nothing; its own clip path goes too                                                                                                                             |
-| A clip path of more than one shape, or clipped in turn or itself                                         | `rewritten`                                                         | The same, but for Chromium's even-odd order quirk above, where the mask draws the full union                                                                                                                           |
-| Such a one in object-bounding-box units with its own transform or clip path                              | refused                                                             | `unsupported-feature`                                                                                                                                                                                                  |
-| One on a root that has a mask of its own                                                                 | refused                                                             | `unsupported-feature`                                                                                                                                                                                                  |
+| Removed                                                                                            | Reason                                                              | Drawn after                                                                                                                                                                                                            |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `preserveAspectRatio` `slice` on the root                                                          | `render-cost`                                                       | The same: the view box becomes the part that showed (refused where six decimals cannot hold it, or beside a percentage of the view box); one whose view box kept whole shows the same to half a device pixel just goes |
+| `preserveAspectRatio` `none` (stretched) on the root                                               | `render-cost`                                                       | Less: drawn to fit, undistorted, clipped to the view box where fitting it alone would show more; refused then beside a root clip or mask                                                                               |
+| An element, attribute or style property not on the allowlist, a class or `style` rule, a filter    | `unsupported-element`, `unsupported-attribute`, `styling`, `filter` | Not promised: reported, and may show what the original hid (a blend mode, filter, `display:none` rule or root `transform` that hid or moved a shape)                                                                   |
+| A `style` attribute only CSS error recovery could split (an unclosed comment or string, an escape) | `invalid-value`                                                     | Not promised: reported, and may show what its declarations set or hid                                                                                                                                                  |
+| A style declaration outside its grammar, and every other one of its property, attribute included   | `invalid-value`, `external-reference`                               | Not promised: reported; the property takes its default (a paint that referred outside paints nothing)                                                                                                                  |
+| `mask` on a clip path or on a shape or `use` in one                                                | `render-cost`                                                       | The same: browsers ignore it                                                                                                                                                                                           |
+| A shape in a clip path not displayed or hidden                                                     | `render-cost`                                                       | The same: the clip path ignores it; kept as a definition where something else draws it                                                                                                                                 |
+| A clip path holding a `use` of anything but a shape (each child, `misplaced`)                      | `misplaced`                                                         | Less: the clip path is emptied, so what it clips draws nothing; its own clip path goes too                                                                                                                             |
+| A clip path of more than one shape, or clipped in turn or itself                                   | `rewritten`                                                         | The same, but for Chromium's even-odd order quirk above, where the mask draws the full union                                                                                                                           |
+| Such a one in object-bounding-box units with its own transform or clip path                        | refused                                                             | `unsupported-feature`                                                                                                                                                                                                  |
+| One on a root that has a mask of its own                                                           | refused                                                             | `unsupported-feature`                                                                                                                                                                                                  |
 
 A clip path of one shape that is not clipped in turn is kept, however long or self-crossing: it
 clips by its outline, with no union. The browser test times the costliest of each form at both of
