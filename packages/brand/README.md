@@ -317,17 +317,21 @@ Refused, as the whole document (each with its own `code`):
   clip path in object-bounding-box units that must be written as a mask and has a transform or clip
   path of its own; a stretching `preserveAspectRatio="none"` (one the view box fitted into its frame would not show
   to within the half device pixel below, so it must be clipped to its view box) beside a clip path
-  or mask on the root; a width or height under one CSS pixel, given in any unit or worked out from
-  the view box (no logo has a natural size that small, and there six decimals are a large share of
-  it); a view box and size that six decimals cannot hold. One rule decides every view box: the
+  or mask on the root; a width or height under one CSS pixel (to within a billionth, so
+  `0.264583333333mm` is one pixel), given in any unit or worked out from the view box (no logo has
+  a natural size that small, and there six decimals are a large share of it; a known limit is
+  that a logo with no width or height and a view box under one unit on a side, such as
+  `0 0 0.5 0.5`, is refused too, and must be given a size of at least a pixel or a larger view
+  box); a view box and size that six decimals cannot hold. One rule decides every view box: the
   output draws its view box fitted into its width and height as written, and what that shows must
   have every edge within half a device pixel (at 4000 device pixels, 2000 CSS pixels twice as
   dense, along the longer side) of what the original showed when drawn at its exact size (the
   width and height as given, converted from their unit before any rounding, a missing one in the
   view box's proportions): the part a `slice` showed, the whole view box under `none`, or the
   view box fitted into the frame with its alignment. With only one of width and height under
-  `none`, Chromium gives the original no proportions of its own, but it still shows the whole view
-  box, which is all the rule compares; the output is given the other side in the view box's
+  `none`, Chromium gives the original no proportions of its own and ignores the side given too,
+  drawing it at the default natural size of 300 by 150 CSS pixels, but it still shows the whole
+  view box, which is all the rule compares; the output is given the other side in the view box's
   proportions. The sanitiser writes the first of these that passes: the view box kept whole; under
   `none`, the view box clipped to itself; for a `slice`, the part it showed, each edge to six
   decimals. Where none passes, the logo is refused. That covers a crop of a view box a few
@@ -420,7 +424,21 @@ colours (`#rgb`, `#rrggbb`, `rgb()`, the CSS named colours, `currentColor`, writ
 `scale`, `rotate`, `skewX`, `skewY`, at most 16); path data (every command, arc flags included);
 points, `viewBox` (positive width and height), `preserveAspectRatio` (an alignment such as
 `xMidYMid`, then `meet` or nothing), dash arrays (at most 64
-lengths, in absolute units only) and the enumerations. White space inside a value is XML's: space,
+lengths, in absolute units only) and the enumerations. A number is written as SVG and Chromium
+write one: a point must have a digit after it (`100.` and `1.e2` are no numbers to Chromium, so
+they are dropped, not read as 100), and in path data only white space comes between a command
+and its first number, with at most one comma between two numbers (a comma before the next
+command is taken, as Chromium takes it); a dash array likewise takes at most one comma between
+lengths. A root width or height of zero or less, which Chromium draws at no size, is refused
+(`missing-size`). Path data outside its grammar is dropped whole, where Chromium would draw it up to
+the first error: the output shows less. A browser test draws 45 spellings of a number (signs,
+points, exponents, leading zeros, hexadecimal, `Infinity`, `NaN`, stray white space and commas) in
+each of a length, a plain number, a transform, a view box, path data, points, a dash array and the
+root's width, and 18 spellings of a pair in each list, in the original and the output, and holds
+the output to drawing what the original drew. Where the sanitiser shows less than Chromium would,
+it says so: a number written with more characters than `numberLength` refuses the logo; a dash
+array whose numbers run together without a separator (`1.5.5`, `1+2`) is dropped; and so are
+points of an odd count, which Chromium draws up to the last whole pair. White space inside a value is XML's: space,
 tab, line feed and carriage return; a no-break space or a line separator is not white space, and a
 value that leans on one is dropped. A reference is only ever to an id in the same document, which
 must match `[A-Za-z_][A-Za-z0-9_-]{0,63}` and exist: no URL scheme, no other file, no `data:` URL.
@@ -899,7 +917,11 @@ the `<img>` a bounded width and height (a few hundred CSS pixels at most), never
 or a stretched canvas, and draw it once rather than at a size a page may grow without limit. Size it
 by one dimension, letting the other follow, or keep the frame's proportions (`width` and `height`
 from the result): a box of other proportions stretches or letterboxes the logo, which is the host's
-choice and outside what the sanitiser promises.
+choice and outside what the sanitiser promises. Two more limits: Chromium rounds the height of an
+`<img>` sized by its width alone down to a sixty-fourth of a CSS pixel, so a very elongated logo
+(hundreds to one) whose slice or stretch was rewritten can letterbox by several device pixels at
+its automatic height; give it both sizes from the result. And drawing a logo on a canvas lays it
+out at its natural size rounded to whole pixels, which is outside the supported scope.
 
 ### Rendering: `<img>` first, sanitising always
 
@@ -970,8 +992,10 @@ view boxes a fraction of a unit across, in every alignment and absolute unit, si
 thousandth to a thousand times the view box and to six decimals or more, checking against a
 separate geometric model of what a browser shows that no output shows more than half a device
 pixel past what the original showed; and 6,000 logos as design tools export them (two or three
-decimals, ordinary sizes), checking none is refused that some view box written to six decimals
-could show.
+decimals, ordinary sizes), checking none is refused that these view boxes, the view box kept whole
+or the crop written to six decimals, could show. That last check tries the sanitiser's own
+candidates, so unlike the geometric model it is not independent of the sanitiser: it finds a
+refusal of a logo the sanitiser itself could have written, not one some other view box could.
 
 ## Commands
 
