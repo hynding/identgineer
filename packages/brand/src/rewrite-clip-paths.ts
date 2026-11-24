@@ -181,6 +181,14 @@ class ClipPathRewriter {
     const drawing = clip.children.filter((child) => !isDescriptive(child));
     const descriptive = clip.children.filter(isDescriptive);
     if (drawing.some((child) => child.name === "use" && !BASIC_SHAPES.has(this.target(child)))) {
+      // An empty clip path hides everything, so its own clip path changes nothing.
+      if (clip.attributes.delete("clip-path")) {
+        this.removals.add(
+          { element: clip.qualified, attribute: "clip-path" },
+          "render-cost",
+          clip.offset,
+        );
+      }
       for (const child of drawing) {
         this.removals.add({ element: child.qualified }, "misplaced", child.offset);
         this.keepIfReferenced(child, clip);

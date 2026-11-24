@@ -5,6 +5,7 @@ import { parseSvgXml } from "./parse-svg-xml.ts";
 import { resolveSvgNamespaces } from "./resolve-svg-namespaces.ts";
 import type { SanitisedSvg } from "./sanitised-svg.ts";
 import { serialiseSvg } from "./serialise-svg.ts";
+import { isSettledOutput } from "./settled-output.ts";
 import { settleSvgReferences } from "./settle-svg-references.ts";
 import { findDisallowedCharacter } from "./svg-characters.ts";
 import { SVG_LOGO_LIMITS, type SvgLogoLimits } from "./svg-logo-limits.ts";
@@ -171,15 +172,32 @@ function toError(rejection: SvgLogoRejection, locator: TextLocator | undefined):
   return { code: rejection.code, message, ...locator.locate(rejection.offset) };
 }
 
+const UNSETTLED: SvgLogoResult = {
+  ok: false,
+  errors: [{ code: "internal-error", message: "the SVG could not be read" }],
+};
+
 /**
  * The sanitiser with its limits as a parameter, so tests can measure the reader on inputs larger
- * than the public limits allow. Never throws.
+ * than the public limits allow. Never throws. Every output is checked before it is returned (see
+ * `isSettledOutput`): one that is not settled, which only a defect in the sanitiser could give, is
+ * refused as `internal-error`.
  */
 export function sanitiseSvgLogoWithLimits(
   input: unknown,
   options: unknown,
   limits: SvgLogoLimits,
 ): SvgLogoResult {
+  const result = sanitiseOnce(input, options, limits);
+  if (!result.ok) return result;
+  const again = (svg: string): string | undefined => {
+    const second = sanitiseOnce(svg, options, limits);
+    return second.ok ? second.svg : undefined;
+  };
+  return isSettledOutput(result.svg, again) ? result : UNSETTLED;
+}
+
+function sanitiseOnce(input: unknown, options: unknown, limits: SvgLogoLimits): SvgLogoResult {
   let locator: TextLocator | undefined;
   try {
     const idPrefix = readIdPrefix(options);
@@ -229,10 +247,7 @@ export function sanitiseSvgLogoWithLimits(
   } catch (error) {
     if (error instanceof SvgLogoRejection) return { ok: false, errors: [toError(error, locator)] };
     // Only a defect in the sanitiser gets here (stack exhaustion included); it still refuses.
-    return {
-      ok: false,
-      errors: [{ code: "internal-error", message: "the SVG could not be read" }],
-    };
+    return UNSETTLED;
   }
 }
 
