@@ -1,7 +1,7 @@
 import { decodeSvgInput } from "./decode-svg-input.ts";
 import { filterSvgTree, type CleanElement } from "./filter-svg-tree.ts";
 import { freshIds } from "./fresh-ids.ts";
-import { movesMoreThanHalfAPixel, stretchesByMoreThanHalfAPixel } from "./half-pixel.ts";
+import { movesMoreThanHalfAPixel, proportionsDifferByMoreThanHalfAPixel } from "./half-pixel.ts";
 import { findViewBoxPercentage } from "./view-box-percentages.ts";
 import { isLocalPathValue, parseSvgXml } from "./parse-svg-xml.ts";
 import { resolveSvgNamespaces } from "./resolve-svg-namespaces.ts";
@@ -107,7 +107,7 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
   const aspect = aspectRatio(root.droppedAspect ?? "");
   const stretched =
     aspect?.align === "none" &&
-    stretchesByMoreThanHalfAPixel({ width: boxWidth, height: boxHeight }, size);
+    proportionsDifferByMoreThanHalfAPixel({ width: boxWidth, height: boxHeight }, size);
   const shown =
     aspect === undefined || aspect.align === "none"
       ? box
@@ -132,7 +132,8 @@ type ViewBox = readonly [number, number, number, number];
 /**
  * The part of the view box a crop (`slice`) showed, which becomes the view box: drawn to fit, it
  * shows what the crop showed and nothing more. Refused where six decimals cannot hold that part to
- * half a pixel at the largest size measured.
+ * half a pixel at the largest size measured: an edge moved further, or proportions the fitted
+ * drawing would letterbox by more.
  */
 function cropped(
   size: { readonly width: number; readonly height: number },
@@ -150,13 +151,18 @@ function cropped(
     width,
     height,
   ] as const;
-  const span = Math.max(width, height);
-  // A slice that shows the whole view box, to within half a pixel, crops nothing: it is the default.
-  if (exact.every((value, index) => !movesMoreThanHalfAPixel(box[index] ?? NaN, value, span))) {
+  // A slice whose frame has the view box's proportions, to within half a pixel, crops nothing:
+  // fitted instead, the view box is letterboxed by no more than that.
+  if (!proportionsDifferByMoreThanHalfAPixel({ width: boxWidth, height: boxHeight }, size)) {
     return box;
   }
+  const span = Math.max(width, height);
   const written = exact.map((value) => Number(value.toFixed(limits.fractionDigits)));
-  if (exact.some((value, index) => movesMoreThanHalfAPixel(value, written[index] ?? NaN, span))) {
+  const [, , writtenWidth = 1, writtenHeight = 1] = written;
+  if (
+    exact.some((value, index) => movesMoreThanHalfAPixel(value, written[index] ?? NaN, span)) ||
+    proportionsDifferByMoreThanHalfAPixel({ width: writtenWidth, height: writtenHeight }, size)
+  ) {
     throw new SvgLogoRejection(
       "unsupported-feature",
       "has a preserveAspectRatio slice that crops a part of its view box too small to write to six decimals; crop the view box itself instead",
