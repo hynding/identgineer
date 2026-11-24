@@ -22,11 +22,18 @@ export interface SvgLogoLimits {
   readonly textLength: number;
   /** An element or attribute name, its prefix included. */
   readonly nameLength: number;
-  /** One number as written, sign and exponent included. */
+  /**
+   * One number as written, sign and exponent included: a longer one is dropped with its value. 25
+   * holds every double as the writers editors use give it (JavaScript's longest, `-0.0000012345678901234567`).
+   */
   readonly numberLength: number;
-  /** Digits before the point once a number is normalised: 6 keeps every number below 1,000,000. */
+  /** Digits before the point of a number's value: 6 keeps every number below 1,000,000. */
   readonly integerDigits: number;
-  /** Digits kept after the point; the rest is rounded half away from zero. */
+  /**
+   * Digits after the point of a number the sanitiser works out itself (a width or height from the
+   * view box, a crop, the region of a mask), rounded half away from zero. A number it keeps is
+   * written exactly as it was given.
+   */
   readonly fractionDigits: number;
   /** Stops in one gradient. */
   readonly gradientStops: number;
@@ -63,7 +70,7 @@ export const SVG_LOGO_LIMITS: SvgLogoLimits = Object.freeze({
   pathDataLength: 128 * 1024,
   textLength: 2048,
   nameLength: 64,
-  numberLength: 32,
+  numberLength: 25,
   integerDigits: 6,
   fractionDigits: 6,
   gradientStops: 64,

@@ -25,7 +25,6 @@ import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import type { SvgLogoRemovalReason } from "./svg-logo-result.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 import { splitDeclarationList } from "./css-declaration-list.ts";
-import { withRoundingError } from "./svg-number.ts";
 import type { Removals } from "./svg-removals.ts";
 import {
   absolutePixels,
@@ -56,8 +55,6 @@ export interface CleanElement {
    * so the size can be settled to show what it showed.
    */
   readonly droppedAspect?: string;
-  /** On the root only: its width and height in CSS pixels exactly, before six decimals round them. */
-  readonly exactSize?: { readonly width?: number; readonly height?: number };
 }
 
 const PROPERTY_NAME = /^-?[a-z][a-z0-9-]{0,63}$/;
@@ -185,7 +182,6 @@ class TreeFilter {
   private droppedAspect: string | undefined;
   /** Set when the element just read has a style setting its geometry, so it goes. */
   private styledGeometry = false;
-  private readonly exactSize: { width?: number; height?: number } = {};
 
   constructor(limits: SvgLogoLimits, removals: Removals) {
     this.limits = limits;
@@ -198,8 +194,9 @@ class TreeFilter {
     }
     const element = this.element(source, "svg", true);
     if (element === undefined) throw new Error("the root was dropped, which only refusing may do");
-    const root = { ...element, exactSize: this.exactSize };
-    return this.droppedAspect === undefined ? root : { ...root, droppedAspect: this.droppedAspect };
+    return this.droppedAspect === undefined
+      ? element
+      : { ...element, droppedAspect: this.droppedAspect };
   }
 
   /** `clipping`: the element is a clip path, or stands inside one. */
@@ -344,9 +341,7 @@ class TreeFilter {
     name: string,
     absolute = false,
   ): void {
-    const parsed = absolute
-      ? this.pixels(name, attribute.value)
-      : this.parse(name, attribute.value);
+    const parsed = absolute ? this.pixels(attribute.value) : this.parse(name, attribute.value);
     if (parsed !== undefined) {
       kept.set(name, parsed);
       return;
@@ -366,11 +361,12 @@ class TreeFilter {
     paintNothingFor(kept, name, reason);
   }
 
-  private pixels(name: string, value: string): SvgValue | undefined {
+  /** A root width or height: read as CSS pixels, written as given. */
+  private pixels(value: string): SvgValue | undefined {
     const pixels = absolutePixels(value, this.limits);
     // Chromium draws a root of no width or height, a negative one, or one in a unit of the
     // viewport, at no size at all.
-    const problem = pixels === undefined ? rootSizeProblem(value, this.limits) : undefined;
+    const problem = pixels === undefined ? rootSizeProblem(value) : undefined;
     if (problem === "no-size") {
       throw new SvgLogoRejection(
         "missing-size",
@@ -389,18 +385,13 @@ class TreeFilter {
         "has a width or height Chromium reads as CSS the sanitiser does not take; give it as a number of pixels or in an absolute unit",
       );
     }
-    if (pixels === undefined) return undefined;
-    if (name === "width" || name === "height") this.exactSize[name] = pixels.exact;
-    return { text: pixels.text };
+    return pixels;
   }
 
-  /** A value by its grammar, with how far rounding moved it where it did. */
+  /** A value by its grammar. */
   private parse(name: string, value: string): SvgValue | undefined {
     const grammar = Object.hasOwn(SVG_GRAMMARS, name) ? SVG_GRAMMARS[name] : undefined;
-    if (grammar === undefined) return undefined;
-    const { result, error } = withRoundingError(() => grammar(value, this.limits));
-    if (result === undefined || error === 0 || !("text" in result)) return result;
-    return { ...result, roundingError: error };
+    return grammar?.(value, this.limits);
   }
 
   /**

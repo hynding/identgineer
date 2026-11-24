@@ -6,7 +6,7 @@ import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 import { IDENTITY, mapBox, type Matrix, multiply, parseTransform } from "./svg-matrix.ts";
 import type { Removals } from "./svg-removals.ts";
-import { SVG_GRAMMARS, type SvgValue } from "./svg-values.ts";
+import { SVG_GRAMMARS, type SvgValue, writtenText } from "./svg-values.ts";
 
 /** What a clip path may draw with: a `use` in one draws only these, and nothing else. */
 const BASIC_SHAPES: ReadonlySet<string> = new Set([
@@ -38,6 +38,12 @@ function textOf(element: CleanElement, name: string): string | undefined {
   return value !== undefined && "text" in value ? value.text : undefined;
 }
 
+/** A value as it is written out: as given, where it was given. */
+function writtenOf(element: CleanElement, name: string): string | undefined {
+  const value = element.attributes.get(name);
+  return value !== undefined && "text" in value ? writtenText(value) : undefined;
+}
+
 function referenceOf(element: CleanElement, name: string): string | undefined {
   const value = element.attributes.get(name);
   return value !== undefined && "reference" in value ? value.reference : undefined;
@@ -47,7 +53,7 @@ function isDescriptive(element: CleanElement): boolean {
   return element.name === "title" || element.name === "desc";
 }
 
-/** A value built here, read through the same grammar as any input so the output stays canonical. */
+/** A value built here, read through the same grammar as any input. */
 function kept(name: string, text: string, limits: SvgLogoLimits): SvgValue {
   const grammar = SVG_GRAMMARS[name];
   const value = grammar?.(text, limits);
@@ -101,11 +107,12 @@ function union(left: SvgBox, right: SvgBox): SvgBox {
 
 const SCALE = 1e6;
 
-/** A kept number (plain decimal, at most six places) in whole millionths. */
-function millionths(text: string): bigint {
-  const match = /^(-?)(\d*)(?:\.(\d{1,6}))?$/.exec(text);
-  if (match === null) throw new Error(`"${text}" is not a kept number`);
+/** A number read as a plain decimal in whole millionths, or `undefined` where it has a part smaller. */
+function millionths(text: string): bigint | undefined {
+  const match = /^(-?)(\d*)(?:\.(\d+))?$/.exec(text);
+  if (match === null) throw new Error(`"${text}" is not a plain decimal`);
   const [, sign = "", whole = "", fraction = ""] = match;
+  if (fraction.length > 6) return undefined;
   const value = BigInt(whole === "" ? "0" : whole) * 1_000_000n + BigInt(fraction.padEnd(6, "0"));
   return sign === "-" ? -value : value;
 }
@@ -338,8 +345,9 @@ class ClipPathRewriter {
   }
 
   /**
-   * A use's `x` and `y` as a translation, for a group to take over. Written to six decimals, a
-   * position could move the use, so one that six decimals do not hold exactly is refused.
+   * A use's `x` and `y` as a translation, for a group to take over: a number of pixels as it was
+   * given, so it is read as the same number; in another unit, or a percentage, the number of user
+   * units it comes to, refused where six decimals do not hold that exactly.
    */
   private placement(use: CleanElement): string | undefined {
     const [x, y] = [this.exactOffset(use, "x"), this.exactOffset(use, "y")];
@@ -348,6 +356,8 @@ class ClipPathRewriter {
 
   private exactOffset(use: CleanElement, name: "x" | "y"): string {
     const text = textOf(use, name) ?? "0";
+    if (Number(text) === 0) return "0";
+    if (/^-?[\d.]+$/.test(text)) return (writtenOf(use, name) ?? text).replace(/px$/i, "");
     const refused = (): SvgLogoRejection =>
       new SvgLogoRejection(
         "unsupported-feature",
@@ -357,15 +367,16 @@ class ClipPathRewriter {
     if (text.endsWith("%")) {
       // Worked in whole millionths, so the answer is exact or refused, never rounded.
       const side = name === "x" ? this.viewport.width : this.viewport.height;
-      const product = millionths(text.slice(0, -1)) * millionths(side.toFixed(6));
+      const given = millionths(text.slice(0, -1));
+      const product = (given ?? 0n) * (millionths(side.toFixed(6)) ?? 0n);
       const divisor = 100n * 1_000_000n;
-      if (product % divisor !== 0n) throw refused();
+      if (given === undefined || product % divisor !== 0n) throw refused();
       return decimal(product / divisor);
     }
     const value = userUnits(text, this.viewport.base);
     const written = Number(value.toFixed(6));
     if (Math.abs(written - value) > 1e-9) throw refused();
-    return decimal(millionths(written.toFixed(6)));
+    return decimal(millionths(written.toFixed(6)) ?? 0n);
   }
 
   /** What a shape of a rewritten clip path is drawn as in its mask, and the box it can cover. */
@@ -488,7 +499,7 @@ class ClipPathRewriter {
       ["width", width],
       ["height", height],
     ] as const) {
-      attributes.set(name, kept(name, value.toFixed(6), this.limits));
+      attributes.set(name, kept(name, decimal(BigInt(Math.round(value * SCALE))), this.limits));
     }
   }
 
@@ -529,7 +540,7 @@ class ClipPathRewriter {
   /** The group (or two) an element with a mask of its own moves into, under the new mask. */
   private wrap(node: CleanElement, mask: SvgValue): CleanElement {
     const id = node.attributes.get("id");
-    const transform = textOf(node, "transform");
+    const transform = writtenOf(node, "transform");
     const placement = node.name === "use" ? this.placement(node) : undefined;
     for (const name of ["id", "transform", "x", "y"]) {
       if (name === "id" || name === "transform" || node.name === "use") {

@@ -2,7 +2,7 @@
  * The largest size the budgets are measured at, in device pixels along the larger side: 2000 CSS
  * pixels at a device pixel ratio of 2.
  */
-export const MEASURED_DEVICE_PIXELS = 4000;
+const MEASURED_DEVICE_PIXELS = 4000;
 
 /**
  * Whether two parts of user space, each as x, y, width and height, have every edge within half a

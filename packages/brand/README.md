@@ -277,7 +277,7 @@ tree; namespaces are resolved by the rules of Namespaces in XML; every element a
 held to the allowlist and every value to a grammar of its own, which parses it into numbers and
 keywords; references between elements are checked; and the SVG is written again from that tree.
 The output is always the same for the same input, has the SVG namespace on the root and nowhere
-else, attributes in a fixed order, numbers in one form, ids renamed, no comments, no declaration,
+else, attributes in a fixed order, every number it keeps as it was given, ids renamed, no comments, no declaration,
 no white space between elements and every character of text escaped. Sanitising it again returns
 it unchanged, and it reads back through the same reader without loss.
 
@@ -327,14 +327,15 @@ Refused, as the whole document (each with its own `code`):
   to within the half device pixel below, so it must be clipped to its view box) beside a clip path
   or mask on the root; a width or height under one CSS pixel (to within a billionth, so
   `0.264583333333mm` is one pixel), given in any unit or worked out from the view box (no logo has
-  a natural size that small, and there six decimals are a large share of it; a known limit is
+  a natural size that small; a known limit is
   that a logo with no width or height and a view box under one unit on a side, such as
   `0 0 0.5 0.5`, is refused too, and must be given a size of at least a pixel or a larger view
-  box); a view box and size that six decimals cannot hold. One rule decides every view box: the
+  box); a width, height or view box the sanitiser must work out (one the root lacks, or a crop)
+  that six decimals cannot hold. One rule decides every view box: the
   output draws its view box fitted into its width and height as written, and what that shows must
   have every edge within half a device pixel (at 4000 device pixels, 2000 CSS pixels twice as
   dense, along the longer side) of what the original showed when drawn at its exact size (the
-  width and height as given, converted from their unit before any rounding, a missing one in the
+  width and height as given, converted from their unit exactly, a missing one in the
   view box's proportions): the part a `slice` showed, the whole view box under `none`, or the
   view box fitted into the frame with its alignment. With only one of width and height under
   `none`, Chromium gives the original no proportions of its own and ignores the side given too,
@@ -344,8 +345,8 @@ Refused, as the whole document (each with its own `code`):
   `none`, the view box clipped to itself; for a `slice`, the part it showed, each edge to six
   decimals. Where none passes, the logo is refused. That covers a crop of a view box a few
   thousandths of a unit across, whose far edges take two roundings; ordinary logos are far from
-  it. The position of a `use` moved onto a group
-  (below) is refused unless six decimals hold it exactly; a cropping `slice` beside any length taken as a percentage of
+  it. The position of a `use` moved onto a group (below), given in a unit other than pixels or as
+  a percentage, is refused unless six decimals hold it exactly; a cropping `slice` beside any length taken as a percentage of
   the view box in what is drawn (a size, position, radius or stroke width of a shape, a `use`
   position, the region of a mask in user units, written or by default, which is -10% and 120%, and
   a coordinate of a painted gradient in user units, written, inherited through `href` or by
@@ -449,47 +450,46 @@ does not trim them, and so is an `href`, which must be `#` and an id with nothin
 (Chromium does not resolve `" #a"` in an image); CSS properties and `preserveAspectRatio`,
 `offset`, `viewBox` and lengths are trimmed, as Chromium trims them. A length that may not be
 negative (a width, radius, stroke width or dash length) is dropped when written negative, even
-just below zero where six decimals would write `0`: Chromium ignores it as an error. A root width or height is kept only as a positive number of pixels or in an absolute unit
+just below zero (`-0.0000004`): Chromium ignores it as an error. A root width or height is kept only as a positive number of pixels or in an absolute unit
 (`100`, `100px`, `1e2`, `10mm`), and dropped and reported as a percentage, which an image takes as
 no size given, so the logo is sized from its view box. Chromium reads anything else there as a CSS
-length, so it is refused rather than dropped: zero or less in any unit, or a number that rounds to
-zero (`0`, `-1mm`, `0em`, `0e39`, `1e-39`), which Chromium draws at no size, is `missing-size`; a
+length, so it is refused rather than dropped: zero or less in any unit, or a number Chromium reads
+as zero (`0`, `-1mm`, `0em`, `0e39`, `1e-39`), which Chromium draws at no size, is `missing-size`; a
 unit of the viewport (`1vw`), which an image has none of, a unit the sanitiser does not take
 (`2em`, which Chromium draws at 32 pixels, or `4Q`), a calculation (`calc(0px)`,
 `max(0px,0px)`), a variable or environment value, a keyword (`auto`, `inherit`) or any other
-spelling (`10 px`, `5.`) is `unsupported-feature`. Path data outside its grammar is dropped whole, where Chromium would draw it up to
-the first error: the output shows less. So is path data with an arc whose radius was not zero and
-rounds to zero (a line, where Chromium draws an ellipse scaled up to fit). Six decimals keep a number to within half a millionth,
-and a transform can magnify that: a logo is refused (`unsupported-feature`) where rounding a
-number it keeps can move what it shows by more than half a device pixel at 4000 device pixels
-along the longer side of the view box. Each number rounding changed counts its change times the
-magnification applied to it: a function of a transform list by the transforms before it (a
-changed scale, rotation or skew also by how far from the origin a point the view box shows can
-lie, mapped back through them); a coordinate, length or radius of a shape, the position of a
-`use`, the region of a mask and the numbers and transform of a gradient by everything they are
-drawn under; a stroke width and dash offset likewise, the changes of a dash array's lengths added
-up over one repeat (an odd list read twice) once for every repeat before the last dash (a dash
-array every length of which rounds to zero, which Chromium draws solid, is refused), a stop offset by the length of its gradient's vector, and the vector of a
-repeated or reflected gradient once for every repeat the view box can show. An arc is not moved
-in proportion to its numbers: where its radii barely fit between its ends, its centre lies the
-square root of the misfit away, and where its ends barely meet, it is drawn as nothing once they
-do. So each arc is drawn as SVG draws it (its radii scaled up where too small, its centre, the
-angles it starts at and sweeps through) from its numbers exactly and as written, from where the
-pen exactly and as written stands, and counts how far apart the points at the same fraction of
-the two arcs can be: the largest distance at 65 evenly spaced fractions plus the most it can grow
-between them, or, where its ends meet in one reading and not the other, how far the arc drawn
-reaches from its start. Where the nearest six decimals move an arc further than its numbers moved,
-a radius may be written as the six-decimal number on its other side, whichever moves the arc
-least, so that radii that fit before rounding still fit after it. In relative path data
-each rounding carries on to every point after it, and the changes along the way to anything drawn
-(through groups, `use`s, clip paths and masks) add up. A number rounding did not change counts
-nothing however much it is magnified, so an exact `scale(999999)` is kept. A gradient whose vector
-or radius rounds to nothing, which paints its last colour everywhere, is refused too. A browser test draws 45 spellings of a number (signs,
+spelling (`10 px`, `5.`) is `unsupported-feature`, and so is one written with more than
+`numberLength` characters. Path data outside its grammar is dropped whole, where Chromium would
+draw it up to the first error: the output shows less.
+
+Every number the sanitiser keeps is written exactly as it was given, character for character,
+with its exponent and its unit as written; only the white space around a whole value is trimmed,
+and a tab, line feed or carriage return between numbers is written as a space, which Chromium
+reads alike. Chromium reads the numbers of a logo in single precision, by readers of its own (one
+for path data and lists, one for lengths), whose results need not be the nearest single-precision
+number: a number written in another spelling, however close, can be read as another number, and
+where an arc's radii barely fit between its ends, its ends barely meet, a dash is far below a
+pixel or a transform magnifies a hair a million times, that shows. Written as given, it is read
+the same in the output as in the original, however Chromium rounds it. A number written with more
+than `numberLength` (25) characters is dropped with the value that holds it, never rounded: the
+longest number JavaScript writes, `-0.0000012345678901234567`, has 25, and no number in the clean
+corpus, nor in some 270 further editors' exports the sanitiser was reviewed against, has more than 22. The numbers the
+sanitiser works out itself are written to six decimals, refused where six decimals do not hold
+what the rules here require: a width or height the root lacks (from its view box) and a view box
+it lacks (from its width and height), the part of the view box a `slice` showed, the region of a
+mask a clip path is rewritten as, and the position of a `use` moved onto a group, where given in
+another unit or as a percentage (in pixels it is written as given). The sanitiser's own geometry
+(the budgets, the overdraw, the view box rule) reads each number as an exact double, and where
+Chromium's reading of it could cost more to draw, it counts the costlier: an arc whose ends meet in
+one reading as its whole ellipse, and dashes far below a pixel as many as the stroke is long over
+their period, so `stroke-dasharray="0.0000004"` is refused as too costly, whether Chromium draws
+it dashed or solid. A browser test draws 45 spellings of a number (signs,
 points, exponents, leading zeros, hexadecimal, `Infinity`, `NaN`, stray white space and commas) in
 each of a length, a plain number, a transform, a view box, path data, points, a dash array and the
 root's width, and 18 spellings of a pair in each list, in the original and the output, and holds
 the output to drawing what the original drew. Where the sanitiser shows less than Chromium would,
-it says so: a number written with more characters than `numberLength` refuses the logo; a dash
+it says so: a number written with more characters than `numberLength` is dropped (and refuses the
+logo as the root's width); a dash
 array whose numbers run together without a separator (`1.5.5`, `1+2`) is dropped; and so are
 points of an odd count, which Chromium draws up to the last whole pair; a root width Chromium
 ignores as no length (`50.`, `0x32`, `NaN`) is refused, as above, rather than dropped. A second browser test
@@ -503,7 +503,12 @@ the declaration among others: marked important or not, beside another of its pro
 important or not), after comments, and between decoys whose strings, brackets and urls hold a
 `;` (each decoy dropped and reported, and nothing else), so the split and the cascade are held to
 Chromium's too. It runs six spellings of
-each value in CI (`IDG_CONFORMANCE_SPELLINGS` raises it locally). White space inside a value is XML's: space,
+each value in CI (`IDG_CONFORMANCE_SPELLINGS` raises it locally). A third generates 3,200 logos of numbers of 8 to
+17 significant digits near where the drawing changes (arcs whose radii barely fit, whose ends nearly
+meet or whose radii are near zero, chained and relative; ends a hair apart; dashes far below a pixel
+beside longer ones; a hair's offset, turn or scale under transforms magnifying it up to a million
+times) and requires each one the sanitiser keeps with nothing reported to draw, as an image, exactly
+as the original, pixel for pixel. White space inside a value is XML's: space,
 tab, line feed and carriage return; a no-break space or a line separator is not white space, and a
 value that leans on one is dropped. A reference is only ever to an id in the same document, which
 must match `[A-Za-z_][A-Za-z0-9_-]{0,63}` and exist: no URL scheme, no other file, no `data:` URL.
@@ -618,9 +623,9 @@ Each is in `SVG_LOGO_LIMITS`; going over one refuses the document.
 | `pathDataLength`       | 128 KiB       | One `d` or `points`; traced artwork is long, but not unbounded                          |
 | `textLength`           | 2,048         | Code points, as read: one run of text, and a whole `title` or `desc`                    |
 | `nameLength`           | 64            | An element or attribute name                                                            |
-| `numberLength`         | 32            | One number as written; exponents take at most 3 digits                                  |
+| `numberLength`         | 25            | One number as written, kept as written; exponents take at most 3 digits                 |
 | `integerDigits`        | 6             | Every number is below 1,000,000 in magnitude                                            |
-| `fractionDigits`       | 6             | Kept after the point, rounded half away from zero (exact, in decimal, never a float)    |
+| `fractionDigits`       | 6             | A number the sanitiser works out, rounded half away from zero (exact, in decimal)       |
 | `gradientStops`        | 64            | Stops in one gradient                                                                   |
 | `referenceDepth`       | 8             | References followed in a row (`use`, gradient `href`, `clip-path`, `mask`)              |
 | `renderedElements`     | 20,000        | Elements once every `use`, clip path and mask is expanded: the copies a renderer builds |
@@ -844,9 +849,10 @@ wherever any shape covers, so it lets through what the clip path let through:
   `use` of it, and the space both masks work in, stay as they were. The root's clip path works in
   the space around the root, in CSS pixels, which only a mask on the root shares: one on a root
   without a mask becomes a mask on the root, and one on a root with a mask of its own is refused
-  (`unsupported-feature`). The group takes the position only where six decimals hold it exactly (a
-  percentage of the view box worked in whole millionths); otherwise the logo is refused
-  (`unsupported-feature`), since a rounded position would move what it places.
+  (`unsupported-feature`). A position in pixels is written as given; in another unit, or as a
+  percentage of the view box worked in whole millionths, the group takes it only where six decimals
+  hold it exactly; otherwise the logo is refused (`unsupported-feature`), since a rounded position
+  would move what it places.
 - **Sharing and budgets.** One mask stands for each clip path, however many elements used it, and
   takes an id from the same counter as everything else, so the output is still a fixed point. A
   rewritten clip path counts as a mask: in `maskApplications`, in `maskDepth` (nested inside any
@@ -869,8 +875,8 @@ The output is never larger than an input may
 be (`inputBytes`; see what is promised of its size above): one that would be is refused
 (`too-large`) rather than returned. Nor may it have
 more elements, deeper nesting or a longer attribute value than an input may (the clip to a
-stretched view box adds three elements, a group taking a mask adds a level, and a number such as
-`1e-6` is written out as `0.000001`): those are refused as `too-many-elements`, `too-deep` and
+stretched view box adds three elements, a group taking a mask adds a level, and a transform list
+it joins can be longer than either): those are refused as `too-many-elements`, `too-deep` and
 `too-long`. So every output can be sanitised again and gives itself back.
 
 Before and after are drawn as images in the browser test and compared pixel by pixel, for
@@ -1085,12 +1091,12 @@ It does not judge what a logo shows: trademark, offensive or misleading content,
 imitates another brand, or visual spoofing inside the logo's box (a drawn "verified" badge, a fake
 button) are out of scope, as is anything a page does with a logo outside it (a logo is drawn where
 the page puts it, at the size the page gives it). Text in a `title` or `desc` is kept as escaped
-text, so a consumer that shows it must still treat it as text. The geometry is kept to six
-decimals; colours set only by CSS are lost (see above).
+text, so a consumer that shows it must still treat it as text. Colours set only by CSS are lost
+(see above).
 
-The tests hold it to that: a hostile corpus of 329 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 155
-refused, and every removal, by element, attribute and reason, for each of the 174 accepted, 40 of
+The tests hold it to that: a hostile corpus of 339 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 138
+refused, and every removal, by element, attribute and reason, for each of the 201 accepted, 40 of
 them with a clip path rewritten as a mask, 39 of which keep that mask in the output: in the
 fortieth, the rewritten clip path was the clip path of another clip path that is then emptied, so
 nothing is left to use it) and

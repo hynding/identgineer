@@ -19,7 +19,7 @@ import type { SvgLogoError, SvgLogoResult } from "./svg-logo-result.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 import { normaliseNumber } from "./svg-number.ts";
 import { Removals, TextLocator } from "./svg-removals.ts";
-import { aspectRatio, SVG_GRAMMARS, type SvgValue } from "./svg-values.ts";
+import { aspectRatio, SVG_GRAMMARS, type SvgValue, writtenText } from "./svg-values.ts";
 
 export interface SvgLogoOptions {
   /**
@@ -85,12 +85,11 @@ const ONE_PIXEL = 1 - 1e-9;
  * written, would show other than what the original showed by more than half a device pixel.
  */
 function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
+  // In CSS pixels, exactly: the root's width and height are read so, and written as given.
   const givenWidth = textOf(root, "width");
   const givenHeight = textOf(root, "height");
-  const exactWidth =
-    givenWidth === undefined ? undefined : (root.exactSize?.width ?? Number(givenWidth));
-  const exactHeight =
-    givenHeight === undefined ? undefined : (root.exactSize?.height ?? Number(givenHeight));
+  const exactWidth = givenWidth === undefined ? undefined : Number(givenWidth);
+  const exactHeight = givenHeight === undefined ? undefined : Number(givenHeight);
   // No logo has a natural size under a pixel, where six decimals are a large share of it.
   if ((exactWidth ?? 1) < ONE_PIXEL || (exactHeight ?? 1) < ONE_PIXEL) {
     throw new SvgLogoRejection(
@@ -99,6 +98,7 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
     );
   }
   let [width, height] = [givenWidth, givenHeight];
+  const givenViewBox = root.attributes.get("viewBox");
   let viewBox = textOf(root, "viewBox");
   if (viewBox === undefined) {
     if (width === undefined || height === undefined) {
@@ -123,8 +123,13 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
   const scaled = (value: number): string | undefined =>
     normaliseNumber(value.toFixed(limits.fractionDigits), limits);
   if (width === undefined && height === undefined) {
-    width = parts[2];
-    height = parts[3];
+    // The view box's own width and height, spelled as it spells them.
+    const spelled =
+      givenViewBox !== undefined && "text" in givenViewBox
+        ? writtenText(givenViewBox).split(/[ ,]+/)
+        : parts;
+    width = spelled[2];
+    height = spelled[3];
   } else {
     width ??= scaled(frame.width);
     height ??= scaled(frame.height);
@@ -132,6 +137,7 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
   if (width === undefined || height === undefined || Number(width) <= 0 || Number(height) <= 0) {
     throw new SvgLogoRejection("missing-size", "has no usable width and height");
   }
+  // Every spelling the grammars keep is one JavaScript reads to the same number.
   const size = { width: Number(width), height: Number(height) };
   if (size.width < ONE_PIXEL || size.height < ONE_PIXEL) {
     throw new SvgLogoRejection(
@@ -139,8 +145,8 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
       "comes to a width or height under one pixel from its view box; give the logo a width and a height of at least one pixel, or use a larger view box",
     );
   }
-  root.attributes.set("width", { text: width });
-  root.attributes.set("height", { text: height });
+  if (givenWidth === undefined) root.attributes.set("width", canonical("width", width, limits));
+  if (givenHeight === undefined) root.attributes.set("height", canonical("height", height, limits));
   // Kept only when it fits the view box in (`meet`); a stretch or crop is drawn to fit, centred.
   const fit = textOf(root, "preserveAspectRatio") ?? "xMidYMid";
   const aspect = aspectRatio(root.droppedAspect ?? "");
@@ -172,16 +178,19 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
     );
   }
   const { shown, clipped } = chosen;
-  root.attributes.set("viewBox", canonical("viewBox", shown.join(" "), limits));
+  if (shown !== box || givenViewBox === undefined) {
+    root.attributes.set("viewBox", canonical("viewBox", shown.join(" "), limits));
+  }
   return { ...size, viewBox: shown, clipTo: clipped ? box : undefined, cropped: shown !== box };
 }
 
+/** A value the sanitiser works out, read through the same grammar as any input. */
 function canonical(name: string, text: string, limits: SvgLogoLimits): SvgValue {
   const value = SVG_GRAMMARS[name]?.(text, limits);
   if (value === undefined) {
     throw new SvgLogoRejection(
       "number-out-of-range",
-      "has a preserveAspectRatio whose view box cannot be written within the number limits",
+      "has a size or view box that cannot be written within the number limits",
     );
   }
   return value;
@@ -327,8 +336,9 @@ function checkWrittenTree(root: CleanElement, limits: SvgLogoLimits): void {
 }
 
 /**
- * Refuses an output with an attribute value longer than an input's may be: numbers are written out
- * in full (`1e-6` as `0.000001`), so a value can grow past the limit the reader holds it to.
+ * Refuses an output with an attribute value longer than an input's may be: a transform the sanitiser
+ * joins (a use's position moved onto a group with its transform) can grow past the limit the reader
+ * holds it to.
  */
 function checkWrittenValues(svg: string, limits: SvgLogoLimits): void {
   for (const [, name = "", value = ""] of svg.matchAll(/ ([\w:-]+)="([^"]*)"/g)) {

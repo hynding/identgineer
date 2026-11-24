@@ -19,13 +19,10 @@ import {
   type Matrix,
   multiply,
   parseTransform,
-  product,
   stretch,
-  transformFunctions,
 } from "./svg-matrix.ts";
 import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
-import { RoundingPrecision, valueError } from "./svg-rounding-precision.ts";
 import type { SvgValue } from "./svg-values.ts";
 
 /**
@@ -107,45 +104,7 @@ interface Inherited {
   readonly strokeMiterlimit: number;
   readonly strokeLinecap: string;
   readonly strokeDasharray: string;
-  /** How far rounding moved the stroke width, the dash offset and a repeat of the dashes, in user units. */
-  readonly strokeWidthError: number;
-  readonly dashOffsetError: number;
-  readonly dashArrayError: number;
 }
-
-/** The numbers that place what a shape or a `use` draws, in its own user space. */
-const PLACING = [
-  "d",
-  "points",
-  "x",
-  "y",
-  "width",
-  "height",
-  "rx",
-  "ry",
-  "cx",
-  "cy",
-  "r",
-  "x1",
-  "y1",
-  "x2",
-  "y2",
-] as const;
-
-/** The numbers that place a gradient, in the space its units give. */
-const GRADIENT_PLACING = ["x1", "y1", "x2", "y2", "cx", "cy", "r", "fx", "fy", "fr"] as const;
-
-/** A gradient's vector and radii by default, in either of its units. */
-const GRADIENT_DEFAULTS: Readonly<Record<string, string>> = {
-  x1: "0",
-  y1: "0",
-  x2: "100%",
-  y2: "0",
-  cx: "50%",
-  cy: "50%",
-  r: "50%",
-  fr: "0",
-};
 
 const ROOT_INHERITED: Inherited = {
   fill: { text: "black" },
@@ -157,9 +116,6 @@ const ROOT_INHERITED: Inherited = {
   strokeMiterlimit: 4,
   strokeLinecap: "butt",
   strokeDasharray: "none",
-  strokeWidthError: 0,
-  dashOffsetError: 0,
-  dashArrayError: 0,
 };
 
 function textOf(element: CleanElement, name: string): string | undefined {
@@ -187,7 +143,6 @@ class OverdrawWalk {
   private readonly side: number;
   private readonly percentBase: number;
   private readonly geometries = new Map<CleanElement, Geometry | undefined>();
-  private readonly precision: RoundingPrecision;
   total = 0;
 
   constructor(
@@ -201,7 +156,6 @@ class OverdrawWalk {
     this.side = Math.max(viewBox[2] ?? 1, viewBox[3] ?? 1);
     this.square = this.side * this.side;
     this.percentBase = Math.max(this.side, 1);
-    this.precision = new RoundingPrecision(viewBox);
     const parents = new Map<CleanElement, CleanElement>();
     const stack = [root];
     for (let element = stack.pop(); element !== undefined; element = stack.pop()) {
@@ -213,49 +167,32 @@ class OverdrawWalk {
     this.parents = parents;
   }
 
-  /**
-   * Draws `element` under `matrix`; returns the box of what it painted, in view box units. `moved`
-   * is how far rounding has already moved what it draws, in device pixels (see
-   * `RoundingPrecision`).
-   */
-  draw(
-    element: CleanElement,
-    matrix: Matrix,
-    inherited: Inherited,
-    clipping: boolean,
-    moved: number,
-  ): SvgBox {
+  /** Draws `element` under `matrix`; returns the box of what it painted, in view box units. */
+  draw(element: CleanElement, matrix: Matrix, inherited: Inherited, clipping: boolean): SvgBox {
     if (textOf(element, "display") === "none") return EMPTY_BOX;
     const transform = textOf(element, "transform");
     let local = transform === undefined ? matrix : multiply(matrix, parseTransform(transform));
     const paint = clipping ? inherited : this.inherit(element, inherited);
-    // The root's width and height size the image, not what is drawn in it.
-    const placing = element.name === "svg" ? ["viewBox"] : PLACING;
-    const here =
-      moved +
-      this.precision.transform(element.attributes.get("transform"), matrix) +
-      this.precision.shift(this.precision.errorOf(element, placing, this.percentBase), local);
-    this.precision.check(here);
     let box = EMPTY_BOX;
     const opacity = numberOf(element, "opacity") ?? 1;
     const geometry = this.geometry(element);
     if (element.name === "use") {
       local = multiply(local, [1, 0, 0, 1, this.length(element, "x"), this.length(element, "y")]);
       const target = this.target(element, "href");
-      if (target !== undefined) box = this.draw(target, local, paint, clipping, here);
+      if (target !== undefined) box = this.draw(target, local, paint, clipping);
       if (opacity < 1 && !clipping) this.charge(this.share(box) * SVG_OVERDRAW_WEIGHTS.layer);
     } else if (geometry !== undefined) {
-      box = this.shape(geometry, element.name, local, paint, clipping, opacity, here);
+      box = this.shape(geometry, element.name, local, paint, clipping, opacity);
     } else {
       for (const child of element.children) {
         if (!NOT_DRAWN_IN_PLACE.has(child.name)) {
-          box = union(box, this.draw(child, local, paint, clipping, here));
+          box = union(box, this.draw(child, local, paint, clipping));
         }
       }
       if (opacity < 1 && !clipping) this.charge(this.share(box) * SVG_OVERDRAW_WEIGHTS.layer);
     }
-    this.applyClip(element, local, box, here);
-    if (!clipping) this.applyMask(element, local, box, here);
+    this.applyClip(element, local, box);
+    if (!clipping) this.applyMask(element, local, box);
     return box;
   }
 
@@ -266,7 +203,6 @@ class OverdrawWalk {
     paint: Inherited,
     clipping: boolean,
     opacity: number,
-    moved: number,
   ): SvgBox {
     const scale = determinant(matrix);
     const edges = Math.min(
@@ -286,13 +222,6 @@ class OverdrawWalk {
     }
     const fills = fillable && !isNone(paint.fill);
     const strokes = !isNone(paint.stroke) && paint.strokeWidth > 0;
-    if (fills) this.precision.check(moved + this.gradientShift(paint.fill, geometry.box, matrix));
-    if (strokes)
-      this.precision.check(moved + this.gradientShift(paint.stroke, geometry.box, matrix));
-    // A stroke width rounded to zero shows no stroke where the original showed one.
-    if (!isNone(paint.stroke)) {
-      this.precision.check(moved + this.precision.shift(strokeError(geometry, paint), matrix));
-    }
     // Opacity on a shape with one paint is folded into that paint; with two it takes a layer.
     const layered = opacity < 1 && fills && strokes;
     const alpha = layered ? 1 : opacity;
@@ -369,20 +298,17 @@ class OverdrawWalk {
    * clip path kept holds one shape, which clips by its outline: the sanitiser writes any other as
    * an alpha mask, charged as a mask.
    */
-  private applyClip(element: CleanElement, matrix: Matrix, box: SvgBox, moved: number): void {
+  private applyClip(element: CleanElement, matrix: Matrix, box: SvgBox): void {
     const clip = this.target(element, "clip-path");
     if (clip === undefined) return;
     this.charge(this.share(box) * SVG_OVERDRAW_WEIGHTS.clip);
     const content = this.contentMatrix(clip, "clipPathUnits", matrix, box);
-    // The clip path's own transform comes after the space of what it clips, in either units.
-    const here = moved + this.precision.transform(clip.attributes.get("transform"), matrix);
-    this.precision.check(here);
-    for (const child of clip.children) this.draw(child, content, ROOT_INHERITED, true, here);
-    this.applyClip(clip, content, box, here);
+    for (const child of clip.children) this.draw(child, content, ROOT_INHERITED, true);
+    this.applyClip(clip, content, box);
   }
 
   /** A mask applied to `box`: its area, and its content painted each time. */
-  private applyMask(element: CleanElement, matrix: Matrix, box: SvgBox, moved: number): void {
+  private applyMask(element: CleanElement, matrix: Matrix, box: SvgBox): void {
     const mask = this.target(element, "mask");
     if (mask === undefined) return;
     const weight =
@@ -392,102 +318,7 @@ class OverdrawWalk {
     this.charge(this.share(box) * weight);
     const content = this.contentMatrix(mask, "maskContentUnits", matrix, box);
     const inherited = this.inheritedAt(mask);
-    const bounding = textOf(mask, "maskUnits") !== "userSpaceOnUse";
-    const region = bounding ? this.boxMatrix(box) : matrix;
-    const here =
-      moved +
-      this.precision.shift(
-        this.precision.errorOf(
-          mask,
-          ["x", "y", "width", "height"],
-          bounding ? 1 : this.percentBase,
-        ),
-        region ?? matrix,
-      );
-    this.precision.check(here);
-    for (const child of mask.children) this.draw(child, content, inherited, false, here);
-  }
-
-  /** The matrix taking the unit square onto `box`, or `undefined` for an empty box. */
-  private boxMatrix(box: SvgBox): Matrix | undefined {
-    if (box.minX > box.maxX) return undefined;
-    return [box.maxX - box.minX, 0, 0, box.maxY - box.minY, box.minX, box.minY];
-  }
-
-  /**
-   * How far rounding moves a gradient `paint` paints a shape with, drawn under `matrix` with the
-   * box `box` in its own space: its transform, the numbers placing its vector, and its stops'
-   * offsets, each moving a colour along the vector by its change times the vector's length.
-   */
-  private gradientShift(paint: SvgValue, box: SvgBox, matrix: Matrix): number {
-    if (!("reference" in paint)) return 0;
-    const first = this.ids.get(paint.reference);
-    if (first === undefined || !GRADIENTS.has(first.name)) return 0;
-    const chain = this.gradientChain(first);
-    const own = (name: string): SvgValue | undefined =>
-      chain.find((at) => at.attributes.has(name))?.attributes.get(name);
-    const units = own("gradientUnits");
-    const bounding = !(units !== undefined && "text" in units && units.text === "userSpaceOnUse");
-    const space = bounding ? this.boxMatrix(box) : IDENTITY;
-    // A gradient in the units of an empty or flat box paints nothing.
-    if (space === undefined || space[0] === 0 || space[3] === 0) return 0;
-    const base = product(matrix, space);
-    const transform = own("gradientTransform");
-    const percentBase = bounding ? 1 : this.percentBase;
-    const placed =
-      transform !== undefined && "text" in transform
-        ? transformFunctions(transform.text).reduce(product, base)
-        : base;
-    const at = (name: string): number => {
-      const value = own(name);
-      // A focal point is the centre unless it is given.
-      const fallback = name === "fx" || name === "fy" ? own(name.replace("f", "c")) : undefined;
-      const given = value ?? fallback;
-      const written = given !== undefined && "text" in given ? given.text : GRADIENT_DEFAULTS[name];
-      return userUnits(written, percentBase);
-    };
-    const vector =
-      first.name === "linearGradient"
-        ? Math.hypot(at("x2") - at("x1"), at("y2") - at("y1"))
-        : at("r") + at("fr");
-    const placing = Math.max(
-      0,
-      ...chain.map((gradient) => this.precision.errorOf(gradient, GRADIENT_PLACING, percentBase)),
-    );
-    // A vector or radius rounded to nothing paints the last colour everywhere: no small shift.
-    const radius = first.name === "linearGradient" ? vector : at("r");
-    if (radius === 0 && placing > 0) return Infinity;
-    const offsets = Math.max(
-      0,
-      ...this.stopsOf(first).map((stop) => valueError(stop.attributes.get("offset"), 1)),
-    );
-    // Repeated or reflected, each repeat starts where the last ended, so a change to the vector
-    // moves the last repeat shown once for every repeat before it.
-    const spread = own("spreadMethod");
-    const repeating = spread !== undefined && "text" in spread && spread.text !== "pad";
-    const start =
-      first.name === "linearGradient"
-        ? Math.hypot(at("x1"), at("y1"))
-        : Math.max(Math.hypot(at("cx"), at("cy")), Math.hypot(at("fx"), at("fy")));
-    const repeats =
-      repeating && placing > 0 ? 1 + (this.precision.reach(placed) + start) / radius : 1;
-    return (
-      this.precision.transform(transform, base) +
-      this.precision.shift(placing * repeats + offsets * vector, placed)
-    );
-  }
-
-  /** A gradient and those it borrows from through `href`, in order. */
-  private gradientChain(gradient: CleanElement): CleanElement[] {
-    const chain: CleanElement[] = [];
-    for (
-      let at: CleanElement | undefined = gradient;
-      at !== undefined && chain.length <= this.ids.size && !chain.includes(at);
-      at = this.target(at, "href")
-    ) {
-      chain.push(at);
-    }
-    return chain;
+    for (const child of mask.children) this.draw(child, content, inherited, false);
   }
 
   /**
@@ -534,16 +365,7 @@ class OverdrawWalk {
       strokeMiterlimit: numberOf(element, "stroke-miterlimit") ?? from.strokeMiterlimit,
       strokeLinecap: textOf(element, "stroke-linecap") ?? from.strokeLinecap,
       strokeDasharray: textOf(element, "stroke-dasharray") ?? from.strokeDasharray,
-      strokeWidthError: this.errorAt(element, "stroke-width", from.strokeWidthError),
-      dashOffsetError: this.errorAt(element, "stroke-dashoffset", from.dashOffsetError),
-      dashArrayError: this.errorAt(element, "stroke-dasharray", from.dashArrayError),
     };
-  }
-
-  /** The rounding of `name` where `element` sets it, else what it inherits. */
-  private errorAt(element: CleanElement, name: string, inherited: number): number {
-    const value = element.attributes.get(name);
-    return value === undefined ? inherited : valueError(value, this.percentBase);
   }
 
   /** A length attribute in user units. */
@@ -626,19 +448,6 @@ function capLength(paint: Inherited): number {
   return width;
 }
 
-/**
- * How far rounding moves a stroke's edges and dashes, in its user units: its width and dash offset
- * by their change, and each dash by the change of every length before it, repeat after repeat.
- */
-function strokeError(geometry: Geometry, paint: Inherited): number {
-  const { period } = dashingOf(paint.strokeDasharray);
-  // A dash array rounded to all zeros counts without limit (see the dash array grammar).
-  if (period === 0) return paint.strokeWidthError + paint.dashArrayError;
-  // Every subpath starts the pattern afresh.
-  const repeats = Math.ceil(geometry.length / period) + geometry.subpaths;
-  return paint.strokeWidthError + paint.dashOffsetError + paint.dashArrayError * repeats;
-}
-
 function isNone(paint: SvgValue): boolean {
   return "text" in paint && paint.text === "none";
 }
@@ -654,7 +463,7 @@ export function measureOverdraw(
 ): number {
   const viewBox = (textOf(root, "viewBox") ?? "0 0 1 1").split(" ").map(Number);
   const walk = new OverdrawWalk(root, ids, limits, viewBox);
-  walk.draw(root, IDENTITY, ROOT_INHERITED, false, 0);
+  walk.draw(root, IDENTITY, ROOT_INHERITED, false);
   if (!Number.isFinite(walk.total)) throw new Error("the overdraw is not a finite number");
   return walk.total;
 }

@@ -2,32 +2,6 @@ import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 
 const MAX_EXPONENT_DIGITS = 3;
-
-// The most any number read inside `withRoundingError` has moved in rounding, while one runs.
-let roundingSink: { error: number } | undefined;
-
-/**
- * Reads with `read`, and says how far rounding moved any number it read (or any change it noted
- * with `noteRoundingError`), in the units the numbers are written in: zero where nothing rounded.
- */
-export function withRoundingError<T>(read: () => T): {
-  readonly result: T;
-  readonly error: number;
-} {
-  const outer = roundingSink;
-  const sink = { error: 0 };
-  roundingSink = sink;
-  try {
-    return { result: read(), error: sink.error };
-  } finally {
-    roundingSink = outer;
-  }
-}
-
-/** Counts a change rounding made, in the units of the numbers read, as if a number moved so far. */
-export function noteRoundingError(error: number): void {
-  if (roundingSink !== undefined && error > roundingSink.error) roundingSink.error = error;
-}
 const MAX_EXPONENT = 38;
 
 function isDigit(unit: number): boolean {
@@ -68,35 +42,20 @@ export function scanNumber(text: string, start: number): number {
   return end;
 }
 
-function increment(digits: string): string {
-  const units = digits.split("");
-  for (let index = units.length - 1; index >= 0; index -= 1) {
-    if (units[index] === "9") {
-      units[index] = "0";
-      continue;
-    }
-    units[index] = String(Number(units[index]) + 1);
-    return units.join("");
-  }
-  return `1${units.join("")}`;
-}
-
 /**
- * Writes a number token in its one canonical form, exactly, in decimal: at most
- * `limits.fractionDigits` after the point (rounded half away from zero), no exponent, no `+`, no
- * leading or trailing zeros, `0` for any zero. Works on the digits, never through a binary float, so
- * the same token always gives the same text and the text gives itself back. A number of
- * `limits.integerDigits` digits or more before the point, or a token longer than
- * `limits.numberLength`, refuses the document; `undefined` means the token is not a number.
+ * The value of a number token, exactly, as one plain decimal: no exponent, no `+`, no leading or
+ * trailing zeros, `0` for any zero, every digit kept. Works on the digits, never through a binary
+ * float, so the same token always gives the same text. This is how the sanitiser reads a number
+ * (and `Number` of it is the double nearest the token's value, as `Number` of the token is); it is
+ * never written out, since a number kept is written exactly as it was given. `undefined` means the
+ * token is not a number the sanitiser keeps: not one at all, one written with more than
+ * `limits.numberLength` characters, or one whose exponent passes 38 either way. A number of more
+ * than `limits.integerDigits` digits before the point, or an exponent of more than three digits,
+ * refuses the document.
  */
 export function normaliseNumber(token: string, limits: SvgLogoLimits): string | undefined {
-  if (token.length > limits.numberLength) {
-    throw new SvgLogoRejection(
-      "number-out-of-range",
-      "has a number written with too many characters",
-    );
-  }
-  if (token.length === 0 || scanNumber(token, 0) !== token.length) return undefined;
+  if (token.length === 0 || token.length > limits.numberLength) return undefined;
+  if (scanNumber(token, 0) !== token.length) return undefined;
   const negative = token.startsWith("-");
   const unsigned = token.replace(/^[+-]/, "");
   const exponentAt = unsigned.search(/[eE]/);
@@ -105,6 +64,8 @@ export function normaliseNumber(token: string, limits: SvgLogoLimits): string | 
   if (exponentText.replace(/^[+-]/, "").length > MAX_EXPONENT_DIGITS) {
     throw new SvgLogoRejection("number-out-of-range", "has a number with too large an exponent");
   }
+  // Chromium's SVG number reader takes no exponent beyond 38, even on zero.
+  if (Math.abs(Number(exponentText)) > MAX_EXPONENT) return undefined;
   const point = mantissa.indexOf(".");
   const integerPart = point === -1 ? mantissa : mantissa.slice(0, point);
   const fractionPart = point === -1 ? "" : mantissa.slice(point + 1);
@@ -112,36 +73,13 @@ export function normaliseNumber(token: string, limits: SvgLogoLimits): string | 
   let digits = integerPart + fractionPart;
   let pointAt = integerPart.length + Number(exponentText);
   const leadingZeros = digits.length - digits.replace(/^0+/, "").length;
-  digits = digits.slice(leadingZeros);
+  digits = digits.slice(leadingZeros).replace(/0+$/, "");
   pointAt -= leadingZeros;
-  // Chromium's SVG number reader takes no exponent beyond 38, even on zero.
-  const exponentTooLarge = Math.abs(Number(exponentText)) > MAX_EXPONENT;
-  if (digits === "") return exponentTooLarge ? undefined : "0";
+  if (digits === "") return "0";
   if (pointAt > limits.integerDigits) {
     throw new SvgLogoRejection("number-out-of-range", "has a number too large in magnitude");
   }
-  if (exponentTooLarge) return undefined;
-  let whole = pointAt > 0 ? digits.slice(0, pointAt).padEnd(pointAt, "0") : "0";
-  let fraction = pointAt >= 0 ? digits.slice(pointAt) : "0".repeat(-pointAt) + digits;
-  const rounds = /[1-9]/.test(fraction.slice(limits.fractionDigits));
-  if (fraction.length > limits.fractionDigits) {
-    const roundUp = fraction.charCodeAt(limits.fractionDigits) >= 0x35;
-    fraction = fraction.slice(0, limits.fractionDigits);
-    if (roundUp) {
-      const bumped = increment(whole + fraction);
-      whole = bumped.slice(0, bumped.length - fraction.length);
-      fraction = bumped.slice(bumped.length - fraction.length);
-    }
-  }
-  fraction = fraction.replace(/0+$/, "");
-  whole = whole.replace(/^0+(?=\d)/, "");
-  if (whole.length > limits.integerDigits) {
-    throw new SvgLogoRejection("number-out-of-range", "has a number too large in magnitude");
-  }
-  const written =
-    whole === "0" && fraction === ""
-      ? "0"
-      : `${negative ? "-" : ""}${whole}${fraction === "" ? "" : `.${fraction}`}`;
-  if (rounds) noteRoundingError(Math.abs(Number(token) - Number(written)));
-  return written;
+  const whole = pointAt > 0 ? digits.slice(0, pointAt).padEnd(pointAt, "0") : "0";
+  const fraction = pointAt >= 0 ? digits.slice(pointAt) : "0".repeat(-pointAt) + digits;
+  return `${negative ? "-" : ""}${whole}${fraction === "" ? "" : `.${fraction}`}`;
 }

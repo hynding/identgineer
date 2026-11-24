@@ -145,12 +145,15 @@ const CHILDREN: Readonly<Record<string, readonly string[]>> = {
 
 const TEXT_HOLDERS = new Set(["title", "desc"]);
 const ID = "[A-Za-z_][A-Za-z0-9_-]*";
-// A number as the sanitiser writes it: no sign on zero, no leading or trailing zeros, no
-// exponent, at most six digits on either side of the point.
-const NUMBER = "-?(?:0|[1-9][0-9]{0,5})(?:\\.[0-9]{0,5}[1-9])?";
+// A number as the sanitiser keeps it, written as it was given: an optional sign, digits with a
+// fraction after a point or a fraction alone, and an exponent of at most three digits.
+const NUMBER = "[+-]?(?:[0-9]+(?:\\.[0-9]+)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?";
 const NUMBER_ONLY = new RegExp(`^${NUMBER}$`);
-const LENGTH = new RegExp(`^(${NUMBER})(%|mm|cm|in|pt|pc)?$`);
-const ABSOLUTE_LENGTH = new RegExp(`^(${NUMBER})(mm|cm|in|pt|pc)?$`);
+const UNITS = "px|mm|cm|in|pt|pc";
+const LENGTH = new RegExp(`^(${NUMBER})(%|${UNITS})?$`, "i");
+const ABSOLUTE_LENGTH = new RegExp(`^(${NUMBER})(${UNITS})?$`, "i");
+// White space with at most one comma, as between two numbers of a list.
+const LIST_SEPARATOR = / +(?:, *)?|, */;
 const COLOUR = /^(?:#[0-9a-f]{6}|[a-z]+|currentColor)$/;
 const REFERENCE_URL = new RegExp(`^url\\(#(${ID})\\)$`);
 const FRAGMENT = new RegExp(`^#(${ID})$`);
@@ -179,8 +182,43 @@ const TRANSFORM_ARITY: Readonly<Record<string, readonly number[]>> = {
 
 type Grammar = (value: string, element: string) => boolean;
 
-const isNumber = (value: string): boolean => NUMBER_ONLY.test(value);
-const numbers = (value: string): string[] => (value === "" ? [] : value.split(" "));
+/**
+ * A number the sanitiser keeps: at most 25 characters, an exponent of at most 38 either way, and
+ * fewer than seven digits before the point once the exponent is applied.
+ */
+function isNumber(value: string): boolean {
+  if (value.length > 25 || !NUMBER_ONLY.test(value)) return false;
+  const [mantissa = "", exponent = "0"] = value.replace(/^[+-]/, "").split(/[eE]/);
+  if (exponent.replace(/^[+-]/, "").length > 3 || Math.abs(Number(exponent)) > 38) return false;
+  const [whole = "", fraction = ""] = mantissa.split(".");
+  const digits = (whole + fraction).replace(/^0+/, "");
+  const leading =
+    whole.replace(/^0+/, "").length || -(fraction.length - fraction.replace(/^0+/, "").length);
+  return digits === "" || leading + Number(exponent) <= 6;
+}
+
+/**
+ * A list of numbers, each after the last with white space and at most one comma between them, or
+ * nothing where the next number cannot run on from it (`1.5.5`, `1-2`); `undefined` for any other.
+ */
+function numberList(value: string): string[] | undefined {
+  const parts: string[] = [];
+  const next = new RegExp(`^${NUMBER}`);
+  let at = 0;
+  while (at < value.length) {
+    if (parts.length > 0) {
+      const separator = / *(?:, *)?/.exec(value.slice(at))?.[0] ?? "";
+      at += separator.length;
+      if (at >= value.length) return undefined;
+    }
+    const match = next.exec(value.slice(at));
+    if (match === null || !isNumber(match[0])) return undefined;
+    parts.push(match[0]);
+    at += match[0].length;
+  }
+  return parts;
+}
+
 const oneOf =
   (...choices: string[]): Grammar =>
   (value) =>
@@ -189,51 +227,103 @@ const oneOf =
 function length(nonNegative: boolean): Grammar {
   return (value) => {
     const match = LENGTH.exec(value);
-    return match !== null && (!nonNegative || Number(match[1]) >= 0);
+    return (
+      match !== null &&
+      isNumber(match[1] ?? "") &&
+      (!nonNegative || !/^-0*[.0-9]*[1-9]/.test(match[1] ?? ""))
+    );
   };
 }
 
-// The root's size is in pixels, written bare, and never zero.
-const size: Grammar = (value, element) =>
-  element === "svg" ? isNumber(value) && Number(value) > 0 : length(true)(value, element);
+// The root's size is positive, in pixels or an absolute unit.
+const size: Grammar = (value, element) => {
+  if (element !== "svg") return length(true)(value, element);
+  const match = ABSOLUTE_LENGTH.exec(value);
+  return match !== null && isNumber(match[1] ?? "") && Number(match[1]) > 0;
+};
 
+// A fraction, a percentage too, which Chromium clamps to 0 to 1.
 function unitInterval(value: string): boolean {
-  return isNumber(value) && Number(value) >= 0 && Number(value) <= 1;
+  const match = /^(.*?)%?$/.exec(value);
+  return isNumber(match?.[1] ?? "");
 }
 
+const PATH_COMMAND = /[MmLlHhVvCcSsQqTtAaZz]/;
+
+/**
+ * Path data as Chromium reads it: a move first; between a command and its first number only white
+ * space; between numbers white space with at most one comma; an arc's flags single digits that may
+ * touch what follows; a comma after a command's last number only before the next command.
+ */
 function pathData(value: string): boolean {
-  const segments = value.match(/[A-Za-z][^A-Za-z]*/g);
-  if (segments?.join("") !== value) return false;
-  return segments.every((segment, index) => {
-    const command = segment.charAt(0);
-    const arity = PATH_ARITY[command.toLowerCase()];
-    if (arity === undefined || (index === 0 && command.toLowerCase() !== "m")) return false;
-    const values = numbers(segment.slice(1));
-    if (arity === 0) return values.length === 0;
-    if (values.length === 0 || values.length % arity !== 0 || !values.every(isNumber)) return false;
-    // An arc's fourth and fifth numbers are flags.
-    return (
-      arity !== 7 ||
-      values.every((part, position) => position % 7 < 3 || position % 7 > 4 || /^[01]$/.test(part))
-    );
-  });
+  let at = 0;
+  const spaces = (): void => {
+    while (value[at] === " ") at += 1;
+  };
+  const separator = (): void => {
+    spaces();
+    if (value[at] === ",") at += 1;
+    spaces();
+  };
+  const number = (): boolean => {
+    const match = new RegExp(`^${NUMBER}`).exec(value.slice(at));
+    if (match === null || !isNumber(match[0])) return false;
+    at += match[0].length;
+    return true;
+  };
+  let first = true;
+  while (at < value.length) {
+    const command = value[at] ?? "";
+    if (!PATH_COMMAND.test(command) || (first && command.toLowerCase() !== "m")) return false;
+    first = false;
+    at += 1;
+    const arity = PATH_ARITY[command.toLowerCase()] ?? 0;
+    if (arity > 0) {
+      for (;;) {
+        for (let index = 0; index < arity; index += 1) {
+          if (index === 0) spaces();
+          else separator();
+          if (arity === 7 && (index === 3 || index === 4)) {
+            if (value[at] !== "0" && value[at] !== "1") return false;
+            at += 1;
+          } else if (!number()) return false;
+        }
+        const before = at;
+        separator();
+        if (new RegExp(`^${NUMBER}`).test(value.slice(at))) continue;
+        if (!PATH_COMMAND.test(value[at] ?? "")) at = before;
+        break;
+      }
+    }
+    spaces();
+  }
+  return !first && !value.endsWith(" ");
 }
 
 function points(value: string): boolean {
-  return value
-    .split(" ")
-    .every((pair) => /^[^,]+,[^,]+$/.test(pair) && pair.split(",").every(isNumber));
+  const parts = numberList(value);
+  return parts !== undefined && parts.length >= 2 && parts.length % 2 === 0;
 }
 
+/** Functions separated by white space with at most one comma, each `name(numbers)`. */
 function transform(value: string): boolean {
-  const functions = value.match(/[A-Za-z]+\([^)]*\)/g);
-  if (functions?.join(" ") !== value) return false;
+  if (/^[ ,]|[ ,]$/.test(value)) return false;
+  const functions = value.match(/[A-Za-z]+ *\([^)]*\)/g);
+  if (functions === null || functions.length > 16) return false;
+  const between = value.split(/[A-Za-z]+ *\([^)]*\)/);
+  if (
+    !between.every((gap, index) =>
+      index === 0 || index === between.length - 1 ? gap === "" : /^ *(?:, *)?$/.test(gap),
+    )
+  )
+    return false;
   return functions.every((call) => {
     const open = call.indexOf("(");
-    const name = call.slice(0, open);
+    const name = call.slice(0, open).trimEnd();
     const arities = Object.hasOwn(TRANSFORM_ARITY, name) ? TRANSFORM_ARITY[name] : undefined;
-    const values = numbers(call.slice(open + 1, -1));
-    return arities?.includes(values.length) === true && values.every(isNumber);
+    const inside = call.slice(open + 1, -1).replace(/^ +| +$/g, "");
+    const values = numberList(inside);
+    return values !== undefined && arities?.includes(values.length) === true;
   });
 }
 
@@ -262,10 +352,8 @@ const GRAMMARS: Readonly<Record<string, Grammar>> = {
   x2: length(false),
   y2: length(false),
   viewBox: (value) => {
-    const parts = numbers(value);
-    return (
-      parts.length === 4 && parts.every(isNumber) && Number(parts[2]) > 0 && Number(parts[3]) > 0
-    );
+    const parts = numberList(value);
+    return parts?.length === 4 && Number(parts[2]) > 0 && Number(parts[3]) > 0;
   },
   preserveAspectRatio: (value) => /^x(?:Min|Mid|Max)Y(?:Min|Mid|Max)(?: meet)?$/.test(value),
   transform,
@@ -288,12 +376,18 @@ const GRAMMARS: Readonly<Record<string, Grammar>> = {
   "stroke-linecap": oneOf("butt", "round", "square"),
   "stroke-linejoin": oneOf("miter", "round", "bevel"),
   "stroke-miterlimit": (value) => isNumber(value) && Number(value) >= 1,
-  "stroke-dasharray": (value) =>
-    value === "none" ||
-    numbers(value).every((part) => {
-      const match = ABSOLUTE_LENGTH.exec(part);
-      return match !== null && Number(match[1]) >= 0;
-    }),
+  "stroke-dasharray": (value) => {
+    if (value === "none") return true;
+    const parts = value.split(LIST_SEPARATOR);
+    return (
+      !/^[ ,]|[ ,]$/.test(value) &&
+      parts.length <= 64 &&
+      parts.every((part) => {
+        const match = ABSOLUTE_LENGTH.exec(part);
+        return match !== null && length(true)(part, "path");
+      })
+    );
+  },
   "stroke-dashoffset": length(false),
   "paint-order": (value) =>
     value === "normal" ||

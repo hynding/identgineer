@@ -1,26 +1,30 @@
 import { trimXmlWhitespace, XML_WHITESPACE } from "./svg-characters.ts";
 import { parseSvgColour } from "./svg-colour.ts";
 import type { SvgLogoLimits } from "./svg-logo-limits.ts";
-import { normaliseNumber, noteRoundingError } from "./svg-number.ts";
+import { normaliseNumber } from "./svg-number.ts";
 import { parseSvgNumberList, parseSvgPathData } from "./svg-path-data.ts";
 import { parseSvgTransform } from "./svg-transform.ts";
 
 /**
- * A value that passed its grammar: canonical text built from what was parsed, or a reference to
- * an id in the same document (written back once ids are renamed).
+ * A value that passed its grammar, or a reference to an id in the same document (written back once
+ * ids are renamed). `text` is the value as the sanitiser reads it: numbers in one plain decimal
+ * form, exactly (see `normaliseNumber`), lengths in lower case with no `px`, a fraction as a number
+ * from 0 to 1. A value holding numbers is written out as `written`, exactly as it was given but for
+ * its white space: so Chromium reads the same numbers from the output as from the original, however
+ * its own number readers round them.
  */
 export type SvgValue =
   | {
       readonly text: string;
-      /**
-       * How far rounding to six decimals moved the value's numbers (or, for an arc, the shape they
-       * draw), in the units they are written in; absent where nothing rounded.
-       */
-      readonly roundingError?: number;
-      /** A transform list that rounding changed, with its numbers exactly as written. */
-      readonly exactTransform?: string;
+      /** The value as given, trimmed, each tab, line feed and carriage return a space. */
+      readonly written?: string;
     }
   | { readonly reference: string; readonly form: "url" | "fragment" };
+
+/** What a value is written out as: as given where it holds numbers, else its own text. */
+export function writtenText(value: { readonly text: string; readonly written?: string }): string {
+  return value.written ?? value.text;
+}
 
 export type SvgGrammar = (input: string, limits: SvgLogoLimits) => SvgValue | undefined;
 
@@ -72,6 +76,16 @@ const ABSOLUTE_UNITS: Readonly<Record<string, number>> = {
 
 const text = (value: string): SvgValue => ({ text: value });
 
+// White space XML keeps in a value, which the output writes as spaces: a line feed written out would
+// be read back as a space, and every grammar that takes numbers takes any white space alike.
+const WHITESPACE_CHARACTER = /[\t\n\r]/g;
+
+/** A value read as `read`, to be written out as `input` was given. */
+function asGiven(input: string, read: string): SvgValue {
+  const written = trimXmlWhitespace(input).replace(WHITESPACE_CHARACTER, " ");
+  return written === read ? { text: read } : { text: read, written };
+}
+
 function number(input: string, limits: SvgLogoLimits): string | undefined {
   return normaliseNumber(trimXmlWhitespace(input), limits);
 }
@@ -94,29 +108,24 @@ function length(
 ): string | undefined {
   const { amount, unit } = splitUnit(input);
   if (!(units as ReadonlySet<string>).has(unit)) return undefined;
-  // A negative number Chromium takes as an error, even one that rounds to zero.
-  if (!allowNegative && Number(amount) < 0) return undefined;
   const normalised = normaliseNumber(amount, limits);
+  // A negative number Chromium takes as an error, `-0` aside.
   if (normalised === undefined || (!allowNegative && normalised.startsWith("-"))) return undefined;
   return normalised + (unit === "px" ? "" : unit);
 }
 
 /**
- * A number of CSS pixels from a length in an absolute unit (or none), as written out and exactly, as
- * a browser takes it before any rounding; `undefined` otherwise.
+ * A positive length in an absolute unit (or none), read as the number of CSS pixels it is and
+ * written out as given; `undefined` otherwise.
  */
-export function absolutePixels(
-  input: string,
-  limits: SvgLogoLimits,
-): { readonly text: string; readonly exact: number } | undefined {
+export function absolutePixels(input: string, limits: SvgLogoLimits): SvgValue | undefined {
   const { amount, unit } = splitUnit(input);
   const factor = Object.hasOwn(ABSOLUTE_UNITS, unit) ? ABSOLUTE_UNITS[unit] : undefined;
   const normalised = factor === undefined ? undefined : normaliseNumber(amount, limits);
   if (factor === undefined || normalised === undefined || Number(normalised) <= 0) return undefined;
-  const exact = Number(amount) * factor;
-  if (factor === 1) return { text: normalised, exact };
-  const text = normaliseNumber(exact.toFixed(limits.fractionDigits), limits);
-  return text === undefined ? undefined : { text, exact };
+  if (factor === 1) return asGiven(input, normalised);
+  const pixels = normaliseNumber(String(Number(normalised) * factor), limits);
+  return pixels === undefined ? undefined : asGiven(input, pixels);
 }
 
 // Units of the viewport, which an image has none of: Chromium draws a root sized in them at no size.
@@ -157,21 +166,19 @@ const NUMBER_AND_UNIT = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?)(%|[a-z
 /**
  * What is wrong with a root width or height that is not a positive length in an absolute unit (or
  * none): a percentage, which an image takes as no size given (`undefined`: dropped, and the size
- * read from the view box); a number that is zero or less, or rounds to zero, in any other unit,
- * which Chromium draws at no size (`no-size`); a positive one in a unit of the viewport, which an
+ * read from the view box); a number that is zero or less, or too small for Chromium to read as more,
+ * in any other unit, which Chromium draws at no size (`no-size`); a positive one in a unit of the viewport, which an
  * image has none of (`viewport`); anything else, which Chromium reads as CSS (a calculation, a
  * variable, a keyword, a unit the sanitiser does not take) in ways it does not (`unread`).
  */
-export function rootSizeProblem(
-  input: string,
-  limits: SvgLogoLimits,
-): "no-size" | "viewport" | "unread" | undefined {
+export function rootSizeProblem(input: string): "no-size" | "viewport" | "unread" | undefined {
   const match = NUMBER_AND_UNIT.exec(trimXmlWhitespace(input));
   if (match === null) return "unread";
   const unit = (match[2] ?? "").toLowerCase();
   if (unit === "%") return undefined;
   const amount = Number(match[1]);
-  if (amount <= 0 || amount < 10 ** -limits.fractionDigits / 2) return "no-size";
+  // Chromium reads a length past single precision's smallest, `1e-39`, as zero.
+  if (amount < 1e-38) return "no-size";
   return VIEWPORT_UNITS.has(unit) ? "viewport" : "unread";
 }
 
@@ -185,8 +192,20 @@ function fraction(input: string, limits: SvgLogoLimits): string | undefined {
   if (unit !== "" && unit !== "%") return undefined;
   const normalised = normaliseNumber(amount, limits);
   if (normalised === undefined) return undefined;
-  const scaled = unit === "%" ? normaliseNumber(`${normalised}e-2`, limits) : normalised;
-  return scaled === undefined ? undefined : clampUnit(scaled);
+  // The value read exactly, a percentage as a hundredth of it, then clamped as Chromium clamps it.
+  return clampUnit(unit === "%" ? hundredth(normalised) : normalised);
+}
+
+/** A plain decimal divided by 100, exactly. */
+function hundredth(decimal: string): string {
+  const negative = decimal.startsWith("-");
+  const [whole = "0", fractionDigits = ""] = decimal.replace("-", "").split(".");
+  const digits = whole.padStart(3, "0") + fractionDigits;
+  const point = digits.length - fractionDigits.length - 2;
+  const integer = digits.slice(0, point).replace(/^0+(?=\d)/, "");
+  const rest = digits.slice(point).replace(/0+$/, "");
+  const value = rest === "" ? integer : `${integer}.${rest}`;
+  return negative && value !== "0" ? `-${value}` : value;
 }
 
 function urlReference(input: string): SvgValue | undefined {
@@ -226,27 +245,27 @@ const colour: SvgGrammar = (input) => {
 
 const anyLength: SvgGrammar = (input, limits) => {
   const parsed = length(input, limits, true);
-  return parsed === undefined ? undefined : text(parsed);
+  return parsed === undefined ? undefined : asGiven(input, parsed);
 };
 
 const nonNegativeLength: SvgGrammar = (input, limits) => {
   const parsed = length(input, limits, false);
-  return parsed === undefined ? undefined : text(parsed);
+  return parsed === undefined ? undefined : asGiven(input, parsed);
 };
 
 const unitInterval: SvgGrammar = (input, limits) => {
   const parsed = fraction(input, limits);
-  return parsed === undefined ? undefined : text(parsed);
+  return parsed === undefined ? undefined : asGiven(input, parsed);
 };
 
 const miterLimit: SvgGrammar = (input, limits) => {
   const parsed = number(input, limits);
-  return parsed === undefined || Number(parsed) < 1 ? undefined : text(parsed);
+  return parsed === undefined || Number(parsed) < 1 ? undefined : asGiven(input, parsed);
 };
 
 const pathData: SvgGrammar = (input, limits) => {
   const parsed = parseSvgPathData(input, limits);
-  return parsed === undefined ? undefined : text(parsed);
+  return parsed === undefined ? undefined : asGiven(input, parsed);
 };
 
 const points: SvgGrammar = (input, limits) => {
@@ -256,13 +275,13 @@ const points: SvgGrammar = (input, limits) => {
   for (let index = 0; index < values.length; index += 2) {
     pairs.push(`${values[index] ?? ""},${values[index + 1] ?? ""}`);
   }
-  return text(pairs.join(" "));
+  return asGiven(input, pairs.join(" "));
 };
 
 const viewBox: SvgGrammar = (input, limits) => {
   const values = parseSvgNumberList(input, limits);
   if (values?.length !== 4 || Number(values[2]) <= 0 || Number(values[3]) <= 0) return undefined;
-  return text(values.join(" "));
+  return asGiven(input, values.join(" "));
 };
 
 const dashArray: SvgGrammar = (input, limits) => {
@@ -271,17 +290,7 @@ const dashArray: SvgGrammar = (input, limits) => {
   if (parts.length > 64) return undefined;
   const lengths = parts.map((part) => length(part, limits, false, DASH_UNITS));
   if (lengths.some((part) => part === undefined)) return undefined;
-  // What rounding moves a dash by, one repeat on: every length's change before it, an odd list
-  // read twice over. Where every length rounds to zero the stroke is drawn solid, however short
-  // the dashes were: no shift bounds that.
-  const changes = parts.map((part, index) =>
-    Math.abs(Number(splitUnit(part).amount) - Number(splitUnit(lengths[index] ?? "").amount)),
-  );
-  const written = lengths.some((part) => Number(splitUnit(part ?? "").amount) !== 0);
-  const given = parts.some((part) => Number(splitUnit(part).amount) !== 0);
-  const perRepeat = changes.reduce((sum, change) => sum + change, 0) * ((parts.length % 2) + 1);
-  noteRoundingError(given && !written ? Infinity : perRepeat);
-  return text(lengths.join(" "));
+  return asGiven(input, lengths.join(" "));
 };
 
 // Either `normal` or the layers named first, each once; the ones left out follow in their usual order.
@@ -295,10 +304,7 @@ const paintOrder: SvgGrammar = (input) => {
 
 const transform: SvgGrammar = (input, limits) => {
   const parsed = parseSvgTransform(input, limits);
-  if (parsed === undefined) return undefined;
-  return parsed.exact === parsed.text
-    ? text(parsed.text)
-    : { text: parsed.text, exactTransform: parsed.exact };
+  return parsed === undefined ? undefined : asGiven(input, parsed);
 };
 
 const ALIGNMENTS = ["xMin", "xMid", "xMax"].flatMap((x) =>
