@@ -69,6 +69,78 @@ describe("sanitiseSvgLogo, output", () => {
     );
   });
 
+  it.each([
+    ["a length", '<rect width="5." height="5"/>', "width"],
+    ["a length with an exponent", '<rect width="5.e0" height="5"/>', "width"],
+    ["a plain number", '<rect width="5" height="5" opacity="1."/>', "opacity"],
+    ["a transform", '<rect width="5" height="5" transform="translate(5.)"/>', "transform"],
+    ["path data", '<path d="M0 0H5.V5H0Z"/>', "d"],
+    ["points", '<polygon points="0,0 5.,0 5,5"/>', "points"],
+    [
+      "a dash array",
+      '<path d="M0 0H5" stroke="#000" stroke-dasharray="1. 2"/>',
+      "stroke-dasharray",
+    ],
+  ])("drops a number ending in a point, which Chromium does not take, in %s", (_, body, name) => {
+    const result = accepted(svg(body));
+    expect(result.removed).toEqual([
+      expect.objectContaining({ attribute: name, reason: "invalid-value" }),
+    ]);
+  });
+
+  it.each([
+    ["a view box", 'viewBox="0. 0 10 10" width="10" height="10"', "viewBox"],
+    ["the root's width", 'viewBox="0 0 10 10" width="5." height="10"', "width"],
+  ])("drops a number ending in a point on the root, in %s", (_, root, name) => {
+    const result = accepted(svg('<rect width="5" height="5"/>', root));
+    expect(result.removed).toEqual([
+      expect.objectContaining({ attribute: name, reason: "invalid-value" }),
+    ]);
+  });
+
+  it.each([
+    ["a comma before a command's first number", "M,0 0L5 5"],
+    ["two commas between numbers", "M0,,0L5 5"],
+  ])("drops path data with %s, which Chromium does not take", (_, d) => {
+    expect(accepted(svg(`<path d="${d}"/>`)).removed).toEqual([
+      expect.objectContaining({ attribute: "d", reason: "invalid-value" }),
+    ]);
+  });
+
+  it("keeps path data with a comma before a command, which Chromium takes", () => {
+    expect(output('<path d="M0 0,L5 5,5 0, Z"/>')).toBe(`${ROOT}<path d="M0 0L5 5 5 0Z"/></svg>`);
+  });
+
+  it.each([",1 2", "1,,2", "1 2,"])(
+    "drops a dash array of %j, which Chromium does not take",
+    (dashes) => {
+      expect(
+        accepted(svg(`<path d="M0 0H5" stroke="#000" stroke-dasharray="${dashes}"/>`)).removed,
+      ).toEqual([
+        expect.objectContaining({ attribute: "stroke-dasharray", reason: "invalid-value" }),
+      ]);
+    },
+  );
+
+  it.each([
+    ["zero", 'width="0" height="10"'],
+    ["minus zero", 'width="10" height="-0"'],
+    ["a negative width", 'width="-5" height="10"'],
+    ["a negative length in millimetres", 'width="-1mm" height="10"'],
+  ])("refuses a root whose size is %s, which Chromium draws at no size", (_, size) => {
+    expect(refused(svg('<rect width="5" height="5"/>', `viewBox="0 0 10 10" ${size}`)).code).toBe(
+      "missing-size",
+    );
+  });
+
+  it("keeps a width of one pixel written in millimetres, to the floating point", () => {
+    expect(accepted(svg("", 'viewBox="0 0 1 1" width="0.264583333333mm"')).width).toBe(1);
+  });
+
+  it("refuses a view box under a pixel with no size, advising a larger one", () => {
+    expect(refused(svg("", 'viewBox="0 0 0.5 0.5"')).message).toContain("larger view box");
+  });
+
   it("rounds numbers to six decimals, half away from zero, exactly", () => {
     expect(output('<path d="M0.1234565 -0.1234565L999999.9999994 0.0000005"/>')).toBe(
       `${ROOT}<path d="M0.123457 -0.123457L999999.999999 0.000001"/></svg>`,
