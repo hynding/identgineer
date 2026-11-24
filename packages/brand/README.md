@@ -314,13 +314,11 @@ paint server becomes `none`, which is what a browser draws, rather than black); 
 outside `title` and `desc`; a `DOCTYPE` with no internal subset, such as the public SVG 1.1 one
 older Illustrator versions write (it is read only to find its end: no DTD is fetched and nothing it
 would declare is honoured, so `&nbsp;` is refused with or without it); and what is valid but would
-make the logo far costlier to draw than its budgets can see, where the picture stays the same or
-close to it: a `preserveAspectRatio` of `none` or `slice`, which would stretch or crop the view box
-(the logo is then drawn to fit, as by default), and a `clip-path` or `mask` on a clip path or on a
-shape inside one, which makes a browser draw the clip path as a mask layer each time it is applied
-(Chromium does not even draw such a mask). A clip path of more than one shape, or of one clipped in
-turn, is not dropped but written as an alpha mask of the same shapes, and listed with the reason
-`rewritten` (see clip paths of more than one shape, below). The reasons are `active-content`,
+make the logo far costlier to draw than its budgets can see, or that browsers ignore (`render-cost`;
+see the table below), and a clip path written as a mask (`rewritten`, see clip paths of more than
+one shape, below). What is guaranteed of these is exactly this: the output never shows anything the
+original did not. Each one draws the same picture, or less of it, or the document is refused; the
+table below says which, removal by removal. The reasons are `active-content`,
 `event-handler`, `external-reference` (only on an attribute that takes a reference: a `url(` in
 path data is just an `invalid-value`), `styling`, `editor-metadata`, `text`, `filter`,
 `foreign-namespace`, `unsupported-element`, `unsupported-attribute`, `invalid-value`, `misplaced`,
@@ -396,11 +394,13 @@ Decisions, with the reason for each:
   drawing nor what it costs would be the logo's own (see the drawing cost below).
 - **A clip path holds shapes and uses of them, and a mask takes no transform, clip path or mask of
   its own.** Browsers leave a group out of a clip path, and apply none of those on a mask, so
-  dropping them changes nothing drawn; what a browser would honour but draw far more slowly (a clip
-  path or mask on a clip path or what it holds) is dropped too, as `render-cost`. A `use` in a clip
-  path of anything but a shape is dropped as `misplaced`: the specification calls it an error, and
-  Chromium 153, against it, clips to everything the group draws, which would bring back the costly
-  union of many shapes (below).
+  dropping them changes nothing drawn; a mask on a clip path or on what it holds is ignored too
+  (Chromium 153.0.8010.12 does not draw it) and dropped as `render-cost`. A clip path on a clip path
+  or on what it holds is kept, and the clip path written as a mask (below). A `use` in a clip path
+  of anything but a shape is an error in the specification, which makes the clip path invalid;
+  Chromium 153.0.8010.12 leaves such a use out and clips to the clip path's other shapes. The
+  sanitiser empties the clip path (each child dropped as `misplaced`, a child something else draws
+  kept as a definition), so what it clips draws nothing, which is never more than either.
 - **Editor metadata goes.** Inkscape, Sodipodi, RDF, Creative Commons, Dublin Core, Adobe, Sketch
   and Serif namespaces, `metadata`, `xml:space`, `version`, the root's `x` and `y`.
 - **`xml:base` goes**, so it cannot redirect a fragment reference to another document.
@@ -434,8 +434,14 @@ Each is in `SVG_LOGO_LIMITS`; going over one refuses the document.
 | `drawingCost`          | 200,000       | What drawing its geometry costs once every reference is expanded; see below             |
 | `overdraw`             | 500           | What painting it costs, in images' worth of solid paint; see below                      |
 | `maskApplications`     | 128           | Masks and clip paths applied once every reference is expanded                           |
-| `maskDepth`            | 4             | Masks and clip paths applied inside one another, in a row                               |
+| `maskDepth`            | 4             | Masks and clip paths applied inside one another, in a row (see below)                   |
 | `ids`                  | 1,024         | Elements with an id                                                                     |
+
+`maskDepth` counts masks and clip paths applied while drawing another's content: a mask whose
+content has an element with a mask, whose content has one in turn, is three deep, and a clip path
+written as a mask counts as one. It does not count masks on an element's ancestors: a masked group
+in a masked group is two masks applied one after the other, each one deep, and only
+`maskApplications` counts them.
 
 "Billion laughs" by `use` (a definition used ten times, each of those ten times, and so on) is
 stopped twice over: by `renderedElements`, for the copies a renderer builds, and by `drawingCost`,
@@ -595,22 +601,29 @@ segments. An earlier version counted how often the shapes could cross and refuse
 since the time does not follow the count, no limit on it was safe. So no clip path of more than one
 shape is kept.
 
-A clip path of more than one shape, or of one shape that is clipped in turn (a `use` of a shape
-with a clip path of its own), is written as an alpha mask (`mask-type="alpha"`) of the same shapes,
-under the same id, and reported with the reason `rewritten`. A mask paints its content and never
-combines it, and its alpha is 1 wherever any shape covers, so it lets through what the clip path
-let through:
+A clip path of more than one shape, or of one shape clipped in turn (a shape or `use` in it with a
+clip path of its own, or a `use` of a shape with one), or with a clip path of its own, is written
+as an alpha mask (`mask-type="alpha"`) of the same shapes, under the same id, and reported with
+the reason `rewritten`. A mask paints its content and never combines it, and its alpha is 1
+wherever any shape covers, so it lets through what the clip path let through:
 
-- **Content.** Each shape is drawn opaque and bare: `fill="#ffffff"`, `fill-opacity="1"`,
-  `stroke="none"`, `visibility="visible"`, its geometry and its own `transform`, and nothing else
-  (a clip path takes neither its shapes' paint nor their strokes, filters or masks). The fill rule
-  is the shape's clip rule: its own, or the `use`'s, or the clip path's or what holds it, as
-  Chromium inherits it. A `use` becomes a group carrying the use's `transform` and then its `x` and
-  `y` (a percentage taken of the view box, or of the box in object-bounding-box units) around a
-  copy of the shape; a shape clipped in turn keeps its clip path in the copy. What a clip path
-  ignores is left out (a shape not displayed or hidden, by itself or the `use` that draws it, and
-  a `use` of anything but a shape), and dropped as `render-cost` or `misplaced`. The clip path's
-  own `transform` goes on a group around the content.
+- **Content.** The mask carries the paint every shape inherits: `fill="#ffffff"`,
+  `fill-opacity="1"`, `fill-rule="nonzero"`, `stroke="none"`, `visibility="visible"`. Each shape is
+  drawn bare: its geometry, its own `transform`, its clip path if it has one, and `fill-rule` only
+  where its clip rule is `evenodd` (its own, or the `use`'s, or the clip path's or what holds it,
+  as Chromium inherits it); a clip path takes neither its shapes' paint nor their strokes. A `use`
+  stays a `use`, with its `x`, `y` (a percentage taken of the view box, in object-bounding-box
+  units too, as Chromium takes it), `transform` and clip path, pointing at one bare copy of its
+  shape. The copy is made once for the whole document, however many uses draw it, in a `defs` set
+  just before the first clip path that needs it, so the output grows with the input rather than
+  with the uses. What a clip path ignores is left out (a shape not displayed or hidden, by itself
+  or by the `use` that draws it) and dropped as `render-cost`; a child that something else draws
+  (a `use` elsewhere naming its id) is kept, with its id, paint and all, in that `defs`. The clip
+  path's own `transform` goes on a group around the content, and its own clip path on a group
+  around that, since Chromium applies it outside the transform.
+- **Clips in turn.** A clip path on a shape, a `use` or the clip path itself keeps working in the
+  mask: if it is of one shape it stays a clip path, and if it needs rewriting it becomes a mask in
+  turn, nested in this one, counted in `maskDepth` like any other.
 - **Units and region.** `clipPathUnits="objectBoundingBox"` becomes
   `maskContentUnits="objectBoundingBox"`, the region staying in the same box; otherwise the
   region is in user space (`maskUnits="userSpaceOnUse"`). The region is the box of every shape
@@ -620,29 +633,65 @@ let through:
   mask by what it masks: 12 masked squares took the same with a region of the view box and of two
   million units). An element with an empty box (a horizontal line, say) draws nothing under a clip
   path or mask in object-bounding-box units, and draws nothing the same way after the rewrite.
-  `display` is copied, since a mask not displayed is ignored as a clip path not displayed is.
+  `display` is copied. The region is held within the largest number a value may be (999,999.999999):
+  for shapes near that, far from the origin or spanning most of it, the margin gives way first,
+  and only shapes reaching past it lose their edges, which shows less, never more.
 - **What used it.** Every `clip-path` that named it, written as an attribute or in `style`, in
   the drawing or in a mask's content, becomes `mask`. An element that has a mask of its own moves
-  into a group that takes its id, its `transform` and the new mask, so a `use` of it, and the
-  space both masks work in, stay as they were. The root's clip path works in the space around the
-  root, in CSS pixels, which only a mask on the root shares: one on a root without a mask becomes
-  a mask on the root, and one on a root with a mask of its own is refused (`drawing-too-costly`).
+  into a group that takes its id, its `transform` and, for a `use`, its `x` and `y` (as a
+  translation after the transform, a percentage taken of the view box), and the new mask, so a
+  `use` of it, and the space both masks work in, stay as they were. The root's clip path works in
+  the space around the root, in CSS pixels, which only a mask on the root shares: one on a root
+  without a mask becomes a mask on the root, and one on a root with a mask of its own is refused
+  (`drawing-too-costly`).
 - **Sharing and budgets.** One mask stands for each clip path, however many elements used it, and
   takes an id from the same counter as everything else, so the output is still a fixed point. A
   rewritten clip path counts as a mask: in `maskApplications`, in `maskDepth` (nested inside any
   mask it is applied within), in the drawing cost (200 an application, plus its shapes) and in the
-  overdraw (an alpha mask, 32, over the box of what it masks).
+  overdraw (an alpha mask, 32, over the box of what it masks). The budgets are measured after the
+  rewrite, on what is written.
+- **Known limitation: refused, not rewritten.** A clip path in object-bounding-box units that
+  needs rewriting and has a `transform` or a clip path of its own is refused
+  (`drawing-too-costly`): Chromium applies those in user space, outside the box its shapes are
+  drawn in, which no mask shared by everything the clip path clips can stand for. One of a single
+  shape, not clipped in turn, is kept as it is, transform and all.
+
+Before rewriting, every definition nothing drawn refers to, directly or through other definitions
+(a clip path, mask or gradient no element uses, a `defs` child no `use` draws), is dropped without
+being reported, since it changes nothing drawn; so an unused clip path costs no work and no output,
+however many uses of however large a path it holds. The output is never larger than an input may
+be (`inputBytes`): one that would be is refused (`too-large`) rather than returned, so every output
+can be sanitised again and gives itself back.
 
 Before and after are drawn as images in the browser test and compared pixel by pixel, for
 overlapping circles, compound shapes by the even-odd and the nonzero rule, a clip path with its own
 transform, one in object-bounding-box units, uses of shapes with paint and strokes of their own, a
 clip under an element's own mask, one on a transformed element drawn again by a `use`, a stroke
 reaching far past its shape's box, hidden shapes and a percentage position, one in a mask's
-content, a shape clipped in turn and one on the root: at most 0.5% of the pixels may differ, by
-antialiasing. One departure is Chromium's: with the even-odd rule, a shape with a hole before a
-shape overlapping it clips to less than their union, and to the union with the order turned round;
-the mask draws the union the specification asks for in either order, which the test checks
-against Chromium's own drawing of the turned order.
+content, a shape clipped in turn, one on the root, a clip child and a hidden clip child drawn by a
+`use` elsewhere, a `use` with a position, a mask and a clip path, a percentage position in
+object-bounding-box units, a clip path clipped itself under its own transform, a clipped shape and
+a clipped `use` (its clip of two shapes) in a clip path, a mask in a clip path, and one shape in
+object-bounding-box units with a transform, kept: at most 0.5% of the pixels may differ, by
+antialiasing. Every case, and the emptied clip path holding a `use` of a group, is also held to
+showing nothing more: at most 0.5% of the pixels may be more opaque after than before. One
+departure is Chromium's: with the even-odd rule, a shape with a hole before a shape overlapping it
+clips to less than their union, and to the union with the order turned round; the mask draws the
+union the specification asks for in either order, which the test checks against Chromium's own
+drawing of the turned order.
+
+What each removal for drawing does to the picture, as drawn by Chromium 153.0.8010.12:
+
+| Removed                                                                       | Reason        | Drawn after                                                                                     |
+| ----------------------------------------------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------- |
+| `preserveAspectRatio` `slice` on the root                                     | `render-cost` | The same: the view box becomes the part that showed, to six decimals                            |
+| `preserveAspectRatio` `none` (stretched) on the root                          | `render-cost` | Less: drawn to fit, undistorted, clipped to the view box (the same where the proportions match) |
+| `mask` on a clip path or on a shape or `use` in one                           | `render-cost` | The same: browsers ignore it                                                                    |
+| A shape in a clip path not displayed or hidden                                | `render-cost` | The same: the clip path ignores it; kept as a definition where something else draws it          |
+| A clip path holding a `use` of anything but a shape (each child, `misplaced`) | `misplaced`   | Less: the clip path is emptied, so what it clips draws nothing                                  |
+| A clip path of more than one shape, or clipped in turn or itself              | `rewritten`   | The same, but for Chromium's even-odd order quirk above, where the mask draws the full union    |
+| Such a one in object-bounding-box units with its own transform or clip path   | refused       | `drawing-too-costly`                                                                            |
+| One on a root that has a mask of its own                                      | refused       | `drawing-too-costly`                                                                            |
 
 A clip path of one shape that is not clipped in turn is kept, however long or self-crossing: it
 clips by its outline, with no union. The browser test times the costliest of each form at both of
@@ -759,8 +808,9 @@ What the budgets do not bound: other renderers (Firefox, Safari, librsvg, a desi
 were not measured; a GPU rasteriser, which is usually faster; and sizes beyond those measured,
 since paint costs in proportion to the pixels covered: a logo shown at 4000 CSS pixels twice as
 dense costs about four times what it does at 2000. The budget also assumes the logo is shown
-whole: `preserveAspectRatio` `none` and `slice` are dropped, so the view box is always fitted
-inside its frame (`xMidYMid meet`), but a host can still stretch or crop it. Drawn as an `<img>`
+whole: `preserveAspectRatio` `none` and `slice` are dropped (a cropped view box becomes the part
+that showed, and a stretched one is clipped to itself), so the view box is always fitted inside
+its frame (`xMidYMid meet`), but a host can still stretch or crop it. Drawn as an `<img>`
 sized by CSS (with the default `object-fit: fill`, or `contain`) or inline sized by CSS, a logo
 1,000 wide and 1 tall stays one line in Chromium; `object-fit: cover`, or a canvas `drawImage`
 into a box of another shape, stretches it over the whole box. So show a logo at a logo's size: give
@@ -814,16 +864,18 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. The geometry is kept to six
 decimals; colours set only by CSS are lost (see above).
 
-The tests hold it to that: a hostile corpus of 240 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 106
-refused, and every removal, by element, attribute and reason, for each of the 134 accepted, 32 of
+The tests hold it to that: a hostile corpus of 250 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 111
+refused, and every removal, by element, attribute and reason, for each of the 139 accepted, 39 of
 them with a clip path written as a mask) and
 generated oversized inputs, each refused or accepted with an output an independent checker finds
 inert (its own tokeniser, its own copy of the allowlist, its own grammar for every value and its
 own rules for where each element may stand); a clean corpus of logos as Inkscape, Illustrator,
 Figma and Sketch export them, with golden outputs and geometry compared number by number; 35,000
 seeded random documents, strings, byte arrays and mutated logos, checking that it never throws and
-that every output is valid, idempotent, deterministic and within the drawing cost limit; and 3,000
+that every output is valid, idempotent, deterministic and within the drawing cost limit; 5,000
+random documents of clip paths and masks, checking every output is valid, a fixed point and no
+larger than an input may be; and 3,000
 random graphs of definitions, uses, masks, layers and dashes whose cost a separate model works out,
 checking the sanitiser measures the same cost and refuses exactly what goes over a limit.
 
