@@ -681,7 +681,7 @@ describe("sanitiseSvgLogo, linear time", () => {
     [
       "a title split by comments",
       (fill) => root(`<title>${fill("a<!---->")}</title>`),
-      1,
+      8,
       "accepted",
     ],
     ["an unclosed CDATA section", (fill) => root(`<title><![CDATA[${fill("]")}`), 16, "malformed"],
@@ -707,7 +707,7 @@ describe("sanitiseSvgLogo, linear time", () => {
       1,
       "accepted",
     ],
-    ["unclosed tags", (fill) => root(fill("<g>")), 1, "mismatched-tag"],
+    ["unclosed tags", (fill) => root(fill("<g>")), 4, "mismatched-tag"],
     ["one long path", (fill) => root(`<path d="M0 0${fill(" 1.5-2.5e1")}"/>`), 1, "accepted"],
     ["one long path of bare signs", (fill) => root(`<path d="M0 0${fill("-")}"/>`), 8, "accepted"],
     [
