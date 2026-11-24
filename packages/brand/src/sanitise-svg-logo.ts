@@ -2,7 +2,7 @@ import { decodeSvgInput } from "./decode-svg-input.ts";
 import { filterSvgTree, type CleanElement } from "./filter-svg-tree.ts";
 import { freshIds } from "./fresh-ids.ts";
 import { movesMoreThanHalfAPixel } from "./half-pixel.ts";
-import { parseSvgXml } from "./parse-svg-xml.ts";
+import { isLocalPathValue, parseSvgXml } from "./parse-svg-xml.ts";
 import { resolveSvgNamespaces } from "./resolve-svg-namespaces.ts";
 import type { SanitisedSvg } from "./sanitised-svg.ts";
 import { serialiseSvg } from "./serialise-svg.ts";
@@ -214,6 +214,22 @@ function checkWrittenTree(root: CleanElement, limits: SvgLogoLimits): void {
   }
 }
 
+/**
+ * Refuses an output with an attribute value longer than an input's may be: numbers are written out
+ * in full (`1e-6` as `0.000001`), so a value can grow past the limit the reader holds it to.
+ */
+function checkWrittenValues(svg: string, limits: SvgLogoLimits): void {
+  for (const [, name = "", value = ""] of svg.matchAll(/ ([\w:-]+)="([^"]*)"/g)) {
+    const max = isLocalPathValue(name) ? limits.pathDataLength : limits.attributeValueLength;
+    if (value.length > max) {
+      throw new SvgLogoRejection(
+        "too-long",
+        `would be written with an attribute value longer than ${String(max)}`,
+      );
+    }
+  }
+}
+
 function toError(rejection: SvgLogoRejection, locator: TextLocator | undefined): SvgLogoError {
   const message = `the SVG ${rejection.message}`;
   if (rejection.offset === undefined || locator === undefined) {
@@ -280,6 +296,7 @@ function sanitiseOnce(input: unknown, options: unknown, limits: SvgLogoLimits): 
     const reported = [size.width, size.height, ...size.viewBox, drawingCost, overdraw];
     if (!reported.every(Number.isFinite)) throw new Error("a reported number is not finite");
     const svg = serialiseSvg(root, renamed);
+    checkWrittenValues(svg, limits);
     // Writing clip paths as masks adds a little; whatever it adds, the output is never larger than an
     // input may be, so it can always be sanitised again.
     if (new TextEncoder().encode(svg).length > limits.inputBytes) {

@@ -70,7 +70,7 @@ function isNameUnit(unit: number): boolean {
   );
 }
 
-function isLocalPathValue(name: string): boolean {
+export function isLocalPathValue(name: string): boolean {
   const local = name.slice(name.indexOf(":") + 1);
   return local === "d" || local === "points";
 }
