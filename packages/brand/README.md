@@ -315,10 +315,19 @@ Refused, as the whole document (each with its own `code`):
   decimals from the other is no stretch) beside a clip path or mask on the
   root; a cropping `slice`, or the position of a `use` moved onto a group (below), that six decimals
   cannot hold (to half a device pixel at 4000 device pixels, 2000 CSS pixels twice as dense, for the
-  crop; exactly for the position); a cropping `slice` beside any length given as a percentage of the
-  view box (a size, position, radius or stroke width of a shape, a `use` position, a mask region in
-  user units, a gradient in user units), which the crop would change, while percentages of a box
-  (a gradient or mask region in object-bounding-box units) are unchanged by it and kept;
+  crop; exactly for the position); a cropping `slice` beside any length taken as a percentage of
+  the view box in what is drawn (a size, position, radius or stroke width of a shape, a `use`
+  position, the region of a mask in user units, written or by default, which is -10% and 120%, and
+  a coordinate of a painted gradient in user units, written, inherited through `href` or by
+  default: 100% for a linear gradient's end, 50% for a radial one's centre and radius, with the
+  focus following the centre), which the crop would change. Each gradient attribute is resolved
+  as Chromium 153 resolves it: its own, else the nearest gradient in its `href` chain that has
+  it (units from either kind, a coordinate only from the same kind, past any of the other kind
+  between), else the default. Percentages of a box (a gradient or mask region in
+  object-bounding-box units) are unchanged by a crop, a length of 0% is 0 of anything, and a
+  definition nothing draws is left out before the check; all three are kept. A `slice` that shows
+  the whole view box to within that half device pixel crops nothing: it is dropped, as the
+  default it then equals, and nothing is refused;
 - going over any limit below.
 
 Dropped (and listed in `removed`, with the element, attribute or style property, a reason and a
@@ -428,7 +437,9 @@ Decisions, with the reason for each:
   sanitiser empties the clip path (each child dropped as `misplaced`, a child something else draws
   kept as a definition), so what it clips draws nothing, which is never more than either.
 - **Editor metadata goes.** Inkscape, Sodipodi, RDF, Creative Commons, Dublin Core, Adobe, Sketch
-  and Serif namespaces, `metadata`, `xml:space`, `version`, the root's `x` and `y`.
+  and Serif namespaces and `metadata` are reported as `editor-metadata`; `xml:space`, `version`,
+  `baseProfile` and the root's `x` and `y`, which editors also write, are not on the allowlist and
+  are reported as `unsupported-attribute`.
 - **`xml:base` goes**, so it cannot redirect a fragment reference to another document.
 - **Ids are renamed** to `idPrefix` and a number (default `logo-`), in document order, and ids
   nothing refers to are dropped: an inlined logo cannot clobber a page's ids or globals
@@ -449,7 +460,7 @@ Each is in `SVG_LOGO_LIMITS`; going over one refuses the document.
 | `attributesPerElement` | 64            | Editors write about 20 on a busy element                                                |
 | `attributeValueLength` | 4,096         | One value as written, other than path data                                              |
 | `pathDataLength`       | 128 KiB       | One `d` or `points`; traced artwork is long, but not unbounded                          |
-| `textLength`           | 2,048         | Characters, as read: one run of text, and a whole `title` or `desc`                     |
+| `textLength`           | 2,048         | Code points, as read: one run of text, and a whole `title` or `desc`                    |
 | `nameLength`           | 64            | An element or attribute name                                                            |
 | `numberLength`         | 32            | One number as written; exponents take at most 3 digits                                  |
 | `integerDigits`        | 6             | Every number is below 1,000,000 in magnitude                                            |
@@ -718,17 +729,17 @@ drawing of the turned order.
 
 What each removal for drawing does to the picture, as drawn by Chromium 153.0.8010.12:
 
-| Removed                                                                                         | Reason                                                              | Drawn after                                                                                                                                          |
-| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `preserveAspectRatio` `slice` on the root                                                       | `render-cost`                                                       | The same: the view box becomes the part that showed (refused where six decimals cannot hold it, or beside a percentage of the view box)              |
-| `preserveAspectRatio` `none` (stretched) on the root                                            | `render-cost`                                                       | Less: drawn to fit, undistorted, clipped to the view box; refused beside a root clip or mask                                                         |
-| An element, attribute or style property not on the allowlist, a class or `style` rule, a filter | `unsupported-element`, `unsupported-attribute`, `styling`, `filter` | Not promised: reported, and may show what the original hid (a blend mode, filter, `display:none` rule or root `transform` that hid or moved a shape) |
-| `mask` on a clip path or on a shape or `use` in one                                             | `render-cost`                                                       | The same: browsers ignore it                                                                                                                         |
-| A shape in a clip path not displayed or hidden                                                  | `render-cost`                                                       | The same: the clip path ignores it; kept as a definition where something else draws it                                                               |
-| A clip path holding a `use` of anything but a shape (each child, `misplaced`)                   | `misplaced`                                                         | Less: the clip path is emptied, so what it clips draws nothing; its own clip path goes too                                                           |
-| A clip path of more than one shape, or clipped in turn or itself                                | `rewritten`                                                         | The same, but for Chromium's even-odd order quirk above, where the mask draws the full union                                                         |
-| Such a one in object-bounding-box units with its own transform or clip path                     | refused                                                             | `unsupported-feature`                                                                                                                                |
-| One on a root that has a mask of its own                                                        | refused                                                             | `unsupported-feature`                                                                                                                                |
+| Removed                                                                                         | Reason                                                              | Drawn after                                                                                                                                                               |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `preserveAspectRatio` `slice` on the root                                                       | `render-cost`                                                       | The same: the view box becomes the part that showed (refused where six decimals cannot hold it, or beside a percentage of the view box); one that crops nothing just goes |
+| `preserveAspectRatio` `none` (stretched) on the root                                            | `render-cost`                                                       | Less: drawn to fit, undistorted, clipped to the view box; refused beside a root clip or mask                                                                              |
+| An element, attribute or style property not on the allowlist, a class or `style` rule, a filter | `unsupported-element`, `unsupported-attribute`, `styling`, `filter` | Not promised: reported, and may show what the original hid (a blend mode, filter, `display:none` rule or root `transform` that hid or moved a shape)                      |
+| `mask` on a clip path or on a shape or `use` in one                                             | `render-cost`                                                       | The same: browsers ignore it                                                                                                                                              |
+| A shape in a clip path not displayed or hidden                                                  | `render-cost`                                                       | The same: the clip path ignores it; kept as a definition where something else draws it                                                                                    |
+| A clip path holding a `use` of anything but a shape (each child, `misplaced`)                   | `misplaced`                                                         | Less: the clip path is emptied, so what it clips draws nothing; its own clip path goes too                                                                                |
+| A clip path of more than one shape, or clipped in turn or itself                                | `rewritten`                                                         | The same, but for Chromium's even-odd order quirk above, where the mask draws the full union                                                                              |
+| Such a one in object-bounding-box units with its own transform or clip path                     | refused                                                             | `unsupported-feature`                                                                                                                                                     |
+| One on a root that has a mask of its own                                                        | refused                                                             | `unsupported-feature`                                                                                                                                                     |
 
 A clip path of one shape that is not clipped in turn is kept, however long or self-crossing: it
 clips by its outline, with no union. The browser test times the costliest of each form at both of
@@ -901,9 +912,9 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. The geometry is kept to six
 decimals; colours set only by CSS are lost (see above).
 
-The tests hold it to that: a hostile corpus of 272 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 121
-refused, and every removal, by element, attribute and reason, for each of the 151 accepted, 40 of
+The tests hold it to that: a hostile corpus of 278 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 125
+refused, and every removal, by element, attribute and reason, for each of the 153 accepted, 40 of
 them with a clip path written as a mask) and
 generated oversized inputs, each refused or accepted with an output an independent checker finds
 inert (its own tokeniser, its own copy of the allowlist, its own grammar for every value and its
@@ -913,9 +924,12 @@ seeded random documents, strings, byte arrays and mutated logos, checking that i
 that every output is valid, idempotent, deterministic and within the drawing cost limit; 5,000
 random documents of clip paths and masks (clipped in turn and themselves, `use`s of groups, names
 the sanitiser gives what it adds, stretched and cropped view boxes), checking every output is valid, a fixed point and no
-larger than an input may be; and 3,000
+larger than an input may be; 3,000
 random graphs of definitions, uses, masks, layers and dashes whose cost a separate model works out,
-checking the sanitiser measures the same cost and refuses exactly what goes over a limit.
+checking the sanitiser measures the same cost and refuses exactly what goes over a limit; and 4,000
+random chains of linear and radial gradients and masks beside a crop or a slice that crops nothing,
+checking the sanitiser refuses exactly those a separate model, resolving `href` and defaults its own
+way, finds taking a percentage of the view box.
 
 ## Commands
 
