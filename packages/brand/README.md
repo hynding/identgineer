@@ -506,10 +506,12 @@ before a cost was counted) can fail to parse afterwards. That is intended; the o
 again, or a simpler one.
 
 The reader works in one pass, in time linear in the input, with no recursion over the input and no
-regular expression with nested quantifiers on it; the tests read a megabyte of each adversarial
-shape (bare ampersands, unclosed comments and attributes, a megabyte of path data, sixty
-thousand uses of one group or of one masked, dashed path) with the limits raised, each in under a
-second on a laptop. The drawing cost is measured in the same pass over the expanded references,
+regular expression with nested quantifiers on it; the tests read each adversarial shape (bare
+ampersands, unclosed comments and attributes, long path data, many uses of one group or of one
+masked, dashed path) at 64 and 256 KiB with the limits raised, and hold four times the input to
+less than eight times as long, the fastest of five runs of each (linear is about four, quadratic
+sixteen; each run takes under 0.4 seconds on a laptop). A ratio, unlike a time, holds on a slow or
+busy machine; a deliberately quadratic stage in the reader fails it. The drawing cost is measured in the same pass over the expanded references,
 each element once, so it is linear too. The overdraw walks every instance a renderer would draw,
 which `renderedElements` (checked first) bounds, reading each shape's geometry once.
 
