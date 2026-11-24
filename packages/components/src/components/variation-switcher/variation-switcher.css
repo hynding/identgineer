@@ -1,6 +1,9 @@
 :host {
   display: block;
-  min-inline-size: 0;
+  /* A size container has no width of its own, so where its container sizes it by its content (a flex
+     row, an inline block) it would be nothing. It is given the size of a small panel, or all of the
+     room if there is less, so it fills a block or a cell as before and can still shrink. */
+  min-inline-size: min(100%, var(--idg-size-m));
   container-type: inline-size;
   container-name: idg-variation-switcher;
   color: var(--idg-color-text);
@@ -39,9 +42,6 @@
   font-weight: var(--idg-font-display-weight);
   letter-spacing: var(--idg-font-display-letter-spacing);
   line-height: var(--idg-font-display-line-height);
-  /* A word of a heading in a wide display face, uppercase and doubled, is wider than a narrow
-     panel: it breaks inside the box and never spills out of it. */
-  overflow-wrap: anywhere;
   text-transform: var(--idg-ornament-heading-transform);
 }
 
@@ -118,16 +118,10 @@
 }
 
 /* A button may be narrower than its text on one line, so a long label wraps rather than push the
-   panel wider than its container. A control's own padding and an icon can leave less room than a
-   single word needs (large text on a narrow screen), and then the word breaks in its box, as the
-   label's text cannot otherwise be kept inside it. */
+   panel wider than its container. */
 .actions idg-button {
   min-inline-size: 0;
   max-inline-size: 100%;
-}
-
-.actions idg-button::part(label) {
-  overflow-wrap: anywhere;
 }
 
 /* A narrow container (or large text, which makes the same container narrow in rem) gives the
@@ -189,5 +183,21 @@ idg-radio::part(label) {
 @media (forced-colors: active) {
   .swatch {
     box-shadow: 0 0 0 1px CanvasText;
+  }
+}
+
+/* In a narrow window, at a large text size, a word of the heading (in a wide display face, uppercase
+   and doubled) or of a button's label (whose padding and icon leave less room than a word needs) is
+   wider than the panel. It breaks inside its box, which `anywhere` allows where a plain break would
+   leave the box as wide as the word, and never leaves the window. Not elsewhere, where a panel
+   squeezed by its page keeps the words it always had. 28rem is --idg-size-l; a media query counts
+   rem at the browser's own size, so it does not follow the page's text size. */
+@media (max-width: 28rem) {
+  .heading {
+    overflow-wrap: anywhere;
+  }
+
+  .actions idg-button::part(label) {
+    overflow-wrap: anywhere;
   }
 }

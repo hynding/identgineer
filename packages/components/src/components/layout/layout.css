@@ -1474,6 +1474,43 @@
   }
 }
 
+/* A container narrower than --idg-size-m (20rem) is too narrow for the brand and the menu button
+   side by side: the button takes the width of its padding and its label, and the brand is left a
+   letter a line. At 100% text that is a window under 320px; at larger text it is a phone, since rem
+   follows the text. The threshold is exclusive, so 320px at 100%
+   keeps the row it has always had. The button gets a row of its own, no wider than the container,
+   with its padding bounded by the room, and the actions are free to shrink. It comes last so that
+   it holds in every layout. */
+@container idg-shell (inline-size < 20rem) {
+  .header {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "brand"
+      "toggle"
+      "nav"
+      "actions";
+    row-gap: var(--idg-space-2xs);
+  }
+
+  .toggle {
+    justify-self: start;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    padding-inline: min(var(--idg-density-control-padding-inline), var(--idg-space-s));
+  }
+
+  /* A name sized for a wider container, or a masthead, would take the whole of this one a word at
+     a time, and a word that is wider than the container breaks anywhere. At the smallest step a
+     typical one-word name and its icon fit on a row, whichever the type scale. */
+  .brand {
+    font-size: var(--idg-font-size-step-neg1);
+  }
+
+  .actions {
+    min-inline-size: 0;
+  }
+}
+
 @media (forced-colors: active) {
   .toggle,
   .close {
