@@ -90,10 +90,32 @@
   "aspect-ratio-slice-at-half-a-device-pixel.svg": {
     "outcome": "reject:unsupported-feature"
   },
+  "aspect-ratio-slice-beside-a-gradient-inheriting-a-percentage.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
   "aspect-ratio-slice-beside-a-percent-mask-region.svg": {
     "outcome": "reject:unsupported-feature"
   },
   "aspect-ratio-slice-beside-a-percent-use-position.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-beside-a-percentage-nothing-draws.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "aspect-ratio-slice-beside-a-radial-gradient-inheriting-percentages.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-beside-a-user-space-linear-gradient-by-default.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-beside-a-user-space-radial-gradient-by-default.svg": {
     "outcome": "reject:unsupported-feature"
   },
   "aspect-ratio-slice-beside-percent-radius-and-stroke.svg": {
@@ -104,6 +126,16 @@
   },
   "aspect-ratio-slice-crop.svg": {
     "outcome": "reject:overdraw-too-large"
+  },
+  "aspect-ratio-slice-cropping-nothing-beside-percent-sizes.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      }
+    ]
   },
   "aspect-ratio-slice-of-a-tiny-view-box.svg": {
     "outcome": "reject:unsupported-feature"

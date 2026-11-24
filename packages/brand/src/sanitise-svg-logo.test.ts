@@ -493,6 +493,34 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
       "a shape in a clip path in the box of what it clips, whose percentages Chromium takes of the view box",
       '<clipPath id="c" clipPathUnits="objectBoundingBox"><rect width="50%" height="1"/></clipPath><rect width="9" height="9" clip-path="url(#c)"/>',
     ],
+    [
+      "a linear gradient in user space by its default end, 100%",
+      '<linearGradient id="g" gradientUnits="userSpaceOnUse"/><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    [
+      "a radial gradient in user space by its default centre and radius, 50%",
+      '<radialGradient id="g" gradientUnits="userSpaceOnUse" cx="5" cy="5"/><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    [
+      "a radial gradient's focus, taken from the one it takes its stops from",
+      '<radialGradient id="a" fx="10%"/><radialGradient id="g" href="#a" gradientUnits="userSpaceOnUse" cx="5" cy="5" r="5"/><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    [
+      "a gradient in user space taking a percentage from one in the box of what it paints",
+      '<linearGradient id="a" x2="50%" gradientUnits="objectBoundingBox"/><linearGradient id="g" href="#a" gradientUnits="userSpaceOnUse"/><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    [
+      "a radial gradient in user space taking its percentages from one in that box",
+      '<radialGradient id="a" cx="0%" cy="50%" r="50%"/><radialGradient id="g" href="#a" gradientUnits="userSpaceOnUse"/><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    [
+      "a linear gradient taking its end through a radial one, as Chromium does",
+      '<linearGradient id="a" x2="50%"/><radialGradient id="b" href="#a" gradientUnits="userSpaceOnUse"/><linearGradient id="g" href="#b" x1="1" y1="1" y2="1"/><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    [
+      "a mask region in user space left to its default, -10% and 120%",
+      '<mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="9"><rect width="9" height="9" fill="#fff"/></mask><rect width="9" height="9" mask="url(#m)"/>',
+    ],
   ])(
     "refuses preserveAspectRatio slice beside a percentage of the view box in %s, which the crop would change",
     (_, body) => {
@@ -522,8 +550,62 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
       "a stop's offset",
       '<linearGradient id="g"><stop offset="50%"/></linearGradient><rect width="9" height="9" fill="url(#g)"/>',
     ],
+    [
+      "a linear gradient in user space whose defaults left are 0%, which is 0 of anything",
+      '<linearGradient id="g" gradientUnits="userSpaceOnUse" x2="9"/><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    [
+      "a radial gradient in user space whose focus follows a centre in user units",
+      '<radialGradient id="g" gradientUnits="userSpaceOnUse" cx="5" cy="5" r="5"/><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    [
+      "a linear gradient in user space taking its stops from a radial one, whose centre it does not share",
+      '<radialGradient id="a" gradientUnits="userSpaceOnUse"><stop offset="0"/></radialGradient><linearGradient id="g" href="#a" x2="9"/><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    [
+      "a gradient in user space only ever drawn through one in a box",
+      '<linearGradient id="a" gradientUnits="userSpaceOnUse"><stop offset="0"/></linearGradient><linearGradient id="g" href="#a" gradientUnits="objectBoundingBox"/><rect width="9" height="9" fill="url(#g)"/>',
+    ],
+    [
+      "a mask region in user space written whole",
+      '<mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="9" height="9"><rect width="9" height="9" fill="#fff"/></mask><rect width="9" height="9" mask="url(#m)"/>',
+    ],
+    ["a length of 0%", '<rect width="0%" height="9"/><rect width="9" height="9"/>'],
+    [
+      "a percentage only in a definition nothing draws",
+      '<defs><linearGradient id="u" x2="100%" gradientUnits="userSpaceOnUse"/></defs><rect width="9" height="9"/>',
+    ],
   ])("keeps the crop beside a percentage of a box, not of the view box: %s", (_, body) => {
     expect(sanitiseSvgLogo(SLICE(body)).ok).toBe(true);
+  });
+
+  it.each([
+    ["no size", ""],
+    ["the view box's size", ' width="200" height="100"'],
+    ["a size within half a device pixel of its proportions", ' width="2000" height="1000.0001"'],
+  ])(
+    "drops a slice that crops nothing, with %s, and keeps percentages of the view box",
+    (_, size) => {
+      const result = accepted(
+        `<svg ${NS} viewBox="0 0 200 100"${size} preserveAspectRatio="xMidYMid slice"><rect width="100%" height="100%" fill="#fff"/></svg>`,
+      );
+      expect(result.svg).toContain('viewBox="0 0 200 100"');
+      expect(result.svg).toContain('width="100%"');
+      expect(result.removed).toEqual([
+        expect.objectContaining({ attribute: "preserveAspectRatio", reason: "render-cost" }),
+      ]);
+    },
+  );
+
+  it.each([
+    ["a title", "😀"],
+    ["a title by character references", "&#x1F600;"],
+    ["a title of CDATA sections", "<![CDATA[😀]]>"],
+  ])("measures %s in code points, so an astral character counts once", (_, written) => {
+    const at = SVG_LOGO_LIMITS.textLength;
+    expect(accepted(svg(`<title>${written.repeat(at)}</title>`)).svg).toContain("<title>");
+    const over = sanitiseSvgLogo(svg(`<title>${written.repeat(at)}a</title>`));
+    expect(over.ok || over.errors[0]?.code).toBe("too-long");
   });
 
   it("measures a crop at 2000 CSS pixels twice as dense: 4000 device pixels", () => {
