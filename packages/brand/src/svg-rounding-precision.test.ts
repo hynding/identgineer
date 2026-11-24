@@ -80,6 +80,10 @@ describe("a number rounding changed, as its transforms magnify it", () => {
       '<radialGradient id="g" gradientUnits="userSpaceOnUse" cx="50" cy="50" r="0.0000003"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#f00"/></radialGradient><rect width="100" height="100" fill="url(#g)"/>',
     ],
     [
+      "a repeating gradient's vector, repeat after repeat",
+      '<linearGradient id="g" gradientUnits="userSpaceOnUse" x2="0.0010004" spreadMethod="repeat"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#f00"/></linearGradient><rect width="100" height="100" fill="url(#g)"/>',
+    ],
+    [
       "an arc's ratio, scaled up to the arc's size",
       '<g transform="scale(999)"><path d="M0 0A0.1 0.3000001 0 0 1 100 0Z" fill="#f00"/></g>',
     ],
@@ -99,6 +103,10 @@ describe("a number rounding changed, as its transforms magnify it", () => {
     [
       "a matrix as Inkscape writes one",
       '<g transform="matrix(1.0583333,0,0,1.0583333,-0.52916667,-0.52916667)"><rect width="10.583333" height="3.96875" fill="#f00"/></g>',
+    ],
+    [
+      "a repeating gradient as an editor writes one",
+      '<linearGradient id="g" gradientUnits="userSpaceOnUse" x1="10.1234567" x2="20.7654321" spreadMethod="reflect"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#f00"/></linearGradient><rect width="100" height="100" fill="url(#g)"/>',
     ],
   ])("keeps %s", (_, body) => {
     expect(outcome(sanitiseSvgLogo(svg(body)))).toBe("accept");
