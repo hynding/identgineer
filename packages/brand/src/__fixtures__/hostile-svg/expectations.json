@@ -173,6 +173,9 @@
       }
     ]
   },
+  "aspect-ratio-slice-whose-far-edges-round-twice.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
   "attribute-quote-injection.svg": {
     "outcome": "accept",
     "removed": [
@@ -873,6 +876,9 @@
   },
   "deep-nesting.svg": {
     "outcome": "reject:too-deep"
+  },
+  "derived-height-off-its-proportions-once-written.svg": {
+    "outcome": "reject:unsupported-feature"
   },
   "description-with-quotation-marks-near-the-limit.svg": {
     "outcome": "accept",

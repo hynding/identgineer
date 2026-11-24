@@ -621,6 +621,23 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
     },
   );
 
+  it.each([
+    [
+      "a crop whose far edges each take two roundings, together almost a device pixel",
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0.003788 -0.000902 0.002966 0.002165" width="0.002966" height="0.002166" preserveAspectRatio="xMidYMin slice"><rect x="0.003788" y="-0.000902" width="0.002966" height="0.002165"/></svg>',
+    ],
+    [
+      "a height worked out from the width, which six decimals would take off its proportions",
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1" width="0.3333"><rect width="1000" height="1"/></svg>',
+    ],
+  ])(
+    "refuses %s, where what the output shows would pass what the original showed by more than half a device pixel",
+    (_, input) => {
+      const refused = sanitiseSvgLogo(input);
+      expect(refused.ok || refused.errors[0]?.code).toBe("unsupported-feature");
+    },
+  );
+
   it("refuses a crop whose part written to six decimals would be letterboxed along its long side", () => {
     // The part shown is 1000 by 0.000285714…, written 0.000286: 0.1% taller, 4 device pixels at 4000.
     const refused = sanitiseSvgLogo(
