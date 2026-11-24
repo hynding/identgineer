@@ -1707,6 +1707,26 @@
   "relative-size-only.svg": {
     "outcome": "reject:missing-size"
   },
+  "review-arc-radius-ratio-mask.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "path",
+        "attribute": "d",
+        "reason": "invalid-value"
+      }
+    ]
+  },
+  "review-arc-tiny-radius-mask.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "path",
+        "attribute": "d",
+        "reason": "invalid-value"
+      }
+    ]
+  },
   "review-cal-radial.svg": {
     "outcome": "accept",
     "removed": []

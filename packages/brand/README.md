@@ -448,7 +448,11 @@ unit of the viewport (`1vw`), which an image has none of, a unit the sanitiser d
 (`2em`, which Chromium draws at 32 pixels, or `4Q`), a calculation (`calc(0px)`,
 `max(0px,0px)`), a variable or environment value, a keyword (`auto`, `inherit`) or any other
 spelling (`10 px`, `5.`) is `unsupported-feature`. Path data outside its grammar is dropped whole, where Chromium would draw it up to
-the first error: the output shows less. A browser test draws 45 spellings of a number (signs,
+the first error: the output shows less. So is path data with an arc whose shape rounding to six decimals
+changes beyond rounding: a radius that was not zero and rounds to zero (a line, where Chromium
+draws an ellipse scaled up to fit), or, where the radii are too small for the arc and Chromium
+scales them up keeping their ratio, a ratio rounding changes by more than a millionth, which the
+scaling magnifies to the size of the arc. A browser test draws 45 spellings of a number (signs,
 points, exponents, leading zeros, hexadecimal, `Infinity`, `NaN`, stray white space and commas) in
 each of a length, a plain number, a transform, a view box, path data, points, a dash array and the
 root's width, and 18 spellings of a pair in each list, in the original and the output, and holds
