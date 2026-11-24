@@ -305,12 +305,102 @@ describe("an arc as SVG draws it, from its numbers exactly and as written", () =
       const unit = random() < 0.5 ? "mm" : "";
       const input = drawing(
         `0 0 ${significant(side)} ${significant(side)}`,
-        `width="${significant(side)}${unit}" height="${significant(side)}${unit}"`,
+        `width="100${unit}" height="100${unit}"`,
         `<path d="m ${x},${y} a ${rx},${ry} 0 0 1 ${across},0 ${rx},${ry} 0 0 1 -${across},0 z"/>`,
       );
       const result = sanitiseSvgLogo(input);
       if (!result.ok || result.removed.length > 0) refused.push(input);
     }
     expect(refused).toEqual([]);
+  });
+});
+
+/** An arc's points, by SVG 1.1 F.6.5, at `count + 1` evenly spaced fractions of the way along. */
+function arcPoints(numbers: readonly number[], count: number): (readonly [number, number])[] {
+  const [
+    x1 = 0,
+    y1 = 0,
+    rxGiven = 0,
+    ryGiven = 0,
+    degrees = 0,
+    large = 0,
+    sweep = 0,
+    x2 = 0,
+    y2 = 0,
+  ] = numbers;
+  const phi = (degrees * Math.PI) / 180;
+  const [cos, sin] = [Math.cos(phi), Math.sin(phi)];
+  const xp = (cos * (x1 - x2)) / 2 + (sin * (y1 - y2)) / 2;
+  const yp = (-sin * (x1 - x2)) / 2 + (cos * (y1 - y2)) / 2;
+  const fit = Math.max(1, Math.sqrt(xp ** 2 / rxGiven ** 2 + yp ** 2 / ryGiven ** 2));
+  const [rx, ry] = [Math.abs(rxGiven) * fit, Math.abs(ryGiven) * fit];
+  const squared =
+    (rx ** 2 * ry ** 2 - rx ** 2 * yp ** 2 - ry ** 2 * xp ** 2) /
+    (rx ** 2 * yp ** 2 + ry ** 2 * xp ** 2);
+  const factor = (large === sweep ? -1 : 1) * Math.sqrt(Math.max(0, squared));
+  const [cxp, cyp] = [(factor * rx * yp) / ry, (-factor * ry * xp) / rx];
+  const [cx, cy] = [cos * cxp - sin * cyp + (x1 + x2) / 2, sin * cxp + cos * cyp + (y1 + y2) / 2];
+  const angle = (ux: number, uy: number, vx: number, vy: number): number =>
+    Math.sign(ux * vy - uy * vx || 1) *
+    Math.acos(
+      Math.min(1, Math.max(-1, (ux * vx + uy * vy) / Math.hypot(ux, uy) / Math.hypot(vx, vy))),
+    );
+  const start = angle(1, 0, (xp - cxp) / rx, (yp - cyp) / ry);
+  let extent = angle((xp - cxp) / rx, (yp - cyp) / ry, (-xp - cxp) / rx, (-yp - cyp) / ry);
+  if (sweep === 0 && extent > 0) extent -= 2 * Math.PI;
+  if (sweep === 1 && extent < 0) extent += 2 * Math.PI;
+  return Array.from({ length: count + 1 }, (_, index) => {
+    const theta = start + (extent * index) / count;
+    const [x, y] = [rx * Math.cos(theta), ry * Math.sin(theta)];
+    return [cos * x - sin * y + cx, sin * x + cos * y + cy] as const;
+  });
+}
+
+describe("an arc's rounding, at random", () => {
+  it("keeps an arc only where each point of it stays within half a device pixel", () => {
+    const random = seeded(2_026_162);
+    let kept = 0;
+    for (let run = 0; run < 1500; run += 1) {
+      const [x1, y1, x2, y2] = [0, 0, 0, 0].map(() => 0.1 + random() * 0.8);
+      const half = Math.hypot((x2 ?? 0) - (x1 ?? 0), (y2 ?? 0) - (y1 ?? 0)) / 2;
+      const misfit = (random() < 0.5 ? -1 : 1) * 10 ** -(2 + random() * 7);
+      const rx = half * (1 + misfit);
+      const ry = random() < 0.5 ? rx : rx * (0.5 + random());
+      const numbers = [
+        x1,
+        y1,
+        rx,
+        ry,
+        random() < 0.5 ? 0 : random() * 180,
+        random() < 0.5 ? 0 : 1,
+        random() < 0.5 ? 0 : 1,
+        x2,
+        y2,
+      ].map((value) => Number((value ?? 0).toFixed(8)));
+      const [mx, my, ...arc] = numbers;
+      const input = drawing(
+        "0 0 1 1",
+        'width="100" height="100"',
+        `<path fill="red" d="M${String(mx)} ${String(my)}A${arc.join(" ")}Z"/>`,
+      );
+      const result = sanitiseSvgLogo(input);
+      if (!result.ok) continue;
+      const written = /d="M([^A]*)A([^Z"]*)/.exec(result.svg);
+      if (written === null) continue;
+      kept += 1;
+      const shown = [...(written[1] ?? "").split(" "), ...(written[2] ?? "").split(" ")].map(
+        Number,
+      );
+      const before = arcPoints(numbers, 256);
+      const after = arcPoints(shown, 256);
+      const farthest = Math.max(
+        ...before.map(([x, y], index) => {
+          const [shownX = 0, shownY = 0] = after[index] ?? [];
+          return Math.hypot(shownX - x, shownY - y) * 4000;
+        }),
+      );
+      expect(farthest).toBeLessThanOrEqual(0.5 + 1e-6);
+    }
+    expect(kept).toBeGreaterThan(300);
   });
 });
