@@ -151,8 +151,8 @@ const CLIPS: readonly (readonly [string, string, Outcome?])[] = [
   [
     "a use at a percentage position in a clip path in the box of what it clips",
     logo(
-      '<rect id="r" width="0.2" height="0.2"/><clipPath id="c" clipPathUnits="objectBoundingBox"><use href="#r" x="0.5%" y="0.1%"/>' +
-        '<circle cx="0.2" cy="0.7" r="0.1"/></clipPath><rect x="10" y="20" width="80" height="60" fill="url(#g)" clip-path="url(#c)"/>',
+      '<defs><rect id="r" width="0.3" height="0.3"/></defs><clipPath id="c" clipPathUnits="objectBoundingBox"><use href="#r" x="0.5%" y="0.1%"/>' +
+        '<circle cx="0.2" cy="0.7" r="0.2"/></clipPath><rect x="10" y="20" width="80" height="60" fill="url(#g)" clip-path="url(#c)"/>',
     ),
   ],
   [
@@ -172,7 +172,7 @@ const CLIPS: readonly (readonly [string, string, Outcome?])[] = [
   [
     "a clipped use in a clip path, the inner clip of two shapes",
     logo(
-      '<clipPath id="d"><rect width="50" height="50"/><circle cx="70" cy="70" r="20"/></clipPath><rect id="t" width="100" height="100" fill="#f00"/>' +
+      '<clipPath id="d"><rect width="50" height="50"/><circle cx="70" cy="70" r="20"/></clipPath><defs><rect id="t" width="100" height="100" fill="#f00"/></defs>' +
         `<clipPath id="c"><use href="#t" clip-path="url(#d)"/></clipPath>${FULL} clip-path="url(#c)"/>`,
     ),
   ],
@@ -287,7 +287,7 @@ test.describe("a clip path written as a mask", () => {
       page,
     }) => {
       const result = sanitiseSvgLogo(input);
-      expect(result.ok && result.svg).not.toMatch(/<clipPath[^>]*>(?:<[^/][^>]*\/>){2}/);
+      expect(result.ok && result.svg).not.toMatch(/<clipPath[^>]*[^/]>(?:<[^/][^>]*\/>){2}/);
       const { painted } = await check(page, input, outcome);
       expect(painted, "and is clipped").toBeLessThan(SIZE * SIZE * 0.95);
     });

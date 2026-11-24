@@ -135,13 +135,13 @@ describe("sanitiseSvgLogo, output", () => {
     expect(accepted(first).svg).toBe(first);
   });
 
-  it("renames referenced ids in document order and drops the rest", () => {
+  it("renames referenced ids in document order, drops the rest and what nothing refers to", () => {
     expect(
       output(
         '<defs><linearGradient id="b"/><linearGradient id="unused"/><linearGradient id="a" href="#b"/></defs><rect id="r" width="1" height="1" fill="url(#a)"/>',
       ),
     ).toBe(
-      `${ROOT}<defs><linearGradient id="logo-0"/><linearGradient/><linearGradient id="logo-1" href="#logo-0"/></defs><rect width="1" height="1" fill="url(#logo-1)"/></svg>`,
+      `${ROOT}<defs><linearGradient id="logo-0"/><linearGradient id="logo-1" href="#logo-0"/></defs><rect width="1" height="1" fill="url(#logo-1)"/></svg>`,
     );
   });
 
@@ -440,7 +440,7 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
     ]);
   });
 
-  it("drops a clip path or mask on a clip path or on what it holds, which would make it a mask layer", () => {
+  it("drops a mask on a clip path or on what it holds, which browsers ignore, and keeps a clip path there", () => {
     const dropped = removals(
       '<clipPath id="k"><rect width="5" height="5"/></clipPath><mask id="m"><rect width="5" height="5" fill="#fff"/></mask>' +
         '<clipPath id="c" clip-path="url(#k)" style="mask:url(#m)">' +
@@ -456,11 +456,8 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
         reason,
       })),
     ).toEqual([
-      { element: "clipPath", attribute: "clip-path", property: undefined, reason: "render-cost" },
       { element: "clipPath", attribute: "style", property: "mask", reason: "render-cost" },
-      { element: "rect", attribute: "clip-path", property: undefined, reason: "render-cost" },
       { element: "rect", attribute: "mask", property: undefined, reason: "render-cost" },
-      { element: "use", attribute: "style", property: "clip-path", reason: "render-cost" },
       { element: "clipPath", attribute: undefined, property: undefined, reason: "rewritten" },
     ]);
   });

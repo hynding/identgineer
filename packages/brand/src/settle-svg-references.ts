@@ -165,6 +165,44 @@ const NOT_DRAWN_IN_PLACE: ReadonlySet<string> = new Set([
   "radialGradient",
 ]);
 
+/**
+ * Drops every definition nothing drawn refers to, directly or through other definitions: such a
+ * clip path, mask, gradient or `defs` child changes nothing drawn, so leaving it out is exact, and
+ * whatever it held can cost no work or output later on. A definition is kept with everything that
+ * holds what is drawn; `defs` elements themselves stay where they are.
+ */
+function pruneDefinitions(root: CleanElement, limits: SvgLogoLimits): void {
+  const ids = collectIds(walk(root), limits);
+  const parents = new Map<CleanElement, CleanElement>();
+  const kept = new Set<CleanElement>();
+  const keep = (element: CleanElement): void => {
+    for (let at: CleanElement | undefined = element; at !== undefined && !kept.has(at);) {
+      kept.add(at);
+      at = parents.get(at);
+    }
+  };
+  for (const element of walk(root)) {
+    for (const child of element.children) parents.set(child, element);
+  }
+  const reached = new Set<CleanElement>();
+  const stack = [root];
+  for (let element = stack.pop(); element !== undefined; element = stack.pop()) {
+    if (reached.has(element)) continue;
+    reached.add(element);
+    keep(element);
+    for (const child of element.children) {
+      if (child.name === "defs") keep(child);
+      else if (!NOT_DRAWN_IN_PLACE.has(child.name)) stack.push(child);
+    }
+    for (const { element: target } of targetsOf(element, ids)) stack.push(target);
+  }
+  for (const element of walk(root)) {
+    if (element.children.some((child) => !kept.has(child))) {
+      element.children = element.children.filter((child) => kept.has(child));
+    }
+  }
+}
+
 interface Expansion {
   /** Elements once every reference is expanded, definitions included. */
   readonly size: number;
@@ -345,7 +383,9 @@ export function settleSvgReferences(
 } {
   const all = walk(root);
   dropDangling(all, collectIds(all, limits), removals);
+  pruneDefinitions(root, limits);
   rewriteClipPaths(root, collectIds(walk(root), limits), viewportOf(root), limits, removals);
+  pruneDefinitions(root, limits);
   const elements = walk(root);
   const ids = collectIds(elements, limits);
   const drawingCost = checkExpansion(root, elements, ids, limits);

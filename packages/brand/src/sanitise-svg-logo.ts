@@ -1,5 +1,6 @@
 import { decodeSvgInput } from "./decode-svg-input.ts";
 import { filterSvgTree, type CleanElement } from "./filter-svg-tree.ts";
+import { freshIds } from "./fresh-ids.ts";
 import { parseSvgXml } from "./parse-svg-xml.ts";
 import { resolveSvgNamespaces } from "./resolve-svg-namespaces.ts";
 import type { SanitisedSvg } from "./sanitised-svg.ts";
@@ -11,6 +12,7 @@ import type { SvgLogoError, SvgLogoResult } from "./svg-logo-result.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 import { normaliseNumber } from "./svg-number.ts";
 import { Removals, TextLocator } from "./svg-removals.ts";
+import { aspectRatio, SVG_GRAMMARS, type SvgValue } from "./svg-values.ts";
 
 export interface SvgLogoOptions {
   /**
@@ -84,14 +86,81 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
   if (width === undefined || height === undefined || Number(width) <= 0 || Number(height) <= 0) {
     throw new SvgLogoRejection("missing-size", "has no usable width and height");
   }
-  root.attributes.set("viewBox", { text: viewBox });
   root.attributes.set("width", { text: width });
   root.attributes.set("height", { text: height });
-  return {
-    width: Number(width),
-    height: Number(height),
-    viewBox: [minX, minY, boxWidth, boxHeight],
-  };
+  const size = { width: Number(width), height: Number(height) };
+  const box = [minX, minY, boxWidth, boxHeight] as const;
+  const shown = root.droppedAspect === undefined ? box : showAsDrawn(root, size, box, limits);
+  root.attributes.set("viewBox", canonical("viewBox", shown.join(" "), limits));
+  return { ...size, viewBox: shown };
+}
+
+function canonical(name: string, text: string, limits: SvgLogoLimits): SvgValue {
+  const value = SVG_GRAMMARS[name]?.(text, limits);
+  if (value === undefined) {
+    throw new SvgLogoRejection(
+      "number-out-of-range",
+      "has a preserveAspectRatio whose view box cannot be written within the number limits",
+    );
+  }
+  return value;
+}
+
+type ViewBox = readonly [number, number, number, number];
+
+/**
+ * Makes the view box show, drawn to fit, what the dropped `preserveAspectRatio` showed and nothing
+ * more. A crop (`slice`) shows part of the view box: the view box becomes that part. A stretch
+ * (`none`) shows the whole view box, distorted: the view box stays and its content is clipped to
+ * it, since drawn to fit it leaves space round it where content beyond it would otherwise show.
+ */
+function showAsDrawn(
+  root: CleanElement,
+  size: { readonly width: number; readonly height: number },
+  [minX, minY, boxWidth, boxHeight]: ViewBox,
+  limits: SvgLogoLimits,
+): ViewBox {
+  const aspect = aspectRatio(root.droppedAspect ?? "");
+  const digits = (value: number): number => Number(value.toFixed(limits.fractionDigits));
+  if (aspect?.align === "none") {
+    if (boxWidth * size.height !== boxHeight * size.width)
+      clipToViewBox(root, [minX, minY, boxWidth, boxHeight], limits);
+    return [minX, minY, boxWidth, boxHeight];
+  }
+  const scale = Math.max(size.width / boxWidth, size.height / boxHeight);
+  const [width, height] = [size.width / scale, size.height / scale];
+  const align = aspect?.align ?? "xMidYMid";
+  const share = (part: string): number => (part === "Min" ? 0 : part === "Mid" ? 0.5 : 1);
+  return [
+    digits(minX + (boxWidth - width) * share(align.slice(1, 4))),
+    digits(minY + (boxHeight - height) * share(align.slice(5, 8))),
+    digits(width),
+    digits(height),
+  ];
+}
+
+/** Moves everything drawn into a group clipped to the view box; a title or description stays. */
+function clipToViewBox(root: CleanElement, box: ViewBox, limits: SvgLogoLimits): void {
+  const [minX, minY, width, height] = box.map(String);
+  const id = freshIds(root)();
+  const rect = new Map<string, SvgValue>();
+  if (minX !== "0") rect.set("x", canonical("x", minX ?? "0", limits));
+  if (minY !== "0") rect.set("y", canonical("y", minY ?? "0", limits));
+  rect.set("width", canonical("width", width ?? "1", limits));
+  rect.set("height", canonical("height", height ?? "1", limits));
+  const at = root.offset;
+  const element = (
+    name: CleanElement["name"],
+    attributes: Map<string, SvgValue>,
+    children: CleanElement[],
+  ): CleanElement => ({ name, qualified: name, attributes, children, text: "", offset: at });
+  const descriptive = root.children.filter(({ name }) => name === "title" || name === "desc");
+  const drawn = root.children.filter(({ name }) => name !== "title" && name !== "desc");
+  root.children = [
+    ...descriptive,
+    element("clipPath", new Map([["id", { text: id }]]), [element("rect", rect, [])]),
+    element("g", new Map([["clip-path", { reference: id, form: "url" }]]), drawn),
+  ];
 }
 
 function toError(rejection: SvgLogoRejection, locator: TextLocator | undefined): SvgLogoError {
@@ -139,9 +208,18 @@ export function sanitiseSvgLogoWithLimits(
     );
     const reported = [size.width, size.height, ...size.viewBox, drawingCost, overdraw];
     if (!reported.every(Number.isFinite)) throw new Error("a reported number is not finite");
+    const svg = serialiseSvg(root, renamed);
+    // Writing clip paths as masks adds a little; whatever it adds, the output is never larger than an
+    // input may be, so it can always be sanitised again.
+    if (new TextEncoder().encode(svg).length > limits.inputBytes) {
+      throw new SvgLogoRejection(
+        "too-large",
+        `would be written in more than ${String(limits.inputBytes)} bytes`,
+      );
+    }
     return {
       ok: true,
-      svg: serialiseSvg(root, renamed) as SanitisedSvg,
+      svg: svg as SanitisedSvg,
       ...size,
       drawingCost,
       overdraw,

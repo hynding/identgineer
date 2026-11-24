@@ -23,14 +23,7 @@
     ]
   },
   "aspect-ratio-slice-crop.svg": {
-    "outcome": "accept",
-    "removed": [
-      {
-        "element": "svg",
-        "attribute": "preserveAspectRatio",
-        "reason": "render-cost"
-      }
-    ]
+    "outcome": "reject:overdraw-too-large"
   },
   "attribute-quote-injection.svg": {
     "outcome": "accept",
@@ -378,13 +371,7 @@
     "outcome": "reject:drawing-too-costly"
   },
   "clip-path-inside-clip-path.svg": {
-    "outcome": "accept",
-    "removed": [
-      {
-        "element": "clipPath",
-        "reason": "rewritten"
-      }
-    ]
+    "outcome": "reject:overdraw-too-large"
   },
   "clip-path-near-coincident-zigzags.svg": {
     "outcome": "accept",

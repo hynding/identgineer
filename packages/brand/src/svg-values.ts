@@ -199,8 +199,13 @@ const ALIGNMENTS = ["xMin", "xMid", "xMax"].flatMap((x) =>
   ["YMin", "YMid", "YMax"].map((y) => x + y),
 );
 
+export interface AspectRatio {
+  readonly align: string;
+  readonly meet: string;
+}
+
 /** A `preserveAspectRatio` as SVG reads it: an alignment or `none`, then `meet` or `slice`. */
-function aspectRatio(input: string): { align: string; meet: string } | undefined {
+export function aspectRatio(input: string): AspectRatio | undefined {
   const parts = trimXmlWhitespace(input).split(WHITESPACE_RUN);
   const [align, meet = "meet"] = parts;
   if (parts.length > 2 || align === undefined) return undefined;

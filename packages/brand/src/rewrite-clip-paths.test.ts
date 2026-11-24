@@ -106,10 +106,10 @@ describe("clip paths of more than one shape", () => {
       ),
     );
     expect(masked).toBe(
-      '<defs><rect id="logo-0" width="40" height="40" fill="#0000ff"/></defs>' +
+      '<defs><rect id="logo-0" width="40" height="40" fill="blue"/></defs>' +
         `<mask id="logo-1" x="-8" y="-8" width="96" height="96" maskUnits="userSpaceOnUse" mask-type="alpha" ${PAINT}>` +
         '<rect width="40" height="40"/><circle cx="60" cy="60" r="20"/></mask>' +
-        '<rect width="100" height="100" fill="#ff0000" mask="url(#logo-1)"/><use href="#logo-0" x="50"/>',
+        '<rect width="100" height="100" fill="red" mask="url(#logo-1)"/><use href="#logo-0" x="50"/>',
     );
   });
 
@@ -157,10 +157,10 @@ describe("clip paths of more than one shape", () => {
   });
 
   it("copy a use's target once however many uses draw it, so the output grows with the input", () => {
-    const path = `<path id="p" d="M0 0${"L1 2".repeat(5000)}"/>`;
+    const path = `<path id="p" d="M0 0${"L1 2".repeat(500)}"/>`;
     const input = `${ROOT}<defs>${path}</defs><clipPath id="c">${'<use href="#p"/>'.repeat(200)}</clipPath><rect width="10" height="10" clip-path="url(#c)"/></svg>`;
     const result = accepted(input.slice(ROOT.length, -"</svg>".length));
-    expect(result.svg.match(/L1 2/g)?.length).toBe(5000);
+    expect(result.svg.match(/L1 2/g)?.length).toBe(500);
     expect(result.svg.length).toBeLessThan(input.length * 2);
   });
 
@@ -215,7 +215,7 @@ describe("clip paths of more than one shape", () => {
         ),
       ),
     ).toContain(
-      '<mask id="logo-0" x="-0.1" y="-0.1" width="1.2" height="1.2" maskContentUnits="objectBoundingBox" mask-type="alpha">',
+      `<mask id="logo-0" x="-0.1" y="-0.1" width="1.2" height="1.2" maskContentUnits="objectBoundingBox" mask-type="alpha" ${PAINT}>`,
     );
   });
 

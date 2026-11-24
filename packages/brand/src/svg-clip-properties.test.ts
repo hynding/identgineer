@@ -114,7 +114,7 @@ class ClipGenerator {
       ? `clipPathUnits="${this.pick(["objectBoundingBox", "userSpaceOnUse"])}"`
       : "";
     const transform = this.chance(0.3) ? `transform="${this.transform()}"` : "";
-    const content = Array.from({ length: Math.floor(this.random() * 4) }, () =>
+    const content = Array.from({ length: 1 + Math.floor(this.random() * 3) }, () =>
       this.chance(0.5) ? this.shape() : this.use(),
     ).join("");
     return `<clipPath id="${this.reference()}" ${units} ${transform} ${this.attributes(Math.floor(this.random() * 2))}>${content}</clipPath>`;
@@ -152,7 +152,11 @@ class ClipGenerator {
     const content = Array.from({ length: 1 + Math.floor(this.random() * 7) }, () =>
       this.node(0),
     ).join("");
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box}" ${root}>${content}<linearGradient id="g"><stop offset="0" stop-color="#00f"/><stop offset="1" stop-color="#0f0"/></linearGradient></svg>`;
+    // Drawn last, so that most clip paths are used: one nothing uses is dropped before it matters.
+    const clipped = ["a", "b", "c", "d", "m", "s", "t"]
+      .map((id) => `<rect width="40" height="40" clip-path="url(#${id})"/>`)
+      .join("");
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box}" ${root}>${content}${clipped}<linearGradient id="g"><stop offset="0" stop-color="#00f"/><stop offset="1" stop-color="#0f0"/></linearGradient></svg>`;
   }
 }
 

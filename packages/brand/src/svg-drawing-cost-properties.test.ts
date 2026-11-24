@@ -110,8 +110,8 @@ class LogoGraph {
   private readonly items: Item[] = [];
   private readonly masks: Item[] = [];
   private readonly shapes: Item[] = [];
-  private readonly periods: number[] = [];
-  private readonly perPeriods: number[] = [];
+  /** The dashing of each dashed shape, by id. */
+  private readonly dashing = new Map<string, Dashes>();
 
   constructor(random: () => number) {
     this.random = random;
@@ -125,14 +125,16 @@ class LogoGraph {
     return items[this.integer(items.length)] as T;
   }
 
-  private dash(): string {
+  private dash(id: string): string {
     if (this.random() >= 0.2) return "";
     const length = (1 + this.integer(5000)) / 1000;
     // An odd array repeats twice over.
     const entries = this.pick([1, 2, 3, 64]);
     const odd = entries % 2 === 1;
-    this.periods.push((odd ? 2 : 1) * entries * length);
-    this.perPeriods.push(odd ? entries : entries / 2);
+    this.dashing.set(id, {
+      period: (odd ? 2 : 1) * entries * length,
+      perPeriod: odd ? entries : entries / 2,
+    });
     return ` stroke-dasharray="${Array.from({ length: entries }, () => String(length)).join(" ")}"`;
   }
 
@@ -198,7 +200,7 @@ class LogoGraph {
     const painted = filled(Math.min(area, boxArea), visible, length, box);
     return {
       id,
-      markup: `<path id="${id}" d="${data}"${this.dash()}/>`,
+      markup: `<path id="${id}" d="${data}"${this.dash(id)}/>`,
       measure: (dashes) => shape(geometry, length, dashes),
       paint: () => painted,
       clipped: false,
@@ -210,7 +212,7 @@ class LogoGraph {
       const [width, height] = [1 + this.integer(100), 1 + this.integer(100)];
       return {
         id,
-        markup: `<rect id="${id}" width="${String(width)}" height="${String(height)}"${this.dash()}/>`,
+        markup: `<rect id="${id}" width="${String(width)}" height="${String(height)}"${this.dash(id)}/>`,
         measure: (dashes) => shape(4 * WEIGHT.line, 2 * (width + height), dashes),
         clipped: false,
         paint: () =>
@@ -225,7 +227,7 @@ class LogoGraph {
     const radius = 1 + this.integer(50);
     return {
       id,
-      markup: `<circle id="${id}" r="${String(radius)}"${this.dash()}/>`,
+      markup: `<circle id="${id}" r="${String(radius)}"${this.dash(id)}/>`,
       measure: (dashes) => shape(4 * WEIGHT.cubic, 2 * Math.PI * radius, dashes),
       clipped: false,
       paint: () =>
@@ -368,9 +370,21 @@ class LogoGraph {
     const roots = Array.from({ length: 1 + this.integer(40) }, () =>
       this.use(this.pick(this.items)),
     );
+    // A definition nothing drawn refers to is dropped, and its dash array with it.
+    const markups = new Map([...this.items, ...this.masks].map((item) => [item.id, item.markup]));
+    const reached = new Set<string>();
+    const pending = roots.map((root) => root.markup);
+    for (let markup = pending.pop(); markup !== undefined; markup = pending.pop()) {
+      for (const [, id = ""] of markup.matchAll(/#([a-z0-9]+)/g)) {
+        if (reached.has(id)) continue;
+        reached.add(id);
+        pending.push(markups.get(id) ?? "");
+      }
+    }
+    const used = [...this.dashing].filter(([id]) => reached.has(id)).map(([, dashing]) => dashing);
     const dashes: Dashes = {
-      period: this.periods.length === 0 ? 0 : Math.min(...this.periods),
-      perPeriod: this.perPeriods.length === 0 ? 0 : Math.max(...this.perPeriods),
+      period: used.length === 0 ? 0 : Math.min(...used.map(({ period }) => period)),
+      perPeriod: used.length === 0 ? 0 : Math.max(...used.map(({ perPeriod }) => perPeriod)),
     };
     const expected = roots
       .map((root) => root.measure(dashes))

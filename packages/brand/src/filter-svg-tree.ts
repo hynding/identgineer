@@ -32,6 +32,11 @@ export interface CleanElement {
   children: CleanElement[];
   readonly text: string;
   readonly offset: number;
+  /**
+   * On the root only: the `preserveAspectRatio` dropped because it stretches or crops the view box,
+   * so the size can be settled to show what it showed.
+   */
+  readonly droppedAspect?: string;
 }
 
 const PROPERTY_NAME = /^-?[a-z][a-z0-9-]{0,63}$/;
@@ -41,11 +46,10 @@ const REFERENCE_TAKING: ReadonlySet<string> = new Set(["fill", "stroke", "clip-p
 const SCHEME = /^[a-z][a-z0-9+.-]*:/;
 
 /**
- * A clip path or mask on a clip path, or on a shape inside one: a browser can no longer clip with
- * the shapes' outlines and draws the clip path into a mask layer each time it is applied instead,
- * so it is dropped (a mask there is not even drawn by Chromium).
+ * A mask on a clip path, or on a shape inside one: browsers ignore it (Chromium does not draw it),
+ * so dropping it changes nothing. A clip path there is kept and written as a mask later on.
  */
-const CLIPPED_AS_MASK: ReadonlySet<string> = new Set(["clip-path", "mask"]);
+const IGNORED_WHEN_CLIPPING: ReadonlySet<string> = new Set(["mask"]);
 
 /**
  * Why a value that failed its grammar was dropped: what it was trying to do, where that shows. A
@@ -99,6 +103,7 @@ function propertyReason(property: string): SvgLogoRemovalReason {
 class TreeFilter {
   private readonly limits: SvgLogoLimits;
   private readonly removals: Removals;
+  private droppedAspect: string | undefined;
 
   constructor(limits: SvgLogoLimits, removals: Removals) {
     this.limits = limits;
@@ -109,7 +114,8 @@ class TreeFilter {
     if (source.namespace !== SVG_NAMESPACE || source.local !== "svg") {
       throw new SvgLogoRejection("not-svg", "must have an svg root element", source.offset);
     }
-    return this.element(source, "svg", true);
+    const root = this.element(source, "svg", true);
+    return this.droppedAspect === undefined ? root : { ...root, droppedAspect: this.droppedAspect };
   }
 
   /** `clipping`: the element is a clip path, or stands inside one. */
@@ -205,7 +211,7 @@ class TreeFilter {
         style = attribute;
         continue;
       }
-      if (namespace === null && clipping && CLIPPED_AS_MASK.has(local)) {
+      if (namespace === null && clipping && IGNORED_WHEN_CLIPPING.has(local)) {
         this.removals.add(
           { element: source.qualified, attribute: attribute.qualified },
           "render-cost",
@@ -249,6 +255,9 @@ class TreeFilter {
       name === "href" && !trimXmlWhitespace(attribute.value).startsWith("#")
         ? "external-reference"
         : invalidValueReason(name, attribute.value);
+    if (name === "preserveAspectRatio" && reason === "render-cost") {
+      this.droppedAspect = attribute.value;
+    }
     this.removals.add(
       { element: source.qualified, attribute: attribute.qualified },
       reason,
@@ -289,7 +298,7 @@ class TreeFilter {
         this.removals.add(names, "invalid-value", attribute.offset);
         continue;
       }
-      if (clipping && CLIPPED_AS_MASK.has(property)) {
+      if (clipping && IGNORED_WHEN_CLIPPING.has(property)) {
         this.removals.add({ ...names, property }, "render-cost", attribute.offset);
         continue;
       }

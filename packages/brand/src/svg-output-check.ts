@@ -397,8 +397,11 @@ export function findSanitisedSvgProblems(svg: string): string[] {
         if (seen.has(attribute)) problems.push(`${name}: ${attribute} twice`);
         seen.add(attribute);
         if (!allowed?.includes(attribute)) problems.push(`${name}: the attribute ${attribute}`);
-        if (parent === "clipPath" && (attribute === "clip-path" || attribute === "mask"))
-          problems.push(`${name}: the attribute ${attribute} inside a clip path`);
+        if (
+          (parent === "clipPath" || name === "clipPath") &&
+          (attribute === "clip-path" || attribute === "mask")
+        )
+          problems.push(`${name}: the attribute ${attribute} on or inside a clip path`);
         checkValue(name, attribute, value, problems, references);
         if (attribute === "id") {
           if (ids.has(value)) problems.push(`the id ${value} twice`);
@@ -408,6 +411,7 @@ export function findSanitisedSvgProblems(svg: string): string[] {
       const attributes = new Map(
         [...(start[2] ?? "").matchAll(ATTRIBUTE)].map(([, key = "", value = ""]) => [key, value]),
       );
+      if (name === "use" && !attributes.has("href")) problems.push("a use with no reference");
       const id = attributes.get("id");
       if (id !== undefined) identified.set(id, { name, clipped: attributes.has("clip-path") });
       if (name === "clipPath") clips.push({ shapes: 0, uses: [] });

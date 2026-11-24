@@ -1,4 +1,5 @@
 import type { CleanElement } from "./filter-svg-tree.ts";
+import { freshIds } from "./fresh-ids.ts";
 import { STYLE_PROPERTIES, SVG_ELEMENT_RULES, type SvgElementName } from "./svg-allowlist.ts";
 import { EMPTY_BOX, measureShape, type SvgBox, userUnits } from "./svg-drawing-cost.ts";
 import type { SvgLogoLimits } from "./svg-logo-limits.ts";
@@ -18,11 +19,17 @@ const BASIC_SHAPES: ReadonlySet<string> = new Set([
   "polygon",
 ]);
 
+/** The attributes that may refer to another element. */
+const REFERRING = ["href", "fill", "stroke", "clip-path", "mask"] as const;
+
 /** The attributes that give a shape its geometry: all it keeps but its id, transform and paint. */
 function geometryAttributes(name: SvgElementName): readonly string[] {
   return SVG_ELEMENT_RULES[name].attributes.filter(
     (attribute) =>
-      attribute !== "id" && attribute !== "transform" && !STYLE_PROPERTIES.has(attribute),
+      attribute !== "id" &&
+      attribute !== "href" &&
+      attribute !== "transform" &&
+      !STYLE_PROPERTIES.has(attribute),
   );
 }
 
@@ -34,6 +41,10 @@ function textOf(element: CleanElement, name: string): string | undefined {
 function referenceOf(element: CleanElement, name: string): string | undefined {
   const value = element.attributes.get(name);
   return value !== undefined && "reference" in value ? value.reference : undefined;
+}
+
+function isDescriptive(element: CleanElement): boolean {
+  return element.name === "title" || element.name === "desc";
 }
 
 /** A value built here, read through the same grammar as any input so the output stays canonical. */
@@ -60,6 +71,8 @@ function element(
 
 /** One shape a clip path draws: the shape, the `use` that draws it if any, and how it is filled. */
 interface ClipShape {
+  /** The child of the clip path: the shape itself, or the `use`. */
+  readonly child: CleanElement;
   readonly shape: CleanElement;
   readonly use: CleanElement | undefined;
   readonly clipRule: string;
@@ -88,9 +101,27 @@ function union(left: SvgBox, right: SvgBox): SvgBox {
 
 const SCALE = 1e6;
 
+/** What a rewritten clip path's mask paints its shapes with, inherited by each of them. */
+const MASK_PAINT = [
+  ["fill", "#fff"],
+  ["fill-opacity", "1"],
+  ["fill-rule", "nonzero"],
+  ["stroke", "none"],
+  ["visibility", "visible"],
+] as const;
+
 class ClipPathRewriter {
   private readonly parents = new Map<CleanElement, CleanElement>();
   private readonly rewritten = new Set<string>();
+  /** Every id something refers to. */
+  private readonly referenced = new Set<string>();
+  /** The bare copy made of each shape a `use` in a rewritten clip path draws, by its new id. */
+  private readonly copies = new Map<CleanElement, string>();
+  /** The box of each shape, measured once however often it is drawn. */
+  private readonly boxes = new Map<CleanElement, SvgBox>();
+  /** The definitions set beside each clip path, made when first needed. */
+  private readonly besides = new Map<CleanElement, CleanElement>();
+  private readonly nextId: () => string;
 
   private readonly root: CleanElement;
   private readonly ids: ReadonlyMap<string, CleanElement>;
@@ -110,8 +141,13 @@ class ClipPathRewriter {
     this.viewport = viewport;
     this.limits = limits;
     this.removals = removals;
+    this.nextId = freshIds(root);
     const stack = [root];
     for (let parent = stack.pop(); parent !== undefined; parent = stack.pop()) {
+      for (const name of REFERRING) {
+        const reference = referenceOf(parent, name);
+        if (reference !== undefined) this.referenced.add(reference);
+      }
       for (const child of parent.children) {
         this.parents.set(child, parent);
         stack.push(child);
@@ -136,41 +172,55 @@ class ClipPathRewriter {
   }
 
   /**
-   * Keeps of a clip path only what it draws (a shape it ignores is dropped as `render-cost`, a
-   * `use` of anything but a shape as `misplaced`), then rewrites it as a mask if it would make a
-   * renderer combine shapes: when it draws more than one, or one clipped in turn.
+   * Keeps of a clip path only what it draws (a shape it ignores is dropped as `render-cost`; one
+   * holding a `use` of anything but a shape, which browsers draw differently, is emptied), then
+   * rewrites it as a mask if it would make a renderer combine shapes: when it draws more than one,
+   * or one clipped in turn, or is clipped itself.
    */
   private settle(clip: CleanElement): void {
+    const drawing = clip.children.filter((child) => !isDescriptive(child));
+    const descriptive = clip.children.filter(isDescriptive);
+    if (drawing.some((child) => child.name === "use" && !BASIC_SHAPES.has(this.target(child)))) {
+      for (const child of drawing) {
+        this.removals.add({ element: child.qualified }, "misplaced", child.offset);
+        this.keepIfReferenced(child, clip);
+      }
+      clip.children = descriptive;
+      return;
+    }
     const shapes: ClipShape[] = [];
-    const children: CleanElement[] = [];
-    for (const child of clip.children) {
-      if (child.name === "title" || child.name === "desc") {
-        children.push(child);
+    for (const child of drawing) {
+      const drawn = this.clipShape(clip, child);
+      if (drawn === undefined) {
+        this.removals.add({ element: child.qualified }, "render-cost", child.offset);
+        this.keepIfReferenced(child, clip);
         continue;
       }
-      const drawn = this.clipShape(clip, child);
-      if (drawn === undefined) continue;
-      children.push(child);
       shapes.push(drawn);
     }
-    clip.children = children;
-    const clippedInTurn = shapes.some(({ shape }) => referenceOf(shape, "clip-path") !== undefined);
-    if (shapes.length > 1 || clippedInTurn) this.rewrite(clip, shapes);
+    clip.children = clip.children.filter(
+      (child) => isDescriptive(child) || shapes.some((shape) => shape.child === child),
+    );
+    const clipped =
+      referenceOf(clip, "clip-path") !== undefined ||
+      shapes.some(
+        ({ child, shape }) =>
+          referenceOf(child, "clip-path") !== undefined ||
+          referenceOf(shape, "clip-path") !== undefined,
+      );
+    if (shapes.length > 1 || clipped) this.rewrite(clip, shapes);
   }
 
+  private target(use: CleanElement): string {
+    const reference = referenceOf(use, "href");
+    return (reference === undefined ? undefined : this.ids.get(reference))?.name ?? "";
+  }
+
+  /** The shape a child of a clip path draws, or nothing when the clip path ignores it. */
   private clipShape(clip: CleanElement, child: CleanElement): ClipShape | undefined {
-    let shape = child;
-    let use: CleanElement | undefined;
-    if (child.name === "use") {
-      const reference = referenceOf(child, "href");
-      const target = reference === undefined ? undefined : this.ids.get(reference);
-      if (target === undefined || !BASIC_SHAPES.has(target.name)) {
-        this.removals.add({ element: child.qualified }, "misplaced", child.offset);
-        return undefined;
-      }
-      shape = target;
-      use = child;
-    }
+    const reference = child.name === "use" ? referenceOf(child, "href") : undefined;
+    const use = child.name === "use" ? child : undefined;
+    const shape = (reference === undefined ? undefined : this.ids.get(reference)) ?? child;
     // A use passes its properties to its target, not the target's place in the document.
     const property = (name: string): string | undefined =>
       textOf(shape, name) ??
@@ -180,107 +230,162 @@ class ClipPathRewriter {
       textOf(child, "display") !== "none" &&
       textOf(shape, "display") !== "none" &&
       (property("visibility") ?? "visible") === "visible";
-    if (!shown) {
-      this.removals.add({ element: child.qualified }, "render-cost", child.offset);
-      return undefined;
-    }
-    return { shape, use, clipRule: property("clip-rule") ?? "nonzero" };
+    return shown ? { child, shape, use, clipRule: property("clip-rule") ?? "nonzero" } : undefined;
   }
 
-  /** A use's `x` or `y` in user units of what the clip path's content is drawn in. */
-  private offset(use: CleanElement, name: "x" | "y", objectBox: boolean): number {
+  /**
+   * A child leaving its clip path that something still refers to (a `use` elsewhere drawing it)
+   * stays as a definition, with its id, paint and all, beside the clip path.
+   */
+  private keepIfReferenced(child: CleanElement, clip: CleanElement): void {
+    const id = textOf(child, "id");
+    if (id !== undefined && this.referenced.has(id)) this.beside(clip).children.push(child);
+  }
+
+  /** The `defs` set just before a clip path, for what must outlive it. */
+  private beside(clip: CleanElement): CleanElement {
+    const existing = this.besides.get(clip);
+    if (existing !== undefined) return existing;
+    const parent = this.parents.get(clip);
+    if (parent === undefined) throw new Error("a clip path is the root");
+    const definitions = element("defs", new Map(), [], clip.offset);
+    const at = parent.children.indexOf(clip);
+    parent.children.splice(at, 0, definitions);
+    this.parents.set(definitions, parent);
+    this.besides.set(clip, definitions);
+    return definitions;
+  }
+
+  private box(shape: CleanElement): SvgBox {
+    const known = this.boxes.get(shape);
+    if (known !== undefined) return known;
+    const geometry = measureShape(shape, this.viewport.base)?.box ?? EMPTY_BOX;
+    // A percentage resolves to between nothing and itself of the larger side, so the box with the
+    // origin in it holds wherever it lands.
+    const usesPercentages = geometryAttributes(shape.name).some((name) =>
+      textOf(shape, name)?.includes("%"),
+    );
+    const box = usesPercentages
+      ? union(geometry, { minX: 0, minY: 0, maxX: 0, maxY: 0 })
+      : geometry;
+    this.boxes.set(shape, box);
+    return box;
+  }
+
+  /** The shape's geometry and own transform, and the clip path that clips it in turn, bare. */
+  private bare(shape: CleanElement): Map<string, SvgValue> {
+    const attributes = new Map<string, SvgValue>();
+    for (const name of [...geometryAttributes(shape.name), "transform", "clip-path"]) {
+      const value = shape.attributes.get(name);
+      if (value !== undefined) attributes.set(name, value);
+    }
+    return attributes;
+  }
+
+  /**
+   * One bare copy of what a `use` in a clip path draws, made once for the whole document and set
+   * beside the first clip path that needs it, so a use costs one element however large its target.
+   * Its fill rule is its own clip rule, if it has one; otherwise it takes the use's.
+   */
+  private copyOf(shape: CleanElement, clip: CleanElement): string {
+    const known = this.copies.get(shape);
+    if (known !== undefined) return known;
+    const id = this.nextId();
+    const attributes = this.bare(shape);
+    attributes.set("id", { text: id });
+    const own = textOf(shape, "clip-rule");
+    if (own !== undefined) attributes.set("fill-rule", kept("fill-rule", own, this.limits));
+    this.beside(clip).children.push(element(shape.name, attributes, [], shape.offset));
+    this.copies.set(shape, id);
+    return id;
+  }
+
+  /** A use's `x` or `y` in user units: a percentage of the view box, as browsers take it. */
+  private offset(use: CleanElement, name: "x" | "y"): number {
     const text = textOf(use, name);
     if (text === undefined) return 0;
     if (text.endsWith("%")) {
       const fraction = Number(text.slice(0, -1)) / 100;
-      if (objectBox) return fraction;
       return fraction * (name === "x" ? this.viewport.width : this.viewport.height);
     }
     return userUnits(text, this.viewport.base);
   }
 
-  /** The shape drawn bare in a mask, and the box it can cover in the mask's content units. */
-  private copy(
-    { shape, use, clipRule }: ClipShape,
-    clipMatrix: Matrix,
-    objectBox: boolean,
-  ): { readonly drawn: CleanElement; readonly box: SvgBox } {
-    const attributes = new Map<string, SvgValue>();
-    let usesPercentages = false;
-    for (const name of geometryAttributes(shape.name)) {
-      const value = shape.attributes.get(name);
-      if (value === undefined) continue;
-      attributes.set(name, value);
-      if ("text" in value && value.text.includes("%")) usesPercentages = true;
-    }
-    const own = textOf(shape, "transform");
-    if (own !== undefined) attributes.set("transform", kept("transform", own, this.limits));
-    attributes.set("fill", kept("fill", "#fff", this.limits));
-    attributes.set("fill-opacity", kept("fill-opacity", "1", this.limits));
-    attributes.set("fill-rule", kept("fill-rule", clipRule, this.limits));
-    attributes.set("stroke", kept("stroke", "none", this.limits));
-    const clipPath = shape.attributes.get("clip-path");
-    if (clipPath !== undefined && "reference" in clipPath) attributes.set("clip-path", clipPath);
-    attributes.set("visibility", kept("visibility", "visible", this.limits));
-    let drawn = element(shape.name, attributes, [], shape.offset);
-    let matrix = own === undefined ? IDENTITY : parseTransform(own);
-    if (use !== undefined) {
-      const placed = [textOf(use, "transform"), this.placement(use, objectBox)].filter(
-        (part): part is string => part !== undefined,
-      );
-      // One group when the transform list stays within its limit, a group for each part if not.
-      if (placed.length > 0 && !this.tooLong(placed)) drawn = this.group(placed.join(" "), drawn);
-      else for (const part of [...placed].reverse()) drawn = this.group(part, drawn);
-      matrix = multiply(placed.length === 0 ? IDENTITY : parseTransform(placed.join(" ")), matrix);
-    }
-    // A percentage resolves to between nothing and itself of the larger side, so the box with the
-    // origin in it holds wherever it lands.
-    const geometry = measureShape(shape, this.viewport.base)?.box ?? EMPTY_BOX;
-    const local = usesPercentages
-      ? union(geometry, { minX: 0, minY: 0, maxX: 0, maxY: 0 })
-      : geometry;
-    return { drawn, box: mapBox(multiply(clipMatrix, matrix), local) };
-  }
-
-  private placement(use: CleanElement, objectBox: boolean): string | undefined {
-    const [x, y] = [this.offset(use, "x", objectBox), this.offset(use, "y", objectBox)];
+  private placement(use: CleanElement): string | undefined {
+    const [x, y] = [this.offset(use, "x"), this.offset(use, "y")];
     return x === 0 && y === 0 ? undefined : `translate(${String(x)} ${String(y)})`;
   }
 
-  private tooLong(parts: readonly string[]): boolean {
-    return SVG_GRAMMARS.transform?.(parts.join(" "), this.limits) === undefined;
-  }
-
-  private group(transform: string, child: CleanElement): CleanElement {
-    return element(
-      "g",
-      new Map([["transform", kept("transform", transform, this.limits)]]),
-      [child],
-      child.offset,
+  /** What a shape of a rewritten clip path is drawn as in its mask, and the box it can cover. */
+  private drawn(
+    { child, shape, use, clipRule }: ClipShape,
+    clip: CleanElement,
+    clipMatrix: Matrix,
+  ): { readonly drawn: CleanElement; readonly box: SvgBox } {
+    const own = textOf(shape, "transform");
+    const ownMatrix = own === undefined ? IDENTITY : parseTransform(own);
+    if (use === undefined) {
+      const attributes = this.bare(child);
+      if (clipRule !== "nonzero")
+        attributes.set("fill-rule", kept("fill-rule", clipRule, this.limits));
+      return {
+        drawn: element(child.name, attributes, [], child.offset),
+        box: mapBox(multiply(clipMatrix, ownMatrix), this.box(child)),
+      };
+    }
+    // The use itself is kept, pointing at the bare copy: its position, transform and the clip path
+    // on it work in the mask as they did in the clip path.
+    const attributes = new Map<string, SvgValue>([
+      ["href", { reference: this.copyOf(shape, clip), form: "fragment" }],
+    ]);
+    for (const name of ["x", "y", "transform", "clip-path"]) {
+      const value = use.attributes.get(name);
+      if (value !== undefined) attributes.set(name, value);
+    }
+    if (textOf(shape, "clip-rule") === undefined && clipRule !== "nonzero") {
+      attributes.set("fill-rule", kept("fill-rule", clipRule, this.limits));
+    }
+    const placed = [textOf(use, "transform"), this.placement(use)].filter(
+      (part): part is string => part !== undefined,
     );
+    const useMatrix = placed.reduce<Matrix>(
+      (matrix, part) => multiply(matrix, parseTransform(part)),
+      IDENTITY,
+    );
+    return {
+      drawn: element("use", attributes, [], use.offset),
+      box: mapBox(multiply(multiply(clipMatrix, useMatrix), ownMatrix), this.box(shape)),
+    };
   }
 
   /** The clip path, replaced where it stands by an alpha mask of the same shapes under the same id. */
   private rewrite(clip: CleanElement, shapes: readonly ClipShape[]): void {
     const objectBox = textOf(clip, "clipPathUnits") === "objectBoundingBox";
-    const transform = textOf(clip, "transform");
-    const clipMatrix = transform === undefined ? IDENTITY : parseTransform(transform);
-    const copies = shapes.map((shape) => this.copy(shape, clipMatrix, objectBox));
-    const drawn = copies.map(({ drawn: copy }) => copy);
-    const content =
-      transform === undefined
-        ? drawn
-        : [
-            element(
-              "g",
-              new Map([["transform", kept("transform", transform, this.limits)]]),
-              drawn,
-              clip.offset,
-            ),
-          ];
-    const descriptive = clip.children.filter(
-      (child) => child.name === "title" || child.name === "desc",
-    );
+    const transform = clip.attributes.get("transform");
+    const clipClip = clip.attributes.get("clip-path");
+    if (objectBox && (transform !== undefined || clipClip !== undefined)) {
+      // Chromium applies these in user space, outside the box the content is drawn in: no mask
+      // shared by everything that uses the clip path can stand in for them.
+      throw new SvgLogoRejection(
+        "drawing-too-costly",
+        "has a clip path in object bounding box units with a transform or clip path of its own, which cannot be written as a mask",
+        clip.offset,
+      );
+    }
+    const clipMatrix =
+      transform !== undefined && "text" in transform ? parseTransform(transform.text) : IDENTITY;
+    for (const { child } of shapes) {
+      if (child.name !== "use") this.keepIfReferenced(child, clip);
+    }
+    const copies = shapes.map((shape) => this.drawn(shape, clip, clipMatrix));
+    let content = copies.map(({ drawn }) => drawn);
+    if (transform !== undefined) {
+      content = [element("g", new Map([["transform", transform]]), content, clip.offset)];
+    }
+    // A clip path's own clip path applies outside its transform.
+    if (clipClip !== undefined) {
+      content = [element("g", new Map([["clip-path", clipClip]]), content, clip.offset)];
+    }
     const attributes = new Map<string, SvgValue>();
     const id = clip.attributes.get("id");
     if (id !== undefined) attributes.set("id", id);
@@ -293,9 +398,11 @@ class ClipPathRewriter {
       );
     }
     attributes.set("mask-type", kept("mask-type", "alpha", this.limits));
+    for (const [name, value] of MASK_PAINT) attributes.set(name, kept(name, value, this.limits));
     // A clip path not displayed clips nothing, and a mask not displayed masks nothing.
     const display = clip.attributes.get("display");
     if (display !== undefined) attributes.set("display", display);
+    const descriptive = clip.children.filter(isDescriptive);
     const mask = element("mask", attributes, [...descriptive, ...content], clip.offset);
     const parent = this.parents.get(clip);
     if (parent === undefined) throw new Error("a clip path is the root");
@@ -332,8 +439,9 @@ class ClipPathRewriter {
 
   /**
    * Points everything that used a rewritten clip path at its mask instead. An element with a mask
-   * of its own moves into a group that carries its id and transform (so a `use` of it, and where
-   * it stands, are unchanged) and applies the new mask around its own.
+   * of its own moves into a group that carries its id, its transform and (for a `use`) its
+   * position, so a `use` of it, where it stands and the space both masks work in are unchanged,
+   * and applies the new mask around its own.
    */
   private swapReferences(): void {
     const stack = [this.root];
@@ -358,27 +466,46 @@ class ClipPathRewriter {
           node.offset,
         );
       }
-      const moved = new Map<string, SvgValue>();
-      for (const name of ["id", "transform"]) {
-        const value = node.attributes.get(name);
-        if (value === undefined) continue;
-        moved.set(name, value);
+      const wrapper = this.wrap(node, clip);
+      parent.children = parent.children.map((child) => (child === node ? wrapper : child));
+    }
+  }
+
+  /** The group (or two) an element with a mask of its own moves into, under the new mask. */
+  private wrap(node: CleanElement, mask: SvgValue): CleanElement {
+    const id = node.attributes.get("id");
+    const transform = textOf(node, "transform");
+    const placement = node.name === "use" ? this.placement(node) : undefined;
+    for (const name of ["id", "transform", "x", "y"]) {
+      if (name === "id" || name === "transform" || node.name === "use") {
         node.attributes.delete(name);
       }
-      moved.set("mask", clip);
-      const wrapper = element("g", moved, [node], node.offset);
-      parent.children = parent.children.map((child) => (child === node ? wrapper : child));
-      this.parents.set(wrapper, parent);
-      this.parents.set(node, wrapper);
     }
+    const parts = [transform, placement].filter((part): part is string => part !== undefined);
+    const fits = SVG_GRAMMARS.transform?.(parts.join(" "), this.limits) !== undefined;
+    const outer = new Map<string, SvgValue>();
+    if (id !== undefined) outer.set("id", id);
+    if (parts.length === 0 || fits) {
+      if (parts.length > 0) outer.set("transform", kept("transform", parts.join(" "), this.limits));
+      outer.set("mask", mask);
+      return element("g", outer, [node], node.offset);
+    }
+    if (transform !== undefined) outer.set("transform", kept("transform", transform, this.limits));
+    const inner = new Map<string, SvgValue>();
+    if (placement !== undefined) {
+      inner.set("transform", kept("transform", placement, this.limits));
+    }
+    inner.set("mask", mask);
+    return element("g", outer, [element("g", inner, [node], node.offset)], node.offset);
   }
 }
 
 /**
  * Leaves no clip path that makes a renderer combine shapes, which can take minutes however few
- * they are: a clip path of more than one shape, or of one clipped in turn, becomes an alpha mask
- * of the same shapes, opaque, under the same id, and what used it uses the mask (see the README).
- * A clip path of one shape stays as it is. What a clip path ignores is dropped from it.
+ * they are: a clip path of more than one shape, or of one clipped in turn, or clipped itself,
+ * becomes an alpha mask of the same shapes, opaque, under the same id, and what used it uses the
+ * mask (see the README). A clip path of one shape stays as it is. What a clip path ignores is
+ * dropped from it, but kept as a definition where something else draws it.
  */
 export function rewriteClipPaths(
   root: CleanElement,
