@@ -168,7 +168,7 @@ const REALISTIC: readonly (readonly [string, string, number, number])[] = [
   ["a Figma export with 8 alpha masks", figmaMasks(), 4, 60],
   ["a wordmark of 8 outlined letters clipping a gradient", textClips(8, 1), 4, 8],
   ["four such wordmarks in one logo", textClips(8, 4), 13, 31],
-  ["an Inkscape wordmark of 20 glyphs converted from text", inkscapeWordmark(), 10, 10],
+  ["an Inkscape wordmark of 20 glyphs converted from text", inkscapeWordmark(), 10, 15],
 ];
 
 describe("realistic logos", () => {

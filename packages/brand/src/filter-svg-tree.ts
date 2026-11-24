@@ -18,6 +18,7 @@ import {
 import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import type { SvgLogoRemovalReason } from "./svg-logo-result.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
+import { splitDeclarationList } from "./css-declaration-list.ts";
 import type { Removals } from "./svg-removals.ts";
 import {
   absolutePixels,
@@ -53,47 +54,9 @@ export interface CleanElement {
 }
 
 const PROPERTY_NAME = /^-?[a-z][a-z0-9-]{0,63}$/;
-// What CSS reads as a comment, string, block, escape or rule, inside which a `;` ends nothing.
-const OUTSIDE_A_DECLARATION_LIST = /\/\*|[\\'"[\]{}@<]/;
-// The only functions a kept style value holds; any other `(` may hide a `;` from CSS.
-const STYLE_FUNCTION = /(?:url|rgb)\([^();]*\)/gi;
-// `!important` changes nothing where the style attribute is the only rule, once no property is set
-// twice; any other `!` is not CSS the sanitiser has checked.
-const IMPORTANT = /^important$/i;
-
-/** A declaration's value without a final `!important`; `undefined` for any other `!`. */
-function withoutImportant(value: string): string | undefined {
-  const mark = value.indexOf("!");
-  if (mark === -1) return value;
-  return IMPORTANT.test(trimXmlWhitespace(value.slice(mark + 1)))
-    ? value.slice(0, mark)
-    : undefined;
-}
-
-/**
- * The declarations of a style attribute exactly as CSS splits them, or `undefined` when the
- * attribute is anything but a plain list of `name: value` declarations: a comment, string, bracket,
- * escape or at-rule, a function other than `url()` and `rgb()`, a `!` other than a final
- * `!important`, or a property set twice. CSS would read such a list in ways a split on `;` does
- * not, so none of it is kept.
- */
-function plainDeclarations(style: string): { property: string; value: string }[] | undefined {
-  if (OUTSIDE_A_DECLARATION_LIST.test(style)) return undefined;
-  if (/[()]/.test(style.replace(STYLE_FUNCTION, ""))) return undefined;
-  const declarations: { property: string; value: string }[] = [];
-  const seen = new Set<string>();
-  for (const declaration of style.split(";")) {
-    if (isXmlWhitespaceOnly(declaration)) continue;
-    const colon = declaration.indexOf(":");
-    const property =
-      colon === -1 ? "" : trimXmlWhitespace(declaration.slice(0, colon)).toLowerCase();
-    const value = withoutImportant(declaration.slice(colon + 1));
-    if (value === undefined || seen.has(property)) return undefined;
-    seen.add(property);
-    declarations.push({ property, value });
-  }
-  return declarations;
-}
+// What a kept style value may not hold: CSS reads a comment, string, escape or bracket in ways the
+// grammars do not, so a value holding one is dropped rather than read past it.
+const UNREAD_IN_A_VALUE = /\/\*|['"\\[\]{}]/;
 
 /** The attributes and properties whose value may refer to something (`href` is read apart). */
 const REFERENCE_TAKING: ReadonlySet<string> = new Set(["fill", "stroke", "clip-path", "mask"]);
@@ -360,9 +323,12 @@ class TreeFilter {
   }
 
   /**
-   * A `style` attribute is read as a list of declarations, each held to the property allowlist and
-   * to the same grammar as the attribute of its name, and written out as that attribute (taking
-   * precedence over it, as CSS does). The output never holds CSS: no style attribute, no element.
+   * A `style` attribute is read as a list of declarations, split as CSS splits it, each held to the
+   * property allowlist and to the same grammar as the attribute of its name, and written out as
+   * that attribute (taking precedence over it, as CSS does). Among declarations of one property the
+   * last important one wins, else the last. Where any of them fails its grammar, CSS may or may not
+   * take it, so which one wins, and whether the attribute does, is unknown: none of them is kept.
+   * A list CSS would split only by its error recovery is dropped whole. The output never holds CSS.
    */
   private style(
     kept: Map<string, SvgValue>,
@@ -372,24 +338,14 @@ class TreeFilter {
     clipping: boolean,
   ): void {
     const names = { element: source.qualified, attribute: attribute.qualified };
-    const declarations = plainDeclarations(attribute.value);
+    const declarations = splitDeclarationList(attribute.value);
     if (declarations === undefined) {
-      // What CSS would make of it is unknown, so the element is not drawn (a stop is drawn clear):
-      // dropping the style alone could show what it hid.
-      // The root, a clip path or a mask is drawn whatever its display, so it cannot be hidden.
-      if (["svg", "clipPath", "mask"].includes(source.local)) {
-        throw new SvgLogoRejection(
-          "unsupported-feature",
-          `has a style on its ${source.local} element that CSS would read otherwise; write its properties as attributes`,
-          attribute.offset,
-        );
-      }
       this.removals.add(names, droppedStyleReason(attribute.value), attribute.offset);
-      if (rule.attributes.includes("display")) kept.set("display", { text: "none" });
-      else if (rule.attributes.includes("stop-opacity")) kept.set("stop-opacity", { text: "0" });
       return;
     }
-    for (const { property, value } of declarations) {
+    const read = new Map<string, { value: SvgValue; important: boolean }[]>();
+    const unread = new Map<string, SvgLogoRemovalReason>();
+    for (const { property, value, important } of declarations) {
       if (!PROPERTY_NAME.test(property)) {
         this.removals.add(names, "invalid-value", attribute.offset);
         continue;
@@ -402,15 +358,44 @@ class TreeFilter {
         this.removals.add({ ...names, property }, propertyReason(property), attribute.offset);
         continue;
       }
-      const parsed = this.parse(property, value);
+      const parsed = UNREAD_IN_A_VALUE.test(value) ? undefined : this.parse(property, value);
       if (parsed === undefined) {
         const reason = invalidValueReason(property, value);
         this.removals.add({ ...names, property }, reason, attribute.offset);
-        paintNothingFor(kept, property, reason);
+        if (unread.get(property) !== "external-reference") unread.set(property, reason);
         continue;
       }
-      kept.set(property, parsed);
+      const values = read.get(property) ?? [];
+      values.push({ value: parsed, important });
+      read.set(property, values);
     }
+    for (const [property, reason] of unread) this.dropProperty(kept, source, property, reason);
+    for (const [property, values] of read) {
+      if (unread.has(property)) continue;
+      const important = values.filter((declaration) => declaration.important);
+      const winner = (important.length > 0 ? important : values).at(-1);
+      if (winner !== undefined) kept.set(property, winner.value);
+    }
+  }
+
+  /** Drops a presentation attribute a style declaration the sanitiser cannot read would outweigh. */
+  private dropProperty(
+    kept: Map<string, SvgValue>,
+    source: ResolvedElement,
+    property: string,
+    reason: SvgLogoRemovalReason,
+  ): void {
+    if (kept.delete(property)) {
+      const written = source.attributes.find(
+        ({ namespace, local }) => namespace === null && local === property,
+      );
+      this.removals.add(
+        { element: source.qualified, attribute: written?.qualified ?? property },
+        reason,
+        written?.offset ?? source.offset,
+      );
+    }
+    paintNothingFor(kept, property, reason);
   }
 }
 

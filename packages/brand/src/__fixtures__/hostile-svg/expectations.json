@@ -668,6 +668,13 @@
       {
         "element": "rect",
         "attribute": "style",
+        "property": "width",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "fill",
         "reason": "active-content"
       }
     ]
@@ -756,6 +763,13 @@
       {
         "element": "rect",
         "attribute": "style",
+        "property": "fill",
+        "reason": "external-reference"
+      },
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "stroke",
         "reason": "external-reference"
       }
     ]

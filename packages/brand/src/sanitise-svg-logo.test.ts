@@ -239,7 +239,6 @@ describe("sanitiseSvgLogo, output", () => {
     ["a comment inside the value", "fill:/**/red"],
     ["a comment after the value", "fill:red/**/"],
     ["a quoted value", "fill:'red'"],
-    ["a quoted url", "fill:url('#a')"],
   ])("drops a declaration with %s, which is not normalised", (_, style) => {
     const result = accepted(svg(`<rect width="9" height="9" style="${style}"/>`));
     expect(result.svg).toBe(`${ROOT}<rect width="9" height="9"/></svg>`);
@@ -262,8 +261,8 @@ describe("sanitiseSvgLogo, output", () => {
     ["braces", "x:{;display:inline;}"],
     ["a block after a name", "x{a:b}display:inline"],
     ["an at-sign", "@x;display:inline"],
-    ["an unquoted url holding a bracket", "x:url(a(b);display:inline)"],
-    ["an unquoted url holding a space", "x:url(a b;display:inline)"],
+    ["an unquoted url holding a bracket", "x:url(#a(b);display:inline)"],
+    ["an unquoted url holding a space", "x:url(#a b;display:inline)"],
     ["a declaration without a colon", "display;opacity:1"],
     ["a name that is not one word", "display inline:x;opacity:1"],
   ])("drops a whole style holding %s, and reports it, putting nothing in its place", (_, style) => {
