@@ -3,9 +3,11 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 
 // The sanitiser writes a clip path of more than one shape, or of one clipped in turn, as an alpha
-// mask of the same shapes, since a renderer combining the shapes of a clip path can take minutes.
-// The picture must not change: each logo below is drawn as an image before and after sanitising,
-// and the two must match pixel for pixel but for antialiasing at the edges.
+// mask of the same shapes, since a renderer combining the shapes of a clip path can take minutes,
+// and changes a few other things that would cost too much to draw. It must never show more than
+// the original: each logo below is drawn as an image before and after sanitising, no pixel may be
+// painted after that was not before but for antialiasing at the edges, and where the picture is
+// meant to stay the same the two must match pixel for pixel, but for antialiasing.
 
 const SIZE = 200;
 /** A pixel differs when a channel moves by more than this, out of 255. */
@@ -24,7 +26,10 @@ function logo(body: string, root = ""): string {
 const RING = "M50 10A40 40 0 1 1 49.9 10ZM50 30A20 20 0 1 1 49.9 30Z";
 const RING_REVERSED = "M50 10A40 40 0 1 1 49.9 10ZM50 30A20 20 0 1 0 50.1 30Z";
 
-const CLIPS: readonly (readonly [string, string])[] = [
+/** `same`: the picture must not change; `less`: it may lose what was painted, but gain nothing. */
+type Outcome = "same" | "less";
+
+const CLIPS: readonly (readonly [string, string, Outcome?])[] = [
   [
     "overlapping circles",
     logo(
@@ -121,10 +126,102 @@ const CLIPS: readonly (readonly [string, string])[] = [
       ' clip-path="url(#c)"',
     ),
   ],
+  [
+    "a clip child that a use elsewhere draws",
+    logo(
+      '<clipPath id="c"><rect id="r" width="40" height="40" fill="#0f766e"/><circle cx="60" cy="60" r="20"/></clipPath>' +
+        `${FULL} clip-path="url(#c)"/><use href="#r" x="55" y="5"/>`,
+    ),
+  ],
+  [
+    "a hidden clip child that a use elsewhere draws",
+    logo(
+      '<g visibility="hidden"><clipPath id="c"><rect id="r" width="40" height="40"/><circle cx="60" cy="60" r="20"/></clipPath></g>' +
+        `${FULL} clip-path="url(#c)"/><use href="#r" x="50" y="50" visibility="visible" fill="#0f766e"/>`,
+    ),
+  ],
+  [
+    "a use with a position, a mask of its own and a clip path",
+    logo(
+      '<mask id="m"><rect x="-100" y="-100" width="300" height="300" fill="#fff"/></mask><rect id="s" x="-50" y="-50" width="100" height="100" fill="url(#g)"/>' +
+        '<clipPath id="c"><rect width="20" height="20"/><rect x="25" y="25" width="20" height="20"/></clipPath>' +
+        '<use href="#s" x="50" y="50" mask="url(#m)" clip-path="url(#c)"/><use href="#s" x="5%" y="10" transform="scale(0.5)" mask="url(#m)" clip-path="url(#c)"/>',
+    ),
+  ],
+  [
+    "a use at a percentage position in a clip path in the box of what it clips",
+    logo(
+      '<rect id="r" width="0.2" height="0.2"/><clipPath id="c" clipPathUnits="objectBoundingBox"><use href="#r" x="0.5%" y="0.1%"/>' +
+        '<circle cx="0.2" cy="0.7" r="0.1"/></clipPath><rect x="10" y="20" width="80" height="60" fill="url(#g)" clip-path="url(#c)"/>',
+    ),
+  ],
+  [
+    "a clip path that is clipped itself, under its own transform",
+    logo(
+      '<clipPath id="d"><rect width="50" height="50"/></clipPath><clipPath id="c" clip-path="url(#d)" transform="translate(20 0)"><rect width="60" height="100"/></clipPath>' +
+        `${FULL} clip-path="url(#c)"/>`,
+    ),
+  ],
+  [
+    "a clipped shape in a clip path",
+    logo(
+      '<clipPath id="d"><rect width="50" height="50"/></clipPath><clipPath id="c"><rect width="100" height="100" clip-path="url(#d)"/></clipPath>' +
+        `${FULL} clip-path="url(#c)"/>`,
+    ),
+  ],
+  [
+    "a clipped use in a clip path, the inner clip of two shapes",
+    logo(
+      '<clipPath id="d"><rect width="50" height="50"/><circle cx="70" cy="70" r="20"/></clipPath><rect id="t" width="100" height="100" fill="#f00"/>' +
+        `<clipPath id="c"><use href="#t" clip-path="url(#d)"/></clipPath>${FULL} clip-path="url(#c)"/>`,
+    ),
+  ],
+  [
+    "a mask inside a clip path, which Chromium ignores",
+    logo(
+      '<mask id="m"><rect width="30" height="100" fill="#fff"/></mask><clipPath id="c" mask="url(#m)"><rect width="50" height="100" mask="url(#m)"/>' +
+        `<circle cx="70" cy="50" r="20"/></clipPath>${FULL} clip-path="url(#c)"/>`,
+    ),
+  ],
+  [
+    "a clip path of one shape in the box of what it clips, with a transform, kept as it is",
+    logo(
+      '<clipPath id="c" clipPathUnits="objectBoundingBox" transform="translate(0.5 0)"><rect width="0.4" height="1"/></clipPath>' +
+        '<rect x="10" y="10" width="80" height="80" fill="url(#g)" clip-path="url(#c)"/>',
+    ),
+  ],
+  [
+    "a clip path holding a use of a group, emptied",
+    logo(
+      '<g id="gr"><rect x="60" width="20" height="100"/></g><clipPath id="c"><rect width="50" height="100"/><use href="#gr"/></clipPath>' +
+        `${FULL} clip-path="url(#c)"/><circle cx="50" cy="50" r="30" fill="#0f766e"/>`,
+    ),
+    "less",
+  ],
+];
+
+/** Logos whose view box would be stretched or cropped, beside the clip paths. */
+const ASPECTS: readonly (readonly [string, string, Outcome])[] = [
+  [
+    "a view box cropped to fill a square",
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50" width="${String(SIZE)}" height="${String(SIZE)}" preserveAspectRatio="xMinYMid slice"><defs>${GRADIENT}</defs>` +
+      '<rect x="-40" y="-40" width="200" height="130" fill="#0f766e"/><circle cx="25" cy="25" r="25" fill="url(#g)"/><circle cx="80" cy="25" r="25" fill="#e11d48"/></svg>',
+    "same",
+  ],
+  [
+    "a view box stretched to fill a square",
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50" width="${String(SIZE)}" height="${String(SIZE)}" preserveAspectRatio="none"><defs>${GRADIENT}</defs>` +
+      '<rect x="-40" y="-40" width="200" height="35" fill="#0f766e"/><circle cx="25" cy="25" r="25" fill="url(#g)"/></svg>',
+    "less",
+  ],
 ];
 
 interface Comparison {
+  /** Pixels that differ in any channel. */
   readonly differing: number;
+  /** Pixels more opaque after than before: what sanitising would show that the original did not. */
+  readonly revealed: number;
+  /** Pixels painted before. */
   readonly painted: number;
 }
 
@@ -146,6 +243,7 @@ async function compare(page: Page, before: string, after: string): Promise<Compa
       };
       const [first, second] = [await pixels(before), await pixels(after)];
       let differing = 0;
+      let revealed = 0;
       let painted = 0;
       for (let index = 0; index < first.length; index += 4) {
         let most = 0;
@@ -156,29 +254,50 @@ async function compare(page: Page, before: string, after: string): Promise<Compa
           );
         }
         if (most > tolerance) differing += 1;
+        if ((second[index + 3] ?? 0) - (first[index + 3] ?? 0) > tolerance) revealed += 1;
         if ((first[index + 3] ?? 0) > 0) painted += 1;
       }
-      return { differing, painted };
+      return { differing, revealed, painted };
     },
     { before, after, size: SIZE, tolerance: CHANNEL_TOLERANCE },
   );
 }
 
+/** Sanitises `input` and compares the two pictures, holding them to `outcome`. */
+async function check(page: Page, input: string, outcome: Outcome): Promise<Comparison> {
+  const result = sanitiseSvgLogo(input);
+  if (!result.ok) throw new Error(JSON.stringify(result.errors));
+  await page.setContent("<!doctype html><body>");
+  const comparison = await compare(
+    page,
+    `data:image/svg+xml;charset=utf-8,${encodeURIComponent(input)}`,
+    logoDataUrl(result.svg),
+  );
+  expect(comparison.painted, "the original paints something").toBeGreaterThan(SIZE * 10);
+  expect(comparison.revealed, "nothing shown that the original hid").toBeLessThanOrEqual(
+    DIFFERING_PIXELS,
+  );
+  if (outcome === "same") expect(comparison.differing).toBeLessThanOrEqual(DIFFERING_PIXELS);
+  return comparison;
+}
+
 test.describe("a clip path written as a mask", () => {
-  for (const [label, input] of CLIPS) {
-    test(`draws the same picture: ${label}`, async ({ page }) => {
+  for (const [label, input, outcome = "same"] of CLIPS) {
+    test(`draws ${outcome === "same" ? "the same picture" : "no more"}: ${label}`, async ({
+      page,
+    }) => {
       const result = sanitiseSvgLogo(input);
-      if (!result.ok) throw new Error(JSON.stringify(result.errors));
-      expect(result.svg).not.toMatch(/<clipPath[^>]*>(?:<[^/][^>]*\/>){2}/);
-      await page.setContent("<!doctype html><body>");
-      const { differing, painted } = await compare(
-        page,
-        `data:image/svg+xml;charset=utf-8,${encodeURIComponent(input)}`,
-        logoDataUrl(result.svg),
-      );
-      expect(painted, "the clipped picture paints something").toBeGreaterThan(SIZE * 10);
+      expect(result.ok && result.svg).not.toMatch(/<clipPath[^>]*>(?:<[^/][^>]*\/>){2}/);
+      const { painted } = await check(page, input, outcome);
       expect(painted, "and is clipped").toBeLessThan(SIZE * SIZE * 0.95);
-      expect(differing).toBeLessThanOrEqual(DIFFERING_PIXELS);
+    });
+  }
+
+  for (const [label, input, outcome] of ASPECTS) {
+    test(`draws ${outcome === "same" ? "the same picture" : "no more"}: ${label}`, async ({
+      page,
+    }) => {
+      await check(page, input, outcome);
     });
   }
 

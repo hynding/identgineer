@@ -253,6 +253,15 @@
       }
     ]
   },
+  "clip-path-child-drawn-by-a-use-elsewhere.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
   "clip-path-crossing-zigzags.svg": {
     "outcome": "accept",
     "removed": [
@@ -266,14 +275,7 @@
     "outcome": "reject:reference-cycle"
   },
   "clip-path-cycle.svg": {
-    "outcome": "accept",
-    "removed": [
-      {
-        "element": "rect",
-        "attribute": "clip-path",
-        "reason": "render-cost"
-      }
-    ]
+    "outcome": "reject:reference-cycle"
   },
   "clip-path-d-cz-1e5-01-100.svg": {
     "outcome": "accept",
@@ -351,13 +353,36 @@
       }
     ]
   },
-  "clip-path-inside-clip-path.svg": {
+  "clip-path-hidden-child-drawn-by-a-use-elsewhere.svg": {
     "outcome": "accept",
     "removed": [
       {
         "element": "rect",
-        "attribute": "clip-path",
         "reason": "render-cost"
+      }
+    ]
+  },
+  "clip-path-in-box-units-percent-use.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-in-box-units-rotated.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "clip-path-in-box-units-with-transform.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "clip-path-inside-clip-path.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
       }
     ]
   },
@@ -388,6 +413,42 @@
   },
   "clip-path-of-two-shapes-on-root-with-mask.svg": {
     "outcome": "reject:drawing-too-costly"
+  },
+  "clip-path-on-a-clip-path.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-on-a-shape-in-a-clip-path.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-on-a-use-in-a-clip-path.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-on-a-use-with-position-and-mask.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
   },
   "clip-path-sc-zzp-n60.svg": {
     "outcome": "accept",

@@ -4,6 +4,7 @@ import { seeded } from "./seeded-random.ts";
 import { SVG_DRAWING_WEIGHTS as WEIGHT } from "./svg-drawing-cost.ts";
 import { SVG_LOGO_LIMITS } from "./svg-logo-limits.ts";
 import { SVG_OVERDRAW_WEIGHTS as PAINT } from "./svg-overdraw.ts";
+import { expectSettledLogo } from "./test-support.ts";
 
 // Random logos built as a graph of definitions (shapes, groups of uses, masks) whose drawing cost
 // and overdraw are worked out here from the graph itself, by a model written apart from the
@@ -402,6 +403,7 @@ describe("the drawing cost, over random graphs of definitions", () => {
       const outcome = result.ok ? "accepted" : (result.errors[0]?.code ?? "none");
       outcomes.set(outcome, (outcomes.get(outcome) ?? 0) + 1);
       if (result.ok) {
+        expectSettledLogo(result.svg, where);
         expect(result.drawingCost, where).toBe(expected.cost);
         expect(result.overdraw, where).toBeCloseTo(overdraw, 6);
         expect(Object.values(over).some(Boolean), where).toBe(false);

@@ -394,13 +394,23 @@ describe("sanitiseSvgLogo, what is dropped and why", () => {
     );
   });
 
-  it.each(["none", "xMinYMin slice", "xMidYMid  slice", "none meet"])(
-    "drops preserveAspectRatio %s, which would stretch or crop the view box, so the logo is drawn to fit",
-    (value) => {
+  const CLIPPED_TO_THE_VIEW_BOX =
+    '<clipPath id="logo-0"><rect width="1000" height="1"/></clipPath><g clip-path="url(#logo-0)"/></svg>';
+  it.each([
+    ["none", `viewBox="0 0 1000 1" width="600" height="600">${CLIPPED_TO_THE_VIEW_BOX}`],
+    ["xMinYMin slice", 'viewBox="0 0 1 1" width="600" height="600"/>'],
+    ["xMidYMid  slice", 'viewBox="499.5 0 1 1" width="600" height="600"/>'],
+    ["none meet", `viewBox="0 0 1000 1" width="600" height="600">${CLIPPED_TO_THE_VIEW_BOX}`],
+  ])(
+    "drops preserveAspectRatio %s, drawing the logo to fit what showed, and nothing more",
+    (value, kept) => {
       const result = accepted(
         `<svg ${NS} viewBox="0 0 1000 1" width="600" height="600" preserveAspectRatio="${value}"/>`,
       );
       expect(result.svg).not.toContain("preserveAspectRatio");
+      // Cropped, the view box becomes what showed; stretched, it is clipped to the view box, which
+      // the space fitting it leaves round it would otherwise show beyond.
+      expect(result.svg).toBe(`<svg ${NS} ${kept}`);
       expect(result.removed).toEqual([
         {
           element: "svg",

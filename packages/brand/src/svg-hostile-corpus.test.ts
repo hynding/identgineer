@@ -5,6 +5,7 @@ import { sanitiseSvgLogo } from "./sanitise-svg-logo.ts";
 import { SVG_LOGO_LIMITS } from "./svg-logo-limits.ts";
 import type { SvgLogoRemoval, SvgLogoResult } from "./svg-logo-result.ts";
 import { findSanitisedSvgProblems } from "./svg-output-check.ts";
+import { expectSettledLogo } from "./test-support.ts";
 
 const CORPUS = new URL("./__fixtures__/hostile-svg/", import.meta.url);
 /** What one file removes, without where: the element, attribute or property, and why. */
@@ -53,6 +54,11 @@ const GENERATED: readonly (readonly [string, string, string])[] = [
         '</defs><use href="#l4"/>',
     ),
     "expansion-too-large",
+  ],
+  [
+    "2,000 uses of a 100 KB path in a referenced clip path",
+    `<svg ${NS} viewBox="0 0 1000 1000"><defs><path id="p" d="M0 0${"L1 2".repeat(25_000)}"/></defs><clipPath id="c">${'<use href="#p"/>'.repeat(2000)}</clipPath><rect width="10" height="10" clip-path="url(#c)"/></svg>`,
+    "drawing-too-costly",
   ],
 ];
 
@@ -131,8 +137,7 @@ describe("the hostile SVG corpus", () => {
       expect(result.removed.map(withoutPlace)).toEqual(expectation?.removed);
       expect(result.removedCount).toBe(result.removed.length);
       expectInert(result.svg);
-      const again = sanitiseSvgLogo(result.svg);
-      expect(again.ok && again.svg).toBe(result.svg);
+      expectSettledLogo(result.svg, file);
     }
   });
 

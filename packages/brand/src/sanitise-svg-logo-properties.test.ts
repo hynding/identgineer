@@ -5,9 +5,9 @@ import { sanitiseSvgLogo, sanitiseSvgLogoWithLimits } from "./sanitise-svg-logo.
 import { seeded } from "./seeded-random.ts";
 import { SVG_LOGO_LIMITS } from "./svg-logo-limits.ts";
 import type { SvgLogoResult } from "./svg-logo-result.ts";
-import { findSanitisedSvgProblems } from "./svg-output-check.ts";
 import { SVG_ELEMENT_RULES, type SvgElementName } from "./svg-allowlist.ts";
 import { SVG_GRAMMARS } from "./svg-values.ts";
+import { expectSettledLogo } from "./test-support.ts";
 
 const ELEMENTS = [
   // Allowed.
@@ -303,7 +303,7 @@ function sanitiseOrFail(input: string | Uint8Array, where: string): SvgLogoResul
 
 function checkAccepted(result: SvgLogoResult, input: string | Uint8Array, where: string): boolean {
   if (!result.ok) return false;
-  expect(findSanitisedSvgProblems(result.svg), where).toEqual([]);
+  expectSettledLogo(result.svg, where);
   const again = sanitiseSvgLogo(result.svg);
   expect(again.ok && again.svg, `${where}: idempotence`).toBe(result.svg);
   expect(again.ok && again.removedCount, `${where}: nothing left to remove`).toBe(0);
