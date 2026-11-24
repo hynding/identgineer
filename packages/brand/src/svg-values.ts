@@ -20,7 +20,8 @@ export const ID_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/;
 const URL_REFERENCE = new RegExp(
   `^url\\(${XML_WHITESPACE}*(["']?)#([A-Za-z_][A-Za-z0-9_-]{0,63})\\1${XML_WHITESPACE}*\\)$`,
 );
-const LIST_SEPARATOR = new RegExp(`(?:${XML_WHITESPACE}|,)+`);
+// White space with at most one comma in it: Chromium takes no list with two commas in a row.
+const LIST_SEPARATOR = new RegExp(`${XML_WHITESPACE}+(?:,${XML_WHITESPACE}*)?|,${XML_WHITESPACE}*`);
 const WHITESPACE_RUN = new RegExp(`${XML_WHITESPACE}+`);
 /**
  * The units a kept length may carry, a pixel being written bare. No em or ex: inline, they would
@@ -102,11 +103,16 @@ export function absolutePixels(
   if (factor === undefined || normalised === undefined || Number(normalised) <= 0) return undefined;
   const exact = Number(amount) * factor;
   if (factor === 1) return { text: normalised, exact };
-  const text = normaliseNumber(
-    (Number(normalised) * factor).toFixed(limits.fractionDigits),
-    limits,
-  );
+  const text = normaliseNumber(exact.toFixed(limits.fractionDigits), limits);
   return text === undefined ? undefined : { text, exact };
+}
+
+/** Whether a length in an absolute unit (or none) is a number, but zero or less. */
+export function isNonPositiveAbsoluteLength(input: string, limits: SvgLogoLimits): boolean {
+  const { amount, unit } = splitUnit(input);
+  if (!Object.hasOwn(ABSOLUTE_UNITS, unit)) return false;
+  const normalised = normaliseNumber(amount, limits);
+  return normalised !== undefined && Number(normalised) <= 0;
 }
 
 function clampUnit(normalised: string): string {

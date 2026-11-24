@@ -14,7 +14,13 @@ import type { SvgLogoLimits } from "./svg-logo-limits.ts";
 import type { SvgLogoRemovalReason } from "./svg-logo-result.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 import type { Removals } from "./svg-removals.ts";
-import { absolutePixels, stretchesOrCrops, SVG_GRAMMARS, type SvgValue } from "./svg-values.ts";
+import {
+  absolutePixels,
+  isNonPositiveAbsoluteLength,
+  stretchesOrCrops,
+  SVG_GRAMMARS,
+  type SvgValue,
+} from "./svg-values.ts";
 import {
   SVG_NAMESPACE,
   XLINK_NAMESPACE,
@@ -273,6 +279,13 @@ class TreeFilter {
 
   private pixels(name: string, value: string): SvgValue | undefined {
     const pixels = absolutePixels(value, this.limits);
+    // Chromium draws a root of no width or height, or a negative one, at no size at all.
+    if (pixels === undefined && isNonPositiveAbsoluteLength(value, this.limits)) {
+      throw new SvgLogoRejection(
+        "missing-size",
+        "has a width or height of zero or less, which draws nothing; give it a positive size",
+      );
+    }
     if (pixels === undefined) return undefined;
     if (name === "width" || name === "height") this.exactSize[name] = pixels.exact;
     return { text: pixels.text };

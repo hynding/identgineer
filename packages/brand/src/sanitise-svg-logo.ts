@@ -74,6 +74,9 @@ function textOf(root: CleanElement, name: string): string | undefined {
   return value !== undefined && "text" in value ? value.text : undefined;
 }
 
+/** One CSS pixel, less what converting a unit costs in floating point: `0.264583333333mm` is one. */
+const ONE_PIXEL = 1 - 1e-9;
+
 /**
  * Gives the root an explicit view box, width and height: each one written is kept, a missing view
  * box is `0 0 width height`, and a missing width or height follows from the view box's proportions.
@@ -89,7 +92,7 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
   const exactHeight =
     givenHeight === undefined ? undefined : (root.exactSize?.height ?? Number(givenHeight));
   // No logo has a natural size under a pixel, where six decimals are a large share of it.
-  if ((exactWidth ?? 1) < 1 || (exactHeight ?? 1) < 1) {
+  if ((exactWidth ?? 1) < ONE_PIXEL || (exactHeight ?? 1) < ONE_PIXEL) {
     throw new SvgLogoRejection(
       "unsupported-feature",
       "has a width or height under one pixel; give the logo a size of at least one pixel, or leave the size out",
@@ -130,10 +133,10 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
     throw new SvgLogoRejection("missing-size", "has no usable width and height");
   }
   const size = { width: Number(width), height: Number(height) };
-  if (size.width < 1 || size.height < 1) {
+  if (size.width < ONE_PIXEL || size.height < ONE_PIXEL) {
     throw new SvgLogoRejection(
       "unsupported-feature",
-      "comes to a width or height under one pixel from its view box; give the logo a width and a height of at least one pixel",
+      "comes to a width or height under one pixel from its view box; give the logo a width and a height of at least one pixel, or use a larger view box",
     );
   }
   root.attributes.set("width", { text: width });
