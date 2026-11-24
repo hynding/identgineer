@@ -15,7 +15,10 @@ export interface SvgLogoLimits {
   readonly attributeValueLength: number;
   /** One `d` or `points` value as written. */
   readonly pathDataLength: number;
-  /** One run of character data, and the whole text of a `title` or `desc`. */
+  /**
+   * One run of character data, and the whole text of a `title` or `desc`, in the characters it
+   * reads as (a reference counts as the one character it stands for), so however it is written.
+   */
   readonly textLength: number;
   /** An element or attribute name, its prefix included. */
   readonly nameLength: number;

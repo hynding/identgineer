@@ -81,11 +81,13 @@ function expectInert(svg: string): void {
 const KEPT_AS_TEXT_OR_RENAMED = new Set([
   "cdata-in-title.svg",
   "crlf-line-ends.svg",
+  "description-with-quotation-marks-near-the-limit.svg",
   "id-dom-clobbering.svg",
   "mxss-svg-in-title.svg",
   "mxss-title-escaped-markup.svg",
   "mxss-xmp.svg",
   "polyglot-js-comment.svg",
+  "title-of-greater-than-signs-at-the-limit.svg",
   "utf7-payload-undeclared.svg",
 ]);
 

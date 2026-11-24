@@ -430,13 +430,15 @@ class Reader {
     const start = this.position;
     let end = this.text.indexOf("<", start);
     if (end === -1) end = this.text.length;
-    if (end - start > this.limits.textLength) {
-      this.fail("too-long", `has a run of text longer than ${String(this.limits.textLength)}`);
-    }
     const raw = this.text.slice(start, end);
     if (raw.includes("]]>")) this.fail("malformed", "has ]]> in text", start + raw.indexOf("]]>"));
+    // Measured in the characters it reads as, not as written: the writer escapes `>` and `"`, so a
+    // limit on the written form would refuse what it writes from text read within the limit.
     let text = "";
     while (this.position < end) {
+      if (text.length > this.limits.textLength) {
+        this.fail("too-long", `has a run of text longer than ${String(this.limits.textLength)}`);
+      }
       if (this.text.charCodeAt(this.position) === 0x26) {
         text += this.readReference();
         if (this.position > end) this.fail("malformed", "has a malformed reference", start);
@@ -444,6 +446,9 @@ class Reader {
       }
       text += this.text.charAt(this.position);
       this.position += 1;
+    }
+    if (text.length > this.limits.textLength) {
+      this.fail("too-long", `has a run of text longer than ${String(this.limits.textLength)}`);
     }
     this.appendText(stack, text, start);
   }
