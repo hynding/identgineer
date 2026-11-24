@@ -141,6 +141,131 @@ describe("sanitiseSvgLogo, output", () => {
     expect(refused(svg("", 'viewBox="0 0 0.5 0.5"')).message).toContain("larger view box");
   });
 
+  // Spellings Chromium rejects or reads otherwise, each able to show what the original hid: each is
+  // dropped and reported, never read leniently into a valid value.
+  it.each([
+    [
+      "a leading comma in a transform",
+      '<rect width="9" height="9" transform=",translate(-1000)"/>',
+      "transform",
+    ],
+    [
+      "a trailing comma in a transform",
+      '<rect width="9" height="9" transform="translate(-1000),"/>',
+      "transform",
+    ],
+    [
+      "two commas in a transform",
+      '<rect width="9" height="9" transform="scale(1),,translate(-1000)"/>',
+      "transform",
+    ],
+    [
+      "a space in a gradient's units",
+      '<linearGradient gradientUnits=" userSpaceOnUse"/>',
+      "gradientUnits",
+    ],
+    ["a space in a spread method", '<linearGradient spreadMethod="repeat "/>', "spreadMethod"],
+    [
+      "a space in a clip path's units",
+      '<clipPath clipPathUnits=" objectBoundingBox"><rect width="1" height="1"/></clipPath>',
+      "clipPathUnits",
+    ],
+    ["a space in a mask's units", '<mask maskUnits="userSpaceOnUse "/>', "maskUnits"],
+    [
+      "a space in a mask's content units",
+      '<mask maskContentUnits="objectBoundingBox "/>',
+      "maskContentUnits",
+    ],
+    ["zero with a large exponent in path data", '<path d="M0 0H9V9H0e39Z"/>', "d"],
+    ["zero with a large exponent in points", '<polygon points="0 0 9 0 9 9 0e39 9"/>', "points"],
+    [
+      "zero with a large exponent in a transform",
+      '<rect width="9" height="9" transform="translate(-1000 0e39)"/>',
+      "transform",
+    ],
+    ["zero with a large exponent in a length", '<rect width="9" height="0.0e100"/>', "height"],
+    [
+      "an rgb colour separated by commas and spaces",
+      '<rect width="9" height="9" fill="rgb(255,0 0)"/>',
+      "fill",
+    ],
+    [
+      "a use reference after white space",
+      '<defs><rect id="a" width="9" height="9"/></defs><use href=" #a"/>',
+      "href",
+    ],
+    [
+      "a gradient reference after white space",
+      '<linearGradient id="a"/><linearGradient id="b" href="#a "/>',
+      "href",
+    ],
+  ])("drops %s, and reports it", (_, body, name) => {
+    const result = accepted(svg(body));
+    expect(result.removed).toContainEqual(
+      expect.objectContaining({ attribute: name, reason: "invalid-value" }),
+    );
+  });
+
+  // CSS swallows what follows a comment, string, bracket or escape, so the sanitiser cannot split
+  // such a style into declarations as CSS would: the whole attribute goes, and is reported.
+  it.each([
+    ["a comment", "opacity:1/*;display:inline;*/"],
+    ["an unclosed comment", "opacity:1/*;display:inline"],
+    ["parentheses", "--x:(;display:inline;)"],
+    ["a string", "font-family:';display:inline;'"],
+    ["a double-quoted string", "font-family:&quot;;display:inline;&quot;"],
+    ["square brackets", "x:[;display:inline;]"],
+    ["braces", "x:{;display:inline;}"],
+    ["an escaped semicolon", String.raw`opacity:1\;display:inline`],
+    ["an at-sign", "@x;display:inline"],
+    ["a less-than sign", "x:&lt;;display:inline"],
+    ["a property set twice", "display:inline;display:inline"],
+  ])("drops a whole style holding %s, and reports it", (_, style) => {
+    const result = accepted(svg(`<rect width="9" height="9" display="none" style="${style}"/>`));
+    expect(result.svg).toBe(`${ROOT}<rect width="9" height="9" display="none"/></svg>`);
+    expect(result.removed).toEqual([
+      expect.objectContaining({ attribute: "style", reason: "invalid-value" }),
+    ]);
+  });
+
+  it("drops a view box whose zero has a large exponent, and reports it", () => {
+    const result = accepted(svg('<rect width="9" height="9"/>', 'viewBox="0e39 0 10 10"'));
+    expect(result.removed).toContainEqual(
+      expect.objectContaining({ attribute: "viewBox", reason: "invalid-value" }),
+    );
+  });
+
+  it("keeps a style declaration marked important, which no other rule can outweigh here", () => {
+    expect(output('<rect width="9" height="9" style="fill:red !important"/>')).toBe(
+      `${ROOT}<rect width="9" height="9" fill="red"/></svg>`,
+    );
+  });
+
+  it.each([
+    ["zero ems", 'width="0em"'],
+    ["minus one em", 'width="-1em"'],
+    ["zero quarter-millimetres", 'width="0Q"'],
+    ["zero viewport widths", 'width="0vw"'],
+  ])("refuses a root whose size is %s, which Chromium draws at no size", (_, size) => {
+    expect(
+      refused(svg('<rect width="5" height="5"/>', `viewBox="0 0 10 10" ${size} height="10"`)).code,
+    ).toBe("missing-size");
+  });
+
+  it("refuses a root sized in a unit of the viewport, which Chromium draws at no size as an image", () => {
+    expect(
+      refused(svg('<rect width="5" height="5"/>', 'viewBox="0 0 10 10" width="1vw" height="10"'))
+        .code,
+    ).toBe("unsupported-feature");
+  });
+
+  it("drops a root size in ems, and reports it", () => {
+    const result = accepted(
+      svg('<rect width="5" height="5"/>', 'viewBox="0 0 10 10" width="2em" height="10"'),
+    );
+    expect(result.removed).toContainEqual(expect.objectContaining({ attribute: "width" }));
+  });
+
   it("rounds numbers to six decimals, half away from zero, exactly", () => {
     expect(output('<path d="M0.1234565 -0.1234565L999999.9999994 0.0000005"/>')).toBe(
       `${ROOT}<path d="M0.123457 -0.123457L999999.999999 0.000001"/></svg>`,
