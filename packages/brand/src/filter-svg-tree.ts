@@ -69,6 +69,14 @@ const SCHEME = /^[a-z][a-z0-9+.-]*:/;
 const IGNORED_WHEN_CLIPPING: ReadonlySet<string> = new Set(["mask"]);
 
 /**
+ * A clip path of `none` on or in a clip path, where the clip path is rewritten as a mask: it is what
+ * no clip path is, so dropping it changes nothing.
+ */
+function isNoClip(name: string, value: SvgValue | undefined): boolean {
+  return name === "clip-path" && value !== undefined && "text" in value && value.text === "none";
+}
+
+/**
  * Why a value that failed its grammar was dropped: what it was trying to do, where that shows. A
  * `url(` or a scheme is an external reference only where the attribute could have taken one; in
  * path data, say, it is just not a valid value.
@@ -258,6 +266,14 @@ class TreeFilter {
           local,
           isRoot && (local === "width" || local === "height"),
         );
+        if (clipping && isNoClip(local, kept.get(local))) {
+          kept.delete(local);
+          this.removals.add(
+            { element: source.qualified, attribute: attribute.qualified },
+            "render-cost",
+            attribute.offset,
+          );
+        }
         continue;
       }
       this.removals.add(
@@ -378,7 +394,13 @@ class TreeFilter {
       if (unread.has(property)) continue;
       const important = values.filter((declaration) => declaration.important);
       const winner = (important.length > 0 ? important : values).at(-1);
-      if (winner !== undefined) kept.set(property, winner.value);
+      if (winner === undefined) continue;
+      if (clipping && isNoClip(property, winner.value)) {
+        this.removals.add({ ...names, property }, "render-cost", attribute.offset);
+        this.dropProperty(kept, source, property, "render-cost");
+      } else {
+        kept.set(property, winner.value);
+      }
     }
   }
 

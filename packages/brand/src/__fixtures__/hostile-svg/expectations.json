@@ -1707,6 +1707,38 @@
     "outcome": "accept",
     "removed": []
   },
+  "review-clip-path-none-in-clip-a.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "clip-path",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "review-clip-path-none-in-clip-b.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "clip-path",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "review-clip-path-none-in-clip-c.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "attribute": "style",
+        "property": "clip-path",
+        "reason": "render-cost"
+      }
+    ]
+  },
   "review-da-ellipse-scaled.svg": {
     "outcome": "accept",
     "removed": []
