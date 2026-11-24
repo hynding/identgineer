@@ -22,6 +22,8 @@ export interface XmlElement {
 export interface XmlText {
   readonly kind: "text";
   readonly text: string;
+  /** How long the text is in code points, kept as runs are joined so none is counted twice. */
+  readonly length: number;
   readonly offset: number;
 }
 
@@ -455,7 +457,7 @@ class Reader {
     if (length > this.limits.textLength) {
       this.fail("too-long", `has a run of text longer than ${String(this.limits.textLength)}`);
     }
-    this.appendText(stack, text, start);
+    this.appendText(stack, text, length, start);
   }
 
   private readCdata(stack: readonly OpenElement[]): void {
@@ -463,29 +465,36 @@ class Reader {
     const end = this.text.indexOf("]]>", start + 9);
     if (end === -1) this.fail("malformed", "has an unclosed CDATA section", start);
     const text = this.text.slice(start + 9, end);
-    if (codePointLength(text) > this.limits.textLength) {
+    const length = codePointLength(text);
+    if (length > this.limits.textLength) {
       this.fail("too-long", `has a run of text longer than ${String(this.limits.textLength)}`);
     }
-    this.appendText(stack, text, start);
+    this.appendText(stack, text, length, start);
     this.position = end + 3;
   }
 
-  private appendText(stack: readonly OpenElement[], text: string, offset: number): void {
+  private appendText(
+    stack: readonly OpenElement[],
+    text: string,
+    length: number,
+    offset: number,
+  ): void {
     const parent = stack.at(-1);
     if (parent === undefined || text === "") return;
     const last = parent.children.at(-1);
     if (last?.kind === "text") {
-      if (codePointLength(last.text) + codePointLength(text) > this.limits.textLength) {
+      if (last.length + length > this.limits.textLength) {
         this.fail("too-long", `has a run of text longer than ${String(this.limits.textLength)}`);
       }
       parent.children[parent.children.length - 1] = {
         kind: "text",
         text: last.text + text,
+        length: last.length + length,
         offset: last.offset,
       };
       return;
     }
-    parent.children.push({ kind: "text", text, offset });
+    parent.children.push({ kind: "text", text, length, offset });
   }
 
   private readEndTag(): string {
