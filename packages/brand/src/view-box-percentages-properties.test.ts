@@ -5,8 +5,8 @@ import { seeded } from "./seeded-random.ts";
 // An independent model of when a slice crops and which lengths a crop would change. A slice crops
 // when its frame's proportions differ from the view box's by more than half a device pixel at 4000;
 // the crop is the part of the view box the frame shows, written to six decimals, and refused where
-// that moves an edge by more than half a pixel or leaves proportions a fitted drawing would
-// letterbox. Each gradient's attributes are resolved through the chain of gradients it takes them
+// that part, fitted into the frame and centred, would put any edge of what is shown more than half
+// a pixel from where the crop put it. Each gradient's attributes are resolved through the chain of gradients it takes them
 // from, then the specification's defaults, and a mask's region by its defaults. It shares no code
 // with the sanitiser.
 
@@ -70,14 +70,20 @@ function shownPart(document: Document): Box {
 }
 
 function cannotBeWritten(document: Document): boolean {
-  const exact = shownPart(document);
-  const written = exact.map(sixDecimals);
-  const span = Math.max(exact[2], exact[3]);
-  const moved = exact.some(
-    (value, index) => (Math.abs((written[index] ?? NaN) - value) * DEVICE_PIXELS) / span > 0.5,
+  const [x, y, width, height] = shownPart(document);
+  const [writtenX = 0, writtenY = 0, writtenWidth = 1, writtenHeight = 1] =
+    shownPart(document).map(sixDecimals);
+  const fit = Math.min(document.frame.width / writtenWidth, document.frame.height / writtenHeight);
+  const [fittedWidth, fittedHeight] = [document.frame.width / fit, document.frame.height / fit];
+  const left = writtenX - (fittedWidth - writtenWidth) / 2;
+  const top = writtenY - (fittedHeight - writtenHeight) / 2;
+  const apart = Math.max(
+    Math.abs(left - x),
+    Math.abs(top - y),
+    Math.abs(left + fittedWidth - (x + width)),
+    Math.abs(top + fittedHeight - (y + height)),
   );
-  const [, , width = 1, height = 1] = written;
-  return moved || letterbox(width, height, document.frame.width, document.frame.height) > 0.5;
+  return (apart * DEVICE_PIXELS) / Math.max(width, height) > 0.5;
 }
 
 const COORDINATES: Readonly<Record<Kind, readonly string[]>> = {

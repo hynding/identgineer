@@ -1,7 +1,7 @@
 import { decodeSvgInput } from "./decode-svg-input.ts";
 import { filterSvgTree, type CleanElement } from "./filter-svg-tree.ts";
 import { freshIds } from "./fresh-ids.ts";
-import { movesMoreThanHalfAPixel, proportionsDifferByMoreThanHalfAPixel } from "./half-pixel.ts";
+import { proportionsDifferByMoreThanHalfAPixel, showsTheSameToHalfAPixel } from "./half-pixel.ts";
 import { findViewBoxPercentage } from "./view-box-percentages.ts";
 import { isLocalPathValue, parseSvgXml } from "./parse-svg-xml.ts";
 import { resolveSvgNamespaces } from "./resolve-svg-namespaces.ts";
@@ -70,11 +70,14 @@ function textOf(root: CleanElement, name: string): string | undefined {
 /**
  * Gives the root an explicit view box, width and height: each one written is kept, a missing view
  * box is `0 0 width height`, and a missing width or height follows from the view box's proportions.
- * A root with neither a view box nor both a width and height has no size and is refused.
+ * A root with neither a view box nor both a width and height has no size and is refused, and so is
+ * one whose output, its view box fitted into its frame as written, would show other than what the
+ * original showed by more than half a device pixel.
  */
 function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
-  let width = textOf(root, "width");
-  let height = textOf(root, "height");
+  const givenWidth = textOf(root, "width");
+  const givenHeight = textOf(root, "height");
+  let [width, height] = [givenWidth, givenHeight];
   let viewBox = textOf(root, "viewBox");
   if (viewBox === undefined) {
     if (width === undefined || height === undefined) {
@@ -104,14 +107,39 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
   root.attributes.set("height", { text: height });
   const size = { width: Number(width), height: Number(height) };
   const box = [minX, minY, boxWidth, boxHeight] as const;
+  // The frame a browser draws the original in: as written, a missing side exactly in proportion.
+  const frame =
+    givenWidth === undefined && givenHeight === undefined
+      ? size
+      : {
+          width: givenWidth === undefined ? (size.height * boxWidth) / boxHeight : size.width,
+          height: givenHeight === undefined ? (size.width * boxHeight) / boxWidth : size.height,
+        };
+  // Kept only when it fits the view box in (`meet`); a stretch or crop is drawn to fit, centred.
+  const fit = textOf(root, "preserveAspectRatio") ?? "xMidYMid";
   const aspect = aspectRatio(root.droppedAspect ?? "");
-  const stretched =
-    aspect?.align === "none" &&
-    proportionsDifferByMoreThanHalfAPixel({ width: boxWidth, height: boxHeight }, size);
-  const shown =
-    aspect === undefined || aspect.align === "none"
+  const differs = proportionsDifferByMoreThanHalfAPixel(
+    { width: boxWidth, height: boxHeight },
+    frame,
+  );
+  const stretched = aspect?.align === "none" && differs;
+  const sliced = aspect !== undefined && aspect.align !== "none";
+  const original = sliced
+    ? sliceRegion(frame, box, aspect.align)
+    : aspect?.align === "none"
       ? box
-      : cropped(size, box, aspect.align, limits);
+      : fittedRegion(box, frame, fit);
+  // A slice whose frame has the view box's proportions, to within half a pixel, crops nothing.
+  const shown = sliced && differs ? sixDecimals(original, limits) : box;
+  const fitted = fittedRegion(shown, size, fit);
+  if (!showsTheSameToHalfAPixel(original, stretched ? within(fitted, box) : fitted)) {
+    throw new SvgLogoRejection(
+      "unsupported-feature",
+      sliced
+        ? "has a preserveAspectRatio slice that crops a part of its view box too small to write to six decimals; crop the view box itself instead"
+        : "has a width or height that six decimals cannot write in the view box's proportions; give both, or the view box in larger numbers",
+    );
+  }
   root.attributes.set("viewBox", canonical("viewBox", shown.join(" "), limits));
   return { ...size, viewBox: shown, clipTo: stretched ? box : undefined, cropped: shown !== box };
 }
@@ -130,46 +158,60 @@ function canonical(name: string, text: string, limits: SvgLogoLimits): SvgValue 
 type ViewBox = readonly [number, number, number, number];
 
 /**
- * The part of the view box a crop (`slice`) showed, which becomes the view box: drawn to fit, it
- * shows what the crop showed and nothing more. Refused where six decimals cannot hold that part to
- * half a pixel at the largest size measured: an edge moved further, or proportions the fitted
- * drawing would letterbox by more.
+ * The part of the view box a crop (`slice`) shows in a frame: drawn to fit, it shows what the crop
+ * showed and nothing more.
  */
-function cropped(
-  size: { readonly width: number; readonly height: number },
-  box: ViewBox,
+function sliceRegion(
+  frame: { readonly width: number; readonly height: number },
+  [minX, minY, boxWidth, boxHeight]: ViewBox,
   align: string,
-  limits: SvgLogoLimits,
 ): ViewBox {
-  const [minX, minY, boxWidth, boxHeight] = box;
-  const scale = Math.max(size.width / boxWidth, size.height / boxHeight);
-  const [width, height] = [size.width / scale, size.height / scale];
-  const share = (part: string): number => (part === "Min" ? 0 : part === "Mid" ? 0.5 : 1);
-  const exact = [
+  const scale = Math.max(frame.width / boxWidth, frame.height / boxHeight);
+  const [width, height] = [frame.width / scale, frame.height / scale];
+  return [
     minX + (boxWidth - width) * share(align.slice(1, 4)),
     minY + (boxHeight - height) * share(align.slice(5, 8)),
     width,
     height,
-  ] as const;
-  // A slice whose frame has the view box's proportions, to within half a pixel, crops nothing:
-  // fitted instead, the view box is letterboxed by no more than that.
-  if (!proportionsDifferByMoreThanHalfAPixel({ width: boxWidth, height: boxHeight }, size)) {
-    return box;
-  }
-  const span = Math.max(width, height);
-  const written = exact.map((value) => Number(value.toFixed(limits.fractionDigits)));
-  const [, , writtenWidth = 1, writtenHeight = 1] = written;
-  if (
-    exact.some((value, index) => movesMoreThanHalfAPixel(value, written[index] ?? NaN, span)) ||
-    proportionsDifferByMoreThanHalfAPixel({ width: writtenWidth, height: writtenHeight }, size)
-  ) {
-    throw new SvgLogoRejection(
-      "unsupported-feature",
-      "has a preserveAspectRatio slice that crops a part of its view box too small to write to six decimals; crop the view box itself instead",
-    );
-  }
-  const [x = 0, y = 0, w = 1, h = 1] = written;
-  return [x, y, w, h];
+  ];
+}
+
+/** The part of user space a view box fitted into a frame (`meet`) shows, letterbox included. */
+function fittedRegion(
+  [minX, minY, boxWidth, boxHeight]: ViewBox,
+  frame: { readonly width: number; readonly height: number },
+  align: string,
+): ViewBox {
+  const scale = Math.min(frame.width / boxWidth, frame.height / boxHeight);
+  const [width, height] = [frame.width / scale, frame.height / scale];
+  return [
+    minX - (width - boxWidth) * share(align.slice(1, 4)),
+    minY - (height - boxHeight) * share(align.slice(5, 8)),
+    width,
+    height,
+  ];
+}
+
+function sixDecimals(region: ViewBox, limits: SvgLogoLimits): ViewBox {
+  const [x = 0, y = 0, width = 1, height = 1] = region.map((value) =>
+    Number(value.toFixed(limits.fractionDigits)),
+  );
+  return [x, y, width, height];
+}
+
+/** What of `region` lies inside `box`: a stretched view box is clipped to itself. */
+function within(
+  [x, y, width, height]: ViewBox,
+  [minX, minY, boxWidth, boxHeight]: ViewBox,
+): ViewBox {
+  const [left, top] = [Math.max(x, minX), Math.max(y, minY)];
+  const right = Math.min(x + width, minX + boxWidth);
+  const bottom = Math.min(y + height, minY + boxHeight);
+  return [left, top, right - left, bottom - top];
+}
+
+function share(part: string): number {
+  return part === "Min" ? 0 : part === "Mid" ? 0.5 : 1;
 }
 
 /**
