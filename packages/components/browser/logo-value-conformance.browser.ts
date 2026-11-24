@@ -725,3 +725,112 @@ test.describe("a style value, as Chromium weighs it", () => {
     });
   }
 });
+
+/** Every pixel Chromium draws of a probe as an image, as one string. */
+async function drawing(page: Page, original: string): Promise<string> {
+  return page.evaluate(async (source) => {
+    const image = new Image();
+    image.src = source;
+    await image.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = 100;
+    canvas.height = 100;
+    const context = canvas.getContext("2d");
+    if (context === null) throw new Error("no canvas");
+    context.drawImage(image, 0, 0, 100, 100);
+    return context.getImageData(0, 0, 100, 100).data.join(",");
+  }, dataUrl(original));
+}
+
+// Elements the sanitiser keeps, each drawn so that a change to its geometry shows, and the style
+// properties that could set it. Chromium decides which of them it reads as geometry; the sanitiser
+// must drop the element (or refuse the logo) for exactly those, and keep it for the rest.
+const GEOMETRY_PROBES: Readonly<Record<string, (style: string) => string>> = {
+  rect: (s) => svg(`<rect x="10" y="10" width="50" height="50" rx="5" ry="5" fill="#f00"${s}/>`),
+  "rect with a transform": (s) =>
+    svg(`<rect x="10" y="10" width="50" height="50" fill="#f00" transform="rotate(20)"${s}/>`),
+  circle: (s) => svg(`<circle cx="40" cy="40" r="20" fill="#f00"${s}/>`),
+  ellipse: (s) => svg(`<ellipse cx="40" cy="40" rx="20" ry="10" fill="#f00"${s}/>`),
+  line: (s) => svg(`<line x1="10" y1="10" x2="60" y2="60" stroke="#f00" stroke-width="5"${s}/>`),
+  polyline: (s) => svg(`<polyline points="10 10 60 10 60 60" fill="#f00"${s}/>`),
+  polygon: (s) => svg(`<polygon points="10 10 60 10 60 60" fill="#f00"${s}/>`),
+  path: (s) => svg(`<path d="M10 10H60V60Z" fill="#f00"${s}/>`),
+  g: (s) => svg(`<g${s}><rect x="10" y="10" width="50" height="50" fill="#f00"/></g>`),
+  use: (s) =>
+    svg(
+      `<defs><rect id="r" width="30" height="30" fill="#f00"/></defs><use href="#r" x="10" y="10"${s}/>`,
+    ),
+  linearGradient: (s) =>
+    svg(
+      `<linearGradient id="g" x1="0" x2="1" gradientTransform="rotate(20)"${s}><stop offset="0" stop-color="#0f0"/><stop offset="1" stop-color="#00f"/></linearGradient><rect width="100" height="100" fill="url(#g)"/>`,
+    ),
+  stop: (s) =>
+    svg(
+      `<linearGradient id="g"><stop offset="0" stop-color="#0f0"${s}/><stop offset="1" stop-color="#00f"/></linearGradient><rect width="100" height="100" fill="url(#g)"/>`,
+    ),
+  mask: (s) =>
+    svg(
+      `<mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"${s}><rect x="10" y="10" width="50" height="50" fill="#fff"/></mask><rect width="100" height="100" fill="#f00" mask="url(#m)"/>`,
+    ),
+};
+const GEOMETRY_DECLARATIONS = [
+  "x:30px",
+  "y:30px",
+  "width:10px",
+  "height:10px",
+  "cx:70px",
+  "cy:70px",
+  "r:5px",
+  "rx:30px",
+  "ry:30px",
+  "d:path('M0 0H90V90Z')",
+  "transform:translate(20px,20px)",
+  "translate:20px 20px",
+  "rotate:45deg",
+  "scale:0.5",
+  "transform-origin:50px 50px",
+  "transform-box:fill-box",
+  "offset-path:path('M0 0H50');offset-distance:20px",
+];
+
+test.describe("a style property Chromium reads as geometry", () => {
+  for (const [element, probe] of Object.entries(GEOMETRY_PROBES)) {
+    test(`drops the ${element} for exactly those Chromium reads so`, async ({ page }) => {
+      await page.setContent("<!doctype html><body></body>");
+      const plain = await drawing(page, probe(""));
+      const disagreements: string[] = [];
+      for (const declaration of GEOMETRY_DECLARATIONS) {
+        const original = probe(` style="${declaration.replace(/"/g, "&quot;")}"`);
+        const read = (await drawing(page, original)) !== plain;
+        const result = sanitiseSvgLogo(original);
+        const removed = result.ok ? result.removed : [];
+        const dropped = removed.some(({ attribute }) => attribute === undefined);
+        if (read !== dropped) {
+          disagreements.push(`${declaration}: Chromium ${read ? "reads" : "ignores"} it`);
+        }
+      }
+      expect(disagreements).toEqual([]);
+    });
+  }
+
+  test("refuses the root or a clip path for each Chromium reads so", async ({ page }) => {
+    await page.setContent("<!doctype html><body></body>");
+    const root = (s: string): string =>
+      svg('<rect x="10" y="10" width="50" height="50" fill="#f00"/>', s);
+    const clip = (s: string): string =>
+      svg(
+        `<clipPath id="c" transform="rotate(20)"${s}><rect x="10" y="10" width="50" height="50"/></clipPath><rect width="100" height="100" fill="#f00" clip-path="url(#c)"/>`,
+      );
+    const disagreements: string[] = [];
+    for (const probe of [root, clip]) {
+      const plain = await drawing(page, probe(""));
+      for (const declaration of GEOMETRY_DECLARATIONS) {
+        const original = probe(` style="${declaration.replace(/"/g, "&quot;")}"`);
+        const read = (await drawing(page, original)) !== plain;
+        const refused = !sanitiseSvgLogo(original).ok;
+        if (read && !refused) disagreements.push(`${declaration}: kept`);
+      }
+    }
+    expect(disagreements).toEqual([]);
+  });
+});

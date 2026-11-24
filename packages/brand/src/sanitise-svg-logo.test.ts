@@ -299,11 +299,125 @@ describe("sanitiseSvgLogo, output", () => {
     ["the last of two important ones", "fill:red!important;fill:blue ! IMPORTANT", "blue"],
     ["the style over the attribute", "fill:blue", "blue"],
     ["an important one alone", "fill:blue !important", "blue"],
+    ["an important one before a dropped plain one", "fill:blue !important;fill:reddish", "blue"],
+    [
+      "an important one after a dropped important one",
+      "fill:hsl(0,1%,1%)!important;fill:blue!important",
+      "blue",
+    ],
   ])("keeps %s", (_, style, fill) => {
     expect(output(`<rect width="9" height="9" fill="green" style="${style}"/>`)).toBe(
       `${ROOT}<rect width="9" height="9" fill="${fill}"/></svg>`,
     );
   });
+
+  // Chromium reads these style properties as the geometry of the element (checked in the browser
+  // tests), which the sanitiser keeps only as attributes: the element goes with the declaration.
+  it.each([
+    ["width on a rectangle", '<rect x="2" width="6" height="6" style="width:0"/>', "rect", "width"],
+    ["x on a rectangle", '<rect width="6" height="6" style="x:-1000px"/>', "rect", "x"],
+    ["rx on a rectangle", '<rect width="6" height="6" style="rx:3px"/>', "rect", "rx"],
+    ["r on a circle", '<circle cx="5" cy="5" r="3" style="r:0"/>', "circle", "r"],
+    ["cy on an ellipse", '<ellipse rx="3" ry="2" style="cy:5px"/>', "ellipse", "cy"],
+    ["d on a path", '<path d="M0 0H9V9Z" style="d:path(&quot;M0 0&quot;)"/>', "path", "d"],
+    ["y on a use", '<rect id="r" width="2" height="2"/><use href="#r" style="y:5px"/>', "use", "y"],
+    [
+      "a transform on a group",
+      '<g style="transform:scale(0)"><rect width="9" height="9"/></g>',
+      "g",
+      "transform",
+    ],
+    ["a rotation on a line", '<line x2="9" stroke="#000" style="rotate:45deg"/>', "line", "rotate"],
+    ["a scale on a polygon", '<polygon points="0 0 9 0 9 9" style="scale:2"/>', "polygon", "scale"],
+    ["a translation on a path", '<path d="M0 0H9V9Z" style="translate:5px"/>', "path", "translate"],
+    [
+      "an offset on a rectangle",
+      '<rect width="6" height="6" style="offset-distance:5px"/>',
+      "rect",
+      "offset-distance",
+    ],
+    [
+      "a transform origin beside a transform",
+      '<rect width="6" height="6" transform="rotate(20)" style="transform-origin:center"/>',
+      "rect",
+      "transform-origin",
+    ],
+  ])("drops an element whose style sets %s, and reports both", (_, body, element, property) => {
+    const result = accepted(svg(`${body}<rect width="1" height="1"/>`));
+    expect(result.svg).toBe(`${ROOT}<rect width="1" height="1"/></svg>`);
+    expect(result.removed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ element, attribute: "style", property }),
+        { element, reason: "unsupported-attribute", line: 1, column: expect.any(Number) as number },
+      ]),
+    );
+  });
+
+  it("drops a gradient whose style sets a transform, so what it painted paints nothing", () => {
+    expect(
+      output(
+        '<linearGradient id="g" style="transform:rotate(90deg)"><stop offset="0"/></linearGradient><rect width="9" height="9" fill="url(#g)"/>',
+      ),
+    ).toBe(`${ROOT}<rect width="9" height="9" fill="none"/></svg>`);
+  });
+
+  it.each([
+    [
+      "a transform origin with no transform",
+      '<rect width="6" height="6" style="transform-origin:center"/>',
+    ],
+    ["a width on a circle", '<circle cx="5" cy="5" r="3" style="width:0"/>'],
+    ["an x on a group", '<g style="x:5px"><rect width="6" height="6"/></g>'],
+  ])(
+    "keeps an element whose style sets %s, which Chromium does not read as its geometry",
+    (_, body) => {
+      const result = accepted(svg(body));
+      expect(result.removed).toHaveLength(1);
+      expect(result.svg).not.toBe(EMPTY);
+    },
+  );
+
+  it.each([
+    [
+      "a root sized in its style",
+      svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="width:2px"'),
+    ],
+    [
+      "a root transformed in its style",
+      svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="rotate:5deg"'),
+    ],
+    [
+      "a clip path transformed in its style",
+      svg(
+        '<clipPath id="c" style="transform:scale(2)"><rect width="5" height="5"/></clipPath><rect width="9" height="9" clip-path="url(#c)"/>',
+      ),
+    ],
+  ])("refuses %s, which dropping would show unclipped or at another size", (_, input) => {
+    expect(refused(input).code).toBe("unsupported-feature");
+  });
+
+  it.each([
+    ["-webkit-clip-path", "clip-path", 'clip-path="url(#c)"'],
+    ["-webkit-mask", "mask", 'mask="url(#m)"'],
+    ["-webkit-mask-image", "mask", 'mask="url(#m)"'],
+    ["mask-image", "mask", 'mask="url(#m)"'],
+    ["mask-mode", "mask", 'mask="url(#m)"'],
+  ])(
+    "takes %s for %s, which it stands for, and drops that attribute with it",
+    (alias, name, attribute) => {
+      const result = accepted(
+        svg(
+          `<clipPath id="c"><rect width="5" height="5"/></clipPath><mask id="m"><rect width="5" height="5" fill="#fff"/></mask>` +
+            `<rect width="9" height="9" ${attribute} style="${alias}:none"/>`,
+        ),
+      );
+      expect(result.svg).toBe(`${ROOT}<rect width="9" height="9"/></svg>`);
+      expect(result.removed).toEqual([
+        expect.objectContaining({ attribute: "style", property: alias }),
+        expect.objectContaining({ attribute: name }),
+      ]);
+    },
+  );
 
   // Whether CSS takes a value the sanitiser cannot read decides which declaration wins, and
   // whether the attribute does: so none of them is kept.
