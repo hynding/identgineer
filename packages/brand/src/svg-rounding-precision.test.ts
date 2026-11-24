@@ -24,8 +24,8 @@ describe("a number rounding changed, as its transforms magnify it", () => {
       '<g transform="scale(999999)"><g transform="scale(0.0000014)"><rect width="10" height="10" fill="#f00"/></g></g>',
     ],
     [
-      "a rotation under a magnifying scale",
-      '<g transform="scale(999999) rotate(0.0000004) scale(0.000001)"><rect x="50" width="10" height="10" fill="#f00"/></g>',
+      "a rotation under a scale magnifying one axis",
+      '<g transform="scale(999999 1) rotate(0.0000004)"><rect width="100" height="100" fill="#f00"/></g>',
     ],
     [
       "a coordinate of path data",
@@ -54,6 +54,22 @@ describe("a number rounding changed, as its transforms magnify it", () => {
     [
       "a gradient's coordinate",
       '<linearGradient id="g" gradientUnits="userSpaceOnUse" x1="0.0000004" x2="0.00001"><stop offset="0" stop-color="#f00"/><stop offset="1" stop-color="#0f0"/></linearGradient><g transform="scale(999999)"><rect width="0.00001" height="0.00001" fill="url(#g)"/></g>',
+    ],
+    [
+      "relative path data, each rounding carried on by the next",
+      `<g transform="scale(999)"><path d="m0 0${" h0.0000004".repeat(50)}v0.1h-0.00002z" fill="#f00"/></g>`,
+    ],
+    [
+      "a dash length, repeated along the stroke",
+      '<path d="M0 50H100" stroke="#f00" stroke-width="0.001" stroke-dasharray="0.0015004 0.0015004"/>',
+    ],
+    [
+      "a stroke width rounded to nothing",
+      '<g transform="scale(999999)"><path d="M0 0H0.0001" stroke="#f00" stroke-width="0.0000004"/></g>',
+    ],
+    [
+      "a stop's offset, along a long gradient",
+      '<linearGradient id="g" gradientUnits="userSpaceOnUse" x2="999999"><stop offset="0.5000004" stop-color="#f00"/><stop offset="0.5000004" stop-color="#0f0"/></linearGradient><rect width="100" height="100" fill="url(#g)"/>',
     ],
     [
       "an arc's ratio, scaled up to the arc's size",
