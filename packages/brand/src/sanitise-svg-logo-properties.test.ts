@@ -175,6 +175,9 @@ const TEXTS = [
   // At the length limit in characters, and longer once escaped.
   ">".repeat(2048),
   '"Acme" & > '.repeat(186),
+  // At the limit in code points, twice as long in UTF-16 units.
+  "😀".repeat(2048),
+  "a𝄞".repeat(1024),
 ];
 
 interface Node {
