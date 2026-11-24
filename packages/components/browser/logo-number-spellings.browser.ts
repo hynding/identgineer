@@ -125,12 +125,14 @@ const dropped = (spelling: string): string =>
   `${JSON.stringify(spelling)}: Chromium takes it, the sanitiser drops it`;
 const refused = (spelling: string): string =>
   `${JSON.stringify(spelling)}: Chromium takes it, the sanitiser refuses the logo`;
+const refusedThoughIgnored = (spelling: string): string =>
+  `${JSON.stringify(spelling)}: Chromium drops it, the sanitiser refuses the logo`;
 
 /**
  * What the sanitiser drops or refuses although Chromium draws it, each listed in the README: a
  * number written with more characters than `numberLength` refuses the whole logo, a dash array
  * of numbers run together is dropped, and so are points of an odd count, which Chromium draws up to
- * the last whole pair.
+ * the last whole pair; a root width Chromium ignores is refused rather than dropped.
  */
 const KNOWN: Readonly<Record<string, readonly string[]>> = {
   "a length": [refused(LONG)],
@@ -140,7 +142,33 @@ const KNOWN: Readonly<Record<string, readonly string[]>> = {
   "path data": [refused(LONG)],
   points: [refused(LONG)],
   "a dash array": [refused(LONG), dropped("50.5.5")],
-  "the root's width": [refused(LONG)],
+  // A root width Chromium does not read as a plain number in a kept unit is refused, never dropped:
+  // it reads it as CSS, where the sanitiser cannot tell every spelling that draws nothing.
+  "the root's width": [
+    ...["50.", "5.e1"].map(refusedThoughIgnored),
+    refused(LONG),
+    ...[
+      "0x32",
+      "5e",
+      "5e+",
+      "5e-",
+      ".",
+      "+",
+      "-",
+      "e1",
+      ".e1",
+      "Infinity",
+      "NaN",
+      "5 0",
+      "50.5.",
+      "50.5.5",
+      "++50",
+      "+-50",
+      "50e1.5",
+      "50,",
+      ",50",
+    ].map(refusedThoughIgnored),
+  ],
 };
 const KNOWN_IN_LISTS: Readonly<Record<string, readonly string[]>> = {
   points: [dropped("50.50")],

@@ -473,7 +473,8 @@ root's width, and 18 spellings of a pair in each list, in the original and the o
 the output to drawing what the original drew. Where the sanitiser shows less than Chromium would,
 it says so: a number written with more characters than `numberLength` refuses the logo; a dash
 array whose numbers run together without a separator (`1.5.5`, `1+2`) is dropped; and so are
-points of an odd count, which Chromium draws up to the last whole pair. A second browser test
+points of an odd count, which Chromium draws up to the last whole pair; a root width Chromium
+ignores as no length (`50.`, `0x32`, `NaN`) is refused, as above, rather than dropped. A second browser test
 holds the keep side to Chromium by generation rather than by list: for every attribute and style
 property the allowlist keeps, it writes valid values in a probe where each shows, mutates them at
 random (white space of each kind before, after and inside, commas added, doubled and removed,
