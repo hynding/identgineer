@@ -72,6 +72,14 @@ describe("a number rounding changed, as its transforms magnify it", () => {
       '<linearGradient id="g" gradientUnits="userSpaceOnUse" x2="999999"><stop offset="0.5000004" stop-color="#f00"/><stop offset="0.5000004" stop-color="#0f0"/></linearGradient><rect width="100" height="100" fill="url(#g)"/>',
     ],
     [
+      "a gradient's vector rounded to a point, which paints its last colour",
+      '<linearGradient id="g" gradientUnits="userSpaceOnUse" x1="50" x2="50.0000003"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#f00"/></linearGradient><rect width="100" height="100" fill="url(#g)"/>',
+    ],
+    [
+      "a gradient's radius rounded to nothing",
+      '<radialGradient id="g" gradientUnits="userSpaceOnUse" cx="50" cy="50" r="0.0000003"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#f00"/></radialGradient><rect width="100" height="100" fill="url(#g)"/>',
+    ],
+    [
       "an arc's ratio, scaled up to the arc's size",
       '<g transform="scale(999)"><path d="M0 0A0.1 0.3000001 0 0 1 100 0Z" fill="#f00"/></g>',
     ],
