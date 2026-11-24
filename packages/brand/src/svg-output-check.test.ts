@@ -15,6 +15,49 @@ describe("findSanitisedSvgProblems", () => {
     expect(findSanitisedSvgProblems(svg)).toEqual([]);
   });
 
+  it.each([
+    ["a tab between attributes", '<path d="M0 0L1 1"\tfill="url(#logo-0)"/>'],
+    ["a line feed between attributes", '<path d="M0 0L1 1"\nfill="url(#logo-0)"/>'],
+    ["two spaces between attributes", '<path d="M0 0L1 1"  fill="url(#logo-0)"/>'],
+    ["a space before the end of a tag", '<path d="M0 0L1 1" fill="url(#logo-0)" />'],
+    ["single quotes", "<path d='M0 0L1 1' fill=\"url(#logo-0)\"/>"],
+    ["a missing quote", '<path d="M0 0L1 1 fill="url(#logo-0)"/>'],
+    ["an unquoted value", '<path d=M0 fill="url(#logo-0)"/>'],
+    ["a space around the equals sign", '<path d ="M0 0L1 1" fill="url(#logo-0)"/>'],
+    ["an ampersand in a value", '<path d="M0 0L1 1" fill="url(#logo-0)&amp;"/>'],
+    ["a less-than sign in a value", '<path d="M0 0L1 1<" fill="url(#logo-0)"/>'],
+    ["a digit in an element name", '<path1 d="M0 0L1 1" fill="url(#logo-0)"/>'],
+    ["an attribute name starting with a digit", '<path 1d="M0 0L1 1" fill="url(#logo-0)"/>'],
+    ["an attribute with no value", '<path d fill="url(#logo-0)"/>'],
+  ])("reports %s as a malformed tag", (_, tag) => {
+    const changed = svg.replace('<path d="M0 0L1 1" fill="url(#logo-0)"/>', tag);
+    expect(changed).not.toBe(svg);
+    expect(findSanitisedSvgProblems(changed)).toContain(
+      `a malformed tag at ${String(changed.indexOf("<path"))}`,
+    );
+  });
+
+  it.each([
+    ["a script tag with a line feed before its end", "<script \n></script>"],
+    ["a script tag with a tab before its end", "<script\t></script>"],
+    ["an end tag with a space", "<g></g >"],
+  ])("reports %s, whose tag is not in the written form", (_, tags) => {
+    const changed = svg.replace("<title>", `${tags}<title>`);
+    expect(findSanitisedSvgProblems(changed)[0]).toMatch(
+      /^a (?:malformed tag|stray or mismatched end tag) at /,
+    );
+  });
+
+  it.each([
+    ["an upper-case element", "<PATH/>"],
+    ["an upper-case script element", "<SCRIPT></SCRIPT>"],
+  ])("reports %s, which the allowlist does not hold", (_, tags) => {
+    const changed = svg.replace("<title>", `${tags}<title>`);
+    expect(findSanitisedSvgProblems(changed)).toContain(
+      `the element ${tags.slice(1, tags.indexOf(">")).replace("/", "")}`,
+    );
+  });
+
   it("takes a paint order only in its grammar", () => {
     const withOrder = (value: string): string[] =>
       findSanitisedSvgProblems(svg.replace("<path ", `<path paint-order="${value}" `));
