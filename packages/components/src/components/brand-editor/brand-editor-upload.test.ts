@@ -9,7 +9,7 @@ const WITH_SCRIPT =
 const ENTITIES =
   '<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY lol "lol">]><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1">&lol;</svg>';
 
-const fileOf = (text: string | Uint8Array, type = "image/svg+xml") =>
+const fileOf = (text: string | Uint8Array<ArrayBuffer>, type = "image/svg+xml") =>
   new File([text], "logo.svg", { type });
 
 /** A file whose reading is held until the test lets it go, and which counts its reads. */
