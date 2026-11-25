@@ -21,12 +21,12 @@ const FIELDS: Readonly<Record<string, Check>> = {
   displayName: (value) =>
     value === null || value === "" ? "displayName is a required field" : string(80)(value),
   bio: string(500),
-  locale: string(35, /^[a-z]{2,3}(-[A-Z][a-z]{3})?(-([A-Z]{2}|[0-9]{3}))?$/),
+  language: string(35, /^[a-z]{2,3}(-[A-Z][a-z]{3})?(-([A-Z]{2}|[0-9]{3}))?$/),
   timezone: string(64, /^[A-Za-z_]+(\/[A-Za-z0-9_+-]+)*$/),
   marketingOptIn: (value) => (typeof value === "boolean" ? undefined : "must be a boolean"),
 };
 
-const DEFAULTS = { bio: null, locale: "en", timezone: "UTC", marketingOptIn: false };
+const DEFAULTS = { bio: null, language: "en", timezone: "UTC", marketingOptIn: false };
 
 const checkData = (context: RouteContext, creating: boolean) => {
   const data: unknown = context.jsonBody().data;

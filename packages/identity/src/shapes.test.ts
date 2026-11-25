@@ -177,7 +177,7 @@ describe("readProfile", () => {
     documentId: "p1",
     displayName: "Ada",
     bio: null,
-    locale: "en",
+    language: "en",
     timezone: "UTC",
     marketingOptIn: false,
     createdAt: "2026-01-01T00:00:00.000Z",

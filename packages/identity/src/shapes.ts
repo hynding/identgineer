@@ -154,13 +154,14 @@ const list = (value: unknown): readonly unknown[] => {
 export const readSessions = (value: unknown): readonly IdentitySession[] =>
   Object.freeze(list(value).map(readSession));
 
+// `language` is the CMS's name for the profile's `locale` (see profile-operations.ts).
 const readProfileEntry = (value: unknown): Profile => {
   const fields = record(value);
   return Object.freeze({
     documentId: nonEmptyText(fields.documentId),
     displayName: text(fields.displayName),
     bio: nullableText(fields.bio),
-    locale: nullableText(fields.locale),
+    locale: nullableText(fields.language),
     timezone: nullableText(fields.timezone),
     marketingOptIn: flag(fields.marketingOptIn, false),
   });

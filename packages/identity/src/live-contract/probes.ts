@@ -423,7 +423,7 @@ const MAIN_STEPS: readonly Step[] = [
         data: {
           displayName: "Ada",
           bio: null,
-          locale: "en",
+          language: "en",
           timezone: "UTC",
           marketingOptIn: false,
         },

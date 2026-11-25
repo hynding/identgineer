@@ -83,6 +83,19 @@ describe("tracking data minimisation", () => {
     expect(host.test("news.example.com/story")).toBe(false);
   });
 
+  it("keeps a profile's language to a BCP 47 tag of at most 35 characters, defaulting to en", () => {
+    const language = fieldOf("Profile", "language") as Field & {
+      default?: string;
+      maxLength?: number;
+    };
+    expect(language.maxLength).toBe(35);
+    expect(language.default).toBe("en");
+    const tag = matcher("Profile", "language");
+    for (const valid of ["en", "nl-NL", "zh-Hant-TW", "es-419"]) expect(tag.test(valid)).toBe(true);
+    for (const invalid of ["english", "EN", "en_US", "en-nl"])
+      expect(tag.test(invalid)).toBe(false);
+  });
+
   it("keeps country as a two-letter code only", () => {
     const country = matcher("Event", "country");
     expect(country.test("NL")).toBe(true);
