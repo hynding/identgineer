@@ -116,12 +116,23 @@ describe.skipIf(!BUILDS.every((directory) => existsSync(directory)))(
           for (const marker of HEAVY_MARKERS) expect(holds(directory, exported, marker)).toBe(true);
         });
 
+        // The editor validates, previews and sanitises, but never writes a theme: it loads the
+        // package's edit entry, which holds no emitter.
+        it("finds the sanitiser and the generator in the editor's closure, and not the emitter", () => {
+          const editor = loaded(directory, "idg-brand-editor");
+          const [sanitiser = "", generator = "", emitter = ""] = HEAVY_MARKERS;
+          expect(holds(directory, editor, sanitiser)).toBe(true);
+          expect(holds(directory, editor, generator)).toBe(true);
+          expect(holds(directory, editor, emitter)).toBe(false);
+        });
+
         it("keeps the brand components in bundles apart from every other component", () => {
           const brand = [
             "idg-brand-logo",
             "idg-brand-swatches",
             "idg-brand-guidelines",
             "idg-brand-export",
+            "idg-brand-editor",
           ];
           const entries = brand.map((tag) => entryOf(directory, tag));
           expect(new Set(entries).size).toBe(brand.length);
