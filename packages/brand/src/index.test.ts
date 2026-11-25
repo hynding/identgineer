@@ -12,6 +12,7 @@ describe("the public API", () => {
         "CORNERS",
         "CORNER_RADII",
         "FONT_PAIRINGS",
+        "MAX_BRAND_KIT_PAGE_SIZE",
         "MAX_REPORTED_REMOVALS",
         "NAME_MAX_LENGTH",
         "RESERVED_BRAND_IDS",

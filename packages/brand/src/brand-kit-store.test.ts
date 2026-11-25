@@ -592,6 +592,26 @@ describe("failures", () => {
     expect(error.message).not.toContain(SECRET);
   });
 
+  it("reads a fetch that refuses the request itself apart from an unreachable CMS", async () => {
+    // The identity SDK's authorizedFetch refuses a URL outside its own base URL like this.
+    const refused = Object.assign(new Error(SECRET), { code: "validation" });
+    const { store } = storeWith(() => Promise.reject(refused));
+    const error = await rejection(store.list());
+    expect(error.code).toBe("request-refused");
+    expect(error.message).not.toContain(SECRET);
+    expect(JSON.stringify(error)).not.toContain(SECRET);
+  });
+
+  it.each([
+    ["a TypeError", new TypeError("failed")],
+    ["an AbortError", new DOMException("aborted", "AbortError")],
+    ["a TimeoutError", new DOMException("timed out", "TimeoutError")],
+    ["the identity SDK's network error", Object.assign(new Error("x"), { code: "network" })],
+  ])("reads %s from fetch as a network error", async (_, thrown) => {
+    const { store } = storeWith(() => Promise.reject(thrown));
+    expect((await rejection(store.list())).code).toBe("network");
+  });
+
   it("passes on a signed-out session from the identity SDK's authorised fetch", async () => {
     const signedOut = Object.assign(new Error("signed out"), { code: "unauthorized" });
     const { store } = storeWith(() => Promise.reject(signedOut));
