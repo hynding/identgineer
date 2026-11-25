@@ -284,6 +284,41 @@ describe("the overdraw of a logo", () => {
     );
   });
 
+  it("charges a small arc as its whole ellipse when its chord is too short, against its radius, for Chromium to tell which way it turns", () => {
+    // Chromium works an arc out in single precision; ends a few single-precision steps apart on
+    // the unit circle can come out turning the other way, a whole turn less a hair, and the whole
+    // ellipse is stroked: M500 500a999999 999999 0 0 1 0.01 0 paints a line across the image.
+    const hairline = 'fill="none" stroke="#000" stroke-width="0.000000001"';
+    expect(refusal(svg(`<path d="M0 50A999999 999999 0 0 1 0.01 50" ${hairline}/>`))).toBe(
+      "overdraw-too-large",
+    );
+    // Charged exactly as the large arc between the same ends, which is the whole ellipse: drawn
+    // small enough to be kept, relative or absolute, along either axis or neither, on a turned
+    // ellipse of unequal radii, and far from the origin, where single precision loses such a
+    // chord altogether.
+    const scaled = 'transform="scale(0.0001)" fill="none" stroke="#000" stroke-width="0.0001"';
+    for (const [small, large] of [
+      ["M0 50A999999 999999 0 0 1 0.01 50", "M0 50A999999 999999 0 1 1 0.01 50"],
+      ["M0 50a999999 999999 0 0 0 0.01 0", "M0 50a999999 999999 0 1 0 0.01 0"],
+      ["M50 0A999999 999999 0 0 1 50 0.01", "M50 0A999999 999999 0 1 1 50 0.01"],
+      ["M0 50a999999 300000 37 0 1 0.6 0.8", "M0 50a999999 300000 37 1 1 0.6 0.8"],
+      ["M100000 50a999999 999999 0 0 1 0.001 0", "M100000 50a999999 999999 0 1 1 0.001 0"],
+    ]) {
+      expect(overdraw(`<path d="${small}" ${scaled}/>`), small).toBe(
+        overdraw(`<path d="${large}" ${scaled}/>`),
+      );
+    }
+    // A chord of 2^-16 of the radius or more is bounded by itself, flips having been seen only
+    // below 2^-24: 20 along a radius of 999,999, but not 10.
+    expectNear(
+      overdraw(`<path d="M0 50A999999 999999 0 0 1 20 50" ${hairline}/>`),
+      strokeEdges(4) + curvedStrokeEdges((Math.PI / 2) * 0.2 * 1.001),
+    );
+    expect(refusal(svg(`<path d="M0 50A999999 999999 0 0 1 10 50" ${hairline}/>`))).toBe(
+      "overdraw-too-large",
+    );
+  });
+
   it("bounds a curve's length closer than its control polygon, never short of it", () => {
     const hairline = 'fill="none" stroke="#000" stroke-width="0.000001"';
     // The control polygon, 2.24 sides, still bounds the outline's edges.

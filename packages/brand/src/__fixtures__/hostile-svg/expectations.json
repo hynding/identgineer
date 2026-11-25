@@ -1810,6 +1810,39 @@
     "outcome": "accept",
     "removed": []
   },
+  "review-arc-tiny-chord-one-100000-w2.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-one-999999-w0.5.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-one-999999-w10.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-one-999999-w2.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-rot-999999-w2.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-rot-w0.05.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-rot-w0.1.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-rot-w0.2.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-rot-w2-a10.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-rot-w2-a80.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-sep-999999-w0.5.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
   "review-arc-tiny-radius-mask.svg": {
     "outcome": "accept",
     "removed": []
