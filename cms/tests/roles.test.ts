@@ -130,36 +130,10 @@ describe("the authenticated role", () => {
     for (const action of ACTIONS) expect(allows(authenticated, "User", action, mine)).toBe(false);
   });
 
-  it.each(OWNED)(
-    "holds every %s grant that writes under the ownership condition",
-    (contentType) => {
-      const grants = authenticated.grants.filter((g) => g.contentType === contentType);
-      expect(grants.length).toBeGreaterThan(0);
-      for (const grant of grants.filter((g) => g.actions.some((a) => a !== "read"))) {
-        expect(grant.condition).toEqual(OWNER_CONDITION);
-      }
-    },
-  );
-
-  it.each(OWNED.filter((t) => t !== "BrandKit"))(
-    "holds every %s grant under the ownership condition",
-    (contentType) => {
-      for (const grant of authenticated.grants.filter((g) => g.contentType === contentType)) {
-        expect(grant.condition).toEqual(OWNER_CONDITION);
-      }
-    },
-  );
-
-  it("holds brand kits under the ownership grant and a separate read-only grant of public ones", () => {
-    expect(authenticated.grants.filter((g) => g.contentType === "BrandKit")).toEqual([
-      {
-        contentType: "BrandKit",
-        actions: ["create", "read", "update", "delete"],
-        condition: OWNER_CONDITION,
-        assign: { owner: "user.id" },
-      },
-      { contentType: "BrandKit", actions: ["read"], condition: PUBLIC_KIT_CONDITION },
-    ]);
+  it.each(OWNED)("holds every %s grant under the ownership condition", (contentType) => {
+    const grants = authenticated.grants.filter((g) => g.contentType === contentType);
+    expect(grants.length).toBeGreaterThan(0);
+    for (const grant of grants) expect(grant.condition).toEqual(OWNER_CONDITION);
   });
 
   it.each(OWNED)("fills the owner of a %s it creates from the session", (contentType) => {
@@ -170,16 +144,18 @@ describe("the authenticated role", () => {
     }
   });
 
-  it.each(OWNED)("cannot touch someone else's private %s", (contentType) => {
+  it.each(OWNED)("cannot touch someone else's %s", (contentType) => {
     for (const action of ACTIONS) {
       expect(allows(authenticated, contentType, action, theirs)).toBe(false);
       expect(allows(authenticated, contentType, action, theirPrivateKit)).toBe(false);
     }
   });
 
-  it("reads someone else's public brand kit, but cannot change or delete it", () => {
-    expect(allows(authenticated, "BrandKit", "read", theirPublicKit)).toBe(true);
-    for (const action of WRITES) {
+  // A kit's owner cannot be filtered on (the user type is not readable), so a list under a second
+  // grant would mix the caller's kits with every public kit, with no way to tell them apart. A
+  // signed-in page reads public kits without its credentials, as the public role.
+  it("cannot touch someone else's public brand kit, so its list holds its own kits only", () => {
+    for (const action of ACTIONS) {
       expect(allows(authenticated, "BrandKit", action, theirPublicKit)).toBe(false);
     }
   });
@@ -277,7 +253,7 @@ describe("brand kit ownership", () => {
     "lets no role but the admin read %s, so a populated owner shows nothing",
     (contentType) => {
       for (const role of [publicRole, authenticated]) {
-        expect(allows(role, contentType, "read", theirPublicKit)).toBe(false);
+        expect(allows(role, contentType, "read", myPublicKit)).toBe(false);
         expect(allows(role, contentType, "read", publicKitForGuest)).toBe(false);
         expect(allows(role, contentType, "read")).toBe(false);
       }
