@@ -284,7 +284,7 @@ describe("the overdraw of a logo", () => {
     );
   });
 
-  it("charges a small arc as its whole ellipse when its chord is too short, against its radius, for Chromium to tell which way it turns", () => {
+  it("charges a small arc as its whole ellipse when its chord is too short, against its radius or where it lies, for Chromium to tell which way it turns", () => {
     // Chromium works an arc out in single precision; ends a few single-precision steps apart on
     // the unit circle can come out turning the other way, a whole turn less a hair, and the whole
     // ellipse is stroked: M500 500a999999 999999 0 0 1 0.01 0 paints a line across the image.
@@ -308,8 +308,16 @@ describe("the overdraw of a logo", () => {
         overdraw(`<path d="${large}" ${scaled}/>`),
       );
     }
+    // Single precision holds a point far from the origin less finely, so the chord is held to
+    // 2^-16 of the coordinates too: a chord of 1 on a radius of 1,000 at 100,000.
+    expect(overdraw(`<path d="M100000 50a1000 1000 0 0 1 1 0" ${scaled}/>`)).toBe(
+      overdraw(`<path d="M100000 50a1000 1000 0 1 1 1 0" ${scaled}/>`),
+    );
+    expect(overdraw(`<path d="M1000 50a1000 1000 0 0 1 1 0" ${scaled}/>`)).toBeLessThan(
+      overdraw(`<path d="M1000 50a1000 1000 0 1 1 1 0" ${scaled}/>`),
+    );
     // A chord of 2^-16 of the radius or more is bounded by itself, flips having been seen only
-    // below 2^-24: 20 along a radius of 999,999, but not 10.
+    // below 2^-23: 20 along a radius of 999,999, but not 10.
     expectNear(
       overdraw(`<path d="M0 50A999999 999999 0 0 1 20 50" ${hairline}/>`),
       strokeEdges(4) + curvedStrokeEdges((Math.PI / 2) * 0.2 * 1.001),
