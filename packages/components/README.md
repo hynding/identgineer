@@ -1728,9 +1728,10 @@ editor.addEventListener("idgSave", (event) => {
   so. The guide is inside the element's shadow root, so the brand's colours style nothing outside
   it.
 - **Narrow forms.** The form is a container: below 20em (at 320px, or with large text) its groups
-  and hex boxes pad less, and each hex field keeps at least 7ch for a whole `#rrggbb`, wrapping
-  below its picker inside the box, with the invalid mark inside it too. A browser test checks this
-  in every layout at 320px and at 200% text.
+  and hex boxes pad less, and each hex field keeps at least 8ch for a whole `#rrggbb`, wrapping
+  below its picker inside the box, with the invalid mark inside it too. The file chooser's button
+  sits on a line of its own above the file name, wrapping its label, so no upload clips it. A
+  browser test checks this in every layout at 320px and at 200% text.
 - **Control names** are the fields' names prefixed with `brand-` (`brand-name`, `brand-id`, …): a
   control named `id` or `name` would shadow the form's own properties.
 - **Content-Security-Policy:** the logos are data URL images, so as for `idg-brand-logo` the page
