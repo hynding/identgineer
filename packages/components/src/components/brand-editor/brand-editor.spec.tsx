@@ -620,10 +620,51 @@ describe("idg-brand-editor saving", () => {
 
     submit(root);
     await waitForChanges();
+    const parent = root.parentElement;
     removeHost(root);
     answer({ ok: true, record: { documentId: "doc-2", isPublic: false, kit: HARBOUR } });
     await settle(waitForChanges);
     expect(events.seen).toEqual([]);
+    // What was stored is still known, so the element put back updates that kit.
+    parent?.append(root);
+    await settle(waitForChanges);
+    submit(root);
+    await settle(waitForChanges);
+    expect(store.create).toHaveBeenCalledTimes(2);
+    expect(store.update.mock.calls[0]?.[0]).toBe("doc-2");
+  });
+
+  it("keeps a pending save's answer when the element is moved, and updates the kit it created", async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    const store = {
+      create: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            answer = resolve;
+          }),
+      ),
+      update: vi.fn((documentId: string, kit: BrandKit) =>
+        Promise.resolve({ ok: true, record: { documentId, isPublic: false, kit } }),
+      ),
+    };
+    const { root, waitForChanges } = await mount({ kit: ACME, store });
+    submit(root);
+    await waitForChanges();
+    const button = shadowOf(root).querySelector<HTMLElement & { loading: boolean }>(".submit");
+    const holder = document.createElement("div");
+    document.body.append(holder);
+    holder.append(root);
+    await waitForChanges();
+    expect(button?.loading).toBe(true);
+    answer({ ok: true, record: { documentId: "doc-1", isPublic: false, kit: ACME } });
+    await settle(waitForChanges);
+    expect(events.seen).toEqual([
+      { type: "idgSave", detail: { documentId: "doc-1", id: "acme", created: true } },
+    ]);
+    submit(root);
+    await settle(waitForChanges);
+    expect(store.create).toHaveBeenCalledTimes(1);
+    expect(store.update.mock.calls[0]?.[0]).toBe("doc-1");
   });
 });
 
