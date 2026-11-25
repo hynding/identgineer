@@ -112,13 +112,14 @@
 }
 
 /* A narrow form, as at 320px or with large text, gives its fields the room its groups and boxes
-   would pad: the group keeps its edge, each hex field keeps a whole #rrggbb in view, and the file
-   chooser's button has room for its label's widest word. The base rules for the group and the hex
-   box come before this block; the file chooser's comes after, so its narrow rule is the more
-   specific one to win. */
+   would pad: each hex field keeps a whole #rrggbb in view, and the file chooser's button gets more
+   room for its label's widest word, which is the browser's, in the control font each design and
+   UX mode sets. The group and the button keep half the narrow space each, so neither's edge
+   touches what it holds. The base rules for the group and the hex box come before this block; the
+   file chooser's comes after, so its narrow rule is the more specific one to win. */
 @container brand-form (inline-size < 20em) {
   .group {
-    padding-inline: var(--idg-space-3xs);
+    padding-inline: calc(var(--idg-space-3xs) / 2);
   }
 
   .colour::part(box) {
@@ -126,7 +127,7 @@
   }
 
   .image-row .file::file-selector-button {
-    padding-inline: var(--idg-space-3xs);
+    padding-inline: calc(var(--idg-space-3xs) / 2);
   }
 }
 
