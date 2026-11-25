@@ -331,7 +331,9 @@ Refused, as the whole document (each with its own `code`):
   that a logo with no width or height and a view box under one unit on a side, such as
   `0 0 0.5 0.5`, is refused too, and must be given a size of at least a pixel or a larger view
   box); a width, height or view box the sanitiser must work out (one the root lacks, or a crop)
-  that six decimals cannot hold. One rule decides every view box: the
+  that six decimals cannot hold. A root with no width or height is sized from its view box's
+  numbers as the view box grammar reads them, so `viewBox="-10-10 100 100"` is 100 by 100. One
+  rule decides every view box: the
   output draws its view box fitted into its width and height as written, and what that shows must
   have every edge within half a device pixel (at 4000 device pixels, 2000 CSS pixels twice as
   dense, along the longer side) of what the original showed when drawn at its exact size (the
@@ -341,7 +343,9 @@ Refused, as the whole document (each with its own `code`):
   `none`, Chromium gives the original no proportions of its own and ignores the side given too,
   drawing it at the default natural size of 300 by 150 CSS pixels, but it still shows the whole
   view box, which is all the rule compares; the output is given the other side in the view box's
-  proportions. The sanitiser writes the first of these that passes: the view box kept whole; under
+  proportions. The sanitiser writes the first of these that passes: the view box kept whole (one
+  the root lacks, worked out from its width and height, to six decimals, so `width="10mm"` gives
+  a view box 37.795276 wide); under
   `none`, the view box clipped to itself; for a `slice`, the part it showed, each edge to six
   decimals. Where none passes, the logo is refused. That covers a crop of a view box a few
   thousandths of a unit across, whose far edges take two roundings; ordinary logos are far from
@@ -476,7 +480,9 @@ longest number JavaScript writes, `-0.0000012345678901234567`, has 25, and no nu
 corpus, nor in some 270 further editors' exports the sanitiser was reviewed against, has more than 22. The numbers the
 sanitiser works out itself are written to six decimals, refused where six decimals do not hold
 what the rules here require: a width or height the root lacks (from its view box) and a view box
-it lacks (from its width and height), the part of the view box a `slice` showed, the region of a
+it lacks (from its width and height, held to the half device pixel of the view box rule, and
+refused as `number-out-of-range` where its six decimals reach a million, as any number that size
+is, though the width as written is just under it), the part of the view box a `slice` showed, the region of a
 mask a clip path is rewritten as, and the position of a `use` moved onto a group, where given in
 another unit or as a percentage (in pixels it is written as given). The sanitiser's own geometry
 (the budgets, the overdraw, the view box rule) reads each number as an exact double; the lengths
@@ -1132,9 +1138,9 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. Colours set only by CSS are lost
 (see above).
 
-The tests hold it to that: a hostile corpus of 349 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 146
-refused, and every removal, by element, attribute and reason, for each of the 203 accepted, 40 of
+The tests hold it to that: a hostile corpus of 353 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 148
+refused, and every removal, by element, attribute and reason, for each of the 205 accepted, 40 of
 them with a clip path rewritten as a mask, 39 of which keep that mask in the output: in the
 fortieth, the rewritten clip path was the clip path of another clip path that is then emptied, so
 nothing is left to use it) and

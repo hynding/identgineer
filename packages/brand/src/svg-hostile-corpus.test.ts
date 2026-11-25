@@ -146,6 +146,13 @@ const NUMBERS_KEPT_AS_WRITTEN = new Set([
   "review-magnified-shift.svg",
 ]);
 
+// Files whose payload is a root size the sanitiser works out (a run-together view box, a view box
+// the root lacks), which it writes or reads correctly, so nothing is removed.
+const SIZES_WORKED_OUT = new Set([
+  "review-no-viewbox-millimetres.svg",
+  "review-viewbox-run-together.svg",
+]);
+
 function withoutPlace(removal: SvgLogoRemoval): ExpectedRemoval {
   const names: ExpectedRemoval = { element: removal.element, reason: removal.reason };
   return {
@@ -210,7 +217,8 @@ describe("the hostile SVG corpus", () => {
       expect(expectation.removed?.length === 0, file).toBe(
         KEPT_AS_TEXT_OR_RENAMED.has(file) ||
           WITHIN_BUDGET.has(file) ||
-          NUMBERS_KEPT_AS_WRITTEN.has(file),
+          NUMBERS_KEPT_AS_WRITTEN.has(file) ||
+          SIZES_WORKED_OUT.has(file),
       );
     }
   });

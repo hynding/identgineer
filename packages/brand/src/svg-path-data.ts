@@ -114,18 +114,21 @@ export function parseSvgPathData(input: string, limits: SvgLogoLimits): string |
   return segments.length === 0 ? undefined : segments.join("");
 }
 
-/**
- * A list of numbers, `undefined` for anything else; used for points, view boxes and the arguments
- * of a transform function.
- */
-export function parseSvgNumberList(input: string, limits: SvgLogoLimits): string[] | undefined {
+/** A number of a list: as the sanitiser keeps it, and as it was written. */
+interface ListedNumber {
+  readonly value: string;
+  readonly spelling: string;
+}
+
+function scanNumberList(input: string, limits: SvgLogoLimits): ListedNumber[] | undefined {
   const cursor = new Cursor(input);
-  const values: string[] = [];
+  const numbers: ListedNumber[] = [];
   cursor.skipWhitespace();
   while (!cursor.atEnd()) {
+    const start = cursor.position;
     const value = cursor.number(limits);
     if (value === undefined) return undefined;
-    values.push(value);
+    numbers.push({ value, spelling: input.slice(start, cursor.position) });
     cursor.skipWhitespace();
     if (cursor.text.charCodeAt(cursor.position) === 0x2c) {
       cursor.position += 1;
@@ -133,5 +136,21 @@ export function parseSvgNumberList(input: string, limits: SvgLogoLimits): string
       if (cursor.atEnd()) return undefined;
     }
   }
-  return values;
+  return numbers;
+}
+
+/**
+ * A list of numbers, `undefined` for anything else; used for points, view boxes and the arguments
+ * of a transform function.
+ */
+export function parseSvgNumberList(input: string, limits: SvgLogoLimits): string[] | undefined {
+  return scanNumberList(input, limits)?.map(({ value }) => value);
+}
+
+/**
+ * Each number of a list as it was written, split where the list's grammar splits it (`-10-10` is
+ * two numbers); `undefined` for anything that is not a list of numbers.
+ */
+export function svgNumberSpellings(input: string, limits: SvgLogoLimits): string[] | undefined {
+  return scanNumberList(input, limits)?.map(({ spelling }) => spelling);
 }

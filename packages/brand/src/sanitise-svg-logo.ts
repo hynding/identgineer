@@ -19,6 +19,7 @@ import type { SvgLogoError, SvgLogoResult } from "./svg-logo-result.ts";
 import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 import { normaliseNumber } from "./svg-number.ts";
 import { Removals, TextLocator } from "./svg-removals.ts";
+import { svgNumberSpellings } from "./svg-path-data.ts";
 import { aspectRatio, SVG_GRAMMARS, type SvgValue, writtenText } from "./svg-values.ts";
 
 export interface SvgLogoOptions {
@@ -123,10 +124,10 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
   const scaled = (value: number): string | undefined =>
     normaliseNumber(value.toFixed(limits.fractionDigits), limits);
   if (width === undefined && height === undefined) {
-    // The view box's own width and height, spelled as it spells them.
+    // The view box's own width and height, spelled as it spells them, split as its grammar splits.
     const spelled =
       givenViewBox !== undefined && "text" in givenViewBox
-        ? writtenText(givenViewBox).split(/[ ,]+/)
+        ? (svgNumberSpellings(writtenText(givenViewBox), limits) ?? parts)
         : parts;
     width = spelled[2];
     height = spelled[3];
@@ -158,10 +159,12 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
       ? box
       : fittedRegion(box, frame, fit);
   // One rule decides: the first that shows what the original showed, to half a pixel, is written.
-  // The view box kept whole, unclipped; else, stretched, clipped to itself, or cropped, the part a
-  // slice showed, to six decimals.
+  // The view box kept whole, unclipped (one the root lacks, worked out from its size, to six
+  // decimals); else, stretched, clipped to itself, or cropped, the part a slice showed, to six
+  // decimals.
+  const whole = givenViewBox === undefined ? sixDecimals(box, limits) : box;
   const candidates: readonly { readonly shown: ViewBox; readonly clipped: boolean }[] = [
-    { shown: box, clipped: false },
+    { shown: whole, clipped: false },
     ...(stretching ? [{ shown: box, clipped: true }] : []),
     ...(sliced ? [{ shown: sixDecimals(original, limits), clipped: false }] : []),
   ];
@@ -178,10 +181,8 @@ function settleSize(root: CleanElement, limits: SvgLogoLimits): Size {
     );
   }
   const { shown, clipped } = chosen;
-  if (shown !== box || givenViewBox === undefined) {
-    root.attributes.set("viewBox", canonical("viewBox", shown.join(" "), limits));
-  }
-  return { ...size, viewBox: shown, clipTo: clipped ? box : undefined, cropped: shown !== box };
+  if (shown !== box) root.attributes.set("viewBox", canonical("viewBox", shown.join(" "), limits));
+  return { ...size, viewBox: shown, clipTo: clipped ? box : undefined, cropped: shown !== whole };
 }
 
 /** A value the sanitiser works out, read through the same grammar as any input. */
