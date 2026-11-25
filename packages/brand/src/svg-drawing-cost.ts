@@ -399,12 +399,11 @@ function bezierLength(points: readonly number[], halvings = HALVINGS): number {
  * short for Chromium to tell which way round its ellipse the arc turns. Chromium maps the arc onto a
  * unit circle and works out the angle it turns through in single precision; ends a few
  * single-precision steps apart there can come out turning the other way, which Chromium takes as a
- * whole turn less a hair, and so strokes the whole ellipse. That was seen for chords up to 2^-23.6
- * of the radius, over radii, radius ratios, turned ellipses, chord directions, both sweeps, and
- * starts from 0.5 to 900,000. Measured against this threshold, flips reached 2^-7.5 of it (the
- * worst, `M-999999 3a1000 10 89.999 0 0 0.084294 0`), so it stays 2^7.5 times (about 180) above the
- * largest seen. Single precision holds a point far from the origin less finely, so the
- * coordinates bound the chord too.
+ * whole turn less a hair, and so strokes the whole ellipse. That was seen only for chords up to
+ * 2^-7.5 of this threshold (the worst, `M-999999 3a1000 10 89.999 0 0 0.084294 0`), over radii,
+ * radius ratios, turned ellipses, chord directions, both sweeps, and starts from 0.5 to 900,000. The
+ * threshold is therefore about 2^7.5 (about 180) times the longest chord seen to flip. Single
+ * precision holds a point far from the origin less finely, so the coordinates bound the chord too.
  */
 const SMALL_ARC_CHORD = 2 ** -16;
 

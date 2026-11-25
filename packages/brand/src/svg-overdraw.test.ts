@@ -327,8 +327,10 @@ describe("the overdraw of a logo", () => {
     );
   });
 
-  it("holds a small arc's chord to the shortest Chromium may read, so far from the origin the reading error decides", () => {
-    // Ends at about 999,999 are read to within about 21 (see `lengthSlack`), against a threshold of
+  it("holds a small arc's chord to the shortest Chromium may read, by the reading slack, not the chord as written", () => {
+    // Pins the slack only: the radius equals the coordinates here, so this cannot tell whether the
+    // coordinates bound the threshold too (the test above pins that). Ends at about 999,999 are read
+    // to within about 21 (see `lengthSlack`), against a threshold of
     // 2^-16 of 999,999, about 15.3. A chord of 30 may be read as 9: charged as the whole ellipse,
     // exactly as the large arc between the same ends. Had the slack been added to the chord rather
     // than taken from it, the chord would read as 51 and be bounded by itself.
