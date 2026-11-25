@@ -39,7 +39,8 @@ Field names are the IR's neutral camelCase; each target maps them to its own col
 ### Identity (owner only)
 
 - **Profile** — one per user: `owner` (one-to-one to the user, unique), `displayName`, `avatar`
-  (images only), `bio`, `locale` (BCP 47), `timezone` (IANA), `marketingOptIn` (default off).
+  (images only), `bio`, `language` (BCP 47; not `locale`, which Strapi and so camis reserve), `timezone` (IANA),
+  `marketingOptIn` (default off).
 - **BrandKit** — `owner`, `name`, `tagline`, `logo` and `mark` (images only), `primaryColor`,
   `secondaryColor`, `neutralColor` (`#rrggbb`), `typePairing` (component: `headingFamily`,
   `bodyFamily`, restricted to characters that cannot break out of a CSS font string), `corners`
