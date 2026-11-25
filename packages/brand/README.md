@@ -1229,18 +1229,20 @@ stops a body being read when the given `fetch` has let go of it after the header
 `authorizedFetch` does).
 
 A list answers summaries (`BrandKitSummary`: the kit without `logo` and `mark`, marked
-`logos: "not-loaded"`). It asks the CMS
-for the other fields only (Strapi's `fields` parameter, which strapi-php and Strapi's generated
-controllers both honour for the owner and the public role). A list never checks logo or mark text:
-any that arrives anyway is dropped from the record unchecked. It is still read and parsed with the
-rest of the page, though, and counts towards the page's bound, so a page whose logos arrive anyway
-and push it past that bound is refused as `malformed-response`. Checking a logo is not free: `get` and `getPublic` pass the logo and mark through
-`parseBrandKit`, which sanitises each again to see it is a fixed point, about half a second for a
-logo near the sanitiser's limit (ten kits with two 436 KB logos each took 9.2 seconds). Fetch the
-full kit only for the one being shown or edited. A summary is never written back: `update`
-replaces every field, so a summary, or a kit spread from one, would clear the logo and mark. Its
-`logos` marker does not compile as `update`'s kit, and `update` refuses it as `validation`, naming
-`logo` and `mark`, before sending anything; edit the kit `get` answers instead.
+`logos: "not-loaded"`). It asks the CMS for the other fields only (Strapi's `fields` parameter,
+which strapi-php and Strapi's generated controllers both honour for the owner and the public role).
+A list never checks logo or mark text: any that arrives anyway is dropped from the record
+unchecked. It is still read and parsed with the rest of the page, though, and counts towards the
+page's bound, so a page whose logos arrive anyway and push it past that bound is refused as
+`malformed-response`. Checking a logo is not free: `get` and `getPublic` pass the logo and mark
+through `parseBrandKit`, which sanitises each again to see it is a fixed point, about half a second
+for a logo near the sanitiser's limit (ten kits with two 436 KB logos each took 9.2 seconds). Fetch
+the full kit only for the one being shown or edited.
+
+A summary is never written back: `update` replaces every field, so a summary, or a kit spread from
+one, would clear the logo and mark. Its `logos` marker does not compile as `update`'s kit, and
+`update` refuses it as `validation`, naming `logo` and `mark`, before sending anything; edit the
+kit `get` answers instead.
 
 Everything read from the CMS is untrusted:
 
@@ -1258,8 +1260,8 @@ Everything read from the CMS is untrusted:
   logo and mark), so a kit's logo and mark must be exactly what `sanitiseSvgLogo` returns. A
   record that fails comes back as `{ ok: false, index?, documentId?, errors }`, each error located
   by its CMS field (`primaryColor`) and never repeating the value, and at most 50 of them with one
-  more (`too-many-errors`) saying there were others; it is never a kit, and one bad
-  record does not fail a list. A public read refuses a record that is not public.
+  more (`too-many-errors`) saying there were others; it is never a kit, and one bad record does
+  not fail a list. A public read refuses a record that is not public.
 
 Writes take a `BrandKit` that `parseBrandKit` returned, check it again (the type cannot stop a
 JavaScript caller), and send its fields in the CMS shape: colours as `#rrggbb`, an absent optional
@@ -1270,8 +1272,8 @@ today that is every optional field an update clears (`tagline`, `secondaryColor`
 `logo`, `mark`), since camis drops a `null` in an update body where Strapi clears the field
 ([hynding/camis#122](https://github.com/hynding/camis/issues/122)). The write did store a kit,
 with the other fields saved: the error's `documentId` names it, so `get` it to see what it now
-holds, or `remove` it (a `create` that is not applied has still made a new kit). Do not keep `themeTokens` in the CMS: generate the
-theme from the kit, which is deterministic.
+holds, or `remove` it (a `create` that is not applied has still made a new kit). Do not keep
+`themeTokens` in the CMS: generate the theme from the kit, which is deterministic.
 
 A request that fails rejects with a `BrandKitStoreError`, whose message is fixed per code and
 never holds a response body, a thrown error's text or a logo:
