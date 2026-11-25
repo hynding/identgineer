@@ -1732,11 +1732,11 @@ No slots.
 - **Narrow forms.** The form is a container: below 20em (at 320px, or with large text) its groups
   and hex boxes pad less, and each hex field keeps at least 8ch for a whole `#rrggbb`, wrapping
   below its picker inside the box, with the invalid mark inside it too. The file chooser's button
-  sits on a line of its own above the file name, and it and the groups pad half as much again, so
-  no upload clips its label and the label's widest word fits the button. Browser tests check this
-  in every layout at 320px and at 200% text, reading each padding as computed, and check the
-  widest word in all 64 pairings of design and UX mode at 320px and 200% text. With Inter all
-  fit; with DejaVu Sans brutalist in the focus mode does not ("CHOOSE" needs 169.7px of 162px).
+  sits on a line of its own above the file name and spans its row with no inline padding of its
+  own, its label centred, while the groups pad half as much again; so no upload clips its label
+  and the label's widest word fits the button. Browser tests check this in every layout at 320px
+  and at 200% text, reading each padding and the button's width as computed, and check the widest
+  word in all 64 pairings of design and UX mode at 320px and 200% text, under both fonts tested.
 - **Control names** are the fields' names prefixed with `brand-` (`brand-name`, `brand-id`, …): a
   control named `id` or `name` would shadow the form's own properties.
 - **Content-Security-Policy:** the logos are data URL images, so as for `idg-brand-logo` the page
