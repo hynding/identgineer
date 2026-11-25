@@ -322,7 +322,14 @@ test.describe("idg-brand-guidelines with a kit and a theme it cannot trust", () 
     ).toEqual([]);
     expect(found.attributes.filter((name) => /^on/i.test(name))).toEqual([]);
     expect(found.heading).toContain(CANARY.slice(0, 10));
-    for (const style of found.styles) expect(style).toMatch(/^(?:--_[a-z-]+: [^;]*;? ?)*$/);
+    // Each declaration on its own, so a style is only private custom properties and nothing else.
+    const declarations = found.styles.flatMap((style) =>
+      style
+        .split(";")
+        .map((declaration) => declaration.trim())
+        .filter((declaration) => declaration !== ""),
+    );
+    for (const declaration of declarations) expect(declaration).toMatch(/^--_[a-z-]+: [^;]+$/);
     expect(found.computed.join(" ")).not.toMatch(/example\.com|url\(/);
     expect(found.pwned).toBeUndefined();
     expect(watch.requests.filter((url) => !url.startsWith(ORIGIN))).toEqual([]);
