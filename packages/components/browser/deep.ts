@@ -50,33 +50,44 @@ export interface Reflow {
 /**
  * Whether the page scrolls sideways, and whether anything inside any host matching `selector`
  * reaches past the host's own inline end. Both are read after the caller has waited for the
- * re-render its change causes.
+ * re-render its change causes. What sits inside an element matching `scrolling` is left out, since
+ * a scrolling region is meant to hold more than it shows: the region itself is still measured.
  */
-export async function measureReflow(page: Page, selector: string): Promise<Reflow> {
-  return page.evaluate((wanted) => {
-    const root = document.documentElement;
-    const inside = (parent: ParentNode): Element[] =>
-      [...parent.querySelectorAll("*")].flatMap((node) => [
-        node,
-        ...(node.shadowRoot ? inside(node.shadowRoot) : []),
-      ]);
-    const hosts = [...document.querySelectorAll(wanted)];
-    const counted = hosts.map((host) => {
-      const box = host.getBoundingClientRect();
-      const elements = inside(host.shadowRoot ?? host);
+export async function measureReflow(
+  page: Page,
+  selector: string,
+  scrolling?: string,
+): Promise<Reflow> {
+  return page.evaluate(
+    ([wanted, scrolls]) => {
+      const root = document.documentElement;
+      const inside = (parent: ParentNode): Element[] =>
+        [...parent.querySelectorAll("*")].flatMap((node) => [
+          node,
+          ...(node.shadowRoot ? inside(node.shadowRoot) : []),
+        ]);
+      const hosts = [...document.querySelectorAll(wanted)];
+      const counted = hosts.map((host) => {
+        const box = host.getBoundingClientRect();
+        // What a scrolling region holds is meant to reach past it: the region is measured, not that.
+        const elements = inside(host.shadowRoot ?? host).filter(
+          (element) => scrolls === undefined || element.parentElement?.closest(scrolls) == null,
+        );
+        return {
+          count: elements.length,
+          wider: elements.filter((element) => {
+            const edge = element.getBoundingClientRect();
+            return edge.width > 0 && edge.right > box.right + 1;
+          }).length,
+        };
+      });
       return {
-        count: elements.length,
-        wider: elements.filter((element) => {
-          const edge = element.getBoundingClientRect();
-          return edge.width > 0 && edge.right > box.right + 1;
-        }).length,
+        page: root.scrollWidth - root.clientWidth,
+        wider: counted.map(({ wider }) => wider),
+        hosts: hosts.length,
+        elements: counted.reduce((sum, { count }) => sum + count, 0),
       };
-    });
-    return {
-      page: root.scrollWidth - root.clientWidth,
-      wider: counted.map(({ wider }) => wider),
-      hosts: hosts.length,
-      elements: counted.reduce((sum, { count }) => sum + count, 0),
-    };
-  }, selector);
+    },
+    [selector, scrolling] as const,
+  );
 }

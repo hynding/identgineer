@@ -14,6 +14,8 @@ import { expect } from "./fixtures";
 import { BROWSER_PORT } from "./port";
 
 export const BRAND_PAGE = "/fixtures/brand.html";
+/** The export element's page: it draws no image, so it is served under the strict policy and no looser. */
+export const EXPORT_PAGE = "/fixtures/brand-export.html";
 /** The brand elements the fixture holds, each of which must be hydrated before a test reads it. */
 export const BRAND_TAGS = [
   "idg-brand-logo",
@@ -202,6 +204,10 @@ const DATA = {
     "hostile-guide": HOSTILE_GUIDE_THEME,
   },
   kits: { harbour: HARBOUR_KIT, acme: ACME_KIT, hostile: HOSTILE_KIT },
+  alteredTheme: {
+    ...HARBOUR_THEME,
+    document: { ...HARBOUR_THEME.document, $description: "changed after it was generated" },
+  },
   exports: {
     harbour: {
       css: HARBOUR_CSS,
@@ -223,6 +229,13 @@ export interface Watch {
 export interface OpenOptions {
   /** `strict` is the policy every browser test runs under; `logo` also allows `img-src data:`. */
   readonly policy?: "strict" | "logo";
+  /** The fixture to open: the brand page by default. */
+  readonly page?: typeof BRAND_PAGE | typeof EXPORT_PAGE;
+}
+
+/** Opens the export fixture under the strict policy, with nothing allowed beyond it. */
+export function openBrandExport(page: Page): Promise<Watch> {
+  return openBrand(page, { page: EXPORT_PAGE, policy: "strict" });
 }
 
 /**
@@ -246,7 +259,8 @@ export async function openBrand(page: Page, options: OpenOptions = {}): Promise<
     (url) => url.origin !== ORIGIN,
     (route) => route.abort(),
   );
-  await page.route(`**${BRAND_PAGE}`, async (route) => {
+  const target = options.page ?? BRAND_PAGE;
+  await page.route(`**${target}`, async (route) => {
     const response = await route.fetch();
     const policy =
       options.policy === "strict" ? CONTENT_SECURITY_POLICY : LOGO_CONTENT_SECURITY_POLICY;
@@ -258,7 +272,7 @@ export async function openBrand(page: Page, options: OpenOptions = {}): Promise<
   await page.route(`**${BRAND_DATA}`, (route) =>
     route.fulfill({ contentType: "application/json", body: JSON.stringify(DATA) }),
   );
-  await page.goto(BRAND_PAGE);
+  await page.goto(target);
   await expect(page.locator("html[data-brand-ready]")).toHaveCount(1);
   await expect(
     page.locator(BRAND_TAGS.map((tag) => `${tag}:not(.hydrated)`).join(", ")),
