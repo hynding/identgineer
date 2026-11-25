@@ -1489,18 +1489,22 @@ No events and no slots. Parts: `image`, `wordmark`, `monogram`. The sizes are th
 `1.75`, `2.5`, `3.5` and `5rem`; set the width with the page's own CSS on the element (it is
 `inline-flex`, never wider than its container).
 
-- **Only sanitiser output is drawn.** The text goes through `isSanitisedSvgLogo` of
-  `@identgineer/brand`, which reads it with the sanitiser again and accepts it only if it comes back
-  unchanged. Then, and only then, `logoDataUrl` makes the `src` of an `<img>`. A script, a handler,
+- **Only sanitiser output is drawn.** The text goes through `logoImage` of `@identgineer/brand/logo`,
+  which reads it with the sanitiser again, once, and accepts it only if it comes back unchanged.
+  Then, and only then, it gives the data URL that is the `src` of an `<img>`, and the size the logo
+  draws at. A script, a handler,
   an external reference, a `foreignObject`, an editor's file, an SVG the sanitiser would still change
   and anything wrapped around a logo is never drawn, and neither is any part of it put in the page:
-  no SVG element, no `innerHTML`, no `style`. The check runs when `logo` changes, not on every
-  render, and it costs what the sanitiser costs (milliseconds for a real logo, a few hundred for one
-  at the 512 KiB limit).
+  no SVG element, no `innerHTML`, no `style`. The check runs once when `logo` changes, not on every
+  render. Measured in Node, one check takes 0.25 to 1.9 ms for the fourteen logos from design tools
+  in the brand package's clean fixtures (250 to 2465 bytes), and about 0.65 s for a 480 KB logo of
+  tiny shapes, near the size limit.
 - **Image only.** The `<img>` has `decoding="async"`, no `srcset`, `sizes`, `crossorigin` or `usemap`,
-  and a data URL, so it makes no request. Its `width` and `height` are the frame's (from the view
-  box) and its height is set by `size`, so the box has its final shape before anything is decoded:
-  nothing shifts when it loads. It is drawn whole (`object-fit: contain`), and in a container
+  and a data URL, so it makes no request. Its `width` and `height` are the logo's natural size, the
+  root's `width` and `height` in pixels (what the sanitiser settled, not the view box, which a root
+  of `width="3in" height="1in"` or one with a padded view box does not match), scaled to whole
+  numbers that keep its shape, because the attributes are whole numbers. Its height is set by
+  `size`, so the box has its final shape before anything is decoded: nothing shifts when it loads. It is drawn whole (`object-fit: contain`), and in a container
   narrower than the logo the box shrinks, never stretching or cropping it.
 - **Content-Security-Policy.** A data URL needs `img-src data:`. The strict policy the components are
   tested under (`default-src 'self'`) does not allow it, so allow it as the brand package says:
@@ -1543,9 +1547,10 @@ announces the scheme, the group and the position.
   colour, markup, a number) leaves that role out, and nothing of it is drawn. The chip's colour is
   set as one custom property through the style API, never a `style` string or CSS text, which the
   strict policy would not allow either. With nothing valid at all, the `empty` message is shown.
-- **Chips stay visible.** Each chip has a 2px edge in `border-strong`, which every theme keeps at
-  3:1 against the page, so a colour as light as the page or as dark as the dark scheme is still a
-  shape. Forced colours keep the chip's own colour with a system edge.
+- **Chips stay visible.** Each chip has a 2px edge in `border-strong`. The browser tests measure
+  that edge against the surface behind the chip, composited as the page draws it (the scheme's own
+  fill, translucent in the glass design, over the page), in all eight designs and both schemes, and
+  hold it to 3:1, so a colour as light as the page or as dark as the dark scheme is still a shape. Forced colours keep the chip's own colour with a system edge.
 - **No movement.** It has no transition or animation, so reduced motion changes nothing; it has no
   focusable element, so nothing is in the tab order.
 - **The axes.** Each scheme is a surface of the page's design (its fill, border, corners, blur and
@@ -1573,7 +1578,8 @@ with no console violation.
   overlays are wired by `demo.js`, an external module that imports `toast()` from the build.
 - A brand's logo is a data URL image, which this policy refuses. `idg-brand-logo` is tested under
   the policy with `img-src 'self' data:` added (the one directive the brand package asks for), and
-  under this one, where it shows the name instead.
+  under this one, where it shows the name instead. The test server gives that policy to the demo
+  index page, which shows two logos, and to no other page.
 - The custom-elements build was not loaded under the CSP: it needs a bundler, and runs the same
   runtime.
 
@@ -1642,11 +1648,12 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   written out, and `checks/fixture-bootstrap.test.ts` fails when it no longer matches what the
   package builds: copy the new value from `dist/bootstrap.sri.json`. The same plugin transpiles the
   brand and tokens packages, which the brand components import. They import only the narrow entries
-  made for a browser bundle, `@identgineer/brand/logo` (`isSanitisedSvgLogo` and `logoDataUrl`) and
+  made for a browser bundle, `@identgineer/brand/logo` (`isSanitisedSvgLogo`, `logoDataUrl` and `logoImage`) and
   `@identgineer/tokens/contrast` (`contrastRatio`), because the packages' indexes also load the
   theme pipeline, which reads the tokens sources from disk. The sanitiser therefore sits in the
-  lazy chunk of `idg-brand-logo` alone (about 90 KB minified, 30 KB gzipped, loaded only where
-  that element is used), and `idg-brand-swatches` adds under 8 KB.
+  lazy chunk of `idg-brand-logo` alone (its entry bundles to 88.6 KB minified, 29.6 KB gzipped with esbuild, loaded only where that
+  element is used), and `idg-brand-swatches` adds under 8 KB. Together they take the `www/build`
+  directory from 433,865 to 534,311 bytes.
 - **The identity fixture.** `identity.html` wires every identity element to one real client on the
   identity package's fake API (`createFakeIdentityApi`), in the page. The build's second step,
   `scripts/build-sdk-fixtures.ts`, transpiles that package's source and its fake into

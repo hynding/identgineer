@@ -271,6 +271,11 @@ plain string cannot reach `logoDataUrl` or a kit by accident; `isSanitisedSvgLog
 any value at run time (it is a fixed point of the sanitiser), and `logoDataUrl` and `parseBrandKit`
 both do.
 
+A browser bundle that only draws logos imports `@identgineer/brand/logo`, which has `isSanitisedSvgLogo`,
+`logoDataUrl` and `logoImage(value)`. `logoImage` checks a logo once and gives `{ url, width, height }`:
+the data URL and the size the logo draws at, the root's `width` and `height` in pixels (not the view
+box). It is what `idg-brand-logo` uses, so a logo change costs one check.
+
 ### How it works
 
 Nothing from the input is passed through. A strict reader written for this package (no DOM, no
