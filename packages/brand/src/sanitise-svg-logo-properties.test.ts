@@ -645,6 +645,61 @@ describe("sanitiseSvgLogo, linear time", () => {
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1">${body}</svg>`;
   type Fill = (unit: string) => string;
 
+  // Linear growth has exponent 1 and quadratic 2; honest runs measured 0.9 to 1.3 on a quiet machine
+  // and up to 1.54 with four busy processes on four cores. The bound sits above that and clear of
+  // quadratic: 16x the input may take up to 16 ** 1.7 (about 111) times as long, where linear takes
+  // about 16 to 30 and quadratic 256.
+  const GROWTH_EXPONENT_BOUND = 1.7;
+  // A run shorter than this is mostly timer and scheduler noise, so it is counted as this long.
+  const FLOOR_MILLISECONDS = 5;
+
+  /**
+   * The exponent k in time ~ size ** k, by least squares on the logarithms of the fastest of
+   * three runs at each of three sizes. Runs are taken in turn across the sizes, so a pause for
+   * garbage collection or another process counts less, and a busy spell slows all sizes alike.
+   * Over a 16-fold span an honest 4 to 5.5 times per quadrupling (exponent about 1.2) stays far
+   * from a quadratic stage (2); one 4x pair left a bound of 8 between 5.5 and 16.
+   */
+  function growthExponent(
+    sizes: readonly [number, number, number],
+    run: (size: number) => number,
+    { runs = 3, floorMilliseconds = FLOOR_MILLISECONDS } = {},
+  ): number {
+    const fastest = sizes.map(() => Number.POSITIVE_INFINITY);
+    for (let round = 0; round < runs; round += 1) {
+      sizes.forEach((size, index) => {
+        fastest[index] = Math.min(fastest[index] ?? Number.POSITIVE_INFINITY, run(size));
+      });
+    }
+    const xs = sizes.map((size) => Math.log(size));
+    const ys = fastest.map((time) => Math.log(Math.max(time, floorMilliseconds)));
+    const meanX = xs.reduce((sum, x) => sum + x, 0) / xs.length;
+    const meanY = ys.reduce((sum, y) => sum + y, 0) / ys.length;
+    const covariance = xs.reduce(
+      (sum, x, index) => sum + (x - meanX) * ((ys[index] ?? meanY) - meanY),
+      0,
+    );
+    const variance = xs.reduce((sum, x) => sum + (x - meanX) ** 2, 0);
+    return covariance / variance;
+  }
+
+  it("measures a linear function as growing like its input and a quadratic one like its square", () => {
+    // The measure is checked against known functions, so a defect in it cannot pass every case below.
+    const spin = (count: number): number => {
+      const started = performance.now();
+      let sink = 0;
+      for (let step = 0; step < count; step += 1) sink += Math.sqrt(step);
+      if (sink < 0) throw new Error("unreachable: keeps the loop from being removed");
+      return performance.now() - started;
+    };
+    const sizes = [100, 400, 1600] as const;
+    const options = { runs: 3, floorMilliseconds: 0.2 };
+    const linear = growthExponent(sizes, (size) => spin(size * 20_000), options);
+    const quadratic = growthExponent(sizes, (size) => spin(size * size * 100), options);
+    expect(linear).toBeLessThan(GROWTH_EXPONENT_BOUND - 0.4);
+    expect(quadratic).toBeGreaterThan(GROWTH_EXPONENT_BOUND + 0.1);
+  }, 30_000);
+
   function timed(input: string): number {
     const started = performance.now();
     sanitiseSvgLogoWithLimits(input, undefined, limits);
