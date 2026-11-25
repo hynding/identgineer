@@ -25,6 +25,36 @@ test.describe("the index page's brand section", () => {
     page.removeAllListeners("console");
   });
 
+  test("shows the guide and the export of the brand, with the files as text and no violation", async ({
+    page,
+  }) => {
+    const violations: string[] = [];
+    await page.addInitScript(() => {
+      document.addEventListener("securitypolicyviolation", (event) => {
+        console.error(`violation ${event.violatedDirective} ${event.blockedURI}`);
+      });
+    });
+    page.on("console", (message) => {
+      if (message.text().startsWith("violation")) violations.push(message.text());
+    });
+    await page.goto("/index.html");
+    await expect(
+      page.locator("idg-brand-guidelines:not(.hydrated), idg-brand-export:not(.hydrated)"),
+    ).toHaveCount(0);
+    const guide = page.locator("#brand-demo-guidelines");
+    await expect(guide.locator("h2.name")).toHaveText("Harbour Lights");
+    await expect(guide.locator("section")).toHaveCount(7);
+    await expect(guide.locator("img")).toHaveCount(0);
+    await expect.poll(() => guide.locator("idg-brand-logo").count()).toBe(4);
+    const files = page.locator("#brand-demo-export");
+    await expect(files.locator('[role="region"]')).toHaveCount(3);
+    await expect(files.locator('[data-artefact="css"] code')).toContainText("--idg-color-accent");
+    await expect(files.locator('[data-action="copy-css"]')).toHaveCount(1);
+    await expect(files.locator('[data-action="download-tokens"]')).toHaveCount(1);
+    expect(violations).toEqual([]);
+    page.removeAllListeners("console");
+  });
+
   test("is served with the logo policy, and no other page is widened", async ({ page }) => {
     const policy = async (path: string) =>
       (await page.goto(path))?.headers()["content-security-policy"];
