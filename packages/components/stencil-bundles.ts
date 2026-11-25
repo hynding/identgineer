@@ -9,8 +9,11 @@
  * by what renders or is used together, and each brand component is apart: the sanitiser is in the
  * logo's, the guide's and the export's bundles, the generator and emitters in the export's alone.
  *
- * A component can be in one bundle only, so the leaves most families use are in `controls`, which a
- * composite of another group waits one round trip for unless the page has asked for it already.
+ * A component can be in one bundle only, so the leaves most families use (the skeleton and the
+ * switch too, which the profile renders) are in `controls`, which a composite of another group
+ * waits one round trip for unless the page has asked for it already. `controls` has no chunk of
+ * its own: it holds copies of the helpers it shares (`utils/controls-copies.ts`), since a chunk
+ * shared with another entry is fetched only after the first entry arrives.
  * `checks/core-bundle.test.ts` reads this list and the component sources: every component is in a
  * group, and what a component renders is in its own group or in `controls`.
  */
