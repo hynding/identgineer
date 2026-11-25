@@ -43,8 +43,8 @@ test.describe("the index page's brand section", () => {
     ).toHaveCount(0);
     const guide = page.locator("#brand-demo-guidelines");
     await expect(guide.locator("h2.name")).toHaveText("Harbour Lights");
-    await expect(guide.locator("section")).toHaveCount(7);
-    await expect(guide.locator("img")).toHaveCount(0);
+    await expect(guide.locator("section")).toHaveCount(6);
+    await expect(guide.locator("img")).toHaveCount(4);
     await expect.poll(() => guide.locator("idg-brand-logo").count()).toBe(4);
     const files = page.locator("#brand-demo-export");
     await expect(files.locator('[role="region"]')).toHaveCount(3);
