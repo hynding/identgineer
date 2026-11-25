@@ -257,8 +257,9 @@ base.describe("the checks themselves", () => {
 
 // The costliest logos the sanitiser still accepts, one for each kind of work a renderer does: long
 // edges, crowded on every row; arcs; hairline dashes, of two lengths and of 64; dashes along
-// circles, an ellipse, a rounded rectangle, an arc, a cubic, a diagonal and a horizontal line;
-// solid paint over and over; gradients at the stop limit, opaque and translucent; a fill under a
+// circles, an ellipse, a rounded rectangle, an arc, a cubic, a diagonal and a horizontal line, and
+// along paths of horizontal and vertical lines (an L, a staircase, a serpentine, a square spiral, a
+// line drawn back and forth, an open path round a square); solid paint over and over; gradients at the stop limit, opaque and translucent; a fill under a
 // very wide stroke; group opacity layers; masks inside masks; a clip path of crowded edges with the
 // even-odd rule; a view box far wider than tall; dashes, round dots and round joins on a stroke as
 // wide as the image; clip paths of near-coincident zigzags, which a renderer combining them took
@@ -395,6 +396,36 @@ function clipOf(shapes: string, wrapper = ""): string {
   return `<clipPath id="c">${shapes}</clipPath><g id="p" ${wrapper}><rect width="200000" height="200000" fill="#0f766e" fill-opacity="0.5" clip-path="url(#c)"/></g>`;
 }
 
+/** Path data of `steps` steps across the image, each a horizontal line and then a vertical one. */
+function staircase(steps: number): string {
+  let data = "M0 0";
+  for (let step = 1; step <= steps; step += 1) {
+    const at = String((step * 1000) / steps);
+    data += `H${at}V${at}`;
+  }
+  return data;
+}
+
+/** Path data of `rows` horizontal lines across the image, joined end to end by vertical ones. */
+function serpentine(rows: number): string {
+  let data = "M0 0";
+  for (let row = 0; row < rows; row += 1) {
+    data += `${row % 2 === 0 ? "H1000" : "H0"}V${String(((row + 1) * 1000) / rows)}`;
+  }
+  return data;
+}
+
+/** Path data of `sides` horizontal and vertical lines winding out from the centre, 12 apart. */
+function squareSpiral(sides: number): string {
+  let data = "M500 500";
+  for (let side = 0; side < sides; side += 1) {
+    const reach = (side + 1) * 12;
+    const command = ["H", "V", "H", "V"][side % 4] ?? "H";
+    data += `${command}${String(side % 4 < 2 ? 500 + reach : 500 - reach)}`;
+  }
+  return data;
+}
+
 const FULL = 'width="1000" height="1000"';
 const STOPS = SVG_LOGO_LIMITS.gradientStops;
 
@@ -422,8 +453,9 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
     ),
     "drawing-too-costly",
   ],
-  // Dashes along anything but one run of horizontal and vertical lines are worked out again for
-  // every tile of a large image the shape's box touches; along such a run, culled to the tile.
+  // Dashes along anything but one horizontal or vertical line or a rectangle are worked out again
+  // for every tile of a large image the shape's box touches, along a path of two such lines too;
+  // along one line or a rectangle, culled to the tile.
   ...(["butt", "round", "square"] as const).flatMap((cap) =>
     (["3", "5"] as const).map(
       (width) =>
@@ -447,6 +479,15 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
       ["a cubic", '<path id="p" d="M50 500C50 251 251 50 500 50"'],
       ["a diagonal line", '<path id="p" d="M0 0L1000 1000"'],
       ["a horizontal line", '<path id="p" d="M0 500H1000"'],
+      ["an L of a horizontal and a vertical line", '<path id="p" d="M0 0H1000V1000"'],
+      ["a staircase of four steps", `<path id="p" d="${staircase(4)}"`],
+      ["a serpentine of 20 rows", `<path id="p" d="${serpentine(20)}"`],
+      ["a square spiral of 40 sides", `<path id="p" d="${squareSpiral(40)}"`],
+      [
+        "a horizontal line drawn back and forth ten times",
+        `<path id="p" d="M0 500${"H1000H0".repeat(10)}"`,
+      ],
+      ["an open path round a square", '<path id="p" d="M50 50H950V950H50V50"'],
     ] as const
   ).map(
     ([shape, element]) =>
@@ -728,12 +769,15 @@ async function showImage(page: Page, logo: Logo, size: number): Promise<number> 
   await page.setContent(
     `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'"><style>body{margin:0}img{display:block}</style>`,
   );
-  await page.evaluate(async (dataUrl) => {
+  const loaded = await page.evaluate(async (dataUrl) => {
     const image = new Image();
     image.src = dataUrl;
     await image.decode();
     Object.assign(window, { pendingLogo: image });
+    return image.naturalWidth;
   }, logo.dataUrl ?? "");
+  // An image that failed to load would draw nothing, and so be timed as fast.
+  expect(loaded, `${logo.name} loads as an image`).toBeGreaterThan(0);
   await page.screenshot();
   const started = Date.now();
   await page.evaluate((size) => {
