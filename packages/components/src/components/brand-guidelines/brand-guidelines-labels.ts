@@ -8,6 +8,9 @@ export interface BrandGuidelinesLabels {
   readonly name: string;
   readonly light: string;
   readonly dark: string;
+  /** The scheme as it reads inside a sentence: `light` and `dark`, in the words of the language. */
+  readonly sentenceLight: string;
+  readonly sentenceDark: string;
 
   readonly logoHeading: string;
   readonly logo: string;
@@ -82,6 +85,8 @@ export const BRAND_GUIDELINES_LABELS: BrandGuidelinesLabels = {
   name: "Brand guidelines",
   light: "Light",
   dark: "Dark",
+  sentenceLight: "light",
+  sentenceDark: "dark",
 
   logoHeading: "Logo and mark",
   logo: "Logo",

@@ -111,7 +111,7 @@ describe("idg-brand-guidelines headings", () => {
 describe("idg-brand-guidelines name, tagline and logo", () => {
   it("shows the name and the tagline as text", async () => {
     const { root } = await render(<idg-brand-guidelines kit={ACME} theme={ACME_THEME} />);
-    expect(text(one(root, "h2"))).toBe("Acme");
+    expect(text(one(root, "h2"))).toBe("Acme Rockets");
     expect(text(one(root, '[part="tagline"]'))).toBe(ACME.tagline ?? "");
   });
 
@@ -209,9 +209,10 @@ describe("idg-brand-guidelines colours and gradient", () => {
 
   it("holds the swatches, named for the brand, and passes the theme on", async () => {
     const { root } = await render(<idg-brand-guidelines kit={ACME} theme={ACME_THEME} />);
-    const swatches = one(root, "idg-brand-swatches") as (HTMLElement & { theme?: unknown }) | null;
+    const swatches = one(root, "idg-brand-swatches") as
+      (HTMLElement & { theme?: unknown; label?: string }) | null;
     expect(swatches?.theme).toBe(ACME_THEME);
-    expect(swatches?.getAttribute("label")).toBe("Acme colours");
+    expect(swatches?.label).toBe("Acme Rockets colours");
   });
 
   it("passes the words of the swatches on", async () => {
@@ -420,10 +421,15 @@ describe("idg-brand-guidelines with data it cannot trust", () => {
 
   it("builds no style attribute as a string: only validated custom properties are set", async () => {
     const { root } = await render(<idg-brand-guidelines kit={HARBOUR} theme={HARBOUR_THEME} />);
-    for (const element of all(root, "[style]")) {
-      const style = (element as HTMLElement).style;
-      for (let index = 0; index < style.length; index += 1) {
-        expect(style.item(index)).toMatch(/^--_[a-z-]+$/);
+    const styled = all(root, "[style]");
+    expect(styled.length).toBeGreaterThan(10);
+    for (const element of styled) {
+      // Each declaration is one of the component's own custom properties, with a validated value.
+      const declarations = (element.getAttribute("style") ?? "")
+        .split(";")
+        .filter((part) => part.trim() !== "");
+      for (const declaration of declarations) {
+        expect(declaration.trim()).toMatch(/^--_[a-z-]+:\s*[-#%(),.\w "]+$/);
       }
     }
     expect(shadow(root).innerHTML).not.toMatch(/example\.com/);

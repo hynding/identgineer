@@ -11,9 +11,9 @@ import { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 import { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
 import { BrandGuidelinesKit, BrandGuidelinesTheme } from "./components/brand-guidelines/brand-guidelines-types";
 import { BrandGuidelinesLabels } from "./components/brand-guidelines/brand-guidelines-labels";
+import { BrandSwatchesLabels } from "./components/brand-swatches/brand-swatches-labels";
 import { BrandLogoSize, BrandLogoVariant } from "./components/brand-logo/brand-logo-options";
 import { BrandSwatchesTheme } from "./components/brand-swatches/brand-swatches-types";
-import { BrandSwatchesLabels } from "./components/brand-swatches/brand-swatches-labels";
 import { BreadcrumbSeparator } from "./components/breadcrumb/breadcrumb-options";
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 import { CardPadding, CardVariant } from "./components/card/card-options";
@@ -71,9 +71,9 @@ export { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 export { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
 export { BrandGuidelinesKit, BrandGuidelinesTheme } from "./components/brand-guidelines/brand-guidelines-types";
 export { BrandGuidelinesLabels } from "./components/brand-guidelines/brand-guidelines-labels";
+export { BrandSwatchesLabels } from "./components/brand-swatches/brand-swatches-labels";
 export { BrandLogoSize, BrandLogoVariant } from "./components/brand-logo/brand-logo-options";
 export { BrandSwatchesTheme } from "./components/brand-swatches/brand-swatches-types";
-export { BrandSwatchesLabels } from "./components/brand-swatches/brand-swatches-labels";
 export { BreadcrumbSeparator } from "./components/breadcrumb/breadcrumb-options";
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 export { CardPadding, CardVariant } from "./components/card/card-options";
@@ -300,7 +300,15 @@ export namespace Components {
         "variant": BadgeVariant;
     }
     /**
-     * A brand guide for one kit.
+     * A brand guide for one kit: its name and tagline, its logo and mark on a light and a dark backing,
+     * its colours (through `idg-brand-swatches`) and gradient, a specimen of its fonts, its corner
+     * radii, its tone, and what the theme generator moved or flagged, each as a headed section.
+     * It takes the data `parseBrandKit` and `generateBrandTheme` return and re-derives nothing. All of
+     * it is untrusted and none of it is trusted: every string is drawn as text, a colour is drawn only
+     * when it is exactly `#rrggbb`, a number only when it is finite and in range, and each value
+     * reaches the page as a custom property set through the style API, never as a style string or
+     * markup. A part that is missing or malformed is left out. No font is ever loaded: the specimen
+     * uses what the page has, and names the families as text.
      */
     interface IdgBrandGuidelines {
         /**
@@ -323,9 +331,9 @@ export namespace Components {
         /**
           * The words of the colour swatches the guide holds.
          */
-        "swatchLabels"?: Record<string, string>;
+        "swatchLabels"?: Partial<BrandSwatchesLabels>;
         /**
-          * The theme `generateBrandTheme` returned, or its `document`.
+          * The theme `generateBrandTheme` returned, or its `document`, which has no corner radii, adjustments or notes. Set it as a property.
          */
         "theme"?: BrandGuidelinesTheme;
     }
@@ -2413,7 +2421,15 @@ declare global {
         new (): HTMLIdgBadgeElement;
     };
     /**
-     * A brand guide for one kit.
+     * A brand guide for one kit: its name and tagline, its logo and mark on a light and a dark backing,
+     * its colours (through `idg-brand-swatches`) and gradient, a specimen of its fonts, its corner
+     * radii, its tone, and what the theme generator moved or flagged, each as a headed section.
+     * It takes the data `parseBrandKit` and `generateBrandTheme` return and re-derives nothing. All of
+     * it is untrusted and none of it is trusted: every string is drawn as text, a colour is drawn only
+     * when it is exactly `#rrggbb`, a number only when it is finite and in range, and each value
+     * reaches the page as a custom property set through the style API, never as a style string or
+     * markup. A part that is missing or malformed is left out. No font is ever loaded: the specimen
+     * uses what the page has, and names the families as text.
      */
     interface HTMLIdgBrandGuidelinesElement extends Components.IdgBrandGuidelines, HTMLStencilElement {
     }
@@ -3618,7 +3634,15 @@ declare namespace LocalJSX {
         "variant"?: BadgeVariant;
     }
     /**
-     * A brand guide for one kit.
+     * A brand guide for one kit: its name and tagline, its logo and mark on a light and a dark backing,
+     * its colours (through `idg-brand-swatches`) and gradient, a specimen of its fonts, its corner
+     * radii, its tone, and what the theme generator moved or flagged, each as a headed section.
+     * It takes the data `parseBrandKit` and `generateBrandTheme` return and re-derives nothing. All of
+     * it is untrusted and none of it is trusted: every string is drawn as text, a colour is drawn only
+     * when it is exactly `#rrggbb`, a number only when it is finite and in range, and each value
+     * reaches the page as a custom property set through the style API, never as a style string or
+     * markup. A part that is missing or malformed is left out. No font is ever loaded: the specimen
+     * uses what the page has, and names the families as text.
      */
     interface IdgBrandGuidelines {
         /**
@@ -3641,9 +3665,9 @@ declare namespace LocalJSX {
         /**
           * The words of the colour swatches the guide holds.
          */
-        "swatchLabels"?: Record<string, string>;
+        "swatchLabels"?: Partial<BrandSwatchesLabels>;
         /**
-          * The theme `generateBrandTheme` returned, or its `document`.
+          * The theme `generateBrandTheme` returned, or its `document`, which has no corner radii, adjustments or notes. Set it as a property.
          */
         "theme"?: BrandGuidelinesTheme;
     }
@@ -6121,7 +6145,15 @@ declare module "@stencil/core" {
              */
             "idg-badge": LocalJSX.IntrinsicElements["idg-badge"] & JSXBase.HTMLAttributes<HTMLIdgBadgeElement>;
             /**
-             * A brand guide for one kit.
+             * A brand guide for one kit: its name and tagline, its logo and mark on a light and a dark backing,
+             * its colours (through `idg-brand-swatches`) and gradient, a specimen of its fonts, its corner
+             * radii, its tone, and what the theme generator moved or flagged, each as a headed section.
+             * It takes the data `parseBrandKit` and `generateBrandTheme` return and re-derives nothing. All of
+             * it is untrusted and none of it is trusted: every string is drawn as text, a colour is drawn only
+             * when it is exactly `#rrggbb`, a number only when it is finite and in range, and each value
+             * reaches the page as a custom property set through the style API, never as a style string or
+             * markup. A part that is missing or malformed is left out. No font is ever loaded: the specimen
+             * uses what the page has, and names the families as text.
              */
             "idg-brand-guidelines": LocalJSX.IntrinsicElements["idg-brand-guidelines"] & JSXBase.HTMLAttributes<HTMLIdgBrandGuidelinesElement>;
             /**
