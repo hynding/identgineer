@@ -1729,14 +1729,18 @@ No slots.
   working the theme out again. While the draft is invalid the last valid version stays, and says
   so. The guide is inside the element's shadow root, so the brand's colours style nothing outside
   it.
-- **Narrow forms.** The form is a container: below 20em (at 320px, or with large text) its groups
-  and hex boxes pad less, and each hex field keeps at least 8ch for a whole `#rrggbb`, wrapping
-  below its picker inside the box, with the invalid mark inside it too. The file chooser's button
-  sits on a line of its own above the file name and spans its row with no inline padding of its
-  own, its label centred, while the groups pad half as much again; so no upload clips its label
-  and the label's widest word fits the button. Browser tests check this in every layout at 320px
-  and at 200% text, reading each padding and the button's width as computed, and check the widest
-  word in all 64 pairings of design and UX mode at 320px and 200% text, under both fonts tested.
+- **Narrow forms.** The form is a container, measured in its own text, in two tiers. The file
+  chooser's button always sits on a line of its own above the file name, wrapping its label
+  between words. Below 20em (beside the preview, or in a 320px window) the hex boxes pad less and
+  each hex field keeps at least 8ch for a whole `#rrggbb`, wrapping below its picker inside the
+  box, with the invalid mark inside it too; groups and the file chooser keep their regular padding.
+  Below 10.5em (large text in a narrow window, as at 320px with 150% text or more) the groups give
+  up their inline padding and the file chooser's button spans its row with no inline padding of
+  its own, its label centred, so the label's widest word fits. Browser tests check every layout at
+  320px from 100% to 200% text, reading each padding and the button's width as computed in each
+  tier; that groups and buttons keep their regular padding beside the preview at 1280px and at
+  320px with 100% text; and that the widest word fits with at least 4px to spare in all 64
+  pairings of design and UX mode at 320px and each of 100, 125, 150, 175 and 200% text.
 - **Control names** are the fields' names prefixed with `brand-` (`brand-name`, `brand-id`, …): a
   control named `id` or `name` would shadow the form's own properties.
 - **Content-Security-Policy:** the logos are data URL images, so as for `idg-brand-logo` the page
