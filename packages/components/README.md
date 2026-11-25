@@ -1864,7 +1864,7 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   | Group                  | Components                                                                                                                                                   | `www/build` | `dist/esm` |
   | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------: | ---------: |
   | controls               | icon, button, link, badge, progress, alert, avatar, avatar-group, skeleton, switch                                                                           |      57,977 |    117,342 |
-  | forms and identity     | field, input, textarea, checkbox, radio, radio-group, select, sign-in, register, password-reset, profile, session-guard, property-picker, variation-switcher |     153,893 |    309,763 |
+  | forms and identity     | field, input, textarea, checkbox, radio, radio-group, select, sign-in, register, password-reset, profile, session-guard, property-picker, variation-switcher |     153,913 |    309,785 |
   | dashboard              | event-table, table, pagination, stat, sparkline                                                                                                              |      67,796 |    168,578 |
   | consent and overlays   | consent-banner, consent-preferences, dialog, popover, tooltip, toast, toast-region                                                                           |      87,918 |    188,483 |
   | menus                  | menu, menu-group, menu-item, menu-separator, user-menu                                                                                                       |      49,796 |    126,820 |
@@ -1875,13 +1875,13 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   | `idg-brand-swatches`   | the swatches                                                                                                                                                 |      29,826 |     84,500 |
   | `idg-brand-guidelines` | the guide, with the sanitiser                                                                                                                                |     141,319 |    375,430 |
   | `idg-brand-export`     | the export, with the sanitiser, the generator and the emitters                                                                                               |     219,466 |    500,751 |
-  | `idg-brand-editor`     | the editor, with the sanitiser and the generator, and the guide it previews in                                                                               |     243,724 |    542,610 |
+  | `idg-brand-editor`     | the editor, with the sanitiser and the generator, and the guide it previews in                                                                               |     245,730 |    547,769 |
 
-  The loader `identgineer.esm.js` is 12,925 bytes more on every page. The sanitiser (about 90 KB
+  The loader `identgineer.esm.js` is 12,922 bytes more on every page. The sanitiser (about 90 KB
   minified) is in the logo's, the guide's, the export's and the editor's bundles (the export
   validates a kit with it), the generator in the export's and the editor's, and the emitters in the
   export's alone. The editor's row counts its own entry and chunks; a page with it also loads the
-  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 695,620
+  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 697,640
   bytes (663,801 before the editor), against 433,865 before the brand components and 536,437 on
   main.
 
