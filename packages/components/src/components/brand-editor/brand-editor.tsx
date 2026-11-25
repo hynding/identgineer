@@ -29,6 +29,7 @@ import { BRAND_EDITOR_LABELS, type BrandEditorLabels } from "./brand-editor-labe
 import {
   isBrandEditorStore,
   readSaved,
+  readUnreadDocumentId,
   readStoreFailure,
   type BrandEditorStore,
   type StoreFailure,
@@ -193,6 +194,11 @@ export class IdgBrandEditor {
   };
 
   private storedId?: string;
+  /**
+   * A kit this editor created that no `idgSave` has reported yet: a create that was not applied
+   * whole, or not read back, stored it, and the first save that succeeds says it was created.
+   */
+  private createdUnreported?: string;
   private keys = 0;
   private focusInvalid = false;
   private readonly attempts = new Attempts();
@@ -224,6 +230,7 @@ export class IdgBrandEditor {
     this.picked = {};
     this.refusedFromKit = refusedLogos;
     this.storedId = this.validDocumentId();
+    this.createdUnreported = undefined;
     this.errors = {};
     this.summary = undefined;
     this.savedKey = 0;
@@ -414,30 +421,33 @@ export class IdgBrandEditor {
       if (!this.attempts.isCurrent(attempt)) return;
       const saved = readSaved(answer);
       if (saved === undefined) {
+        if (documentId === undefined) this.adoptCreated(readUnreadDocumentId(answer));
         this.summary = { text: labels.saveUnreadableAnswer, key: (this.keys += 1) };
         return;
       }
+      const created = documentId === undefined || this.createdUnreported === saved.documentId;
+      this.createdUnreported = undefined;
       this.storedId = saved.documentId;
       this.removals = {};
       this.savedKey = this.keys += 1;
-      this.idgSave.emit({
-        documentId: saved.documentId,
-        id: saved.id,
-        created: documentId === undefined,
-      });
+      this.idgSave.emit({ documentId: saved.documentId, id: saved.id, created });
     } catch (error) {
       if (!this.attempts.isCurrent(attempt)) return;
-      this.fail(readStoreFailure(error), labels);
+      this.fail(readStoreFailure(error), documentId === undefined, labels);
     } finally {
       if (this.attempts.isCurrent(attempt)) this.pending = false;
     }
   }
 
-  private fail(failure: StoreFailure, labels: BrandEditorLabels): void {
-    // A create the CMS did not apply still stored a kit: the next save changes that one.
-    if (failure.code === "not-applied" && failure.documentId !== undefined) {
-      this.storedId ??= failure.documentId;
-    }
+  /** A create that stored a kit it could not report: the next save changes that one. */
+  private adoptCreated(documentId: string | undefined): void {
+    if (documentId === undefined || this.storedId !== undefined) return;
+    this.storedId = documentId;
+    this.createdUnreported = documentId;
+  }
+
+  private fail(failure: StoreFailure, creating: boolean, labels: BrandEditorLabels): void {
+    if (creating && failure.code === "not-applied") this.adoptCreated(failure.documentId);
     const onField =
       failure.code === "validation"
         ? labels.fieldRefused

@@ -1691,6 +1691,11 @@ editor.addEventListener("idgSave", (event) => {
   `saveUnexpectedStatus`, and `saveUnknown` for anything else); `validation` and `not-applied` mark
   the fields the server named (its field names mapped to the form's) with fixed words. Nothing the
   server said is shown.
+- **Which kit a save changes, and `created`.** A create that stored a kit but did not report it
+  whole (a `not-applied` error with a `documentId`, or an `{ ok: false, documentId }` answer that
+  could not be read back) still stored that kit: the next save updates it rather than creating
+  another. `created` is `true` on the first `idgSave` for a kit this editor created, whether the
+  create itself or a later update is the first save to succeed, and `false` on every other.
 - **Validation is `parseBrandKit`'s.** Each of its codes is one fixed message on the field it names,
   through `idg-field` with `aria-invalid`. On a save with fields to change, a summary alert is shown
   and focus goes to the first of them. Nothing is checked twice in another way.

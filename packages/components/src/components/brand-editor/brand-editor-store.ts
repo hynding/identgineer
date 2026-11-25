@@ -52,6 +52,15 @@ export function readSaved(result: unknown): SavedKit | undefined {
   return documentId === undefined || typeof id !== "string" ? undefined : { documentId, id };
 }
 
+/**
+ * The document a write stored but could not read back (`{ ok: false, documentId }`), so that the
+ * next save updates it rather than creating another; nothing for any other answer.
+ */
+export function readUnreadDocumentId(result: unknown): string | undefined {
+  if (ownValue(result, "ok") !== false) return undefined;
+  return documentIdOf(ownValue(result, "documentId"));
+}
+
 const STORE_CODES: readonly BrandKitStoreErrorCode[] = [
   "unauthorized",
   "forbidden",
