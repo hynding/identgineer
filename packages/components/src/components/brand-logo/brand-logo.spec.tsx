@@ -88,7 +88,8 @@ describe("idg-brand-logo with a sanitised logo", () => {
     const { root } = await render(<idg-brand-logo logo={LOGO} name="Harbour Lights" />);
     for (const element of shadow(root).querySelectorAll("*")) {
       expect(element.hasAttribute("style")).toBe(false);
-      expect(element.getAttributeNames().filter((name) => name.startsWith("on"))).toEqual([]);
+      const names = Array.from(element.attributes, (attribute) => attribute.name);
+      expect(names.filter((name) => name.startsWith("on"))).toEqual([]);
     }
   });
 
@@ -112,7 +113,7 @@ describe("idg-brand-logo with a sanitised logo", () => {
     const { root } = await render(<idg-brand-logo logo={LOGO} name={hostile} />);
     const alt = image(root)?.getAttribute("alt") ?? "";
     expect(alt).not.toContain("‮");
-    expect([...alt]).toHaveLength(60);
+    expect(Array.from(alt)).toHaveLength(60);
   });
 
   it("draws the mark in the same way", async () => {
@@ -155,6 +156,28 @@ describe("idg-brand-logo with a sanitised logo", () => {
   });
 });
 
+describe("idg-brand-logo when the image cannot load", () => {
+  it("shows the name instead, as a browser that refuses a data url would leave it", async () => {
+    const { root, waitForChanges } = await render(
+      <idg-brand-logo logo={LOGO} name="Harbour Lights" />,
+    );
+    image(root)?.dispatchEvent(new Event("error"));
+    await waitForChanges();
+    expect(image(root)).toBeNull();
+    expect(part(root, "wordmark")?.textContent).toBe("Harbour Lights");
+  });
+
+  it("tries a new logo after a failure", async () => {
+    const { root, waitForChanges, setProps } = await render(
+      <idg-brand-logo logo={LOGO} name="Harbour Lights" />,
+    );
+    image(root)?.dispatchEvent(new Event("error"));
+    await waitForChanges();
+    await setProps({ logo: MARK });
+    expect(image(root)?.getAttribute("src")).toBe(logoDataUrl(MARK));
+  });
+});
+
 describe("idg-brand-logo without a usable logo", () => {
   it.each(NOT_SANITISED)(
     "never draws %s, and shows the name as a wordmark instead",
@@ -192,6 +215,11 @@ describe("idg-brand-logo without a usable logo", () => {
     expect(letters?.textContent).toBe("HL");
     expect(letters?.getAttribute("aria-hidden")).toBe("true");
     expect(part(root, "wordmark")).toBeNull();
+  });
+
+  it("shows the first character of a name with no letters in it as the monogram", async () => {
+    const { root } = await render(<idg-brand-logo name={"\u202E"} variant="mark" />);
+    expect(part(root, "monogram")?.querySelector(".letters")?.textContent).toBe("\uFFFD");
   });
 
   it("hides the monogram from assistive technology when it is decoration", async () => {
@@ -240,7 +268,7 @@ describe("idg-brand-logo without a usable logo", () => {
     const { root } = await render(<idg-brand-logo name={`Acme‮evil ${"y".repeat(100)}`} />);
     const text = part(root, "wordmark")?.textContent ?? "";
     expect(text).not.toContain("‮");
-    expect([...text]).toHaveLength(60);
+    expect(Array.from(text)).toHaveLength(60);
     expect(text.endsWith("…")).toBe(true);
   });
 });

@@ -1,0 +1,92 @@
+:host {
+  display: inline-flex;
+  box-sizing: border-box;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-display);
+  vertical-align: middle;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.size-xs {
+  --_size: 1.25rem;
+  --_text: var(--idg-font-size-step-neg1);
+}
+
+.size-sm {
+  --_size: 1.75rem;
+  --_text: var(--idg-font-size-step-0);
+}
+
+.size-md {
+  --_size: 2.5rem;
+  --_text: var(--idg-font-size-step-2);
+}
+
+.size-lg {
+  --_size: 3.5rem;
+  --_text: var(--idg-font-size-step-3);
+}
+
+.size-xl {
+  --_size: 5rem;
+  --_text: var(--idg-font-size-step-5);
+}
+
+/* The image keeps the logo's proportions at a fixed height. Its width and height attributes give it
+   the frame's ratio before anything is decoded, so nothing moves when it loads. A container too
+   narrow for it shrinks the box and the logo is drawn whole inside it, never stretched or cropped. */
+.image {
+  display: block;
+  box-sizing: border-box;
+  inline-size: auto;
+  block-size: var(--_size);
+  max-inline-size: 100%;
+  object-fit: contain;
+}
+
+.wordmark {
+  min-inline-size: 0;
+  font-size: calc(var(--_text) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+  overflow-wrap: anywhere;
+}
+
+/* The accent fill carries the letters, so only its text has to read. */
+.monogram {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: var(--_size);
+  block-size: var(--_size);
+  overflow: hidden;
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--idg-color-accent);
+  color: var(--idg-color-on-accent);
+  font-size: calc(var(--_size) * 0.4);
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: 0;
+  line-height: 1;
+  user-select: none;
+}
+
+.letters {
+  text-transform: uppercase;
+}
+
+@media (forced-colors: active) {
+  .monogram {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}

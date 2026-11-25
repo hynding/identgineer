@@ -9,6 +9,7 @@ import { AccordionToggleDetail } from "./components/accordion/accordion-options"
 import { AlertVariant } from "./components/alert/alert-options";
 import { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 import { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
+import { BrandLogoSize, BrandLogoVariant } from "./components/brand-logo/brand-logo-options";
 import { BreadcrumbSeparator } from "./components/breadcrumb/breadcrumb-options";
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 import { CardPadding, CardVariant } from "./components/card/card-options";
@@ -64,6 +65,7 @@ export { AccordionToggleDetail } from "./components/accordion/accordion-options"
 export { AlertVariant } from "./components/alert/alert-options";
 export { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 export { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
+export { BrandLogoSize, BrandLogoVariant } from "./components/brand-logo/brand-logo-options";
 export { BreadcrumbSeparator } from "./components/breadcrumb/breadcrumb-options";
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 export { CardPadding, CardVariant } from "./components/card/card-options";
@@ -288,6 +290,42 @@ export namespace Components {
           * @default "neutral"
          */
         "variant": BadgeVariant;
+    }
+    /**
+     * A brand's logo or mark, or the brand's name where there is none to show.
+     * The logo is drawn only through an `<img>` whose source is a data URL, and only when the text is
+     * exactly what the brand package's logo sanitiser returns (it is read again and must come back
+     * unchanged). The SVG is never part of the page. Anything else, a script, a handler, an external
+     * reference, an editor's file, is not drawn at all: the component shows the name as a wordmark, or
+     * for the mark its first letters as a monogram, and with no name shows nothing.
+     * The page's Content-Security-Policy must allow `img-src data:` for the logo to load (the strict
+     * policy the components are tested under, `default-src 'self'`, does not); without it the browser
+     * refuses the image and reports a violation, and the name is not shown in its place.
+     */
+    interface IdgBrandLogo {
+        /**
+          * Marks the logo as decoration, with an empty alternative text, for one that sits beside the brand's name written out as text.
+          * @default false
+         */
+        "decorative": boolean;
+        /**
+          * The logo's SVG text exactly as `sanitiseSvgLogo` returned it, the kit's `logo` or `mark`. Text that is not that output is never drawn.
+         */
+        "logo"?: string;
+        /**
+          * The brand's name: the image's alternative text, and what is shown when there is no logo.
+         */
+        "name"?: string;
+        /**
+          * The height of the logo, the mark's edge, and the size of the text that stands in for them.
+          * @default "md"
+         */
+        "size": BrandLogoSize;
+        /**
+          * `logo` shows a wide logo or a wordmark, `mark` a compact symbol or a monogram.
+          * @default "logo"
+         */
+        "variant": BrandLogoVariant;
     }
     /**
      * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
@@ -2314,6 +2352,23 @@ declare global {
         new (): HTMLIdgBadgeElement;
     };
     /**
+     * A brand's logo or mark, or the brand's name where there is none to show.
+     * The logo is drawn only through an `<img>` whose source is a data URL, and only when the text is
+     * exactly what the brand package's logo sanitiser returns (it is read again and must come back
+     * unchanged). The SVG is never part of the page. Anything else, a script, a handler, an external
+     * reference, an editor's file, is not drawn at all: the component shows the name as a wordmark, or
+     * for the mark its first letters as a monogram, and with no name shows nothing.
+     * The page's Content-Security-Policy must allow `img-src data:` for the logo to load (the strict
+     * policy the components are tested under, `default-src 'self'`, does not); without it the browser
+     * refuses the image and reports a violation, and the name is not shown in its place.
+     */
+    interface HTMLIdgBrandLogoElement extends Components.IdgBrandLogo, HTMLStencilElement {
+    }
+    var HTMLIdgBrandLogoElement: {
+        prototype: HTMLIdgBrandLogoElement;
+        new (): HTMLIdgBrandLogoElement;
+    };
+    /**
      * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
      * idg-breadcrumb-item. The last item is the current page unless another item says it is.
      */
@@ -3243,6 +3298,7 @@ declare global {
         "idg-avatar": HTMLIdgAvatarElement;
         "idg-avatar-group": HTMLIdgAvatarGroupElement;
         "idg-badge": HTMLIdgBadgeElement;
+        "idg-brand-logo": HTMLIdgBrandLogoElement;
         "idg-breadcrumb": HTMLIdgBreadcrumbElement;
         "idg-breadcrumb-item": HTMLIdgBreadcrumbItemElement;
         "idg-button": HTMLIdgButtonElement;
@@ -3473,6 +3529,42 @@ declare namespace LocalJSX {
           * @default "neutral"
          */
         "variant"?: BadgeVariant;
+    }
+    /**
+     * A brand's logo or mark, or the brand's name where there is none to show.
+     * The logo is drawn only through an `<img>` whose source is a data URL, and only when the text is
+     * exactly what the brand package's logo sanitiser returns (it is read again and must come back
+     * unchanged). The SVG is never part of the page. Anything else, a script, a handler, an external
+     * reference, an editor's file, is not drawn at all: the component shows the name as a wordmark, or
+     * for the mark its first letters as a monogram, and with no name shows nothing.
+     * The page's Content-Security-Policy must allow `img-src data:` for the logo to load (the strict
+     * policy the components are tested under, `default-src 'self'`, does not); without it the browser
+     * refuses the image and reports a violation, and the name is not shown in its place.
+     */
+    interface IdgBrandLogo {
+        /**
+          * Marks the logo as decoration, with an empty alternative text, for one that sits beside the brand's name written out as text.
+          * @default false
+         */
+        "decorative"?: boolean;
+        /**
+          * The logo's SVG text exactly as `sanitiseSvgLogo` returned it, the kit's `logo` or `mark`. Text that is not that output is never drawn.
+         */
+        "logo"?: string;
+        /**
+          * The brand's name: the image's alternative text, and what is shown when there is no logo.
+         */
+        "name"?: string;
+        /**
+          * The height of the logo, the mark's edge, and the size of the text that stands in for them.
+          * @default "md"
+         */
+        "size"?: BrandLogoSize;
+        /**
+          * `logo` shows a wide logo or a wordmark, `mark` a compact symbol or a monogram.
+          * @default "logo"
+         */
+        "variant"?: BrandLogoVariant;
     }
     /**
      * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
@@ -5406,6 +5498,13 @@ declare namespace LocalJSX {
         "size": BadgeSize;
         "dot": boolean;
     }
+    interface IdgBrandLogoAttributes {
+        "logo": string;
+        "name": string;
+        "variant": BrandLogoVariant;
+        "size": BrandLogoSize;
+        "decorative": boolean;
+    }
     interface IdgBreadcrumbAttributes {
         "label": string;
         "separator": BreadcrumbSeparator;
@@ -5783,6 +5882,7 @@ declare namespace LocalJSX {
         "idg-avatar": Omit<IdgAvatar, keyof IdgAvatarAttributes> & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes]?: IdgAvatar[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `attr:${K}`]?: IdgAvatarAttributes[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `prop:${K}`]?: IdgAvatar[K] };
         "idg-avatar-group": Omit<IdgAvatarGroup, keyof IdgAvatarGroupAttributes> & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes]?: IdgAvatarGroup[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `attr:${K}`]?: IdgAvatarGroupAttributes[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `prop:${K}`]?: IdgAvatarGroup[K] };
         "idg-badge": Omit<IdgBadge, keyof IdgBadgeAttributes> & { [K in keyof IdgBadge & keyof IdgBadgeAttributes]?: IdgBadge[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `attr:${K}`]?: IdgBadgeAttributes[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `prop:${K}`]?: IdgBadge[K] };
+        "idg-brand-logo": Omit<IdgBrandLogo, keyof IdgBrandLogoAttributes> & { [K in keyof IdgBrandLogo & keyof IdgBrandLogoAttributes]?: IdgBrandLogo[K] } & { [K in keyof IdgBrandLogo & keyof IdgBrandLogoAttributes as `attr:${K}`]?: IdgBrandLogoAttributes[K] } & { [K in keyof IdgBrandLogo & keyof IdgBrandLogoAttributes as `prop:${K}`]?: IdgBrandLogo[K] };
         "idg-breadcrumb": Omit<IdgBreadcrumb, keyof IdgBreadcrumbAttributes> & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes]?: IdgBreadcrumb[K] } & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes as `attr:${K}`]?: IdgBreadcrumbAttributes[K] } & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes as `prop:${K}`]?: IdgBreadcrumb[K] };
         "idg-breadcrumb-item": Omit<IdgBreadcrumbItem, keyof IdgBreadcrumbItemAttributes> & { [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes]?: IdgBreadcrumbItem[K] } & { [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes as `attr:${K}`]?: IdgBreadcrumbItemAttributes[K] } & { [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes as `prop:${K}`]?: IdgBreadcrumbItem[K] };
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
@@ -5871,6 +5971,18 @@ declare module "@stencil/core" {
              * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
              */
             "idg-badge": LocalJSX.IntrinsicElements["idg-badge"] & JSXBase.HTMLAttributes<HTMLIdgBadgeElement>;
+            /**
+             * A brand's logo or mark, or the brand's name where there is none to show.
+             * The logo is drawn only through an `<img>` whose source is a data URL, and only when the text is
+             * exactly what the brand package's logo sanitiser returns (it is read again and must come back
+             * unchanged). The SVG is never part of the page. Anything else, a script, a handler, an external
+             * reference, an editor's file, is not drawn at all: the component shows the name as a wordmark, or
+             * for the mark its first letters as a monogram, and with no name shows nothing.
+             * The page's Content-Security-Policy must allow `img-src data:` for the logo to load (the strict
+             * policy the components are tested under, `default-src 'self'`, does not); without it the browser
+             * refuses the image and reports a violation, and the name is not shown in its place.
+             */
+            "idg-brand-logo": LocalJSX.IntrinsicElements["idg-brand-logo"] & JSXBase.HTMLAttributes<HTMLIdgBrandLogoElement>;
             /**
              * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
              * idg-breadcrumb-item. The last item is the current page unless another item says it is.

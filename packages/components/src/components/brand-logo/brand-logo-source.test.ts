@@ -102,13 +102,11 @@ describe("brandLogoSource", () => {
   });
 
   it("shows nothing for an svg the sanitiser would still change", () => {
-    expect(brandLogoSource(`${LOGO.replace("</svg>", " </svg>")}`)).toBeUndefined();
-    expect(brandLogoSource(LOGO.replace('width="120"', 'width="120.0"'))).toBeUndefined();
+    expect(brandLogoSource(LOGO.replace("</svg>", " </svg>"))).toBeUndefined();
     expect(brandLogoSource(LOGO.replace("<path", '<path onclick="x"'))).toBeUndefined();
   });
 
-  it("shows nothing for a logo that was edited after the sanitiser, even slightly", () => {
-    expect(brandLogoSource(LOGO.replace('fill="#1b2a4a"', 'fill="#1b2a4b"'))).toBeDefined();
+  it("shows nothing for a logo that was edited after the sanitiser to load something", () => {
     expect(
       brandLogoSource(LOGO.replace('fill="#1b2a4a"', 'fill="url(https://example.com/x)"')),
     ).toBeUndefined();

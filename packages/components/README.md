@@ -44,6 +44,7 @@ to be classified:
 | `idg-button`     | primary edge where the accent does not stand out | `accent-edge`                             | fill       |
 | `idg-card`       | accent variant and everything on it              | `accent`, `on-accent`                     | fill       |
 | `idg-avatar`     | first colour pair of the initials                | `accent`, `on-accent`                     | fill       |
+| `idg-brand-logo` | monogram standing in for a brand's mark          | `accent`, `on-accent`                     | fill       |
 | `idg-layout`     | skip link                                        | `accent`, `on-accent`                     | fill       |
 | `idg-layout`     | hero glow                                        | `accent`                                  | decoration |
 | demo page        | background glow                                  | `accent`                                  | decoration |
