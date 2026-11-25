@@ -841,12 +841,16 @@ the `use` that draws it):
   stroke's outline twice over. Edges that cross every row crowd it, and a crowded row costs more
   than in proportion: a path whose edges cross the image `edgesPerRow` times costs twice as much
   per edge, and more beyond.
-- **A stroke's curves.** A large image is rasterised in tiles, and Chromium strokes a curve again
-  for every tile its box touches. So the curves of a stroke (quadratics, cubics and arcs, a circle's
-  or an ellipse's outline, a rounded rectangle's corners, taken as one ellipse of the larger
-  radius) are charged again as edges of their own, both sides of them `curvedStroke` less one
-  times over, by their length as drawn and no more than the image can show of them, apart from the
-  crowding of the stroke's caps.
+- **A stroke's curves.** A large image is rasterised in tiles, and Chromium strokes a curve again,
+  whole, for every tile its box touches, however little of it the image shows. So the curves of a
+  stroke (quadratics, cubics and arcs, a circle's or an ellipse's outline, a rounded rectangle's
+  corners, taken as one ellipse of the larger radius) are charged again, both sides of them
+  `curvedStroke` less one times over, as edge length in proportion to their whole length as drawn
+  (through every transform, with no cap at what the image shows and no crowding of rows). A
+  Bézier curve's length is bounded by the control polygons of its eighths, a small arc's (one
+  drawn with the small-arc flag, which turns at most half way round its ellipse) by pi over two
+  times its chord times the ratio of its radii, so a nearly flat arc of a huge radius, as editors
+  write one, costs about its chord; a large arc counts as its whole ellipse.
 - **Stroke ends.** Every join and every cap is outline the rasteriser walks, and on a wide stroke
   it is long: a round join or cap is half a circle of the stroke's width, a square cap twice the
   width, a miter join up to the miter limit times it. Each segment is charged a join and each
@@ -890,15 +894,29 @@ edge for its length, 2,739 uses of a full-size circle stroked 2 wide, undashed, 
 limit and 97% of the overdraw, took 4.8 to 6.4 seconds as an `<img>` 2000 CSS pixels square at
 twice the density (0.5 wide 4.4 to 5.3, a full-size ellipse 3.4 to 4.1, and 143 uses of a path of
 20 full-size semicircles, at the overdraw limit, 2.0 to 4.5), on two four-core machines, where a
-canvas draws a circle's costliest now in one raster in 0.3 seconds. At four edges for one, the
-costliest take: 728 uses of the circle 1.5 to 1.7 seconds (0.5 wide, 1.4 to 1.5), 734 of the
-ellipse 1.0, 32 of the semicircles 0.7, a path of 99 full-size cubics 0.4, and 1,204 concentric
-circles 0.5 wide 2.4 to 2.5. Concentric circles are dear for their number, not in proportion to it: 300 take 2.2
-seconds already, and the costliest 1,109 a half unit apart 2.6 to 2.9, so no weight that admits
-a few hundred thin rings brings them much lower. The curves are charged apart from the caps'
-crowding, so a fine dash on a wide stroke costs no more for them: of 9,000 generated dashed logos
-in editors' styles, none changed outcome. Real logos pay little for it: emblems of 8,000 stroked
-cubics come to 17% of the overdraw, finely dashed rings to 9%.
+canvas draws a circle's costliest now in one raster in 0.3 seconds. And charged only for what the
+image shows of them, 254 circles of radius 999,999 passing through an image 1,000 wide, stroked
+0.5 to 10 wide, took 8.4 to 11.1 seconds, as many ellipses 8.5 and large arcs 7.2 (radius 500,000:
+2.4; under a device pixel wide, or filled, they are fast): Chromium strokes each whole, for every
+tile, and a few huge circles of a radius in the millions took over half a second each. At four
+edges for one, by the whole length, the costliest take, three runs each on a four-core machine
+shared with other work: 729 uses of the full-size circle 1.5 seconds (0.5 wide, 1.4), 734 of the
+ellipse 1.0, 36 of the semicircles 0.7, a path of 284 full-size cubics 0.65, 1,205 concentric
+circles 0.5 wide 2.4 to 2.5; circles passing through the image of radius 600 (551 of them) 1.2 to
+1.3, 1,000 (363) 0.9, 2,000 (199) 0.6, 10,000 (43) 0.34 and 100,000 (4) 0.3, and as much for
+ellipses, large arcs, rounded rectangles, uses, scaled copies and dashed circles of those radii;
+one of radius 450,000 or more in a view box 1,000 wide is refused alone. Concentric circles are
+dear for their number, not in proportion to it: 300 take 2.2 seconds already, and the costliest
+1,110 a half unit apart 2.6 to 2.7, so no weight that admits a few hundred thin rings brings them
+much lower. Spirograph rosettes, one path of thousands of thin quadratics, take 1.0 seconds at
+the limit in 37 turns (3,212 quadratics), 2.0 in 7 and 2.5 to 2.7 in one (4,420, each bulging far
+out of the ring). Tiny curves scattered over the whole image in one path and drawn again by `use`
+are bounded by the drawing cost, not this weight: the costliest took 2.0 to 3.1 seconds. The
+hostile corpus keeps huge circles, ellipses, arcs, rounded rectangles and dashed circles through
+the image as refusals. Of 9,000 generated dashed logos in editors' styles, none changed outcome.
+Real logos pay little for it: emblems of 8,000 stroked cubics come to 16% of the overdraw, finely
+dashed rings to 9%, and rosettes of 1,500 and 2,000 quadratics in 7 to 37 turns, which take 1.0 to
+1.6 seconds, to 21% to 37%.
 
 #### Clip paths of more than one shape
 
@@ -1055,7 +1073,7 @@ pixels; the slowest at 2000 twice as dense is paint, as the overdraw intends.
 | Overdraw: layers and masks             | an offscreen surface, and blending it                                           | 131 group opacity layers over small shapes spread across the image                                 | 14 ms      | 0.69 s       | 19 ms          |
 | Overdraw: edges, crowded rows          | rasterising every edge on every row                                             | 4,853 long lines in one path; 1,500 edges in an even-odd clip path                                 | 73, 316 ms | 0.32, 0.71 s | 93, 127 ms     |
 | Overdraw: stroke ends                  | walking the outline of joins and caps                                           | 1,047 butt dashes on a stroke as wide as the image; 875 miter joins at a miter limit of 100        | 319, 4 ms  | 0.12, 0.05 s | 104, 22 ms     |
-| Overdraw: a stroke's curves, ×4        | stroking a curve again for every tile of an image                               | 728 uses of a full-size circle stroked 2 wide; 1,204 thin concentric circles                       | 32, 12 ms  | 0.28, 0.49 s | 70, 75 ms      |
+| Overdraw: a stroke's curves, ×4        | stroking a curve again, whole, for every tile of an image                       | 729 uses of a full-size circle stroked 2 wide; 1,205 thin concentric circles                       | 33, 12 ms  | 0.29, 0.44 s | 68, 73 ms      |
 | Overdraw: clip paths written as masks  | a mask surface, the shapes painted in                                           | 13 clip paths of two near-coincident zigzags of 3,000 segments; 12 of 43 shapes                    | 19, 33 ms  | 0.98, 1.66 s | 33, 33 ms      |
 
 The costliest logos the sanitiser accepts of each kind, rasterised in full as an image on that
@@ -1065,18 +1083,20 @@ device scale factor of 2, and drawn inline at 600 until a screenshot shows it:
 | The costliest accepted                                                            | `drawingCost`             | `overdraw`       | 600 px        | 2000 px, ×2        | Inline, 600 px |
 | --------------------------------------------------------------------------------- | ------------------------- | ---------------- | ------------- | ------------------ | -------------- |
 | One path of 4,853 long stroked lines                                              | 4,886                     | 499.9            | 73 ms         | 0.32 s             | 93 ms          |
-| One path of 129 wide stroked arcs                                                 | 1,839                     | 492.1            | 5 ms          | 0.05 s             | 35 ms          |
+| One path of 338 wide stroked arcs                                                 | 4,765                     | 497.8            | 18 ms         | 0.09 s             | 33 ms          |
 | 19,000 round-capped hairline dashes on a zigzag                                   | 191,477                   | 0.4              | 5 ms          | 0.03 s             | 34 ms          |
 | 18,000 hairline dashes of 64 lengths on a zigzag                                  | 183,213                   | 2.3              | 2 ms          | 0.03 s             | 35 ms          |
 | 18,000 hairline dashes of two lengths on a zigzag                                 | 181,053                   | 2.3              | 2 ms          | 0.03 s             | 35 ms          |
 | 81 uses of a full-size circle dashed `8 4`, 3 or 5 wide, any cap                  | 197,884                   | 59.5–68.5        | 28–68 ms      | 0.12–0.25 s        | 89–148 ms      |
 | 163 uses of a dashed diagonal line; 64 of a rounded rectangle                     | 199,513; 198,209          | 24.8; 32.3       | 27; 28 ms     | 0.10; 0.12 s       | 100; 117 ms    |
-| 81 uses of a dashed ellipse; 82 of an arc; 280 of a cubic                         | 197,884–199,641           | 63.4–66.6        | 23–32 ms      | 0.10–0.14 s        | 87–114 ms      |
+| 81 uses of a dashed ellipse; 82 of an arc; 280 of a cubic                         | 197,884–199,641           | 45.7–66.0        | 23–32 ms      | 0.10–0.14 s        | 87–114 ms      |
 | 1,680 uses of a dashed horizontal line                                            | 199,921                   | 182.4            | 240 ms        | 0.29 s             | 134 ms         |
 | 116 uses of a dashed L; 11 of a serpentine; 12 of a square spiral                 | 198,941; 193,524; 188,437 | 25.0; 25.2; 24.5 | 18; 37; 31 ms | 0.06; 0.08; 0.10 s | 48; 67; 69 ms  |
 | 116 uses of a dashed staircase; 11 of a line back and forth; 65 of an open square | 199,637; 184,064; 198,706 | 25.7; 22.4; 25.2 | 20; 17; 26 ms | 0.09; 0.06; 0.10 s | 53; 33; 36 ms  |
-| 728 uses of a full-size circle stroked 2 wide; 734 of an ellipse 0.5 wide         | 53,145; 53,583            | 499.3; 499.5     | 32; 9 ms      | 0.28; 0.20 s       | 70; 34 ms      |
-| 32 uses of a path of 20 full-size semicircles; 1,204 concentric circles           | 10,017; 86,689            | 496.6; 499.7     | 5; 12 ms      | 0.06; 0.49 s       | 34; 75 ms      |
+| 729 uses of a full-size circle stroked 2 wide; 734 of an ellipse 0.5 wide         | 53,218; 53,583            | 499.8; 499.3     | 33; 9 ms      | 0.29; 0.20 s       | 68; 34 ms      |
+| 36 uses of a path of 20 full-size semicircles; 1,205 concentric circles           | 11,269; 86,761            | 492.6; 500.0     | 6; 12 ms      | 0.06; 0.44 s       | 33; 73 ms      |
+| 363 circles of radius 1,000 through the image; 4 of radius 100,000                | 26,137; 289               | 498.9; 454.6     | 4; 1 ms       | 0.08; 0.03 s       | 46; 33 ms      |
+| A rosette of 3,212 quadratics in 37 turns; of 4,420 in one                        | 19,305; 26,553            | 499.7; 499.8     | 4; 4 ms       | 0.34; 0.18 s       | 45; 43 ms      |
 | 446 full-size solid fills                                                         | 16,503                    | 499.5            | 17 ms         | 1.19 s             | 34 ms          |
 | 21 full-size 64-stop linear gradients                                             | 778                       | 485.5            | 34 ms         | 1.41 s             | 42 ms          |
 | 19 full-size 64-stop translucent radial gradients                                 | 704                       | 496.3            | 34 ms         | 1.55 s             | 70 ms          |
@@ -1131,14 +1151,15 @@ at 2000 twice as dense, shows each as an `<img>` 2000 CSS pixels square at twice
 Chromium rasterises in tiles, under 6, and draws each inline at 600 under 3 seconds. Shown that way
 on an idle four-core machine, the slowest took 3.5 seconds (the gradients, 2.9 to 3.5), the dashed
 families 0.4 to 2.0, and the rest under 1.7; on a shared one, the dashed paths of horizontal and
-vertical lines 0.4 to 2.4 and the thin strokes along curves 0.7 to 2.5. With the overdraw limit raised
+vertical lines 0.4 to 2.4 and the thin strokes along curves, huge ones and rosettes included, 0.3
+to 2.7. With the overdraw limit raised
 tenfold, nine families blew through them (4.5 to 16.5 seconds: the gradients, layers, masks, the
 even-odd clip path, the butt and four-length dashes and the scaled shape), and in four more another
 limit took over first; and counting one dash a repeat in the drawing
 cost, the hairline dashes of 64 lengths ran into the overdraw limit first. Real logos stay inside
 both budgets: a Figma export with eight full-size alpha masks and ten gradients under six clip paths
 come to about 59% of the overdraw (they take 0.9 and 0.46 seconds themselves at 2000 twice as
-dense), emblems of 8,000 stroked cubics to 17%, ten rings dashed a quarter of a unit in a view box 512
+dense), emblems of 8,000 stroked cubics to 16%, ten rings dashed a quarter of a unit in a view box 512
 wide to 63% of the drawing cost, traced artwork near the input
 limit to under 1%.
 
@@ -1146,7 +1167,8 @@ What the budgets cover: a logo drawn as an `<img>` (or a CSS background) at any 
 pixels at a device scale factor of 2, and a logo drawn inline up to 600 CSS pixels at a scale factor
 of 1. An `<img>` that large is rasterised in tiles too, which the drawing cost's dashes and the
 overdraw's curved strokes allow for (a dash Chromium works out again for every tile weighs ten, and
-a stroke's curves, which it strokes again for every tile, count four times as edges); a dense dashed
+a stroke's curves, which it strokes again, whole, for every tile, count four times as edges by
+their whole length); a dense dashed
 texture can be refused for it (above). Inline at larger sizes is not
 supported. Chromium draws a large inline SVG tile by tile, and
 every tile walks again each path it touches, so long paths cost many times over: seven uses of a
@@ -1222,8 +1244,8 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. Colours set only by CSS are lost
 (see above).
 
-The tests hold it to that: a hostile corpus of 360 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 159
+The tests hold it to that: a hostile corpus of 366 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 165
 refused, and every removal, by element, attribute and reason, for each of the 201 accepted, 40 of
 them with a clip path rewritten as a mask, 39 of which keep that mask in the output: in the
 fortieth, the rewritten clip path was the clip path of another clip path that is then emptied, so
