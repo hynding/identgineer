@@ -101,4 +101,5 @@ export const BUNDLES: readonly { readonly name: string; readonly components: rea
     { name: "brand-swatches", components: ["idg-brand-swatches"] },
     { name: "brand-guidelines", components: ["idg-brand-guidelines"] },
     { name: "brand-export", components: ["idg-brand-export"] },
+    { name: "brand-editor", components: ["idg-brand-editor"] },
   ];

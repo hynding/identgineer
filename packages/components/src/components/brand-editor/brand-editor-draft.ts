@@ -6,8 +6,8 @@ import { brandLogoSource } from "../brand-logo/brand-logo-source";
 
 /** The editor's fields, in the order the form shows them. */
 export const DRAFT_FIELDS = [
-  "id",
   "name",
+  "id",
   "tagline",
   "primary",
   "secondary",
@@ -19,6 +19,9 @@ export const DRAFT_FIELDS = [
   "mark",
 ] as const;
 export type DraftField = (typeof DRAFT_FIELDS)[number];
+
+/** How long typing must pause before the preview's kit and theme are worked out again. */
+export const PREVIEW_DELAY_MS = 300;
 
 export type ColourField = "primary" | "secondary" | "neutralTint";
 export const COLOUR_FIELDS: readonly ColourField[] = ["primary", "secondary", "neutralTint"];

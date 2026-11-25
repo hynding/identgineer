@@ -29,8 +29,8 @@ import "../field/field";
 import "../icon/icon";
 import "../input/input";
 import "../select/select";
-import { PREVIEW_DELAY_MS } from "./brand-editor";
 import "./brand-editor";
+import { PREVIEW_DELAY_MS } from "./brand-editor-draft";
 
 vi.mock("@identgineer/brand/edit", async (importOriginal) => {
   const original = await importOriginal<typeof import("@identgineer/brand/edit")>();
@@ -57,6 +57,7 @@ interface EditorElement extends HTMLElement {
   kit?: unknown;
   store?: unknown;
   documentId?: string;
+  clock?: unknown;
   labels?: Record<string, string>;
   preview?: boolean;
   headingLevel?: number;
@@ -86,6 +87,28 @@ async function mount(props: Partial<EditorElement> = {}) {
   Object.assign(root, props);
   await rendered.waitForChanges();
   return { ...rendered, root };
+}
+
+/** Timers that run only when the test says, and say what they were asked to wait. */
+function manualClock() {
+  const pending = new Map<number, { callback: () => void; delayMs: number }>();
+  let handles = 0;
+  return {
+    setTimeout: (callback: () => void, delayMs: number) => {
+      handles += 1;
+      pending.set(handles, { callback, delayMs });
+      return handles;
+    },
+    clearTimeout: (handle: unknown) => {
+      pending.delete(handle as number);
+    },
+    delays: () => [...pending.values()].map((timer) => timer.delayMs),
+    run: () => {
+      const due = [...pending.values()];
+      pending.clear();
+      for (const timer of due) timer.callback();
+    },
+  };
 }
 
 /** Lets promises, timers the test has not faked and renders run. */
@@ -154,7 +177,6 @@ beforeEach(() => {
 
 afterEach(() => {
   events.stop();
-  vi.useRealTimers();
 });
 
 describe("idg-brand-editor form", () => {
@@ -176,12 +198,16 @@ describe("idg-brand-editor form", () => {
       const input = fileInput(root, field);
       expect(input.getAttribute("type")).toBe("file");
       expect(input.getAttribute("accept")).toBe("image/svg+xml,.svg");
-      const label = shadowOf(root).querySelector(`label[for="${field}-file"]`);
-      expect(label?.textContent).toContain(field === "logo" ? "Logo" : "Mark");
+      const label = shadowOf(root).querySelector<HTMLLabelElement>(`#${field}-label`);
+      expect(label?.localName).toBe("label");
+      expect(label?.htmlFor).toBe(`${field}-file`);
+      expect(textOf(root, `#${field}-label`)).toBe(
+        `${field === "logo" ? "Logo" : "Mark"} optional`,
+      );
     }
-    expect(shadowOf(root).querySelector('idg-button[type="submit"]')?.textContent).toContain(
-      "Save brand kit",
-    );
+    const save = shadowOf(root).querySelector<HTMLElement & { type?: string }>(".submit");
+    expect(save?.type).toBe("submit");
+    expect(textOf(root, ".submit")).toBe("Save brand kit");
   });
 
   it("pairs each colour field with a named native colour picker in its box", async () => {
@@ -294,18 +320,16 @@ describe("idg-brand-editor preview", () => {
   });
 
   it("works the theme out once typing pauses, not on every keystroke, and keeps the logo it has", async () => {
-    const { root, waitForChanges } = await mount({ kit: HARBOUR });
+    const clock = manualClock();
+    const { root, waitForChanges } = await mount({ kit: HARBOUR, clock });
     const before = guide(root)?.kit;
     expect(vi.mocked(generateBrandTheme)).toHaveBeenCalledTimes(1);
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    for (const name of ["H", "Ha", "Har", "Harb", "Harbo"]) {
-      type(root, "name", name);
-      vi.advanceTimersByTime(PREVIEW_DELAY_MS - 1);
-    }
+    for (const name of ["H", "Ha", "Har", "Harb", "Harbo"]) type(root, "name", name);
+    await waitForChanges();
+    expect(clock.delays()).toEqual([PREVIEW_DELAY_MS]);
     expect(vi.mocked(generateBrandTheme)).toHaveBeenCalledTimes(1);
     expect(guide(root)?.kit).toBe(before);
-    vi.advanceTimersByTime(1);
-    vi.useRealTimers();
+    clock.run();
     await waitForChanges();
     expect(vi.mocked(generateBrandTheme)).toHaveBeenCalledTimes(2);
     expect(guide(root)?.kit?.name).toBe("Harbo");
@@ -313,11 +337,10 @@ describe("idg-brand-editor preview", () => {
   });
 
   it("keeps the last valid preview while the draft is not a kit, and says so", async () => {
-    const { root, waitForChanges } = await mount({ kit: ACME });
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const clock = manualClock();
+    const { root, waitForChanges } = await mount({ kit: ACME, clock });
     type(root, "primary", "red");
-    vi.advanceTimersByTime(PREVIEW_DELAY_MS);
-    vi.useRealTimers();
+    clock.run();
     await waitForChanges();
     expect(guide(root)?.kit?.name).toBe("Acme Rockets");
     expect(textOf(root, ".preview .note")).toBe(
@@ -509,7 +532,10 @@ describe("idg-brand-editor saving", () => {
         update: vi.fn(),
       },
       { create: () => Promise.reject(thrown), update: vi.fn() },
-      { create: () => Promise.reject({ code: "network", message: CANARY }), update: vi.fn() },
+      {
+        create: () => Promise.reject(Object.assign(new Error(CANARY), { code: "network" })),
+        update: vi.fn(),
+      },
       { create: () => Promise.resolve({ ok: false, errors: [] }), update: vi.fn() },
       { create: () => Promise.resolve(CANARY), update: vi.fn() },
       undefined,
@@ -625,6 +651,12 @@ describe("idg-brand-editor uploads", () => {
       "The file declares a document type with its own definitions, which is not allowed.",
     );
     expect(guide(root)?.kit?.logo).toBe(HARBOUR.logo);
+  });
+
+  it("is still removed from the page by remove(), which no method of its own hides", async () => {
+    const { root } = await mount({ kit: HARBOUR });
+    root.remove();
+    expect(root.isConnected).toBe(false);
   });
 
   it("removes an upload, with what was said about it", async () => {

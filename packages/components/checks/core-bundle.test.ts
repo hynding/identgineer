@@ -254,6 +254,19 @@ const ACCEPTED_RENDERS: Record<string, string> = {
     "a guide of the sanitiser's logo tiles; the logo's bundle is requested once the guide renders",
   "idg-brand-guidelines>idg-brand-swatches":
     "the swatches are a bundle of their own, small, and requested once the guide renders",
+  // The editor's fields are the form controls every form uses: copying them into the editor's
+  // group would put them in two bundles, which a component cannot be. They are requested in the
+  // same round trip as the logo and the guide below, so the editor waits one hop in all.
+  "idg-brand-editor>idg-field":
+    "the field around each control is the forms group's; requested with the editor's other parts",
+  "idg-brand-editor>idg-input":
+    "the hex, name, id and tagline inputs are the forms group's own control",
+  "idg-brand-editor>idg-select":
+    "the font pairing, corners and tone are the forms group's own select",
+  "idg-brand-editor>idg-brand-logo":
+    "an upload's thumbnail is the logo element with its sanitiser check; the guide requests it too",
+  "idg-brand-editor>idg-brand-guidelines":
+    "the preview is the guide, a bundle of its own, requested in the same hop as the fields",
 };
 
 describe("the bundles of stencil-bundles.ts, against the components' sources", () => {
