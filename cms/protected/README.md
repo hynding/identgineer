@@ -19,7 +19,7 @@ Keep each language under the path its own target expects:
 | Extra API routes (strapi-php only) | `routes/api-custom.php`            | —                                                      |
 | REST page cap (Strapi only)        | —                                  | `config/api.ts`                                        |
 
-Each path above is seeded by camis as a stub the first time it builds, implementing a generated
+Each hook, endpoint and route path above is seeded by camis as a stub the first time it builds, implementing a generated
 contract (`app/Hooks/Contracts/*.php`, `src/hooks/contracts/*.ts`). Copy a stub here before
 filling it in; editing it under `cms/generated/` would be lost on the next clean build.
 
