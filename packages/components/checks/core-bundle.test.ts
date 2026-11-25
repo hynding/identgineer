@@ -127,6 +127,28 @@ describe.skipIf(!BUILDS.every((directory) => existsSync(directory)))(
           expect(entries).not.toContain(entryOf(directory, "idg-button"));
         });
 
+        // A composite of another group asks for controls when it renders, so what controls imports
+        // on arrival is a second round trip unless the page has fetched it already; a chunk that
+        // every entry imports is fetched with the first entry, and one of controls' own is not.
+        it("imports into controls only chunks that every entry imports", () => {
+          const imports = (name: string) =>
+            new Set(
+              [
+                ...readFileSync(join(directory, name), "utf8").matchAll(
+                  /(?:from|import)\s*["']\.\/([^"']+\.m?js)["']/g,
+                ),
+              ].map((match) => match[1] ?? ""),
+            );
+          const entries = scripts(directory).filter((name) => name.endsWith(".entry.js"));
+          const common = entries
+            .map(imports)
+            .reduce((all, next) => new Set([...all].filter((name) => next.has(name))));
+          const own = [...imports(entryOf(directory, "idg-button"))].filter(
+            (name) => !common.has(name),
+          );
+          expect(own).toEqual([]);
+        });
+
         it.each(TOGETHER)("draws what %s creates from its own entry", (...tags) => {
           const entries = new Set(tags.map((tag) => entryOf(directory, tag)));
           expect([...entries]).toHaveLength(1);
