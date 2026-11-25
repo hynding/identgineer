@@ -412,6 +412,20 @@ describe("create", () => {
     expect((await rejection(store.create(kit as unknown as BrandKit))).code).toBe("validation");
   });
 
+  it("refuses a summary, or a kit spread from one, which would store a copy without logos", async () => {
+    const { store, sent } = storeWith(() => json(page([rowOf(kitFrom())])));
+    const [item] = (await store.list()).results;
+    if (item?.ok !== true) throw new Error("expected a summary");
+    const { summary } = item.record;
+    // @ts-expect-error A summary is not a kit: it has no logo or mark to send.
+    const asIs = await rejection(store.create(summary));
+    // @ts-expect-error Nor is a kit spread from one, which keeps the summary's marker.
+    const spread = await rejection(store.create({ ...summary, name: "Copy" }));
+    expect(asIs).toMatchObject({ code: "validation", fields: ["logo", "mark"] });
+    expect(spread).toMatchObject({ code: "validation", fields: ["logo", "mark"] });
+    expect(sent).toHaveLength(1);
+  });
+
   it("refuses an isPublic that is not a boolean", async () => {
     const { store, sent } = storeWith(() => json({}));
     const options = { isPublic: "yes" } as unknown as { isPublic: boolean };
