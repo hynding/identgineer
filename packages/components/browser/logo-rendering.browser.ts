@@ -604,6 +604,26 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
       ),
     "overdraw-too-large",
   ],
+  // A small arc whose chord is a hundred-millionth of its radius can come out turning the other
+  // way in single precision, and Chromium strokes the whole circle; one 2^-16 of it is drawn small.
+  ...(
+    [
+      [10_000, "0.0001", ' transform="rotate(10 500 500)"'],
+      [999_999, "16", ""],
+    ] as const
+  ).map(
+    ([radius, chord, turn]) =>
+      [
+        `small arcs of radius ${radius.toLocaleString("en")} with chords of ${chord}, in one path`,
+        (count: number) =>
+          costlyLogo(
+            `<path d="${spread(count)
+              .map((x) => `M${String(x)} 500a${String(radius)} ${String(radius)} 0 0 1 ${chord} 0`)
+              .join("")}" fill="none" stroke="#000" stroke-width="2"${turn}/>`,
+          ),
+        "overdraw-too-large",
+      ] as const,
+  ),
   [
     "a thin rosette of quadratics in 37 turns",
     (count) =>
