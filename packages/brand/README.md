@@ -281,7 +281,7 @@ guide shows (`CORNERS`, `TONES`, `CORNER_RADII`, `RADIUS_NAMES`, `FONT_PAIRINGS`
 `@identgineer/brand/emit` has `emitBrandThemeCss` and `emitBrandThemeTokens`: the generator, the
 sanitiser and the tokens emitter read no disk, the token sources being JSON the bundler includes, so
 a page can emit a theme itself. Tests walk each entry's import graph and fail on any Node built-in.
-`idg-brand-export` uses it.
+`emitBrandTheme(theme)` gives `{ css, tokens, id }` from one regeneration of the theme, so that nested getters or `toJSON` methods that answer differently each time cannot give a stylesheet of one theme and tokens of another; it refuses an altered theme as the two emitters do. `idg-brand-export` uses it.
 
 ### How it works
 

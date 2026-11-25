@@ -1592,6 +1592,10 @@ them.
 - **Logos.** The logo and mark are drawn by `idg-brand-logo` on a tile of the brand's own page
   colour, with its text and accent, for each scheme; the name stands in where an image is missing or
   refused. A data URL image needs `img-src 'self' data:` as for `idg-brand-logo`.
+  The sanitiser reads a logo once for each distinct text, however many tiles and guides show it:
+  the answers for the last four texts (two guides' logo and mark) are kept, none for a text past
+  the sanitiser's 512 KB limit, so at most about 8 MB is held. A guide's own kit change costs one
+  read for each new text, about half a second for a logo of 440 KB.
 - **Headings.** The name is the heading at `headingLevel`, each section one level below it, so a page
   chooses where the guide sits in its outline.
 - **Reflow.** Nothing is wider than its host at 320px or at 200% text.
@@ -1741,25 +1745,48 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
 - **Bundles.** Left to itself, Stencil groups components that share imports, and the logo
   sanitiser, the theme generator and the emitters ended up in the one bundle of `idg-button` and 44
   others: `www/build` held it as a 450,181 byte entry (325,993 before the brand components) and
-  `dist/esm/idg-accordion_47.entry.js` was 846 KB (633 KB before). `bundles` in `stencil.config.ts`
-  lists the brand components, which turns the grouping off, so every component is a bundle of its
-  own and loads only what it imports. What a page loads, entry and shared chunks together
-  (`checks/core-bundle.test.ts` measures it from the build and fails if a core component's closure
-  holds the sanitiser, generator or emitter or passes a ceiling of 40,000 bytes in `www/build` and
-  100,000 in `dist/esm`):
+  `dist/esm/idg-accordion_47.entry.js` was 846 KB (633 KB before). Listing components in `bundles`
+  in `stencil.config.ts` turns that grouping off, and a component not listed becomes a bundle of its
+  own; one bundle for each component was tried first and made a composite wait a round trip for
+  what it creates when it renders (the dashboard's rows were in the page after 35 ms and seen after
+  230 to 320 ms at 100 ms latency, and the index page went from 16 to 72 requests). So the
+  components are grouped by what renders or is used together, and each brand component is apart.
+  A component is in one bundle only, so the leaves most families use are in `controls`, which a
+  composite of another group waits one round trip for unless the page has asked for it already.
+  `checks/core-bundle.test.ts` holds this layout from the build: no group but the brand ones loads
+  the sanitiser, generator or emitters (and the brand closures do hold them, so the check cannot
+  pass for want of a string), what a composite creates shares its entry, and each group stays
+  within a ceiling of its measured size. What a page loads of a group, its entry and the chunks it
+  imports, in bytes:
 
-  | Page with only         | `www/build` | `dist/esm` |
-  | ---------------------- | ----------: | ---------: |
-  | `idg-button`           |    32,430 B |   82,533 B |
-  | `idg-brand-swatches`   |    29,826 B |   84,500 B |
-  | `idg-brand-logo`       |   117,072 B |  326,388 B |
-  | `idg-brand-guidelines` |   141,248 B |  374,633 B |
-  | `idg-brand-export`     |   219,211 B |  499,879 B |
+  | Group                  | Components                                                                                                                                                   | `www/build` | `dist/esm` |
+  | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------: | ---------: |
+  | controls               | icon, button, link, badge, progress, alert, avatar, avatar-group                                                                                             |      50,219 |    107,531 |
+  | forms and identity     | field, input, textarea, checkbox, radio, radio-group, select, sign-in, register, password-reset, profile, session-guard, property-picker, variation-switcher |     153,681 |    309,460 |
+  | dashboard              | event-table, table, pagination, skeleton, stat, sparkline                                                                                                    |      69,699 |    171,122 |
+  | consent and overlays   | consent-banner, consent-preferences, dialog, switch, popover, tooltip, toast, toast-region                                                                   |      94,065 |    196,594 |
+  | menus                  | menu, menu-group, menu-item, menu-separator, user-menu                                                                                                       |      49,731 |    126,662 |
+  | tabs                   | tabs, tab, tab-panel                                                                                                                                         |      31,746 |     87,726 |
+  | accordion              | accordion, accordion-item                                                                                                                                    |      27,957 |     79,096 |
+  | layout                 | stack, cluster, grid, cover, sidebar, switcher, layout, divider, card, breadcrumb, breadcrumb-item                                                           |      84,021 |    160,349 |
+  | `idg-brand-logo`       | the logo, with the sanitiser                                                                                                                                 |     117,089 |    327,027 |
+  | `idg-brand-swatches`   | the swatches                                                                                                                                                 |      29,826 |     84,500 |
+  | `idg-brand-guidelines` | the guide, with the sanitiser                                                                                                                                |     141,269 |    375,346 |
+  | `idg-brand-export`     | the export, with the sanitiser, the generator and the emitters                                                                                               |     219,207 |    500,002 |
 
-  The sanitiser (about 90 KB minified) is loaded by the logo and the guide; the generator and
-  emitters only by the export. The cost is a request for each component's own entry, where a
-  grouped bundle served several. The whole `www/build` directory, all pages together, went from
-  433,865 bytes before the brand components to 670,556 with them.
+  The loader `identgineer.esm.js` is 12,510 bytes more on every page. The sanitiser (about 90 KB
+  minified) is in the logo's, the guide's and the export's bundles (the export validates a kit with
+  it), the generator and emitters in the export's alone. The whole `www/build` directory is 663,013
+  bytes, against 433,865 before the brand components and 536,437 on main.
+
+  Measured against main's grouped build, with 100 ms of latency and 1.5 MB/s: a page with only an
+  `idg-button` is fully hydrated in 620 ms (936 ms grouped), loading 62,758 bytes in 8 requests
+  (363,999 bytes in 13); the navigation fixture in 840 ms (965 ms), 22 requests of 193,402 bytes
+  (13 of 363,999); the demo index page, which now also shows the guide, the export and the logos,
+  in 1,160 ms (870 ms) with 39 requests of 645,169 bytes (16 of 370,939); and the dashboard fixture
+  in 1,040 ms (870 ms), 23 requests of 302,389 bytes (18 of 384,535), the extra time being its
+  forms and variation tools asking for `controls` once they render. Its rows are in the page and
+  seen in the same frame (0 ms apart, where one bundle per component left 200 ms).
 
 - **The identity fixture.** `identity.html` wires every identity element to one real client on the
   identity package's fake API (`createFakeIdentityApi`), in the page. The build's second step,
