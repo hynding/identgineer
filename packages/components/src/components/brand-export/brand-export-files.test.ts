@@ -52,6 +52,7 @@ describe("fileSlug", () => {
   });
 
   it("reads no more of a name than a file name can use, however long it is", () => {
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called back with its string below
     const original = String.prototype.normalize;
     const lengths: number[] = [];
     const spy = vi.spyOn(String.prototype, "normalize").mockImplementation(function (
