@@ -1,4 +1,6 @@
 import type { CleanElement } from "./filter-svg-tree.ts";
+import type { SvgLogoLimits } from "./svg-logo-limits.ts";
+import { SvgLogoRejection } from "./svg-logo-rejection.ts";
 import { type SvgLengthUnit, writtenText } from "./svg-values.ts";
 
 /**
@@ -8,9 +10,11 @@ import { type SvgLengthUnit, writtenText } from "./svg-values.ts";
  * (what it paints is the overdraw's to count, see `SVG_OVERDRAW_WEIGHTS`); group opacity draws
  * into a layer; a mask or clip path draws its content into a layer each time it is applied; each
  * dash is a segment of its own. A large image is rasterised in tiles, and Chromium works out every
- * dash of a shape again for each tile its box touches, except along one horizontal or vertical
- * line and round a rectangle, whose dashes it culls to the tile: elsewhere a dash weighs ten,
- * measured as an image 2000 CSS pixels square at twice the density.
+ * dash of a stroke again for each tile its box touches, except along one horizontal or vertical
+ * line and round a rectangle, whose dashes it culls to the tile: elsewhere each instance of a
+ * stroked shape is charged `tiledDash` a dash, by its caps, again for the share of the tiles of an
+ * image 2000 CSS pixels square at twice the density its box can touch (counted in the overdraw's
+ * walk, which knows each instance's transform and paint).
  */
 export const SVG_DRAWING_WEIGHTS = Object.freeze({
   line: 1,
@@ -22,8 +26,16 @@ export const SVG_DRAWING_WEIGHTS = Object.freeze({
   layer: 50,
   mask: 200,
   dash: 1,
-  tiledDash: 10,
+  tiledDash: Object.freeze({ butt: 4, square: 5, round: 8 }),
 });
+
+/** The refusal of a logo over `limits.drawingCost`. */
+export function drawingTooCostly(limits: SvgLogoLimits): SvgLogoRejection {
+  return new SvgLogoRejection(
+    "drawing-too-costly",
+    `would cost more than ${String(limits.drawingCost)} to draw (see SVG_DRAWING_WEIGHTS)`,
+  );
+}
 
 export interface Geometry {
   /** What drawing the outline costs, before dashes. */
@@ -770,7 +782,7 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
     case "ellipse": {
       const [rx, ry] =
         element.name === "circle" ? [length("r"), length("r")] : [length("rx"), length("ry")];
-      const outline = 2 * Math.PI * Math.max(rx, ry) * (1 + READ);
+      const outline = Math.PI * Math.sqrt(2 * (rx * rx + ry * ry)) * (1 + READ);
       return {
         weight: 4 * cubic,
         length: outline,

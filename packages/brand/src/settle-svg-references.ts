@@ -3,6 +3,7 @@ import { GRADIENTS, USABLE } from "./svg-allowlist.ts";
 import {
   dashCount,
   dashingOf,
+  drawingTooCostly,
   measureShape,
   SVG_DRAWING_WEIGHTS,
   type Dashing,
@@ -291,8 +292,8 @@ function percentBase(root: CleanElement): number {
 
 /**
  * What drawing one element costs on its own: a shape its geometry and its dashes (see
- * `dashingByElement`), dearer off one horizontal or vertical line or a rectangle; anything else a
- * little; group opacity a layer.
+ * `dashingByElement`), each once (working them out again for the tiles of a large image is charged
+ * per instance, in the overdraw's walk); anything else a little; group opacity a layer.
  */
 function ownCost(element: CleanElement, dashing: Dashing, base: number): number {
   const weights = SVG_DRAWING_WEIGHTS;
@@ -300,9 +301,7 @@ function ownCost(element: CleanElement, dashing: Dashing, base: number): number 
   let cost =
     geometry === undefined
       ? weights.element
-      : weights.shape +
-        geometry.weight +
-        dashCount(geometry, dashing) * (geometry.straightRun ? weights.dash : weights.tiledDash);
+      : weights.shape + geometry.weight + dashCount(geometry, dashing) * weights.dash;
   const opacity = element.attributes.get("opacity");
   if (opacity !== undefined && "text" in opacity && Number(opacity.text) < 1) cost += weights.layer;
   return cost;
@@ -312,7 +311,8 @@ function ownCost(element: CleanElement, dashing: Dashing, base: number): number 
  * Expands every reference, refusing a reference cycle, a chain of references deeper than the limit
  * and a logo over any limit on what drawing it takes: elements drawn (an element referenced ten
  * times is drawn ten times), drawing cost, masks applied and masks nested. Each element is measured
- * once, so the work is linear however large the totals. Returns the drawing cost.
+ * once, so the work is linear however large the totals. Returns the drawing cost of the expansion,
+ * before the dashes worked out again for each tile, which the overdraw's walk adds per instance.
  */
 function checkExpansion(
   root: CleanElement,
@@ -398,12 +398,7 @@ function checkExpansion(
       `applies masks or clip paths more than ${String(limits.maskApplications)} times`,
     );
   }
-  if (!(total.cost <= limits.drawingCost)) {
-    throw new SvgLogoRejection(
-      "drawing-too-costly",
-      `would cost more than ${String(limits.drawingCost)} to draw (see SVG_DRAWING_WEIGHTS)`,
-    );
-  }
+  if (!(total.cost <= limits.drawingCost)) throw drawingTooCostly(limits);
   return total.cost;
 }
 
@@ -424,7 +419,8 @@ export function dropDanglingReferences(
 /**
  * Settles every same-document reference, once dangling ones are dropped: drops definitions nothing
  * drawn refers to, writes clip paths that would make a renderer combine shapes as masks, and
- * refuses cycles and expansions beyond the limits. Returns the drawing cost, and the new name of
+ * refuses cycles and expansions beyond the limits. Returns the drawing cost (the expansion's and the
+ * dashes worked out again for the tiles of a large image), the overdraw, and the new name of
  * each id still referenced, numbered in document order after `idPrefix`; every other id is dropped,
  * so the output names nothing a page could collide with by accident.
  */
@@ -443,8 +439,8 @@ export function settleSvgReferences(
   pruneDefinitions(root, limits);
   const elements = walk(root);
   const ids = collectIds(elements, limits);
-  const drawingCost = checkExpansion(root, elements, ids, limits);
-  const overdraw = measureOverdraw(root, ids, limits);
+  const expansionCost = checkExpansion(root, elements, ids, limits);
+  const { overdraw, drawingCost } = measureOverdraw(root, ids, limits, expansionCost);
   const referenced = new Set<string>();
   for (const element of elements) {
     for (const attribute of ["href", "fill", "stroke", "clip-path", "mask"]) {
