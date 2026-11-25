@@ -116,6 +116,8 @@ backend without sessions, or an own logout that already failed), resolves as it 
 `saveProfile` takes `displayName` (required, up to 80 characters), `bio` (up to 500, or `null`),
 `locale` (BCP 47), `timezone` (IANA) and `marketingOptIn`, checked against the limits in
 `cms/camis.json`. Only these fields are sent; the server sets the owner.
+The CMS stores `locale` as `language`, because camis reserves `locale` for Strapi's own field; the
+client maps it at the wire, so callers (and the `fields` of a validation error) keep saying `locale`.
 
 Also exported: `passkeysSupported()`, `safeRedirectPath(path, fallback?)`, `IDENTITY_ERROR_CODES`
 and the types.

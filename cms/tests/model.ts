@@ -49,6 +49,9 @@ export interface Field {
   target?: string;
   allowedTypes?: string[];
   private?: boolean;
+  names?: { api?: string };
+  inverse?: string;
+  inverseNames?: { api: string };
 }
 
 export interface ContentType {
