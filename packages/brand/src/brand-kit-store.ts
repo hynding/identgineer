@@ -212,10 +212,13 @@ function refusedFields(body: unknown): string[] {
   return [...fields];
 }
 
-async function failureOf(response: Response): Promise<BrandKitStoreError> {
+async function failureOf(
+  response: Response,
+  signal: AbortSignal | undefined,
+): Promise<BrandKitStoreError> {
   const { status } = response;
   if (status === 400) {
-    const body = await readFailureBody(response, MAX_FAILURE_BYTES);
+    const body = await readFailureBody(response, MAX_FAILURE_BYTES, signal);
     if (own(own(body, "error"), "name") === "ValidationError") {
       const fields = refusedFields(body);
       return validation(fields.length === 0 ? undefined : fields);
@@ -356,7 +359,8 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
     } catch (error) {
       throw new BrandKitStoreError(isSignedOut(error) ? "unauthorized" : "network");
     }
-    if (response.status < 200 || response.status > 299) throw await failureOf(response);
+    if (response.status < 200 || response.status > 299)
+      throw await failureOf(response, call.signal);
     return response;
   };
 
@@ -376,7 +380,11 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
     query.append("pagination[pageSize]", String(pageSize));
     if (publicKits) query.append("filters[isPublic][$eq]", "true");
     const response = await send({ fetch, method: "GET", path: KITS_PATH, query, signal });
-    const body = await readJsonAnswer(response, pageSize * MAX_SUMMARY_BYTES + MAX_ENVELOPE_BYTES);
+    const body = await readJsonAnswer(
+      response,
+      pageSize * MAX_SUMMARY_BYTES + MAX_ENVELOPE_BYTES,
+      signal,
+    );
     return readPage(
       body,
       pageSize,
@@ -393,7 +401,7 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
     const path = documentPath(documentId);
     const signal = readSignal(requestOptions);
     const response = await send({ fetch, method: "GET", path, signal });
-    const body = await readJsonAnswer(response, MAX_RECORD_BYTES);
+    const body = await readJsonAnswer(response, MAX_RECORD_BYTES, signal);
     return readSingle(body, publicKits ? publicOnly(readCmsBrandKit) : readCmsBrandKit);
   };
 
@@ -406,7 +414,10 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
     const signal = readSignal(writeOptions);
     const data = writableData(kit, writeOptions);
     const response = await send({ fetch: signedIn, method, path, data, signal });
-    const result = readSingle(await readJsonAnswer(response, MAX_RECORD_BYTES), readCmsBrandKit);
+    const result = readSingle(
+      await readJsonAnswer(response, MAX_RECORD_BYTES, signal),
+      readCmsBrandKit,
+    );
     if (!result.ok) return result;
     const unapplied = unappliedFields(data, result.record);
     if (unapplied.length > 0) throw new BrandKitStoreError("not-applied", { fields: unapplied });
