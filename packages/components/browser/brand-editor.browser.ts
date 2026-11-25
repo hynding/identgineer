@@ -135,6 +135,16 @@ async function tabTo(page: Page, editorId: string, name: string): Promise<void> 
   throw new Error(`Tab never reached ${name} in ${editorId}`);
 }
 
+/** An idg-alert's words, which it slots into the element that carries its role. */
+async function expectAlert(
+  alert: Locator,
+  role: "alert" | "status",
+  text: string | RegExp,
+): Promise<void> {
+  await expect(alert.locator(`[role="${role}"]`)).toHaveCount(1);
+  await expect(alert).toContainText(text);
+}
+
 /** Every attribute value and text of the page, through shadow roots, decoded where it is a url. */
 function everything(page: Page): Promise<{ names: string[]; values: string[] }> {
   return page.evaluate(() => {
@@ -186,6 +196,23 @@ test.describe("idg-brand-editor form", () => {
     await expect(textInput(host, "primary")).toHaveValue("#f4c430");
     await expect(textInput(host, "neutralTint")).toHaveValue("#1b2a4a");
     await expect(host.locator("idg-select[name='typography'] select")).toHaveValue("classic-serif");
+  });
+
+  test("names no control after a property of its form, so none shadows the form's own", async ({
+    page,
+  }) => {
+    await openEditor(page);
+    const properties = await editor(page, "editor-harbour").evaluate((host) => {
+      const form = host.shadowRoot?.querySelector("form");
+      if (!form) throw new Error("the editor has no form");
+      const shadowed = ["id", "name", "action", "method", "target", "elements", "submit", "reset"];
+      return shadowed.filter((property) => {
+        const own = Object.getPrototypeOf(form) as object;
+        const expected = Reflect.get(own, property, form) as unknown;
+        return (form as unknown as Record<string, unknown>)[property] !== expected;
+      });
+    });
+    expect(properties).toEqual([]);
   });
 
   test("previews the kit in its own region, as the guide, with its logo and mark drawn", async ({
@@ -305,8 +332,7 @@ test.describe("idg-brand-editor saving, by keyboard alone", () => {
     await page.keyboard.press("Tab");
     await page.keyboard.press("Enter");
     const host = editor(page, "editor-new");
-    const status = host.locator('idg-alert[part="saved"] [role="status"]');
-    await expect(status).toHaveText("Brand kit saved.");
+    await expectAlert(host.locator('idg-alert[part="saved"]'), "status", "Brand kit saved.");
     const first = await store(page);
     expect(first.calls).toEqual([
       {
@@ -382,7 +408,9 @@ test.describe("idg-brand-editor saving, by keyboard alone", () => {
     await page.keyboard.type("  ");
     await page.keyboard.press("Enter");
     const host = editor(page, "editor-new");
-    await expect(host.locator('idg-alert[part="error"] [role="alert"]')).toHaveText(
+    await expectAlert(
+      host.locator('idg-alert[part="error"]'),
+      "alert",
       "Some fields need a change. Each says what is wrong.",
     );
     await expect.poll(() => focused(page)).toMatchObject({ control: "name", tag: "input" });
@@ -404,7 +432,9 @@ test.describe("idg-brand-editor saving, by keyboard alone", () => {
     await tabTo(page, "editor-harbour", "name");
     await page.keyboard.press("Enter");
     const host = editor(page, "editor-harbour");
-    await expect(host.locator('idg-alert[part="error"] [role="alert"]')).toHaveText(
+    await expectAlert(
+      host.locator('idg-alert[part="error"]'),
+      "alert",
       "The kit was not saved: the fields marked below were refused.",
     );
     await expect.poll(() => focused(page)).toMatchObject({ control: "primary", tag: "input" });
@@ -446,9 +476,7 @@ test.describe("idg-brand-editor uploads", () => {
     const host = editor(page, "editor-harbour");
     await upload(host, "logo").setInputFiles(svgFile("logo.svg", HOSTILE));
     const removals = host.locator('[part="removals"]');
-    await expect(removals.locator('[role="alert"]')).toContainText(
-      "The logo was cleaned: 5 parts were removed.",
-    );
+    await expectAlert(removals, "alert", "The logo was cleaned: 5 parts were removed.");
     await expect(removals.locator("li")).toHaveText([
       "An event handler was removed (svg onload, line 1)",
       "Script or other active content was removed (script, line 1)",
