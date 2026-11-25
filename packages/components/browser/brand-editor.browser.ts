@@ -1104,6 +1104,66 @@ test.describe("idg-brand-editor reflow", () => {
     }
   });
 
+  // The threshold itself: the form is set to a width of its own text a little above and a little
+  // below it, so a threshold that drifted (a rule at 10em, or in rem) fails here, not only where the
+  // fixtures happen to land.
+  for (const fontSize of ["100%", "200%"]) {
+    test(`switches to the squeezed padding at ${String(SQUEEZED_EM)}em of form width, text at ${fontSize}: just above it the groups pad as everywhere, just below they pad the narrow amount`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await openEditor(page);
+      await page.evaluate((size) => {
+        document.documentElement.style.fontSize = size;
+      }, fontSize);
+      const read = async (offset: number) => {
+        const found = await page.evaluate(
+          async ({ squeezedEm, offsetPx }) => {
+            const host = document.querySelector<HTMLElement>("#editor-new");
+            const form = host?.shadowRoot?.querySelector(".form");
+            const group = form?.querySelector(".group");
+            const file = form?.querySelector(".image-row .file");
+            if (!host || !form || !group || !file) throw new Error("no form");
+            host.style.flex = "none";
+            const base = Number.parseFloat(getComputedStyle(form).fontSize);
+            host.style.inlineSize = `${String(squeezedEm * base + offsetPx)}px`;
+            await new Promise((resolve) =>
+              requestAnimationFrame(() => requestAnimationFrame(resolve)),
+            );
+            const resolve = (value: string) => {
+              const probe = document.createElement("div");
+              probe.style.paddingInline = value;
+              form.append(probe);
+              const resolved = getComputedStyle(probe).paddingLeft;
+              probe.remove();
+              return resolved;
+            };
+            const ems =
+              form.getBoundingClientRect().width /
+              Number.parseFloat(getComputedStyle(form).fontSize);
+            return {
+              ems,
+              padding: getComputedStyle(group).paddingLeft,
+              pulledOut: getComputedStyle(file).marginLeft,
+              narrow: resolve("var(--idg-space-3xs)"),
+              regular: resolve("calc(var(--idg-space-s) * var(--idg-density-gap-scale))"),
+            };
+          },
+          { squeezedEm: SQUEEZED_EM, offsetPx: offset },
+        );
+        return found;
+      };
+      const above = await read(2);
+      expect(above.ems).toBeGreaterThan(SQUEEZED_EM);
+      expect(above.padding).toBe(above.regular);
+      expect(above.pulledOut).toBe("0px");
+      const below = await read(-2);
+      expect(below.ems).toBeLessThan(SQUEEZED_EM);
+      expect(below.padding).toBe(below.narrow);
+      expect(below.pulledOut).toBe(`-${below.narrow}`);
+    });
+  }
+
   test("pulls a squeezed form's file inputs out over the group padding in right-to-left text too", async ({
     page,
   }) => {
