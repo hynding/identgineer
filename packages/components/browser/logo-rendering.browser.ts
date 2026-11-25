@@ -8,7 +8,7 @@ import {
   type SvgLogoErrorCode,
 } from "@identgineer/brand";
 import { test as base, type Page } from "@playwright/test";
-import { CONTENT_SECURITY_POLICY } from "./content-security-policy";
+import { LOGO_CONTENT_SECURITY_POLICY as LOGO_POLICY } from "./content-security-policy";
 import { expect, test } from "./fixtures";
 import { BROWSER_PORT } from "./port";
 
@@ -21,15 +21,6 @@ const OWN_FILES = new Set([
   "/fixtures/logos.json",
   "/favicon.ico",
 ]);
-
-/**
- * The strict policy every browser test runs under, with one directive added: images may come from
- * data URLs, which is what a page that shows logos through `logoDataUrl` must allow.
- */
-const LOGO_POLICY = CONTENT_SECURITY_POLICY.replace(
-  "default-src 'self';",
-  "default-src 'self'; img-src 'self' data:;",
-);
 
 interface Logo {
   readonly name: string;
