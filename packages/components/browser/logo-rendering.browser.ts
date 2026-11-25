@@ -259,7 +259,8 @@ base.describe("the checks themselves", () => {
 // edges, crowded on every row; arcs; hairline dashes, of two lengths and of 64; dashes along
 // circles, an ellipse, a rounded rectangle, an arc, a cubic, a diagonal and a horizontal line, and
 // along paths of horizontal and vertical lines (an L, a staircase, a serpentine, a square spiral, a
-// line drawn back and forth, an open path round a square); solid paint over and over; gradients at the stop limit, opaque and translucent; a fill under a
+// line drawn back and forth, an open path round a square); thin strokes along full-size circles,
+// ellipses and arcs, and along concentric circles; solid paint over and over; gradients at the stop limit, opaque and translucent; a fill under a
 // very wide stroke; group opacity layers; masks inside masks; a clip path of crowded edges with the
 // even-odd rule; a view box far wider than tall; dashes, round dots and round joins on a stroke as
 // wide as the image; clip paths of near-coincident zigzags, which a renderer combining them took
@@ -514,6 +515,43 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
         "drawing-too-costly",
       ] as const,
   ),
+  // A thin stroke along a curve is stroked again for every tile of a large image its box touches.
+  ...(["2", "0.5"] as const).map(
+    (width) =>
+      [
+        `thin full-size circles ${width} wide, by uses`,
+        copies(
+          `<circle id="p" cx="500" cy="500" r="450" fill="none" stroke="#000" stroke-width="${width}"/>`,
+        ),
+        "overdraw-too-large",
+      ] as const,
+  ),
+  [
+    "thin full-size ellipses, by uses",
+    copies(
+      '<ellipse id="p" cx="500" cy="500" rx="450" ry="300" fill="none" stroke="#000" stroke-width="0.5"/>',
+    ),
+    "overdraw-too-large",
+  ],
+  [
+    "thin paths of 20 full-size semicircles, by uses",
+    copies(
+      `<path id="p" d="M50 500${Array.from({ length: 20 }, (_, index) => `A450 450 0 1 1 ${index % 2 === 0 ? "950" : "50"} 500`).join("")}" fill="none" stroke="#000" stroke-width="0.5"/>`,
+    ),
+    "overdraw-too-large",
+  ],
+  [
+    "thin concentric circles",
+    (count) =>
+      costlyLogo(
+        Array.from(
+          { length: count },
+          (_, index) =>
+            `<circle cx="500" cy="500" r="${String(490 - (index % 480))}" fill="none" stroke="#000" stroke-width="0.5"/>`,
+        ).join(""),
+      ),
+    "overdraw-too-large",
+  ],
   ["full-size solid fills", copies(`<rect id="p" ${FULL} fill="#0f766e"/>`), "overdraw-too-large"],
   [
     `full-size linear gradients of ${String(STOPS)} stops`,
