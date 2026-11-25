@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
+  <rect id="a" width="10" height="10" fill="#123456"/>
+  <title>&lt;textarea&gt;&lt;/textarea&gt;&lt;svg onload=alert(1)&gt;</title>
+  <desc><textarea>&lt;/textarea&gt;&lt;img src=x onerror=alert(1)&gt;</textarea></desc>
+</svg>

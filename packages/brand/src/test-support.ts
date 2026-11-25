@@ -9,9 +9,14 @@ import {
   SHARED_SOURCES,
 } from "@identgineer/tokens/theme-pipeline";
 import type { Scheme } from "@identgineer/tokens";
+import { expect } from "vitest";
 import type { BrandKit } from "./brand-kit.ts";
 import type { BrandTheme } from "./generate-brand-theme.ts";
+import { isSanitisedSvgLogo } from "./is-sanitised-svg-logo.ts";
 import { parseBrandKit } from "./parse-brand-kit.ts";
+import { sanitiseSvgLogo } from "./sanitise-svg-logo.ts";
+import { SVG_LOGO_LIMITS } from "./svg-logo-limits.ts";
+import { findSanitisedSvgProblems } from "./svg-output-check.ts";
 
 // Test-only helpers: everything here goes through the tokens package's own functions, the ones the
 // built-in themes are held to, rather than anything in this package.
@@ -62,4 +67,19 @@ export function contrastProblems(theme: BrandTheme): string[] {
 export function hueDistance(first: number, second: number): number {
   const difference = Math.abs(first - second) % 360;
   return difference > 180 ? 360 - difference : difference;
+}
+
+/**
+ * What every accepted logo must be: valid to the independent check, a fixed point of the sanitiser
+ * (so `isSanitisedSvgLogo` and a kit take it), and no larger than an input may be.
+ */
+export function expectSettledLogo(svg: string, where: string, idPrefix?: string): void {
+  expect(findSanitisedSvgProblems(svg), `${where}: valid`).toEqual([]);
+  const again = sanitiseSvgLogo(svg, idPrefix === undefined ? undefined : { idPrefix });
+  expect(again.ok && again.svg, `${where}: a fixed point`).toBe(svg);
+  expect(isSanitisedSvgLogo(svg), `${where}: taken as sanitised`).toBe(true);
+  expect(
+    new TextEncoder().encode(svg).length,
+    `${where}: within the input limit`,
+  ).toBeLessThanOrEqual(SVG_LOGO_LIMITS.inputBytes);
 }

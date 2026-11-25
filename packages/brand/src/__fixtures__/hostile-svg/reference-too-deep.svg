@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
+  <rect id="a" width="10" height="10" fill="#123456"/>
+  <use id="u0" href="#u1"/>
+  <use id="u1" href="#u2"/>
+  <use id="u2" href="#u3"/>
+  <use id="u3" href="#u4"/>
+  <use id="u4" href="#u5"/>
+  <use id="u5" href="#u6"/>
+  <use id="u6" href="#u7"/>
+  <use id="u7" href="#u8"/>
+  <use id="u8" href="#u9"/>
+  <use id="u9" href="#u10"/>
+  <use id="u10" href="#u11"/>
+  <use id="u11" href="#u12"/>
+  <rect id="u12" width="1" height="1"/>
+</svg>

@@ -1,1 +1,3 @@
 * text=auto eol=lf
+# Byte-exact hostile inputs: line ends, byte order marks, NULs and UTF-16 are the test
+packages/brand/src/__fixtures__/hostile-svg/*.svg -text

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { RESERVED_THEME_IDS, THEME_IDS } from "@identgineer/tokens";
 import { describe, expect, it } from "vitest";
 import { BRAND_ID_MAX_LENGTH, RESERVED_BRAND_IDS } from "./brand-id.ts";
@@ -8,6 +9,7 @@ import {
   TAGLINE_MAX_LENGTH,
   type BrandKitError,
 } from "./parse-brand-kit.ts";
+import { sanitiseSvgLogo } from "./sanitise-svg-logo.ts";
 import { seeded } from "./seeded-random.ts";
 
 const VALID = {
@@ -285,8 +287,8 @@ describe("parseBrandKit, refusals", () => {
   });
 
   it("refuses unknown keys at every level", () => {
-    expect(errorsOf({ ...VALID, logo: "<svg/>" })).toEqual([
-      expect.objectContaining({ path: "logo", code: "unknown-key" }),
+    expect(errorsOf({ ...VALID, favicon: "<svg/>" })).toEqual([
+      expect.objectContaining({ path: "favicon", code: "unknown-key" }),
     ]);
     expect(pathsOf({ ...VALID, colors: { primary: "#000", accent: "#fff" } })).toEqual([
       "colors.accent",
@@ -512,5 +514,115 @@ describe("parseBrandKit, fuzzed input", () => {
       ).not.toThrow();
       expect(result?.ok, `seed ${String(seed)}, run ${String(run)}`).toBe(false);
     }
+  });
+});
+
+function sanitisedLogo(body: string, idPrefix = "logo-"): string {
+  const result = sanitiseSvgLogo(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">${body}</svg>`,
+    { idPrefix },
+  );
+  if (!result.ok) throw new Error(JSON.stringify(result.errors));
+  return result.svg;
+}
+
+const LOGO = sanitisedLogo('<g id="g"><path d="M0 0H10V10Z" fill="#4f46e5"/></g><use href="#g"/>');
+const MARK = sanitisedLogo('<circle cx="5" cy="5" r="5"/>', "mark-");
+
+describe("parseBrandKit, logo and mark", () => {
+  it("keeps a logo and a mark exactly as the sanitiser returned them", () => {
+    const result = parseBrandKit({ ...VALID, logo: LOGO, mark: MARK });
+    expect(result.ok && result.kit.logo).toBe(LOGO);
+    expect(result.ok && result.kit.mark).toBe(MARK);
+  });
+
+  it("round-trips a kit's logo and mark through JSON", () => {
+    const first = parseBrandKit({ ...VALID, logo: LOGO, mark: MARK });
+    if (!first.ok) throw new Error("expected a kit");
+    // Stored as JSON (a CMS field, a file) and read back, the logo is the same kit again.
+    const stored = JSON.stringify({ ...VALID, logo: first.kit.logo, mark: first.kit.mark });
+    const second = parseBrandKit(JSON.parse(stored));
+    expect(second).toEqual(first);
+  });
+
+  it.each(["logo", "mark"])("treats an undefined %s as absent", (field) => {
+    const result = parseBrandKit({ ...VALID, [field]: undefined });
+    expect(result.ok && field in result.kit).toBe(false);
+  });
+
+  it.each([
+    ["a script", LOGO.replace("</svg>", "<script>alert(1)</script></svg>")],
+    ["an event handler", LOGO.replace("<path ", '<path onload="alert(1)" ')],
+    [
+      "an external reference",
+      LOGO.replace('href="#logo-0"', 'href="https://attacker.invalid/x.svg#a"'),
+    ],
+    [
+      "a file straight from an editor",
+      '<?xml version="1.0"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>',
+    ],
+    [
+      "a clip path of two shapes",
+      sanitisedLogo(
+        '<clipPath id="c"><circle r="5"/></clipPath><rect width="9" height="9" clip-path="url(#c)"/>',
+      ).replace('<circle r="5"/>', '<circle r="5"/><circle cx="9" r="5"/>'),
+    ],
+  ])("refuses a logo with %s until it is sanitised", (_label, logo) => {
+    for (const field of ["logo", "mark"]) {
+      expect(errorsOf({ ...VALID, [field]: logo })).toEqual([
+        expect.objectContaining({ path: field, code: "unsanitised-logo" }),
+      ]);
+    }
+  });
+
+  it.each([
+    [
+      "a DOCTYPE",
+      '<!DOCTYPE svg [<!ENTITY x "y">]><svg xmlns="http://www.w3.org/2000/svg"/>',
+      "doctype",
+    ],
+    ["malformed markup", "<svg><g></svg>", "mismatched-tag"],
+    ["no SVG at all", "Acme", "malformed"],
+    ["an empty string", "", "malformed"],
+    [
+      "a reference cycle",
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><use id="u" href="#u"/></svg>',
+      "reference-cycle",
+    ],
+  ])("refuses a logo with %s, naming the reason and where", (_label, logo, code) => {
+    const [error] = errorsOf({ ...VALID, logo });
+    expect(error).toEqual(expect.objectContaining({ path: "logo", code: "invalid-logo" }));
+    expect(error?.message).toContain(code);
+    expect(error?.message).not.toMatch(/ENTITY|alert|Acme/);
+  });
+
+  it("passes on what to change in a logo the sanitiser deliberately does not support", () => {
+    const [error] = errorsOf({
+      ...VALID,
+      logo:
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" width="10" height="40" preserveAspectRatio="none" mask="url(#m)">' +
+        '<mask id="m"><rect width="10" height="10" fill="#fff"/></mask></svg>',
+    });
+    expect(error).toEqual(expect.objectContaining({ path: "logo", code: "invalid-logo" }));
+    expect(error?.message).toContain("unsupported-feature");
+    expect(error?.message).toContain("preserveAspectRatio");
+  });
+
+  it.each([[42], [null], [{ svg: LOGO }], [[LOGO]]])(
+    "refuses the logo %j as the wrong type",
+    (logo) => {
+      expect(errorsOf({ ...VALID, logo })).toEqual([
+        expect.objectContaining({ path: "logo", code: "wrong-type" }),
+      ]);
+    },
+  );
+
+  it("reads the fixture kit with its logo and mark", () => {
+    const fixture: unknown = JSON.parse(
+      readFileSync(new URL("./__fixtures__/harbour-lights.kit.json", import.meta.url), "utf8"),
+    );
+    const result = parseBrandKit(fixture);
+    expect(result.ok && result.kit.logo?.startsWith("<svg ")).toBe(true);
+    expect(result.ok && result.kit.mark?.startsWith("<svg ")).toBe(true);
   });
 });

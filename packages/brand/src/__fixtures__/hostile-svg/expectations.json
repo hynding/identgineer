@@ -1,0 +1,3046 @@
+{
+  "allowlist-drop-blend-mode-hiding-a-shape.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "path",
+        "attribute": "style",
+        "property": "mix-blend-mode",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "allowlist-drop-class-rule-hiding-a-shape.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "style",
+        "reason": "styling"
+      },
+      {
+        "element": "rect",
+        "attribute": "class",
+        "reason": "styling"
+      }
+    ]
+  },
+  "allowlist-drop-filter-hiding-a-shape.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "filter",
+        "reason": "filter"
+      },
+      {
+        "element": "rect",
+        "attribute": "filter",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "allowlist-drop-root-transform-moving-a-shape.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "transform",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "anchor-element.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "a",
+        "reason": "active-content"
+      },
+      {
+        "element": "a",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "aspect-ratio-none-beside-a-root-clip-path.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-none-beside-a-root-mask.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-none-stretch.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "aspect-ratio-none-with-a-derived-width-beside-a-root-clip-path.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "aspect-ratio-slice-at-half-a-device-pixel.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-beside-a-gradient-inheriting-a-percentage.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-beside-a-percent-mask-region.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-beside-a-percent-use-position.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-beside-a-percentage-nothing-draws.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "aspect-ratio-slice-beside-a-radial-gradient-inheriting-percentages.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-beside-a-user-space-linear-gradient-by-default.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-beside-a-user-space-radial-gradient-by-default.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-beside-percent-radius-and-stroke.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-beside-percent-sizes.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-crop.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "aspect-ratio-slice-cropping-nothing-beside-percent-sizes.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "aspect-ratio-slice-of-a-sliver-letterboxed-once-written.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-of-a-tall-sliver-cropping-a-fraction-of-a-pixel.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "aspect-ratio-slice-of-a-tiny-view-box.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "aspect-ratio-slice-of-a-wide-sliver-cropping-a-fraction-of-a-pixel.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "aspect-ratio-slice-of-a-wordmark-cropping-a-fraction-of-a-pixel.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "aspect-ratio-slice-whose-far-edges-round-twice.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "attribute-quote-injection.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "fill",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "rect",
+        "attribute": "fill",
+        "reason": "invalid-value"
+      }
+    ]
+  },
+  "attribute-without-value.svg": {
+    "outcome": "reject:malformed"
+  },
+  "attributes-without-space.svg": {
+    "outcome": "reject:malformed"
+  },
+  "bare-ampersand.svg": {
+    "outcome": "reject:invalid-entity"
+  },
+  "bidi-override-literal.svg": {
+    "outcome": "reject:invalid-character"
+  },
+  "bidi-override-title.svg": {
+    "outcome": "reject:invalid-character"
+  },
+  "billion-laughs-entities.svg": {
+    "outcome": "reject:doctype"
+  },
+  "billion-laughs-mask.svg": {
+    "outcome": "reject:expansion-too-large"
+  },
+  "billion-laughs-use.svg": {
+    "outcome": "reject:expansion-too-large"
+  },
+  "c1-control.svg": {
+    "outcome": "reject:invalid-character"
+  },
+  "cdata-end-in-text.svg": {
+    "outcome": "reject:malformed"
+  },
+  "cdata-in-title.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "cdata-outside-root.svg": {
+    "outcome": "reject:malformed"
+  },
+  "cdata-unclosed.svg": {
+    "outcome": "reject:malformed"
+  },
+  "clip-path-a-clipapp-120.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-a2-clipuse-120.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-a3-clipingroup-120.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-a4-cliprot-120.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-arcs.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-arcs1.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-circles.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-dup.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-ellipses.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-loops.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-loops1.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-many.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-near.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-rrects.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-star.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-c-zz.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-cal-eoclip.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "clip-path-cal-zz-small.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-cal-zz.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-child-drawn-by-a-use-elsewhere.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-crossing-zigzags.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-cycle-through-use.svg": {
+    "outcome": "reject:reference-cycle"
+  },
+  "clip-path-cycle.svg": {
+    "outcome": "reject:reference-cycle"
+  },
+  "clip-path-d-cz-1e5-01-100.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-d-zz-1e3-00001-1.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-d-zz-1e5-001-100.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-d-zz-1e5-01-100.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-d-zzp-1e5-01-100.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-e-zzp-1e5-0-003-100.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-e2-alone-30000.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "clip-path-e2-square-100000.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-e2-square-30000.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-hidden-child-drawn-by-a-use-elsewhere.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "clip-path-in-box-units-percent-use.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-in-box-units-rotated.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "clip-path-in-box-units-with-transform.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "clip-path-inside-clip-path.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "clip-path-near-coincident-zigzags.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-of-43-shapes.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "clip-path-of-crossing-subpaths.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-of-one-self-crossing-path.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "clip-path-of-two-shapes-on-root-with-mask.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "clip-path-on-a-clip-path.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-on-a-shape-in-a-clip-path.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-on-a-use-in-a-clip-path.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-on-a-use-with-position-and-mask.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-sc-zzp-n60.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-self-crossing-beside-a-square.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-small-zzp-n10-b100000-0-003.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "clip-path-use-child-drawn-by-a-use-elsewhere.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      }
+    ]
+  },
+  "comment-double-hyphen.svg": {
+    "outcome": "reject:invalid-comment"
+  },
+  "comment-html-short-arrow.svg": {
+    "outcome": "reject:invalid-comment"
+  },
+  "comment-html-short.svg": {
+    "outcome": "reject:invalid-comment"
+  },
+  "comment-triple-hyphen-end.svg": {
+    "outcome": "reject:invalid-comment"
+  },
+  "comment-unclosed.svg": {
+    "outcome": "reject:invalid-comment"
+  },
+  "crlf-line-ends.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "css-class-and-style.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "style",
+        "reason": "styling"
+      },
+      {
+        "element": "rect",
+        "attribute": "class",
+        "reason": "styling"
+      }
+    ]
+  },
+  "css-expression.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "fill",
+        "reason": "active-content"
+      },
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "width",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "fill",
+        "reason": "active-content"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "css-import.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "style",
+        "reason": "styling"
+      },
+      {
+        "element": "style",
+        "reason": "styling"
+      }
+    ]
+  },
+  "css-moz-binding.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "-moz-binding",
+        "reason": "active-content"
+      },
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "behavior",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "css-style-element.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "style",
+        "reason": "styling"
+      },
+      {
+        "element": "style",
+        "reason": "styling"
+      }
+    ]
+  },
+  "css-style-escapes.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "reason": "external-reference"
+      }
+    ]
+  },
+  "css-style-markup-injection.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "reason": "invalid-value"
+      }
+    ]
+  },
+  "css-url-fill.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "fill",
+        "reason": "external-reference"
+      },
+      {
+        "element": "rect",
+        "attribute": "stroke",
+        "reason": "external-reference"
+      }
+    ]
+  },
+  "css-url-in-style.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "fill",
+        "reason": "external-reference"
+      },
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "stroke",
+        "reason": "external-reference"
+      }
+    ]
+  },
+  "css-url-reference-attributes.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "clip-path",
+        "reason": "external-reference"
+      },
+      {
+        "element": "rect",
+        "attribute": "mask",
+        "reason": "external-reference"
+      },
+      {
+        "element": "rect",
+        "attribute": "marker-start",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "cursor-and-font-face.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "cursor",
+        "reason": "active-content"
+      },
+      {
+        "element": "font-face",
+        "reason": "unsupported-element"
+      }
+    ]
+  },
+  "dangling-reference-to-a-generated-name.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "preserveAspectRatio",
+        "reason": "render-cost"
+      },
+      {
+        "element": "rect",
+        "attribute": "clip-path",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "dangling-references.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "fill",
+        "reason": "dangling-reference"
+      },
+      {
+        "element": "rect",
+        "attribute": "mask",
+        "reason": "dangling-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "dashes-of-63-lengths-in-a-burst.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "dashes-of-64-lengths-on-a-hairline.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "dashes-on-a-wide-stroke.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "deep-nesting.svg": {
+    "outcome": "reject:too-deep"
+  },
+  "derived-height-off-its-proportions-once-written.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "description-with-quotation-marks-near-the-limit.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "doctype-after-root.svg": {
+    "outcome": "reject:doctype"
+  },
+  "doctype-before-declaration.svg": {
+    "outcome": "reject:processing-instruction"
+  },
+  "doctype-empty-internal-subset.svg": {
+    "outcome": "reject:doctype"
+  },
+  "doctype-inside-root.svg": {
+    "outcome": "reject:doctype"
+  },
+  "doctype-internal-entities.svg": {
+    "outcome": "reject:doctype"
+  },
+  "doctype-literal-with-bracket.svg": {
+    "outcome": "reject:doctype"
+  },
+  "doctype-literal-with-gt.svg": {
+    "outcome": "reject:doctype"
+  },
+  "doctype-lower-case.svg": {
+    "outcome": "reject:doctype"
+  },
+  "doctype-nested-brackets.svg": {
+    "outcome": "reject:doctype"
+  },
+  "doctype-public-with-internal-subset.svg": {
+    "outcome": "reject:doctype"
+  },
+  "doctype-public-without-system.svg": {
+    "outcome": "reject:doctype"
+  },
+  "doctype-public.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "!DOCTYPE",
+        "reason": "document-type"
+      }
+    ]
+  },
+  "doctype-repeated.svg": {
+    "outcome": "reject:doctype"
+  },
+  "doctype-system-external-entity-use.svg": {
+    "outcome": "reject:invalid-entity"
+  },
+  "doctype-system-external.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "!DOCTYPE",
+        "reason": "document-type"
+      }
+    ]
+  },
+  "doctype-unclosed-literal.svg": {
+    "outcome": "reject:doctype"
+  },
+  "doctype-unclosed.svg": {
+    "outcome": "reject:doctype"
+  },
+  "duplicate-attributes-through-prefixes.svg": {
+    "outcome": "reject:duplicate-attribute"
+  },
+  "duplicate-attributes.svg": {
+    "outcome": "reject:duplicate-attribute"
+  },
+  "duplicate-ids.svg": {
+    "outcome": "reject:duplicate-id"
+  },
+  "emptied-clip-path-in-box-units-keeps-its-clip-path.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "attribute": "clip-path",
+        "reason": "render-cost"
+      },
+      {
+        "element": "use",
+        "reason": "misplaced"
+      }
+    ]
+  },
+  "emptied-clip-path-keeps-a-clip-path-written-as-a-mask.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "reason": "rewritten"
+      },
+      {
+        "element": "clipPath",
+        "attribute": "clip-path",
+        "reason": "render-cost"
+      },
+      {
+        "element": "use",
+        "reason": "misplaced"
+      }
+    ]
+  },
+  "emptied-clip-path-keeps-its-clip-path.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "attribute": "clip-path",
+        "reason": "render-cost"
+      },
+      {
+        "element": "use",
+        "reason": "misplaced"
+      }
+    ]
+  },
+  "end-tag-case-mismatch.svg": {
+    "outcome": "reject:mismatched-tag"
+  },
+  "entity-declaration-inside-root.svg": {
+    "outcome": "reject:malformed"
+  },
+  "feimage-external.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "filter",
+        "reason": "filter"
+      },
+      {
+        "element": "rect",
+        "attribute": "filter",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "filter-elements.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "filter",
+        "reason": "filter"
+      },
+      {
+        "element": "rect",
+        "attribute": "filter",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "foreignobject-html.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "foreignObject",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "foreignobject-mixed-case.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "foreignobject",
+        "reason": "active-content"
+      },
+      {
+        "element": "FOREIGNOBJECT",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "gradient-href-cycle.svg": {
+    "outcome": "reject:reference-cycle"
+  },
+  "handler-casing.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "ONLOAD",
+        "reason": "event-handler"
+      },
+      {
+        "element": "rect",
+        "attribute": "OnClick",
+        "reason": "event-handler"
+      },
+      {
+        "element": "rect",
+        "attribute": "onMouseOver",
+        "reason": "event-handler"
+      },
+      {
+        "element": "rect",
+        "attribute": "onfocusin",
+        "reason": "event-handler"
+      }
+    ]
+  },
+  "handler-entity-in-name.svg": {
+    "outcome": "reject:invalid-name"
+  },
+  "handler-entity-in-value.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "onclick",
+        "reason": "event-handler"
+      },
+      {
+        "element": "rect",
+        "attribute": "onmouseover",
+        "reason": "event-handler"
+      }
+    ]
+  },
+  "handler-namespaced.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "ev:event",
+        "reason": "foreign-namespace"
+      },
+      {
+        "element": "rect",
+        "attribute": "ev:onload",
+        "reason": "foreign-namespace"
+      },
+      {
+        "element": "rect",
+        "attribute": "svg:onload",
+        "reason": "foreign-namespace"
+      }
+    ]
+  },
+  "handler-on-every-allowed-element.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "defs",
+        "attribute": "onload",
+        "reason": "event-handler"
+      },
+      {
+        "element": "linearGradient",
+        "attribute": "onload",
+        "reason": "event-handler"
+      },
+      {
+        "element": "stop",
+        "attribute": "onload",
+        "reason": "event-handler"
+      },
+      {
+        "element": "clipPath",
+        "attribute": "onclick",
+        "reason": "event-handler"
+      },
+      {
+        "element": "circle",
+        "attribute": "onclick",
+        "reason": "event-handler"
+      },
+      {
+        "element": "g",
+        "attribute": "onclick",
+        "reason": "event-handler"
+      },
+      {
+        "element": "use",
+        "attribute": "onload",
+        "reason": "event-handler"
+      },
+      {
+        "element": "title",
+        "attribute": "onclick",
+        "reason": "event-handler"
+      }
+    ]
+  },
+  "handler-onload-root.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "onload",
+        "reason": "event-handler"
+      }
+    ]
+  },
+  "handler-whitespace.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "onload",
+        "reason": "event-handler"
+      }
+    ]
+  },
+  "handler-xlink-actuate.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "use",
+        "attribute": "xlink:actuate",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "use",
+        "attribute": "xlink:show",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "use",
+        "attribute": "xlink:type",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "href-both-forms.svg": {
+    "outcome": "reject:duplicate-attribute"
+  },
+  "href-data-url.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "href-fragment-with-scheme.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "href-javascript-control-reference.svg": {
+    "outcome": "reject:invalid-character"
+  },
+  "href-javascript-entity-scheme.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "href-javascript-newline.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "href-javascript-tab-reference.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "href-javascript.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "href-other-prefix-bound-to-xlink.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "use",
+        "attribute": "x:href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "href-vbscript.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "href-xlink-javascript.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "use",
+        "attribute": "xlink:href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "linearGradient",
+        "attribute": "xlink:href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "href-xlink-prefix-bound-to-svg.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "use",
+        "attribute": "xlink:href",
+        "reason": "foreign-namespace"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "href-xlink-undeclared-prefix.svg": {
+    "outcome": "reject:invalid-namespace"
+  },
+  "huge-exponent.svg": {
+    "outcome": "reject:number-out-of-range"
+  },
+  "huge-number-path.svg": {
+    "outcome": "reject:number-out-of-range"
+  },
+  "huge-number-precision.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "path",
+        "attribute": "d",
+        "reason": "invalid-value"
+      }
+    ]
+  },
+  "huge-number.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "width",
+        "reason": "invalid-value"
+      }
+    ]
+  },
+  "id-dom-clobbering.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "id-invalid-characters.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "id",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "rect",
+        "attribute": "id",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "iframe-embed-object.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "iframe",
+        "reason": "active-content"
+      },
+      {
+        "element": "embed",
+        "reason": "active-content"
+      },
+      {
+        "element": "object",
+        "reason": "active-content"
+      },
+      {
+        "element": "video",
+        "reason": "active-content"
+      },
+      {
+        "element": "audio",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "image-external.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "image",
+        "reason": "active-content"
+      },
+      {
+        "element": "image",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "latin1-declared.svg": {
+    "outcome": "reject:invalid-encoding"
+  },
+  "lt-in-attribute.svg": {
+    "outcome": "reject:malformed"
+  },
+  "metadata-element.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "metadata",
+        "reason": "editor-metadata"
+      }
+    ]
+  },
+  "missing-size.svg": {
+    "outcome": "reject:missing-size"
+  },
+  "mxss-desc-markup.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "p",
+        "reason": "foreign-namespace"
+      }
+    ]
+  },
+  "mxss-html-breakout-element.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "font",
+        "reason": "unsupported-element"
+      },
+      {
+        "element": "p",
+        "reason": "unsupported-element"
+      },
+      {
+        "element": "b",
+        "reason": "unsupported-element"
+      }
+    ]
+  },
+  "mxss-noscript.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "noscript",
+        "reason": "unsupported-element"
+      }
+    ]
+  },
+  "mxss-style-cdata.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "style",
+        "reason": "styling"
+      }
+    ]
+  },
+  "mxss-svg-in-title.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "mxss-textarea.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "textarea",
+        "reason": "unsupported-element"
+      }
+    ]
+  },
+  "mxss-title-escaped-markup.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "mxss-title-img.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "img",
+        "reason": "unsupported-element"
+      }
+    ]
+  },
+  "mxss-xmp.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "namespace-almost-svg.svg": {
+    "outcome": "reject:not-svg"
+  },
+  "namespace-default-changed-on-child.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "g",
+        "reason": "foreign-namespace"
+      }
+    ]
+  },
+  "namespace-empty-default-on-child.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "g",
+        "reason": "foreign-namespace"
+      }
+    ]
+  },
+  "namespace-html-root.svg": {
+    "outcome": "reject:not-svg"
+  },
+  "namespace-mathml.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "math",
+        "reason": "foreign-namespace"
+      }
+    ]
+  },
+  "namespace-prefixed-root.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "s:script",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "namespace-svg-prefix-rebound-on-child.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg:g",
+        "reason": "foreign-namespace"
+      }
+    ]
+  },
+  "namespace-two-colons.svg": {
+    "outcome": "reject:invalid-name"
+  },
+  "namespace-unbound-element-prefix.svg": {
+    "outcome": "reject:invalid-namespace"
+  },
+  "namespace-xml-prefix-rebound.svg": {
+    "outcome": "reject:invalid-namespace"
+  },
+  "namespace-xmlns-prefix-declared.svg": {
+    "outcome": "reject:invalid-namespace"
+  },
+  "nested-svg.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "reason": "misplaced"
+      }
+    ]
+  },
+  "non-ascii-name.svg": {
+    "outcome": "reject:invalid-name"
+  },
+  "null-byte-after-root.svg": {
+    "outcome": "reject:invalid-character"
+  },
+  "null-byte-in-name.svg": {
+    "outcome": "reject:invalid-character"
+  },
+  "null-byte-in-scheme.svg": {
+    "outcome": "reject:invalid-character"
+  },
+  "null-character-reference.svg": {
+    "outcome": "reject:invalid-character"
+  },
+  "out-of-range-character-reference.svg": {
+    "outcome": "reject:invalid-character"
+  },
+  "overdraw-gradient-both.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "overdraw-gradient-fill.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "overlong-character-reference.svg": {
+    "outcome": "reject:invalid-entity"
+  },
+  "overlong-decimal-reference.svg": {
+    "outcome": "reject:invalid-entity"
+  },
+  "paint-order-hiding-a-stroke.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "polyglot-gif-header.svg": {
+    "outcome": "reject:malformed"
+  },
+  "polyglot-html-around.svg": {
+    "outcome": "reject:not-svg"
+  },
+  "polyglot-js-comment.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "polyglot-second-root.svg": {
+    "outcome": "reject:malformed"
+  },
+  "polyglot-text-after-root.svg": {
+    "outcome": "reject:malformed"
+  },
+  "processing-instruction-inside.svg": {
+    "outcome": "reject:processing-instruction"
+  },
+  "reference-too-deep.svg": {
+    "outcome": "reject:reference-too-deep"
+  },
+  "relative-size-only.svg": {
+    "outcome": "reject:missing-size"
+  },
+  "review-arc-coincident-mask.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-coincident-rel.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-coincident.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-coincident0-rel.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-coincident0.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-float-angle-dash.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-arc-float-coincide-10-rel.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-float-coincide-10.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-float-coincide-50.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-float-near-coincident-100.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-float-near-coincident.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-float-radii-scaled-10.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-float-radius-dash-relative.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-arc-float-radius-dash.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-arc-float-reverse.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-near-fit-24.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-near-fit-endpoint.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-near-fit-mask.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-near-fit-reveal.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-near-fit-vb1.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-near-fit-vb1b.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-near-fit.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-radius-ratio-mask.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-arc-tiny-radius-mask.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-cal-radial.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-clip-path-none-in-clip-a.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "clip-path",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "review-clip-path-none-in-clip-b.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "clip-path",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "review-clip-path-none-in-clip-c.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "clipPath",
+        "attribute": "style",
+        "property": "clip-path",
+        "reason": "render-cost"
+      }
+    ]
+  },
+  "review-da-ellipse-scaled.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-da-group-circles.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-da-mask-dash.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-da-poly-style.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-da-wide-round-64.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-da-wide-square-burst.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-da-zero-sub-round.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-dash-negative-rounding-to-zero.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "path",
+        "attribute": "stroke-dasharray",
+        "reason": "invalid-value"
+      }
+    ]
+  },
+  "review-dash-zero-square-cap.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-dash-zero.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-dash-zero1.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-dash-zero2.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-float-coincide.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-float-coincide2.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-g-conical-out.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-g-focal-edge.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-g-focal-repeat.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-g-skew.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-gradient-repeat-rounded.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-gradient-rounded-to-a-point.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-magnified-shift.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-no-viewbox-millimetres.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-no-viewbox-width-to-a-million.svg": {
+    "outcome": "reject:number-out-of-range"
+  },
+  "review-redos-style-url-spaces.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      },
+      {
+        "element": "g",
+        "attribute": "style",
+        "reason": "invalid-value"
+      }
+    ]
+  },
+  "review-root-width-0e39.svg": {
+    "outcome": "reject:missing-size"
+  },
+  "review-root-width-1e-39.svg": {
+    "outcome": "reject:missing-size"
+  },
+  "review-root-width-calc-0px.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-root-width-max-0px-0px.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-alias.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "-webkit-clip-path",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "attribute": "clip-path",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-content-visibility-g.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "g",
+        "attribute": "style",
+        "property": "content-visibility",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "g",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-content-visibility-root.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-geo-d.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "path",
+        "attribute": "style",
+        "property": "d",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "path",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-geo-r.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "circle",
+        "attribute": "style",
+        "property": "r",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "circle",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-geo-transform.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "transform",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-geo-width.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "width",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-geo-x.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "x",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-mask-box-image-gradient.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "g",
+        "attribute": "style",
+        "property": "-webkit-mask-box-image",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "g",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-mask-image-gradient.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "mask-image",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-offset-short.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "offset",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-root-border-hide.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-root-border-left.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-root-mask-image.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-root-position-fixed.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-root-position-inset-inline.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-root-position-left.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-root-position-top.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-root-style-width.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-root-webkit.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-webkit-origin.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "-webkit-transform-origin",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-webkit-transform-clip.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-webkit-transform.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "-webkit-transform",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-viewbox-run-together-short.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-viewbox-run-together.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "root-not-svg.svg": {
+    "outcome": "reject:not-svg"
+  },
+  "script-entity-encoded.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "g",
+        "reason": "character-data"
+      }
+    ]
+  },
+  "script-external-source.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "script",
+        "reason": "active-content"
+      },
+      {
+        "element": "script",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "script-in-cdata.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "script",
+        "reason": "active-content"
+      },
+      {
+        "element": "g",
+        "reason": "character-data"
+      }
+    ]
+  },
+  "script-in-comment.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "script",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "script-inside-allowed-element.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "script",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "script-mixed-case.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "SCRIPT",
+        "reason": "active-content"
+      },
+      {
+        "element": "Script",
+        "reason": "active-content"
+      },
+      {
+        "element": "sCrIpT",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "script-namespaced.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg:script",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "script-plain.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "script",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "script-xhtml-namespace.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "html:script",
+        "reason": "foreign-namespace"
+      },
+      {
+        "element": "script",
+        "reason": "foreign-namespace"
+      }
+    ]
+  },
+  "serpentine-of-25000-segments-drawn-seven-times.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "smil-anchor-set-href.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "a",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "smil-animate-href.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "animate",
+        "reason": "active-content"
+      },
+      {
+        "element": "animate",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "smil-other-animations.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "animateTransform",
+        "reason": "active-content"
+      },
+      {
+        "element": "animateMotion",
+        "reason": "active-content"
+      },
+      {
+        "element": "animateColor",
+        "reason": "active-content"
+      },
+      {
+        "element": "discard",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "smil-set-onload.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "set",
+        "reason": "active-content"
+      },
+      {
+        "element": "set",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "square-dashes-on-a-wide-stroke.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "surrogate-character-reference.svg": {
+    "outcome": "reject:invalid-character"
+  },
+  "text-elements.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "text",
+        "reason": "text"
+      },
+      {
+        "element": "textPath",
+        "reason": "text"
+      }
+    ]
+  },
+  "title-of-greater-than-signs-at-the-limit.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "too-many-stops.svg": {
+    "outcome": "reject:too-many-stops"
+  },
+  "transform-overflow-nan.svg": {
+    "outcome": "reject:number-out-of-range"
+  },
+  "unbalanced-tags.svg": {
+    "outcome": "reject:mismatched-tag"
+  },
+  "unclosed-root.svg": {
+    "outcome": "reject:mismatched-tag"
+  },
+  "undeclared-entity.svg": {
+    "outcome": "reject:invalid-entity"
+  },
+  "unknown-elements-allowed-attributes.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "foo",
+        "reason": "unsupported-element"
+      },
+      {
+        "element": "pattern",
+        "reason": "unsupported-element"
+      },
+      {
+        "element": "symbol",
+        "reason": "unsupported-element"
+      },
+      {
+        "element": "marker",
+        "reason": "unsupported-element"
+      },
+      {
+        "element": "switch",
+        "reason": "unsupported-element"
+      },
+      {
+        "element": "view",
+        "reason": "unsupported-element"
+      }
+    ]
+  },
+  "unknown-html-entity.svg": {
+    "outcome": "reject:invalid-entity"
+  },
+  "unquoted-attribute.svg": {
+    "outcome": "reject:malformed"
+  },
+  "use-cycle-ancestor.svg": {
+    "outcome": "reject:reference-cycle"
+  },
+  "use-cycle-pair.svg": {
+    "outcome": "reject:reference-cycle"
+  },
+  "use-cycle-self.svg": {
+    "outcome": "reject:reference-cycle"
+  },
+  "use-data-url.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "use-external-file.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "use-position-in-millimetres-moved-onto-a-group.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "use-position-in-percent-of-a-fractional-view-box.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "use-relative-file.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "attribute": "href",
+        "reason": "external-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      },
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "use-wrong-kind.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "use",
+        "reason": "dangling-reference"
+      },
+      {
+        "element": "rect",
+        "attribute": "fill",
+        "reason": "dangling-reference"
+      },
+      {
+        "element": "rect",
+        "attribute": "clip-path",
+        "reason": "dangling-reference"
+      }
+    ]
+  },
+  "utf16be-bom.svg": {
+    "outcome": "reject:invalid-encoding"
+  },
+  "utf16le-bom.svg": {
+    "outcome": "reject:invalid-encoding"
+  },
+  "utf16le-no-bom.svg": {
+    "outcome": "reject:invalid-character"
+  },
+  "utf7-declared.svg": {
+    "outcome": "reject:invalid-encoding"
+  },
+  "utf7-payload-undeclared.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "utf8-bom.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "script",
+        "reason": "active-content"
+      }
+    ]
+  },
+  "utf8-double-bom.svg": {
+    "outcome": "reject:invalid-character"
+  },
+  "utf8-encoded-surrogate.svg": {
+    "outcome": "reject:invalid-encoding"
+  },
+  "utf8-invalid-bytes.svg": {
+    "outcome": "reject:invalid-encoding"
+  },
+  "utf8-overlong-less-than.svg": {
+    "outcome": "reject:invalid-encoding"
+  },
+  "xml-base.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "svg",
+        "attribute": "xml:base",
+        "reason": "external-reference"
+      },
+      {
+        "element": "g",
+        "attribute": "xml:base",
+        "reason": "external-reference"
+      }
+    ]
+  },
+  "xml-declaration-not-first.svg": {
+    "outcome": "reject:processing-instruction"
+  },
+  "xml-stylesheet-first.svg": {
+    "outcome": "reject:processing-instruction"
+  },
+  "xml-stylesheet-instruction.svg": {
+    "outcome": "reject:processing-instruction"
+  },
+  "xml-version-1-1.svg": {
+    "outcome": "reject:invalid-declaration"
+  },
+  "xxe-parameter-entity.svg": {
+    "outcome": "reject:doctype"
+  },
+  "xxe-system-entity.svg": {
+    "outcome": "reject:doctype"
+  }
+}

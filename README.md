@@ -61,7 +61,12 @@ A brand kit (name, colours, a font pairing, corners and tone) becomes a theme of
 `packages/brand` checks the kit, derives a light and dark palette that passes the same contrast
 checks as the built-in themes, and emits it as CSS scoped to `data-theme="<your id>"` and as DTCG
 tokens. Its corners are a preference that designs may decline: the square designs (brutalist,
-editorial, pixel) keep their own. See [packages/brand/README.md](packages/brand/README.md).
+editorial, pixel) keep their own. A kit's logo and mark are SVG uploads, rebuilt by a strict,
+dependency-free sanitiser into inert SVG (an allowlist of elements and attributes, no script,
+handlers, external references or `foreignObject`, and bounds on what drawing and painting it may
+cost) and
+shown through `<img>`. See
+[packages/brand/README.md](packages/brand/README.md).
 
 ## Tracking
 

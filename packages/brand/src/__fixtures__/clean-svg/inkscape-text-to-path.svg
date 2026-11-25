@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="120"
+   height="40"
+   viewBox="0 0 120 40"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25)"
+   sodipodi:docname="wordmark.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1">
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath1">
+      <path
+         d="m 82,4 h 34 v 32 h -34 z"
+         style="font-size:32px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans, Normal';fill:#000000;stroke-width:1"
+         id="path4" />
+    </clipPath>
+    <mask
+       maskUnits="userSpaceOnUse"
+       id="mask1">
+      <path
+         d="m 82,4 h 34 v 16 h -34 z"
+         style="font-size:32px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans, Normal';fill:#ffffff"
+         id="path5" />
+    </mask>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       aria-label="Ab"
+       id="text1"
+       style="font-size:32px;line-height:1.25;font-family:'Open Sans';-inkscape-font-specification:'Open Sans, Normal';letter-spacing:0px;word-spacing:0px;fill:#0f172a;stroke-width:1">
+      <path
+         d="M 22.4,32 19.8,25.3 H 8.9 L 6.3,32 H 2.6 L 12.9,4.6 h 3.1 L 26.1,32 Z M 18.7,22.1 15.4,13.2 Q 15,12 14.4,9.9 13.8,12.3 13.2,13.2 L 10,22.1 Z"
+         style="font-weight:bold;font-family:'Open Sans';-inkscape-font-specification:'Open Sans Bold';fill:#0f766e"
+         id="path1" />
+      <path
+         d="m 38.6,10.9 q 3.9,0 6,2.7 2.1,2.6 2.1,7.4 0,4.8 -2.2,7.5 -2.1,2.6 -5.9,2.6 -1.9,0 -3.5,-0.7 -1.5,-0.7 -2.6,-2.2 H 32.3 L 31.6,32 H 29.2 V 3 h 3.4 v 7 q 0,2.4 -0.2,4.3 h 0.2 q 2.4,-3.4 6,-3.4 z m -0.5,2.9 q -2.9,0 -4.1,1.7 -1.3,1.6 -1.3,5.5 0,3.9 1.3,5.6 1.3,1.7 4.2,1.7 2.6,0 3.9,-1.9 1.3,-1.9 1.3,-5.5 0,-3.6 -1.3,-5.4 -1.3,-1.8 -4,-1.8 z"
+         style="font-family:'Open Sans';-inkscape-font-specification:'Open Sans, Normal'"
+         id="path2" />
+    </g>
+    <rect
+       style="fill:#38bdf8;fill-opacity:1;stroke:none"
+       id="rect1"
+       width="40"
+       height="40"
+       x="80"
+       y="0"
+       clip-path="url(#clipPath1)"
+       mask="url(#mask1)" />
+  </g>
+</svg>

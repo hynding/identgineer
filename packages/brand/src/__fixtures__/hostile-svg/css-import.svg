@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
+  <rect id="a" width="10" height="10" fill="#123456"/>
+  <style>@import url(https://attacker.invalid/x.css);</style>
+  <style type="text/css">@import "https://attacker.invalid/y.css";</style>
+</svg>

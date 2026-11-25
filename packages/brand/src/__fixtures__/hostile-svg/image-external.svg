@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <rect id="a" width="10" height="10" fill="#123456"/>
+  <image href="https://attacker.invalid/x.png" width="10" height="10"/>
+  <image xlink:href="https://attacker.invalid/x.svg"/>
+</svg>

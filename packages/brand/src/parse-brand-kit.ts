@@ -8,6 +8,9 @@ import {
   type Tone,
 } from "./brand-kit.ts";
 import { TYPOGRAPHY_IDS, type TypographyId } from "./font-pairings.ts";
+import { isSanitisedSvgLogo } from "./is-sanitised-svg-logo.ts";
+import { sanitiseSvgLogo } from "./sanitise-svg-logo.ts";
+import type { SanitisedSvg } from "./sanitised-svg.ts";
 import { parseHexColor, type Rgb } from "./srgb.ts";
 
 export type BrandKitErrorCode =
@@ -23,6 +26,8 @@ export type BrandKitErrorCode =
   | "invalid-text"
   | "invalid-color"
   | "not-allowed"
+  | "invalid-logo"
+  | "unsanitised-logo"
   | "too-many-errors";
 
 /** Located: `path` names the field (`colors.primary`), and `message` never repeats the value. */
@@ -64,7 +69,17 @@ const LOOSE_PUNCTUATION =
   /(?<![\p{L}\p{M}])[\u05F3\u05F4\u30FB\u00B7]|[\u30FB\u00B7](?![\p{L}\p{M}])/u;
 const SHOWABLE_KEY = /^[A-Za-z0-9_$-]{1,40}$/;
 
-const KIT_KEYS = ["id", "name", "tagline", "colors", "typography", "corners", "tone"] as const;
+const KIT_KEYS = [
+  "id",
+  "name",
+  "tagline",
+  "colors",
+  "typography",
+  "corners",
+  "tone",
+  "logo",
+  "mark",
+] as const;
 const COLOR_KEYS = ["primary", "secondary", "neutralTint"] as const;
 
 type Fields<Key extends string> = Partial<Record<Key, unknown>>;
@@ -229,6 +244,41 @@ function readColors(value: unknown, errors: Errors): BrandColors | undefined {
   });
 }
 
+/**
+ * A logo is stored as the sanitiser returned it, so the kit only accepts that exact text: an SVG
+ * the sanitiser refuses is reported with its reason, and one it would change (hostile content it
+ * would drop, or a file straight from an editor) must go through `sanitiseSvgLogo` first.
+ */
+function readLogo(value: unknown, path: string, errors: Errors): SanitisedSvg | undefined {
+  const text = readString(value, path, errors);
+  if (text === undefined) return undefined;
+  if (isSanitisedSvgLogo(text)) return text;
+  const result = sanitiseSvgLogo(text);
+  if (!result.ok) {
+    const [error] = result.errors;
+    const where =
+      error?.line === undefined
+        ? ""
+        : ` at line ${String(error.line)}, column ${String(error.column)}`;
+    // What to change, for a form the sanitiser deliberately does not support; the message
+    // names the construct, never the logo's text.
+    const change =
+      error?.code === "unsupported-feature" ? `: ${error.message.replace(/^the SVG /, "it ")}` : "";
+    errors.add(
+      path,
+      "invalid-logo",
+      `is not an SVG logo the sanitiser accepts (${error?.code ?? "malformed"}${where})${change}`,
+    );
+    return undefined;
+  }
+  errors.add(
+    path,
+    "unsanitised-logo",
+    "must be stored exactly as sanitiseSvgLogo returns it; sanitise the upload first",
+  );
+  return undefined;
+}
+
 interface KitParts {
   readonly id: string | undefined;
   readonly name: string | undefined;
@@ -237,6 +287,8 @@ interface KitParts {
   readonly typography: TypographyId | undefined;
   readonly corners: Corners | undefined;
   readonly tone: Tone | undefined;
+  readonly logo: SanitisedSvg | undefined;
+  readonly mark: SanitisedSvg | undefined;
 }
 
 function readKit(input: unknown, errors: Errors): KitParts | undefined {
@@ -253,13 +305,15 @@ function readKit(input: unknown, errors: Errors): KitParts | undefined {
     typography: readChoice(fields.typography, "typography", TYPOGRAPHY_IDS, errors),
     corners: readChoice(fields.corners, "corners", CORNERS, errors),
     tone: readChoice(fields.tone, "tone", TONES, errors),
+    logo: fields.logo === undefined ? undefined : readLogo(fields.logo, "logo", errors),
+    mark: fields.mark === undefined ? undefined : readLogo(fields.mark, "mark", errors),
   };
 }
 
 /**
  * Reads untrusted input (parsed JSON, form data) into a typed brand kit, or returns every problem
- * with the field it belongs to. It never throws, keeps no input string except the id, name and
- * tagline it has checked, and shares nothing with the input.
+ * with the field it belongs to. It never throws, keeps no input string except the id, name,
+ * tagline, logo and mark it has checked, and shares nothing with the input.
  */
 export function parseBrandKit(input: unknown): BrandKitResult {
   const errors = new Errors();
@@ -270,7 +324,7 @@ export function parseBrandKit(input: unknown): BrandKitResult {
     // Only a hostile proxy (a throwing trap, or one revoked) gets here.
     return { ok: false, errors: [{ path: "", code: "unreadable", message: "could not be read" }] };
   }
-  const { id, name, tagline, colors, typography, corners, tone } = parts ?? {};
+  const { id, name, tagline, colors, typography, corners, tone, logo, mark } = parts ?? {};
   if (
     errors.list.length > 0 ||
     id === undefined ||
@@ -292,6 +346,8 @@ export function parseBrandKit(input: unknown): BrandKitResult {
       typography,
       corners,
       tone,
+      ...(logo !== undefined && { logo }),
+      ...(mark !== undefined && { mark }),
     }),
   };
 }
