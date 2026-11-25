@@ -150,7 +150,6 @@ visitor:
 | `authenticated` | NavigationItem | read                           | —                                       | As above                                                          |
 | `authenticated` | Profile        | create, read, update           | `record.ownerId == user.id`, owner = me | Manage their own profile; no delete                               |
 | `authenticated` | BrandKit       | create, read, update, delete   | `record.ownerId == user.id`, owner = me | Manage their own brand kits                                       |
-| `authenticated` | BrandKit       | read                           | `record.isPublic == true`               | Signed-in callers do not inherit the public role on Strapi        |
 | `authenticated` | Property       | create, read, update, delete   | `record.ownerId == user.id`, owner = me | Manage the sites they track                                       |
 | `authenticated` | Event          | read                           | `record.ownerId == user.id`             | See analytics of their own properties; never write them           |
 | `authenticated` | ConsentRecord  | read                           | `record.ownerId == user.id`             | Show consent evidence for their own properties; never write it    |
@@ -162,11 +161,15 @@ visitor:
   endpoint. Its one conditioned grant reads brand kits marked public. Tracking reaches the CMS only
   through the two ingestion endpoints, which are public by declaration in `camis.json`, not by a
   grant.
-- A user holds brand kits under two grants: the owner grant, which may do everything to their own
-  kits, and a read-only grant on public kits. Each target lets an action through when any grant
-  of the role allows it, so a public kit of someone else can be read but not changed or deleted
-  (403), and a private kit of someone else is not found (404). The owner grant is not widened:
-  widening it to public kits would let anyone change them.
+- A signed-in user holds brand kits under the owner grant only, and reads public kits without
+  their credentials, as the public role (the brand package's store does). A read-only grant of
+  public kits for `authenticated` was tried and dropped: a kit's `owner` cannot be filtered on
+  (strapi-php answers `400 Invalid key owner`, as the user type is not readable), so
+  `GET /api/brand-kits` would mix the caller's kits with every public kit of other users, with
+  nothing in an answer to tell them apart. A kit of someone else is not found (404) for a
+  signed-in user; a public one cannot be changed or deleted by anyone but its owner (403 for the
+  public role). The owner grant is not widened: widening it to public kits would let anyone change
+  them.
 - No role but `super-admin` reads User or File, so a populate of a kit's `owner` shows nothing
   about the owner to anyone else.
 - "owner = me" is the grant's `assign: { owner: "user.id" }`: the server fills the owner from the
@@ -368,8 +371,9 @@ behaviour, so on strapi-php a property with events cannot be deleted until its e
 
 **Public brand kits.** A `public` read grant on BrandKit conditioned on `record.isPublic == true`
 is within what camis enforces on both targets (a read condition of `eq` over `record.<field>`
-against a literal, with the public role as the caller without a session), and the model has it,
-with the separate read-only grant for `authenticated` described under [Roles](#roles). Both
-targets combine a role's grants on one type with "or": strapi-php's policy and list scope test each
-condition of the role, and Strapi's generated controllers hold each action under every condition
-that grants it.
+against a literal, with the public role as the caller without a session), and the model has it. A
+signed-in user does not inherit the public role on Strapi, and the separate read-only grant for
+`authenticated` that would cover it is left out for the reason given under [Roles](#roles). Both
+targets combine a role's grants on one type with "or" (strapi-php's policy and list scope test each
+condition of the role; Strapi's generated controllers hold each action under every condition that
+grants it), so such a grant would add public kits to every signed-in list, not replace the owner's.
