@@ -453,23 +453,31 @@ export class IdgBrandEditor {
 
   /**
    * Waits, busy, for the reads of uploads under way, so a save sends the file just chosen and not
-   * the one before it. Whether the save may go on: not when the kit was replaced or the element
-   * left the page meanwhile, nor when a file it waited for was refused, which is then the first
-   * field to change.
+   * the one before it, and the form as it stands when the wait ends. Whether the save may go on:
+   * not when the kit was replaced or the element left the page meanwhile, nor when an image it
+   * waited for was removed (the person changed their mind about it, so nothing is said), nor when
+   * an image it waited for ends refused, which is then the first field to change. Earlier
+   * outcomes do not count: a refused file since replaced by one that was accepted is no reason.
    */
   private async waitForReads(labels: BrandEditorLabels): Promise<boolean> {
     const attempt = this.attempts.start();
     this.pending = true;
     this.summary = undefined;
     this.saved = undefined;
-    const ends: ReadEnd[] = [];
+    const awaited = new Set<ImageField>();
+    let removed = false;
+    let dropped = false;
     while (this.reads.size > 0) {
-      ends.push(...(await Promise.all([...this.reads.values()].map((read) => read.ended))));
+      const waiting = [...this.reads.entries()];
+      for (const [field] of waiting) awaited.add(field);
+      const ends = await Promise.all(waiting.map(([, read]) => read.ended));
+      removed ||= ends.includes("removed");
+      dropped ||= ends.includes("dropped");
     }
     if (!this.attempts.isCurrent(attempt)) return false;
     this.pending = false;
-    if (ends.includes("dropped")) return false;
-    if (ends.includes("refused")) {
+    if (dropped || removed) return false;
+    if ([...awaited].some((field) => this.errors[field] !== undefined)) {
       this.summary = { text: labels.errorFields, key: (this.keys += 1) };
       this.focusInvalid = true;
       return false;
