@@ -627,14 +627,14 @@ describe("sanitiseSvgLogo, linear time", () => {
   // the whole input, not only up to the first limit.
   const limits = {
     ...SVG_LOGO_LIMITS,
-    inputBytes: 16 * 1024 * 1024,
-    elements: 1_000_000,
-    depth: 1_000_000,
+    inputBytes: 64 * 1024 * 1024,
+    elements: 10_000_000,
+    depth: 10_000_000,
     attributesPerElement: 1_000_000,
-    attributeValueLength: 16 * 1024 * 1024,
-    pathDataLength: 16 * 1024 * 1024,
-    textLength: 16 * 1024 * 1024,
-    nameLength: 16 * 1024 * 1024,
+    attributeValueLength: 64 * 1024 * 1024,
+    pathDataLength: 64 * 1024 * 1024,
+    textLength: 64 * 1024 * 1024,
+    nameLength: 64 * 1024 * 1024,
     ids: 1_000_000,
     renderedElements: 10_000_000,
     drawingCost: Number.MAX_SAFE_INTEGER,
@@ -645,27 +645,71 @@ describe("sanitiseSvgLogo, linear time", () => {
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1">${body}</svg>`;
   type Fill = (unit: string) => string;
 
+  // Linear growth has exponent 1 and quadratic 2; honest runs measured 0.9 to 1.3 on a quiet machine
+  // and up to about 1.55 with four busy processes on four cores. The bound sits above that and clear of
+  // quadratic: 16x the input may take up to 16 ** 1.7 (about 111) times as long, where linear takes
+  // about 14 to 35 and quadratic 256.
+  const GROWTH_EXPONENT_BOUND = 1.7;
+  // A run shorter than this is mostly timer and scheduler noise, so it is counted as this long.
+  const FLOOR_MILLISECONDS = 5;
+
+  /**
+   * The exponent k in time ~ size ** k, by least squares on the logarithms of the fastest of
+   * several runs (three unless told otherwise) at each of three sizes. Runs are taken in turn
+   * across the sizes, so a pause for garbage collection or another process counts less, and a busy
+   * spell slows all sizes alike.
+   * Over a 16-fold span an honest 4 to 5.5 times per quadrupling (exponent about 1.2) stays far
+   * from a quadratic stage (2); one 4x pair left a bound of 8 between 5.5 and 16.
+   */
+  function growthExponent(
+    sizes: readonly [number, number, number],
+    run: (size: number) => number,
+    { runs = 3, floorMilliseconds = FLOOR_MILLISECONDS } = {},
+  ): number {
+    const fastest = sizes.map(() => Number.POSITIVE_INFINITY);
+    for (let round = 0; round < runs; round += 1) {
+      sizes.forEach((size, index) => {
+        fastest[index] = Math.min(fastest[index] ?? Number.POSITIVE_INFINITY, run(size));
+      });
+    }
+    const xs = sizes.map((size) => Math.log(size));
+    const ys = fastest.map((time) => Math.log(Math.max(time, floorMilliseconds)));
+    const meanX = xs.reduce((sum, x) => sum + x, 0) / xs.length;
+    const meanY = ys.reduce((sum, y) => sum + y, 0) / ys.length;
+    const covariance = xs.reduce(
+      (sum, x, index) => sum + (x - meanX) * ((ys[index] ?? meanY) - meanY),
+      0,
+    );
+    const variance = xs.reduce((sum, x) => sum + (x - meanX) ** 2, 0);
+    return covariance / variance;
+  }
+
+  it("measures a linear function as growing like its input and a quadratic one like its square", () => {
+    // The measure is checked against known functions, so a defect in it cannot pass every case
+    // below. The smallest run of each takes about 10 ms, over the floor, so the floor does not
+    // flatten either slope; the bound is what has to separate the two.
+    const spin = (count: number): number => {
+      const started = performance.now();
+      let sink = 0;
+      for (let step = 0; step < count; step += 1) sink += Math.sqrt(step);
+      if (sink < 0) throw new Error("unreachable: keeps the loop from being removed");
+      return performance.now() - started;
+    };
+    const sizes = [100, 400, 1600] as const;
+    const linear = growthExponent(sizes, (size) => spin(size * 75_000), { runs: 7 });
+    const quadratic = growthExponent(sizes, (size) => spin(size * size * 750), { runs: 3 });
+    expect(linear).toBeLessThan(GROWTH_EXPONENT_BOUND);
+    expect(quadratic).toBeGreaterThan(GROWTH_EXPONENT_BOUND);
+  }, 120_000);
+
   function timed(input: string): number {
     const started = performance.now();
     sanitiseSvgLogoWithLimits(input, undefined, limits);
     return performance.now() - started;
   }
 
-  /**
-   * The fastest of five runs of each, taken in turn, so a pause for garbage collection or another
-   * process counts less, and a busy spell slows both sizes alike.
-   */
-  function fastestOfEach(small: string, large: string): { small: number; large: number } {
-    let [fastestSmall, fastestLarge] = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
-    for (let run = 0; run < 5; run += 1) {
-      fastestSmall = Math.min(fastestSmall, timed(small));
-      fastestLarge = Math.min(fastestLarge, timed(large));
-    }
-    return { small: fastestSmall, large: fastestLarge };
-  }
-
   // Each shape is read to its end, accepted or refused only there, and is as large as it takes for
-  // the smaller of its two sizes to run for about 10 ms or more on a laptop: a shape the reader
+  // the smallest of its three sizes to run for about 10 ms or more on a laptop: a shape the reader
   // gets through in a fraction of that is made larger rather than timed in the noise.
   it.each<readonly [string, (fill: Fill, bytes: number) => string, number, string]>([
     ["ampersands in a comment", (fill) => root(`<!--${fill("&")}-->`), 32, "accepted"],
@@ -676,7 +720,7 @@ describe("sanitiseSvgLogo, linear time", () => {
       "accepted",
     ],
     ["character references", (fill) => root(`<title>${fill("&#x41;")}</title>`), 8, "accepted"],
-    ["an unclosed comment", (fill) => root(`<!--${fill("- ")}`), 16, "invalid-comment"],
+    ["an unclosed comment", (fill) => root(`<!--${fill("- ")}`), 32, "invalid-comment"],
     ["comments", (fill) => root(fill("<!-- x -->")), 32, "accepted"],
     [
       "a title split by comments",
@@ -716,7 +760,7 @@ describe("sanitiseSvgLogo, linear time", () => {
     [
       "a style of one url of white space",
       (fill) => root(`<g style="url(${fill(" ")}#("/>`),
-      4,
+      8,
       "accepted",
     ],
     ["a long transform", (fill) => root(`<g transform="${fill("scale(1)")}"/>`), 8, "accepted"],
@@ -743,26 +787,23 @@ describe("sanitiseSvgLogo, linear time", () => {
       "overdraw-too-large",
     ],
     ["greater-than signs in text", (fill) => root(fill(">")), 8, "accepted"],
-    ["one long element name", (fill) => root(`<${fill("a")}/>`), 16, "accepted"],
+    ["one long element name", (fill) => root(`<${fill("a")}/>`), 32, "accepted"],
   ])(
-    "reads %s in linear time: four times the input takes far less than sixteen times as long",
+    "reads %s in linear time: sixteen times the input takes far less than quadratic time",
     (_label, build, scale, outcome) => {
       const at = (bytes: number): string =>
         build((unit) => unit.repeat(Math.ceil(bytes / unit.length)), bytes);
-      const [small, large] = [at((QUARTER_MEGABYTE * scale) / 4), at(QUARTER_MEGABYTE * scale)];
-      const result = sanitiseSvgLogoWithLimits(large, undefined, limits);
+      const smallest = (QUARTER_MEGABYTE * scale) / 4;
+      const sizes = [smallest, smallest * 4, smallest * 16] as const;
+      const inputs = new Map(sizes.map((bytes) => [bytes, at(bytes)]));
+      const result = sanitiseSvgLogoWithLimits(inputs.get(sizes[2]) ?? "", undefined, limits);
       expect(result.ok ? "accepted" : result.errors[0]?.code).toBe(outcome);
-      // A ratio, not a time, so a slow machine cannot fail it: linear is about 4, quadratic 16. A
-      // floor of 5 ms keeps a run too short to time from making the ratio noise. Measured again up
-      // to twice, since a busy spell during one measurement can push a linear ratio past the bound
-      // where a quadratic one is past it every time.
-      let ratio = Number.POSITIVE_INFINITY;
-      for (let attempt = 0; attempt < 3 && !(ratio < 8); attempt += 1) {
-        const fastest = fastestOfEach(small, large);
-        ratio = fastest.large / Math.max(fastest.small, 5);
-      }
-      expect(ratio).toBeLessThan(8);
+      // An exponent, not a time, so a slow machine cannot fail it. The floor keeps a run too short
+      // to time from making the fit noise. No retries: the wide span is what tolerates a busy spell.
+      expect(growthExponent(sizes, (bytes) => timed(inputs.get(bytes) ?? ""))).toBeLessThan(
+        GROWTH_EXPONENT_BOUND,
+      );
     },
-    120_000,
+    300_000,
   );
 });
