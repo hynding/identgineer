@@ -1,7 +1,8 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { BUNDLES } from "../stencil-bundles";
 
 const PACKAGE = fileURLToPath(new URL("..", import.meta.url));
 // The two builds a page loads from: the lazy build the www output serves, and the dist module build.
@@ -134,3 +135,108 @@ describe.skipIf(!BUILDS.every((directory) => existsSync(directory)))(
     }
   },
 );
+
+// What is rendered by whom, read from the sources: a component and the helper modules it imports.
+const SOURCES = join(PACKAGE, "src");
+
+function sourceFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return sourceFiles(path);
+    return /\.tsx?$/.test(entry.name) && !/\.(?:spec|test)\.tsx?$|\.d\.ts$/.test(entry.name)
+      ? [path]
+      : [];
+  });
+}
+
+const withoutComments = (text: string) =>
+  text.replaceAll(/\/\*[\s\S]*?\*\//g, "").replaceAll(/^\s*\/\/.*$/gm, "");
+
+/** A component's file, and every module of the package it imports, which can render more elements. */
+function modulesOf(file: string): string[] {
+  const seen = new Set<string>();
+  const queue = [file];
+  for (const path of queue) {
+    if (seen.has(path)) continue;
+    seen.add(path);
+    const text = withoutComments(readFileSync(path, "utf8"));
+    for (const match of text.matchAll(/from\s+["'](\.[^"']*)["']/g)) {
+      const base = resolve(dirname(path), match[1] ?? "");
+      const found = [`${base}.tsx`, `${base}.ts`, join(base, "index.ts")].find((candidate) =>
+        existsSync(candidate),
+      );
+      if (found !== undefined) queue.push(found);
+    }
+  }
+  return [...seen];
+}
+
+const COMPONENTS = sourceFiles(SOURCES).flatMap((file) => {
+  const tag = /tag:\s*"(idg-[a-z-]+)"/.exec(withoutComments(readFileSync(file, "utf8")))?.[1];
+  return tag === undefined ? [] : [{ tag, file }];
+});
+
+const groupOf = (tag: string) => BUNDLES.find((group) => group.components.includes(tag))?.name;
+
+// What a component renders that is in a group of its own and not in `controls`: the element waits a
+// round trip for that bundle, so each is listed here with the reason it is accepted.
+const ACCEPTED_RENDERS: Record<string, string> = {
+  "idg-brand-guidelines>idg-brand-logo":
+    "a guide of the sanitiser's logo tiles; the logo's bundle is requested once the guide renders",
+  "idg-brand-guidelines>idg-brand-swatches":
+    "the swatches are a bundle of their own, small, and requested once the guide renders",
+};
+
+describe("the bundles of stencil-bundles.ts, against the components' sources", () => {
+  it("finds the components, and every one is in exactly one group", () => {
+    expect(COMPONENTS.length).toBeGreaterThan(50);
+    for (const { tag } of COMPONENTS) {
+      const holding = BUNDLES.filter((group) => group.components.includes(tag));
+      expect(
+        holding.map((group) => group.name),
+        `${tag} is in`,
+      ).toHaveLength(1);
+    }
+  });
+
+  it("lists no component that does not exist, and none twice", () => {
+    const tags = new Set(COMPONENTS.map(({ tag }) => tag));
+    const listed = BUNDLES.flatMap((group) => group.components);
+    expect(listed.filter((tag) => !tags.has(tag))).toEqual([]);
+    expect(listed.length).toBe(new Set(listed).size);
+  });
+
+  it("renders only what is in its own group or in controls, bar the accepted", () => {
+    const outside: string[] = [];
+    for (const { tag, file } of COMPONENTS) {
+      const rendered = new Set(
+        modulesOf(file)
+          .flatMap((module) => [
+            ...withoutComments(readFileSync(module, "utf8")).matchAll(/<(idg-[a-z-]+)/g),
+          ])
+          .map((match) => match[1]),
+      );
+      for (const other of rendered) {
+        if (other === undefined || other === tag) continue;
+        const group = groupOf(other);
+        if (group === groupOf(tag) || group === "controls") continue;
+        if (`${tag}>${other}` in ACCEPTED_RENDERS) continue;
+        outside.push(`${tag} (${groupOf(tag) ?? "none"}) renders ${other} (${group ?? "none"})`);
+      }
+    }
+    expect(outside).toEqual([]);
+  });
+
+  it("accepts only renders that are made", () => {
+    for (const key of Object.keys(ACCEPTED_RENDERS)) {
+      const [tag, other] = key.split(">");
+      const component = COMPONENTS.find((candidate) => candidate.tag === tag);
+      const texts = modulesOf(component?.file ?? "").map((module) => readFileSync(module, "utf8"));
+      expect(
+        texts.some((text) => text.includes(`<${other ?? ""}`)),
+        key,
+      ).toBe(true);
+      expect(groupOf(other ?? ""), key).not.toBe(groupOf(tag ?? ""));
+    }
+  });
+});
