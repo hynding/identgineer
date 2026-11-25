@@ -22,6 +22,23 @@ function cost(body: string, viewBox?: string): number {
   return accepted(svg(body, viewBox)).drawingCost;
 }
 
+/** A view box a hundred units square, as some tests below are drawn in. */
+const BOX = "0 0 100 100";
+
+/** The perimeter of an ellipse, added up over a million pieces. */
+function ellipsePerimeter(rx: number, ry: number): number {
+  let length = 0;
+  const pieces = 1_000_000;
+  for (let index = 1; index <= pieces; index += 1) {
+    const [from, to] = [((index - 1) / pieces) * 2 * Math.PI, (index / pieces) * 2 * Math.PI];
+    length += Math.hypot(
+      rx * (Math.cos(to) - Math.cos(from)),
+      ry * (Math.sin(to) - Math.sin(from)),
+    );
+  }
+  return length;
+}
+
 function refusal(input: string): SvgLogoErrorCode | undefined {
   const result = sanitiseSvgLogo(input);
   return result.ok ? undefined : result.errors[0]?.code;
@@ -206,7 +223,7 @@ describe("the drawing cost of a logo", () => {
       layer: 50,
       mask: 200,
       dash: 1,
-      tiledDash: 10,
+      tiledDash: { butt: 4, square: 5, round: 9, wideRound: 24 },
     });
     expect(cost("")).toBe(1);
     expect(cost('<rect width="1" height="1"/>')).toBe(37);
@@ -269,37 +286,167 @@ describe("the drawing cost of a logo", () => {
     );
     expect(cost('<rect width="100%" height="100%" stroke-dasharray="1"/>')).toBe(59);
     expect(cost('<path d="M0 0H100" stroke-dasharray="0 0"/>')).toBe(34);
-    // Two subpaths are not one run of horizontal and vertical lines, so each dash costs ten.
-    expect(cost('<path d="M0 0H100M0 10H100" stroke-dasharray="1"/>')).toBe(1 + 34 + 1030);
+    // Unstroked, no dash is worked out again for the tiles of an image (see below): one a dash.
+    expect(cost('<path d="M0 0H100M0 10H100" stroke-dasharray="1"/>')).toBe(1 + 34 + 103);
   });
 
-  it("charges a dash ten times on anything but one horizontal or vertical line or a rectangle, which Chromium works out again for every tile of a large image", () => {
-    // What Chromium culls to the tile: a line whose ends share a coordinate written the same, a
-    // path of one move and one H or V segment, a rectangle without rounded corners.
+  it("charges a dash one in the shape itself, whatever the shape", () => {
+    // Unstroked, nothing is dashed again for the tiles of an image: each dash costs one, along one
+    // horizontal or vertical line, a rectangle, or anything else.
     expect(cost('<line x2="100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
-    expect(cost('<line x1="5" x2="5" y2="100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
-    expect(cost('<path d="M5 0V100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
     expect(cost('<path d="m5 0h100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
     expect(cost('<rect width="10" height="10" stroke-dasharray="1"/>')).toBe(1 + 36 + 22);
-    expect(cost('<rect width="10" height="10" rx="0" stroke-dasharray="1"/>')).toBe(1 + 36 + 22);
-    expect(cost('<rect width="10" height="10" ry="0" stroke-dasharray="1"/>')).toBe(1 + 36 + 22);
-    // A path of more than one H or V segment is not culled, whichever way it turns: an open
-    // rectangle, an L, a staircase, back and forth along one line, on along one line.
-    expect(cost('<path d="M0 0H100V100h-100v-100" stroke-dasharray="1"/>')).toBe(1 + 36 + 2020);
-    expect(cost('<path d="M0 0H100V100" stroke-dasharray="1"/>')).toBe(1 + 34 + 1020);
-    expect(cost('<path d="M0 0H50V50H100V100" stroke-dasharray="1"/>')).toBe(1 + 36 + 1020);
-    expect(cost('<path d="M0 0H100H0" stroke-dasharray="1"/>')).toBe(1 + 34 + 1020);
-    expect(cost('<path d="M0 0H50H100" stroke-dasharray="1"/>')).toBe(1 + 34 + 520);
-    // Anything else, even where the numbers come out horizontal: a coordinate written two ways, a
-    // closing segment, a line segment, a polyline, a slanted line, a rounded rectangle, a curve.
-    expect(cost('<line y1="5" y2="5.0" x2="100" stroke-dasharray="1"/>')).toBe(1 + 33 + 520);
-    expect(cost('<path d="M0 0H100V100H0Z" stroke-dasharray="1"/>')).toBe(1 + 36 + 2020);
-    expect(cost('<path d="M0 0L100 0" stroke-dasharray="1"/>')).toBe(1 + 33 + 520);
-    expect(cost('<polyline points="0,0 100,0" stroke-dasharray="1"/>')).toBe(1 + 33 + 520);
-    expect(cost('<line x2="60" y2="80" stroke-dasharray="1"/>')).toBe(1 + 33 + 520);
-    expect(cost('<rect width="10" height="10" rx="1" stroke-dasharray="1"/>')).toBe(1 + 76 + 220);
-    expect(cost('<circle r="10" stroke-dasharray="1"/>')).toBe(1 + 72 + 330);
-    expect(cost('<path d="M0 0C30 0 70 0 100 0" stroke-dasharray="1"/>')).toBe(1 + 42 + 520);
+    expect(cost('<path d="M0 0H100V100h-100v-100" stroke-dasharray="1"/>')).toBe(1 + 36 + 202);
+    expect(cost('<path d="M0 0H100V100" stroke-dasharray="1"/>')).toBe(1 + 34 + 102);
+    expect(cost('<line y1="5" y2="5.0" x2="100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
+    expect(cost('<line x2="60" y2="80" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
+    expect(cost('<rect width="10" height="10" rx="1" stroke-dasharray="1"/>')).toBe(1 + 76 + 22);
+    expect(cost('<circle r="10" stroke-dasharray="1"/>')).toBe(1 + 72 + 33);
+    expect(cost('<path d="M0 0C30 0 70 0 100 0" stroke-dasharray="1"/>')).toBe(1 + 42 + 52);
+  });
+
+  it("charges each dash of a stroke again for the share of the tiles of a large image its box can touch, by its caps, but along one horizontal or vertical line or round a rectangle, which Chromium culls to the tile", () => {
+    const stroked = (shape: string, paint = ""): number =>
+      cost(shape.replace("/>", ` stroke="#000" stroke-dasharray="1"${paint}/>`), BOX);
+    // Culled to the tile: a line whose ends share a coordinate written the same, a path of one
+    // move and one H or V segment, a rectangle without rounded corners, stroked or not.
+    expect(stroked('<line x2="100"/>')).toBe(1 + 33 + 52);
+    expect(stroked('<line x1="5" x2="5" y2="100"/>')).toBe(1 + 33 + 52);
+    expect(stroked('<path d="M5 0V100"/>')).toBe(1 + 33 + 52);
+    expect(stroked('<rect width="10" height="10"/>')).toBe(1 + 36 + 22);
+    expect(stroked('<rect width="10" height="10" rx="0"/>')).toBe(1 + 36 + 22);
+    expect(stroked('<rect width="10" height="10" ry="0"/>')).toBe(1 + 36 + 22);
+    // Anything else, even where its numbers come out horizontal, is worked out again for every
+    // tile its box touches (the stroke's reach included: half its width, four times over at a
+    // miter join), counted on a grid of eight by eight: across the whole image, a share of 1. A
+    // diagonal of 72 dashes costs four more a dash butt, five square and nine round.
+    expect(stroked('<line x2="100" y2="100"/>')).toBe(1 + 33 + 72 + 72 * 4);
+    expect(stroked('<line x2="100" y2="100"/>', ' stroke-linecap="butt"')).toBe(
+      1 + 33 + 72 + 72 * 4,
+    );
+    expect(stroked('<line x2="100" y2="100"/>', ' stroke-linecap="square"')).toBe(
+      1 + 33 + 72 + 72 * 5,
+    );
+    expect(stroked('<line x2="100" y2="100"/>', ' stroke-linecap="round"')).toBe(
+      1 + 33 + 72 + 72 * 9,
+    );
+    // A coordinate written two ways, a line segment, a path of two H or V segments: 52 or 102
+    // dashes in a box as wide as the image and four high, so eight columns and two rows (one more
+    // where it straddles two), a quarter of the tiles.
+    expect(stroked('<line y1="5" y2="5.0" x2="100"/>')).toBe(1 + 33 + 52 + (52 * 4) / 4);
+    expect(stroked('<path d="M0 5L100 5"/>')).toBe(1 + 33 + 52 + (52 * 4) / 4);
+    expect(stroked('<path d="M0 5H50H100"/>')).toBe(1 + 34 + 52 + (52 * 4) / 4);
+    expect(stroked('<path d="M0 5H100H0"/>')).toBe(1 + 34 + 102 + (102 * 4) / 4);
+    expect(stroked('<polyline points="0,0 100,0"/>')).toBe(1 + 33 + 52 + (52 * 4) / 4);
+    expect(stroked('<path d="M0 0C30 0 70 0 100 0"/>')).toBe(1 + 42 + 52 + (52 * 4) / 4);
+    // Paths of H and V segments, open, closed or in steps, across the whole image.
+    expect(stroked('<path d="M0 0H100V100"/>')).toBe(1 + 34 + 102 + 102 * 4);
+    expect(stroked('<path d="M0 0H50V50H100V100"/>')).toBe(1 + 36 + 102 + 102 * 4);
+    expect(stroked('<path d="M0 0H100V100H0Z"/>')).toBe(1 + 36 + 202 + 202 * 4);
+    // A rectangle with rounded corners, 14 across with its reach: three columns and three rows.
+    expect(stroked('<rect width="10" height="10" rx="1"/>')).toBe(
+      Math.ceil(1 + 76 + 22 + (22 * 4 * 9) / 64),
+    );
+    // A small shape in a corner touches few tiles: 9 dashes along a diagonal 14 across with its
+    // reach, three columns and three rows, 9 of 64; scaled up ten times, all of them.
+    expect(stroked('<line x2="10" y2="10"/>')).toBe(Math.ceil(1 + 33 + 9 + (9 * 4 * 9) / 64));
+    expect(stroked('<line x2="10" y2="10" transform="scale(10)"/>')).toBe(1 + 33 + 9 + 9 * 4);
+    // A curve: a circle of 143 dashes across the image.
+    expect(stroked('<circle cx="50" cy="50" r="45" fill="none"/>')).toBe(1 + 72 + 143 + 143 * 4);
+    // Unstroked, or stroked with nothing, nothing is dashed again.
+    expect(cost('<line x2="100" y2="100" stroke-dasharray="1"/>', BOX)).toBe(1 + 33 + 72);
+    expect(stroked('<line x2="100" y2="100"/>', ' stroke-width="0"')).toBe(1 + 33 + 72);
+    expect(cost('<line x2="100" y2="100" stroke="none" stroke-dasharray="1"/>', BOX)).toBe(
+      1 + 33 + 72,
+    );
+  });
+
+  it("charges the tiles each instance of a dashed stroke touches, with its own transform and the caps and dash array it inherits", () => {
+    const small = '<path id="p" d="M0 0L10 10" stroke="#000"';
+    const smallTiles = (9 * 4 * 9) / 64;
+    // Drawn twice, once scaled up ten times: each instance its own share.
+    expect(
+      cost(
+        `<defs>${small} stroke-dasharray="1"/></defs><use href="#p"/><use href="#p" transform="scale(10)"/>`,
+        BOX,
+      ),
+    ).toBe(Math.ceil(1 + 2 * (1 + 33 + 9) + smallTiles + 9 * 4));
+    // The dash array and the caps from the use that draws it, or from a group around that use.
+    expect(cost(`<defs>${small}/></defs><use href="#p" stroke-dasharray="1"/>`, BOX)).toBe(
+      Math.ceil(1 + 1 + 33 + 9 + smallTiles),
+    );
+    expect(
+      cost(
+        `<defs>${small} stroke-dasharray="1"/></defs><g stroke-linecap="round"><use href="#p" transform="scale(10)"/></g>`,
+        BOX,
+      ),
+    ).toBe(1 + 1 + 1 + 33 + 9 + 9 * 9);
+    // And in a mask's content, from the mask's own ancestors.
+    expect(
+      cost(
+        `<g stroke-dasharray="1"><mask id="m"><path d="M0 0L100 100" stroke="#fff"/></mask></g><rect width="1" height="1" mask="url(#m)"/>`,
+        BOX,
+      ),
+    ).toBe(1 + 1 + 1 + 33 + 72 + (36 + 200) + 72 * 4);
+  });
+
+  it("charges a round-capped dash more once its stroke, as drawn, is wider than a tile of eight by eight", () => {
+    const circle = (paint: string, wrap = (shape: string): string => shape): number =>
+      cost(
+        wrap(
+          `<circle cx="50" cy="50" r="45" fill="none" stroke="#000" stroke-dasharray="1"${paint}/>`,
+        ),
+        BOX,
+      );
+    const round = ' stroke-linecap="round"';
+    // 143 dashes across the image: a tile is an eighth of its side, 12.5 here.
+    expect(circle(` stroke-width="12.5"${round}`)).toBe(1 + 72 + 143 + 143 * 9);
+    expect(circle(` stroke-width="12.6"${round}`)).toBe(1 + 72 + 143 + 143 * 24);
+    expect(circle(` stroke-width="100"${round}`)).toBe(1 + 72 + 143 + 143 * 24);
+    // Butt and square caps cost the same however wide.
+    expect(circle(' stroke-width="100" stroke-linecap="butt"')).toBe(1 + 72 + 143 + 143 * 4);
+    expect(circle(' stroke-width="100" stroke-linecap="square"')).toBe(1 + 72 + 143 + 143 * 5);
+    // The width as drawn: scaled by the shape's transform, by the larger of its stretches, or
+    // inherited from a group.
+    expect(circle(` stroke-width="7" transform="scale(2)"${round}`)).toBe(1 + 72 + 143 + 143 * 24);
+    expect(circle(` stroke-width="7" transform="scale(2 1.5)"${round}`)).toBe(
+      1 + 72 + 143 + 143 * 24,
+    );
+    expect(circle(` stroke-width="20" transform="scale(0.5)"${round}`)).toBe(
+      1 + 72 + 143 + 143 * 9,
+    );
+    expect(circle(round, (shape) => `<g stroke-width="20">${shape}</g>`)).toBe(
+      1 + 1 + 72 + 143 + 143 * 24,
+    );
+  });
+
+  it("charges each instance of a round-capped dash by the width it is drawn at", () => {
+    const definition =
+      '<defs><circle id="p" cx="50" cy="50" r="45" fill="none" stroke="#000" stroke-width="7" stroke-linecap="round" stroke-dasharray="1"/></defs>';
+    // Through a use scaled up twice, and one not scaled; or with the width from the use.
+    expect(cost(`${definition}<use href="#p" transform="scale(2)"/><use href="#p"/>`, BOX)).toBe(
+      1 + 2 * (1 + 72 + 143) + 143 * 24 + 143 * 9,
+    );
+    expect(
+      cost(
+        '<defs><circle id="p" cx="50" cy="50" r="45" fill="none" stroke="#000" stroke-linecap="round" stroke-dasharray="1"/></defs><use href="#p" stroke-width="13"/>',
+        BOX,
+      ),
+    ).toBe(1 + 1 + 72 + 143 + 143 * 24);
+  });
+
+  it("bounds the length of an ellipse by pi times the root of twice the sum of its radii squared, never shorter than it is", () => {
+    // 45 by 16: no longer than 212.2, so 107 dashes of a period of 2 and one more for the subpath;
+    // it is about 208.9 round. A circle's is its circumference.
+    expect(cost('<ellipse rx="45" ry="16" stroke-dasharray="1"/>', BOX)).toBe(1 + 72 + 108);
+    expect(cost('<circle r="45" stroke-dasharray="1"/>', BOX)).toBe(1 + 72 + 143);
+    for (const ry of [45, 40, 30, 16, 5, 1, 0.01]) {
+      const dashes = cost(`<ellipse rx="45" ry="${String(ry)}" stroke-dasharray="1"/>`, BOX) - 73;
+      const perimeter = ellipsePerimeter(45, ry);
+      expect(dashes, String(ry)).toBeGreaterThanOrEqual(Math.ceil(perimeter / 2) + 1);
+      // The bound is at most a little over a tenth longer, for the flattest ellipse.
+      expect(dashes, String(ry)).toBeLessThanOrEqual(Math.ceil((perimeter * 1.12) / 2) + 1);
+    }
   });
 
   it("counts every dash in each repeat of a dash array, an odd one repeated twice", () => {

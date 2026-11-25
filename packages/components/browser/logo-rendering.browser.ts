@@ -248,12 +248,13 @@ base.describe("the checks themselves", () => {
 
 // The costliest logos the sanitiser still accepts, one for each kind of work a renderer does: long
 // edges, crowded on every row; arcs; hairline dashes, of two lengths and of 64; dashes along
-// circles, an ellipse, a rounded rectangle, an arc, a cubic, a diagonal and a horizontal line, and
-// along paths of horizontal and vertical lines (an L, a staircase, a serpentine, a square spiral, a
-// line drawn back and forth, an open path round a square); thin strokes along full-size circles,
-// ellipses and arcs, along concentric circles, along circles and arcs far larger than the image
-// passing through it, and along a rosette of quadratics in one path; solid paint over and over; gradients at the stop limit, opaque and translucent; a fill under a
-// very wide stroke; group opacity layers; masks inside masks; a clip path of crowded edges with the
+// circles (round caps wider than a tile among them), a guilloche of ellipses, an ellipse, a rounded
+// rectangle, an arc, a cubic, a diagonal and a horizontal line, and along paths of horizontal and
+// vertical lines (an L, a staircase, a serpentine, a square spiral, a line drawn back and forth, an
+// open path round a square); thin strokes along full-size circles, ellipses and arcs, along
+// concentric circles, along circles and arcs far larger than the image passing through it, and
+// along a rosette of quadratics in one path; solid paint over and over; gradients at the stop
+// limit, opaque and translucent; a fill under a very wide stroke; group opacity layers; masks inside masks; a clip path of crowded edges with the
 // even-odd rule; a view box far wider than tall; dashes, round dots and round joins on a stroke as
 // wide as the image; clip paths of near-coincident zigzags, which a renderer combining them took
 // minutes over, each written as a mask, and of one such zigzag in every form a clip path of one
@@ -490,6 +491,26 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
         ] as const,
     ),
   ),
+  // Round caps wider than a tile of a large image cost Chromium about twice as much a dash.
+  [
+    "dashed full-size circles 140 wide, round-capped, by uses",
+    copies(
+      '<circle id="p" cx="500" cy="500" r="450" fill="none" stroke="#000" stroke-width="140" stroke-linecap="round" stroke-dasharray="8 4"/>',
+    ),
+    "drawing-too-costly",
+  ],
+  [
+    "a guilloche of thin ellipses dashed 3 2, turned across half a turn",
+    (count) =>
+      costlyLogo(
+        Array.from(
+          { length: count },
+          (_, index) =>
+            `<ellipse cx="500" cy="500" rx="450" ry="160" transform="rotate(${((index * 180) / count).toFixed(2)} 500 500)" fill="none" stroke="#000" stroke-width="0.4" stroke-dasharray="3 2"/>`,
+        ).join(""),
+      ),
+    "drawing-too-costly",
+  ],
   ...(
     [
       ["an ellipse", '<ellipse id="p" cx="500" cy="500" rx="450" ry="200"'],
@@ -1082,6 +1103,21 @@ test.describe(`the costliest logos the sanitiser accepts, at ${String(LARGE_SIZE
       expect(await showImage(page, logo, LARGE_SIZE), logo.name).toBeLessThan(
         LARGE_RASTER_BUDGET_MS,
       );
+    });
+  }
+
+  // Hostile logos the sanitiser accepts as they are, among the costliest dashed ones in the corpus.
+  for (const file of [
+    "review-dash-inherited-from-group.svg",
+    "review-dash-dense-hatching-240.svg",
+  ]) {
+    test(`shows the hostile ${file} as an image within the budget`, async ({ page }) => {
+      const result = sanitiseSvgLogo(
+        readFileSync(new URL(`hostile-svg/${file}`, BRAND_FIXTURES), "utf8"),
+      );
+      if (!result.ok) throw new Error(`${file} was refused`);
+      const logo = { name: file, svg: result.svg, dataUrl: logoDataUrl(result.svg) };
+      expect(await showImage(page, logo, LARGE_SIZE), file).toBeLessThan(LARGE_RASTER_BUDGET_MS);
     });
   }
 });

@@ -1930,25 +1930,32 @@
     "removed": []
   },
   "review-dash-dense-hatching-240.svg": {
-    "outcome": "reject:drawing-too-costly"
+    "outcome": "accept",
+    "removed": []
   },
   "review-dash-dense-hatching-clipped.svg": {
-    "outcome": "reject:drawing-too-costly"
+    "outcome": "accept",
+    "removed": []
   },
   "review-dash-inherited-from-group.svg": {
-    "outcome": "reject:drawing-too-costly"
+    "outcome": "accept",
+    "removed": []
   },
   "review-dash-inherited-from-style.svg": {
-    "outcome": "reject:drawing-too-costly"
+    "outcome": "accept",
+    "removed": []
   },
   "review-dash-inherited-from-use.svg": {
-    "outcome": "reject:drawing-too-costly"
+    "outcome": "accept",
+    "removed": []
   },
   "review-dash-inherited-through-nested-use.svg": {
-    "outcome": "reject:drawing-too-costly"
+    "outcome": "accept",
+    "removed": []
   },
   "review-dash-inherited-through-use.svg": {
-    "outcome": "reject:drawing-too-costly"
+    "outcome": "accept",
+    "removed": []
   },
   "review-dash-negative-rounding-to-zero.svg": {
     "outcome": "accept",

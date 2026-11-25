@@ -4,9 +4,11 @@ import {
   boxArea,
   dashCount,
   dashingOf,
+  drawingTooCostly,
   EMPTY_BOX,
   type Geometry,
   measureShape,
+  SVG_DRAWING_WEIGHTS,
   type SvgBox,
   userUnits,
 } from "./svg-drawing-cost.ts";
@@ -144,21 +146,25 @@ function numberOf(element: CleanElement, name: string): number | undefined {
 class OverdrawWalk {
   private readonly ids: ReadonlyMap<string, CleanElement>;
   private readonly parents: ReadonlyMap<CleanElement, CleanElement>;
-  private readonly limit: number;
+  private readonly limits: SvgLogoLimits;
   private readonly square: number;
   private readonly side: number;
   private readonly percentBase: number;
   private readonly geometries = new Map<CleanElement, Geometry | undefined>();
   total = 0;
+  /** The drawing cost, to which working each instance's dashes out again for each tile adds. */
+  drawingCost: number;
 
   constructor(
     root: CleanElement,
     ids: ReadonlyMap<string, CleanElement>,
     limits: SvgLogoLimits,
     viewBox: readonly number[],
+    drawingCost: number,
   ) {
     this.ids = ids;
-    this.limit = limits.overdraw;
+    this.limits = limits;
+    this.drawingCost = drawingCost;
     this.side = Math.max(viewBox[2] ?? 1, viewBox[3] ?? 1);
     this.square = this.side * this.side;
     this.percentBase = Math.max(this.side, 1);
@@ -279,6 +285,16 @@ class OverdrawWalk {
           2 * (SVG_OVERDRAW_WEIGHTS.curvedStroke - 1) * curved * SVG_OVERDRAW_WEIGHTS.edge,
       );
       box = mapBox(matrix, outer);
+      // Every dash is worked out again for each tile of a large image the stroke's box touches,
+      // but along one horizontal or vertical line or round a rectangle, culled to the tile.
+      if (pieces.dashed && !geometry.straightRun) {
+        this.drawingCost +=
+          pieces.count *
+          this.tileShare(box) *
+          tiledDashWeight(paint.strokeLinecap, width * stretch(matrix) > this.side / TILES);
+        // Written so that a cost that is not a number is refused too.
+        if (!(this.drawingCost <= this.limits.drawingCost)) throw drawingTooCostly(this.limits);
+      }
     }
     if (layered) this.charge(this.share(box) * SVG_OVERDRAW_WEIGHTS.layer);
     return box;
@@ -426,6 +442,17 @@ class OverdrawWalk {
     return value !== undefined && "reference" in value ? this.ids.get(value.reference) : undefined;
   }
 
+  /**
+   * The most of the tiles of a large image a box can touch, as a share of them all: the columns and
+   * rows of `TILES` by `TILES` it spans, and one more of each where it straddles, wherever it lies.
+   */
+  private tileShare(box: SvgBox): number {
+    if (box.minX > box.maxX) return 0;
+    const span = (from: number, to: number): number =>
+      Math.min(TILES, Math.ceil(((to - from) / this.side) * TILES) + 1);
+    return (span(box.minX, box.maxX) * span(box.minY, box.maxY)) / (TILES * TILES);
+  }
+
   /** The share of the image a box covers, at most all of it. */
   private share(box: SvgBox): number {
     return Math.min(1, boxArea(box) / this.square);
@@ -434,13 +461,30 @@ class OverdrawWalk {
   private charge(amount: number): void {
     this.total += amount;
     // Written so that a total that is not a number is refused too.
-    if (!(this.total <= this.limit)) {
+    if (!(this.total <= this.limits.overdraw)) {
       throw new SvgLogoRejection(
         "overdraw-too-large",
-        `would paint more than ${String(this.limit)} times its view box (see SVG_OVERDRAW_WEIGHTS)`,
+        `would paint more than ${String(this.limits.overdraw)} times its view box (see SVG_OVERDRAW_WEIGHTS)`,
       );
     }
   }
+}
+
+/**
+ * Tiles across a large image, for the share a dashed stroke's box touches: Chromium rasterises an
+ * image 2000 CSS pixels square at twice the density in tiles of 256 device pixels, about 16 across;
+ * counted as 8, each of twice that side, so a box is never found to touch fewer than it does.
+ */
+const TILES = 8;
+
+/**
+ * What a dash weighs for each tile its stroke is worked out again in, by its caps: round ones more
+ * on a stroke `wide`r, as drawn, than a tile of `TILES` by `TILES`.
+ */
+function tiledDashWeight(cap: string, wide: boolean): number {
+  const weights = SVG_DRAWING_WEIGHTS.tiledDash;
+  if (cap === "round") return wide ? weights.wideRound : weights.round;
+  return cap === "square" ? weights.square : weights.butt;
 }
 
 /** The outline a join adds at most: a miter's two sides, half a turn round, or a bevel's width. */
@@ -465,16 +509,22 @@ function isNone(paint: SvgValue): boolean {
 
 /**
  * Charges what painting a logo costs, every reference expanded, refusing it past
- * `limits.overdraw`. Run after the expansion limits, which bound the walk. Returns the overdraw.
+ * `limits.overdraw`, and adds to `drawingCost` (what the expansion measured) what working each
+ * instance's dashes out again for the tiles of a large image costs, refusing it past
+ * `limits.drawingCost`. Run after the expansion limits, which bound the walk. Returns the overdraw
+ * and the drawing cost, rounded up.
  */
 export function measureOverdraw(
   root: CleanElement,
   ids: ReadonlyMap<string, CleanElement>,
   limits: SvgLogoLimits,
-): number {
+  drawingCost: number,
+): { readonly overdraw: number; readonly drawingCost: number } {
   const viewBox = (textOf(root, "viewBox") ?? "0 0 1 1").split(" ").map(Number);
-  const walk = new OverdrawWalk(root, ids, limits, viewBox);
+  const walk = new OverdrawWalk(root, ids, limits, viewBox, drawingCost);
   walk.draw(root, IDENTITY, ROOT_INHERITED, false);
   if (!Number.isFinite(walk.total)) throw new Error("the overdraw is not a finite number");
-  return walk.total;
+  const total = Math.ceil(walk.drawingCost);
+  if (!(total <= limits.drawingCost)) throw drawingTooCostly(limits);
+  return { overdraw: walk.total, drawingCost: total };
 }
