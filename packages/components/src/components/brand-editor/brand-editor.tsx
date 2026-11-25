@@ -75,20 +75,30 @@ function removalsNotSent(
   return kept;
 }
 
-/** How a read of an upload that a save waited for ended. */
-type ReadEnd = "applied" | "refused" | "removed" | "replaced" | "dropped";
-
+/** A read of an upload under way, which a waiting save waits for. */
 interface Read {
-  readonly ended: Promise<ReadEnd>;
-  readonly end: (how: ReadEnd) => void;
+  readonly ended: Promise<void>;
+  readonly end: () => void;
 }
 
 function startRead(): Read {
-  let end: (how: ReadEnd) => void = () => undefined;
-  const ended = new Promise<ReadEnd>((resolve) => {
+  let end: () => void = () => undefined;
+  const ended = new Promise<void>((resolve) => {
     end = resolve;
   });
   return { ended, end };
+}
+
+/** What last happened to an image while a save waited. */
+type ImageEvent = "accepted" | "refused" | "removed";
+
+/**
+ * A save waiting for reads: the latest thing that happened to each image while it waited, and
+ * whether the wait was dropped because the kit was replaced or the element left the page.
+ */
+interface Waiting {
+  readonly latest: Partial<Record<ImageField, ImageEvent>>;
+  dropped: boolean;
 }
 
 /** What the preview shows: the kit with the draft's logo and mark, and its theme. */
@@ -240,6 +250,10 @@ export class IdgBrandEditor {
   private readonly refusalKeys: Partial<Record<ImageField, number>> = {};
   /** The reads of uploads under way, which a save waits for. */
   private readonly reads = new Map<ImageField, Read>();
+  /** The save waiting for those reads, if one is. */
+  private waiting?: Waiting;
+  /** A field to focus after the next render, in place of the first with an error. */
+  private focusField?: DraftField;
   /** The colour each picker last showed, which it keeps while its hex field holds no colour. */
   private picked: Partial<Record<ColourField, string>> = {};
   private readonly refresh = new Debounce(
@@ -260,7 +274,7 @@ export class IdgBrandEditor {
     this.attempts.cancel();
     this.uploads.cancelAll();
     this.refresh.cancel();
-    this.endReads("dropped");
+    this.dropWait();
     const { draft, refusedLogos } = draftFromKit(this.kit);
     this.draft = draft;
     this.picked = {};
@@ -290,15 +304,17 @@ export class IdgBrandEditor {
   // with is the one the next save must update. Only reads of uploads are dropped.
   disconnectedCallback(): void {
     this.uploads.cancelAll();
-    this.endReads("dropped");
+    this.dropWait();
     this.refresh.cancel();
     this.reading = { logo: false, mark: false };
   }
 
   componentDidRender(): void {
-    if (!this.focusInvalid) return;
+    if (!this.focusInvalid && this.focusField === undefined) return;
+    const chosen = this.focusField;
     this.focusInvalid = false;
-    const first = DRAFT_FIELDS.find((field) => this.errors[field] !== undefined);
+    this.focusField = undefined;
+    const first = chosen ?? DRAFT_FIELDS.find((field) => this.errors[field] !== undefined);
     const control = first === undefined ? undefined : this.controls[first];
     if (control?.setFocus) void control.setFocus();
     else control?.focus?.();
@@ -357,15 +373,25 @@ export class IdgBrandEditor {
     this.errors = without(this.errors, field);
   }
 
-  private endReads(how: ReadEnd): void {
-    for (const read of this.reads.values()) read.end(how);
+  /** The kit was replaced or the element left the page: a waiting save stops, and reads end. */
+  private dropWait(): void {
+    if (this.waiting) this.waiting.dropped = true;
+    for (const read of this.reads.values()) read.end();
     this.reads.clear();
   }
 
-  private endRead(field: ImageField, read: Read | undefined, how: ReadEnd): void {
+  private endRead(field: ImageField, read: Read | undefined): void {
     if (read === undefined || this.reads.get(field) !== read) return;
     this.reads.delete(field);
-    read.end(how);
+    read.end();
+  }
+
+  /** Records for a waiting save what just happened to an image, in place of what happened before. */
+  private noteImage(field: ImageField, event: ImageEvent | undefined): void {
+    const latest = this.waiting?.latest;
+    if (latest === undefined) return;
+    if (event === undefined) Reflect.deleteProperty(latest, field);
+    else latest[field] = event;
   }
 
   /** Every change to the draft goes through here: what was said about the last save is then past. */
@@ -386,8 +412,10 @@ export class IdgBrandEditor {
     if (file === undefined) return;
     this.reading = { ...this.reading, [field]: true };
     const read = startRead();
-    this.reads.get(field)?.end("replaced");
+    this.reads.get(field)?.end();
     this.reads.set(field, read);
+    // A new read for the image: a waiting save waits for it too, and its outcome is what counts.
+    this.noteImage(field, undefined);
     const outcome = await this.uploads.upload(field, file);
     // A later upload, a removal or the element leaving the page has overtaken this one, and ended
     // its read for any save waiting on it.
@@ -398,7 +426,8 @@ export class IdgBrandEditor {
       // The logo the kit had stays; the input is emptied so the same file can be chosen again.
       input.value = "";
       this.refuseUpload(field, outcome.code, labels);
-      this.endRead(field, read, "refused");
+      this.noteImage(field, "refused");
+      this.endRead(field, read);
       return;
     }
     this.change({ ...this.draft, [field]: outcome.svg });
@@ -419,7 +448,8 @@ export class IdgBrandEditor {
     if (outcome.removedCount === 0) this.say(labels.imageAccepted);
     this.refusedFromKit = this.refusedFromKit.filter((refused) => refused !== field);
     this.showImages();
-    this.endRead(field, read, "applied");
+    this.noteImage(field, "accepted");
+    this.endRead(field, read);
   }
 
   private refuseUpload(field: ImageField, code: UploadRefusalCode, labels: BrandEditorLabels) {
@@ -431,7 +461,8 @@ export class IdgBrandEditor {
 
   private removeImage(field: ImageField): void {
     this.uploads.cancel(field);
-    this.endRead(field, this.reads.get(field), "removed");
+    this.noteImage(field, "removed");
+    this.endRead(field, this.reads.get(field));
     this.change(without(this.draft, field) as BrandDraft);
     this.removals = without(this.removals, field);
     this.reading = { ...this.reading, [field]: false };
@@ -453,36 +484,35 @@ export class IdgBrandEditor {
 
   /**
    * Waits, busy, for the reads of uploads under way, so a save sends the file just chosen and not
-   * the one before it, and the form as it stands when the wait ends. Whether the save may go on:
-   * not when the kit was replaced or the element left the page meanwhile, nor when an image it
-   * waited for was removed (the person changed their mind about it, so nothing is said), nor when
-   * an image it waited for ends refused, which is then the first field to change. Earlier
-   * outcomes do not count: a refused file since replaced by one that was accepted is no reason.
+   * the one before it, and the form as it stands when the wait ends. The latest thing that
+   * happened to each image during the wait decides: a refusal stops the save and is the field to
+   * change; else a removal stops it quietly, as a change of mind; else it goes on. A replaced kit
+   * or the element leaving the page stops it too.
    */
   private async waitForReads(labels: BrandEditorLabels): Promise<boolean> {
     const attempt = this.attempts.start();
     this.pending = true;
     this.summary = undefined;
     this.saved = undefined;
-    const awaited = new Set<ImageField>();
-    let removed = false;
-    let dropped = false;
-    while (this.reads.size > 0) {
-      const waiting = [...this.reads.entries()];
-      for (const [field] of waiting) awaited.add(field);
-      const ends = await Promise.all(waiting.map(([, read]) => read.ended));
-      removed ||= ends.includes("removed");
-      dropped ||= ends.includes("dropped");
+    const waiting: Waiting = { latest: {}, dropped: false };
+    this.waiting = waiting;
+    try {
+      while (this.reads.size > 0 && !waiting.dropped) {
+        await Promise.all([...this.reads.values()].map((read) => read.ended));
+      }
+    } finally {
+      if (this.waiting === waiting) this.waiting = undefined;
     }
     if (!this.attempts.isCurrent(attempt)) return false;
     this.pending = false;
-    if (dropped || removed) return false;
-    if ([...awaited].some((field) => this.errors[field] !== undefined)) {
+    if (waiting.dropped) return false;
+    const refused = IMAGE_FIELDS.find((field) => waiting.latest[field] === "refused");
+    if (refused !== undefined) {
       this.summary = { text: labels.errorFields, key: (this.keys += 1) };
-      this.focusInvalid = true;
+      this.focusField = refused;
       return false;
     }
-    return true;
+    return !IMAGE_FIELDS.some((field) => waiting.latest[field] === "removed");
   }
 
   private async saveKit(): Promise<void> {
