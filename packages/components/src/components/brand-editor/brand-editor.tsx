@@ -503,7 +503,6 @@ export class IdgBrandEditor {
     const attempt = this.attempts.start();
     this.pending = true;
     this.summary = undefined;
-    this.outcome = undefined;
     const waiting: Waiting = { latest: {}, dropped: false };
     this.waiting = waiting;
     try {
@@ -532,6 +531,8 @@ export class IdgBrandEditor {
 
   private async saveKit(): Promise<void> {
     if (this.pending) return;
+    // What became of the last save is past once another starts, whichever way this one ends.
+    this.outcome = undefined;
     const labels = this.text();
     if (this.reads.size > 0 && !(await this.waitForReads(labels))) return;
     this.refresh.flush();
@@ -557,7 +558,6 @@ export class IdgBrandEditor {
     const sent = this.draft;
     this.pending = true;
     this.summary = undefined;
-    this.outcome = undefined;
     this.errors = {};
     try {
       const answer =
