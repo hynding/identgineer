@@ -1848,7 +1848,7 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   | Group                  | Components                                                                                                                                                   | `www/build` | `dist/esm` |
   | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------: | ---------: |
   | controls               | icon, button, link, badge, progress, alert, avatar, avatar-group, skeleton, switch                                                                           |      57,977 |    117,342 |
-  | forms and identity     | field, input, textarea, checkbox, radio, radio-group, select, sign-in, register, password-reset, profile, session-guard, property-picker, variation-switcher |     153,831 |    309,701 |
+  | forms and identity     | field, input, textarea, checkbox, radio, radio-group, select, sign-in, register, password-reset, profile, session-guard, property-picker, variation-switcher |     153,893 |    309,763 |
   | dashboard              | event-table, table, pagination, stat, sparkline                                                                                                              |      67,796 |    168,578 |
   | consent and overlays   | consent-banner, consent-preferences, dialog, popover, tooltip, toast, toast-region                                                                           |      87,918 |    188,483 |
   | menus                  | menu, menu-group, menu-item, menu-separator, user-menu                                                                                                       |      49,796 |    126,820 |
@@ -1865,7 +1865,7 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   minified) is in the logo's, the guide's, the export's and the editor's bundles (the export
   validates a kit with it), the generator in the export's and the editor's, and the emitters in the
   export's alone. The editor's row counts its own entry and chunks; a page with it also loads the
-  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 695,558
+  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 695,620
   bytes (663,801 before the editor), against 433,865 before the brand components and 536,437 on
   main.
 
