@@ -24,8 +24,14 @@ export interface StoredBrandKit {
   readonly kit: BrandKit;
 }
 
-/** A kit as a list gives it: every field but the logo and mark, which a list never reads. */
-export type BrandKitSummary = Omit<BrandKit, "logo" | "mark">;
+/**
+ * A kit as a list gives it: every field but the logo and mark, which a list never reads, and
+ * `logos: "not-loaded"` saying so. The marker, which a spread copies, keeps a summary out of
+ * `update`: written back as a kit, it would clear the logo and mark it never held.
+ */
+export interface BrandKitSummary extends Omit<BrandKit, "logo" | "mark"> {
+  readonly logos: "not-loaded";
+}
 
 /** A summary read back from the CMS: its document id, whether it is public, and the checked fields. */
 export interface StoredBrandKitSummary {
@@ -286,6 +292,7 @@ export function readCmsBrandKit(value: unknown): BrandKitRecordResult {
 export function readCmsBrandKitSummary(value: unknown): BrandKitSummaryResult {
   const read = readRecord(value, false);
   if (!read.ok) return read;
-  const { documentId, isPublic, value: summary } = read;
+  const { documentId, isPublic, value: kit } = read;
+  const summary: BrandKitSummary = Object.freeze({ ...kit, logos: "not-loaded" });
   return { ok: true, record: Object.freeze({ documentId, isPublic, summary }) };
 }

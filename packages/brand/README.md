@@ -1192,13 +1192,18 @@ for (let page = 1, pageCount = 1; page <= Math.min(pageCount, 20); page += 1) {
   pageCount = answer.pageCount;
   for (const item of answer.results) {
     if (item.ok)
-      show(item.record.summary); // { id, name, colors, typography, corners, tone, … }
+      show(item.record.summary); // { id, name, colors, …, tone, logos: "not-loaded" }
     else report(item.index, item.documentId, item.errors); // this record only; the others show
   }
 }
 
+// To edit a kit, get it whole: update replaces every field, so it refuses a summary (and a kit
+// spread from one), which would clear the logo and mark.
 const full = await store.get(documentId); // the whole kit, logo and mark checked
-await store.update(documentId, kit, { isPublic: true }); // replaces every field of the kit
+if (full.ok) {
+  const renamed = { ...full.record.kit, name: "Harbour Lights" };
+  await store.update(documentId, renamed, { isPublic: true });
+}
 await store.remove(documentId);
 await store.getPublic(documentId); // a kit its owner made public, without credentials
 ```
@@ -1223,14 +1228,18 @@ keeps no state between calls and caches nothing; every operation takes an `Abort
 stops a body being read when the given `fetch` has let go of it after the headers (as
 `authorizedFetch` does).
 
-A list answers summaries (`BrandKitSummary`: the kit without `logo` and `mark`). It asks the CMS
+A list answers summaries (`BrandKitSummary`: the kit without `logo` and `mark`, marked
+`logos: "not-loaded"`). It asks the CMS
 for the other fields only (Strapi's `fields` parameter, which strapi-php and Strapi's generated
 controllers both honour for the owner and the public role), and skips any logo or mark text that
 arrives anyway without reading it, so a page of kits with large logos costs no more than one
 without. Checking a logo is not free: `get` and `getPublic` pass the logo and mark through
 `parseBrandKit`, which sanitises each again to see it is a fixed point, about half a second for a
 logo near the sanitiser's limit (ten kits with two 436 KB logos each took 9.2 seconds). Fetch the
-full kit only for the one being shown or edited.
+full kit only for the one being shown or edited. A summary is never written back: `update`
+replaces every field, so a summary, or a kit spread from one, would clear the logo and mark. Its
+`logos` marker does not compile as `update`'s kit, and `update` refuses it as `validation`, naming
+`logo` and `mark`, before sending anything; edit the kit `get` answers instead.
 
 Everything read from the CMS is untrusted:
 
