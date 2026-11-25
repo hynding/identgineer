@@ -85,3 +85,19 @@ export function emitBrandThemeTokens(theme: BrandTheme): string {
   );
   return `${escaped}\n`;
 }
+
+/** What `emitBrandTheme` returns: both texts, and the id they are both scoped to. */
+export interface EmittedBrandTheme {
+  readonly css: string;
+  readonly tokens: string;
+  readonly id: string;
+}
+
+/** A stub the next commit replaces. */
+export function emitBrandTheme(theme: BrandTheme): EmittedBrandTheme {
+  return {
+    css: emitBrandThemeCss(theme),
+    tokens: emitBrandThemeTokens(theme),
+    id: theme.id,
+  };
+}

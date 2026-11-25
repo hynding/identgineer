@@ -24,13 +24,18 @@ function tokensFile(specifier: string): string | undefined {
 }
 
 describe("the emit entry", () => {
-  it("exports the two emitters, and nothing else", () => {
-    expect(Object.keys(emitEntry).sort()).toEqual(["emitBrandThemeCss", "emitBrandThemeTokens"]);
+  it("exports the emitters, and nothing else", () => {
+    expect(Object.keys(emitEntry).sort()).toEqual([
+      "emitBrandTheme",
+      "emitBrandThemeCss",
+      "emitBrandThemeTokens",
+    ]);
   });
 
   it("exports the index's own emitters", () => {
     expect(emitEntry.emitBrandThemeCss).toBe(brand.emitBrandThemeCss);
     expect(emitEntry.emitBrandThemeTokens).toBe(brand.emitBrandThemeTokens);
+    expect(emitEntry.emitBrandTheme).toBe(brand.emitBrandTheme);
   });
 
   describe("the modules it loads, the tokens package's among them", () => {
