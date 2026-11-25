@@ -14,7 +14,8 @@ export interface BrandLogoSource {
 // image then draws. Scaled so the shorter side is this long, rounding changes the shape by under a
 // thousandth.
 const SHORTER_SIDE = 1000;
-// Far below the largest number an attribute holds, for a frame of hundreds of thousands to one.
+// Only a guard: the sanitiser keeps both sides between 1px and under 1,000,000, so the longer side
+// stays far below the largest number an attribute holds and this is not reached.
 const LONGEST_SIDE = 1_000_000_000;
 
 /** A frame as whole numbers that keep its shape, for the image's `width` and `height`. */
