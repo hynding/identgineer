@@ -37,9 +37,10 @@ describe("the logo entry", () => {
     ]);
   });
 
-  it("exports the very functions the package index does", () => {
+  it("exports the index's own isSanitisedSvgLogo and logoDataUrl, and logoImage besides", () => {
     expect(logoEntry.logoDataUrl).toBe(brand.logoDataUrl);
     expect(logoEntry.isSanitisedSvgLogo).toBe(brand.isSanitisedSvgLogo);
+    expect(typeof logoEntry.logoImage).toBe("function");
   });
 
   it("loads no module that needs Node or the tokens build, so a browser bundle can include it", () => {
