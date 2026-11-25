@@ -1737,8 +1737,8 @@ No slots.
   Below 10.5em (large text in a narrow window, as at 320px with 150% text or more) the groups give
   up their inline padding and the file chooser's button spans its row with no inline padding of
   its own, its label centred, so the label's widest word fits. Browser tests check every layout at
-  320px from 100% to 200% text, reading each padding and the button's width as computed in each
-  tier; that groups and buttons keep their regular padding beside the preview at 1280px and at
+  320px with 100% and 125% text, and the default one with 200%, reading each padding and the
+  button's width as computed in the tier it is in; that groups and buttons keep their regular padding beside the preview at 1280px and at
   320px with 100% text; and that the widest word fits with at least 4px to spare in all 64
   pairings of design and UX mode at 320px and each of 100, 125, 150, 175 and 200% text.
 - **Control names** are the fields' names prefixed with `brand-` (`brand-name`, `brand-id`, …): a
