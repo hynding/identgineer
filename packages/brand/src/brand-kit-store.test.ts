@@ -59,6 +59,14 @@ const rowOf = (kit: BrandKit, extra: Record<string, unknown> = {}) => ({
   ...extra,
 });
 
+/** A kit as a list answers it: without its logo and mark, and marked as such. */
+const summaryOf = (kit: BrandKit): Record<string, unknown> => {
+  const summary: Record<string, unknown> = { ...kit, logos: "not-loaded" };
+  delete summary.logo;
+  delete summary.mark;
+  return summary;
+};
+
 const page = (rows: unknown[], pageSize = 10, at = 1) => ({
   data: rows,
   meta: {
@@ -150,7 +158,10 @@ describe("list", () => {
     expect(publicSent).toEqual([]);
     expect(result).toEqual({
       results: [
-        { ok: true, record: { documentId: DOCUMENT_ID, isPublic: false, summary: kitFrom() } },
+        {
+          ok: true,
+          record: { documentId: DOCUMENT_ID, isPublic: false, summary: summaryOf(kitFrom()) },
+        },
       ],
       page: 1,
       pageSize: 10,
@@ -202,7 +213,10 @@ describe("list", () => {
     const { store } = storeWith(() => json(page([row])));
     const { results } = await store.list();
     expect(results).toEqual([
-      { ok: true, record: { documentId: DOCUMENT_ID, isPublic: false, summary: kitFrom() } },
+      {
+        ok: true,
+        record: { documentId: DOCUMENT_ID, isPublic: false, summary: summaryOf(kitFrom()) },
+      },
     ]);
     expect(JSON.stringify(results)).not.toContain("steal");
   });
@@ -434,6 +448,20 @@ describe("update", () => {
     expect(Object.keys((bodyOf(sent[0]) as { data: object }).data)).not.toContain("isPublic");
   });
 
+  it("refuses a summary, or a kit spread from one, which would clear the logo and mark", async () => {
+    const { store, sent } = storeWith(() => json(page([rowOf(kitFrom())])));
+    const [item] = (await store.list()).results;
+    if (item?.ok !== true) throw new Error("expected a summary");
+    const { summary } = item.record;
+    // @ts-expect-error A summary is not a kit: it has no logo or mark to send.
+    const asIs = await rejection(store.update(DOCUMENT_ID, summary));
+    // @ts-expect-error Nor is a kit spread from one, which keeps the summary's marker.
+    const spread = await rejection(store.update(DOCUMENT_ID, { ...summary, name: "Renamed" }));
+    expect(asIs).toMatchObject({ code: "validation", fields: ["logo", "mark"] });
+    expect(spread).toMatchObject({ code: "validation", fields: ["logo", "mark"] });
+    expect(sent).toHaveLength(1);
+  });
+
   it("refuses a bad id without sending anything", async () => {
     const { store, sent } = storeWith(() => json({}));
     expect((await rejection(store.update("../x", kitFrom()))).code).toBe("validation");
@@ -471,7 +499,10 @@ describe("public kits", () => {
     expect(publicSent[0]?.init.credentials).toBe("omit");
     expect(headerOf(publicSent[0], "Authorization")).toBeNull();
     expect(result.results).toEqual([
-      { ok: true, record: { documentId: DOCUMENT_ID, isPublic: true, summary: kitFrom() } },
+      {
+        ok: true,
+        record: { documentId: DOCUMENT_ID, isPublic: true, summary: summaryOf(kitFrom()) },
+      },
     ]);
   });
 

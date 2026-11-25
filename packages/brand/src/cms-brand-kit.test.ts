@@ -227,7 +227,7 @@ describe("readCmsBrandKitSummary", () => {
       record: {
         documentId: "pjx5ucx7febfca6f8rtjrxga",
         isPublic: false,
-        summary: kitFrom({ tone: "calm", tagline: "Hi" }),
+        summary: { ...kitFrom({ tone: "calm", tagline: "Hi" }), logos: "not-loaded" },
       },
     });
     if (result.ok) expect(Object.keys(result.record.summary)).not.toContain("logo");
