@@ -28,6 +28,20 @@ export function integerFrame(width: number, height: number): { width: number; he
   };
 }
 
+// A guide draws the logo and the mark on several tiles and asks about each more than once, and a
+// large logo takes the sanitiser half a second to read. The answers for the last two texts are kept,
+// which is a logo and a mark, so each distinct text is read once however many elements ask. Only the
+// text and its answer are held.
+const REMEMBERED = 2;
+const remembered: { readonly logo: string; readonly source: BrandLogoSource | undefined }[] = [];
+
+function read(logo: unknown): BrandLogoSource | undefined {
+  const image = logoImage(logo);
+  return image === undefined
+    ? undefined
+    : { url: image.url, ...integerFrame(image.width, image.height) };
+}
+
 /**
  * The image source for a brand's logo, or `undefined` when the text is anything but the logo
  * sanitiser's own output. That check is the whole defence: the text is read again by the sanitiser
@@ -36,8 +50,11 @@ export function integerFrame(width: number, height: number): { width: number; he
  * which is the image's natural size, and not the view box, which may be another shape.
  */
 export function brandLogoSource(logo: unknown): BrandLogoSource | undefined {
-  const image = logoImage(logo);
-  return image === undefined
-    ? undefined
-    : { url: image.url, ...integerFrame(image.width, image.height) };
+  if (typeof logo !== "string") return read(logo);
+  const index = remembered.findIndex((entry) => entry.logo === logo);
+  const [found] = index === -1 ? [] : remembered.splice(index, 1);
+  const entry = found ?? { logo, source: read(logo) };
+  remembered.unshift(entry);
+  remembered.length = Math.min(remembered.length, REMEMBERED);
+  return entry.source;
 }
