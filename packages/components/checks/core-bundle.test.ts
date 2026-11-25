@@ -198,6 +198,16 @@ const COMPONENTS = sourceFiles(SOURCES).flatMap((file) => {
   return tag === undefined ? [] : [{ tag, file }];
 });
 
+/** The tags a source draws: as JSX, or by name in a string (createElement, a tag held in a variable). */
+function renderedTags(source: string, known: ReadonlySet<string>): Set<string> {
+  const text = withoutComments(source);
+  const found = new Set<string>();
+  for (const match of text.matchAll(/<(idg-[a-z-]+)/g)) found.add(match[1] ?? "");
+  return found;
+}
+
+const KNOWN_TAGS: ReadonlySet<string> = new Set(COMPONENTS.map(({ tag }) => tag));
+
 const groupOf = (tag: string) => BUNDLES.find((group) => group.components.includes(tag))?.name;
 
 // What a component renders that is in a group of its own and not in `controls`: the element waits a
@@ -228,15 +238,29 @@ describe("the bundles of stencil-bundles.ts, against the components' sources", (
     expect(listed.length).toBe(new Set(listed).size);
   });
 
+  it("sees a tag drawn as JSX, by createElement, or named in a string, and not in a comment", () => {
+    const known = new Set(["idg-tooltip", "idg-badge", "idg-icon", "idg-stat"]);
+    const source = `
+      // idg-stat in a comment
+      render() { return <idg-badge />; }
+      show() { return document.createElement("idg-tooltip"); }
+      const Tag = cond ? \`idg-icon\` : "idg-button-not-a-tag";
+      const id = "idg-sign-out";
+    `;
+    expect([...renderedTags(source, known)].sort()).toEqual([
+      "idg-badge",
+      "idg-icon",
+      "idg-tooltip",
+    ]);
+  });
+
   it("renders only what is in its own group or in controls, bar the accepted", () => {
     const outside: string[] = [];
     for (const { tag, file } of COMPONENTS) {
       const rendered = new Set(
-        modulesOf(file)
-          .flatMap((module) => [
-            ...withoutComments(readFileSync(module, "utf8")).matchAll(/<(idg-[a-z-]+)/g),
-          ])
-          .map((match) => match[1]),
+        modulesOf(file).flatMap((module) => [
+          ...renderedTags(readFileSync(module, "utf8"), KNOWN_TAGS),
+        ]),
       );
       for (const other of rendered) {
         if (other === undefined || other === tag) continue;
