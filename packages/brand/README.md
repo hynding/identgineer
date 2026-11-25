@@ -1256,7 +1256,8 @@ Everything read from the CMS is untrusted:
 - A record is mapped to the kit's input and passed through `parseBrandKit` (a summary without its
   logo and mark), so a kit's logo and mark must be exactly what `sanitiseSvgLogo` returns. A
   record that fails comes back as `{ ok: false, index?, documentId?, errors }`, each error located
-  by its CMS field (`primaryColor`) and never repeating the value; it is never a kit, and one bad
+  by its CMS field (`primaryColor`) and never repeating the value, and at most 50 of them with one
+  more (`too-many-errors`) saying there were others; it is never a kit, and one bad
   record does not fail a list. A public read refuses a record that is not public.
 
 Writes take a `BrandKit` that `parseBrandKit` returned, check it again (the type cannot stop a

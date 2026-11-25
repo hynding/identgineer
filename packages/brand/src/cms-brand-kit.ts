@@ -1,5 +1,5 @@
 import type { BrandKit } from "./brand-kit.ts";
-import { parseBrandKit, type BrandKitError } from "./parse-brand-kit.ts";
+import { MAX_REPORTED_ERRORS, parseBrandKit, type BrandKitError } from "./parse-brand-kit.ts";
 import { formatHexColor } from "./srgb.ts";
 
 /** A brand kit as the CMS stores it (`cms/camis.json`, BrandKit): every field, null when absent. */
@@ -204,6 +204,15 @@ export function parseCmsBrandKit(
   return result.ok ? result : { ok: false, errors: result.errors.map(toCmsError) };
 }
 
+/** At most `MAX_REPORTED_ERRORS`, with one more saying there were others, as `parseBrandKit` does. */
+function capped(errors: readonly BrandKitError[]): BrandKitError[] {
+  if (errors.length <= MAX_REPORTED_ERRORS) return [...errors];
+  return [
+    ...errors.slice(0, MAX_REPORTED_ERRORS),
+    error("", "too-many-errors", "too many errors to list"),
+  ];
+}
+
 function readDocumentId(value: unknown, errors: BrandKitError[]): string | undefined {
   if (value === undefined) {
     errors.push(error("documentId", "missing", "is required"));
@@ -263,7 +272,7 @@ function readRecord(value: unknown, logos: boolean): Read<BrandKit> {
     if (isCmsField(key)) fields[key] = item;
     else if (key === "documentId") documentIdValue = item;
     else if (key === "isPublic") isPublicValue = item;
-    else if (!CMS_OWN_KEYS.has(key)) {
+    else if (!CMS_OWN_KEYS.has(key) && errors.length <= MAX_REPORTED_ERRORS) {
       errors.push(error(showKey(key), "unknown-key", "is not a brand kit field"));
     }
   }
@@ -272,7 +281,7 @@ function readRecord(value: unknown, logos: boolean): Read<BrandKit> {
   const parsed = parseCmsBrandKit(fields);
   if (!parsed.ok) errors.push(...parsed.errors);
   if (!parsed.ok || errors.length > 0 || documentId === undefined || isPublic === undefined) {
-    return { ok: false, ...(documentId !== undefined && { documentId }), errors };
+    return { ok: false, ...(documentId !== undefined && { documentId }), errors: capped(errors) };
   }
   return { ok: true, documentId, isPublic, value: parsed.kit };
 }
