@@ -39,6 +39,12 @@ import { LogoUploads, type UploadFile, type UploadRefusalCode } from "./brand-ed
 const DEFAULT_LEVEL = 2;
 const IMAGE_FIELDS: readonly ImageField[] = ["logo", "mark"];
 
+/**
+ * The name each control carries. A named control of a form is also a property of the form, so a
+ * control named `id` or `name` would shadow the form's own: every name is prefixed.
+ */
+const controlName = (field: DraftField): string => `brand-${field}`;
+
 type Messages = Partial<Record<DraftField, string>>;
 
 interface Summary {
@@ -460,7 +466,7 @@ export class IdgBrandEditor {
         optionalText={options.required ? undefined : labels.optional}
       >
         <idg-input
-          name={field}
+          name={controlName(field)}
           type="text"
           value={this.draft[field]}
           maxlength={options.maxlength}
@@ -491,7 +497,7 @@ export class IdgBrandEditor {
         optionalText={required ? undefined : labels.optional}
       >
         <idg-input
-          name={field}
+          name={controlName(field)}
           type="text"
           value={this.draft[field]}
           maxlength={7}
@@ -530,7 +536,7 @@ export class IdgBrandEditor {
     return (
       <idg-field label={label} error={this.errors[field]} required>
         <idg-select
-          name={field}
+          name={controlName(field)}
           value={this.draft[field]}
           required
           ref={(element) => (this.controls[field] = element)}
@@ -587,7 +593,7 @@ export class IdgBrandEditor {
             id={fileId}
             class="file focusable"
             type="file"
-            name={field}
+            name={controlName(field)}
             accept="image/svg+xml,.svg"
             aria-describedby={`${hintId} ${statusId} ${errorId}`}
             aria-invalid={error === undefined ? undefined : "true"}

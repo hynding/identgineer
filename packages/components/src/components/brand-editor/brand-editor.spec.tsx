@@ -185,15 +185,15 @@ describe("idg-brand-editor form", () => {
     const form = shadowOf(root).querySelector("form");
     expect(form?.getAttribute("aria-label")).toBe("Brand kit");
     expect(form?.hasAttribute("novalidate")).toBe(true);
-    expect(fieldOf(root, "name").label).toBe("Name");
-    expect(fieldOf(root, "id").label).toBe("Theme id");
-    expect(fieldOf(root, "tagline").label).toBe("Tagline");
-    expect(fieldOf(root, "primary").label).toBe("Primary colour");
-    expect(fieldOf(root, "secondary").label).toBe("Secondary colour");
-    expect(fieldOf(root, "neutralTint").label).toBe("Neutral tint");
-    expect(fieldOf(root, "typography").label).toBe("Font pairing");
-    expect(fieldOf(root, "corners").label).toBe("Corners");
-    expect(fieldOf(root, "tone").label).toBe("Tone");
+    expect(fieldOf(root, "brand-name").label).toBe("Name");
+    expect(fieldOf(root, "brand-id").label).toBe("Theme id");
+    expect(fieldOf(root, "brand-tagline").label).toBe("Tagline");
+    expect(fieldOf(root, "brand-primary").label).toBe("Primary colour");
+    expect(fieldOf(root, "brand-secondary").label).toBe("Secondary colour");
+    expect(fieldOf(root, "brand-neutralTint").label).toBe("Neutral tint");
+    expect(fieldOf(root, "brand-typography").label).toBe("Font pairing");
+    expect(fieldOf(root, "brand-corners").label).toBe("Corners");
+    expect(fieldOf(root, "brand-tone").label).toBe("Tone");
     for (const field of ["logo", "mark"] as const) {
       const input = fileInput(root, field);
       expect(input.getAttribute("type")).toBe("file");
@@ -212,7 +212,9 @@ describe("idg-brand-editor form", () => {
 
   it("pairs each colour field with a named native colour picker in its box", async () => {
     const { root } = await mount({ kit: ACME });
-    const picker = control(root, "primary").querySelector<HTMLInputElement>('input[type="color"]');
+    const picker = control(root, "brand-primary").querySelector<HTMLInputElement>(
+      'input[type="color"]',
+    );
     expect(picker?.getAttribute("slot")).toBe("start");
     expect(picker?.getAttribute("aria-label")).toBe("Pick the primary colour");
     expect(picker?.value).toBe("#4f46e5");
@@ -222,7 +224,7 @@ describe("idg-brand-editor form", () => {
     const { root } = await mount();
     const values = (name: string) =>
       [...control(root, name).querySelectorAll("option")].map((option) => option.value);
-    expect(values("typography")).toEqual([
+    expect(values("brand-typography")).toEqual([
       "system",
       "geometric",
       "humanist",
@@ -231,24 +233,24 @@ describe("idg-brand-editor form", () => {
       "book",
       "technical",
     ]);
-    expect(values("corners")).toEqual(["sharp", "soft", "round"]);
-    expect(values("tone")).toEqual(["calm", "balanced", "vivid"]);
+    expect(values("brand-corners")).toEqual(["sharp", "soft", "round"]);
+    expect(values("brand-tone")).toEqual(["calm", "balanced", "vivid"]);
   });
 
   it("starts from the kit it is given, its colours as hex", async () => {
     const { root } = await mount({ kit: ACME });
-    expect(control(root, "name").value).toBe("Acme Rockets");
-    expect(control(root, "id").value).toBe("acme");
-    expect(control(root, "tagline").value).toBe("Up, up & away!");
-    expect(control(root, "primary").value).toBe("#4f46e5");
-    expect(control(root, "secondary").value).toBe("#0f766e");
-    expect(control(root, "neutralTint").value).toBe("");
-    expect(control(root, "typography").value).toBe("geometric");
+    expect(control(root, "brand-name").value).toBe("Acme Rockets");
+    expect(control(root, "brand-id").value).toBe("acme");
+    expect(control(root, "brand-tagline").value).toBe("Up, up & away!");
+    expect(control(root, "brand-primary").value).toBe("#4f46e5");
+    expect(control(root, "brand-secondary").value).toBe("#0f766e");
+    expect(control(root, "brand-neutralTint").value).toBe("");
+    expect(control(root, "brand-typography").value).toBe("geometric");
   });
 
   it("shows markup in a kit as the value of a field, and never as markup", async () => {
     const { root } = await mount({ kit: { ...ACME, name: `Acme ${CANARY}`, tagline: CANARY } });
-    expect(control(root, "name").value).toBe(`Acme ${CANARY}`);
+    expect(control(root, "brand-name").value).toBe(`Acme ${CANARY}`);
     expect(markupIn(root)).not.toContain("img");
     expect(markupIn(root)).not.toContain("script");
   });
@@ -266,15 +268,15 @@ describe("idg-brand-editor form", () => {
       },
     );
     const { root, waitForChanges } = await mount({ kit: throwing });
-    expect(control(root, "name").value).toBe("");
+    expect(control(root, "brand-name").value).toBe("");
     root.kit = "not a kit";
     await waitForChanges();
-    expect(control(root, "name").value).toBe("");
+    expect(control(root, "brand-name").value).toBe("");
   });
 
   it("keeps the inner controls' events inside", async () => {
     const { root } = await mount({ kit: ACME });
-    type(root, "name", "Acme Rocket Co");
+    type(root, "brand-name", "Acme Rocket Co");
     expect(events.seen).toEqual([]);
   });
 
@@ -291,18 +293,18 @@ describe("idg-brand-editor form", () => {
 describe("idg-brand-editor colours", () => {
   it("writes a colour picked into its hex field, and a valid hex typed into its picker", async () => {
     const { root, waitForChanges } = await mount({ kit: ACME });
-    const picker = control(root, "secondary").querySelector<HTMLInputElement>(
+    const picker = control(root, "brand-secondary").querySelector<HTMLInputElement>(
       'input[type="color"]',
     );
     if (!picker) throw new Error("no picker");
     picker.value = "#ff8800";
     picker.dispatchEvent(new Event("input", { bubbles: true }));
     await waitForChanges();
-    expect(control(root, "secondary").value).toBe("#ff8800");
-    type(root, "secondary", "#0AF");
+    expect(control(root, "brand-secondary").value).toBe("#ff8800");
+    type(root, "brand-secondary", "#0AF");
     await waitForChanges();
     expect(picker.value).toBe("#00aaff");
-    type(root, "secondary", "#0a");
+    type(root, "brand-secondary", "#0a");
     await waitForChanges();
     expect(picker.value).toBe("#00aaff");
   });
@@ -324,7 +326,7 @@ describe("idg-brand-editor preview", () => {
     const { root, waitForChanges } = await mount({ kit: HARBOUR, clock });
     const before = guide(root)?.kit;
     expect(vi.mocked(generateBrandTheme)).toHaveBeenCalledTimes(1);
-    for (const name of ["H", "Ha", "Har", "Harb", "Harbo"]) type(root, "name", name);
+    for (const name of ["H", "Ha", "Har", "Harb", "Harbo"]) type(root, "brand-name", name);
     await waitForChanges();
     expect(clock.delays()).toEqual([PREVIEW_DELAY_MS]);
     expect(vi.mocked(generateBrandTheme)).toHaveBeenCalledTimes(1);
@@ -339,7 +341,7 @@ describe("idg-brand-editor preview", () => {
   it("keeps the last valid preview while the draft is not a kit, and says so", async () => {
     const clock = manualClock();
     const { root, waitForChanges } = await mount({ kit: ACME, clock });
-    type(root, "primary", "red");
+    type(root, "brand-primary", "red");
     clock.run();
     await waitForChanges();
     expect(guide(root)?.kit?.name).toBe("Acme Rockets");
@@ -364,19 +366,19 @@ describe("idg-brand-editor validation", () => {
   it("validates with parseBrandKit, marks each field with its code's message, focuses the first and saves nothing", async () => {
     const store = fakeStore();
     const { root, waitForChanges } = await mount({ store });
-    const focus = vi.spyOn(control(root, "name"), "setFocus");
-    type(root, "id", "Not An Id");
-    type(root, "primary", "#12");
+    const focus = vi.spyOn(control(root, "brand-name"), "setFocus");
+    type(root, "brand-id", "Not An Id");
+    type(root, "brand-primary", "#12");
     submit(root);
     await waitForChanges();
-    expect(fieldOf(root, "name").error).toBe("Fill this in.");
-    expect(fieldOf(root, "id").error).toBe(
+    expect(fieldOf(root, "brand-name").error).toBe("Fill this in.");
+    expect(fieldOf(root, "brand-id").error).toBe(
       "Use 2 to 32 lower-case letters and digits, in words joined by single hyphens, starting with a letter.",
     );
-    expect(fieldOf(root, "primary").error).toBe(
+    expect(fieldOf(root, "brand-primary").error).toBe(
       "Enter a hex colour: # and 3 or 6 digits from 0 to 9 and a to f.",
     );
-    expect(fieldOf(root, "tagline").error).toBeUndefined();
+    expect(fieldOf(root, "brand-tagline").error).toBeUndefined();
     expect(textOf(root, 'idg-alert[part="error"]')).toBe(
       "Some fields need a change. Each says what is wrong.",
     );
@@ -388,10 +390,10 @@ describe("idg-brand-editor validation", () => {
     const { root, waitForChanges } = await mount({ kit: { ...ACME, name: "" } });
     submit(root);
     await waitForChanges();
-    expect(fieldOf(root, "name").error).toBe("Fill this in.");
-    type(root, "name", "Acme");
+    expect(fieldOf(root, "brand-name").error).toBe("Fill this in.");
+    type(root, "brand-name", "Acme");
     await waitForChanges();
-    expect(fieldOf(root, "name").error).toBeUndefined();
+    expect(fieldOf(root, "brand-name").error).toBeUndefined();
   });
 
   it("takes its messages from labels", async () => {
@@ -400,7 +402,7 @@ describe("idg-brand-editor validation", () => {
     });
     submit(root);
     await waitForChanges();
-    expect(fieldOf(root, "name").error).toBe("Remplissez ce champ.");
+    expect(fieldOf(root, "brand-name").error).toBe("Remplissez ce champ.");
     expect(shadowOf(root).querySelector("form")?.getAttribute("aria-label")).toBe("Charte");
   });
 });
@@ -417,7 +419,7 @@ describe("idg-brand-editor saving", () => {
       { type: "idgSave", detail: { documentId: "doc-1", id: "acme", created: true } },
     ]);
     expect(textOf(root, 'idg-alert[part="saved"]')).toBe("Brand kit saved.");
-    type(root, "tagline", "Higher");
+    type(root, "brand-tagline", "Higher");
     submit(root);
     await settle(waitForChanges);
     expect(store.create).toHaveBeenCalledTimes(1);
@@ -476,8 +478,8 @@ describe("idg-brand-editor saving", () => {
     const { root, waitForChanges } = await mount({ kit: ACME, store });
     submit(root);
     await settle(waitForChanges);
-    expect(fieldOf(root, "id").error).toBe("The server refused this value.");
-    expect(fieldOf(root, "primary").error).toBe("The server refused this value.");
+    expect(fieldOf(root, "brand-id").error).toBe("The server refused this value.");
+    expect(fieldOf(root, "brand-primary").error).toBe("The server refused this value.");
     expect(textOf(root, 'idg-alert[part="error"]')).toBe(
       "The kit was not saved: the fields marked below were refused.",
     );
@@ -498,7 +500,7 @@ describe("idg-brand-editor saving", () => {
     const { root, waitForChanges } = await mount({ kit: ACME, store });
     submit(root);
     await settle(waitForChanges);
-    expect(fieldOf(root, "tagline").error).toBe(
+    expect(fieldOf(root, "brand-tagline").error).toBe(
       "The server did not save this value as it was sent.",
     );
     submit(root);

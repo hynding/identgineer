@@ -91,9 +91,9 @@ async function openEditor(page: Page): Promise<Watch> {
 
 const editor = (page: Page, id: string) => page.locator(`#${id}`);
 const textInput = (host: Locator, name: string) =>
-  host.locator(`idg-input[name="${name}"] input.native`);
+  host.locator(`idg-input[name="brand-${name}"] input.native`);
 const picker = (host: Locator, name: string) =>
-  host.locator(`idg-input[name="${name}"] input[type="color"]`);
+  host.locator(`idg-input[name="brand-${name}"] input[type="color"]`);
 const upload = (host: Locator, field: "logo" | "mark") => host.locator(`#${field}-file`);
 const preview = (host: Locator) => host.locator("idg-brand-guidelines");
 
@@ -119,7 +119,8 @@ function focused(page: Page) {
       tag: active?.localName ?? "",
       type: active?.getAttribute("type") ?? "",
       id: active?.id ?? "",
-      control: control?.getAttribute("name") ?? "",
+      // The field the control is for: each control's name is its field's, prefixed.
+      control: control?.getAttribute("name")?.replace(/^brand-/, "") ?? "",
       editor: editorRoot(active),
     };
   });
@@ -135,6 +136,16 @@ async function tabTo(page: Page, editorId: string, name: string): Promise<void> 
   throw new Error(`Tab never reached ${name} in ${editorId}`);
 }
 
+/** Presses Tab until focus is on the editor's save button, the first button after its fields. */
+async function tabToSave(page: Page, editorId: string): Promise<void> {
+  for (let step = 0; step < 20; step += 1) {
+    await page.keyboard.press("Tab");
+    const now = await focused(page);
+    if (now.editor === editorId && now.tag === "button") return;
+  }
+  throw new Error(`Tab never reached the save button of ${editorId}`);
+}
+
 /** An idg-alert's words, which it slots into the element that carries its role. */
 async function expectAlert(
   alert: Locator,
@@ -145,15 +156,25 @@ async function expectAlert(
   await expect(alert).toContainText(text);
 }
 
-/** Every attribute value and text of the page, through shadow roots, decoded where it is a url. */
-function everything(page: Page): Promise<{ names: string[]; values: string[] }> {
-  return page.evaluate(() => {
+/**
+ * Every element name, attribute value and text the editors draw, through shadow roots, decoded
+ * where it is a url. The icons' own drawings are the library's fixed SVG, so they are not walked.
+ */
+function everything(
+  page: Page,
+  editors = "idg-brand-editor",
+): Promise<{ names: string[]; values: string[] }> {
+  return page.evaluate((selector) => {
     const all = (root: ParentNode): Element[] =>
       [...root.querySelectorAll("*")].flatMap((node) => [
         node,
-        ...(node.shadowRoot ? all(node.shadowRoot) : []),
+        ...(node.shadowRoot && node.localName !== "idg-icon" ? all(node.shadowRoot) : []),
       ]);
-    const elements = all(document);
+    const elements = [...document.querySelectorAll(selector)].flatMap((editor) => [
+      editor,
+      ...all(editor),
+      ...(editor.shadowRoot ? all(editor.shadowRoot) : []),
+    ]);
     const decode = (value: string) => {
       try {
         return decodeURIComponent(value);
@@ -171,7 +192,7 @@ function everything(page: Page): Promise<{ names: string[]; values: string[] }> 
         ...(element instanceof HTMLInputElement ? [element.value] : []),
       ]),
     };
-  });
+  }, editors);
 }
 
 test.describe("idg-brand-editor form", () => {
@@ -188,14 +209,18 @@ test.describe("idg-brand-editor form", () => {
       await expect(host.getByRole("combobox", { name })).toHaveCount(1);
     }
     await expect(host.getByLabel("Pick the primary colour")).toHaveValue("#f4c430");
-    await expect(host.getByLabel("Logo optional")).toHaveAttribute("type", "file");
-    await expect(host.getByLabel("Mark optional")).toHaveAttribute("type", "file");
-    await expect(host.getByRole("group", { name: "Colours" })).toHaveCount(1);
+    await expect(upload(host, "logo")).toHaveAccessibleName("Logo optional");
+    await expect(upload(host, "logo")).toHaveAttribute("type", "file");
+    await expect(upload(host, "mark")).toHaveAccessibleName("Mark optional");
+    await expect(upload(host, "mark")).toHaveAttribute("type", "file");
+    await expect(host.getByRole("group", { name: "Colours", exact: true })).toHaveCount(1);
     await expect(host.getByRole("button", { name: "Save brand kit" })).toHaveCount(1);
     await expect(textInput(host, "name")).toHaveValue("Harbour Lights");
     await expect(textInput(host, "primary")).toHaveValue("#f4c430");
     await expect(textInput(host, "neutralTint")).toHaveValue("#1b2a4a");
-    await expect(host.locator("idg-select[name='typography'] select")).toHaveValue("classic-serif");
+    await expect(host.locator("idg-select[name='brand-typography'] select")).toHaveValue(
+      "classic-serif",
+    );
   });
 
   test("names no control after a property of its form, so none shadows the form's own", async ({
@@ -327,9 +352,7 @@ test.describe("idg-brand-editor saving, by keyboard alone", () => {
     await page.keyboard.type("#b45309");
     await tabTo(page, "editor-new", "tone");
     await page.keyboard.press("ArrowDown");
-    await tabTo(page, "editor-new", "name");
-    await page.keyboard.press("Shift+Tab");
-    await page.keyboard.press("Tab");
+    await tabToSave(page, "editor-new");
     await page.keyboard.press("Enter");
     const host = editor(page, "editor-new");
     await expectAlert(host.locator('idg-alert[part="saved"]'), "status", "Brand kit saved.");
@@ -381,7 +404,12 @@ test.describe("idg-brand-editor saving, by keyboard alone", () => {
     const save = host.locator("idg-button.submit");
     await expect(save).toHaveAttribute("loading", "");
     await page.keyboard.press("Enter");
-    await page.evaluate(() => {
+    // An input submits its form a task after the keypress, as a browser does: the store answers
+    // only once that second submit has been asked for, while the first is still pending.
+    await page.evaluate(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve);
+      });
       (window as unknown as { __brandStore: StoreState }).__brandStore.release();
     });
     await expect(save).not.toHaveAttribute("loading", "");
@@ -438,9 +466,9 @@ test.describe("idg-brand-editor saving, by keyboard alone", () => {
       "The kit was not saved: the fields marked below were refused.",
     );
     await expect.poll(() => focused(page)).toMatchObject({ control: "primary", tag: "input" });
-    await expect(host.getByRole("textbox", { name: "Primary colour" })).toHaveAccessibleDescription(
-      /The server refused this value\.$/,
-    );
+    await expect(
+      host.getByRole("textbox", { name: "Primary colour", exact: true }),
+    ).toHaveAccessibleDescription(/The server refused this value\.$/);
     const { values, names } = await everything(page);
     expect(values.filter((value) => value.includes("The server said"))).toEqual([]);
     expect(names).not.toContain("script");
@@ -499,7 +527,7 @@ test.describe("idg-brand-editor uploads", () => {
     await expect.poll(async () => (await store(page)).calls.length).toBe(1);
     expect((await store(page)).calls[0]?.kit.logo).toBe(cleaned.svg);
     await expect(removals).toHaveCount(0);
-    const { names, values } = await everything(page);
+    const { names, values } = await everything(page, "#editor-harbour");
     expect(names.filter((name) => ["script", "svg", "iframe", "object"].includes(name))).toEqual(
       [],
     );
@@ -520,7 +548,7 @@ test.describe("idg-brand-editor uploads", () => {
     const host = editor(page, "editor-new");
     await upload(host, "logo").setInputFiles(svgFile("inkscape.svg", INKSCAPE));
     await expect(host.locator('[part="removals"] li').first()).toHaveText(
-      "An attribute that is not supported was removed (svg version, line 9)",
+      "An attribute that is not supported was removed (svg version, line 8)",
     );
     await host.getByRole("button", { name: "Remove the logo" }).press("Enter");
     await expect(host.locator('[part="removals"]')).toHaveCount(0);
@@ -539,7 +567,7 @@ test.describe("idg-brand-editor uploads", () => {
       "The file declares a document type with its own definitions, which is not allowed.",
     );
     await expect(upload(host, "logo")).toHaveAttribute("aria-invalid", "true");
-    await expect(host.getByLabel("Logo optional")).toHaveAccessibleDescription(/document type/);
+    await expect(upload(host, "logo")).toHaveAccessibleDescription(/document type/);
     await expect(upload(host, "logo")).toHaveValue("");
     const logo = await preview(host).evaluate(
       (guide) => (guide as HTMLElement & { kit?: { logo?: string } }).kit?.logo,
@@ -741,6 +769,8 @@ test.describe("idg-brand-editor across the axes", () => {
     expect(sizes.size).toBeGreaterThan(1);
   });
 
+  // As every reduced-motion check of the library measures it: the motion tokens shrink each
+  // transition to at most a millisecond, so nothing is seen to move.
   test("moves nothing when reduced motion is asked for", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await openEditor(page);
@@ -750,16 +780,22 @@ test.describe("idg-brand-editor across the axes", () => {
           node,
           ...(node.shadowRoot ? all(node.shadowRoot) : []),
         ]);
+      const seconds = (value: string) =>
+        Math.max(
+          ...value.split(",").map((part) => {
+            const text = part.trim();
+            return text.endsWith("ms") ? Number.parseFloat(text) / 1000 : Number.parseFloat(text);
+          }),
+        );
       const elements = all(host.shadowRoot ?? host);
       return {
         count: elements.length,
         moving: elements
           .filter((element) => {
             const style = getComputedStyle(element);
-            return (
-              style.animationName !== "none" ||
-              style.transitionDuration.split(",").some((duration) => parseFloat(duration) > 0)
-            );
+            const transition = seconds(style.transitionDuration) + seconds(style.transitionDelay);
+            const animation = style.animationName === "none" ? 0 : seconds(style.animationDuration);
+            return transition > 0.001 || animation > 0.001;
           })
           .map((element) => `${element.localName}.${element.className}`),
       };

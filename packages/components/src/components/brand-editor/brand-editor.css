@@ -148,6 +148,10 @@
   min-inline-size: 0;
 }
 
+.image-row > * {
+  max-inline-size: 100%;
+}
+
 .thumbnail {
   display: flex;
   flex-direction: column;
