@@ -250,11 +250,11 @@ export class IdgBrandEditor {
     this.kitChanged();
   }
 
+  // A pending save is not dropped: the element may only be moving, and the kit the store answers
+  // with is the one the next save must update. Only reads of uploads are dropped.
   disconnectedCallback(): void {
-    this.attempts.cancel();
     this.uploads.cancelAll();
     this.refresh.cancel();
-    this.pending = false;
     this.reading = { logo: false, mark: false };
   }
 
@@ -422,12 +422,19 @@ export class IdgBrandEditor {
       const saved = readSaved(answer);
       if (saved === undefined) {
         if (documentId === undefined) this.adoptCreated(readUnreadDocumentId(answer));
+        if (!this.host.isConnected) return;
         this.summary = { text: labels.saveUnreadableAnswer, key: (this.keys += 1) };
         return;
       }
       const created = documentId === undefined || this.createdUnreported === saved.documentId;
-      this.createdUnreported = undefined;
       this.storedId = saved.documentId;
+      // Off the page, only which kit was stored is kept: nothing is shown and no event is sent, so
+      // the first save once it is back says whether it created the kit.
+      if (!this.host.isConnected) {
+        this.createdUnreported = created ? saved.documentId : undefined;
+        return;
+      }
+      this.createdUnreported = undefined;
       this.removals = {};
       this.savedKey = this.keys += 1;
       this.idgSave.emit({ documentId: saved.documentId, id: saved.id, created });
@@ -448,6 +455,7 @@ export class IdgBrandEditor {
 
   private fail(failure: StoreFailure, creating: boolean, labels: BrandEditorLabels): void {
     if (creating && failure.code === "not-applied") this.adoptCreated(failure.documentId);
+    if (!this.host.isConnected) return;
     const onField =
       failure.code === "validation"
         ? labels.fieldRefused
