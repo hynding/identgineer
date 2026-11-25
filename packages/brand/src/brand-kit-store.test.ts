@@ -609,6 +609,26 @@ describe("failures", () => {
     if (code === "unexpected-status") expect(error.status).toBe(status);
   });
 
+  it("names only the field a validation error's path starts with, never what follows", async () => {
+    const validationError = (errors: unknown[]) =>
+      json(
+        { data: null, error: { status: 400, name: "ValidationError", details: { errors } } },
+        400,
+      );
+    const { store } = storeWith(() =>
+      validationError([
+        { path: ["name", "sk_live_SECRETVALUE123"] },
+        { path: ["logo", ...Array.from({ length: 3000 }, (_, index) => `s${String(index)}`)] },
+        { path: ["name", 0] },
+        { path: ["tagline", "<b>"] },
+      ]),
+    );
+    const error = await rejection(store.create(kitFrom()));
+    expect(error.fields).toEqual(["name", "logo", "tagline"]);
+    expect(JSON.stringify(error)).not.toContain("SECRET");
+    expect(JSON.stringify(error).length).toBeLessThan(200);
+  });
+
   it("names the fields a validation error names, and only the kit's own", async () => {
     const { store } = storeWith(() =>
       json(
