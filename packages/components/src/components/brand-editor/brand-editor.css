@@ -112,13 +112,18 @@
 }
 
 /* A narrow form, as at 320px or with large text, gives its fields the room its groups and boxes
-   would pad: the group keeps its edge, and each hex field keeps a whole #rrggbb in view. */
+   would pad: the group keeps its edge, each hex field keeps a whole #rrggbb in view, and the file
+   chooser's label keeps its words whole. */
 @container brand-form (inline-size < 20em) {
   .group {
     padding-inline: var(--idg-space-3xs);
   }
 
   .colour::part(box) {
+    padding-inline: var(--idg-space-3xs);
+  }
+
+  .file::file-selector-button {
     padding-inline: var(--idg-space-3xs);
   }
 }
@@ -189,10 +194,12 @@
   max-inline-size: 100%;
 }
 
-/* The file input is the browser's own, so it is told it may be no wider than its row, and its
-   button takes the page's control look. */
+/* The file input is the browser's own and clips what does not fit, so it takes its row's width
+   and its button sits on a line of its own, wrapping its label, above the file name. The button
+   takes the page's control look. */
 .file {
   box-sizing: border-box;
+  inline-size: 100%;
   min-inline-size: 0;
   max-inline-size: 100%;
   color: var(--idg-color-text);
@@ -203,9 +210,11 @@
 }
 
 .file::file-selector-button {
+  display: block;
   box-sizing: border-box;
   min-block-size: var(--idg-density-target-size);
-  margin-inline-end: var(--idg-space-xs);
+  max-inline-size: 100%;
+  margin-block-end: var(--idg-space-3xs);
   padding-inline: var(--idg-density-control-padding-inline);
   border-width: var(--idg-border-control-width);
   border-style: var(--idg-border-control-style);
@@ -216,6 +225,8 @@
   font-family: var(--idg-font-family-body);
   font-weight: var(--idg-font-weight-semibold);
   text-transform: var(--idg-ornament-control-transform);
+  white-space: normal;
+  overflow-wrap: break-word;
   cursor: pointer;
 }
 
