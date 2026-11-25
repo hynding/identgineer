@@ -1,7 +1,7 @@
 export { BRAND_ID_MAX_LENGTH, BRAND_ID_MIN_LENGTH, RESERVED_BRAND_IDS } from "./brand-id.ts";
 export { CORNERS, TONES } from "./brand-kit.ts";
 export type { BrandColors, BrandKit, Corners, Tone } from "./brand-kit.ts";
-export { createBrandKitStore } from "./brand-kit-store.ts";
+export { createBrandKitStore, MAX_BRAND_KIT_PAGE_SIZE } from "./brand-kit-store.ts";
 export type {
   BrandKitFetch,
   BrandKitListOptions,

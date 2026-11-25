@@ -1,5 +1,5 @@
 /** What to wait when a 429 does not say, or CORS hides the header. */
-export const DEFAULT_RETRY_AFTER_SECONDS = 60;
+const DEFAULT_RETRY_AFTER_SECONDS = 60;
 const MAX_RETRY_AFTER_SECONDS = 3600;
 
 const clamp = (seconds: number): number =>

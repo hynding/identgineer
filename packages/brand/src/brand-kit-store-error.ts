@@ -6,6 +6,7 @@ export type BrandKitStoreErrorCode =
   | "not-applied"
   | "rate-limited"
   | "network"
+  | "request-refused"
   | "malformed-response"
   | "unexpected-status";
 
@@ -18,6 +19,8 @@ const MESSAGES: Readonly<Record<BrandKitStoreErrorCode, string>> = {
   "not-applied": "The CMS did not save every change to the brand kit.",
   "rate-limited": "Too many requests. Wait before trying again.",
   network: "The CMS could not be reached.",
+  "request-refused":
+    "The fetch given to the brand kit store refused the request. Check that it serves the store's base URL.",
   "malformed-response": "The CMS answered with something that is not a brand kit answer.",
   "unexpected-status": "The CMS could not do that. Try again later.",
 };

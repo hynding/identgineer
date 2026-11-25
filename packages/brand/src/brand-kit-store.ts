@@ -1,5 +1,5 @@
 import type { BrandKit } from "./brand-kit.ts";
-import { BrandKitStoreError } from "./brand-kit-store-error.ts";
+import { BrandKitStoreError, type BrandKitStoreErrorCode } from "./brand-kit-store-error.ts";
 import {
   brandKitToCms,
   CMS_FIELDS,
@@ -37,7 +37,7 @@ export interface BrandKitRequestOptions {
 export interface BrandKitListOptions extends BrandKitRequestOptions {
   /** From 1; 1 by default. */
   readonly page?: number;
-  /** From 1 to `MAX_PAGE_SIZE`, which is also the default. */
+  /** From 1 to `MAX_BRAND_KIT_PAGE_SIZE` (10), which is also the default. */
   readonly pageSize?: number;
 }
 
@@ -85,7 +85,7 @@ export interface BrandKitStore {
 }
 
 const KITS_PATH = "/api/brand-kits";
-export const MAX_PAGE_SIZE = 10;
+export const MAX_BRAND_KIT_PAGE_SIZE = 10;
 /**
  * The largest answer for one kit: two logos at the sanitiser's limit (512 KiB of UTF-8 each),
  * which JSON may write up to three times longer (`\/`, `\"` and `é` escapes), and the rest.
@@ -148,9 +148,9 @@ function readPageOptions(options: BrandKitListOptions | undefined): {
   pageSize: number;
 } {
   const page = options?.page ?? 1;
-  const pageSize = options?.pageSize ?? MAX_PAGE_SIZE;
+  const pageSize = options?.pageSize ?? MAX_BRAND_KIT_PAGE_SIZE;
   if (!Number.isSafeInteger(page) || page < 1) throw validation();
-  if (!Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
+  if (!Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > MAX_BRAND_KIT_PAGE_SIZE) {
     throw validation();
   }
   return { page, pageSize };
@@ -237,17 +237,34 @@ async function failureOf(
   return new BrandKitStoreError("unexpected-status", { status });
 }
 
-/** The identity SDK's `authorizedFetch` rejects with code `unauthorized` when no one is signed in. */
-function isSignedOut(error: unknown): boolean {
+function codeOf(error: unknown): unknown {
   try {
-    return (
-      typeof error === "object" &&
-      error !== null &&
-      (error as { code?: unknown }).code === "unauthorized"
-    );
+    return typeof error === "object" && error !== null
+      ? (error as { code?: unknown }).code
+      : undefined;
   } catch {
-    return false;
+    return undefined;
   }
+}
+
+/**
+ * What a rejected fetch means. A TypeError is the platform's network failure, an AbortError or
+ * TimeoutError an aborted request, and the identity SDK's `authorizedFetch` rejects with code
+ * `network` or `unauthorized` (no one signed in). Anything else is the fetch refusing the request
+ * itself (`authorizedFetch` refuses a URL outside its own base URL with code `validation`). Its
+ * text is never passed on.
+ */
+function rejectionCode(error: unknown): BrandKitStoreErrorCode {
+  const code = codeOf(error);
+  if (code === "unauthorized") return "unauthorized";
+  if (code === "network" || error instanceof TypeError) return "network";
+  if (
+    error instanceof DOMException &&
+    (error.name === "AbortError" || error.name === "TimeoutError")
+  ) {
+    return "network";
+  }
+  return "request-refused";
 }
 
 /**
@@ -371,7 +388,7 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
     try {
       response = await call.fetch(`${storeEndpoint(base, call.path)}${query}`, init);
     } catch (error) {
-      throw new BrandKitStoreError(isSignedOut(error) ? "unauthorized" : "network");
+      throw new BrandKitStoreError(rejectionCode(error));
     }
     if (response.status < 200 || response.status > 299)
       throw await failureOf(response, call.signal);
