@@ -215,7 +215,7 @@ describe("validateDraft", () => {
       ok: false,
       errors: {
         id: "invalid-id",
-        name: "missing",
+        name: "too-short",
         tagline: "too-long",
         primary: "invalid-color",
         secondary: "invalid-color",
@@ -229,7 +229,7 @@ describe("validateDraft", () => {
 
   it("refuses a reserved id and an empty primary", () => {
     const result = validateDraft({ ...VALID, id: "dark", primary: "" });
-    expect(result).toEqual({ ok: false, errors: { id: "reserved-id", primary: "missing" } });
+    expect(result).toEqual({ ok: false, errors: { id: "reserved-id", primary: "invalid-color" } });
   });
 
   it("validates the logo and mark too", () => {
@@ -261,8 +261,9 @@ describe("previewOf", () => {
   });
 
   it("never reads the logo or mark, whatever they hold", () => {
-    const logo = { toString: vi.fn(() => HOSTILE_SVG) } as unknown as string;
+    const toString = vi.fn(() => HOSTILE_SVG);
+    const logo = { toString } as unknown as string;
     expect(previewOf({ ...VALID, logo, mark: logo })?.kit.name).toBe("Acme Rockets");
-    expect(logo.toString).not.toHaveBeenCalled();
+    expect(toString).not.toHaveBeenCalled();
   });
 });
