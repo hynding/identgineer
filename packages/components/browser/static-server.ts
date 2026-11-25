@@ -1,7 +1,7 @@
 import { createServer, type Server } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize, sep } from "node:path";
-import { CONTENT_SECURITY_POLICY } from "./content-security-policy";
+import { CONTENT_SECURITY_POLICY, LOGO_CONTENT_SECURITY_POLICY } from "./content-security-policy";
 
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
@@ -21,11 +21,17 @@ function resolveInside(root: string, urlPath: string): string | undefined {
   return target.startsWith(root + sep) ? target : undefined;
 }
 
+/** The pages that show `idg-brand-logo` draw logos as data URL images, so they and only they may. */
+const LOGO_PAGES: ReadonlySet<string> = new Set(["/", "/index.html"]);
+
 /** Serves a built directory with the strict policy on every response, errors included. */
 export function startStaticServer(root: string, port: number): Promise<Server> {
   const server = createServer((request, response) => {
+    const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
     const headers = {
-      "Content-Security-Policy": CONTENT_SECURITY_POLICY,
+      "Content-Security-Policy": LOGO_PAGES.has(pathname)
+        ? LOGO_CONTENT_SECURITY_POLICY
+        : CONTENT_SECURITY_POLICY,
       "Cache-Control": "no-store",
     };
     // Browsers ask for the icon unprompted, and a 404 would be logged as a console error.
@@ -33,7 +39,7 @@ export function startStaticServer(root: string, port: number): Promise<Server> {
       response.writeHead(204, headers).end();
       return;
     }
-    const path = resolveInside(root, new URL(request.url ?? "/", "http://localhost").pathname);
+    const path = resolveInside(root, pathname);
     if (path === undefined) {
       response.writeHead(403, headers).end();
       return;

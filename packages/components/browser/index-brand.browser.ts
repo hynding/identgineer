@@ -1,0 +1,35 @@
+import { CONTENT_SECURITY_POLICY, LOGO_CONTENT_SECURITY_POLICY } from "./content-security-policy";
+import { expect, test } from "./fixtures";
+
+test.describe("the index page's brand section", () => {
+  test("draws both logos as images under the logo policy, with no violation", async ({ page }) => {
+    const violations: string[] = [];
+    await page.addInitScript(() => {
+      document.addEventListener("securitypolicyviolation", (event) => {
+        console.error(`violation ${event.violatedDirective} ${event.blockedURI}`);
+      });
+    });
+    page.on("console", (message) => {
+      if (message.text().startsWith("violation")) violations.push(message.text());
+    });
+    await page.goto("/index.html");
+    await expect(page.locator("idg-brand-logo:not(.hydrated)")).toHaveCount(0);
+    for (const id of ["brand-demo-logo", "brand-demo-mark"]) {
+      const image = page.locator(`#${id}`).locator("img");
+      await expect(image).toHaveCount(1);
+      await expect
+        .poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth))
+        .toBeGreaterThan(0);
+    }
+    expect(violations).toEqual([]);
+    page.removeAllListeners("console");
+  });
+
+  test("is served with the logo policy, and no other page is widened", async ({ page }) => {
+    const policy = async (path: string) =>
+      (await page.goto(path))?.headers()["content-security-policy"];
+    expect(await policy("/index.html")).toBe(LOGO_CONTENT_SECURITY_POLICY);
+    expect(await policy("/")).toBe(LOGO_CONTENT_SECURITY_POLICY);
+    expect(await policy("/fixtures/variation-switcher.html")).toBe(CONTENT_SECURITY_POLICY);
+  });
+});
