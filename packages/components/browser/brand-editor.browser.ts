@@ -922,8 +922,9 @@ function brokenFileLabels(page: Page) {
 /**
  * Whatever, in every editor, is not padded as its form's width in its own text asks, read as
  * computed against the tokens resolved in that form. Below `NARROW_EM` the hex boxes pad
- * `--idg-space-3xs`; below `SQUEEZED_EM` the groups pad nothing inline and each file chooser's
- * button spans its input with no inline padding; otherwise groups and buttons pad as everywhere.
+ * `--idg-space-3xs`; below `SQUEEZED_EM` the groups pad `--idg-space-3xs` inline, each file input
+ * is pulled out over that padding to span the group's padding box, and its button spans the input
+ * with no inline padding; otherwise groups and buttons pad as everywhere.
  */
 const NARROW_EM = 20;
 const SQUEEZED_EM = 10.5;
@@ -946,11 +947,11 @@ function unnarrowedPaddings(page: Page) {
           form.getBoundingClientRect().width / Number.parseFloat(getComputedStyle(form).fontSize);
         const squeezed = ems < squeezedEm;
         const tier = squeezed ? "squeezed" : ems < narrowEm ? "narrow" : "wide";
+        const box = resolve("var(--idg-space-3xs)");
         const group = squeezed
-          ? "0px"
+          ? box
           : resolve("calc(var(--idg-space-s) * var(--idg-density-gap-scale))");
         const button = squeezed ? "0px" : resolve("var(--idg-density-control-padding-inline)");
-        const box = resolve("var(--idg-space-3xs)");
         const padded = (name: string, style: CSSStyleDeclaration, expected: string) =>
           style.paddingLeft === expected && style.paddingRight === expected
             ? []
@@ -975,8 +976,22 @@ function unnarrowedPaddings(page: Page) {
           ...[...form.querySelectorAll('input[type="file"]')].flatMap((input) => {
             const style = getComputedStyle(input, "::file-selector-button");
             const spans = Math.abs(Number.parseFloat(style.width) - input.clientWidth) <= 0.5;
+            const fieldset = input.closest(".group");
+            if (!fieldset) throw new Error("no group");
+            // The group's padding box: its border box less its borders.
+            const outer = fieldset.getBoundingClientRect();
+            const sides = getComputedStyle(fieldset);
+            const left = outer.left + Number.parseFloat(sides.borderLeftWidth);
+            const right = outer.right - Number.parseFloat(sides.borderRightWidth);
+            const own = input.getBoundingClientRect();
+            const pulled = Math.abs(own.left - left) <= 0.5 && Math.abs(own.right - right) <= 0.5;
             return [
               ...padded(`${input.id} button`, style, button),
+              ...(pulled === squeezed
+                ? []
+                : [
+                    `${editor.id} ${tier} ${input.id} at ${own.left.toFixed(1)} to ${own.right.toFixed(1)} in a padding box at ${left.toFixed(1)} to ${right.toFixed(1)}`,
+                  ]),
               ...(spans === squeezed
                 ? []
                 : [
@@ -1087,6 +1102,25 @@ test.describe("idg-brand-editor reflow", () => {
       expect(tiers.every((ems) => ems >= SQUEEZED_EM)).toBe(true);
       expect(await unnarrowedPaddings(page)).toEqual([]);
     }
+  });
+
+  test("pulls a squeezed form's file inputs out over the group padding in right-to-left text too", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await openEditor(page);
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+      document.documentElement.dir = "rtl";
+    });
+    await settle(page);
+    const found = await measureReflow(page, EDITORS);
+    expect({
+      page: found.page <= 0,
+      wider: found.wider,
+      clipped: (await clippedFileInputs(page)).clipped,
+      unnarrowed: await unnarrowedPaddings(page),
+    }).toEqual({ page: true, wider: [0, 0, 0], clipped: [], unnarrowed: [] });
   });
 
   test("reflows at 200% text with errors and removals shown, nothing wider than its host", async ({
