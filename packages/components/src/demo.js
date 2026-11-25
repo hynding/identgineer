@@ -68,28 +68,61 @@ if (projects && pager && summary) {
 // a logo is the SVG text exactly as the logo sanitiser returned it, and the swatches take a theme's
 // colours (a few roles are enough). The logo is an image of a data URL, so only a page whose policy
 // allows `img-src data:` shows it; csp-demo.html has no such section.
+const HARBOUR_LOGO =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" width="120" height="40"><title>Harbour Lights</title><path d="M14 36h12l-3 -26h-6z" fill="#1b2a4a"/><rect x="16" y="4" width="8" height="6" rx="1" fill="#f4c430"/><rect x="50" y="14" width="64" height="6" rx="3" fill="#1b2a4a"/><rect x="50" y="24" width="40" height="6" rx="3" fill="#1b2a4a"/></svg>';
+const HARBOUR_MARK =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="20" fill="#1b2a4a"/><rect x="16" y="7" width="8" height="5" rx="1" fill="#f4c430"/></svg>';
+const HARBOUR_THEME = {
+  light: {
+    color: {
+      bg: { $value: "#f7f8fb" },
+      text: { $value: "#161b2b" },
+      accent: { $value: "#f4c430" },
+      "on-accent": { $value: "#1b2a4a" },
+    },
+    gradient: {
+      brand: {
+        $value: [
+          { color: "#f4c430", position: 0 },
+          { color: "#ffb982", position: 1 },
+        ],
+      },
+    },
+  },
+  dark: {
+    color: {
+      bg: { $value: "#0c1222" },
+      text: { $value: "#eef1f8" },
+      accent: { $value: "#f4c430" },
+      "on-accent": { $value: "#1b2a4a" },
+    },
+  },
+  radius: { sm: "0.5rem", md: "1rem", lg: "1.5rem", pill: "9999px" },
+};
 const brandLogo = document.getElementById("brand-demo-logo");
 if (brandLogo) {
-  brandLogo.logo =
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" width="120" height="40"><title>Harbour Lights</title><path d="M14 36h12l-3 -26h-6z" fill="#1b2a4a"/><rect x="16" y="4" width="8" height="6" rx="1" fill="#f4c430"/><rect x="50" y="14" width="64" height="6" rx="3" fill="#1b2a4a"/><rect x="50" y="24" width="40" height="6" rx="3" fill="#1b2a4a"/></svg>';
-  document.getElementById("brand-demo-mark").logo =
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="20" fill="#1b2a4a"/><rect x="16" y="7" width="8" height="5" rx="1" fill="#f4c430"/></svg>';
-  document.getElementById("brand-demo-swatches").theme = {
-    light: {
-      color: {
-        bg: { $value: "#f7f8fb" },
-        text: { $value: "#161b2b" },
-        accent: { $value: "#f4c430" },
-        "on-accent": { $value: "#1b2a4a" },
-      },
-    },
-    dark: {
-      color: {
-        bg: { $value: "#0c1222" },
-        text: { $value: "#eef1f8" },
-        accent: { $value: "#f4c430" },
-        "on-accent": { $value: "#1b2a4a" },
-      },
-    },
+  brandLogo.logo = HARBOUR_LOGO;
+  document.getElementById("brand-demo-mark").logo = HARBOUR_MARK;
+  document.getElementById("brand-demo-swatches").theme = HARBOUR_THEME;
+  // The guide reads a kit and a theme as parseBrandKit and generateBrandTheme return them.
+  const guide = document.getElementById("brand-demo-guidelines");
+  guide.kit = {
+    id: "harbour-lights",
+    name: "Harbour Lights",
+    tagline: "Every ship finds its way home",
+    logo: HARBOUR_LOGO,
+    mark: HARBOUR_MARK,
+    colors: { primary: [244, 196, 48], neutralTint: [27, 42, 74] },
+    typography: "classic-serif",
+    corners: "round",
+    tone: "vivid",
   };
+  guide.theme = HARBOUR_THEME;
+  // The export shows texts a page already holds; these are short excerpts of what the brand
+  // package emits, so the demo needs none of the pipeline.
+  const files = document.getElementById("brand-demo-export");
+  files.css = '[data-theme="harbour-lights"] {\n  --idg-color-accent: #f4c430;\n}\n';
+  files.tokens = '{\n  "color": { "accent": { "$value": "#f4c430" } }\n}\n';
+  files.themeId = "harbour-lights";
+  files.name = "Harbour Lights";
 }
