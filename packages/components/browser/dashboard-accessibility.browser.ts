@@ -271,6 +271,24 @@ test.describe("dashboard components in forced colours and with reduced motion", 
     expect(loading.animation * 1000).toBeLessThanOrEqual(1);
     await page.evaluate(`window.dashboardFixture.release()`);
     await expect(rows(page)).toHaveCount(10);
+    // Each component is a bundle of its own and may still be loading: measure once all are drawn.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const waiting = (root: ParentNode): number =>
+            [...root.querySelectorAll("*")].reduce(
+              (count, element) =>
+                count +
+                (element.localName.startsWith("idg-") && !element.classList.contains("hydrated")
+                  ? 1
+                  : 0) +
+                (element.shadowRoot ? waiting(element.shadowRoot) : 0),
+              0,
+            );
+          return waiting(document);
+        }),
+      )
+      .toBe(0);
     const loaded = await measure();
     expect(loaded.transition * 1000).toBeLessThanOrEqual(1);
     expect(loaded.animation * 1000).toBeLessThanOrEqual(1);
