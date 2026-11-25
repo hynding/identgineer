@@ -203,6 +203,10 @@ function renderedTags(source: string, known: ReadonlySet<string>): Set<string> {
   const text = withoutComments(source);
   const found = new Set<string>();
   for (const match of text.matchAll(/<(idg-[a-z-]+)/g)) found.add(match[1] ?? "");
+  // Only an exact component tag counts, so an id such as "idg-sign-out" needs no exception.
+  for (const match of text.matchAll(/["'`](idg-[a-z-]+)["'`]/g)) {
+    if (known.has(match[1] ?? "")) found.add(match[1] ?? "");
+  }
   return found;
 }
 
