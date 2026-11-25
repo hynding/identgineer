@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   artefactFile,
   FALLBACK_SLUG,
@@ -52,10 +52,23 @@ describe("fileSlug", () => {
   });
 
   it("reads no more of a name than a file name can use, however long it is", () => {
-    const started = performance.now();
-    expect(fileSlug(`harbour${" ".repeat(5_000_000)}lights`)).toBe("harbour");
-    expect(fileSlug("é".repeat(5_000_000))).toBe("e".repeat(FILE_SLUG_MAX_LENGTH));
-    expect(performance.now() - started).toBeLessThan(200);
+    const original = String.prototype.normalize;
+    const lengths: number[] = [];
+    const spy = vi.spyOn(String.prototype, "normalize").mockImplementation(function (
+      this: string,
+      form?: string,
+    ) {
+      lengths.push(this.length);
+      return original.call(this, form);
+    });
+    try {
+      expect(fileSlug(`harbour${" ".repeat(5_000_000)}lights`)).toBe("harbour");
+      expect(fileSlug("é".repeat(5_000_000))).toBe("e".repeat(FILE_SLUG_MAX_LENGTH));
+    } finally {
+      spy.mockRestore();
+    }
+    expect(lengths.length).toBeGreaterThan(0);
+    expect(Math.max(...lengths)).toBeLessThanOrEqual(200);
   });
 
   it.each([
