@@ -48,6 +48,7 @@
   text-decoration-thickness: 2px;
   text-transform: var(--idg-ornament-heading-transform);
   text-underline-offset: 0.2em;
+  overflow-wrap: anywhere;
 }
 
 .group {
@@ -63,6 +64,7 @@
   font-weight: var(--idg-font-weight-semibold);
   line-height: var(--idg-font-body-line-height);
   text-transform: var(--idg-ornament-control-transform);
+  overflow-wrap: anywhere;
 }
 
 /* One column of swatches in a narrow scheme; more where the layout's own card width allows. */
@@ -75,8 +77,10 @@
   list-style: none;
 }
 
+/* The details go below the chip where a doubled text size leaves no room beside it. */
 .swatch {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: var(--idg-space-xs);
   min-inline-size: 0;
@@ -97,6 +101,7 @@
 
 .details {
   display: flex;
+  flex: 1 1 6rem;
   flex-direction: column;
   gap: var(--idg-space-3xs);
   min-inline-size: 0;
