@@ -205,6 +205,7 @@ export class IdgBrandEditor {
   private readonly uploads = new LogoUploads();
   private readonly controls: Partial<Record<DraftField, Focusable>> = {};
   private readonly files: Partial<Record<ImageField, HTMLInputElement>> = {};
+  private readonly refusalKeys: Partial<Record<ImageField, number>> = {};
   /** The colour each picker last showed, which it keeps while its hex field holds no colour. */
   private picked: Partial<Record<ColourField, string>> = {};
   private readonly refresh = new Debounce(
@@ -362,6 +363,9 @@ export class IdgBrandEditor {
   }
 
   private refuseUpload(field: ImageField, code: UploadRefusalCode, labels: BrandEditorLabels) {
+    // Keyed per refusal, so the same words for a second file are a new node, which the alert
+    // announces again, as the form's summary is.
+    this.refusalKeys[field] = this.keys += 1;
     this.errors = { ...this.errors, [field]: message(labels, "upload", code) };
   }
 
@@ -642,7 +646,11 @@ export class IdgBrandEditor {
           {error === undefined ? null : (
             <idg-icon class="error-mark" name="error" aria-hidden="true" />
           )}
-          {error === undefined ? null : <span class="error-text">{error}</span>}
+          {error === undefined ? null : (
+            <span key={this.refusalKeys[field] ?? 0} class="error-text">
+              {error}
+            </span>
+          )}
         </div>
         {removals === undefined ? null : (
           <RemovalsView
