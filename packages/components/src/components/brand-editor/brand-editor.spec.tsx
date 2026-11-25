@@ -775,8 +775,13 @@ describe("idg-brand-editor uploads", () => {
       if (!result.ok) throw new Error("not a logo");
       return result.svg;
     };
+    const STOPPED = "Not saved: an image was removed while saving. Save again when ready.";
+    const status = (root: HTMLElement) =>
+      shadowOf(root).querySelector('p[role="status"]')?.textContent;
+    const stoppedNote = (root: HTMLElement) =>
+      shadowOf(root).querySelector('[part="stopped"]')?.textContent;
 
-    it("goes on with a file that replaced a refused one, deciding by the form as it ends", async () => {
+    it("goes on with a file accepted after a refused one during the wait", async () => {
       const store = fakeStore();
       const { root, waitForChanges } = await mount({ kit: ACME, store });
       const refused = slowFile(DOCTYPE);
@@ -801,7 +806,7 @@ describe("idg-brand-editor uploads", () => {
       expect(shadowOf(root).querySelector('idg-alert[part="error"]')).toBeNull();
     });
 
-    it("stops, quietly, when the image it waits for is removed", async () => {
+    it("stops without an error, saying it did not save, when the image it waits for is removed", async () => {
       const store = fakeStore();
       const { root, waitForChanges } = await mount({ kit: HARBOUR, store });
       choose(root, "logo", slowFile(CLEAN_SVG));
@@ -815,6 +820,32 @@ describe("idg-brand-editor uploads", () => {
       expect(loading(root)).toBe(false);
       expect(shadowOf(root).querySelector('idg-alert[part="error"]')).toBeNull();
       expect(shadowOf(root).querySelector('idg-alert[part="saved"]')).toBeNull();
+      expect(status(root)).toBe(STOPPED);
+      expect(stoppedNote(root)).toBe(STOPPED);
+    });
+
+    it("takes back the note that it did not save on the next change, and on the next save", async () => {
+      const store = fakeStore();
+      const { root, waitForChanges } = await mount({ kit: HARBOUR, store });
+      const stop = async () => {
+        choose(root, "logo", slowFile(CLEAN_SVG));
+        await waitForChanges();
+        submit(root);
+        await settle(waitForChanges);
+        shadowOf(root).querySelector<HTMLElement>('[data-remove="logo"]')?.click();
+        await settle(waitForChanges);
+        expect(stoppedNote(root)).toBe(STOPPED);
+      };
+      await stop();
+      type(root, "brand-tagline", "Changed");
+      await settle(waitForChanges);
+      expect(stoppedNote(root)).toBeUndefined();
+      await stop();
+      submit(root);
+      await settle(waitForChanges);
+      expect(stoppedNote(root)).toBeUndefined();
+      expect(store.create).toHaveBeenCalledTimes(1);
+      expect(textOf(root, 'idg-alert[part="saved"]')).toBe("Brand kit saved.");
     });
 
     it("stops when the kit is replaced", async () => {
@@ -938,7 +969,7 @@ describe("idg-brand-editor uploads", () => {
       });
     });
 
-    it("stops quietly when the other image is removed during the wait", async () => {
+    it("stops without an error, saying it did not save, when the other image is removed during the wait", async () => {
       const store = fakeStore();
       const { root, waitForChanges } = await mount({ kit: HARBOUR, store });
       const logo = slowFile(CLEAN_SVG);
@@ -953,6 +984,8 @@ describe("idg-brand-editor uploads", () => {
       expect(store.create).not.toHaveBeenCalled();
       expect(loading(root)).toBe(false);
       expect(shadowOf(root).querySelector('idg-alert[part="error"]')).toBeNull();
+      expect(status(root)).toBe(STOPPED);
+      expect(stoppedNote(root)).toBe(STOPPED);
     });
 
     it("sends text edited during the wait, and one save for two submits", async () => {
