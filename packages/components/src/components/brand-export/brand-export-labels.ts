@@ -25,6 +25,8 @@ export interface BrandExportLabels {
   readonly downloaded: string;
   readonly downloadFailed: string;
   readonly emitFailed: string;
+  /** Shown instead of `emitFailed` for a theme that holds no kit. */
+  readonly emitNoKit: string;
   readonly empty: string;
 }
 
@@ -42,9 +44,10 @@ export const BRAND_EXPORT_LABELS: BrandExportLabels = {
   copy: "Copy {artefact}",
   download: "Download {artefact}",
   copied: "The {artefact} was copied.",
-  copyFailed: "The {artefact} could not be copied, so it is selected: copy it yourself.",
+  copyFailed: "The {artefact} could not be copied. Its text is selected: copy it yourself.",
   downloaded: "The {artefact} was downloaded as {file}.",
   downloadFailed: "The {artefact} could not be downloaded.",
   emitFailed: "The theme could not be turned into files: it no longer matches its brand kit.",
+  emitNoKit: "The theme could not be turned into files: it has no brand kit.",
   empty: "There is nothing to export yet.",
 };

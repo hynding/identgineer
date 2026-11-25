@@ -114,7 +114,7 @@ describe("the notes of a theme", () => {
 
   it("count no more than they read when the array claims a length that is no number of entries", () => {
     const claims = new Proxy([NOTE], {
-      get: (target, key) => (key === "length" ? 1e300 : Reflect.get(target, key)),
+      get: (target, key) => (key === "length" ? 1e300 : (Reflect.get(target, key) as unknown)),
     });
     const list = readNotes({ notes: claims });
     expect(Number.isSafeInteger(list?.omitted)).toBe(true);

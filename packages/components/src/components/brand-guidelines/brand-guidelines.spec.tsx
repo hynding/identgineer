@@ -430,7 +430,7 @@ describe("idg-brand-guidelines with data it cannot trust", () => {
     const { root } = await render(
       <idg-brand-guidelines kit={hostile as unknown as BrandKit} theme={HARBOUR_THEME} />,
     );
-    expect(one(root, "h2")).toBeNull();
+    expect(one(root, ".name")).toBeNull();
     expect(section(root, "typography")).toBeNull();
     expect(section(root, "tone")).toBeNull();
     expect(section(root, "colours")).not.toBeNull();

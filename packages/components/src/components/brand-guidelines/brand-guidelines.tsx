@@ -33,7 +33,7 @@ import { readTypography, type GuideFace } from "./brand-guidelines-typography";
 import type { BrandGuidelinesKit, BrandGuidelinesTheme } from "./brand-guidelines-types";
 
 const DEFAULT_LEVEL = 2;
-const MAX_LEVEL = 6;
+const MAX_NAME_LEVEL = 5;
 
 type Format = (value: number) => string;
 
@@ -86,7 +86,7 @@ export class IdgBrandGuidelines {
   /** The words of the colour swatches the guide holds. */
   @Prop() swatchLabels?: Partial<BrandSwatchesLabels>;
 
-  /** The level of the brand name's heading, 1 to 6; the sections' headings are one deeper. */
+  /** The level of the brand name's heading, 1 to 5 (a larger one is 5); the sections' headings are one deeper, or at its level where there is no name. */
   @Prop({ attribute: "heading-level" }) headingLevel = DEFAULT_LEVEL;
 
   @State() private logoDrawn = false;
@@ -186,12 +186,14 @@ export class IdgBrandGuidelines {
   render() {
     const labels = mergeLabels(BRAND_GUIDELINES_LABELS, this.labels);
     const format = numberFormatter(languageOf(this.host));
-    const level = Math.min(headingLevel(this.headingLevel, DEFAULT_LEVEL), MAX_LEVEL);
-    const Name = `h${String(level)}`;
-    const Title = `h${String(Math.min(level + 1, MAX_LEVEL))}`;
     const kit = this.kit;
     const theme = this.theme;
     const name = readName(kit);
+    // The name is at most a level 5, so that its sections are always one deeper; with no name to
+    // head them they take its level, so that none is left under a heading that is not there.
+    const level = Math.min(headingLevel(this.headingLevel, DEFAULT_LEVEL), MAX_NAME_LEVEL);
+    const Name = `h${String(level)}`;
+    const Title = `h${String(name === "" ? level : level + 1)}`;
     const tagline = readTagline(kit);
     const backings = readBackings(theme);
     const sourceColours = readSourceColours(kit);

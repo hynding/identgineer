@@ -4,7 +4,7 @@ import { copyText } from "../../utils/copy-text";
 import { downloadText } from "../../utils/download-text";
 import { headingLevel } from "../../utils/heading-level";
 import { ownValue } from "../../utils/own-value";
-import { emitTheme, type EmittedTheme } from "./brand-export-emit";
+import { emitFailure, emitTheme, type EmittedTheme } from "./brand-export-emit";
 import {
   artefactFile,
   fileSlug,
@@ -15,8 +15,11 @@ import {
 import { BRAND_EXPORT_LABELS, type BrandExportLabels } from "./brand-export-labels";
 import type { BrandExportDetail, BrandExportTheme } from "./brand-export-types";
 
-/** An artefact longer than this is not shown: nothing a theme emits comes near it. */
-const MAX_ARTEFACT_LENGTH = 2_000_000;
+/**
+ * An artefact longer than this is not shown. A theme emits a few kilobytes; a megabyte of text in a
+ * `<pre>` takes the page over a second to lay out.
+ */
+const MAX_ARTEFACT_LENGTH = 262_144;
 const DEFAULT_LEVEL = 2;
 
 interface ArtefactView {
@@ -72,12 +75,12 @@ export class IdgBrandExport {
 
   /**
    * A theme from `generateBrandTheme`. What `css` and `tokens` do not give is emitted from it here,
-   * by the brand package's own emitters, and its id and its kit's name are used for the snippet and
-   * the file names. Set it as a property.
+   * by the brand package's own emitters, and the id they scoped the stylesheet to is used for the
+   * snippet, and its kit's name for the file names. Set it as a property.
    */
   @Prop() theme?: BrandExportTheme;
 
-  /** The theme id for the usage snippet, when there is no `theme`. */
+  /** The theme id for the usage snippet when the stylesheet is given as `css`; an emitted one names its own. */
   @Prop({ attribute: "theme-id" }) themeId?: string;
 
   /** The brand's name, which the file names are made from. */
@@ -168,8 +171,11 @@ export class IdgBrandExport {
     const name =
       typeof this.name === "string" && this.name.trim() !== "" ? this.name : ownValue(kit, "name");
     const slug = fileSlug(name);
-    const id = themeIdOf(this.themeId) ?? themeIdOf(ownValue(this.theme, "id"));
-    const css = artefactText(this.css) ?? artefactText(this.emitted?.css);
+    const given = artefactText(this.css);
+    const css = given ?? artefactText(this.emitted?.css);
+    // The snippet names the theme the stylesheet shown defines: the emitted one's id for an emitted
+    // stylesheet, and `themeId` only for one that was handed over as text.
+    const id = themeIdOf(given === undefined ? this.emitted?.id : this.themeId);
     const tokens = artefactText(this.tokens) ?? artefactText(this.emitted?.tokens);
     const cssFile = artefactFile("css", slug);
     const tokensFile = artefactFile("tokens", slug);
@@ -227,7 +233,7 @@ export class IdgBrandExport {
       >
         {failed ? (
           <p class="problem" part="problem">
-            {labels.emitFailed}
+            {emitFailure(this.theme) === "no-kit" ? labels.emitNoKit : labels.emitFailed}
           </p>
         ) : null}
         {exportable.length === 0 && !failed ? (

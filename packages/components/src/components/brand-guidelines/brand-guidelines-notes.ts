@@ -96,14 +96,16 @@ function readList<Item>(
   try {
     const entries = ownValue(theme, key);
     if (!Array.isArray(entries)) return undefined;
-    const read = Math.min(entries.length, MAX_READ);
+    // A proxy can claim any length, and a length that is no whole number of entries is not counted.
+    const length = Number.isSafeInteger(entries.length) ? entries.length : 0;
+    const read = Math.min(length, MAX_READ);
     const valid: Item[] = [];
     for (let index = 0; index < read; index += 1) {
       const item = parse((entries as unknown[])[index]);
       if (item !== undefined) valid.push(item);
     }
     const items = valid.slice(0, MAX_LISTED);
-    return { items, omitted: valid.length - items.length + (entries.length - read) };
+    return { items, omitted: valid.length - items.length + (length - read) };
   } catch {
     return undefined;
   }

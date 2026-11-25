@@ -3,6 +3,8 @@ export type Artefact = "css" | "tokens" | "snippet";
 /** The longest file name stem: enough for any brand name, short enough for any file system. */
 export const FILE_SLUG_MAX_LENGTH = 40;
 export const FALLBACK_SLUG = "brand";
+// How much of a name is read: normalising a long text costs time, and a slug keeps 40 characters.
+const MAX_NAME_READ = 200;
 
 // Names a Windows file system reserves for devices, with or without an extension.
 const DEVICE_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/;
@@ -16,7 +18,9 @@ const DEVICE_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/;
  */
 export function fileSlug(name: unknown): string {
   if (typeof name !== "string") return FALLBACK_SLUG;
+  // Cut first: normalising copies the whole text, and a name is never more than a few words.
   const words = name
+    .slice(0, MAX_NAME_READ)
     .normalize("NFKD")
     .replaceAll(/\p{M}/gu, "")
     .toLowerCase()

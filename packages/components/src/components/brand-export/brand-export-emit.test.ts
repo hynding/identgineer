@@ -33,7 +33,7 @@ describe("emitTheme", () => {
         return reads === 1 ? THEME.id : "other-theme";
       },
       get kit() {
-        return reads === 0 ? THEME.kit : { ...THEME.kit, id: "other-theme" };
+        return THEME.kit;
       },
       get document() {
         return THEME.document;
