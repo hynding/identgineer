@@ -49,6 +49,30 @@ describe("emitTheme", () => {
     expect(emitted?.css).not.toContain("other-theme");
   });
 
+  it("gives a stylesheet and tokens of one theme when nested values change between reads", () => {
+    const other = parseBrandKit({
+      id: "kilnworks",
+      name: "Kilnworks",
+      colors: { primary: "#c2410c" },
+      typography: "system",
+      corners: "sharp",
+      tone: "vivid",
+    });
+    if (!other.ok) throw new Error("expected a kit");
+    const OTHER = generateBrandTheme(other.kit);
+    let colourReads = 0;
+    let documentReads = 0;
+    const kit = { ...THEME.kit };
+    Object.defineProperty(kit, "colors", {
+      enumerable: true,
+      get: () => (colourReads++ < 1 ? THEME.kit : OTHER.kit).colors,
+    });
+    const document = { toJSON: () => (documentReads++ < 1 ? THEME.document : OTHER.document) };
+    const emitted = emitTheme({ ...THEME, kit, document });
+    expect(emitted?.css).toBe(emitBrandThemeCss(THEME));
+    expect(emitted?.tokens).toBe(emitBrandThemeTokens(THEME));
+  });
+
   it("tells a theme that has no kit from one that no longer matches it", () => {
     expect(emitTheme({ ...THEME, kit: undefined })).toBeUndefined();
     expect(emitFailure({ ...THEME, kit: undefined })).toBe("no-kit");
