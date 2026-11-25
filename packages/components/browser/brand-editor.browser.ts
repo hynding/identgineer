@@ -896,15 +896,18 @@ function brokenFileLabels(page: Page) {
       // A copy: the adopted list is live, so the one read here would take the added sheet too.
       const sheets = [...root.adoptedStyleSheets];
       root.adoptedStyleSheets = [...sheets, unbroken];
-      const broken = [...root.querySelectorAll('input[type="file"]')]
-        .filter(
-          (input) =>
-            Number.parseFloat(getComputedStyle(input, "::file-selector-button").width) >
-            input.clientWidth + 0.5,
-        )
-        .map((input) => `${editor.id} ${input.id}`);
-      root.adoptedStyleSheets = sheets;
-      return broken;
+      try {
+        return [...root.querySelectorAll('input[type="file"]')].flatMap((input) => {
+          const needed = Number.parseFloat(getComputedStyle(input, "::file-selector-button").width);
+          return needed > input.clientWidth + 0.5
+            ? [
+                `${editor.id} ${input.id} needs ${needed.toFixed(1)}px of ${String(input.clientWidth)}px`,
+              ]
+            : [];
+        });
+      } finally {
+        root.adoptedStyleSheets = sheets;
+      }
     }),
   );
 }
@@ -991,6 +994,28 @@ test.describe("idg-brand-editor reflow", () => {
       });
     }
   }
+
+  // The file chooser's label is the browser's, in the control font each design and UX mode sets,
+  // so its widest word is measured in every pairing of them at the narrowest width and largest text.
+  test("fits the file chooser's widest word in every design and UX mode at 320px and 200% text", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await openEditor(page);
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    const broken: string[] = [];
+    for (const design of DESIGNS) {
+      for (const ux of UX_MODES) {
+        await applyAxes(page, { design, ux });
+        broken.push(...(await brokenFileLabels(page)).map((input) => `${design} ${ux} ${input}`));
+      }
+    }
+    expect(DESIGNS.length * UX_MODES.length).toBe(64);
+    expect(broken).toEqual([]);
+  });
 
   test("reflows at 200% text with errors and removals shown, nothing wider than its host", async ({
     page,
