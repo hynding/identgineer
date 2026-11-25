@@ -4,6 +4,7 @@ import { h, render } from "@stencil/vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "../brand-logo/brand-logo";
 import "../brand-swatches/brand-swatches";
+import { brandLogoSource } from "../brand-logo/brand-logo-source";
 import "./brand-guidelines";
 
 const reads = vi.hoisted(() => ({ count: 0 }));
@@ -72,5 +73,28 @@ describe("how often two guides check their logos", () => {
       </div>,
     );
     expect(reads.count).toBe(4);
+  });
+});
+
+describe("what the logo check remembers", () => {
+  beforeEach(() => {
+    reads.count = 0;
+  });
+
+  it("holds no text longer than the sanitiser accepts, so that what it keeps is bounded", () => {
+    const tooLong = "x".repeat(512 * 1024 + 1);
+    brandLogoSource(tooLong);
+    brandLogoSource(tooLong);
+    expect(reads.count).toBe(2);
+  });
+
+  it("forgets the oldest of five distinct texts, and keeps the last four", () => {
+    const texts = [21, 22, 23, 24, 25].map(logoText);
+    for (const text of texts) brandLogoSource(text);
+    reads.count = 0;
+    for (const text of texts.slice(1)) brandLogoSource(text);
+    expect(reads.count).toBe(0);
+    brandLogoSource(texts[0]);
+    expect(reads.count).toBe(1);
   });
 });

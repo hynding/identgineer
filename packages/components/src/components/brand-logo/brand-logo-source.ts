@@ -29,10 +29,14 @@ export function integerFrame(width: number, height: number): { width: number; he
 }
 
 // A guide draws the logo and the mark on several tiles and asks about each more than once, and a
-// large logo takes the sanitiser half a second to read. The answers for the last two texts are kept,
-// which is a logo and a mark, so each distinct text is read once however many elements ask. Only the
-// text and its answer are held.
-const REMEMBERED = 2;
+// large logo takes the sanitiser half a second to read. The answers for the last four texts are
+// kept: a guide asks about its logo and mark when its kit is set, and its tiles ask about the same
+// two when they render, which can be after a second guide has asked about its own pair. Four is
+// two guides' pairs, so each distinct text is read once however many elements ask, in a page of up
+// to two guides. Only the text and its answer are held, and a text is at most the sanitiser's limit
+// (about 500 KB) and its url about as much again, so what is held stays under 4 MB for the texts
+// and 4 MB for the urls.
+const REMEMBERED = 4;
 const remembered: { readonly logo: string; readonly source: BrandLogoSource | undefined }[] = [];
 
 function read(logo: unknown): BrandLogoSource | undefined {
