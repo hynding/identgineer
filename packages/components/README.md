@@ -1490,13 +1490,13 @@ No events and no slots. Parts: `image`, `wordmark`, `monogram`. The sizes are th
 `inline-flex`, never wider than its container).
 
 - **Only sanitiser output is drawn.** The text goes through `logoImage` of `@identgineer/brand/logo`,
-  which reads it with the sanitiser again, once, and accepts it only if it comes back unchanged.
+  which reads it with the sanitiser again (once, or twice for a logo made with a custom id prefix) and accepts it only if it comes back unchanged.
   Then, and only then, it gives the data URL that is the `src` of an `<img>`, and the size the logo
   draws at. A script, a handler,
   an external reference, a `foreignObject`, an editor's file, an SVG the sanitiser would still change
   and anything wrapped around a logo is never drawn, and neither is any part of it put in the page:
-  no SVG element, no `innerHTML`, no `style`. The check runs once when `logo` changes, not on every
-  render. Measured in Node, one check takes 0.25 to 1.9 ms for the fourteen logos from design tools
+  no SVG element, no `innerHTML`, no `style`. The check runs when `logo` changes, not on every
+  render. Measured in Node, one read takes 0.25 to 1.9 ms for the fourteen logos from design tools
   in the brand package's clean fixtures (250 to 2465 bytes), and about 0.65 s for a 480 KB logo of
   tiny shapes, near the size limit.
 - **Image only.** The `<img>` has `decoding="async"`, no `srcset`, `sizes`, `crossorigin` or `usemap`,

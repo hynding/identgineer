@@ -15,7 +15,8 @@ export interface LogoImage {
 
 /**
  * The image of a logo, or `undefined` for anything but the sanitiser's own output. The logo is read
- * once, where `isSanitisedSvgLogo` followed by `logoDataUrl` reads it twice, and the size is the
+ * once (twice for a logo made with a custom id prefix, which is read with the default one first),
+ * where `isSanitisedSvgLogo` followed by `logoDataUrl` reads it twice, and the size is the
  * one the sanitiser settled, units converted to pixels.
  */
 export function logoImage(value: unknown): LogoImage | undefined {

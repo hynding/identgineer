@@ -12,7 +12,8 @@ function fixedPoint(value: string, idPrefix: string): SvgLogoAccepted | undefine
 
 /**
  * What `sanitiseSvgLogo` returned for a value that is exactly its output, read once, or
- * `undefined` for anything else. `isSanitisedSvgLogo` is whether there is one.
+ * `undefined` for anything else. A logo made with a custom id prefix is read twice, first with the
+ * default prefix and then with its own. `isSanitisedSvgLogo` is whether there is one.
  */
 export function acceptedLogo(value: unknown): SvgLogoAccepted | undefined {
   if (typeof value !== "string") return undefined;
