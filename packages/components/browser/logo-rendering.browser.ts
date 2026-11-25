@@ -878,9 +878,8 @@ async function rasterise(page: Page, logo: Logo, size: number): Promise<number> 
  * Shows a logo's data URL as an `<img>` `size` CSS pixels square in a page as large, at the page's
  * device scale factor, and returns the milliseconds until a screenshot shows it. An image this
  * large is rasterised in tiles, each tile replaying every path whose box it touches, so this is
- * timed apart from the single raster a canvas makes. The page must already be that size: resizing
- * it here left a screenshot taken straight after racing the resize, which a loaded runner lost
- * ("Unable to capture screenshot").
+ * timed apart from the single raster a canvas makes. The page must already be that size, made so
+ * for the test, so that nothing resizes it between its first frame and the screenshots.
  */
 async function showImage(page: Page, logo: Logo, size: number): Promise<number> {
   expect(page.viewportSize(), "the page is as large as the image").toEqual({
@@ -899,6 +898,20 @@ async function showImage(page: Page, logo: Logo, size: number): Promise<number> 
   }, logo.dataUrl ?? "");
   // An image that failed to load would draw nothing, and so be timed as fast.
   expect(loaded, `${logo.name} loads as an image`).toBeGreaterThan(0);
+  // A screenshot copies the frame Chromium last drew of the page, and fails ("Unable to capture
+  // screenshot") when there is none yet: a page this large, made for the test, may not have been
+  // drawn by the time it has loaded on a loaded runner. Two animation frames in, the page has been
+  // drawn: the second begins only once the frame of the first has been taken by the compositor.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            resolve();
+          });
+        });
+      }),
+  );
   // Waits for a frame of the empty page, so the drawing alone is timed; a corner of it is enough,
   // and spares a loaded runner encoding a page of 4000 pixels square that shows nothing.
   await page.screenshot({ clip: { x: 0, y: 0, width: 1, height: 1 } });
