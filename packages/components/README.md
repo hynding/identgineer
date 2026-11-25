@@ -1884,13 +1884,13 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   | `idg-brand-swatches`   | the swatches                                                                                                                                                 |      29,826 |     84,500 |
   | `idg-brand-guidelines` | the guide, with the sanitiser                                                                                                                                |     141,319 |    375,430 |
   | `idg-brand-export`     | the export, with the sanitiser, the generator and the emitters                                                                                               |     219,466 |    500,751 |
-  | `idg-brand-editor`     | the editor, with the sanitiser and the generator, and the guide it previews in                                                                               |     246,360 |    549,309 |
+  | `idg-brand-editor`     | the editor, with the sanitiser and the generator, and the guide it previews in                                                                               |     246,663 |    550,077 |
 
-  The loader `identgineer.esm.js` is 12,922 bytes more on every page. The sanitiser (about 90 KB
+  The loader `identgineer.esm.js` is 12,924 bytes more on every page. The sanitiser (about 90 KB
   minified) is in the logo's, the guide's, the export's and the editor's bundles (the export
   validates a kit with it), the generator in the export's and the editor's, and the emitters in the
   export's alone. The editor's row counts its own entry and chunks; a page with it also loads the
-  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 698,376
+  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 698,683
   bytes (663,801 before the editor), against 433,865 before the brand components and 536,437 on
   main.
 
