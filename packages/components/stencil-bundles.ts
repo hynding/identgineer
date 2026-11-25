@@ -27,6 +27,8 @@ export const BUNDLES: readonly { readonly name: string; readonly components: rea
         "idg-alert",
         "idg-avatar",
         "idg-avatar-group",
+        "idg-skeleton",
+        "idg-switch",
       ],
     },
     {
@@ -50,14 +52,7 @@ export const BUNDLES: readonly { readonly name: string; readonly components: rea
     },
     {
       name: "dashboard",
-      components: [
-        "idg-event-table",
-        "idg-table",
-        "idg-pagination",
-        "idg-skeleton",
-        "idg-stat",
-        "idg-sparkline",
-      ],
+      components: ["idg-event-table", "idg-table", "idg-pagination", "idg-stat", "idg-sparkline"],
     },
     {
       name: "consent",
@@ -65,7 +60,6 @@ export const BUNDLES: readonly { readonly name: string; readonly components: rea
         "idg-consent-banner",
         "idg-consent-preferences",
         "idg-dialog",
-        "idg-switch",
         "idg-popover",
         "idg-tooltip",
         "idg-toast",
