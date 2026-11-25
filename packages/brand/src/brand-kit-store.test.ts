@@ -59,9 +59,16 @@ const rowOf = (kit: BrandKit, extra: Record<string, unknown> = {}) => ({
   ...extra,
 });
 
-const page = (rows: unknown[], pageSize = 10) => ({
+const page = (rows: unknown[], pageSize = 10, at = 1) => ({
   data: rows,
-  meta: { pagination: { page: 1, pageSize, pageCount: 1, total: rows.length } },
+  meta: {
+    pagination: {
+      page: at,
+      pageSize,
+      pageCount: Math.ceil(rows.length / pageSize),
+      total: rows.length,
+    },
+  },
 });
 
 const storeWith = (handler: Handler, publicHandler: Handler = handler) => {
@@ -153,7 +160,7 @@ describe("list", () => {
   });
 
   it("asks for the page and size given", async () => {
-    const { store, sent } = storeWith(() => json(page([], 5)));
+    const { store, sent } = storeWith(() => json(page([], 5, 3)));
     await store.list({ page: 3, pageSize: 5 });
     const url = new URL(sent[0]?.url ?? "");
     expect(url.searchParams.get("pagination[page]")).toBe("3");
@@ -215,6 +222,36 @@ describe("list", () => {
     expect((await rejection(store.list({ pageSize: 1 }))).code).toBe("malformed-response");
   });
 
+  const pagination = (values: Record<string, number>) => ({
+    page: 1,
+    pageSize: 10,
+    pageCount: 1,
+    total: 1,
+    ...values,
+  });
+
+  it.each([
+    ["another page than asked for", { page: 2 }],
+    ["another page size than asked for", { pageSize: 25 }],
+    ["a page count that does not follow from the total", { pageCount: 2 ** 53 - 1, total: 0 }],
+    ["a page count over the total's", { pageCount: 2 }],
+    ["more kits than the total leaves for the page", { total: 0, pageCount: 0 }],
+  ])("refuses pagination with %s", async (_, values) => {
+    const { store } = storeWith(() =>
+      json({ data: [rowOf(kitFrom())], meta: { pagination: pagination(values) } }),
+    );
+    expect((await rejection(store.list())).code).toBe("malformed-response");
+  });
+
+  it("takes an empty list, and a page past the last one, as empty", async () => {
+    const empty = storeWith(() => json(page([])));
+    expect(await empty.store.list()).toMatchObject({ results: [], pageCount: 0, total: 0 });
+    const past = storeWith(() =>
+      json({ data: [], meta: { pagination: pagination({ page: 4, pageCount: 3, total: 25 }) } }),
+    );
+    expect((await past.store.list({ page: 4 })).results).toEqual([]);
+  });
+
   it("refuses a page holding more kits than it asked for", async () => {
     const row = rowOf(kitFrom());
     const { store } = storeWith(() => json(page([row, row, row], 2)));
@@ -274,6 +311,11 @@ describe("get", () => {
       expect(sent).toEqual([]);
     },
   );
+
+  it("refuses an answer whose data is null", async () => {
+    const { store } = storeWith(() => json({ data: null, meta: {} }));
+    expect((await rejection(store.get(DOCUMENT_ID))).code).toBe("malformed-response");
+  });
 
   it("asks again every time, keeping nothing", async () => {
     const { store, sent } = storeWith(() => json({ data: rowOf(kitFrom()), meta: {} }));
