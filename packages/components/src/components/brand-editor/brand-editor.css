@@ -122,16 +122,25 @@
 
 /* A squeezed form, its text large against its width, as at 320px with 150% text or more: the file
    chooser's label is the browser's, in the control font each design and UX mode sets, and its
-   widest word only fits when the groups give up their inline padding and the button spans its row
-   with none of its own, its label centred, its side room whatever the label leaves. 10.5em is
-   measured at 320px from 100% to 200% text: with the regular padding some pairing of design and
-   UX mode breaks the word at forms up to 9em wide, and every pairing fits with room to spare from
-   9.2em; a 320px window at 100% text gives at least 12em, and the form beside the preview at least
-   14em. The group's base rule comes before this block; the button's comes after, so its rule here
-   is the more specific one. */
+   widest word only fits when the button has the group's whole padding box. So the groups keep a
+   little inline padding, which their text and other controls need, and the file input alone is
+   pulled out over it to span the padding box, its button spanning the input with no inline
+   padding of its own, its label centred, its side room whatever the label leaves. Nothing in the
+   group clips, so the input's focus ring shows whole; the margins are logical, so it holds in
+   right-to-left text. 10.5em is measured at 320px from 100% to 200% text: with the regular
+   padding some pairing of design and UX mode breaks the word at forms up to 9em wide, and every
+   pairing fits with room to spare from 9.2em; a 320px window at 100% text gives at least 12em, and
+   the form beside the preview at least 14em. The group's base rule comes before this block; the
+   input's and the button's come after, so their rules here are the more specific ones. */
 @container brand-form (inline-size < 10.5em) {
   .group {
-    padding-inline: 0;
+    padding-inline: var(--idg-space-3xs);
+  }
+
+  .image-row .file {
+    inline-size: calc(100% + 2 * var(--idg-space-3xs));
+    max-inline-size: none;
+    margin-inline: calc(-1 * var(--idg-space-3xs));
   }
 
   .image-row .file::file-selector-button {
