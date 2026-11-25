@@ -36,6 +36,8 @@ function refusal(input: string): SvgLogoErrorCode | undefined {
 // Lengths are bounded over every reading Chromium can make of the numbers, a hair over the exact
 // lengths, so a charge is held to the exact one to within that hair: five decimals.
 const HAIR = 5;
+// A stroke's curves are charged four times over, and so is the hair over their length.
+const CURVED_HAIR = 4;
 
 // A 50 by 50 square: a quarter of the view box, and an outline of 200, twice the larger side.
 const SQUARE = 'width="50" height="50"';
@@ -145,17 +147,23 @@ describe("the overdraw of a logo", () => {
     expect(edges("M-1000 -1000L1000 1000")).toBeCloseTo(strokeEdges(Math.SQRT2), 5);
     // A quadratic curve or an arc is convex: at most the image's perimeter (a stroked curve's
     // edges charged again for the tiles of a large image, below).
-    expect(edges("M-1000 0Q50 5000 1000 0")).toBeCloseTo(strokeEdges(4) + curvedStrokeEdges(4), 5);
-    expect(edges("M0 0A1000 1000 0 1 1 1 0")).toBeCloseTo(strokeEdges(4) + curvedStrokeEdges(4), 5);
+    expect(edges("M-1000 0Q50 5000 1000 0")).toBeCloseTo(
+      strokeEdges(4) + curvedStrokeEdges(4),
+      CURVED_HAIR,
+    );
+    expect(edges("M0 0A1000 1000 0 1 1 1 0")).toBeCloseTo(
+      strokeEdges(4) + curvedStrokeEdges(4),
+      CURVED_HAIR,
+    );
     // A cubic bends at most twice: three convex pieces.
     expect(edges("M-1000 0C3000 5000 -3000 5000 1000 0")).toBeCloseTo(
       strokeEdges(12) + curvedStrokeEdges(12),
-      5,
+      CURVED_HAIR,
     );
     // Short of those, the outline's own length.
     expect(edges("M0 0Q50 50 100 0")).toBeCloseTo(
       strokeEdges(Math.SQRT2) + curvedStrokeEdges(Math.SQRT2),
-      5,
+      CURVED_HAIR,
     );
   });
 
@@ -165,25 +173,25 @@ describe("the overdraw of a logo", () => {
     // larger radius at most; a straight outline costs only its edges.
     expect(overdraw(`<circle r="50" ${hairline}/>`)).toBeCloseTo(
       strokeEdges(Math.PI) + curvedStrokeEdges(Math.PI),
-      HAIR,
+      CURVED_HAIR,
     );
     expect(overdraw(`<ellipse rx="50" ry="10" ${hairline}/>`)).toBeCloseTo(
       strokeEdges(Math.PI) + curvedStrokeEdges(Math.PI),
-      HAIR,
+      CURVED_HAIR,
     );
     expect(overdraw(`<rect ${SQUARE} rx="5" ${hairline}/>`)).toBeCloseTo(
       strokeEdges(SQUARE_EDGES) + curvedStrokeEdges(Math.PI / 10),
-      HAIR,
+      CURVED_HAIR,
     );
     expect(overdraw(`<path d="M0 0H50C50 50 0 50 0 0" ${hairline}/>`)).toBeCloseTo(
       strokeEdges(2) + curvedStrokeEdges(1.5),
-      HAIR,
+      CURVED_HAIR,
     );
     expect(overdraw(`<rect ${SQUARE} ${hairline}/>`)).toBeCloseTo(strokeEdges(SQUARE_EDGES), HAIR);
     // As long as they are drawn, through a transform.
     expect(overdraw(`<circle r="50" transform="scale(0.5)" ${hairline}/>`)).toBeCloseTo(
       strokeEdges(Math.PI / 2) + curvedStrokeEdges(Math.PI / 2),
-      HAIR,
+      CURVED_HAIR,
     );
     // A fill, or the coverage of a clip path, is not stroked.
     expect(overdraw('<circle r="50"/>')).toBeCloseTo(

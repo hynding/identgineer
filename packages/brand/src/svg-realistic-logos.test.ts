@@ -146,8 +146,8 @@ function inkscapeWordmark(): string {
 
 /** Each logo with the most of each budget, in percent, it may use. */
 const REALISTIC: readonly (readonly [string, string, number, number])[] = [
-  ["an emblem of 4,000 cubics, filled and stroked", emblem(40, 6), 21, 5],
-  ["an emblem of 8,000 cubics, filled and stroked", emblem(80, 3), 42, 10],
+  ["an emblem of 4,000 cubics, filled and stroked", emblem(40, 6), 21, 9],
+  ["an emblem of 8,000 cubics, filled and stroked", emblem(80, 3), 42, 17],
   ["traced artwork of 470 KB", traced(470_000), 61, 1],
   [
     "a wordmark of 20 glyphs",
@@ -161,10 +161,10 @@ const REALISTIC: readonly (readonly [string, string, number, number])[] = [
     1,
   ],
   ["10 gradients under 6 clip paths", gradientsUnderClips(), 8, 60],
-  ["300 uses of a 20-cubic symbol", pattern(20), 36, 1],
-  ["300 uses of a 60-cubic symbol", pattern(60), 96, 2],
+  ["300 uses of a 20-cubic symbol", pattern(20), 36, 2],
+  ["300 uses of a 60-cubic symbol", pattern(60), 96, 3],
   ["dashed rings", dashedRings("1 2"), 17, 1],
-  ["finely dashed rings", dashedRings("0.25 0.5"), 64, 8],
+  ["finely dashed rings", dashedRings("0.25 0.5"), 64, 9],
   ["a Figma export with 8 alpha masks", figmaMasks(), 4, 60],
   ["a wordmark of 8 outlined letters clipping a gradient", textClips(8, 1), 4, 8],
   ["four such wordmarks in one logo", textClips(8, 4), 13, 31],

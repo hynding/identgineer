@@ -47,6 +47,10 @@ export interface Geometry {
    * its perimeter; a cubic, which bends at most twice, three convex pieces.
    */
   readonly visibleOutline: number;
+  /** An upper bound of the length of the outline's curves (quadratics, cubics, arcs, ellipses). */
+  readonly curvedLength: number;
+  /** The most of the outline's curves a square image can show, in sides, as `visibleOutline`. */
+  readonly curvedOutline: number;
   /** The box of every point, control points included; an arc's box holds its whole ellipse. */
   readonly box: SvgBox;
   /** An upper bound of the area a fill covers, in square user units, never more than the box. */
@@ -139,6 +143,8 @@ class Pen {
   segments = 0;
   subpaths = 0;
   visibleOutline = 0;
+  curvedLength = 0;
+  curvedOutline = 0;
   /** Whether the subpath was just closed: drawing on without a move starts another. */
   closed = false;
   /** The letter, in upper case, of the segment just drawn. */
@@ -208,6 +214,12 @@ class Pen {
     this.y = fromY;
   }
 
+  /** Counts the segment just drawn, `length` long and showing at most `visible`, as a curve. */
+  curve(length: number, visible: number): void {
+    this.curvedLength += length;
+    this.curvedOutline += visible;
+  }
+
   private include(x: number, y: number, reach: number): void {
     const grown = {
       minX: Math.min(this.subpathBox.minX, x - reach),
@@ -233,6 +245,8 @@ class Pen {
       subpaths: this.subpaths,
       straightRun: this.axisLines && this.subpaths === 1 && this.segments === 1,
       visibleOutline: this.visibleOutline,
+      curvedLength: this.curvedLength,
+      curvedOutline: this.curvedOutline,
       box: this.box,
       area: Math.min(this.area, boxArea(this.box)),
     };
@@ -411,6 +425,7 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
       triangleArea(x, y, x1, y1, endX, endY) +
       triangleArea(x1, y1, x2, y2, endX, endY);
     pen.to([x1, y1, x2, y2, endX, endY], weights.cubic, length, 3 * CONVEX, hull);
+    pen.curve(length, 3 * CONVEX);
     pen.controlX = x2;
     pen.controlY = y2;
     pen.controlError = second.absolute;
@@ -421,15 +436,18 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
     const offset = upper === "Q" ? 2 : 0;
     const [endX, endY] = [at(offset, x), at(offset + 1, y)];
     const end = errorAt(offset);
+    const length =
+      Math.hypot(x1 - x, y1 - y) +
+      Math.hypot(endX - x1, endY - y1) +
+      lengthSlack(reflectedError, reflectedError, end.local);
     pen.to(
       [x1, y1, endX, endY],
       weights.quadratic,
-      Math.hypot(x1 - x, y1 - y) +
-        Math.hypot(endX - x1, endY - y1) +
-        lengthSlack(reflectedError, reflectedError, end.local),
+      length,
       CONVEX,
       triangleArea(x, y, x1, y1, endX, endY),
     );
+    pen.curve(length, CONVEX);
     pen.controlX = x1;
     pen.controlY = y1;
     pen.controlError = upper === "Q" ? errorAt(0).absolute : error + reflectedError;
@@ -448,14 +466,16 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
         STRAIGHT,
       );
     } else {
+      const length = 2 * Math.PI * radius * ARC_CURVES + lengthSlack(end.local);
       pen.to(
         [endX, endY],
         weights.arc,
-        2 * Math.PI * radius * ARC_CURVES + lengthSlack(end.local),
+        length,
         CONVEX,
         Math.PI * radius * radius,
         2 * radius + error,
       );
+      pen.curve(length, CONVEX);
     }
     pen.error = end.absolute;
   }
@@ -642,13 +662,19 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
     case "rect": {
       const rounded = length("rx") > 0 || length("ry") > 0;
       const [width, height] = [length("width"), length("height")];
+      const outline = 2 * (width + height) * (1 + READ);
       return {
         weight: 4 * line + (rounded ? 4 * cubic : 0),
-        length: 2 * (width + height) * (1 + READ),
+        length: outline,
         segments: rounded ? 8 : 4,
         subpaths: 1,
         straightRun: !rounded && width > 0 && height > 0,
         visibleOutline: CONVEX,
+        // The corners together make an ellipse no larger than one of the larger radius.
+        curvedLength: rounded
+          ? Math.min(outline, 2 * Math.PI * Math.max(length("rx"), length("ry")) * (1 + READ))
+          : 0,
+        curvedOutline: rounded ? CONVEX : 0,
         box: boxOf(length("x"), length("y"), width, height),
         area: width * height,
       };
@@ -657,13 +683,16 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
     case "ellipse": {
       const [rx, ry] =
         element.name === "circle" ? [length("r"), length("r")] : [length("rx"), length("ry")];
+      const outline = 2 * Math.PI * Math.max(rx, ry) * (1 + READ);
       return {
         weight: 4 * cubic,
-        length: 2 * Math.PI * Math.max(rx, ry) * (1 + READ),
+        length: outline,
         segments: 4,
         subpaths: 1,
         straightRun: false,
         visibleOutline: CONVEX,
+        curvedLength: outline,
+        curvedOutline: CONVEX,
         box: boxOf(length("cx") - rx, length("cy") - ry, 2 * rx, 2 * ry),
         area: Math.PI * rx * ry,
       };
@@ -684,6 +713,8 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
         // horizontal or vertical; written two ways, they may be read a hair apart.
         straightRun: (same("x1", "x2") || same("y1", "y2")) && exact > slack,
         visibleOutline: STRAIGHT,
+        curvedLength: 0,
+        curvedOutline: 0,
         box: {
           minX: Math.min(x1, x2),
           minY: Math.min(y1, y2),

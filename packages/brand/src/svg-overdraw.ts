@@ -53,6 +53,12 @@ export const SVG_OVERDRAW_WEIGHTS = Object.freeze({
    * more than in proportion to them.
    */
   edgesPerRow: 800,
+  /**
+   * An edge of a stroke's outline along a curve, as so many straight ones: a large image is
+   * rasterised in tiles, and Chromium strokes a curve again for every tile its box touches,
+   * measured as an image 2000 CSS pixels square at twice the density.
+   */
+  curvedStroke: 4,
 });
 
 /** The most of a convex outline a square image shows: its perimeter, in sides. */
@@ -254,6 +260,10 @@ class OverdrawWalk {
       const area = Math.min(scale * local, boxArea(mapBox(matrix, outer))) / this.square;
       const shown = (length: number): number =>
         Math.min(PERIMETER, (stretch(matrix) * length) / this.side);
+      const curved = Math.min(
+        geometry.curvedOutline,
+        (stretch(matrix) * geometry.curvedLength) / this.side,
+      );
       this.charge(
         Math.min(1, area) * this.paintWeight(paint.stroke, paint.strokeOpacity * alpha) +
           // A stroke's outline runs along both sides of the path, round each join (counted at
@@ -265,7 +275,9 @@ class OverdrawWalk {
               geometry.segments * shown(joinLength(paint)) +
               2 * pieces.count * shown(capLength(paint)),
             pieces.spacing < width ? 2 * pieces.count : 0,
-          ),
+          ) +
+          // Along its curves, stroked again for the tiles of a large image.
+          edgeCost(2 * (SVG_OVERDRAW_WEIGHTS.curvedStroke - 1) * curved),
       );
       box = mapBox(matrix, outer);
     }
