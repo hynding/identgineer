@@ -260,7 +260,8 @@ test.describe("dashboard components in forced colours and with reduced motion", 
             const style = getComputedStyle(element);
             // An element outside the flat tree has no computed style: the rows the event table was
             // given are in the page, but until idg-table has rendered they have no slot to be in.
-            // They are counted, not measured, and measured elements must be most of the page.
+            // Such an element is counted, and the test below fails if there is one, so that it
+            // reads as "not drawn yet" and not as a number that is not one.
             if (style.transitionDuration === "") {
               outside += 1;
               continue;
@@ -277,13 +278,34 @@ test.describe("dashboard components in forced colours and with reduced motion", 
         return { transition, animation, measured, outside };
       });
     const loading = await measure();
-    expect(loading.measured).toBeGreaterThan(loading.outside);
+    expect(loading.outside).toBe(0);
+    expect(loading.measured).toBeGreaterThan(100);
     expect(loading.transition * 1000).toBeLessThanOrEqual(1);
     expect(loading.animation * 1000).toBeLessThanOrEqual(1);
     await page.evaluate(`window.dashboardFixture.release()`);
     await expect(rows(page)).toHaveCount(10);
+    // Each bundle of components loads when its first element is made, so a table or a skeleton may
+    // not be drawn the moment its rows are in the page: measure once every element is hydrated.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const waiting = (root: ParentNode): number =>
+            [...root.querySelectorAll("*")].reduce(
+              (count, element) =>
+                count +
+                (element.localName.startsWith("idg-") && !element.classList.contains("hydrated")
+                  ? 1
+                  : 0) +
+                (element.shadowRoot ? waiting(element.shadowRoot) : 0),
+              0,
+            );
+          return waiting(document);
+        }),
+      )
+      .toBe(0);
     const loaded = await measure();
-    expect(loaded.measured).toBeGreaterThan(loaded.outside);
+    expect(loaded.outside).toBe(0);
+    expect(loaded.measured).toBeGreaterThan(100);
     expect(loaded.transition * 1000).toBeLessThanOrEqual(1);
     expect(loaded.animation * 1000).toBeLessThanOrEqual(1);
   });
