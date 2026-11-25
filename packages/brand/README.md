@@ -5,9 +5,10 @@ complete colour theme for your own project. A generated theme is one more value 
 next to the eight built-in themes of [`@identgineer/tokens`](../tokens/README.md), and is held to
 the same checks they are.
 
-Pure TypeScript: no DOM, no dependency besides `@identgineer/tokens`, and no network except
-through the `fetch` given to the [brand kit store](#storing-a-brand-kit). It runs in Node and in
-browsers. A kit can also carry a logo and a mark, as SVG that has been through the
+Pure TypeScript: no DOM and no dependency besides `@identgineer/tokens`. Only the
+[brand kit store](#storing-a-brand-kit) uses the network: through the `fetch` it is given, and for
+its two public reads through `publicFetch`, the global `fetch` unless another is given, always
+with `credentials: "omit"`. It runs in Node and in browsers. A kit can also carry a logo and a mark, as SVG that has been through the
 [logo sanitiser](#logos).
 
 ## Use
@@ -1174,7 +1175,7 @@ refusal of a logo the sanitiser itself could have written, not one some other vi
 [`cms/`](../../cms/README.md#brand-kits)), each owned by the user who created it:
 
 ```ts
-import { createBrandKitStore } from "@identgineer/brand";
+import { createBrandKitStore, MAX_BRAND_KIT_PAGE_SIZE } from "@identgineer/brand";
 
 const store = createBrandKitStore({
   baseUrl: "https://cms.example.com",
@@ -1184,77 +1185,103 @@ const store = createBrandKitStore({
 const saved = await store.create(result.kit, { isPublic: false }); // a kit parseBrandKit returned
 if (saved.ok) saved.record; // { documentId, isPublic, kit }
 
-const { results, pageCount } = await store.list({ page: 1 }); // the user's own kits, oldest first
-for (const item of results) {
-  if (item.ok) show(item.record.kit);
-  else report(item.index, item.documentId, item.errors); // this record only; the others still show
+// Summaries of the user's own kits, oldest first, without logo and mark. Bounded by construction:
+// at most 20 pages of MAX_BRAND_KIT_PAGE_SIZE whatever the server claims.
+for (let page = 1, pageCount = 1; page <= Math.min(pageCount, 20); page += 1) {
+  const answer = await store.list({ page });
+  pageCount = answer.pageCount;
+  for (const item of answer.results) {
+    if (item.ok)
+      show(item.record.summary); // { id, name, colors, typography, corners, tone, … }
+    else report(item.index, item.documentId, item.errors); // this record only; the others show
+  }
 }
 
+const full = await store.get(documentId); // the whole kit, logo and mark checked
 await store.update(documentId, kit, { isPublic: true }); // replaces every field of the kit
 await store.remove(documentId);
 await store.getPublic(documentId); // a kit its owner made public, without credentials
 ```
 
-| Operation                             | Request                                | Sends with    |
-| ------------------------------------- | -------------------------------------- | ------------- |
-| `list({ page?, pageSize?, signal? })` | `GET /api/brand-kits`, oldest first    | `fetch`       |
-| `get(documentId, { signal? })`        | `GET /api/brand-kits/:documentId`      | `fetch`       |
-| `create(kit, { isPublic?, signal? })` | `POST /api/brand-kits`                 | `fetch`       |
-| `update(documentId, kit, { … })`      | `PUT /api/brand-kits/:documentId`      | `fetch`       |
-| `remove(documentId, { signal? })`     | `DELETE /api/brand-kits/:documentId`   | `fetch`       |
-| `listPublic({ page?, pageSize?, … })` | `GET /api/brand-kits`, `isPublic` only | `publicFetch` |
-| `getPublic(documentId, { signal? })`  | `GET /api/brand-kits/:documentId`      | `publicFetch` |
+| Operation                             | Request                                | Answers   | Sends with    |
+| ------------------------------------- | -------------------------------------- | --------- | ------------- |
+| `list({ page?, pageSize?, signal? })` | `GET /api/brand-kits`, oldest first    | summaries | `fetch`       |
+| `get(documentId, { signal? })`        | `GET /api/brand-kits/:documentId`      | a kit     | `fetch`       |
+| `create(kit, { isPublic?, signal? })` | `POST /api/brand-kits`                 | a kit     | `fetch`       |
+| `update(documentId, kit, { … })`      | `PUT /api/brand-kits/:documentId`      | a kit     | `fetch`       |
+| `remove(documentId, { signal? })`     | `DELETE /api/brand-kits/:documentId`   | nothing   | `fetch`       |
+| `listPublic({ page?, pageSize?, … })` | `GET /api/brand-kits`, `isPublic` only | summaries | `publicFetch` |
+| `getPublic(documentId, { signal? })`  | `GET /api/brand-kits/:documentId`      | a kit     | `publicFetch` |
 
 `fetch` sends the signed-in user's requests; in production it is the identity SDK's
 `authorizedFetch`, which this package does not import. `publicFetch` sends the two public reads,
-which carry no credentials; it is the global `fetch` when left out. A page holds 1 to 10 kits (10 by
-default). The base URL is held to the identity SDK's rules: `https:`, or `http:` on localhost
-only, with no credentials, query or fragment. The store keeps no state between calls and caches
-nothing; every operation takes an `AbortSignal`.
+which carry no credentials; it is the global `fetch` when left out. Every request is sent with
+`credentials: "omit"`, `redirect: "error"` and `cache: "no-store"`. A page holds 1 to
+`MAX_BRAND_KIT_PAGE_SIZE` (10) kits, 10 by default. The base URL is held to the identity SDK's
+rules: `https:`, or `http:` on localhost only, with no credentials, query or fragment. The store
+keeps no state between calls and caches nothing; every operation takes an `AbortSignal`, which also
+stops a body being read when the given `fetch` has let go of it after the headers (as
+`authorizedFetch` does).
+
+A list answers summaries (`BrandKitSummary`: the kit without `logo` and `mark`). It asks the CMS
+for the other fields only (Strapi's `fields` parameter, which strapi-php and Strapi's generated
+controllers both honour for the owner and the public role), and skips any logo or mark text that
+arrives anyway without reading it, so a page of kits with large logos costs no more than one
+without. Checking a logo is not free: `get` and `getPublic` pass the logo and mark through
+`parseBrandKit`, which sanitises each again to see it is a fixed point, about half a second for a
+logo near the sanitiser's limit (ten kits with two 436 KB logos each took 9.2 seconds). Fetch the
+full kit only for the one being shown or edited.
 
 Everything read from the CMS is untrusted:
 
-- An answer must be `application/json`, UTF-8 and within its bound (4 MiB a kit, two logos at
-  the sanitiser's limit as JSON escapes them, so 40 MiB for a page of 10); a longer body is
-  cancelled as soon as it goes over, before it is parsed.
-- The envelope must be Strapi's `{ data, meta }` and nothing else, and a page no longer than asked
-  for.
+- An answer must be `application/json`, UTF-8 and within its bound (4 MiB for a kit, two logos at
+  the sanitiser's limit as JSON escapes them; 8 KiB a summary, so about 84 KiB for a page of 10);
+  a longer body is cancelled as soon as it goes over, before it is parsed.
+- The envelope must be Strapi's `{ data, meta }` and nothing else; a single answer's `data` an
+  object. A page's `meta.pagination` must give the page and size asked for, a `pageCount` that
+  follows from `total`, and no more rows than `total` leaves for that page.
 - Each record may hold the kit's fields, `documentId` and `isPublic`; the CMS's own `id`,
   timestamps, `locale` and an `owner` it was not asked to populate are ignored, and any other key,
   `__proto__` and `constructor` included, is an error. Keys are read as own properties only, so
   nothing is polluted.
-- A record is mapped to the kit's input and passed through `parseBrandKit`, so its logo and mark
-  must be exactly what `sanitiseSvgLogo` returns. A record that fails comes back as
-  `{ ok: false, index?, documentId?, errors }`, each error located by its CMS field
-  (`primaryColor`) and never repeating the value; it is never a kit, and one bad record does not
-  fail a list. A public read refuses a record that is not public.
+- A record is mapped to the kit's input and passed through `parseBrandKit` (a summary without its
+  logo and mark), so a kit's logo and mark must be exactly what `sanitiseSvgLogo` returns. A
+  record that fails comes back as `{ ok: false, index?, documentId?, errors }`, each error located
+  by its CMS field (`primaryColor`) and never repeating the value; it is never a kit, and one bad
+  record does not fail a list. A public read refuses a record that is not public.
 
 Writes take a `BrandKit` that `parseBrandKit` returned, check it again (the type cannot stop a
 JavaScript caller), and send its fields in the CMS shape: colours as `#rrggbb`, an absent optional
 field as `null` and the logo and mark as text. They never send `owner`; the CMS sets it from the
-session. `isPublic` is sent only when given. Do not keep `themeTokens` in the CMS: generate the
+session. `isPublic` is sent only when given. The answer is compared with what was sent, and a field
+the CMS answers otherwise rejects the write as `not-applied`, naming the fields. On strapi-php
+today that is every optional field an update clears (`tagline`, `secondaryColor`, `neutralTint`,
+`logo`, `mark`), since camis drops a `null` in an update body where Strapi clears the field
+([hynding/camis#122](https://github.com/hynding/camis/issues/122)); the other fields are saved, so
+`get` the kit again to see what it now holds. Do not keep `themeTokens` in the CMS: generate the
 theme from the kit, which is deterministic.
 
 A request that fails rejects with a `BrandKitStoreError`, whose message is fixed per code and
-never holds a response body or a logo:
+never holds a response body, a thrown error's text or a logo:
 
-| `code`               | When                                                                                        |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| `unauthorized`       | 401, or `fetch` rejected with code `unauthorized` (signed out)                              |
-| `forbidden`          | 403: the kit can be read but not changed (the public role writing a public kit)             |
-| `not-found`          | 404: no such kit, or one the caller may not read (another user's)                           |
-| `validation`         | The input was refused before sending, or a 400 `ValidationError`; `fields` names CMS fields |
-| `rate-limited`       | 429; `retryAfterSeconds` from `Retry-After` (60 when absent, at most 3600)                  |
-| `network`            | `fetch` rejected, the body could not be read, or the signal aborted                         |
-| `malformed-response` | A 2xx answer that is not a brand kit answer (type, size, encoding, JSON or envelope)        |
-| `unexpected-status`  | Any other status, a redirect included; `status` holds it                                    |
+| `code`               | When                                                                                                                               |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `unauthorized`       | 401, or `fetch` rejected with code `unauthorized` (signed out)                                                                     |
+| `forbidden`          | 403: the kit can be read but not changed (the public role writing a public kit)                                                    |
+| `not-found`          | 404: no such kit, or one the caller may not read (another user's)                                                                  |
+| `validation`         | The input was refused before sending, or a 400 `ValidationError`; `fields` names CMS fields                                        |
+| `not-applied`        | A write the CMS answered with other values than were sent; `fields` names them                                                     |
+| `rate-limited`       | 429; `retryAfterSeconds` from `Retry-After` (60 when absent, at most 3600)                                                         |
+| `network`            | `fetch` failed to reach the CMS (a redirect too, as fetch refuses to follow it), the body could not be read, or the signal aborted |
+| `request-refused`    | `fetch` refused the request itself, as `authorizedFetch` does for a URL outside its base URL                                       |
+| `malformed-response` | A 2xx answer that is not a brand kit answer (type, size, encoding, JSON, envelope or pagination)                                   |
+| `unexpected-status`  | Any other status, and a 3xx from a `fetch` that hands redirects back; `status` holds it                                            |
 
 A signed-in user reads other users' public kits with `listPublic` and `getPublic`, as the public
 role: `list` and `get` see the user's own kits only (see the CMS README's
-[Roles](../../cms/README.md#roles) for why). On strapi-php today an update cannot clear an optional
-field (`tagline`, `secondaryColor`, `neutralTint`, `logo`, `mark`): camis drops a `null` in an
-update body, where Strapi clears the field. The live contract test checks it and fails until camis
-is fixed.
+[Roles](../../cms/README.md#roles) for why). The live contract test checks the store against
+strapi-php, its check that an update clears optional fields an expected failure until camis#122 is
+fixed.
 
 The base URL rules are the identity SDK's, restated in `src/store-base-url.ts` since this package
 may not depend on that one; with the `Retry-After` reading, they are a candidate for a shared
