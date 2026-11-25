@@ -840,6 +840,24 @@ describe("aborting", () => {
     expect(cancelled).toBe(true);
   });
 
+  it("reads an abort while a refusal's body is read as a network error", async () => {
+    const controller = new AbortController();
+    const { store } = storeWith(() => {
+      const body = new ReadableStream<Uint8Array>({
+        start(stream) {
+          stream.enqueue(new TextEncoder().encode('{"error":'));
+        },
+        pull: () => new Promise<void>(() => undefined),
+      });
+      setTimeout(() => {
+        controller.abort();
+      }, 10);
+      return new Response(body, { status: 400, headers: { "Content-Type": "application/json" } });
+    });
+    const error = await rejection(store.create(kitFrom(), { signal: controller.signal }));
+    expect(error.code).toBe("network");
+  });
+
   it("sends nothing once the signal has aborted", async () => {
     const controller = new AbortController();
     controller.abort();
