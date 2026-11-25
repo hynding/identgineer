@@ -655,8 +655,9 @@ describe("sanitiseSvgLogo, linear time", () => {
 
   /**
    * The exponent k in time ~ size ** k, by least squares on the logarithms of the fastest of
-   * several runs (three unless told otherwise) at each of three sizes. Runs are taken in turn across the sizes, so a pause for
-   * garbage collection or another process counts less, and a busy spell slows all sizes alike.
+   * several runs (three unless told otherwise) at each of three sizes. Runs are taken in turn
+   * across the sizes, so a pause for garbage collection or another process counts less, and a busy
+   * spell slows all sizes alike.
    * Over a 16-fold span an honest 4 to 5.5 times per quadrupling (exponent about 1.2) stays far
    * from a quadratic stage (2); one 4x pair left a bound of 8 between 5.5 and 16.
    */
@@ -685,8 +686,8 @@ describe("sanitiseSvgLogo, linear time", () => {
 
   it("measures a linear function as growing like its input and a quadratic one like its square", () => {
     // The measure is checked against known functions, so a defect in it cannot pass every case
-    // below. The smallest run takes about 15 ms, well over the floor, so a busy spell cannot sink it
-    // into noise; the bound is what has to separate the two.
+    // below. The smallest run of each takes about 10 ms, over the floor, so the floor does not
+    // flatten either slope; the bound is what has to separate the two.
     const spin = (count: number): number => {
       const started = performance.now();
       let sink = 0;
@@ -695,8 +696,8 @@ describe("sanitiseSvgLogo, linear time", () => {
       return performance.now() - started;
     };
     const sizes = [100, 400, 1600] as const;
-    const linear = growthExponent(sizes, (size) => spin(size * 25_000), { runs: 7 });
-    const quadratic = growthExponent(sizes, (size) => spin(size * size * 250), { runs: 3 });
+    const linear = growthExponent(sizes, (size) => spin(size * 75_000), { runs: 7 });
+    const quadratic = growthExponent(sizes, (size) => spin(size * size * 750), { runs: 3 });
     expect(linear).toBeLessThan(GROWTH_EXPONENT_BOUND);
     expect(quadratic).toBeGreaterThan(GROWTH_EXPONENT_BOUND);
   }, 120_000);
