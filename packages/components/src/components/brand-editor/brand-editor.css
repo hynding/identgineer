@@ -102,9 +102,13 @@
   flex-wrap: wrap;
 }
 
+/* A hex value is set in the mono face, as the guide and the swatches show it, so every digit is
+   one ch wide and seven of them with the hash fit in 7ch whatever the digits; the eighth ch is
+   room for the caret after the last digit. */
 .colour::part(control) {
-  flex: 1 1 7ch;
-  min-inline-size: 7ch;
+  flex: 1 1 8ch;
+  min-inline-size: 8ch;
+  font-family: var(--idg-font-family-mono);
 }
 
 /* A narrow form, as at 320px or with large text, gives its fields the room its groups and boxes
