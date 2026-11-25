@@ -247,22 +247,27 @@ base.describe("the checks themselves", () => {
 });
 
 // The costliest logos the sanitiser still accepts, one for each kind of work a renderer does: long
-// edges, crowded on every row; arcs; hairline dashes, of two lengths and of 64; solid paint over
-// and over; gradients at the stop limit, opaque and translucent; a fill under a very wide stroke;
-// group opacity layers; masks inside masks; a clip path of crowded edges with the even-odd rule; a
-// view box far wider than tall; dashes, round dots and round joins on a stroke as wide as the
-// image; clip paths of near-coincident zigzags, which a renderer combining them took minutes over,
-// each written as a mask, and of one such zigzag in every form a clip path of one shape is kept
-// (alone, transformed, through a use, under the clip path's transform, even-odd, one inside another,
-// each at 30,000 and at 100,000, and in the box of a unit square); clip paths of a clipped shape and
-// of 43 shapes; a mask holding a clipped shape; and a shape scaled as far as a transform may go.
-// Each is the largest of its family that is accepted (the next one up is refused, for the drawing
-// cost or the overdraw), and must be drawn as an image and inline, rasterised in full at 600 CSS
-// pixels and at 2000 with a device scale factor of 2, and drawn inline at 600, each within its
-// budget (the budgets cover inline logos up to 600 CSS pixels only: see the brand README). On a
-// loaded four-core machine the slowest took about 0.35 seconds at 600 and 1.8 at 2000 (see the
-// brand README), so the budgets leave room for a slow runner, yet a limit raised tenfold would
-// blow through them.
+// edges, crowded on every row; arcs; hairline dashes, of two lengths and of 64; dashes along
+// circles, an ellipse, a rounded rectangle, an arc, a cubic, a diagonal and a horizontal line, and
+// along paths of horizontal and vertical lines (an L, a staircase, a serpentine, a square spiral, a
+// line drawn back and forth, an open path round a square); thin strokes along full-size circles,
+// ellipses and arcs, along concentric circles, along circles and arcs far larger than the image
+// passing through it, and along a rosette of quadratics in one path; solid paint over and over; gradients at the stop limit, opaque and translucent; a fill under a
+// very wide stroke; group opacity layers; masks inside masks; a clip path of crowded edges with the
+// even-odd rule; a view box far wider than tall; dashes, round dots and round joins on a stroke as
+// wide as the image; clip paths of near-coincident zigzags, which a renderer combining them took
+// minutes over, each written as a mask, and of one such zigzag in every form a clip path of one
+// shape is kept (alone, transformed, through a use, under the clip path's transform, even-odd, one
+// inside another, each at 30,000 and at 100,000, and in the box of a unit square); clip paths of a
+// clipped shape and of 43 shapes; a mask holding a clipped shape; and a shape scaled as far as a
+// transform may go. Each is the largest of its family that is accepted (the next one up is refused,
+// for the drawing cost or the overdraw), and must be drawn as an image and inline, rasterised in
+// full at 600 CSS pixels and at 2000 with a device scale factor of 2, shown as an image 2000 CSS
+// pixels square at that density (which Chromium rasterises in tiles), and drawn inline at 600, each
+// within its budget (the budgets cover inline logos up to 600 CSS pixels only: see the brand
+// README). On a loaded four-core machine the slowest took about 0.35 seconds at 600 and 1.8 at
+// 2000, and on an idle one 3.5 shown as an image at 2000 (see the brand README), so the budgets
+// leave room for a slow runner, yet a limit raised tenfold would blow through them.
 const SIZE = 600;
 const LARGE_SIZE = 2000;
 const RENDER_BUDGET_MS = 15_000;
@@ -384,6 +389,57 @@ function clipOf(shapes: string, wrapper = ""): string {
   return `<clipPath id="c">${shapes}</clipPath><g id="p" ${wrapper}><rect width="200000" height="200000" fill="#0f766e" fill-opacity="0.5" clip-path="url(#c)"/></g>`;
 }
 
+/** Path data of `steps` steps across the image, each a horizontal line and then a vertical one. */
+function staircase(steps: number): string {
+  let data = "M0 0";
+  for (let step = 1; step <= steps; step += 1) {
+    const at = String((step * 1000) / steps);
+    data += `H${at}V${at}`;
+  }
+  return data;
+}
+
+/** Path data of `rows` horizontal lines across the image, joined end to end by vertical ones. */
+function serpentine(rows: number): string {
+  let data = "M0 0";
+  for (let row = 0; row < rows; row += 1) {
+    data += `${row % 2 === 0 ? "H1000" : "H0"}V${String(((row + 1) * 1000) / rows)}`;
+  }
+  return data;
+}
+
+/** Path data of `sides` horizontal and vertical lines winding out from the centre, 12 apart. */
+function squareSpiral(sides: number): string {
+  let data = "M500 500";
+  for (let side = 0; side < sides; side += 1) {
+    const reach = (side + 1) * 12;
+    const command = ["H", "V", "H", "V"][side % 4] ?? "H";
+    data += `${command}${String(side % 4 < 2 ? 500 + reach : 500 - reach)}`;
+  }
+  return data;
+}
+
+/** `count` points across the image, from 50 to 950. */
+function spread(count: number): number[] {
+  return Array.from({ length: count }, (_, index) =>
+    Number((50 + (index * 900) / Math.max(1, count - 1)).toFixed(2)),
+  );
+}
+
+/**
+ * Path data of a spirograph rosette: `count` quadratics winding 37 times round a ring 450 from the
+ * centre, each bulging out to 600.
+ */
+function rosette(count: number): string {
+  const at = (radius: number, step: number): string => {
+    const angle = (step * 2 * Math.PI * 37) / count;
+    return `${(500 + radius * Math.cos(angle)).toFixed(1)} ${(500 + radius * Math.sin(angle)).toFixed(1)}`;
+  };
+  let data = "M950 500";
+  for (let step = 1; step <= count; step += 1) data += `Q${at(600, step - 0.5)} ${at(450, step)}`;
+  return data;
+}
+
 const FULL = 'width="1000" height="1000"';
 const STOPS = SVG_LOGO_LIMITS.gradientStops;
 
@@ -411,6 +467,52 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
     ),
     "drawing-too-costly",
   ],
+  // Dashes along anything but one horizontal or vertical line or a rectangle are worked out again
+  // for every tile of a large image the shape's box touches, along a path of two such lines too;
+  // along one line or a rectangle, culled to the tile.
+  ...(["butt", "round", "square"] as const).flatMap((cap) =>
+    (["3", "5"] as const).map(
+      (width) =>
+        [
+          `dashed full-size circles ${width} wide, ${cap}-capped, by uses`,
+          copies(
+            `<circle id="p" cx="500" cy="500" r="450" fill="none" stroke="#000" stroke-width="${width}" stroke-linecap="${cap}" stroke-dasharray="8 4"/>`,
+          ),
+          "drawing-too-costly",
+        ] as const,
+    ),
+  ),
+  ...(
+    [
+      ["an ellipse", '<ellipse id="p" cx="500" cy="500" rx="450" ry="200"'],
+      [
+        "a rectangle with rounded corners",
+        '<rect id="p" x="50" y="50" width="900" height="900" rx="100"',
+      ],
+      ["an arc", '<path id="p" d="M50 500A450 450 0 0 1 950 500"'],
+      ["a cubic", '<path id="p" d="M50 500C50 251 251 50 500 50"'],
+      ["a diagonal line", '<path id="p" d="M0 0L1000 1000"'],
+      ["a horizontal line", '<path id="p" d="M0 500H1000"'],
+      ["an L of a horizontal and a vertical line", '<path id="p" d="M0 0H1000V1000"'],
+      ["a staircase of four steps", `<path id="p" d="${staircase(4)}"`],
+      ["a serpentine of 20 rows", `<path id="p" d="${serpentine(20)}"`],
+      ["a square spiral of 40 sides", `<path id="p" d="${squareSpiral(40)}"`],
+      [
+        "a horizontal line drawn back and forth ten times",
+        `<path id="p" d="M0 500${"H1000H0".repeat(10)}"`,
+      ],
+      ["an open path round a square", '<path id="p" d="M50 50H950V950H50V50"'],
+    ] as const
+  ).map(
+    ([shape, element]) =>
+      [
+        `dashes along ${shape}, round-capped`,
+        copies(
+          `${element} fill="none" stroke="#000" stroke-width="5" stroke-linecap="round" stroke-dasharray="8 4"/>`,
+        ),
+        "drawing-too-costly",
+      ] as const,
+  ),
   ...(
     [
       ["of 64 lengths", Array.from({ length: 64 }, () => "1").join(" ")],
@@ -421,11 +523,104 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
       [
         `hairline dashes ${lengths} along a zigzag`,
         copies(
-          `<path id="p" d="M50 50${Array.from({ length: 100 }, (_, index) => `L${index % 2 === 0 ? "950" : "50"} ${String(50 + index * 9)}`).join("")}" fill="none" stroke="#000" stroke-width="0.1" stroke-dasharray="${dasharray}"/>`,
+          `<path id="p" d="M50 50${Array.from({ length: 10 }, (_, index) => `L${index % 2 === 0 ? "950" : "50"} ${String(50 + index * 90)}`).join("")}" fill="none" stroke="#000" stroke-width="0.1" stroke-dasharray="${dasharray}"/>`,
         ),
         "drawing-too-costly",
       ] as const,
   ),
+  // A thin stroke along a curve is stroked again for every tile of a large image its box touches.
+  ...(["2", "0.5"] as const).map(
+    (width) =>
+      [
+        `thin full-size circles ${width} wide, by uses`,
+        copies(
+          `<circle id="p" cx="500" cy="500" r="450" fill="none" stroke="#000" stroke-width="${width}"/>`,
+        ),
+        "overdraw-too-large",
+      ] as const,
+  ),
+  [
+    "thin full-size ellipses, by uses",
+    copies(
+      '<ellipse id="p" cx="500" cy="500" rx="450" ry="300" fill="none" stroke="#000" stroke-width="0.5"/>',
+    ),
+    "overdraw-too-large",
+  ],
+  [
+    "thin paths of 20 full-size semicircles, by uses",
+    copies(
+      `<path id="p" d="M50 500${Array.from({ length: 20 }, (_, index) => `A450 450 0 1 1 ${index % 2 === 0 ? "950" : "50"} 500`).join("")}" fill="none" stroke="#000" stroke-width="0.5"/>`,
+    ),
+    "overdraw-too-large",
+  ],
+  [
+    "thin concentric circles",
+    (count) =>
+      costlyLogo(
+        Array.from(
+          { length: count },
+          (_, index) =>
+            `<circle cx="500" cy="500" r="${String(490 - (index % 480))}" fill="none" stroke="#000" stroke-width="0.5"/>`,
+        ).join(""),
+      ),
+    "overdraw-too-large",
+  ],
+  // Chromium strokes a curve whole for every tile, however little of it the image shows.
+  ...([1000, 100_000] as const).map(
+    (radius) =>
+      [
+        `thin circles of radius ${radius.toLocaleString("en")} passing through the image`,
+        (count: number) =>
+          costlyLogo(
+            spread(count)
+              .map(
+                (x) =>
+                  `<circle cx="${String(x)}" cy="${String(500 - radius)}" r="${String(radius)}" fill="none" stroke="#000" stroke-width="0.5"/>`,
+              )
+              .join(""),
+          ),
+        "overdraw-too-large",
+      ] as const,
+  ),
+  [
+    "thin large arcs of radius 1,000 from points across the image",
+    (count) =>
+      costlyLogo(
+        spread(count)
+          .map(
+            (x) =>
+              `<path d="M${String(x)} 500A1000 1000 0 1 1 ${String(x + 1)} 500" fill="none" stroke="#000" stroke-width="0.5"/>`,
+          )
+          .join(""),
+      ),
+    "overdraw-too-large",
+  ],
+  // A small arc whose chord is a hundred-millionth of its radius can come out turning the other
+  // way in single precision, and Chromium strokes the whole circle; one 2^-16 of it is drawn small.
+  ...(
+    [
+      [10_000, "0.0001", ' transform="rotate(10 500 500)"'],
+      [999_999, "16", ""],
+    ] as const
+  ).map(
+    ([radius, chord, turn]) =>
+      [
+        `small arcs of radius ${radius.toLocaleString("en")} with chords of ${chord}, in one path`,
+        (count: number) =>
+          costlyLogo(
+            `<path d="${spread(count)
+              .map((x) => `M${String(x)} 500a${String(radius)} ${String(radius)} 0 0 1 ${chord} 0`)
+              .join("")}" fill="none" stroke="#000" stroke-width="2"${turn}/>`,
+          ),
+        "overdraw-too-large",
+      ] as const,
+  ),
+  [
+    "a thin rosette of quadratics in 37 turns",
+    (count) =>
+      costlyLogo(`<path d="${rosette(count)}" fill="none" stroke="#000" stroke-width="0.8"/>`),
+    "overdraw-too-large",
+  ],
   ["full-size solid fills", copies(`<rect id="p" ${FULL} fill="#0f766e"/>`), "overdraw-too-large"],
   [
     `full-size linear gradients of ${String(STOPS)} stops`,
@@ -671,6 +866,58 @@ async function rasterise(page: Page, logo: Logo, size: number): Promise<number> 
 }
 
 /**
+ * Shows a logo's data URL as an `<img>` `size` CSS pixels square in a page as large, at the page's
+ * device scale factor, and returns the milliseconds until a screenshot shows it. An image this
+ * large is rasterised in tiles, each tile replaying every path whose box it touches, so this is
+ * timed apart from the single raster a canvas makes. The page must already be that size, made so
+ * for the test, so that nothing resizes it between its first frame and the screenshots.
+ */
+async function showImage(page: Page, logo: Logo, size: number): Promise<number> {
+  expect(page.viewportSize(), "the page is as large as the image").toEqual({
+    width: size,
+    height: size,
+  });
+  await page.setContent(
+    `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'"><style>body{margin:0}img{display:block}</style>`,
+  );
+  const loaded = await page.evaluate(async (dataUrl) => {
+    const image = new Image();
+    image.src = dataUrl;
+    await image.decode();
+    Object.assign(window, { pendingLogo: image });
+    return image.naturalWidth;
+  }, logo.dataUrl ?? "");
+  // An image that failed to load would draw nothing, and so be timed as fast.
+  expect(loaded, `${logo.name} loads as an image`).toBeGreaterThan(0);
+  // A screenshot copies the frame Chromium last drew of the page, and fails ("Unable to capture
+  // screenshot") when there is none yet: a page this large, made for the test, may not have been
+  // drawn by the time it has loaded on a loaded runner. Two animation frames in, the page has been
+  // drawn: the second begins only once the frame of the first has been taken by the compositor.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            resolve();
+          });
+        });
+      }),
+  );
+  // Waits for a frame of the empty page, so the drawing alone is timed; a corner of it is enough,
+  // and spares a loaded runner encoding a page of 4000 pixels square that shows nothing.
+  await page.screenshot({ clip: { x: 0, y: 0, width: 1, height: 1 } });
+  const started = Date.now();
+  await page.evaluate((size) => {
+    const image = (window as unknown as { pendingLogo: HTMLImageElement }).pendingLogo;
+    image.style.width = `${String(size)}px`;
+    image.style.height = `${String(size)}px`;
+    document.body.append(image);
+  }, size);
+  await page.screenshot({ timeout: RENDER_BUDGET_MS });
+  return Date.now() - started;
+}
+
+/**
  * Puts a logo inline in a box `SIZE` CSS pixels square, at the page's device scale factor, and
  * returns the milliseconds until a screenshot shows it: inline, a large logo is drawn tile by tile,
  * each tile walking every path it touches again, so this is timed apart from the image.
@@ -777,13 +1024,20 @@ test.describe("the costliest logos the sanitiser accepts", () => {
 
 test.describe(`the costliest logos the sanitiser accepts, at ${String(LARGE_SIZE)} pixels and twice the density`, () => {
   test.describe.configure({ timeout: 120_000 });
-  test.use({ deviceScaleFactor: 2 });
+  test.use({ deviceScaleFactor: 2, viewport: { width: LARGE_SIZE, height: LARGE_SIZE } });
 
   for (const [label, family, code] of FAMILIES) {
     test(`rasterises ${label} within the budget`, async ({ page }) => {
       const logo = costliest(family, code);
       expect(await page.evaluate(() => window.devicePixelRatio)).toBe(2);
       expect(await rasterise(page, logo, LARGE_SIZE), logo.name).toBeLessThan(
+        LARGE_RASTER_BUDGET_MS,
+      );
+    });
+
+    test(`shows ${label} as an image within the budget`, async ({ page }) => {
+      const logo = costliest(family, code);
+      expect(await showImage(page, logo, LARGE_SIZE), logo.name).toBeLessThan(
         LARGE_RASTER_BUDGET_MS,
       );
     });

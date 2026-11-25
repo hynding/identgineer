@@ -206,6 +206,7 @@ describe("the drawing cost of a logo", () => {
       layer: 50,
       mask: 200,
       dash: 1,
+      tiledDash: 10,
     });
     expect(cost("")).toBe(1);
     expect(cost('<rect width="1" height="1"/>')).toBe(37);
@@ -254,7 +255,7 @@ describe("the drawing cost of a logo", () => {
     expect(cost('<g opacity="1"><rect width="1" height="1"/></g>')).toBe(38);
   });
 
-  it("counts the dashes of every shape a dash array could reach, with the shortest period in the logo", () => {
+  it("counts the dashes of every shape a dash array could reach", () => {
     // Each subpath starts the pattern afresh, so up to one more repeat each; and a length a whole
     // number of periods long is, as Chromium may read the numbers, a hair longer than that, so a
     // repeat more is begun: 51 of a period of 2 along 100, and one more for the subpath.
@@ -262,10 +263,43 @@ describe("the drawing cost of a logo", () => {
     expect(
       cost('<g stroke-dasharray="10"><path d="M0 0H100"/><rect width="10" height="10"/></g>'),
     ).toBe(82);
-    expect(cost('<path d="M0 0H100"/><path d="M0 0H1" stroke-dasharray="1 1"/>')).toBe(121);
+    // A shape no dash array reaches is solid, however finely another shape is dashed.
+    expect(cost('<path d="M0 0H100"/><path d="M0 0H1" stroke-dasharray="1 1"/>')).toBe(
+      1 + 33 + (33 + 2),
+    );
     expect(cost('<rect width="100%" height="100%" stroke-dasharray="1"/>')).toBe(59);
     expect(cost('<path d="M0 0H100" stroke-dasharray="0 0"/>')).toBe(34);
-    expect(cost('<path d="M0 0H100M0 10H100" stroke-dasharray="1"/>')).toBe(1 + 34 + 103);
+    // Two subpaths are not one run of horizontal and vertical lines, so each dash costs ten.
+    expect(cost('<path d="M0 0H100M0 10H100" stroke-dasharray="1"/>')).toBe(1 + 34 + 1030);
+  });
+
+  it("charges a dash ten times on anything but one horizontal or vertical line or a rectangle, which Chromium works out again for every tile of a large image", () => {
+    // What Chromium culls to the tile: a line whose ends share a coordinate written the same, a
+    // path of one move and one H or V segment, a rectangle without rounded corners.
+    expect(cost('<line x2="100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
+    expect(cost('<line x1="5" x2="5" y2="100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
+    expect(cost('<path d="M5 0V100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
+    expect(cost('<path d="m5 0h100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
+    expect(cost('<rect width="10" height="10" stroke-dasharray="1"/>')).toBe(1 + 36 + 22);
+    expect(cost('<rect width="10" height="10" rx="0" stroke-dasharray="1"/>')).toBe(1 + 36 + 22);
+    expect(cost('<rect width="10" height="10" ry="0" stroke-dasharray="1"/>')).toBe(1 + 36 + 22);
+    // A path of more than one H or V segment is not culled, whichever way it turns: an open
+    // rectangle, an L, a staircase, back and forth along one line, on along one line.
+    expect(cost('<path d="M0 0H100V100h-100v-100" stroke-dasharray="1"/>')).toBe(1 + 36 + 2020);
+    expect(cost('<path d="M0 0H100V100" stroke-dasharray="1"/>')).toBe(1 + 34 + 1020);
+    expect(cost('<path d="M0 0H50V50H100V100" stroke-dasharray="1"/>')).toBe(1 + 36 + 1020);
+    expect(cost('<path d="M0 0H100H0" stroke-dasharray="1"/>')).toBe(1 + 34 + 1020);
+    expect(cost('<path d="M0 0H50H100" stroke-dasharray="1"/>')).toBe(1 + 34 + 520);
+    // Anything else, even where the numbers come out horizontal: a coordinate written two ways, a
+    // closing segment, a line segment, a polyline, a slanted line, a rounded rectangle, a curve.
+    expect(cost('<line y1="5" y2="5.0" x2="100" stroke-dasharray="1"/>')).toBe(1 + 33 + 520);
+    expect(cost('<path d="M0 0H100V100H0Z" stroke-dasharray="1"/>')).toBe(1 + 36 + 2020);
+    expect(cost('<path d="M0 0L100 0" stroke-dasharray="1"/>')).toBe(1 + 33 + 520);
+    expect(cost('<polyline points="0,0 100,0" stroke-dasharray="1"/>')).toBe(1 + 33 + 520);
+    expect(cost('<line x2="60" y2="80" stroke-dasharray="1"/>')).toBe(1 + 33 + 520);
+    expect(cost('<rect width="10" height="10" rx="1" stroke-dasharray="1"/>')).toBe(1 + 76 + 220);
+    expect(cost('<circle r="10" stroke-dasharray="1"/>')).toBe(1 + 72 + 330);
+    expect(cost('<path d="M0 0C30 0 70 0 100 0" stroke-dasharray="1"/>')).toBe(1 + 42 + 520);
   });
 
   it("counts every dash in each repeat of a dash array, an odd one repeated twice", () => {
@@ -274,15 +308,51 @@ describe("the drawing cost of a logo", () => {
     expect(cost(`<path d="M0 0H100" stroke-dasharray="${sixtyFour}"/>`)).toBe(1 + 33 + 96);
     // 1 2 3: a period of 12 holding 3 dashes, (9 + 1) x 3.
     expect(cost('<path d="M0 0H100" stroke-dasharray="1 2 3"/>')).toBe(1 + 33 + 30);
-    // A dash array inherits, so every shape is counted at the shortest period and the most dashes
-    // in a repeat anywhere in the logo: a period of 20 holding 32 dashes here, five of them along
-    // 100 and a hair more as read, so six begun, and one more for the subpath.
+    // A shape is counted at its own dash array; one that inherits a dash array, at the shortest
+    // period and the most dashes in a repeat anywhere in the logo: a period of 20 holding 32
+    // dashes here, five of them along 100 and a hair more as read, so six begun, and one more for
+    // the subpath.
     const long = Array.from({ length: 64 }, () => "5").join(" ");
     expect(
       cost(
         `<path d="M0 0H100" stroke-dasharray="10"/><path d="M0 0H1" stroke-dasharray="${long}"/>`,
       ),
-    ).toBe(1 + (33 + 7 * 32) + (33 + 2 * 32));
+    ).toBe(1 + (33 + 7) + (33 + 2 * 32));
+    expect(
+      cost(
+        `<g stroke-dasharray="10"><path d="M0 0H100"/></g><path d="M0 0H1" stroke-dasharray="${long}"/>`,
+      ),
+    ).toBe(1 + 1 + (33 + 7 * 32) + (33 + 2 * 32));
+  });
+
+  it("counts in full the dashes of a shape that inherits a dash array, from an ancestor or from a use that draws it", () => {
+    const line = '<path d="M0 0H100" stroke-dasharray="1"/>';
+    // 52 dashes along the line, as it costs dashed itself.
+    expect(cost(line)).toBe(1 + 33 + 52);
+    expect(cost('<g stroke-dasharray="1"><g><path d="M0 0H100"/></g></g>')).toBe(cost(line) + 2);
+    // Drawn by a use under a dashed group, by a dashed use, and by a dashed use of a group holding
+    // a use of it: the instance inherits from the use, wherever the definition stands.
+    const definition = '<defs><path id="p" d="M0 0H100"/><g id="q"><use href="#p"/></g></defs>';
+    const solid = cost(`${definition}<g><use href="#p"/></g>`);
+    expect(cost(`${definition}<g stroke-dasharray="1"><use href="#p"/></g>`)).toBe(solid + 52);
+    expect(cost(`${definition}<use href="#p" stroke-dasharray="1"/><g/>`)).toBe(solid + 52);
+    expect(cost(`${definition}<use href="#q" stroke-dasharray="1"/>`)).toBe(
+      cost(`${definition}<use href="#q"/>`) + 52,
+    );
+    // Through a mask too, whose content inherits from the mask's ancestors.
+    expect(
+      cost(
+        '<g stroke-dasharray="1"><mask id="m"><path d="M0 0H100"/></mask></g><rect width="1" height="1" mask="url(#m)"/>',
+      ),
+    ).toBe(
+      cost(
+        '<g><mask id="m"><path d="M0 0H100"/></mask></g><rect width="1" height="1" mask="url(#m)"/>',
+      ) + 52,
+    );
+    // A shape's own dash array, even none, is what it is drawn with.
+    expect(cost('<g stroke-dasharray="1"><path d="M0 0H100" stroke-dasharray="none"/></g>')).toBe(
+      1 + 1 + 33,
+    );
   });
 
   it("drops what would make the dash count depend on the page: em and ex lengths, percentage dashes, non-scaling strokes", () => {

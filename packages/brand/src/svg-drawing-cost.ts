@@ -1,5 +1,5 @@
 import type { CleanElement } from "./filter-svg-tree.ts";
-import type { SvgLengthUnit } from "./svg-values.ts";
+import { type SvgLengthUnit, writtenText } from "./svg-values.ts";
 
 /**
  * What drawing each part of a logo's geometry costs, in units of about one stroked straight
@@ -7,7 +7,10 @@ import type { SvgLengthUnit } from "./svg-values.ts";
  * stroked as many lines, an arc as several curves; each shape also costs a fixed amount to set up
  * (what it paints is the overdraw's to count, see `SVG_OVERDRAW_WEIGHTS`); group opacity draws
  * into a layer; a mask or clip path draws its content into a layer each time it is applied; each
- * dash is a segment of its own.
+ * dash is a segment of its own. A large image is rasterised in tiles, and Chromium works out every
+ * dash of a shape again for each tile its box touches, except along one horizontal or vertical
+ * line and round a rectangle, whose dashes it culls to the tile: elsewhere a dash weighs ten,
+ * measured as an image 2000 CSS pixels square at twice the density.
  */
 export const SVG_DRAWING_WEIGHTS = Object.freeze({
   line: 1,
@@ -19,6 +22,7 @@ export const SVG_DRAWING_WEIGHTS = Object.freeze({
   layer: 50,
   mask: 200,
   dash: 1,
+  tiledDash: 10,
 });
 
 export interface Geometry {
@@ -31,11 +35,23 @@ export interface Geometry {
   /** Subpaths: each has its own two caps, and starts its dashes afresh. */
   readonly subpaths: number;
   /**
+   * Whether the outline is one horizontal or vertical line of some length however Chromium reads
+   * its numbers, or a rectangle without rounded corners, whose dashes Chromium culls to each tile of
+   * a large image; any other outline's dashes, a path of two such lines included, are worked out
+   * again for every tile its box touches.
+   */
+  readonly straightRun: boolean;
+  /**
    * The most of the outline a square image can show, in sides of the square: a straight segment
    * at most its diagonal; a convex curve (a quadratic, an arc, a whole rectangle or ellipse) at most
    * its perimeter; a cubic, which bends at most twice, three convex pieces.
    */
   readonly visibleOutline: number;
+  /**
+   * An upper bound of the length of the outline's curves (quadratics, cubics, arcs, ellipses), all
+   * of it, however little of it an image can show: Chromium strokes a curve whole.
+   */
+  readonly curvedLength: number;
   /** The box of every point, control points included; an arc's box holds its whole ellipse. */
   readonly box: SvgBox;
   /** An upper bound of the area a fill covers, in square user units, never more than the box. */
@@ -128,10 +144,13 @@ class Pen {
   segments = 0;
   subpaths = 0;
   visibleOutline = 0;
+  curvedLength = 0;
   /** Whether the subpath was just closed: drawing on without a move starts another. */
   closed = false;
   /** The letter, in upper case, of the segment just drawn. */
   previous = "";
+  /** Whether every segment so far is a horizontal or vertical line of some length. */
+  axisLines = true;
   box: SvgBox = EMPTY_BOX;
   area = 0;
   private subpathBox: SvgBox = EMPTY_BOX;
@@ -195,6 +214,11 @@ class Pen {
     this.y = fromY;
   }
 
+  /** Counts the segment just drawn, at most `length` long, as a curve. */
+  curve(length: number): void {
+    this.curvedLength += length;
+  }
+
   private include(x: number, y: number, reach: number): void {
     const grown = {
       minX: Math.min(this.subpathBox.minX, x - reach),
@@ -218,7 +242,9 @@ class Pen {
       length: this.length,
       segments: this.segments,
       subpaths: this.subpaths,
+      straightRun: this.axisLines && this.subpaths === 1 && this.segments === 1,
       visibleOutline: this.visibleOutline,
+      curvedLength: this.curvedLength,
       box: this.box,
       area: Math.min(this.area, boxArea(this.box)),
     };
@@ -327,6 +353,86 @@ function arcRadius(
   return Math.min(LARGEST_SINGLE, Math.max(rx, ry) * (1 + READ) * Math.sqrt(Math.max(1, lambda)));
 }
 
+/** How many times a curve is halved before its pieces' control polygons bound its length. */
+const HALVINGS = 3;
+
+/**
+ * An upper bound of the length of the Bézier curve through `points` (x, y pairs: its start, its
+ * control points, its end), tighter than its control polygon: the control polygons of its pieces,
+ * each piece no longer than its own, summed over the curve halved `HALVINGS` times, and a step
+ * more for the rounding of this sum. Chromium's reading of the points adds to it as it adds to the
+ * control polygon (as a Bézier curve's derivative moves by no more than its control points do).
+ */
+function bezierLength(points: readonly number[], halvings = HALVINGS): number {
+  if (halvings === 0) {
+    let length = 0;
+    for (let index = 2; index + 1 < points.length; index += 2) {
+      length += Math.hypot(
+        (points[index] ?? 0) - (points[index - 2] ?? 0),
+        (points[index + 1] ?? 0) - (points[index - 1] ?? 0),
+      );
+    }
+    return length * (1 + STEP);
+  }
+  // De Casteljau at the middle: the first piece's points are the first of each row, the second's
+  // the last of each row, read backwards.
+  const first: number[] = [];
+  const second: number[] = [];
+  let row = [...points];
+  while (row.length > 0) {
+    first.push(row[0] ?? 0, row[1] ?? 0);
+    second.unshift(row[row.length - 2] ?? 0, row[row.length - 1] ?? 0);
+    const next: number[] = [];
+    for (let index = 2; index + 1 < row.length; index += 2) {
+      next.push(
+        ((row[index - 2] ?? 0) + (row[index] ?? 0)) / 2,
+        ((row[index - 1] ?? 0) + (row[index + 1] ?? 0)) / 2,
+      );
+    }
+    row = next;
+  }
+  return bezierLength(first, halvings - 1) + bezierLength(second, halvings - 1);
+}
+
+/**
+ * Below this many times its larger radius, or its ends' coordinates, a small arc's chord may be too
+ * short for Chromium to tell which way round its ellipse the arc turns. Chromium maps the arc onto a
+ * unit circle and works out the angle it turns through in single precision; ends a few
+ * single-precision steps apart there can come out turning the other way, which Chromium takes as a
+ * whole turn less a hair, and so strokes the whole ellipse. That was seen for chords up to 2^-23.6
+ * of the radius, over radii, radius ratios, turned ellipses, chord directions, both sweeps, and
+ * starts from 0.5 to 900,000; this stays 2^7 times and more above it. Single precision holds a
+ * point far from the origin less finely, so the coordinates bound the chord too.
+ */
+const SMALL_ARC_CHORD = 2 ** -16;
+
+/**
+ * An upper bound of the length of an arc drawn with the small-arc flag, `chord` (as Chromium may
+ * read it) apart at its ends and at least `shortest` apart, the largest of its ends' coordinates
+ * `reach`; Infinity for a large arc, or for a chord too short for Chromium to be sure of drawing the
+ * small arc (see `SMALL_ARC_CHORD`). SVG picks the
+ * centre so that a small arc turns at most half a turn round its ellipse (exactly half when its
+ * radii are scaled up to reach), and such an arc of a circle is at most a quarter turn's ratio, pi
+ * over two, longer than its chord. The ellipse is the circle stretched by its radii, which makes the
+ * arc at most the larger radius times as long and the chord at least the smaller radius times: so
+ * the arc is at most pi over two times the ratio of its radii (as Chromium may read them) times the
+ * chord, and a thousandth more for the curves Chromium draws it with. A flat arc of a huge radius,
+ * as editors write a nearly straight segment, is about as long as its chord.
+ */
+function smallArcLength(
+  values: readonly number[],
+  chord: number,
+  shortest: number,
+  reach: number,
+): number {
+  const [rx, ry] = [Math.abs(values[0] ?? 0), Math.abs(values[1] ?? 0)];
+  if ((values[3] ?? 0) !== 0 || shortest < SMALL_ARC_CHORD * Math.max(rx, ry, reach)) {
+    return Infinity;
+  }
+  const ratio = (Math.max(rx, ry) / Math.min(rx, ry)) * (1 + 4 * READ);
+  return (Math.PI / 2) * ratio * chord * ARC_CURVES;
+}
+
 function drawSegment(pen: Pen, command: string, values: readonly number[], first: boolean): void {
   const upper = command.toUpperCase();
   const relative = command !== upper;
@@ -359,12 +465,10 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
             error,
             [upper === "H", upper === "V"],
           );
-    pen.to(
-      [endX, endY],
-      weights.line,
-      Math.hypot(endX - x, endY - y) + lengthSlack(end.local),
-      STRAIGHT,
-    );
+    const exact = Math.hypot(endX - x, endY - y);
+    const slack = lengthSlack(end.local);
+    if ((upper !== "H" && upper !== "V") || exact <= slack) pen.axisLines = false;
+    pen.to([endX, endY], weights.line, exact + slack, STRAIGHT);
     pen.error = end.absolute;
   } else if (upper === "Z") {
     pen.to(
@@ -399,6 +503,10 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
       triangleArea(x, y, x1, y1, endX, endY) +
       triangleArea(x1, y1, x2, y2, endX, endY);
     pen.to([x1, y1, x2, y2, endX, endY], weights.cubic, length, 3 * CONVEX, hull);
+    pen.curve(
+      bezierLength([x, y, x1, y1, x2, y2, endX, endY]) +
+        lengthSlack(reflectedError, reflectedError, second.local, second.local, end.local),
+    );
     pen.controlX = x2;
     pen.controlY = y2;
     pen.controlError = second.absolute;
@@ -409,14 +517,20 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
     const offset = upper === "Q" ? 2 : 0;
     const [endX, endY] = [at(offset, x), at(offset + 1, y)];
     const end = errorAt(offset);
+    const length =
+      Math.hypot(x1 - x, y1 - y) +
+      Math.hypot(endX - x1, endY - y1) +
+      lengthSlack(reflectedError, reflectedError, end.local);
     pen.to(
       [x1, y1, endX, endY],
       weights.quadratic,
-      Math.hypot(x1 - x, y1 - y) +
-        Math.hypot(endX - x1, endY - y1) +
-        lengthSlack(reflectedError, reflectedError, end.local),
+      length,
       CONVEX,
       triangleArea(x, y, x1, y1, endX, endY),
+    );
+    pen.curve(
+      bezierLength([x, y, x1, y1, endX, endY]) +
+        lengthSlack(reflectedError, reflectedError, end.local),
     );
     pen.controlX = x1;
     pen.controlY = y1;
@@ -436,17 +550,23 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
         STRAIGHT,
       );
     } else {
+      const length = 2 * Math.PI * radius * ARC_CURVES + lengthSlack(end.local);
       pen.to(
         [endX, endY],
         weights.arc,
-        2 * Math.PI * radius * ARC_CURVES + lengthSlack(end.local),
+        length,
         CONVEX,
         Math.PI * radius * radius,
         2 * radius + error,
       );
+      const chord = Math.hypot(endX - x, endY - y);
+      const slack = lengthSlack(end.local);
+      const reach = Math.max(...[x, y, endX, endY].map(Math.abs));
+      pen.curve(Math.min(length, smallArcLength(values, chord + slack, chord - slack, reach)));
     }
     pen.error = end.absolute;
   }
+  if (upper !== "M" && upper !== "L" && upper !== "H" && upper !== "V") pen.axisLines = false;
   pen.previous = upper;
 }
 
@@ -587,6 +707,7 @@ function polyline(text: string, closed: boolean): Geometry {
       pen.begin();
     } else {
       const slack = lengthSlack(pen.error, error);
+      pen.axisLines = false;
       pen.to([x, y], SVG_DRAWING_WEIGHTS.line, Math.hypot(x - pen.x, y - pen.y) + slack, STRAIGHT);
       pen.error = error;
     }
@@ -616,6 +737,11 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
     return value !== undefined && "text" in value ? value.text : undefined;
   };
   const length = (name: string): number => userUnits(text(name), percentBase);
+  const spelling = (name: string): string => {
+    const value = element.attributes.get(name);
+    return value !== undefined && "text" in value ? writtenText(value) : "0";
+  };
+  const same = (first: string, second: string): boolean => spelling(first) === spelling(second);
   const { line, cubic } = SVG_DRAWING_WEIGHTS;
   switch (element.name) {
     case "path":
@@ -623,12 +749,18 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
     case "rect": {
       const rounded = length("rx") > 0 || length("ry") > 0;
       const [width, height] = [length("width"), length("height")];
+      const outline = 2 * (width + height) * (1 + READ);
       return {
         weight: 4 * line + (rounded ? 4 * cubic : 0),
-        length: 2 * (width + height) * (1 + READ),
+        length: outline,
         segments: rounded ? 8 : 4,
         subpaths: 1,
+        straightRun: !rounded && width > 0 && height > 0,
         visibleOutline: CONVEX,
+        // The corners together make an ellipse no larger than one of the larger radius.
+        curvedLength: rounded
+          ? Math.min(outline, 2 * Math.PI * Math.max(length("rx"), length("ry")) * (1 + READ))
+          : 0,
         box: boxOf(length("x"), length("y"), width, height),
         area: width * height,
       };
@@ -637,29 +769,36 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
     case "ellipse": {
       const [rx, ry] =
         element.name === "circle" ? [length("r"), length("r")] : [length("rx"), length("ry")];
+      const outline = 2 * Math.PI * Math.max(rx, ry) * (1 + READ);
       return {
         weight: 4 * cubic,
-        length: 2 * Math.PI * Math.max(rx, ry) * (1 + READ),
+        length: outline,
         segments: 4,
         subpaths: 1,
+        straightRun: false,
         visibleOutline: CONVEX,
+        curvedLength: outline,
         box: boxOf(length("cx") - rx, length("cy") - ry, 2 * rx, 2 * ry),
         area: Math.PI * rx * ry,
       };
     }
     case "line": {
       const [x1, y1, x2, y2] = [length("x1"), length("y1"), length("x2"), length("y2")];
+      const exact = Math.hypot(x2 - x1, y2 - y1);
+      const slack = lengthSlack(
+        readingError(Math.max(Math.abs(x1), Math.abs(y1))),
+        readingError(Math.max(Math.abs(x2), Math.abs(y2))),
+      );
       return {
         weight: line,
-        length:
-          Math.hypot(x2 - x1, y2 - y1) +
-          lengthSlack(
-            readingError(Math.max(Math.abs(x1), Math.abs(y1))),
-            readingError(Math.max(Math.abs(x2), Math.abs(y2))),
-          ),
+        length: exact + slack,
         segments: 1,
         subpaths: 1,
+        // Ends that share a coordinate written the same are read the same, so the line is exactly
+        // horizontal or vertical; written two ways, they may be read a hair apart.
+        straightRun: (same("x1", "x2") || same("y1", "y2")) && exact > slack,
         visibleOutline: STRAIGHT,
+        curvedLength: 0,
         box: {
           minX: Math.min(x1, x2),
           minY: Math.min(y1, y2),

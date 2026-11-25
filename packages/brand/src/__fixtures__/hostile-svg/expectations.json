@@ -1810,6 +1810,39 @@
     "outcome": "accept",
     "removed": []
   },
+  "review-arc-tiny-chord-one-100000-w2.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-one-999999-w0.5.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-one-999999-w10.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-one-999999-w2.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-rot-999999-w2.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-rot-w0.05.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-rot-w0.1.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-rot-w0.2.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-rot-w2-a10.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-rot-w2-a80.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-arc-tiny-chord-sep-999999-w0.5.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
   "review-arc-tiny-radius-mask.svg": {
     "outcome": "accept",
     "removed": []
@@ -1850,21 +1883,35 @@
       }
     ]
   },
+  "review-curve-huge-arcs.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-curve-huge-circles-wide.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-curve-huge-circles.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-curve-huge-dashed-circles.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-curve-huge-ellipses.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-curve-huge-rounded-rects.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
   "review-da-ellipse-scaled.svg": {
-    "outcome": "accept",
-    "removed": []
+    "outcome": "reject:drawing-too-costly"
   },
   "review-da-group-circles.svg": {
-    "outcome": "accept",
-    "removed": []
+    "outcome": "reject:drawing-too-costly"
   },
   "review-da-mask-dash.svg": {
-    "outcome": "accept",
-    "removed": []
+    "outcome": "reject:drawing-too-costly"
   },
   "review-da-poly-style.svg": {
-    "outcome": "accept",
-    "removed": []
+    "outcome": "reject:drawing-too-costly"
   },
   "review-da-wide-round-64.svg": {
     "outcome": "accept",
@@ -1878,6 +1925,31 @@
     "outcome": "accept",
     "removed": []
   },
+  "review-dash-dense-hatching-200.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-dash-dense-hatching-240.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-dash-dense-hatching-clipped.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-dash-inherited-from-group.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-dash-inherited-from-style.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-dash-inherited-from-use.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-dash-inherited-through-nested-use.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-dash-inherited-through-use.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
   "review-dash-negative-rounding-to-zero.svg": {
     "outcome": "accept",
     "removed": [
@@ -1887,6 +1959,18 @@
         "reason": "invalid-value"
       }
     ]
+  },
+  "review-dash-tiled-circles-fine.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-dash-tiled-circles-round.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-dash-tiled-circles-square.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-dash-tiled-hairline-circles.svg": {
+    "outcome": "reject:drawing-too-costly"
   },
   "review-dash-zero-square-cap.svg": {
     "outcome": "accept",
