@@ -11,6 +11,12 @@ const cancel = (response: Response): void => {
 
 const INITIAL_BUFFER_BYTES = 16 * 1024;
 
+/**
+ * Whether `signal` has aborted, read afresh: a function, so TypeScript does not carry a check made
+ * before an await over to one made after it, when the signal may have aborted in between.
+ */
+export const isAborted = (signal: AbortSignal | undefined): boolean => signal?.aborted === true;
+
 /** `bytes` with room for at least `needed`, doubling so that many small chunks copy little. */
 function grown(bytes: Uint8Array, used: number, needed: number, maxBytes: number): Uint8Array {
   const larger = new Uint8Array(Math.min(maxBytes, Math.max(needed, bytes.byteLength * 2)));
@@ -42,18 +48,18 @@ async function readBytes(
     reader.cancel().catch(() => undefined);
   };
   signal?.addEventListener("abort", stop);
-  let bytes = new Uint8Array(Math.min(maxBytes, INITIAL_BUFFER_BYTES));
+  let bytes: Uint8Array = new Uint8Array(Math.min(maxBytes, INITIAL_BUFFER_BYTES));
   let total = 0;
   try {
     for (;;) {
-      if (signal?.aborted === true) throw new BrandKitStoreError("network");
+      if (isAborted(signal)) throw new BrandKitStoreError("network");
       let chunk: ReadableStreamReadResult<Uint8Array>;
       try {
         chunk = await reader.read();
       } catch {
         throw new BrandKitStoreError("network");
       }
-      if (signal?.aborted === true) throw new BrandKitStoreError("network");
+      if (isAborted(signal)) throw new BrandKitStoreError("network");
       if (chunk.done) break;
       const needed = total + chunk.value.byteLength;
       if (needed > maxBytes) throw malformed();
@@ -110,7 +116,7 @@ export async function readFailureBody(
   try {
     return await readJsonAnswer(response, maxBytes, signal);
   } catch {
-    if (signal?.aborted === true) throw new BrandKitStoreError("network");
+    if (isAborted(signal)) throw new BrandKitStoreError("network");
     return undefined;
   }
 }

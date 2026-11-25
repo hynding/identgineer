@@ -13,7 +13,7 @@ import {
   type BrandKitSummaryResult,
   type StoredBrandKit,
 } from "./cms-brand-kit.ts";
-import { discardBody, readFailureBody, readJsonAnswer } from "./read-cms-answer.ts";
+import { discardBody, isAborted, readFailureBody, readJsonAnswer } from "./read-cms-answer.ts";
 import { parseRetryAfter } from "./retry-after.ts";
 import { parseStoreBaseUrl, storeEndpoint } from "./store-base-url.ts";
 
@@ -376,7 +376,7 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
   const anonymous = publicFetch as BrandKitFetch;
 
   const send = async (call: Call): Promise<Response> => {
-    if (call.signal?.aborted === true) throw new BrandKitStoreError("network");
+    if (isAborted(call.signal)) throw new BrandKitStoreError("network");
     const query = call.query === undefined ? "" : `?${call.query.toString()}`;
     const headers: Record<string, string> = { Accept: "application/json" };
     if (call.data !== undefined) headers["Content-Type"] = "application/json";
@@ -394,7 +394,7 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
       response = await call.fetch(`${storeEndpoint(base, call.path)}${query}`, init);
     } catch (error) {
       // Fetch rejects with the signal's reason, which may be anything the caller aborted with.
-      if (call.signal?.aborted === true) throw new BrandKitStoreError("network");
+      if (isAborted(call.signal)) throw new BrandKitStoreError("network");
       throw new BrandKitStoreError(rejectionCode(error));
     }
     if (response.status < 200 || response.status > 299)
