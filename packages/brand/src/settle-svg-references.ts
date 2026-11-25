@@ -221,8 +221,7 @@ interface Expansion {
 
 /**
  * The shortest dash period anywhere in the logo, 0 for none, and the most dashes in one repeat of
- * any dash array, which together bound the dashes of every shape: dash arrays inherit, through use
- * too.
+ * any dash array, which together bound the dashes of every shape that inherits a dash array.
  */
 function densestDashing(elements: readonly CleanElement[]): Dashing {
   let period = 0;
@@ -236,6 +235,45 @@ function densestDashing(elements: readonly CleanElement[]): Dashing {
     perPeriod = Math.max(perPeriod, dashing.perPeriod);
   }
   return { period, perPeriod };
+}
+
+function ownDasharray(element: CleanElement): string | undefined {
+  const value = element.attributes.get("stroke-dasharray");
+  return value !== undefined && "text" in value ? value.text : undefined;
+}
+
+/**
+ * How each shape may be dashed: by its own dash array when it has one (a presentation attribute,
+ * which is also where a kept style puts it, beats what it inherits), else, where a dash array can
+ * be inherited, at the densest dashing in the logo, else solid. A dash array is inherited from an
+ * ancestor and, by each instance a use draws, from that use; one definition is counted once
+ * however it is drawn, so it is taken as dashed wherever any of its instances may be.
+ */
+function dashingByElement(
+  elements: readonly CleanElement[],
+  ids: ReadonlyMap<string, CleanElement>,
+): (element: CleanElement) => Dashing {
+  const densest = densestDashing(elements);
+  const solid: Dashing = { period: 0, perPeriod: 0 };
+  const inheriting = new Set<CleanElement>();
+  const stack = elements.filter((element) => {
+    const own = ownDasharray(element);
+    return own !== undefined && dashingOf(own).period > 0;
+  });
+  for (let element = stack.pop(); element !== undefined; element = stack.pop()) {
+    const reference = element.name === "use" ? referenceOf(element, "href") : undefined;
+    const target = reference === undefined ? undefined : ids.get(reference);
+    for (const next of target === undefined ? element.children : [...element.children, target]) {
+      if (ownDasharray(next) !== undefined || inheriting.has(next)) continue;
+      inheriting.add(next);
+      stack.push(next);
+    }
+  }
+  return (element) => {
+    const own = ownDasharray(element);
+    if (own !== undefined) return dashingOf(own);
+    return inheriting.has(element) ? densest : solid;
+  };
 }
 
 /** The root's view box, the viewport percentages are taken of (1 by 1 without one). */
@@ -252,9 +290,9 @@ function percentBase(root: CleanElement): number {
 }
 
 /**
- * What drawing one element costs on its own: a shape its geometry and, wherever a dash array might
- * reach it, its dashes at the densest dashing in the logo, dearer off one horizontal or vertical
- * line or a rectangle; anything else a little; group opacity a layer.
+ * What drawing one element costs on its own: a shape its geometry and its dashes (see
+ * `dashingByElement`), dearer off one horizontal or vertical line or a rectangle; anything else a
+ * little; group opacity a layer.
  */
 function ownCost(element: CleanElement, dashing: Dashing, base: number): number {
   const weights = SVG_DRAWING_WEIGHTS;
@@ -284,7 +322,7 @@ function checkExpansion(
 ): number {
   const done = new Map<CleanElement, Expansion>();
   const visiting = new Set<CleanElement>();
-  const dashing = densestDashing(elements);
+  const dashingFor = dashingByElement(elements, ids);
   const base = percentBase(root);
   // Totals stop just over their limit, so no sum grows without bound; each limit below is checked
   // so that a total that is not a number is refused too.
@@ -312,7 +350,7 @@ function checkExpansion(
     visiting.add(element);
     let size = 1;
     let height = 0;
-    let cost = ownCost(element, dashing, base);
+    let cost = ownCost(element, dashingFor(element), base);
     let masks = 0;
     let maskDepth = 0;
     const draw = (measured: Expansion, extraCost: number, extraMasks: number): void => {

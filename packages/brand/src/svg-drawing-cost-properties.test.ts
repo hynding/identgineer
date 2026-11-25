@@ -100,7 +100,7 @@ interface Measure {
 interface Item {
   readonly id: string;
   readonly markup: string;
-  readonly measure: (dashes: Dashes) => Measure;
+  readonly measure: (reading: Reading) => Measure;
   /** What it paints, drawn as itself or (`clipping`) as coverage inside a clip path. */
   readonly paint: (clipping: boolean, reading: Reading) => Paint;
   /** Whether it has a clip path or mask of its own; for a clip path, whether what it holds has. */
@@ -117,15 +117,15 @@ function add(left: Measure, right: Measure): Measure {
   };
 }
 
-/** The shortest dash period in a logo and the most dashes in one repeat, worked out separately. */
+/** How a shape is dashed: the length of one repeat, and the dashes in it. */
 interface Dashes {
   readonly period: number;
   readonly perPeriod: number;
-  readonly reading: Reading;
 }
 
 /**
- * A shape's cost; `dash` is what each dash weighs, more on anything but one run of horizontal and
+ * A shape's cost, dashed by its own dash array (`dashes`, none for a solid one; nothing here
+ * inherits one); `dash` is what each dash weighs, more on anything but one run of horizontal and
  * vertical lines.
  */
 function shape(
@@ -133,15 +133,15 @@ function shape(
   length: number,
   segments: number,
   dash: number,
-  dashes: Dashes,
+  dashes: Dashes | undefined,
+  reading: Reading,
 ): Measure {
-  const { reading } = dashes;
   // Every shape here is one subpath, which may start the pattern afresh: one more repeat.
   const count =
-    dashes.period > 0
-      ? (Math.ceil(reading.length(length, segments) / reading.period(dashes.period)) + 1) *
-        dashes.perPeriod
-      : 0;
+    dashes === undefined
+      ? 0
+      : (Math.ceil(reading.length(length, segments) / reading.period(dashes.period)) + 1) *
+        dashes.perPeriod;
   return { cost: WEIGHT.shape + geometry + count * dash, masks: 0, depth: 0 };
 }
 
@@ -151,7 +151,7 @@ class LogoGraph {
   private readonly masks: Item[] = [];
   private readonly shapes: Item[] = [];
   /** The dashing of each dashed shape, by id. */
-  private readonly dashing = new Map<string, Omit<Dashes, "reading">>();
+  private readonly dashing = new Map<string, Dashes>();
 
   constructor(random: () => number) {
     this.random = random;
@@ -242,7 +242,8 @@ class LogoGraph {
     return {
       id,
       markup: `<path id="${id}" d="${data}"${this.dash(id)}/>`,
-      measure: (dashes) => shape(geometry, length, count, WEIGHT.tiledDash, dashes),
+      measure: (reading) =>
+        shape(geometry, length, count, WEIGHT.tiledDash, this.dashing.get(id), reading),
       paint: (_, reading) => filled(Math.min(area, boxArea), visible, length, count, box, reading),
       clipped: false,
     };
@@ -278,7 +279,8 @@ class LogoGraph {
     return {
       id,
       markup: `<path id="${id}" d="${data}"${this.dash(id)}/>`,
-      measure: (dashes) => shape(count * WEIGHT.line, length, count, dash, dashes),
+      measure: (reading) =>
+        shape(count * WEIGHT.line, length, count, dash, this.dashing.get(id), reading),
       paint: (_, reading) =>
         filled(Math.min(area, boxArea), count * Math.SQRT2, length, count, box, reading),
       clipped: false,
@@ -291,7 +293,15 @@ class LogoGraph {
       return {
         id,
         markup: `<rect id="${id}" width="${String(width)}" height="${String(height)}"${this.dash(id)}/>`,
-        measure: (dashes) => shape(4 * WEIGHT.line, 2 * (width + height), 4, WEIGHT.dash, dashes),
+        measure: (reading) =>
+          shape(
+            4 * WEIGHT.line,
+            2 * (width + height),
+            4,
+            WEIGHT.dash,
+            this.dashing.get(id),
+            reading,
+          ),
         clipped: false,
         paint: (_, reading) =>
           filled(
@@ -308,8 +318,15 @@ class LogoGraph {
     return {
       id,
       markup: `<circle id="${id}" r="${String(radius)}"${this.dash(id)}/>`,
-      measure: (dashes) =>
-        shape(4 * WEIGHT.cubic, 2 * Math.PI * radius, 4, WEIGHT.tiledDash, dashes),
+      measure: (reading) =>
+        shape(
+          4 * WEIGHT.cubic,
+          2 * Math.PI * radius,
+          4,
+          WEIGHT.tiledDash,
+          this.dashing.get(id),
+          reading,
+        ),
       clipped: false,
       paint: (_, reading) =>
         filled(
@@ -326,8 +343,8 @@ class LogoGraph {
   private use(target: Item): Omit<Item, "id"> {
     return {
       markup: `<use href="#${target.id}"/>`,
-      measure: (dashes) =>
-        add({ cost: WEIGHT.element, masks: 0, depth: 0 }, target.measure(dashes)),
+      measure: (reading) =>
+        add({ cost: WEIGHT.element, masks: 0, depth: 0 }, target.measure(reading)),
       paint: (clipping, reading) => target.paint(clipping, reading),
       clipped: target.clipped,
     };
@@ -335,7 +352,7 @@ class LogoGraph {
 
   private applied(mask: Item | undefined): {
     markup: string;
-    measure: (dashes: Dashes) => Measure;
+    measure: (reading: Reading) => Measure;
     /** What applying it to a box paints; a mask inside a clip path is not applied. */
     paint: (box: Box, clipping: boolean, reading: Reading) => number;
   } {
@@ -343,8 +360,8 @@ class LogoGraph {
     const clip = mask.id.startsWith("c");
     return {
       markup: ` ${clip ? "clip-path" : "mask"}="url(#${mask.id})"`,
-      measure: (dashes) => {
-        const inside = mask.measure(dashes);
+      measure: (reading) => {
+        const inside = mask.measure(reading);
         return {
           cost: WEIGHT.mask + inside.cost,
           masks: 1 + inside.masks,
@@ -375,8 +392,8 @@ class LogoGraph {
     return {
       id,
       markup: `<g id="${id}"${layer ? ' opacity="0.5"' : ""}${applied.markup}>${uses.map((use) => use.markup).join("")}</g>`,
-      measure: (dashes) =>
-        [applied.measure(dashes), ...uses.map((use) => use.measure(dashes))].reduce(add, {
+      measure: (reading) =>
+        [applied.measure(reading), ...uses.map((use) => use.measure(reading))].reduce(add, {
           cost: WEIGHT.element + (layer ? WEIGHT.layer : 0),
           masks: 0,
           depth: 0,
@@ -405,8 +422,8 @@ class LogoGraph {
       return {
         id,
         markup: `<clipPath id="${id}">${content.markup}</clipPath>`,
-        measure: (dashes) =>
-          add({ cost: WEIGHT.element, masks: 0, depth: 0 }, content.measure(dashes)),
+        measure: (reading) =>
+          add({ cost: WEIGHT.element, masks: 0, depth: 0 }, content.measure(reading)),
         paint: (clipping, reading) => content.paint(clipping, reading),
         clipped: content.clipped,
       };
@@ -414,10 +431,10 @@ class LogoGraph {
     return {
       id,
       markup: `<mask id="${id}"><g${applied.markup}>${content.markup}</g></mask>`,
-      measure: (dashes) =>
+      measure: (reading) =>
         add(
           { cost: 2 * WEIGHT.element, masks: 0, depth: 0 },
-          add(applied.measure(dashes), content.measure(dashes)),
+          add(applied.measure(reading), content.measure(reading)),
         ),
       // What its content paints each time it is applied.
       paint: (clipping, reading) => {
@@ -462,25 +479,9 @@ class LogoGraph {
     const roots = Array.from({ length: 1 + this.integer(40) }, () =>
       this.use(this.pick(this.items)),
     );
-    // A definition nothing drawn refers to is dropped, and its dash array with it.
-    const markups = new Map([...this.items, ...this.masks].map((item) => [item.id, item.markup]));
-    const reached = new Set<string>();
-    const pending = roots.map((root) => root.markup);
-    for (let markup = pending.pop(); markup !== undefined; markup = pending.pop()) {
-      for (const [, id = ""] of markup.matchAll(/#([a-z0-9]+)/g)) {
-        if (reached.has(id)) continue;
-        reached.add(id);
-        pending.push(markups.get(id) ?? "");
-      }
-    }
-    const used = [...this.dashing].filter(([id]) => reached.has(id)).map(([, dashing]) => dashing);
-    const dashing = {
-      period: used.length === 0 ? 0 : Math.min(...used.map(({ period }) => period)),
-      perPeriod: used.length === 0 ? 0 : Math.max(...used.map(({ perPeriod }) => perPeriod)),
-    };
     const measured = (reading: Reading): Measure =>
       roots
-        .map((root) => root.measure({ ...dashing, reading }))
+        .map((root) => root.measure(reading))
         .reduce(add, { cost: WEIGHT.element, masks: 0, depth: 0 });
     const painted = (reading: Reading): number =>
       roots.reduce((total, root) => total + root.paint(false, reading).overdraw, 0);

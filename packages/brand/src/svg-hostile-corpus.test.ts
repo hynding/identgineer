@@ -101,6 +101,7 @@ const WITHIN_BUDGET = new Set([
   "review-da-wide-round-64.svg",
   "review-da-wide-square-burst.svg",
   "review-da-zero-sub-round.svg",
+  "review-dash-dense-hatching-200.svg",
   "review-g-conical-out.svg",
   "review-g-focal-edge.svg",
   "review-g-focal-repeat.svg",
