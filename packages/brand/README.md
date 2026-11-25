@@ -1250,7 +1250,8 @@ Everything read from the CMS is untrusted:
   the sanitiser's limit as JSON escapes them; 8 KiB a summary, so about 84 KiB for a page of 10);
   a longer body is cancelled as soon as it goes over, before it is parsed.
 - The envelope must be Strapi's `{ data, meta }` and nothing else; a single answer's `data` an
-  object. A page's `meta.pagination` must give the page and size asked for, a `pageCount` that
+  object, and for `get`, `getPublic` and `update` the kit asked for: a record with another
+  `documentId` is a malformed response, never named. A page's `meta.pagination` must give the page and size asked for, a `pageCount` that
   follows from `total`, and no more rows than `total` leaves for that page.
 - Each record may hold the kit's fields, `documentId` and `isPublic`; the CMS's own `id`,
   timestamps, `locale` and an `owner` it was not asked to populate are ignored, and any other key,

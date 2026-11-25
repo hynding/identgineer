@@ -328,6 +328,22 @@ function readSingle(
   return readRecord(data);
 }
 
+/**
+ * A record answered for one document id must be that kit: one with another id (or a refused one
+ * naming another) is not an answer to the request, and is never passed on, nor its id named.
+ */
+function forDocument<Result extends BrandKitRecordResult>(
+  documentId: string,
+  read: (row: unknown) => Result,
+): (row: unknown) => Result {
+  return (row) => {
+    const result = read(row);
+    const answered = result.ok ? result.record.documentId : result.documentId;
+    if (answered !== undefined && answered !== documentId) throw malformed();
+    return result;
+  };
+}
+
 /** A public read must answer public kits only; anything else is refused like a bad field. */
 function publicOnly<Result extends BrandKitRecordResult | BrandKitSummaryResult>(
   read: (row: unknown) => Result,
@@ -440,21 +456,26 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
     const signal = readSignal(requestOptions);
     const response = await send({ fetch, method: "GET", path, signal });
     const body = await readJsonAnswer(response, MAX_RECORD_BYTES, signal);
-    return readSingle(body, publicKits ? publicOnly(readCmsBrandKit) : readCmsBrandKit);
+    return readSingle(
+      body,
+      forDocument(documentId, publicKits ? publicOnly(readCmsBrandKit) : readCmsBrandKit),
+    );
   };
 
+  /** Creates a kit, or with `documentId` replaces that one. */
   const write = async (
-    method: "POST" | "PUT",
-    path: string,
+    documentId: string | undefined,
     kit: BrandKit,
     writeOptions: BrandKitWriteOptions | undefined,
   ): Promise<BrandKitRecordResult> => {
+    const path = documentId === undefined ? KITS_PATH : documentPath(documentId);
+    const method = documentId === undefined ? "POST" : "PUT";
     const signal = readSignal(writeOptions);
     const data = writableData(kit, writeOptions);
     const response = await send({ fetch: signedIn, method, path, data, signal });
     const result = readSingle(
       await readJsonAnswer(response, MAX_RECORD_BYTES, signal),
-      readCmsBrandKit,
+      documentId === undefined ? readCmsBrandKit : forDocument(documentId, readCmsBrandKit),
     );
     if (!result.ok) return result;
     const unapplied = unappliedFields(data, result.record);
@@ -470,11 +491,11 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
     get: (documentId: string, requestOptions?: BrandKitRequestOptions) =>
       getWith(signedIn, documentId, requestOptions, false),
     create: (kit: BrandKit, writeOptions?: BrandKitWriteOptions) =>
-      write("POST", KITS_PATH, kit, writeOptions),
+      write(undefined, kit, writeOptions),
     update: async (documentId: string, kit: BrandKit, writeOptions?: BrandKitWriteOptions) => {
-      const path = documentPath(documentId);
+      documentPath(documentId);
       if (isSummary(kit)) throw validation(["logo", "mark"]);
-      return write("PUT", path, kit, writeOptions);
+      return write(documentId, kit, writeOptions);
     },
     remove: async (documentId: string, requestOptions?: BrandKitRequestOptions) => {
       const path = documentPath(documentId);
