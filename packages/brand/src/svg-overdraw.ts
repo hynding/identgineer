@@ -289,7 +289,9 @@ class OverdrawWalk {
       // but along one horizontal or vertical line or round a rectangle, culled to the tile.
       if (pieces.dashed && !geometry.straightRun) {
         this.drawingCost +=
-          pieces.count * this.tileShare(box) * tiledDashWeight(paint.strokeLinecap);
+          pieces.count *
+          this.tileShare(box) *
+          tiledDashWeight(paint.strokeLinecap, width * stretch(matrix) > this.side / TILES);
         // Written so that a cost that is not a number is refused too.
         if (!(this.drawingCost <= this.limits.drawingCost)) throw drawingTooCostly(this.limits);
       }
@@ -475,10 +477,14 @@ class OverdrawWalk {
  */
 const TILES = 8;
 
-/** What a dash weighs for each tile its stroke is worked out again in, by its caps. */
-function tiledDashWeight(cap: string): number {
+/**
+ * What a dash weighs for each tile its stroke is worked out again in, by its caps: round ones more
+ * on a stroke `wide`r, as drawn, than a tile of `TILES` by `TILES`.
+ */
+function tiledDashWeight(cap: string, wide: boolean): number {
   const weights = SVG_DRAWING_WEIGHTS.tiledDash;
-  return cap === "round" ? weights.round : cap === "square" ? weights.square : weights.butt;
+  if (cap === "round") return wide ? weights.wideRound : weights.round;
+  return cap === "square" ? weights.square : weights.butt;
 }
 
 /** The outline a join adds at most: a miter's two sides, half a turn round, or a bevel's width. */

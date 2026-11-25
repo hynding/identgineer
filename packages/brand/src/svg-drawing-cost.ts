@@ -14,7 +14,9 @@ import { type SvgLengthUnit, writtenText } from "./svg-values.ts";
  * line and round a rectangle, whose dashes it culls to the tile: elsewhere each instance of a
  * stroked shape is charged `tiledDash` a dash, by its caps, again for the share of the tiles of an
  * image 2000 CSS pixels square at twice the density its box can touch (counted in the overdraw's
- * walk, which knows each instance's transform and paint).
+ * walk, which knows each instance's transform and paint); round caps on a stroke wider, as drawn,
+ * than an eighth of the view box's larger side (wider than about 512 device pixels in that image)
+ * cost Chromium about twice as much again, so are charged `wideRound`.
  */
 export const SVG_DRAWING_WEIGHTS = Object.freeze({
   line: 1,
@@ -26,7 +28,7 @@ export const SVG_DRAWING_WEIGHTS = Object.freeze({
   layer: 50,
   mask: 200,
   dash: 1,
-  tiledDash: Object.freeze({ butt: 4, square: 5, round: 8 }),
+  tiledDash: Object.freeze({ butt: 4, square: 5, round: 9, wideRound: 24 }),
 });
 
 /** The refusal of a logo over `limits.drawingCost`. */
