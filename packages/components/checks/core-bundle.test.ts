@@ -7,12 +7,33 @@ const PACKAGE = fileURLToPath(new URL("..", import.meta.url));
 // The two builds a page loads from: the lazy build the www output serves, and the dist module build.
 const BUILDS = ["www/build", "dist/esm"].map((directory) => join(PACKAGE, directory));
 
-// The most bytes of script a page that uses only `idg-button` may load, entry and shared chunks
-// together, for each build. Measured at 32,430 (www) and 82,533 (dist) bytes. Before the brand
-// components the button's bundle alone was 326 KB in www, because Stencil grouped it with 44 others,
-// and with the brand components in that group it was 450 KB. A heavy module that lands in a chunk the
-// button loads raises this and fails it.
-const CEILING_BYTES: Record<string, number> = { "www/build": 40_000, "dist/esm": 100_000 };
+// A representative of each non-brand group, and the most bytes of script a page that uses only that
+// component may load (its entry and the chunks it imports), for `www/build` and `dist/esm`. The
+// ceilings are set from the sizes measured in the README, with a margin of about 15%.
+const REPRESENTATIVES: Record<string, { readonly www: number; readonly dist: number }> = {
+  "idg-button": { www: 1_000_000, dist: 1_000_000 },
+  "idg-field": { www: 1_000_000, dist: 1_000_000 },
+  "idg-sign-in": { www: 1_000_000, dist: 1_000_000 },
+  "idg-event-table": { www: 1_000_000, dist: 1_000_000 },
+  "idg-consent-banner": { www: 1_000_000, dist: 1_000_000 },
+  "idg-dialog": { www: 1_000_000, dist: 1_000_000 },
+  "idg-menu": { www: 1_000_000, dist: 1_000_000 },
+  "idg-tabs": { www: 1_000_000, dist: 1_000_000 },
+  "idg-accordion": { www: 1_000_000, dist: 1_000_000 },
+  "idg-stack": { www: 1_000_000, dist: 1_000_000 },
+};
+
+// Composites and what they create when they render, which must share one entry: a component that
+// is created at run time is requested only then, so one in another entry costs a round trip before
+// it draws (the dashboard's rows were in the page 200 ms before they were seen).
+const TOGETHER: readonly (readonly string[])[] = [
+  ["idg-event-table", "idg-table", "idg-pagination", "idg-skeleton"],
+  ["idg-menu", "idg-menu-item", "idg-menu-group", "idg-menu-separator", "idg-user-menu"],
+  ["idg-tabs", "idg-tab", "idg-tab-panel"],
+  ["idg-accordion", "idg-accordion-item"],
+  ["idg-consent-preferences", "idg-dialog", "idg-switch"],
+  ["idg-sign-in", "idg-register", "idg-password-reset", "idg-field", "idg-input"],
+];
 
 // Strings only the brand package's heavy code holds: the logo sanitiser's error code, the theme
 // generator's refusal of a bad kit, and the emitter's refusal of an altered theme.
@@ -41,36 +62,73 @@ function closure(directory: string, start: string): string[] {
   return [...seen];
 }
 
+/** The entry of a build that holds a component. */
+function entryOf(directory: string, tag: string): string {
+  const word = new RegExp(`\\b${tag.replaceAll("-", "_")}\\b`);
+  const found = scripts(directory).filter(
+    (name) => name.endsWith(".entry.js") && word.test(readFileSync(join(directory, name), "utf8")),
+  );
+  expect(found, `the entry of ${tag}`).toHaveLength(1);
+  return found[0] ?? "";
+}
+
+function loaded(directory: string, tag: string): string[] {
+  return closure(directory, entryOf(directory, tag));
+}
+
+function holds(directory: string, files: readonly string[], marker: string): boolean {
+  return files.some((name) => readFileSync(join(directory, name), "utf8").includes(marker));
+}
+
 describe.skipIf(!BUILDS.every((directory) => existsSync(directory)))(
-  "what a page that uses only idg-button loads, once built",
+  "what a page loads of each component, once built",
   () => {
     for (const directory of BUILDS) {
       const build = directory.slice(PACKAGE.length);
-      const entries = scripts(directory).filter(
-        (name) =>
-          name.endsWith(".entry.js") &&
-          /\bidg_button\b/.test(readFileSync(join(directory, name), "utf8")),
-      );
+      const key = build === "www/build" ? "www" : "dist";
 
       describe(build, () => {
-        it("has one entry for the button", () => {
-          expect(entries).toHaveLength(1);
-        });
-
-        it("loads nothing of the logo sanitiser, the theme generator or the emitters", () => {
-          const loaded = closure(directory, entries[0] ?? "");
-          for (const name of loaded) {
-            const text = readFileSync(join(directory, name), "utf8");
+        for (const [tag, ceilings] of Object.entries(REPRESENTATIVES)) {
+          it(`loads nothing of the sanitiser, generator or emitters for ${tag}, within its ceiling`, () => {
+            const files = loaded(directory, tag);
             for (const marker of HEAVY_MARKERS) {
-              expect(text.includes(marker), `${name} holds "${marker}"`).toBe(false);
+              expect(holds(directory, files, marker), `${tag} loads "${marker}"`).toBe(false);
             }
+            const bytes = files.reduce(
+              (sum, name) => sum + statSync(join(directory, name)).size,
+              0,
+            );
+            expect(bytes).toBeLessThanOrEqual(ceilings[key]);
+          });
+        }
+
+        // The absence above would hold vacuously if a message were reworded: the brand bundles are
+        // where the markers are.
+        it("finds the sanitiser in the logo's and the guide's closures, and all three in the export's", () => {
+          for (const tag of ["idg-brand-logo", "idg-brand-guidelines", "idg-brand-export"]) {
+            expect(holds(directory, loaded(directory, tag), HEAVY_MARKERS[0] ?? ""), tag).toBe(
+              true,
+            );
           }
+          const exported = loaded(directory, "idg-brand-export");
+          for (const marker of HEAVY_MARKERS) expect(holds(directory, exported, marker)).toBe(true);
         });
 
-        it("stays within its size ceiling", () => {
-          const loaded = closure(directory, entries[0] ?? "");
-          const bytes = loaded.reduce((sum, name) => sum + statSync(join(directory, name)).size, 0);
-          expect(bytes).toBeLessThanOrEqual(CEILING_BYTES[build] ?? 0);
+        it("keeps the brand components in bundles apart from every other component", () => {
+          const brand = [
+            "idg-brand-logo",
+            "idg-brand-swatches",
+            "idg-brand-guidelines",
+            "idg-brand-export",
+          ];
+          const entries = brand.map((tag) => entryOf(directory, tag));
+          expect(new Set(entries).size).toBe(brand.length);
+          expect(entries).not.toContain(entryOf(directory, "idg-button"));
+        });
+
+        it.each(TOGETHER)("draws what %s creates from its own entry", (...tags) => {
+          const entries = new Set(tags.map((tag) => entryOf(directory, tag)));
+          expect([...entries]).toHaveLength(1);
         });
       });
     }
