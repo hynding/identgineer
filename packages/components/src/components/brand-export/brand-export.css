@@ -1,0 +1,121 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.export {
+  --_gap: calc(var(--idg-layout-gap) * var(--idg-density-gap-scale));
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--_gap);
+  min-inline-size: 0;
+}
+
+/* An artefact is a surface of the page's own design: its fill, border, corners and elevation are
+   the design's, so a brutalist page draws it hard-edged and a glass one translucent. */
+.artefact {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--idg-space-xs);
+  min-inline-size: 0;
+  padding: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+  border-width: var(--idg-surface-border-width);
+  border-style: var(--idg-surface-border-style);
+  border-color: var(--idg-surface-border-color);
+  border-radius: var(--idg-shape-radius-lg);
+  background: var(--idg-surface-background);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: var(--idg-elevation-sm);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--idg-font-family-display);
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+  text-decoration: var(--idg-ornament-heading-decoration);
+  text-decoration-thickness: 2px;
+  text-transform: var(--idg-ornament-heading-transform);
+  text-underline-offset: 0.2em;
+  overflow-wrap: anywhere;
+}
+
+.hint,
+.problem,
+.empty {
+  margin: 0;
+  line-height: var(--idg-font-body-line-height);
+  overflow-wrap: anywhere;
+}
+
+.hint,
+.empty {
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+}
+
+/* The text is the whole of the file, which is long and has long lines. The region scrolls both
+   ways and takes focus, so a keyboard can reach all of it; a line is never wrapped, because a
+   stylesheet or a token file is read as written. */
+.code {
+  box-sizing: border-box;
+  max-block-size: 20rem;
+  min-inline-size: 0;
+  overflow: auto;
+  padding: var(--idg-space-xs);
+  border: 2px solid var(--idg-color-border-strong);
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--idg-color-bg-subtle);
+  color: var(--idg-color-text);
+}
+
+.code:focus-visible {
+  outline-width: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis));
+  outline-style: var(--idg-focus-ring-style);
+  outline-color: var(--idg-color-focus-ring);
+  outline-offset: var(--idg-focus-ring-offset);
+}
+
+pre {
+  margin: 0;
+  font-family: var(--idg-font-family-mono);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+  tab-size: 2;
+}
+
+code {
+  font-family: inherit;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--idg-space-xs);
+}
+
+.status {
+  margin: 0;
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  overflow-wrap: anywhere;
+}
+
+@media (forced-colors: active) {
+  .code {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}

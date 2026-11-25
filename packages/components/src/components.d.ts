@@ -304,7 +304,15 @@ export namespace Components {
         "variant": BadgeVariant;
     }
     /**
-     * Lets a person take a brand theme away.
+     * Lets a person take a brand theme away: the stylesheet and the token source `@identgineer/brand`
+     * emits, and the lines that put the theme on a page. Each is shown in full as text in a focusable,
+     * scrollable region, and can be copied to the clipboard or downloaded as a file.
+     * Copying uses the asynchronous clipboard API inside the click that asked for it; where the page
+     * may not use it, or the browser refuses, the text is selected instead and the message says so.
+     * Downloading hands the browser a blob with an explicit type and a file name made of lower case
+     * letters, digits and hyphens from the brand's name, and revokes the object url afterwards. Neither
+     * needs more of a Content-Security-Policy than a page with none of this already has. Whatever the
+     * texts hold is drawn as text, never as markup.
      */
     interface IdgBrandExport {
         /**
@@ -329,7 +337,7 @@ export namespace Components {
          */
         "name"?: string;
         /**
-          * A theme from `generateBrandTheme`: the stylesheet and tokens are emitted from it.
+          * A theme from `generateBrandTheme`. What `css` and `tokens` do not give is emitted from it here, by the brand package's own emitters, and its id and its kit's name are used for the snippet and the file names. Set it as a property.
          */
         "theme"?: BrandExportTheme;
         /**
@@ -2471,7 +2479,15 @@ declare global {
         "idgDownload": BrandExportDetail;
     }
     /**
-     * Lets a person take a brand theme away.
+     * Lets a person take a brand theme away: the stylesheet and the token source `@identgineer/brand`
+     * emits, and the lines that put the theme on a page. Each is shown in full as text in a focusable,
+     * scrollable region, and can be copied to the clipboard or downloaded as a file.
+     * Copying uses the asynchronous clipboard API inside the click that asked for it; where the page
+     * may not use it, or the browser refuses, the text is selected instead and the message says so.
+     * Downloading hands the browser a blob with an explicit type and a file name made of lower case
+     * letters, digits and hyphens from the brand's name, and revokes the object url afterwards. Neither
+     * needs more of a Content-Security-Policy than a page with none of this already has. Whatever the
+     * texts hold is drawn as text, never as markup.
      */
     interface HTMLIdgBrandExportElement extends Components.IdgBrandExport, HTMLStencilElement {
         addEventListener<K extends keyof HTMLIdgBrandExportElementEventMap>(type: K, listener: (this: HTMLIdgBrandExportElement, ev: IdgBrandExportCustomEvent<HTMLIdgBrandExportElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
@@ -3702,7 +3718,15 @@ declare namespace LocalJSX {
         "variant"?: BadgeVariant;
     }
     /**
-     * Lets a person take a brand theme away.
+     * Lets a person take a brand theme away: the stylesheet and the token source `@identgineer/brand`
+     * emits, and the lines that put the theme on a page. Each is shown in full as text in a focusable,
+     * scrollable region, and can be copied to the clipboard or downloaded as a file.
+     * Copying uses the asynchronous clipboard API inside the click that asked for it; where the page
+     * may not use it, or the browser refuses, the text is selected instead and the message says so.
+     * Downloading hands the browser a blob with an explicit type and a file name made of lower case
+     * letters, digits and hyphens from the brand's name, and revokes the object url afterwards. Neither
+     * needs more of a Content-Security-Policy than a page with none of this already has. Whatever the
+     * texts hold is drawn as text, never as markup.
      */
     interface IdgBrandExport {
         /**
@@ -3727,15 +3751,15 @@ declare namespace LocalJSX {
          */
         "name"?: string;
         /**
-          * Fires after an artefact was put on the clipboard.
+          * Fires after an artefact was put on the clipboard. Not fired when it was only selected.
          */
         "onIdgCopy"?: (event: IdgBrandExportCustomEvent<BrandExportDetail>) => void;
         /**
-          * Fires after a download of an artefact was started.
+          * Fires after the browser was handed an artefact to download.
          */
         "onIdgDownload"?: (event: IdgBrandExportCustomEvent<BrandExportDetail>) => void;
         /**
-          * A theme from `generateBrandTheme`: the stylesheet and tokens are emitted from it.
+          * A theme from `generateBrandTheme`. What `css` and `tokens` do not give is emitted from it here, by the brand package's own emitters, and its id and its kit's name are used for the snippet and the file names. Set it as a property.
          */
         "theme"?: BrandExportTheme;
         /**
@@ -6268,7 +6292,15 @@ declare module "@stencil/core" {
              */
             "idg-badge": LocalJSX.IntrinsicElements["idg-badge"] & JSXBase.HTMLAttributes<HTMLIdgBadgeElement>;
             /**
-             * Lets a person take a brand theme away.
+             * Lets a person take a brand theme away: the stylesheet and the token source `@identgineer/brand`
+             * emits, and the lines that put the theme on a page. Each is shown in full as text in a focusable,
+             * scrollable region, and can be copied to the clipboard or downloaded as a file.
+             * Copying uses the asynchronous clipboard API inside the click that asked for it; where the page
+             * may not use it, or the browser refuses, the text is selected instead and the message says so.
+             * Downloading hands the browser a blob with an explicit type and a file name made of lower case
+             * letters, digits and hyphens from the brand's name, and revokes the object url afterwards. Neither
+             * needs more of a Content-Security-Policy than a page with none of this already has. Whatever the
+             * texts hold is drawn as text, never as markup.
              */
             "idg-brand-export": LocalJSX.IntrinsicElements["idg-brand-export"] & JSXBase.HTMLAttributes<HTMLIdgBrandExportElement>;
             /**
