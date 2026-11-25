@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { DESIGNS, LAYOUTS, SCHEMES, THEMES, UX_MODES, applyAxes } from "./axes";
 import { expectNoAxeViolations } from "./accessibility";
 import { HARBOUR_THEME, openBrand } from "./brand-page";
+import { measureChipEdges } from "./chip-edge";
 import { contrastRatio } from "./contrast";
 import { expect, test } from "./fixtures";
 import { BROWSER_PORT } from "./port";
@@ -175,30 +176,31 @@ function hexToRgb(hex: string): string {
 }
 
 test.describe("idg-brand-swatches chips stay visible", () => {
-  for (const theme of THEMES) {
-    for (const scheme of SCHEMES) {
-      test(`the chip's edge is at least 3:1 on the page in ${theme} ${scheme}`, async ({
-        page,
-      }) => {
-        await openBrand(page);
-        await applyAxes(page, { theme, scheme });
-        const measured = await page.locator("#swatches-pale").evaluate((host) => {
-          const chips = [...(host.shadowRoot?.querySelectorAll(".chip") ?? [])];
-          const first = chips[0];
-          if (!first) throw new Error("no chip");
-          return {
-            count: chips.length,
-            edges: [...new Set(chips.map((chip) => getComputedStyle(chip).borderTopColor))],
-            widths: [...new Set(chips.map((chip) => getComputedStyle(chip).borderTopWidth))],
-            page: getComputedStyle(document.documentElement).backgroundColor,
-          };
-        });
-        expect(measured.count).toBe(68);
-        expect(measured.edges).toHaveLength(1);
-        expect(measured.widths).toEqual(["2px"]);
-        expect(contrastRatio(measured.edges[0] ?? "", measured.page)).toBeGreaterThanOrEqual(3);
-      });
-    }
+  // The chip sits on the scheme's surface, which is the design's own fill: the surface colour, the
+  // page colour, nothing, or (glass) a 42% tint of the surface over the page. The edge is judged
+  // against what is really behind it, composited.
+  const AXES = [
+    ...THEMES.flatMap((theme) => SCHEMES.map((scheme) => ({ theme, scheme, design: "flat" }))),
+    ...DESIGNS.filter((design) => design !== "flat").flatMap((design) =>
+      SCHEMES.map((scheme) => ({ theme: "aurora", scheme, design })),
+    ),
+  ];
+  for (const axes of AXES) {
+    test(`the chip's edge is at least 3:1 on its surface in ${axes.theme} ${axes.design} ${axes.scheme}`, async ({
+      page,
+    }) => {
+      await openBrand(page);
+      await applyAxes(page, axes);
+      const edges = await measureChipEdges(page.locator("#swatches-pale"));
+      expect(edges).toHaveLength(68);
+      for (const edge of edges) {
+        expect(edge.width).toBe("2px");
+        expect(
+          edge.ratio,
+          `${edge.scheme} ${edge.role}: ${edge.edge} on ${edge.behind}`,
+        ).toBeGreaterThanOrEqual(3);
+      }
+    });
   }
 
   test("a chip as light as the page is told from it by its edge in the light scheme", async ({
