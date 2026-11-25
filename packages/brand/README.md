@@ -276,7 +276,7 @@ A browser bundle that only draws logos imports `@identgineer/brand/logo`, which 
 the data URL and the size the logo draws at, the root's `width` and `height` in pixels (not the view
 box). It is what `idg-brand-logo` uses, so a logo change costs one check.
 
-Two more entries are made for a browser bundle. `@identgineer/brand/presets` has the tables the
+Three more entries are made for a browser bundle. `@identgineer/brand/presets` has the tables the
 guide shows (`CORNERS`, `TONES`, `CORNER_RADII`, `RADIUS_NAMES`, `FONT_PAIRINGS`, `TYPOGRAPHY_IDS`).
 `@identgineer/brand/emit` has `emitBrandThemeCss` and `emitBrandThemeTokens`: the generator, the
 sanitiser and the tokens emitter read no disk, the token sources being JSON the bundler includes, so
