@@ -1684,7 +1684,12 @@ editor.addEventListener("idgSave", (event) => {
 - **It saves only through `store`.** The element never creates a store, never fetches and keeps
   nothing in browser storage; the draft lives in the element. A save calls `create`, or `update`
   with the document id it was given or the one its first save returned. The button shows `loading`
-  only while the store has not answered, and a second submit then does nothing. A store that throws
+  only while the store has not answered, and a second submit then does nothing. A save while a
+  logo or mark is being read waits for the read, busy meanwhile, and sends the file just chosen;
+  if that file is refused, nothing is saved and its field says why. The confirmation goes as soon
+  as the form changes, and a change made while the store answered is not in what was stored, so
+  the confirmation then says so (`savedBefore`) and keeps the removals of an image that was not
+  sent. A store that throws
   or rejects gives an alert, never an exception, and an answer that is not a stored record says the
   kit was sent but the answer could not be read. A refusal that the store reports as an error with
   a `BrandKitStoreError` code is one fixed message per code (`saveUnauthorized` to

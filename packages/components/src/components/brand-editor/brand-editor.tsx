@@ -55,9 +55,40 @@ interface Summary {
 }
 
 interface Removals {
+  /** The sanitised text these removals were made from, to tell whether a save sent it. */
+  readonly svg: string;
   readonly removed: readonly SvgLogoRemoval[];
   readonly count: number;
   readonly key: number;
+}
+
+/** The removals of each image except the one a save sent: those were stored as they are listed. */
+function removalsNotSent(
+  removals: Partial<Record<ImageField, Removals>>,
+  sent: { readonly logo?: string; readonly mark?: string },
+): Partial<Record<ImageField, Removals>> {
+  const kept: Partial<Record<ImageField, Removals>> = {};
+  for (const field of IMAGE_FIELDS) {
+    const listed = removals[field];
+    if (listed !== undefined && listed.svg !== sent[field]) kept[field] = listed;
+  }
+  return kept;
+}
+
+/** How a read of an upload that a save waited for ended. */
+type ReadEnd = "applied" | "refused" | "removed" | "replaced" | "dropped";
+
+interface Read {
+  readonly ended: Promise<ReadEnd>;
+  readonly end: (how: ReadEnd) => void;
+}
+
+function startRead(): Read {
+  let end: (how: ReadEnd) => void = () => undefined;
+  const ended = new Promise<ReadEnd>((resolve) => {
+    end = resolve;
+  });
+  return { ended, end };
 }
 
 /** What the preview shows: the kit with the draft's logo and mark, and its theme. */
@@ -183,7 +214,8 @@ export class IdgBrandEditor {
   @State() private shown?: Shown;
   @State() private errors: Messages = {};
   @State() private summary?: Summary;
-  @State() private savedKey = 0;
+  /** The confirmation of the last save, until the draft changes. */
+  @State() private saved?: { readonly key: number; readonly text: string };
   @State() private pending = false;
   @State() private reading: Readonly<Record<ImageField, boolean>> = { logo: false, mark: false };
   @State() private removals: Partial<Record<ImageField, Removals>> = {};
@@ -206,6 +238,8 @@ export class IdgBrandEditor {
   private readonly controls: Partial<Record<DraftField, Focusable>> = {};
   private readonly files: Partial<Record<ImageField, HTMLInputElement>> = {};
   private readonly refusalKeys: Partial<Record<ImageField, number>> = {};
+  /** The reads of uploads under way, which a save waits for. */
+  private readonly reads = new Map<ImageField, Read>();
   /** The colour each picker last showed, which it keeps while its hex field holds no colour. */
   private picked: Partial<Record<ColourField, string>> = {};
   private readonly refresh = new Debounce(
@@ -226,6 +260,7 @@ export class IdgBrandEditor {
     this.attempts.cancel();
     this.uploads.cancelAll();
     this.refresh.cancel();
+    this.endReads("dropped");
     const { draft, refusedLogos } = draftFromKit(this.kit);
     this.draft = draft;
     this.picked = {};
@@ -234,7 +269,7 @@ export class IdgBrandEditor {
     this.createdUnreported = undefined;
     this.errors = {};
     this.summary = undefined;
-    this.savedKey = 0;
+    this.saved = undefined;
     this.pending = false;
     this.reading = { logo: false, mark: false };
     this.removals = {};
@@ -255,6 +290,7 @@ export class IdgBrandEditor {
   // with is the one the next save must update. Only reads of uploads are dropped.
   disconnectedCallback(): void {
     this.uploads.cancelAll();
+    this.endReads("dropped");
     this.refresh.cancel();
     this.reading = { logo: false, mark: false };
   }
@@ -321,9 +357,26 @@ export class IdgBrandEditor {
     this.errors = without(this.errors, field);
   }
 
+  private endReads(how: ReadEnd): void {
+    for (const read of this.reads.values()) read.end(how);
+    this.reads.clear();
+  }
+
+  private endRead(field: ImageField, read: Read | undefined, how: ReadEnd): void {
+    if (read === undefined || this.reads.get(field) !== read) return;
+    this.reads.delete(field);
+    read.end(how);
+  }
+
+  /** Every change to the draft goes through here: what was said about the last save is then past. */
+  private change(draft: BrandDraft): void {
+    this.draft = draft;
+    this.saved = undefined;
+  }
+
   private edit(field: Exclude<DraftField, ImageField>, value: string): void {
     if (this.draft[field] === value) return;
-    this.draft = { ...this.draft, [field]: value };
+    this.change({ ...this.draft, [field]: value });
     this.clearError(field);
     this.refresh.schedule();
   }
@@ -332,8 +385,12 @@ export class IdgBrandEditor {
     const file: UploadFile | undefined = input.files?.[0];
     if (file === undefined) return;
     this.reading = { ...this.reading, [field]: true };
+    const read = startRead();
+    this.reads.get(field)?.end("replaced");
+    this.reads.set(field, read);
     const outcome = await this.uploads.upload(field, file);
-    // A later upload, a removal or the element leaving the page has overtaken this one.
+    // A later upload, a removal or the element leaving the page has overtaken this one, and ended
+    // its read for any save waiting on it.
     if (outcome === undefined) return;
     this.reading = { ...this.reading, [field]: false };
     const labels = this.text();
@@ -341,9 +398,10 @@ export class IdgBrandEditor {
       // The logo the kit had stays; the input is emptied so the same file can be chosen again.
       input.value = "";
       this.refuseUpload(field, outcome.code, labels);
+      this.endRead(field, read, "refused");
       return;
     }
-    this.draft = { ...this.draft, [field]: outcome.svg };
+    this.change({ ...this.draft, [field]: outcome.svg });
     this.clearError(field);
     const others = without(this.removals, field);
     this.removals =
@@ -352,6 +410,7 @@ export class IdgBrandEditor {
         : {
             ...others,
             [field]: {
+              svg: outcome.svg,
               removed: outcome.removed,
               count: outcome.removedCount,
               key: (this.keys += 1),
@@ -360,6 +419,7 @@ export class IdgBrandEditor {
     if (outcome.removedCount === 0) this.say(labels.imageAccepted);
     this.refusedFromKit = this.refusedFromKit.filter((refused) => refused !== field);
     this.showImages();
+    this.endRead(field, read, "applied");
   }
 
   private refuseUpload(field: ImageField, code: UploadRefusalCode, labels: BrandEditorLabels) {
@@ -371,7 +431,8 @@ export class IdgBrandEditor {
 
   private removeImage(field: ImageField): void {
     this.uploads.cancel(field);
-    this.draft = without(this.draft, field) as BrandDraft;
+    this.endRead(field, this.reads.get(field), "removed");
+    this.change(without(this.draft, field) as BrandDraft);
     this.removals = without(this.removals, field);
     this.reading = { ...this.reading, [field]: false };
     this.clearError(field);
@@ -390,9 +451,36 @@ export class IdgBrandEditor {
     void this.saveKit();
   };
 
+  /**
+   * Waits, busy, for the reads of uploads under way, so a save sends the file just chosen and not
+   * the one before it. Whether the save may go on: not when the kit was replaced or the element
+   * left the page meanwhile, nor when a file it waited for was refused, which is then the first
+   * field to change.
+   */
+  private async waitForReads(labels: BrandEditorLabels): Promise<boolean> {
+    const attempt = this.attempts.start();
+    this.pending = true;
+    this.summary = undefined;
+    this.saved = undefined;
+    const ends: ReadEnd[] = [];
+    while (this.reads.size > 0) {
+      ends.push(...(await Promise.all([...this.reads.values()].map((read) => read.ended))));
+    }
+    if (!this.attempts.isCurrent(attempt)) return false;
+    this.pending = false;
+    if (ends.includes("dropped")) return false;
+    if (ends.includes("refused")) {
+      this.summary = { text: labels.errorFields, key: (this.keys += 1) };
+      this.focusInvalid = true;
+      return false;
+    }
+    return true;
+  }
+
   private async saveKit(): Promise<void> {
     if (this.pending) return;
     const labels = this.text();
+    if (this.reads.size > 0 && !(await this.waitForReads(labels))) return;
     this.refresh.flush();
     const result = validateDraft(this.draft);
     if (!result.ok) {
@@ -413,9 +501,10 @@ export class IdgBrandEditor {
     }
     const attempt = this.attempts.start();
     const documentId = this.storedId;
+    const sent = this.draft;
     this.pending = true;
     this.summary = undefined;
-    this.savedKey = 0;
+    this.saved = undefined;
     this.errors = {};
     try {
       const answer =
@@ -439,8 +528,12 @@ export class IdgBrandEditor {
         return;
       }
       this.createdUnreported = undefined;
-      this.removals = {};
-      this.savedKey = this.keys += 1;
+      this.removals = removalsNotSent(this.removals, result.kit);
+      // A change made while the store answered is not in what it stored, and the page says so.
+      this.saved = {
+        key: (this.keys += 1),
+        text: this.draft === sent ? labels.saved : labels.savedBefore,
+      };
       this.idgSave.emit({ documentId: saved.documentId, id: saved.id, created });
     } catch (error) {
       if (!this.attempts.isCurrent(attempt)) return;
@@ -748,11 +841,11 @@ export class IdgBrandEditor {
             <legend class="legend">{labels.imagesLegend}</legend>
             {IMAGE_FIELDS.map((field) => this.renderImage(field, labels, size))}
           </fieldset>
-          {this.savedKey > 0 ? (
-            <idg-alert key={this.savedKey} part="saved" variant="success">
-              {labels.saved}
+          {this.saved === undefined ? null : (
+            <idg-alert key={this.saved.key} part="saved" variant="success">
+              {this.saved.text}
             </idg-alert>
-          ) : null}
+          )}
           <idg-button class="submit" part="submit" type="submit" loading={this.pending}>
             {labels.save}
           </idg-button>

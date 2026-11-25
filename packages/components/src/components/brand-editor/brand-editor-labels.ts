@@ -87,6 +87,8 @@ export interface BrandEditorLabels
   readonly imageAccepted: string;
   readonly save: string;
   readonly saved: string;
+  /** After a save, when the form was changed while the store answered. */
+  readonly savedBefore: string;
   /** The summary of a form with fields to correct. */
   readonly errorFields: string;
   /** On a field the server refused (`validation`). */
@@ -142,6 +144,7 @@ export const BRAND_EDITOR_LABELS: BrandEditorLabels = {
   imageAccepted: "The file was accepted as it is.",
   save: "Save brand kit",
   saved: "Brand kit saved.",
+  savedBefore: "Brand kit saved as it was when you saved it. Your later changes are not saved yet.",
   errorFields: "Some fields need a change. Each says what is wrong.",
   fieldRefused: "The server refused this value.",
   fieldNotSaved: "The server did not save this value as it was sent.",
