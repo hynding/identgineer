@@ -150,6 +150,32 @@ describe("readCmsBrandKit", () => {
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
   });
 
+  it("stops listing a record's errors at 50, with one more saying so, however many keys it has", () => {
+    const keys = Object.fromEntries(
+      Array.from({ length: 7000 }, (_, index) => [`k${String(index)}`, 0]),
+    );
+    const { errors } = failure(minimalRow({ ...keys, primaryColor: "red" }));
+    expect(errors).toHaveLength(51);
+    expect(errors[49]).toMatchObject({ path: "k49", code: "unknown-key" });
+    expect(errors[50]).toEqual({
+      path: "",
+      code: "too-many-errors",
+      message: "too many errors to list",
+    });
+  });
+
+  it("caps the errors of the record and of its fields together", () => {
+    const keys = Object.fromEntries(
+      Array.from({ length: 49 }, (_, index) => [`k${String(index)}`, 0]),
+    );
+    const { errors } = failure(minimalRow({ ...keys, primaryColor: "red", tone: 3 }));
+    expect(errors.map((error) => error.code).slice(48)).toEqual([
+      "unknown-key",
+      "invalid-color",
+      "too-many-errors",
+    ]);
+  });
+
   it("does not show a key that could carry markup", () => {
     expect(failure(minimalRow({ "<img src=x>": 1 })).errors[0]).toMatchObject({
       path: "(a key that cannot be shown)",
