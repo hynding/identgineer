@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { generateBrandTheme, parseBrandKit, type BrandTheme } from "@identgineer/brand";
-import { contrastRatio } from "@identgineer/tokens";
+import { contrastRatio } from "@identgineer/tokens/contrast";
 import { CONTRAST_PAIRS } from "@identgineer/tokens/theme-pipeline";
 import { describe, expect, it } from "vitest";
 import {
@@ -19,8 +19,8 @@ function themeOf(file: string): BrandTheme {
   return generateBrandTheme(result.kit);
 }
 
-const THEMES = ["acme.kit.json", "harbour-lights.kit.json"].map(themeOf);
-const ACME = THEMES[0] as BrandTheme;
+const THEMES = [themeOf("acme.kit.json"), themeOf("harbour-lights.kit.json")];
+const ACME = themeOf("acme.kit.json");
 
 function documentValue(theme: BrandTheme, scheme: "light" | "dark", role: string): unknown {
   const token = theme.document[scheme].color[role];
@@ -197,9 +197,9 @@ describe("buildSwatchGroups", () => {
     const swatch = buildSwatchGroups(colours)
       .flatMap((group) => group.swatches)
       .find((candidate) => candidate.role === "text");
-    expect(swatch?.pairs).toEqual([
-      { background: "bg", minimum: 4.5, ratio: expect.any(Number), passes: false },
-    ]);
+    expect(swatch?.pairs).toHaveLength(1);
+    expect(swatch?.pairs[0]).toMatchObject({ background: "bg", minimum: 4.5, passes: false });
+    expect(swatch?.pairs[0]?.ratio).toBeLessThan(4.5);
   });
 
   it("leaves out a pair whose other colour is missing, and a role with no colour", () => {

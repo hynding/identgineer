@@ -1,0 +1,154 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+/* The schemes sit side by side when the container is wide enough for two, and one above the other
+   when it is not. The gap follows the layout and the density, like every grid of the library. */
+.swatches {
+  --_gap: calc(var(--idg-layout-gap) * var(--idg-density-gap-scale));
+
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--idg-size-s)), 1fr));
+  gap: var(--_gap);
+  min-inline-size: 0;
+}
+
+/* A scheme is a surface of the page's own design: its fill, border, corners and elevation are the
+   design's, so a brutalist page draws it hard-edged and a glass one translucent. */
+.scheme {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--_gap);
+  min-inline-size: 0;
+  padding: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+  border-width: var(--idg-surface-border-width);
+  border-style: var(--idg-surface-border-style);
+  border-color: var(--idg-surface-border-color);
+  border-radius: var(--idg-shape-radius-lg);
+  background: var(--idg-surface-background);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: var(--idg-elevation-sm);
+}
+
+.scheme-title {
+  font-family: var(--idg-font-family-display);
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+  text-decoration: var(--idg-ornament-heading-decoration);
+  text-decoration-thickness: 2px;
+  text-transform: var(--idg-ornament-heading-transform);
+  text-underline-offset: 0.2em;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--idg-space-xs);
+  min-inline-size: 0;
+}
+
+.group-title {
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-semibold);
+  line-height: var(--idg-font-body-line-height);
+  text-transform: var(--idg-ornament-control-transform);
+}
+
+/* One column of swatches in a narrow scheme; more where the layout's own card width allows. */
+.list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--idg-layout-grid-min)), 1fr));
+  gap: var(--idg-space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.swatch {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--idg-space-xs);
+  min-inline-size: 0;
+}
+
+/* The chip's edge is the strong border, which the page keeps at 3:1 against its backgrounds, so a
+   colour as light as the page or as dark as the dark scheme's is still seen as a shape. */
+.chip {
+  flex: none;
+  box-sizing: border-box;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border: 2px solid var(--idg-color-border-strong);
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--_chip);
+  box-shadow: var(--idg-elevation-sm);
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--idg-space-3xs);
+  min-inline-size: 0;
+  line-height: var(--idg-font-body-line-height);
+}
+
+.role {
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.value {
+  color: var(--idg-color-text-muted);
+  font-family: var(--idg-font-family-mono);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  overflow-wrap: anywhere;
+}
+
+.pairs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--idg-space-3xs);
+  margin: 0;
+  padding: 0;
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  list-style: none;
+}
+
+.pair {
+  overflow-wrap: anywhere;
+}
+
+/* A pair below its level is said in words and set in the danger colour as well, which is held to 3:1
+   on every page background and is only a second cue. */
+.failing .verdict {
+  color: var(--idg-color-text);
+  font-weight: var(--idg-font-weight-semibold);
+  text-decoration: underline;
+  text-decoration-style: wavy;
+}
+
+.empty {
+  margin: 0;
+  color: var(--idg-color-text-muted);
+}
+
+@media (forced-colors: active) {
+  .chip {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    box-shadow: none;
+  }
+}

@@ -10,6 +10,8 @@ import { AlertVariant } from "./components/alert/alert-options";
 import { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 import { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
 import { BrandLogoSize, BrandLogoVariant } from "./components/brand-logo/brand-logo-options";
+import { BrandSwatchesTheme } from "./components/brand-swatches/brand-swatches-types";
+import { BrandSwatchesLabels } from "./components/brand-swatches/brand-swatches-labels";
 import { BreadcrumbSeparator } from "./components/breadcrumb/breadcrumb-options";
 import { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 import { CardPadding, CardVariant } from "./components/card/card-options";
@@ -66,6 +68,8 @@ export { AlertVariant } from "./components/alert/alert-options";
 export { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 export { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
 export { BrandLogoSize, BrandLogoVariant } from "./components/brand-logo/brand-logo-options";
+export { BrandSwatchesTheme } from "./components/brand-swatches/brand-swatches-types";
+export { BrandSwatchesLabels } from "./components/brand-swatches/brand-swatches-labels";
 export { BreadcrumbSeparator } from "./components/breadcrumb/breadcrumb-options";
 export { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 export { CardPadding, CardVariant } from "./components/card/card-options";
@@ -299,8 +303,8 @@ export namespace Components {
      * reference, an editor's file, is not drawn at all: the component shows the name as a wordmark, or
      * for the mark its first letters as a monogram, and with no name shows nothing.
      * The page's Content-Security-Policy must allow `img-src data:` for the logo to load (the strict
-     * policy the components are tested under, `default-src 'self'`, does not); without it the browser
-     * refuses the image and reports a violation, and the name is not shown in its place.
+     * policy the components are tested under, `default-src 'self'`, does not). Where the browser
+     * refuses the image, or it cannot be decoded, the name is shown instead.
      */
     interface IdgBrandLogo {
         /**
@@ -326,6 +330,29 @@ export namespace Components {
           * @default "logo"
          */
         "variant": BrandLogoVariant;
+    }
+    /**
+     * The colours of a generated brand theme, light and dark: for each role a chip, the role's name
+     * and its value as text, and for a foreground colour its contrast on the backgrounds it is used
+     * on, with whether that meets its WCAG level. Every colour is also written out, so colour is
+     * never the only carrier, and each chip has an edge, so a colour close to the page is still seen.
+     * It takes the data `generateBrandTheme` returns and works out nothing of its own but the contrast
+     * ratios. A colour that is not in the package's format (`#rrggbb`, lower case) is left out, and
+     * only validated values reach the page, as a custom property set through the style API.
+     */
+    interface IdgBrandSwatches {
+        /**
+          * The accessible name of the whole. Defaults to the `name` label.
+         */
+        "label"?: string;
+        /**
+          * The words shown, merged over the English defaults.
+         */
+        "labels"?: Partial<BrandSwatchesLabels>;
+        /**
+          * The theme `generateBrandTheme` returned, or its `document`. Set it as a property: it is data, not an attribute.
+         */
+        "theme"?: BrandSwatchesTheme;
     }
     /**
      * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
@@ -2359,14 +2386,29 @@ declare global {
      * reference, an editor's file, is not drawn at all: the component shows the name as a wordmark, or
      * for the mark its first letters as a monogram, and with no name shows nothing.
      * The page's Content-Security-Policy must allow `img-src data:` for the logo to load (the strict
-     * policy the components are tested under, `default-src 'self'`, does not); without it the browser
-     * refuses the image and reports a violation, and the name is not shown in its place.
+     * policy the components are tested under, `default-src 'self'`, does not). Where the browser
+     * refuses the image, or it cannot be decoded, the name is shown instead.
      */
     interface HTMLIdgBrandLogoElement extends Components.IdgBrandLogo, HTMLStencilElement {
     }
     var HTMLIdgBrandLogoElement: {
         prototype: HTMLIdgBrandLogoElement;
         new (): HTMLIdgBrandLogoElement;
+    };
+    /**
+     * The colours of a generated brand theme, light and dark: for each role a chip, the role's name
+     * and its value as text, and for a foreground colour its contrast on the backgrounds it is used
+     * on, with whether that meets its WCAG level. Every colour is also written out, so colour is
+     * never the only carrier, and each chip has an edge, so a colour close to the page is still seen.
+     * It takes the data `generateBrandTheme` returns and works out nothing of its own but the contrast
+     * ratios. A colour that is not in the package's format (`#rrggbb`, lower case) is left out, and
+     * only validated values reach the page, as a custom property set through the style API.
+     */
+    interface HTMLIdgBrandSwatchesElement extends Components.IdgBrandSwatches, HTMLStencilElement {
+    }
+    var HTMLIdgBrandSwatchesElement: {
+        prototype: HTMLIdgBrandSwatchesElement;
+        new (): HTMLIdgBrandSwatchesElement;
     };
     /**
      * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
@@ -3299,6 +3341,7 @@ declare global {
         "idg-avatar-group": HTMLIdgAvatarGroupElement;
         "idg-badge": HTMLIdgBadgeElement;
         "idg-brand-logo": HTMLIdgBrandLogoElement;
+        "idg-brand-swatches": HTMLIdgBrandSwatchesElement;
         "idg-breadcrumb": HTMLIdgBreadcrumbElement;
         "idg-breadcrumb-item": HTMLIdgBreadcrumbItemElement;
         "idg-button": HTMLIdgButtonElement;
@@ -3538,8 +3581,8 @@ declare namespace LocalJSX {
      * reference, an editor's file, is not drawn at all: the component shows the name as a wordmark, or
      * for the mark its first letters as a monogram, and with no name shows nothing.
      * The page's Content-Security-Policy must allow `img-src data:` for the logo to load (the strict
-     * policy the components are tested under, `default-src 'self'`, does not); without it the browser
-     * refuses the image and reports a violation, and the name is not shown in its place.
+     * policy the components are tested under, `default-src 'self'`, does not). Where the browser
+     * refuses the image, or it cannot be decoded, the name is shown instead.
      */
     interface IdgBrandLogo {
         /**
@@ -3565,6 +3608,29 @@ declare namespace LocalJSX {
           * @default "logo"
          */
         "variant"?: BrandLogoVariant;
+    }
+    /**
+     * The colours of a generated brand theme, light and dark: for each role a chip, the role's name
+     * and its value as text, and for a foreground colour its contrast on the backgrounds it is used
+     * on, with whether that meets its WCAG level. Every colour is also written out, so colour is
+     * never the only carrier, and each chip has an edge, so a colour close to the page is still seen.
+     * It takes the data `generateBrandTheme` returns and works out nothing of its own but the contrast
+     * ratios. A colour that is not in the package's format (`#rrggbb`, lower case) is left out, and
+     * only validated values reach the page, as a custom property set through the style API.
+     */
+    interface IdgBrandSwatches {
+        /**
+          * The accessible name of the whole. Defaults to the `name` label.
+         */
+        "label"?: string;
+        /**
+          * The words shown, merged over the English defaults.
+         */
+        "labels"?: Partial<BrandSwatchesLabels>;
+        /**
+          * The theme `generateBrandTheme` returned, or its `document`. Set it as a property: it is data, not an attribute.
+         */
+        "theme"?: BrandSwatchesTheme;
     }
     /**
      * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
@@ -5505,6 +5571,9 @@ declare namespace LocalJSX {
         "size": BrandLogoSize;
         "decorative": boolean;
     }
+    interface IdgBrandSwatchesAttributes {
+        "label": string;
+    }
     interface IdgBreadcrumbAttributes {
         "label": string;
         "separator": BreadcrumbSeparator;
@@ -5883,6 +5952,7 @@ declare namespace LocalJSX {
         "idg-avatar-group": Omit<IdgAvatarGroup, keyof IdgAvatarGroupAttributes> & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes]?: IdgAvatarGroup[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `attr:${K}`]?: IdgAvatarGroupAttributes[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `prop:${K}`]?: IdgAvatarGroup[K] };
         "idg-badge": Omit<IdgBadge, keyof IdgBadgeAttributes> & { [K in keyof IdgBadge & keyof IdgBadgeAttributes]?: IdgBadge[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `attr:${K}`]?: IdgBadgeAttributes[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `prop:${K}`]?: IdgBadge[K] };
         "idg-brand-logo": Omit<IdgBrandLogo, keyof IdgBrandLogoAttributes> & { [K in keyof IdgBrandLogo & keyof IdgBrandLogoAttributes]?: IdgBrandLogo[K] } & { [K in keyof IdgBrandLogo & keyof IdgBrandLogoAttributes as `attr:${K}`]?: IdgBrandLogoAttributes[K] } & { [K in keyof IdgBrandLogo & keyof IdgBrandLogoAttributes as `prop:${K}`]?: IdgBrandLogo[K] };
+        "idg-brand-swatches": Omit<IdgBrandSwatches, keyof IdgBrandSwatchesAttributes> & { [K in keyof IdgBrandSwatches & keyof IdgBrandSwatchesAttributes]?: IdgBrandSwatches[K] } & { [K in keyof IdgBrandSwatches & keyof IdgBrandSwatchesAttributes as `attr:${K}`]?: IdgBrandSwatchesAttributes[K] } & { [K in keyof IdgBrandSwatches & keyof IdgBrandSwatchesAttributes as `prop:${K}`]?: IdgBrandSwatches[K] };
         "idg-breadcrumb": Omit<IdgBreadcrumb, keyof IdgBreadcrumbAttributes> & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes]?: IdgBreadcrumb[K] } & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes as `attr:${K}`]?: IdgBreadcrumbAttributes[K] } & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes as `prop:${K}`]?: IdgBreadcrumb[K] };
         "idg-breadcrumb-item": Omit<IdgBreadcrumbItem, keyof IdgBreadcrumbItemAttributes> & { [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes]?: IdgBreadcrumbItem[K] } & { [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes as `attr:${K}`]?: IdgBreadcrumbItemAttributes[K] } & { [K in keyof IdgBreadcrumbItem & keyof IdgBreadcrumbItemAttributes as `prop:${K}`]?: IdgBreadcrumbItem[K] };
         "idg-button": Omit<IdgButton, keyof IdgButtonAttributes> & { [K in keyof IdgButton & keyof IdgButtonAttributes]?: IdgButton[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `attr:${K}`]?: IdgButtonAttributes[K] } & { [K in keyof IdgButton & keyof IdgButtonAttributes as `prop:${K}`]?: IdgButton[K] };
@@ -5979,10 +6049,20 @@ declare module "@stencil/core" {
              * reference, an editor's file, is not drawn at all: the component shows the name as a wordmark, or
              * for the mark its first letters as a monogram, and with no name shows nothing.
              * The page's Content-Security-Policy must allow `img-src data:` for the logo to load (the strict
-             * policy the components are tested under, `default-src 'self'`, does not); without it the browser
-             * refuses the image and reports a violation, and the name is not shown in its place.
+             * policy the components are tested under, `default-src 'self'`, does not). Where the browser
+             * refuses the image, or it cannot be decoded, the name is shown instead.
              */
             "idg-brand-logo": LocalJSX.IntrinsicElements["idg-brand-logo"] & JSXBase.HTMLAttributes<HTMLIdgBrandLogoElement>;
+            /**
+             * The colours of a generated brand theme, light and dark: for each role a chip, the role's name
+             * and its value as text, and for a foreground colour its contrast on the backgrounds it is used
+             * on, with whether that meets its WCAG level. Every colour is also written out, so colour is
+             * never the only carrier, and each chip has an edge, so a colour close to the page is still seen.
+             * It takes the data `generateBrandTheme` returns and works out nothing of its own but the contrast
+             * ratios. A colour that is not in the package's format (`#rrggbb`, lower case) is left out, and
+             * only validated values reach the page, as a custom property set through the style API.
+             */
+            "idg-brand-swatches": LocalJSX.IntrinsicElements["idg-brand-swatches"] & JSXBase.HTMLAttributes<HTMLIdgBrandSwatchesElement>;
             /**
              * The trail of pages that led to this one, as a navigation landmark holding an ordered list of
              * idg-breadcrumb-item. The last item is the current page unless another item says it is.

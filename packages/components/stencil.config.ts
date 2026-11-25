@@ -1,7 +1,11 @@
 import type { Config } from "@stencil/core";
 import ts from "typescript";
 
-const TRANSPILED_SOURCES = ["/packages/variations/src/", "/packages/brand/src/"];
+const TRANSPILED_SOURCES = [
+  "/packages/variations/src/",
+  "/packages/brand/src/",
+  "/packages/tokens/src/",
+];
 
 // @identgineer/variations is consumed as TypeScript source, like every workspace package. Stencil
 // only compiles what its own tsconfig includes, and including a sibling package's source would

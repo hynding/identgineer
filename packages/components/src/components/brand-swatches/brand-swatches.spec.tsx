@@ -59,7 +59,7 @@ describe("idg-brand-swatches with a generated theme", () => {
     const accent = swatch(root, "light", "accent");
     expect(text(accent.querySelector(".value"))).toBe("#4f46e5");
     expect(text(swatch(root, "dark", "bg").querySelector(".value"))).toBe(
-      (THEME.document.dark.color["bg"] as { $value: string }).$value,
+      (THEME.document.dark.color.bg as { $value: string }).$value,
     );
   });
 
@@ -116,8 +116,8 @@ describe("idg-brand-swatches with a generated theme", () => {
   it("follows a new theme", async () => {
     const { root, setProps } = await render(<idg-brand-swatches theme={THEME} />);
     const other = parseBrandKit({
-      id: "ember",
-      name: "Ember",
+      id: "kilnworks",
+      name: "Kilnworks",
       colors: { primary: "#c2410c" },
       typography: "system",
       corners: "sharp",
@@ -203,7 +203,7 @@ describe("idg-brand-swatches with colours it cannot trust", () => {
     ["a theme that is not an object", "acme"],
     ["a theme with no colours", { light: {}, dark: {} }],
   ])("says there is nothing to show for %s, and draws no chip", async (_name, theme) => {
-    const { root } = await render(<idg-brand-swatches theme={theme as BrandTheme} />);
+    const { root } = await render(<idg-brand-swatches theme={theme as unknown as BrandTheme} />);
     expect(all(root, ".chip")).toHaveLength(0);
     expect(text(shadow(root).querySelector('[part="empty"]'))).toBe("No colours to show.");
   });

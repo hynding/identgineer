@@ -49,6 +49,9 @@ importers:
       '@identgineer/brand':
         specifier: workspace:*
         version: link:../brand
+      '@identgineer/tokens':
+        specifier: workspace:*
+        version: link:../tokens
       '@identgineer/variations':
         specifier: workspace:*
         version: link:../variations
@@ -62,9 +65,6 @@ importers:
       '@identgineer/identity':
         specifier: workspace:*
         version: link:../identity
-      '@identgineer/tokens':
-        specifier: workspace:*
-        version: link:../tokens
       '@identgineer/tracking':
         specifier: workspace:*
         version: link:../tracking
