@@ -479,11 +479,11 @@ what the rules here require: a width or height the root lacks (from its view box
 it lacks (from its width and height), the part of the view box a `slice` showed, the region of a
 mask a clip path is rewritten as, and the position of a `use` moved onto a group, where given in
 another unit or as a percentage (in pixels it is written as given). The sanitiser's own geometry
-(the budgets, the overdraw, the view box rule) reads each number as an exact double, and where
-Chromium's reading of it could cost more to draw, it counts the costlier: an arc whose ends meet in
-one reading as its whole ellipse, and dashes far below a pixel as many as the stroke is long over
-their period, so `stroke-dasharray="0.0000004"` is refused as too costly, whether Chromium draws
-it dashed or solid. A browser test draws 45 spellings of a number (signs,
+(the budgets, the overdraw, the view box rule) reads each number as an exact double; the lengths
+dashes follow, the boxes paint is bounded by and the dash periods are bounded over every reading
+Chromium can make of the numbers (see the drawing cost, below), so dashes far below a pixel count as
+many as the stroke is long over their shortest period, and `stroke-dasharray="0.0000004"` is
+refused as too costly, whether Chromium draws it dashed or solid. A browser test draws 45 spellings of a number (signs,
 points, exponents, leading zeros, hexadecimal, `Infinity`, `NaN`, stray white space and commas) in
 each of a length, a plain number, a transform, a view box, path data, points, a dash array and the
 root's width, and 18 spellings of a pair in each list, in the original and the output, and holds
@@ -717,6 +717,37 @@ Dashing happens in the shape's own user space, so no transform changes the count
 `vector-effect` (whose non-scaling stroke is dashed after the transforms), percentage dashes and
 `em` and `ex` lengths, all of which depend on the page, are not kept. The cost model reads back only
 the units a grammar keeps, and refuses anything else rather than reading it as zero.
+
+The length and the period hold over every reading Chromium can make of the numbers, not only the
+exact one, and so does the box, to within the few single-precision steps a point can be read away.
+Chromium reads each number in single precision, by a reader that adds up the digits in single
+precision too, so a number of up to 25 characters can come out about 50 single-precision steps
+(2^-24 of its value each) from its value, and two spellings of one number apart; an arc whose radius
+is far below that hair is drawn with its radii scaled up by as much as the hair over the radius
+(`M0.3 0A1e-12 1 0 0 0 30e-2 2` is 17,695 long in Chromium, where its numbers as written make it
+6.28). So every number is taken to be read up to 2^-17 of its value away (more than twice the worst
+a reading can be off), a relative point the current point as read plus its offset as read, rounded
+once more (2^-23 of the result), and a point Z returns to as read where its subpath began. Each
+segment's length is its exact length plus as much as its points' errors can add, taken from where
+Chromium reads the current point, so that error cancels from a relative segment, and an offset of
+nothing adds nothing. An arc's half chord, in the arc's own frame, is taken longer on each axis by
+its points' error plus the turn its angle's error can make (the angle read up to 2^-17 of its value
+off, so the half chord turns by at most that share of the angle in radians, and never moves further
+than across its circle); each radius squared at its shortest reading; the radii scaled up by the
+square root of the largest ratio those give, at least 1; and the arc counted as the whole ellipse of
+the larger radius, a thousandth longer for the curves Chromium draws it with, its box reaching that
+diameter (and the current point's error) around the current point. A radius whose square single
+precision cannot hold as a normal number (below about 1e-19) bounds nothing, and the arc is taken as
+the largest radius Chromium can work out, about 3.4e38, so a dashed one is refused. A dash period is
+its lengths at their shortest reading, each a step of the smallest single-precision number short, so
+a period far below the single-precision range counts as about 1e-45. A rectangle's and an ellipse's
+length are taken 2^-17 longer. Where the radii are far larger than any hair, as in every arc an
+editor writes, none of this changes the bound by more than a hair: the drawing cost of every
+accepted logo in the clean corpus and some 270 editors' exports is unchanged and its overdraw moves
+by at most 0.006%. A browser test draws 4,000 paths built to sit on these edges (radii far below a
+hair, numbers in two spellings, huge angles, chains of relative segments, segments of no length,
+reflected control points) and holds every bound to Chromium's own length (`getTotalLength`) and box
+(`getBBox`).
 
 The weights were measured in Chromium, drawing at 600 CSS pixels on a loaded four-core machine:
 about 10 µs a unit for stroked lines, and the same per unit for curves (a stroked cubic took about
@@ -1094,8 +1125,8 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. Colours set only by CSS are lost
 (see above).
 
-The tests hold it to that: a hostile corpus of 339 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 138
+The tests hold it to that: a hostile corpus of 342 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 141
 refused, and every removal, by element, attribute and reason, for each of the 201 accepted, 40 of
 them with a clip path rewritten as a mask, 39 of which keep that mask in the output: in the
 fortieth, the rewritten clip path was the clip path of another clip path that is then emptied, so

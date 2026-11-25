@@ -85,6 +85,23 @@ const ARITY: Readonly<Record<string, number>> = {
   Z: 0,
 };
 const SEGMENT = /([A-Za-z])([^A-Za-z]*)/g;
+
+// Chromium reads every number in single precision, by a reader of its own that adds up the digits
+// in single precision too, so a number of up to 25 characters can come out about 50 single-precision
+// steps (of 2^-24) from its value, and two spellings of one number apart; each sum, product and
+// turn it then works out adds a step more. The bounds below hold over every such reading.
+/** How far, relative to its value, Chromium's reading of a written number can be from it. */
+const READ = 2 ** -17;
+/** How far, relative to its value, one single-precision operation can move a result. */
+const STEP = 2 ** -23;
+/** The smallest normal single-precision number: a radius squared below it is read as no radius. */
+const SMALLEST_NORMAL = 2 ** -126;
+/** The smallest single-precision step of all, a whole step off any reading far below it. */
+const SMALLEST_STEP = 2 ** -149;
+/** The largest single-precision number: no radius Chromium works out can be larger. */
+const LARGEST_SINGLE = 3.4028234663852886e38;
+/** How much longer than its ellipse Chromium's curves drawing an arc can be. */
+const ARC_CURVES = 1.001;
 /** In sides of a square image: its diagonal, and its perimeter (see `Geometry.visibleOutline`). */
 const STRAIGHT = Math.SQRT2;
 const CONVEX = 4;
@@ -102,6 +119,10 @@ class Pen {
   startY = 0;
   controlX = 0;
   controlY = 0;
+  /** How far, on either axis, Chromium's current point can be from `x` and `y`. */
+  error = 0;
+  startError = 0;
+  controlError = 0;
   weight = 0;
   length = 0;
   segments = 0;
@@ -124,6 +145,7 @@ class Pen {
     this.closed = false;
     this.startX = this.x;
     this.startY = this.y;
+    this.startError = this.error;
     this.include(this.x, this.y, 0);
   }
 
@@ -202,33 +224,107 @@ class Pen {
     };
   }
 
-  /** The first control point of a smooth curve: the last one reflected, or the current point. */
-  reflected(after: string): [number, number] {
-    return this.previous === after || this.previous === (after === "C" ? "S" : "T")
-      ? [2 * this.x - this.controlX, 2 * this.y - this.controlY]
-      : [this.x, this.y];
+  /**
+   * The first control point of a smooth curve: the last one reflected, or the current point; and
+   * how far Chromium's reading of it can be from it, taken from where it reads the current point.
+   */
+  reflected(after: string): [number, number, number] {
+    if (this.previous !== after && this.previous !== (after === "C" ? "S" : "T")) {
+      return [this.x, this.y, 0];
+    }
+    const [x, y] = [2 * this.x - this.controlX, 2 * this.y - this.controlY];
+    return [x, y, this.error + this.controlError + STEP * Math.max(Math.abs(x), Math.abs(y))];
   }
 }
 
+/** How far Chromium's reading of a number written `value` can be from it. */
+function readingError(value: number): number {
+  return READ * Math.abs(value);
+}
+
 /**
- * The larger radius of an arc's ellipse, scaled up as SVG scales radii too small to reach the end
- * point (SVG 1.1, F.6.6); 0 for a zero radius, which draws a straight line.
+ * How much longer Chromium can find straight runs than they are, where it reads their points up to
+ * `errors` away on either axis: each point's error counted once for every run it ends.
  */
-function arcRadius(pen: Pen, values: readonly number[], x: number, y: number): number {
-  let rx = Math.abs(values[0] ?? 0);
-  let ry = Math.abs(values[1] ?? 0);
+function lengthSlack(...errors: readonly number[]): number {
+  return Math.SQRT2 * errors.reduce((total, error) => total + error, 0);
+}
+
+/**
+ * How far Chromium's reading of a point of a segment can be from it on either axis: `local`, taken
+ * from where Chromium reads the current point (so the segment's own lengths and chord carry only
+ * that), and `absolute`, which the next segment starts from.
+ */
+interface PointError {
+  readonly local: number;
+  readonly absolute: number;
+}
+
+/**
+ * The error of a point at `offset` (a relative one, from the current point read `current` away) or
+ * at `offset` itself (an absolute one), each coordinate on an axis `moved` (H and V keep the other).
+ * A relative point is the current point plus the offset as read, rounded once, unless the offset is
+ * nothing, which adds nothing.
+ */
+function pointError(
+  offset: readonly [number, number],
+  point: readonly [number, number],
+  relative: boolean,
+  current: number,
+  moved: readonly [boolean, boolean] = [true, true],
+): PointError {
+  const along = (index: 0 | 1): number => (moved[index] ? Math.abs(offset[index]) : 0);
+  const read = READ * Math.max(along(0), along(1));
+  if (relative) {
+    const rounded = along(0) + along(1) === 0 ? 0 : STEP * Math.max(...point.map(Math.abs));
+    return { local: read + rounded, absolute: current + read + rounded };
+  }
+  return { local: current + read, absolute: moved[0] && moved[1] ? read : Math.max(read, current) };
+}
+
+/**
+ * An upper bound of the larger radius of an arc's ellipse as Chromium draws it, its radii scaled up
+ * as SVG scales radii too small to reach the end point (SVG 1.1, F.6.6), over every reading Chromium
+ * can make of its numbers; 0 for a zero radius, which draws a straight line. `chordError` bounds
+ * how far, on either axis, Chromium's chord from the current point to the end can be from the
+ * chord as written. Along a radius far smaller than that, the radii are scaled up by as much as the
+ * error over the radius, so each half chord in the arc's own frame is taken that much longer, and
+ * each radius squared at its shortest reading; a radius whose square single precision cannot hold
+ * as a normal number bounds nothing, and the radius is taken as the largest Chromium can work out.
+ */
+function arcRadius(
+  pen: Pen,
+  values: readonly number[],
+  x: number,
+  y: number,
+  chordError: number,
+): number {
+  const rx = Math.abs(values[0] ?? 0);
+  const ry = Math.abs(values[1] ?? 0);
   if (rx === 0 || ry === 0) return 0;
-  const angle = ((values[2] ?? 0) * Math.PI) / 180;
+  const degrees = values[2] ?? 0;
+  const angle = (degrees * Math.PI) / 180;
   const dx = (pen.x - x) / 2;
   const dy = (pen.y - y) / 2;
+  const half = Math.hypot(dx, dy);
   const x1 = Math.cos(angle) * dx + Math.sin(angle) * dy;
   const y1 = -Math.sin(angle) * dx + Math.cos(angle) * dy;
-  const lambda = (x1 * x1) / (rx * rx) + (y1 * y1) / (ry * ry);
-  if (lambda > 1) {
-    rx *= Math.sqrt(lambda);
-    ry *= Math.sqrt(lambda);
-  }
-  return Math.max(rx, ry);
+  // The angle as read turns the half chord by at most its error in radians, and never moves a
+  // point further than across the circle it turns on.
+  const turn = Math.min(2, READ * Math.abs(angle) + STEP);
+  const moved = (Math.SQRT2 * chordError) / 2 + STEP * half;
+  const hair = moved + turn * half + STEP * (half + moved);
+  const shortestSquare = (radius: number): number => {
+    const square = (radius * (1 - READ)) ** 2 * (1 - STEP);
+    return square < SMALLEST_NORMAL ? 0 : square;
+  };
+  const [squareX, squareY] = [shortestSquare(rx), shortestSquare(ry)];
+  const lambda =
+    squareX === 0 || squareY === 0
+      ? Infinity
+      : ((Math.abs(x1) + hair) ** 2 / squareX + (Math.abs(y1) + hair) ** 2 / squareY) *
+        (1 + 4 * STEP);
+  return Math.min(LARGEST_SINGLE, Math.max(rx, ry) * (1 + READ) * Math.sqrt(Math.max(1, lambda)));
 }
 
 function drawSegment(pen: Pen, command: string, values: readonly number[], first: boolean): void {
@@ -236,28 +332,52 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
   const relative = command !== upper;
   const at = (index: number, origin: number): number =>
     (values[index] ?? 0) + (relative ? origin : 0);
-  const { x, y } = pen;
+  const { x, y, error } = pen;
+  const errorAt = (index: number): PointError =>
+    pointError(
+      [values[index] ?? 0, values[index + 1] ?? 0],
+      [at(index, x), at(index + 1, y)],
+      relative,
+      error,
+    );
   const weights = SVG_DRAWING_WEIGHTS;
   if (upper === "M" && first) {
+    pen.error = errorAt(0).absolute;
     pen.x = at(0, x);
     pen.y = at(1, y);
     pen.begin();
-  } else if (upper === "M" || upper === "L") {
-    pen.to([at(0, x), at(1, y)], weights.line, Math.hypot(at(0, x) - x, at(1, y) - y), STRAIGHT);
-  } else if (upper === "H") {
-    pen.to([at(0, x), y], weights.line, Math.abs(at(0, x) - x), STRAIGHT);
-  } else if (upper === "V") {
-    pen.to([x, at(0, y)], weights.line, Math.abs(at(0, y) - y), STRAIGHT);
+  } else if (upper === "M" || upper === "L" || upper === "H" || upper === "V") {
+    const [endX, endY] =
+      upper === "H" ? [at(0, x), y] : upper === "V" ? [x, at(0, y)] : [at(0, x), at(1, y)];
+    const end =
+      upper === "M" || upper === "L"
+        ? errorAt(0)
+        : pointError(
+            [endX - (relative ? x : 0), endY - (relative ? y : 0)],
+            [endX, endY],
+            relative,
+            error,
+            [upper === "H", upper === "V"],
+          );
+    pen.to(
+      [endX, endY],
+      weights.line,
+      Math.hypot(endX - x, endY - y) + lengthSlack(end.local),
+      STRAIGHT,
+    );
+    pen.error = end.absolute;
   } else if (upper === "Z") {
     pen.to(
       [pen.startX, pen.startY],
       weights.line,
-      Math.hypot(pen.startX - x, pen.startY - y),
+      Math.hypot(pen.startX - x, pen.startY - y) + lengthSlack(error, pen.startError),
       STRAIGHT,
     );
+    pen.error = pen.startError;
     pen.closed = true;
   } else if (upper === "C" || upper === "S") {
-    const [x1, y1] = upper === "C" ? [at(0, x), at(1, y)] : pen.reflected("C");
+    const [x1, y1, reflectedError] =
+      upper === "C" ? [at(0, x), at(1, y), errorAt(0).local] : pen.reflected("C");
     const offset = upper === "C" ? 2 : 0;
     const [x2, y2, endX, endY] = [
       at(offset, x),
@@ -265,10 +385,14 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
       at(offset + 2, x),
       at(offset + 3, y),
     ];
+    const [second, end] = [errorAt(offset), errorAt(offset + 2)];
     // A Bézier curve is never longer than the lines through its control points, and stays inside
     // their hull, which the four triangles on them cover.
     const length =
-      Math.hypot(x1 - x, y1 - y) + Math.hypot(x2 - x1, y2 - y1) + Math.hypot(endX - x2, endY - y2);
+      Math.hypot(x1 - x, y1 - y) +
+      Math.hypot(x2 - x1, y2 - y1) +
+      Math.hypot(endX - x2, endY - y2) +
+      lengthSlack(reflectedError, reflectedError, second.local, second.local, end.local);
     const hull =
       triangleArea(x, y, x1, y1, x2, y2) +
       triangleArea(x, y, x2, y2, endX, endY) +
@@ -277,36 +401,51 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
     pen.to([x1, y1, x2, y2, endX, endY], weights.cubic, length, 3 * CONVEX, hull);
     pen.controlX = x2;
     pen.controlY = y2;
+    pen.controlError = second.absolute;
+    pen.error = end.absolute;
   } else if (upper === "Q" || upper === "T") {
-    const [x1, y1] = upper === "Q" ? [at(0, x), at(1, y)] : pen.reflected("Q");
+    const [x1, y1, reflectedError] =
+      upper === "Q" ? [at(0, x), at(1, y), errorAt(0).local] : pen.reflected("Q");
     const offset = upper === "Q" ? 2 : 0;
     const [endX, endY] = [at(offset, x), at(offset + 1, y)];
+    const end = errorAt(offset);
     pen.to(
       [x1, y1, endX, endY],
       weights.quadratic,
-      Math.hypot(x1 - x, y1 - y) + Math.hypot(endX - x1, endY - y1),
+      Math.hypot(x1 - x, y1 - y) +
+        Math.hypot(endX - x1, endY - y1) +
+        lengthSlack(reflectedError, reflectedError, end.local),
       CONVEX,
       triangleArea(x, y, x1, y1, endX, endY),
     );
     pen.controlX = x1;
     pen.controlY = y1;
+    pen.controlError = upper === "Q" ? errorAt(0).absolute : error + reflectedError;
+    pen.error = end.absolute;
   } else {
     // An arc is no longer than its whole ellipse and bulges no further from its chord than the
     // ellipse's area; the ellipse lies within a diameter of the current point.
     const [endX, endY] = [at(5, x), at(6, y)];
-    const radius = arcRadius(pen, values, endX, endY);
+    const end = errorAt(5);
+    const radius = arcRadius(pen, values, endX, endY, end.local);
     if (radius === 0) {
-      pen.to([endX, endY], weights.arc, Math.hypot(endX - x, endY - y), STRAIGHT);
+      pen.to(
+        [endX, endY],
+        weights.arc,
+        Math.hypot(endX - x, endY - y) + lengthSlack(end.local),
+        STRAIGHT,
+      );
     } else {
       pen.to(
         [endX, endY],
         weights.arc,
-        2 * Math.PI * radius,
+        2 * Math.PI * radius * ARC_CURVES + lengthSlack(end.local),
         CONVEX,
         Math.PI * radius * radius,
-        2 * radius,
+        2 * radius + error,
       );
     }
+    pen.error = end.absolute;
   }
   pen.previous = upper;
 }
@@ -385,7 +524,9 @@ export function userUnits(text: string | undefined, percentBase: number): number
 
 /**
  * The length of one repeat of a kept dash array in user units: its lengths added up, twice over
- * when there is an odd number of them. Zero for `none` or an all-zero array, which draw solid.
+ * when there is an odd number of them, each at the shortest Chromium can read it (a step of the
+ * smallest single-precision number short, for a length far below the normal range), so no reading
+ * fits more dashes in. Zero for `none` or an all-zero array, which draw solid.
  */
 export function dashPeriod(value: string): number {
   if (value === "none") return 0;
@@ -394,8 +535,12 @@ export function dashPeriod(value: string): number {
     if (unit === "%") throw new Error(`a kept dash length "${part}" is a percentage`);
     return amount * unitSize(unit, 0);
   });
-  const sum = lengths.reduce((total, length) => total + length, 0);
-  return lengths.length % 2 === 1 ? 2 * sum : sum;
+  if (lengths.every((length) => length === 0)) return 0;
+  const shortest = lengths.reduce(
+    (total, length) => total + Math.max(0, length * (1 - READ) - SMALLEST_STEP),
+    0,
+  );
+  return Math.max(SMALLEST_STEP, lengths.length % 2 === 1 ? 2 * shortest : shortest);
 }
 
 /** Dashes in one repeat of a kept dash array, a dash of no length included (it has its caps). */
@@ -434,19 +579,23 @@ function polyline(text: string, closed: boolean): Geometry {
   const pairs = text.split(" ");
   for (const [index, pair] of pairs.entries()) {
     const [x = 0, y = 0] = pair.split(",").map(Number);
+    const error = readingError(Math.max(Math.abs(x), Math.abs(y)));
     if (index === 0) {
       pen.x = x;
       pen.y = y;
+      pen.error = error;
       pen.begin();
     } else {
-      pen.to([x, y], SVG_DRAWING_WEIGHTS.line, Math.hypot(x - pen.x, y - pen.y), STRAIGHT);
+      const slack = lengthSlack(pen.error, error);
+      pen.to([x, y], SVG_DRAWING_WEIGHTS.line, Math.hypot(x - pen.x, y - pen.y) + slack, STRAIGHT);
+      pen.error = error;
     }
   }
   if (closed) {
     pen.to(
       [pen.startX, pen.startY],
       SVG_DRAWING_WEIGHTS.line,
-      Math.hypot(pen.startX - pen.x, pen.startY - pen.y),
+      Math.hypot(pen.startX - pen.x, pen.startY - pen.y) + lengthSlack(pen.error, pen.startError),
       STRAIGHT,
     );
   }
@@ -476,7 +625,7 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
       const [width, height] = [length("width"), length("height")];
       return {
         weight: 4 * line + (rounded ? 4 * cubic : 0),
-        length: 2 * (width + height),
+        length: 2 * (width + height) * (1 + READ),
         segments: rounded ? 8 : 4,
         subpaths: 1,
         visibleOutline: CONVEX,
@@ -490,7 +639,7 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
         element.name === "circle" ? [length("r"), length("r")] : [length("rx"), length("ry")];
       return {
         weight: 4 * cubic,
-        length: 2 * Math.PI * Math.max(rx, ry),
+        length: 2 * Math.PI * Math.max(rx, ry) * (1 + READ),
         segments: 4,
         subpaths: 1,
         visibleOutline: CONVEX,
@@ -502,7 +651,12 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
       const [x1, y1, x2, y2] = [length("x1"), length("y1"), length("x2"), length("y2")];
       return {
         weight: line,
-        length: Math.hypot(x2 - x1, y2 - y1),
+        length:
+          Math.hypot(x2 - x1, y2 - y1) +
+          lengthSlack(
+            readingError(Math.max(Math.abs(x1), Math.abs(y1))),
+            readingError(Math.max(Math.abs(x2), Math.abs(y2))),
+          ),
         segments: 1,
         subpaths: 1,
         visibleOutline: STRAIGHT,
