@@ -723,17 +723,17 @@ refused, with `drawing-too-costly` or `overdraw-too-large`.
 `drawingCost` is the sum of the weights below (`SVG_DRAWING_WEIGHTS`), at most 200,000. The unit
 is about one stroked straight segment.
 
-| What is drawn                                                          | Weight                                |
-| ---------------------------------------------------------------------- | ------------------------------------- |
-| A line segment (`L`, `H`, `V`, `Z`, a polyline point)                  | 1                                     |
-| A quadratic curve, a cubic curve, an arc                               | 6, 10, 14                             |
-| A `rect`, a rounded `rect`, a `circle` or `ellipse`                    | 4, 44, 40, as their outlines          |
-| Any shape, on top of its outline                                       | 32                                    |
-| Any other element (`g`, `use`, `title`, …)                             | 1                                     |
-| `opacity` below 1, on any element                                      | 50, a layer                           |
-| Each application of a mask or clip path                                | 200, plus what it holds, each time    |
-| Each dash, in its shape                                                | 1                                     |
-| Each dash of a stroke, again for the tiles it is worked out in (below) | 4, 5, 8 butt, square, round, by share |
+| What is drawn                                                          | Weight                                                                        |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| A line segment (`L`, `H`, `V`, `Z`, a polyline point)                  | 1                                                                             |
+| A quadratic curve, a cubic curve, an arc                               | 6, 10, 14                                                                     |
+| A `rect`, a rounded `rect`, a `circle` or `ellipse`                    | 4, 44, 40, as their outlines                                                  |
+| Any shape, on top of its outline                                       | 32                                                                            |
+| Any other element (`g`, `use`, `title`, …)                             | 1                                                                             |
+| `opacity` below 1, on any element                                      | 50, a layer                                                                   |
+| Each application of a mask or clip path                                | 200, plus what it holds, each time                                            |
+| Each dash, in its shape                                                | 1                                                                             |
+| Each dash of a stroke, again for the tiles it is worked out in (below) | 4, 5, 9 butt, square, round, by share; 24 round on a stroke wider than a tile |
 
 Definitions (`defs`, gradients, masks and clip paths where they stand) cost nothing until they are
 used, and then cost again for every use; a mask inside a mask is applied each time the outer one
@@ -743,24 +743,25 @@ another (`too-many-masks`, `masks-too-deep`).
 Dashes are counted from geometry: an upper bound of each shape's length in its own user units (a
 curve is no longer than the lines through its control points, an arc than its whole ellipse with its
 radii scaled up as SVG scales them, an ellipse than pi times the root of twice the sum of its radii
-squared, which is a circle's circumference and at most 11% over the flattest ellipse), divided by the dash period, times the dashes in each repeat
-(half the lengths of an even dash array, all of an odd one, which repeats twice over), with a repeat
-more for each subpath, which starts the pattern afresh. A shape with a dash array of its own (an
-attribute, or a property of its `style`, which the sanitiser writes as one) is counted at that one.
-A shape that can inherit a dash array, from an ancestor or from a `use` that draws it (through a
-chain of `use` and groups, and into a mask's content from the mask's ancestors), is counted at the
-shortest period and the most dashes in a repeat anywhere in the logo; a definition is counted once
-however many times it is drawn, so it counts as dashed if any of its instances may be. Every other
-shape is solid, however finely another shape is dashed: one dashed ring beside 360 lines no longer
-makes each line cost dashes, as it did when every shape was counted at the logo's densest dashing,
-which refused 13 of 28 logos of curves or slanted lines with one ordinary dashed border, underline
-or ring added (a script of 800 cubics, a hatched emblem, a guilloche of 180 ellipses, 60 contour
-lines) and a sunburst under dashed rings, all drawn in 0.3 to 1.1 seconds. The overdraw counts a
-stroke's dashes with the same function, so the two cannot disagree.
-Dashing happens in the shape's own user space, so no transform changes the count; that is why
-`vector-effect` (whose non-scaling stroke is dashed after the transforms), percentage dashes and
-`em` and `ex` lengths, all of which depend on the page, are not kept. The cost model reads back only
-the units a grammar keeps, and refuses anything else rather than reading it as zero.
+squared, which is a circle's circumference and at most 11% over the flattest ellipse), divided by
+the dash period, times the dashes in each repeat (half the lengths of an even dash array, all of an
+odd one, which repeats twice over), with a repeat more for each subpath, which starts the pattern
+afresh. A shape with a dash array of its own (an attribute, or a property of its `style`, which the
+sanitiser writes as one) is counted at that one. A shape that can inherit a dash array, from an
+ancestor or from a `use` that draws it (through a chain of `use` and groups, and into a mask's
+content from the mask's ancestors), is counted at the shortest period and the most dashes in a
+repeat anywhere in the logo; a definition is counted once however many times it is drawn, so it
+counts as dashed if any of its instances may be. Every other shape is solid, however finely another
+shape is dashed: one dashed ring beside 360 lines no longer makes each line cost dashes, as it did
+when every shape was counted at the logo's densest dashing, which refused 13 of 28 logos of curves
+or slanted lines with one ordinary dashed border, underline or ring added (a script of 800 cubics, a
+hatched emblem, a guilloche of 180 ellipses, 60 contour lines) and a sunburst under dashed rings,
+all drawn in 0.3 to 1.1 seconds. The overdraw counts a stroke's dashes with the same function, so
+the two cannot disagree. Dashing happens in the shape's own user space, so no transform changes the
+count; that is why `vector-effect` (whose non-scaling stroke is dashed after the transforms),
+percentage dashes and `em` and `ex` lengths, all of which depend on the page, are not kept. The cost
+model reads back only the units a grammar keeps, and refuses anything else rather than reading it as
+zero.
 
 Each dash costs one in its shape, wherever it is. On top of that, each instance of a stroked shape
 is charged for its dashes again, by the tiles of a large image they are worked out for, everywhere
@@ -784,51 +785,82 @@ in one raster, a dash costs 2 to 9 µs, about one stroked line.
 
 So each instance is charged its dashes (counted as for the drawing cost, at the dash array it
 inherits) times the share of the tiles its stroke's box can touch times the weight of its caps: 4
-butt, 5 square and 8 round, so at most 5, 6 and 9 a dash in all. The box is the shape's own, grown
-by the stroke's reach (half its width, the miter limit times that at a miter join) and carried
-through the instance's transform, so a shape scaled up touches more tiles and a use of it scaled
-down fewer. Chromium's tiles are 256 device pixels square, about 16 across such an image; the share
-is counted on a grid of 8 by 8, the columns and rows the box spans and one more of each where it
-straddles two, at most all 64, so that it is never short. The weights put the dearest dashes across
-the whole image at about 10 µs a unit, so that the costliest dashed logo takes about two seconds as
-such an image here and, with the overdraw at its limit beside it, about three: the costliest
-accepted circles dashed `4 2`, 3 wide, beside radial gradients up to the overdraw limit took 2.7 to
-2.8 seconds (single runs to 3.4), the dearest such mix before this charge 2.7. The share is worked
-out in the overdraw's walk, which visits every instance with its transform and paint (bounded by
-`renderedElements`), and added to the drawing cost there.
+butt, 5 square and 9 round, so at most 5, 6 and 10 a dash in all, and 24 round (25 in all) on a
+stroke wider, as drawn, than a tile of that grid (below). The box is the shape's own, grown by the
+stroke's reach (half its width, the miter limit times that at a miter join) and carried through the
+instance's transform, so a shape scaled up touches more tiles and a use of it scaled down fewer.
+Chromium's tiles are 256 device pixels square, about 16 across such an image; the share is counted
+on a grid of 8 by 8, the columns and rows the box spans and one more of each where it straddles two,
+at most all 64, so that it is never short. The share is worked out in the overdraw's walk, which
+visits every instance with its transform and paint (bounded by `renderedElements`), and added to the
+drawing cost there.
 
-Charged ten a dash whatever the tiles, as before this, a guilloche of thin ellipses dashed `3 2`
-was accepted up to 34 ellipses (0.57 to 0.63 seconds as such an image), though 120 took 1.4 to
-1.5 and 200 2.3 to 2.4. Now 106 are accepted, which take 1.40 to 1.45 seconds; the rotated
-ellipses' boxes touch fewer tiles than a circle's, and their length is bounded closer. Accepting
-200 would need a butt dash at about half its weight, which would let the costliest butt dashes on
-full-size circles (`4 2` 3 wide, or `8 4` 3 or 5 wide) take well over 3 seconds alone: a guilloche's
-short thin dashes cost about 30 µs each across the image, theirs 40 to 48, and the weight covers
-the dearer. The costliest accepted of the other dashed families, before and after, as such an
-image (median and worst of three, on the quiet machine, the capture a JPEG): circles dashed `8 4`
-by `use`, 3 or 5 wide, 81 of any cap (1.19 to 1.65 seconds) against 158 butt (1.94 to 2.05), 133
-square (1.80 to 1.93) and 90 round (1.63 to 1.79); circles 50 wide round-capped, 81 (2.42 to
-2.43) against 90 (2.55 to 2.60); circles dashed `3 2`, 0.4 wide, 34 (0.89 to 0.93) against 68
-(1.40 to 1.51), and `4 2`, 3 wide, 41 (1.19 to 1.20) against 82 (2.05 to 2.12); 61 concentric
-rings dashed `3 2` (0.71 to 0.73) against 154 (1.45 to 1.52); an ellipse, 81 uses (0.72 to 0.78)
-against 169 (1.27 to 1.30); a rounded rectangle 64 against 71 (1.16 to 1.35 against 1.32 to 1.33);
-an arc 82 against 91 (0.61 to 0.70 against 0.69 to 0.74); a cubic 280 against 626 (0.59 to 0.68
-against 1.11 to 1.15); a diagonal line 163 against 180 (1.15 to 1.20 against 1.30 to 1.33); an L
-116 against 129, a staircase 116 against 128, a serpentine 11 against 12, a square spiral 12
-against 14 (1.09 to 1.23 against 1.24 to 1.43); a line back and forth ten times 11 against 39
-(0.37 to 0.40 against 0.73 to 0.77); an open path round a square 65 against 72 (0.37 to 0.43
-against 0.40 to 0.41); hairline dashes along a zigzag 4 against 8 (0.33 to 0.37 against 0.43 to
-0.47); 584 small dashed circles scattered over the image against 1,891 (0.29 against 0.40 to
-0.42); a dashed circle of radius 10 scaled up 45 times, 34 against 68 (0.95 to 0.97 against 1.63
-to 1.67, the same as the full-size circle), and 50 wide round-capped, 90 (2.49 to 2.50); circles
-of radius 1,000 through the image, 15 against 31 (0.54 to 0.55 against 0.87 to 0.89); small arcs
-of radius 1,000 with chords of 0.0001, stroked whole, refused even alone before, are now bounded
-by the overdraw (206 in one path, 0.22 to 0.23). Drawn on a canvas, none takes over 0.7 seconds at
-2000 twice as dense. Dense dashed textures that this weight refused although they drew fast are
-accepted: 240 short diagonal lines across a disc dashed `1 1` (0.55 to 0.59 seconds; 200 dashed
-`2 2`, accepted before too, 0.39 to 0.42) and the 200 under a clip path (0.40), and so are 50
-circles dashed `4 2` inheriting the dash array from a group, a style or a `use` (1.33 to 1.38). The
-hostile corpus keeps them all as accepted; dashed circles drawn hundreds of times stay refused.
+Round caps cost more the wider the stroke, and twice as much again once it is wider than about 525
+device pixels in such an image, whatever the dash period: 40 uses of a full-size circle dashed `8 4`
+took 1.29 to 1.31 seconds 100 to 130 wide (in a view box 1,000 wide, 4 device pixels a unit) and
+2.09 to 2.38 from 132 to 300 wide; dashed `100 50`, 200 uses took 0.96 seconds 130 wide and 1.22 at
+132; the circle drawn at half its size stepped between 260 and 264 wide (1.27 against 2.22). Above
+the step a round dash took about 200 µs across the image, below it about 110 to 120 from 50 to 130
+wide. Butt and square caps showed no step (0.92 and 0.83 seconds for the 40 uses 140 wide). The step
+is at about the side of a tile of the grid the share is counted on (an eighth of the view box's
+larger side, 500 device pixels), so a round cap weighs 24 on a stroke wider than that after the
+instance's transforms (by their largest stretch), and 9 otherwise, for the dearest round dash below
+the step. Charged 8 whatever the width, as a draft of this charge was, circles 140 wide round-capped
+dashed `8 4` were accepted up to 82 uses, which took 4.2 seconds as such an image (84 at 135 wide
+4.2, 78 at 150 wide 3.8, 118 of `12 6` 3.9, 82 of `0 12` 3.7, 29 of `4 2` 3.1). Now 33 are accepted
+from 130 to 300 wide (1.09 to 1.10 seconds 130 and 131 wide, below the step, and 1.69 to 1.91 above
+it, median of three), and 49 dashed `12 6` (1.70), 33 dotted `0 12` (1.55), 16 dashed `4 2` (1.77),
+106 dashed `20 20` or dotted `0 40` (1.66 to 1.75), 11 dashed `2 2` (1.66) and 154 dashed `40 20`
+300 wide (1.78); the half-size circle 264 wide, 33 (1.69). Below the step, 81 are accepted from 5 to
+125 wide, as before this charge (1.50 to 1.54 seconds 3 or 5 wide, 2.30 to 2.49 from 50 to 125);
+dashed `20 20` 100 wide, 205 (2.07); and dashed `1 1` or dotted `0 2`, 100 or 140 wide, the overdraw
+stops at one or two (0.49 to 0.54). Butt and square caps 140 and 300 wide stop at the overdraw (0.79
+to 1.79 seconds).
+
+The weights put the dearest dashes across the whole image at about 12 µs a unit, so that the
+costliest dashed logo alone, 81 circles 100 to 125 wide round-capped, takes about 2.5 seconds as
+such an image here (medians 2.35 to 2.49, a single run 2.61; the same logo before this charge 2.36
+to 2.46), and with the overdraw at its limit beside it no more than about 2.7: 80 circles 50 wide
+round-capped beside 9 full-size radial gradients of 64 translucent stops took 2.61 to 2.70 (a single
+run 2.94; the same logo before this charge 2.77), 80 of them 100 wide beside 4 radial gradients 2.45
+to 2.47 (2.47 before), 32 circles 140 wide beside 11, 2.13 to 2.19, and 80 circles dashed `4 2`, 3
+wide, beside 16, 2.54 to 2.72 (single runs to 3.4). Charged 8 a round dash whatever the width, 90
+circles 100 wide were accepted alone (2.68 seconds, against 81 before this charge, 2.37), and 88
+circles 50 wide beside 8 radial gradients (2.74 to 2.88, against 2.67 to 2.77).
+
+Charged ten a dash whatever the tiles, as before this, a guilloche of thin ellipses dashed `3 2` was
+accepted up to 34 ellipses (0.57 to 0.63 seconds as such an image), though 120 took 1.4 to 1.5 and
+200 2.3 to 2.4. Now 106 are accepted, which take 1.40 to 1.45 seconds; the rotated ellipses' boxes
+touch fewer tiles than a circle's, and their length is bounded closer. Accepting 200 would need a
+butt dash at about half its weight, which would let the costliest butt dashes on full-size circles
+(`4 2` 3 wide, or `8 4` 3 or 5 wide) take well over 3 seconds alone: a guilloche's short thin dashes
+cost about 30 µs each across the image, theirs 40 to 48, and the weight covers the dearer. The
+costliest accepted of the other dashed families, before and after, as such an image (median and
+worst of three, on the quiet machine, the capture a JPEG): circles dashed `8 4` by `use`, 3 or 5
+wide, 81 of any cap (1.19 to 1.65 seconds) against 158 butt (1.88 to 2.05), 133 square (1.76 to
+1.93) and 81 round (1.50 to 1.54); circles 50 wide round-capped, 81 either way (2.30 to 2.44);
+circles 140 wide round-capped, 81 (4.01 to 4.28, over the mark before this charge too) against 33
+(1.78); circles dashed `3 2`, 0.4 wide, 34 (0.89 to 0.93) against 68 (1.40 to 1.51), and `4 2`, 3
+wide, 41 (1.19 to 1.20) against 82 (2.05 to 2.12); 61 concentric rings dashed `3 2` (0.71 to 0.73)
+against 154 (1.45 to 1.52); round-capped, 5 wide, an ellipse, 81 uses (0.72 to 0.78) against 154
+(1.12 to 1.18); a cubic 280 against 578 (0.59 to 0.68 against 1.01); a line back and forth ten times
+11 against 36 (0.37 to 0.40 against 0.73 to 0.74); and, as before, a rounded rectangle 64 (1.16 to
+1.35 before, 1.20 to 1.25 now), an arc 82 (0.61 to 0.70, 0.61 to 0.62), a diagonal line 163 (1.15 to
+1.20, 1.16 to 1.19), an L 116, a staircase 116, a serpentine 11 and a square spiral 12 (1.09 to
+1.23, 1.11 to 1.25), an open path round a square 65 (0.37 to 0.43, 0.39 to 0.40), whose boxes touch
+every tile; hairline dashes along a zigzag 4 against 8 (0.33 to 0.37 against 0.43 to 0.47); 584
+small dashed circles scattered over the image against 1,891 (0.29 against 0.40 to 0.42); a dashed
+circle of radius 10 scaled up 45 times, 34 against 68 (0.95 to 0.97 against 1.63 to 1.67, the same
+as the full-size circle), and 50 wide round-capped, 81 either way; circles of radius 1,000 through
+the image, 15 against 31 (0.54 to 0.55 against 0.87 to 0.89); small arcs of radius 1,000 with chords
+of 0.0001, stroked whole, refused even alone before, are now bounded by the overdraw (206 in one
+path, 0.22 to 0.23). Drawn on a canvas, none takes over 0.7 seconds at 2000 twice as dense. Dense
+dashed textures that this weight refused although they drew fast are accepted: 240 short diagonal
+lines across a disc dashed `1 1` (0.54 to 0.62 seconds; 200 dashed `2 2`, accepted before too, 0.39
+to 0.42) and the 200 under a clip path (0.40), and so are 50 circles dashed `4 2`, 3 wide,
+inheriting the dash array from a group, a style or a `use` (1.31 to 1.50). The browser tests time
+the 240 lines and the circles inheriting from a group as images. The hostile corpus keeps them all
+as accepted; dashed circles drawn hundreds of times stay refused.
 
 The length and the period hold over every reading Chromium can make of the numbers, not only the
 exact one, and so does the box, to within the few single-precision steps a point can be read away.
@@ -1136,22 +1168,22 @@ for each, the input that does the most real work for what it is charged, made as
 limits allow and timed the same way as the table that follows. None comes near a second at 600
 pixels; the slowest at 2000 twice as dense is paint, as the overdraw intends.
 
-| Term                                   | The work it stands for                                                          | What does the most work for what it is charged                                                     | 600 px     | 2000 px, ×2  | Inline, 600 px |
-| -------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------- | ------------ | -------------- |
-| Drawing cost: a line, 1                | walking and stroking a segment                                                  | 19 uses of a path of 10,000 tiny segments, filled and stroked with round joins                     | 165 ms     | 1.05 s       | 217 ms         |
-| Drawing cost: a curve, 6 to 14         | flattening it into segments                                                     | 9 uses of 2,000 tiny cubics; 7 of 2,000 tiny arcs                                                  | 36, 39 ms  | 0.10, 0.28 s | 47, 50 ms      |
-| Drawing cost: a shape, 32              | setting a shape up                                                              | 2,777 tiny circles, filled; stroked                                                                | 5, 5 ms    | 0.03, 0.04 s | 37, 52 ms      |
-| Drawing cost: an element, 1            | walking the tree                                                                | 4,095 empty groups; 4,093 uses of a small square (the element limit)                               | 2, 13 ms   | 0.03, 0.04 s | 32, 71 ms      |
-| Drawing cost: a layer, 50              | setting a layer up                                                              | 2,325 small shapes with opacity on a fill and a stroke                                             | 8 ms       | 0.04 s       | 52 ms          |
-| Drawing cost: a mask or clip path, 200 | applying it                                                                     | 128 small shapes each masked; each clipped (the application limit)                                 | 3, 8 ms    | 0.03, 0.10 s | 34 ms          |
-| Drawing cost: a dash, 1                | starting a dash, its caps, along one horizontal or vertical line or a rectangle | 1,680 uses of a horizontal line dashed `8 4`, round-capped                                         | 251 ms     | 0.30 s       | 131 ms         |
-| Drawing cost: a dash's tiles, 4 to 8   | working it out again for every tile of an image                                 | 90 uses of a full-size circle dashed `8 4`, round-capped; 19,000 round hairline dashes on a zigzag | 46, 4 ms   | 0.22, 0.03 s | 81, 32 ms      |
-| Overdraw: area by paint                | painting pixels                                                                 | 19 full-size radial gradients of 64 translucent stops, repeating every 0.3% of the image           | 39 ms      | 1.71 s       | 80 ms          |
-| Overdraw: layers and masks             | an offscreen surface, and blending it                                           | 131 group opacity layers over small shapes spread across the image                                 | 14 ms      | 0.69 s       | 19 ms          |
-| Overdraw: edges, crowded rows          | rasterising every edge on every row                                             | 4,853 long lines in one path; 1,500 edges in an even-odd clip path                                 | 73, 316 ms | 0.32, 0.71 s | 93, 127 ms     |
-| Overdraw: stroke ends                  | walking the outline of joins and caps                                           | 1,047 butt dashes on a stroke as wide as the image; 875 miter joins at a miter limit of 100        | 319, 4 ms  | 0.12, 0.05 s | 104, 22 ms     |
-| Overdraw: a stroke's curves, ×4        | stroking a curve again, whole, for every tile of an image                       | 729 uses of a full-size circle stroked 2 wide; 1,205 thin concentric circles                       | 33, 12 ms  | 0.29, 0.44 s | 68, 73 ms      |
-| Overdraw: clip paths written as masks  | a mask surface, the shapes painted in                                           | 13 clip paths of two near-coincident zigzags of 3,000 segments; 12 of 43 shapes                    | 19, 33 ms  | 0.98, 1.66 s | 33, 33 ms      |
+| Term                                   | The work it stands for                                                          | What does the most work for what it is charged                                                               | 600 px     | 2000 px, ×2  | Inline, 600 px |
+| -------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---------- | ------------ | -------------- |
+| Drawing cost: a line, 1                | walking and stroking a segment                                                  | 19 uses of a path of 10,000 tiny segments, filled and stroked with round joins                               | 165 ms     | 1.05 s       | 217 ms         |
+| Drawing cost: a curve, 6 to 14         | flattening it into segments                                                     | 9 uses of 2,000 tiny cubics; 7 of 2,000 tiny arcs                                                            | 36, 39 ms  | 0.10, 0.28 s | 47, 50 ms      |
+| Drawing cost: a shape, 32              | setting a shape up                                                              | 2,777 tiny circles, filled; stroked                                                                          | 5, 5 ms    | 0.03, 0.04 s | 37, 52 ms      |
+| Drawing cost: an element, 1            | walking the tree                                                                | 4,095 empty groups; 4,093 uses of a small square (the element limit)                                         | 2, 13 ms   | 0.03, 0.04 s | 32, 71 ms      |
+| Drawing cost: a layer, 50              | setting a layer up                                                              | 2,325 small shapes with opacity on a fill and a stroke                                                       | 8 ms       | 0.04 s       | 52 ms          |
+| Drawing cost: a mask or clip path, 200 | applying it                                                                     | 128 small shapes each masked; each clipped (the application limit)                                           | 3, 8 ms    | 0.03, 0.10 s | 34 ms          |
+| Drawing cost: a dash, 1                | starting a dash, its caps, along one horizontal or vertical line or a rectangle | 1,680 uses of a horizontal line dashed `8 4`, round-capped                                                   | 251 ms     | 0.30 s       | 131 ms         |
+| Drawing cost: a dash's tiles, 4 to 24  | working it out again for every tile of an image                                 | 33 uses of a full-size circle dashed `8 4`, 140 wide, round-capped; 19,000 round hairline dashes on a zigzag | 55, 4 ms   | 0.36, 0.03 s | 65, 32 ms      |
+| Overdraw: area by paint                | painting pixels                                                                 | 19 full-size radial gradients of 64 translucent stops, repeating every 0.3% of the image                     | 39 ms      | 1.71 s       | 80 ms          |
+| Overdraw: layers and masks             | an offscreen surface, and blending it                                           | 131 group opacity layers over small shapes spread across the image                                           | 14 ms      | 0.69 s       | 19 ms          |
+| Overdraw: edges, crowded rows          | rasterising every edge on every row                                             | 4,853 long lines in one path; 1,500 edges in an even-odd clip path                                           | 73, 316 ms | 0.32, 0.71 s | 93, 127 ms     |
+| Overdraw: stroke ends                  | walking the outline of joins and caps                                           | 1,047 butt dashes on a stroke as wide as the image; 875 miter joins at a miter limit of 100                  | 319, 4 ms  | 0.12, 0.05 s | 104, 22 ms     |
+| Overdraw: a stroke's curves, ×4        | stroking a curve again, whole, for every tile of an image                       | 729 uses of a full-size circle stroked 2 wide; 1,205 thin concentric circles                                 | 33, 12 ms  | 0.29, 0.44 s | 68, 73 ms      |
+| Overdraw: clip paths written as masks  | a mask surface, the shapes painted in                                           | 13 clip paths of two near-coincident zigzags of 3,000 segments; 12 of 43 shapes                              | 19, 33 ms  | 0.98, 1.66 s | 33, 33 ms      |
 
 The costliest logos the sanitiser accepts of each kind, rasterised in full as an image on that
 machine (load average about 8 on four cores, median of three) at 600 CSS pixels and at 2000 with a
@@ -1161,17 +1193,18 @@ device scale factor of 2, and drawn inline at 600 until a screenshot shows it:
 | --------------------------------------------------------------------------------- | ------------------------- | ------------------------ | ------------- | ------------------ | -------------- |
 | One path of 4,853 long stroked lines                                              | 4,886                     | 499.9                    | 73 ms         | 0.32 s             | 93 ms          |
 | One path of 338 wide stroked arcs                                                 | 4,765                     | 497.8                    | 18 ms         | 0.09 s             | 33 ms          |
-| 19,000 round-capped hairline dashes on a zigzag                                   | 172,333                   | 0.4                      | 4 ms          | 0.03 s             | 32 ms          |
+| 19,000 round-capped hairline dashes on a zigzag                                   | 191,477                   | 0.4                      | 4 ms          | 0.03 s             | 32 ms          |
 | 36,000 hairline dashes of 64 lengths on a zigzag                                  | 183,385                   | 4.6                      | 3 ms          | 0.03 s             | 31 ms          |
 | 36,000 hairline dashes of two lengths on a zigzag                                 | 181,225                   | 4.6                      | 3 ms          | 0.03 s             | 31 ms          |
 | 158 uses of a full-size circle dashed `8 4`, 3 or 5 wide, butt; 133 square        | 198,765; 198,836          | 116.0–122.3; 103.3–112.4 | 49–59 ms      | 0.17–0.20 s        | 95–100 ms      |
-| 90 uses of a full-size circle dashed `8 4`, 3 or 5 wide, round                    | 198,541                   | 68.3–73.3                | 43–46 ms      | 0.17–0.22 s        | 81 ms          |
+| 81 uses of a full-size circle dashed `8 4`, 3 or 5 wide, round                    | 197,884                   | 61.4–66.0                | 37–40 ms      | 0.14–0.16 s        | 69–79 ms       |
+| 33 uses of a full-size circle dashed `8 4`, 140 wide, round                       | 197,935                   | 199.8                    | 55 ms         | 0.36 s             | 65 ms          |
 | A guilloche of 106 thin ellipses dashed `3 2`                                     | 199,333                   | 55.2                     | 9 ms          | 0.14 s             | 48 ms          |
-| 180 uses of a dashed diagonal line; 71 of a rounded rectangle                     | 198,901; 198,446          | 27.4; 35.9               | 30; 31 ms     | 0.12; 0.10 s       | 66; 62 ms      |
-| 169 uses of a dashed ellipse; 91 of an arc; 626 of a cubic                        | 198,381–199,930           | 50.8–133.3               | 22–59 ms      | 0.11–0.25 s        | 41–98 ms       |
+| 163 uses of a dashed diagonal line; 64 of a rounded rectangle                     | 199,513; 198,209          | 24.8; 32.3               | 27; 27 ms     | 0.10; 0.14 s       | 65; 55 ms      |
+| 154 uses of a dashed ellipse; 82 of an arc; 578 of a cubic                        | 198,195–199,728           | 45.7–123.1               | 20–57 ms      | 0.09–0.22 s        | 47–80 ms       |
 | 1,680 uses of a dashed horizontal line                                            | 199,921                   | 182.4                    | 251 ms        | 0.30 s             | 131 ms         |
-| 129 uses of a dashed L; 12 of a serpentine; 14 of a square spiral                 | 199,564; 190,093; 197,961 | 27.8; 27.5; 28.6         | 17; 41; 35 ms | 0.06; 0.09; 0.11 s | 47; 61; 68 ms  |
-| 128 uses of a dashed staircase; 39 of a line back and forth; 72 of an open square | 198,785; 197,224; 198,361 | 28.4; 79.3; 28.0         | 21; 56; 35 ms | 0.08; 0.13; 0.09 s | 63; 98; 46 ms  |
+| 116 uses of a dashed L; 11 of a serpentine; 12 of a square spiral                 | 198,941; 193,524; 188,437 | 25.0; 25.2; 24.5         | 16; 35; 29 ms | 0.05; 0.07; 0.09 s | 44; 54; 53 ms  |
+| 116 uses of a dashed staircase; 36 of a line back and forth; 65 of an open square | 199,637; 197,065; 198,706 | 25.7; 73.2; 25.2         | 19; 49; 25 ms | 0.07; 0.12; 0.10 s | 47; 86; 44 ms  |
 | 729 uses of a full-size circle stroked 2 wide; 864 of an ellipse 0.5 wide         | 53,218; 63,073            | 499.8; 499.6             | 33; 10 ms     | 0.29; 0.23 s       | 68; 46 ms      |
 | 36 uses of a path of 20 full-size semicircles; 1,205 concentric circles           | 11,269; 86,761            | 492.6; 500.0             | 6; 12 ms      | 0.06; 0.44 s       | 33; 73 ms      |
 | 363 circles of radius 1,000 through the image; 4 of radius 100,000                | 26,137; 289               | 498.9; 454.6             | 4; 1 ms       | 0.08; 0.03 s       | 46; 33 ms      |
@@ -1203,7 +1236,7 @@ device scale factor of 2, and drawn inline at 600 until a screenshot shows it:
 
 The rows for clip paths were measured again with the rewrite on the same machine idle (load about
 0.3), so they read a little low beside the rest; the clip paths are timed to their first frame.
-The rows for dashes on a zigzag, a circle, a guilloche, an ellipse, a rounded rectangle, an arc, a
+The rows for dashes on a zigzag, circles (140 wide among them), a guilloche, an ellipse, a rounded rectangle, an arc, a
 cubic, a diagonal or horizontal line and paths of horizontal and vertical lines, and for the thin
 ellipses, were measured with each dash charged for its tiles, on a quiet four-core machine, the
 median of three; the rows for thin circles, concentric circles and the wide stroked arcs with a
