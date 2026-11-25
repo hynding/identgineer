@@ -326,6 +326,16 @@ describe("get", () => {
     },
   );
 
+  it.each([
+    ["a kit", {}],
+    ["a refused record", { name: "" }],
+  ])("refuses %s answered for another document id than asked for", async (_kind, extra) => {
+    const { store } = storeWith(() =>
+      json({ data: rowOf(kitFrom(), { documentId: "someone-else", ...extra }) }),
+    );
+    expect((await rejection(store.get(DOCUMENT_ID))).code).toBe("malformed-response");
+  });
+
   it("refuses an answer whose data is null", async () => {
     const { store } = storeWith(() => json({ data: null, meta: {} }));
     expect((await rejection(store.get(DOCUMENT_ID))).code).toBe("malformed-response");
@@ -478,6 +488,18 @@ describe("update", () => {
     expect(sent).toHaveLength(1);
   });
 
+  it.each([
+    ["as sent", kitFrom()],
+    ["otherwise than sent, never naming the other kit", kitFrom({ name: "Other" })],
+  ])("refuses an update answered for another document id, %s", async (_kind, answered) => {
+    const { store } = storeWith(() =>
+      json({ data: rowOf(answered, { documentId: "someone-else" }) }),
+    );
+    const error = await rejection(store.update(DOCUMENT_ID, kitFrom()));
+    expect(error.code).toBe("malformed-response");
+    expect(JSON.stringify(error)).not.toContain("someone-else");
+  });
+
   it("refuses a bad id without sending anything", async () => {
     const { store, sent } = storeWith(() => json({}));
     expect((await rejection(store.update("../x", kitFrom()))).code).toBe("validation");
@@ -544,6 +566,14 @@ describe("public kits", () => {
     expect(sent).toEqual([]);
     expect(publicSent[0]?.url).toBe(`${KITS}/${DOCUMENT_ID}`);
     expect(result.ok).toBe(true);
+  });
+
+  it("refuses a public kit answered for another document id than asked for", async () => {
+    const { store } = storeWith(
+      () => json({}),
+      () => json({ data: rowOf(kitFrom(), { documentId: "someone-else", isPublic: true }) }),
+    );
+    expect((await rejection(store.getPublic(DOCUMENT_ID))).code).toBe("malformed-response");
   });
 
   it("refuses a private kit read as a public one", async () => {
