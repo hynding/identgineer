@@ -79,21 +79,6 @@
           }
         },
         {
-          "contentType": "BrandKit",
-          "actions": ["read"],
-          "condition": {
-            "kind": "eq",
-            "left": {
-              "kind": "var",
-              "name": "record.isPublic"
-            },
-            "right": {
-              "kind": "lit",
-              "value": true
-            }
-          }
-        },
-        {
           "contentType": "Property",
           "actions": ["create", "read", "update", "delete"],
           "condition": {
