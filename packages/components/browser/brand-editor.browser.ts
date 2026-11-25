@@ -852,6 +852,26 @@ function colourInputs(page: Page) {
 const fitting = (fields: readonly { field: string; cropped: readonly string[]; mark: string }[]) =>
   fields.filter((field) => field.cropped.length > 0 || field.mark !== "inside");
 
+/**
+ * Each image upload, in every editor, whose content is wider than its box. The file chooser's
+ * button and file name are drawn inside the browser's own control, which clips them, so a crop
+ * shows only as the input's scroll width exceeding its client width.
+ */
+function clippedFileInputs(page: Page) {
+  return page.evaluate(() => {
+    const inputs = [...document.querySelectorAll("idg-brand-editor")].flatMap((editor) =>
+      [...(editor.shadowRoot?.querySelectorAll('input[type="file"]') ?? [])].map((input) => ({
+        field: `${editor.id} ${input.id}`,
+        clipped: input.scrollWidth > input.clientWidth,
+      })),
+    );
+    return {
+      count: inputs.length,
+      clipped: inputs.filter((input) => input.clipped).map((input) => input.field),
+    };
+  });
+}
+
 test.describe("idg-brand-editor reflow", () => {
   for (const layout of LAYOUTS) {
     for (const size of TEXT_SIZES) {
@@ -870,6 +890,7 @@ test.describe("idg-brand-editor reflow", () => {
           .poll(async () => {
             const found = await measureReflow(page, EDITORS);
             const colours = await colourInputs(page);
+            const files = await clippedFileInputs(page);
             return {
               page: found.page <= 0,
               wider: found.wider,
@@ -877,6 +898,8 @@ test.describe("idg-brand-editor reflow", () => {
               measured: found.elements > 500,
               colours: colours.length,
               misfits: fitting(colours),
+              files: files.count,
+              clipped: files.clipped,
             };
           })
           .toEqual({
@@ -886,6 +909,8 @@ test.describe("idg-brand-editor reflow", () => {
             measured: true,
             colours: 9,
             misfits: [],
+            files: 6,
+            clipped: [],
           });
       });
     }
@@ -908,14 +933,25 @@ test.describe("idg-brand-editor reflow", () => {
       .poll(async () => {
         const found = await measureReflow(page, EDITORS);
         const colours = await colourInputs(page);
+        const files = await clippedFileInputs(page);
         return {
           page: found.page <= 0,
           wider: found.wider,
           hosts: found.hosts,
           colours: colours.length,
           misfits: fitting(colours),
+          files: files.count,
+          clipped: files.clipped,
         };
       })
-      .toEqual({ page: true, wider: [0, 0, 0], hosts: 3, colours: 9, misfits: [] });
+      .toEqual({
+        page: true,
+        wider: [0, 0, 0],
+        hosts: 3,
+        colours: 9,
+        misfits: [],
+        files: 6,
+        clipped: [],
+      });
   });
 });
