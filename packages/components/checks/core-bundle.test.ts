@@ -267,7 +267,7 @@ describe("the bundles of stencil-bundles.ts, against the components' sources", (
         ]),
       );
       for (const other of rendered) {
-        if (other === undefined || other === tag) continue;
+        if (other === tag) continue;
         const group = groupOf(other);
         if (group === groupOf(tag) || group === "controls") continue;
         if (`${tag}>${other}` in ACCEPTED_RENDERS) continue;
