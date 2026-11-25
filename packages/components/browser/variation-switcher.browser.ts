@@ -380,6 +380,35 @@ test.describe("the keyboard alone", () => {
     expect((await activeInfo(page)).label).toBe("UX");
   });
 
+  test("a control tabbed to before the page has settled a new layout stays in view", async ({
+    page,
+  }) => {
+    await open(page, 600);
+    const layout = page.locator("#switcher").locator('select[aria-label="Layout"]');
+    const ux = page.locator("#switcher").locator('select[aria-label="UX"]');
+    await layout.focus();
+    // The Layout select sits at the bottom edge of the window, so the next control is below it.
+    await layout.evaluate((select) => {
+      const bottom = select.getBoundingClientRect().bottom;
+      window.scrollBy(0, bottom - window.innerHeight + 4);
+    });
+    await frames(page);
+    await page.evaluate(async () => {
+      document.documentElement.setAttribute("data-layout", "immersive");
+      await Promise.resolve();
+      await Promise.resolve();
+      // As a Tab does: focus moves on and the browser scrolls the new control into view.
+      document
+        .querySelector("#switcher")
+        ?.shadowRoot?.querySelector('idg-field[data-control="ux"] idg-select')
+        ?.shadowRoot?.querySelector("select")
+        ?.focus();
+    });
+    await frames(page);
+    expect((await activeInfo(page)).label).toBe("UX");
+    await expect(ux).toBeInViewport();
+  });
+
   test("a right to left page reverses the arrows of the theme", async ({ page }) => {
     await open(page);
     await page.evaluate(() => {

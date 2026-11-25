@@ -457,12 +457,13 @@ export class IdgLayout {
     const active = deepActiveElement();
     this.readMode();
     if (!taken) return;
-    restoreViewport(window, taken);
     const previous = taken.focused;
-    if (!previous) return;
     // The frame comes after the change, and a key pressed in between may have moved focus on. That
-    // choice is the visitor's and is not undone; an element the change hides is still active here.
-    if (active !== previous && !isFocusDropped(active)) return;
+    // choice is the visitor's and is not undone, nor is the scroll the browser made to show it; an
+    // element the change hides is still active here.
+    if (previous && active !== previous && !isFocusDropped(active)) return;
+    restoreViewport(window, taken);
+    if (!previous) return;
     if (isVisible(previous)) {
       if (deepActiveElement() !== previous)
         (previous as HTMLElement).focus({ preventScroll: true });
