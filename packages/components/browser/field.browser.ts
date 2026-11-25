@@ -142,6 +142,8 @@ test.describe("an error in a narrow field", () => {
           wordsInRegion: inside(words, region),
           belowMark: words.top >= mark.bottom - 0.5,
           lines,
+          // Read back, so a rule the browser drops as invalid cannot pass for one it applies.
+          sizing: node ? getComputedStyle(node).flexBasis : "",
         };
       },
       [dir, width, error] as const,
@@ -153,7 +155,12 @@ test.describe("an error in a narrow field", () => {
   for (const dir of ["ltr", "rtl"] as const) {
     test(`keeps a word wider than the field inside it, broken, in ${dir}`, async ({ page }) => {
       const found = await measure(page, dir, "10rem", `${LONG} is too long`);
-      expect(found).toMatchObject({ regionInField: true, wordsInRegion: true, belowMark: true });
+      expect(found).toMatchObject({
+        regionInField: true,
+        wordsInRegion: true,
+        belowMark: true,
+        sizing: "min-content",
+      });
       expect(found.lines).toBeGreaterThan(1);
     });
 
@@ -164,6 +171,7 @@ test.describe("an error in a narrow field", () => {
         wordsInRegion: true,
         belowMark: false,
         lines: 1,
+        sizing: "min-content",
       });
     });
   }

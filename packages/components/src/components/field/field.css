@@ -50,12 +50,14 @@
   line-height: var(--idg-font-body-line-height);
 }
 
-/* The message takes the room beside its mark, but never less than its longest word: where that
-   does not fit, as in a narrow field at a large text size, it goes below the mark instead. A word
-   longer than the whole line breaks. */
+/* The message starts as wide as its longest word and grows into the room beside its mark. Where
+   that word does not fit beside the mark, as in a narrow field at a large text size, the message
+   wraps below it; where it is wider than the whole line, it shrinks to the line and that word
+   breaks. An ordinary word that fits is never broken. */
 .error-text {
-  flex: 1 1 0%;
-  min-inline-size: min(min-content, 100%);
+  flex: 1 1 min-content;
+  min-inline-size: 0;
+  max-inline-size: 100%;
   overflow-wrap: break-word;
 }
 
