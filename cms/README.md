@@ -286,8 +286,8 @@ Limits that remain on Strapi, for this model:
   first run: `ALTER TABLE profiles RENAME COLUMN locale TO language` (SQLite, MySQL 8 and
   PostgreSQL). Left alone, schema sync does not rename it: as camis documents it (Strapi's own sync,
   and `camis:schema-sync` of strapi-php), it adds the missing `language` column empty and drops the
-  `locale` column the model no longer declares, so every stored locale is lost and profiles read
-  `language` as the default `en` or `null`. Local Strapi was not booted to confirm this.
+  `locale` column the model no longer declares, so every stored locale is lost. Local Strapi was not booted to confirm
+  this.
 
 **Reported by `pnpm cms:generate`.**
 
