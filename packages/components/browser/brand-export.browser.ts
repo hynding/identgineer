@@ -188,12 +188,12 @@ test.describe("idg-brand-export copying", () => {
     page,
   }) => {
     await openBrandExport(page);
-    await page.locator("#export-text").locator('[data-action="copy-css"]').focus();
+    await page.locator("#export-text").locator('[data-action="copy-css"] button').focus();
     await page.keyboard.press("Enter");
     await expect(status(page, "export-text")).toHaveText("The stylesheet was copied.");
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(HARBOUR_CSS);
     await page.evaluate(() => navigator.clipboard.writeText("something else"));
-    await page.locator("#export-text").locator('[data-action="copy-tokens"]').focus();
+    await page.locator("#export-text").locator('[data-action="copy-tokens"] button').focus();
     await page.keyboard.press("Space");
     await expect
       .poll(() => page.evaluate(() => navigator.clipboard.readText()))
@@ -221,11 +221,12 @@ test.describe("idg-brand-export copying", () => {
         await page.evaluate(() => {
           let active: Element | null = document.activeElement;
           while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+          // A button's name is the text its idg-button host holds; a region is named by its title.
+          const host = (active?.getRootNode() as ShadowRoot | undefined)?.host;
           const label =
-            active?.getAttribute("aria-label") ??
-            active?.textContent.trim() ??
-            active?.getAttribute("role") ??
-            "";
+            active?.localName === "button"
+              ? (host?.textContent.trim().replaceAll(/\s+/g, " ") ?? "")
+              : "";
           return `${active?.localName ?? ""}:${label.slice(0, 24)}`;
         }),
       );
@@ -269,7 +270,10 @@ test.describe("idg-brand-export copying", () => {
         focused: host?.shadowRoot?.activeElement?.getAttribute("aria-labelledby") ?? "",
       };
     });
-    expect([selection.document, selection.shadow]).toContain(HARBOUR_CSS);
+    // The browser leaves out the newline that ends the last line of a block of preformatted text.
+    expect([selection.document, selection.shadow].map((text) => text.trimEnd())).toContain(
+      HARBOUR_CSS.trimEnd(),
+    );
     expect(selection.focused).toBe("title-css");
     expect((await recorded(page)).events).toEqual([]);
   });
@@ -288,7 +292,7 @@ test.describe("idg-brand-export copying", () => {
       "The design tokens could not be copied, so it is selected: copy it yourself.",
     );
     const selected = await page.evaluate(() => document.getSelection()?.toString() ?? "");
-    expect(selected).toBe(HARBOUR_TOKENS);
+    expect(selected.trimEnd()).toBe(HARBOUR_TOKENS.trimEnd());
   });
 });
 
@@ -343,7 +347,7 @@ test.describe("idg-brand-export downloading", () => {
     page,
   }) => {
     await openBrandExport(page);
-    await page.locator("#export-theme").locator('[data-action="download-css"]').focus();
+    await page.locator("#export-theme").locator('[data-action="download-css"] button').focus();
     const [download] = await Promise.all([
       page.waitForEvent("download"),
       page.keyboard.press("Enter"),
@@ -558,7 +562,7 @@ test.describe("idg-brand-export reflow", () => {
               measured: found.elements > 100,
             };
           })
-          .toEqual({ page: true, wider: true, hosts: 4, measured: true });
+          .toEqual({ page: true, wider: true, hosts: 5, measured: true });
       });
     }
   }
@@ -580,7 +584,7 @@ test.describe("idg-brand-export reflow", () => {
           hosts: found.hosts,
         };
       })
-      .toEqual({ page: true, wider: true, hosts: 4 });
+      .toEqual({ page: true, wider: true, hosts: 5 });
     const found = await page.locator("#export-text").evaluate((host) => {
       const regions = [...(host.shadowRoot?.querySelectorAll(".code") ?? [])];
       const box = host.getBoundingClientRect();

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>brand export fixture</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/fixtures/brand.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+    <!-- Served under the strict policy: the export draws no image. The data is answered at /fixtures/brand-data.json. -->
+    <script type="module" src="/fixtures/brand.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Brand export</h1>
+
+      <section id="exports" aria-labelledby="exports-title">
+        <h2 id="exports-title">Files</h2>
+        <idg-brand-export
+          id="export-text"
+          data-export-source="harbour"
+          heading-level="3"
+          label="Harbour Lights files"
+        ></idg-brand-export>
+        <idg-brand-export
+          id="export-theme"
+          data-theme-source="harbour"
+          label="Harbour Lights files from the theme"
+        ></idg-brand-export>
+        <idg-brand-export id="export-altered" label="Altered theme files"></idg-brand-export>
+        <idg-brand-export
+          id="export-hostile"
+          data-export-source="hostile"
+          label="Untrusted files"
+        ></idg-brand-export>
+        <idg-brand-export id="export-empty" label="No files"></idg-brand-export>
+      </section>
+    </main>
+  </body>
+</html>

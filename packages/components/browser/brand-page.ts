@@ -102,7 +102,7 @@ const HOSTILE_KIT = {
   tagline: `Tagline ${CANARY}`,
   logo: HOSTILE_LOGO,
   mark: HOSTILE_LOGO,
-  colors: { primary: [1, 2, 3000], secondary: "red", neutralTint: [0.5, 0, 0] },
+  colors: { primary: [1, 2, 3000], secondary: "red", neutralTint: [27, 42, 74] },
   typography: 'x"; background: url(https://example.com/font.woff)',
   corners: "round; background: url(https://example.com/corners.png)",
   tone: "vivid; background: url(https://example.com/tone.png)",

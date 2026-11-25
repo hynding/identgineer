@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { test as base, type Page } from "@playwright/test";
 import { FONT_PAIRINGS } from "@identgineer/brand/presets";
 import { DESIGNS, LAYOUTS, SCHEMES, THEMES, UX_MODES, applyAxes } from "./axes";
 import { expectNoAxeViolations } from "./accessibility";
@@ -343,34 +343,42 @@ test.describe("idg-brand-guidelines with a kit and a theme it cannot trust", () 
 });
 
 test.describe("idg-brand-guidelines under the strict policy alone", () => {
-  test("shows the names where the policy forbids the images, and the images are the only thing blocked", async ({
-    page,
-  }) => {
-    const watch = await openBrand(page, { policy: "strict" });
-    const violations = await watch.violations();
-    expect(violations.length).toBeGreaterThan(0);
-    for (const violation of violations) expect(violation).toMatch(/^img-src data:/);
-    const wordmarks = await page
-      .locator("#guide-harbour")
-      .evaluate((host) =>
-        [...(host.shadowRoot?.querySelectorAll("idg-brand-logo") ?? [])].map(
-          (logo) => logo.shadowRoot?.querySelector(".wordmark, .monogram") !== null,
-        ),
-      );
-    await expect
-      .poll(() =>
-        page
-          .locator("#guide-harbour")
-          .evaluate((host) =>
-            [...(host.shadowRoot?.querySelectorAll("idg-brand-logo") ?? [])].every(
-              (logo) => logo.shadowRoot?.querySelector(".wordmark, .monogram") !== null,
-            ),
+  // The browser refuses the data urls and says so on the console, which every other test treats as
+  // a failure; here it is the thing under test.
+  base(
+    "shows the names where the policy forbids the images, and the images are the only thing blocked",
+    async ({ page }) => {
+      const messages: string[] = [];
+      page.on("console", (message) => {
+        if (message.type() === "error") messages.push(message.text());
+      });
+      const watch = await openBrand(page, { policy: "strict" });
+      expect(messages.every((message) => message.includes("Content Security Policy"))).toBe(true);
+      const violations = await watch.violations();
+      expect(violations.length).toBeGreaterThan(0);
+      for (const violation of violations) expect(violation).toMatch(/^img-src data/);
+      const wordmarks = await page
+        .locator("#guide-harbour")
+        .evaluate((host) =>
+          [...(host.shadowRoot?.querySelectorAll("idg-brand-logo") ?? [])].map(
+            (logo) => logo.shadowRoot?.querySelector(".wordmark, .monogram") !== null,
           ),
-      )
-      .toBe(true);
-    expect(wordmarks).toHaveLength(4);
-    await expect(page.locator("#guide-harbour")).toBeVisible();
-  });
+        );
+      await expect
+        .poll(() =>
+          page
+            .locator("#guide-harbour")
+            .evaluate((host) =>
+              [...(host.shadowRoot?.querySelectorAll("idg-brand-logo") ?? [])].every(
+                (logo) => logo.shadowRoot?.querySelector(".wordmark, .monogram") !== null,
+              ),
+            ),
+        )
+        .toBe(true);
+      expect(wordmarks).toHaveLength(4);
+      await expect(page.locator("#guide-harbour")).toBeVisible();
+    },
+  );
 });
 
 test.describe("idg-brand-guidelines backings", () => {
