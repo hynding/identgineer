@@ -360,6 +360,26 @@ test.describe("the keyboard alone", () => {
     await expect(status(page)).toContainText(/Link copied|could not be copied/);
   });
 
+  test("a key pressed before the page has settled a new layout keeps focus where it moved", async ({
+    page,
+  }) => {
+    await open(page);
+    await page.locator("#switcher").locator('select[aria-label="Layout"]').focus();
+    // The layout changes, and in the same frame the visitor tabs on to the next control.
+    await page.evaluate(async () => {
+      document.documentElement.setAttribute("data-layout", "side-rail");
+      await Promise.resolve();
+      await Promise.resolve();
+      const ux = document
+        .querySelector("#switcher")
+        ?.shadowRoot?.querySelector('idg-field[data-control="ux"] idg-select')
+        ?.shadowRoot?.querySelector("select");
+      ux?.focus();
+    });
+    await frames(page);
+    expect((await activeInfo(page)).label).toBe("UX");
+  });
+
   test("a right to left page reverses the arrows of the theme", async ({ page }) => {
     await open(page);
     await page.evaluate(() => {

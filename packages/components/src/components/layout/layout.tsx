@@ -47,6 +47,12 @@ function isSamePresence(a: Presence, b: Presence): boolean {
   return REGIONS.every((region) => a[region] === b[region]);
 }
 
+// Focus a change took away rests on the page itself, not on another control.
+function isFocusDropped(): boolean {
+  const active = deepActiveElement();
+  return active === null || active === document.body || active === document.documentElement;
+}
+
 function isVisible(element: Element): boolean {
   const candidate = element as HTMLElement;
   return (
@@ -453,9 +459,11 @@ export class IdgLayout {
     restoreViewport(window, taken);
     const previous = taken.focused;
     if (!previous) return;
+    // The frame comes after the change, and a key pressed in between may have moved focus on. That
+    // choice is the visitor's and is not undone; only a focus the change dropped is put back.
+    if (!isFocusDropped()) return;
     if (isVisible(previous)) {
-      if (deepActiveElement() !== previous)
-        (previous as HTMLElement).focus({ preventScroll: true });
+      (previous as HTMLElement).focus({ preventScroll: true });
       return;
     }
     const inNavigation =
