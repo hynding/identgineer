@@ -1,12 +1,29 @@
 import type { ClientContext } from "./client-context.ts";
 import { documentSegment } from "./identifiers.ts";
 import { isTextWithin, requireObject, requireValid } from "./input-checks.ts";
+import { IdentityError } from "./identity-error.ts";
 import { failureOf } from "./map-error.ts";
 import { readProfile, readProfileList } from "./shapes.ts";
+import type { ApiResponse } from "./transport.ts";
 import type { Profile, ProfileInput } from "./types.ts";
 
 const PROFILES_PATH = "/api/profiles";
 const PROFILE_FIELDS = ["displayName", "bio", "locale", "timezone", "marketingOptIn"] as const;
+
+type ProfileField = (typeof PROFILE_FIELDS)[number];
+
+// The CMS stores the locale as `language`: camis reserves `locale` for Strapi's own. Callers keep
+// `locale`, and this is the only place that knows the difference.
+const WIRE_NAMES: Readonly<Record<ProfileField, string>> = {
+  displayName: "displayName",
+  bio: "bio",
+  locale: "language",
+  timezone: "timezone",
+  marketingOptIn: "marketingOptIn",
+};
+const wireNameOf = (field: ProfileField): string => WIRE_NAMES[field];
+const fieldOfWireName = (name: string): ProfileField | undefined =>
+  PROFILE_FIELDS.find((field) => WIRE_NAMES[field] === name);
 
 // The Profile content type's limits in cms/camis.json.
 const LOCALE = /^[a-z]{2,3}(-[A-Z][a-z]{3})?(-([A-Z]{2}|[0-9]{3}))?$/;
@@ -36,9 +53,19 @@ const checkProfile = (input: ProfileInput): void => {
 const dataOf = (input: ProfileInput): Record<string, unknown> => {
   const data: Record<string, unknown> = {};
   for (const field of PROFILE_FIELDS) {
-    if (Object.hasOwn(input, field) && input[field] !== undefined) data[field] = input[field];
+    if (Object.hasOwn(input, field) && input[field] !== undefined) {
+      data[wireNameOf(field)] = input[field];
+    }
   }
   return data;
+};
+
+/** A failed answer, with the input fields it names given as the caller knows them. */
+const profileFailure = (response: ApiResponse, now: number): IdentityError => {
+  const failure = failureOf(response, now, PROFILE_FIELDS.map(wireNameOf));
+  if (failure.fields === undefined) return failure;
+  const fields = failure.fields.flatMap((name) => fieldOfWireName(name) ?? []);
+  return new IdentityError("validation", { fields });
 };
 
 export const getProfile = (context: ClientContext) => async (): Promise<Profile | null> => {
@@ -59,6 +86,6 @@ export const saveProfile =
         ? { method: "POST", path: PROFILES_PATH, body }
         : { method: "PUT", path: `${PROFILES_PATH}/${documentSegment(existing.documentId)}`, body },
     );
-    if (!response.ok) throw failureOf(response, context.clock.now(), PROFILE_FIELDS);
+    if (!response.ok) throw profileFailure(response, context.clock.now());
     return readProfile(response.body);
   };
