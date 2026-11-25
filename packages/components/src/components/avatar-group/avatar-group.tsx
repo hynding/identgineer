@@ -1,5 +1,5 @@
 import { Component, Element, h, Prop, State } from "@stencil/core";
-import { oneOf } from "../../utils/choice";
+import { oneOf } from "../../utils/controls-copies";
 import { AVATAR_SIZES, type AvatarSize } from "../avatar/avatar-options";
 
 interface GroupedAvatar extends HTMLElement {

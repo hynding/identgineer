@@ -1,5 +1,5 @@
 import { Component, h, Prop } from "@stencil/core";
-import { oneOf } from "../../utils/choice";
+import { oneOf } from "../../utils/controls-copies";
 import { MAX_LINES, SKELETON_VARIANTS, type SkeletonVariant } from "./skeleton-options";
 
 /**

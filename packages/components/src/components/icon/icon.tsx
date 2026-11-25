@@ -1,5 +1,5 @@
 import { Build, Component, h, Prop } from "@stencil/core";
-import { oneOf } from "../../utils/choice";
+import { oneOf } from "../../utils/controls-copies";
 import { ICON_SIZES, type IconSize } from "./icon-options";
 import { ICON_PATHS, isIconName, type IconName } from "./icon-paths";
 

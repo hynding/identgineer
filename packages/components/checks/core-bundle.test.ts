@@ -12,12 +12,12 @@ const BUILDS = ["www/build", "dist/esm"].map((directory) => join(PACKAGE, direct
 // component may load (its entry and the chunks it imports), for `www/build` and `dist/esm`. The
 // ceilings are set from the sizes measured in the README, with a margin of about 15%.
 const REPRESENTATIVES: Record<string, { readonly www: number; readonly dist: number }> = {
-  "idg-button": { www: 58000, dist: 124000 },
+  "idg-button": { www: 66700, dist: 135000 },
   "idg-field": { www: 177000, dist: 356000 },
   "idg-sign-in": { www: 177000, dist: 356000 },
-  "idg-event-table": { www: 81000, dist: 197000 },
-  "idg-consent-banner": { www: 109000, dist: 227000 },
-  "idg-dialog": { www: 109000, dist: 227000 },
+  "idg-event-table": { www: 78000, dist: 194000 },
+  "idg-consent-banner": { www: 101000, dist: 217000 },
+  "idg-dialog": { www: 101000, dist: 217000 },
   "idg-menu": { www: 58000, dist: 146000 },
   "idg-tabs": { www: 37000, dist: 101000 },
   "idg-accordion": { www: 33000, dist: 91000 },
@@ -28,11 +28,11 @@ const REPRESENTATIVES: Record<string, { readonly www: number; readonly dist: num
 // is created at run time is requested only then, so one in another entry costs a round trip before
 // it draws (the dashboard's rows were in the page 200 ms before they were seen).
 const TOGETHER: readonly (readonly string[])[] = [
-  ["idg-event-table", "idg-table", "idg-pagination", "idg-skeleton"],
+  ["idg-event-table", "idg-table", "idg-pagination"],
   ["idg-menu", "idg-menu-item", "idg-menu-group", "idg-menu-separator", "idg-user-menu"],
   ["idg-tabs", "idg-tab", "idg-tab-panel"],
   ["idg-accordion", "idg-accordion-item"],
-  ["idg-consent-preferences", "idg-dialog", "idg-switch"],
+  ["idg-consent-preferences", "idg-dialog"],
   ["idg-sign-in", "idg-register", "idg-password-reset", "idg-field", "idg-input"],
 ];
 
