@@ -65,7 +65,7 @@
   flex-direction: column;
   gap: var(--_gap);
   min-inline-size: 0;
-  padding: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+  padding: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
   border-width: var(--idg-surface-border-width);
   border-style: var(--idg-surface-border-style);
   border-color: var(--idg-surface-border-color);
@@ -73,6 +73,16 @@
   background: var(--idg-surface-background);
   backdrop-filter: var(--idg-surface-backdrop-filter);
   box-shadow: var(--idg-elevation-sm);
+}
+
+/* The swatches are surfaces of their own, one for each scheme: a surface around them would take
+   the width a doubled text size needs for a chip beside its value, so they sit on the page. */
+.section[data-section="colours"] {
+  padding: 0;
+  border-width: 0;
+  background: none;
+  backdrop-filter: none;
+  box-shadow: none;
 }
 
 p {
@@ -138,7 +148,7 @@ code {
   justify-content: center;
   min-inline-size: 0;
   min-block-size: 8rem;
-  padding: var(--idg-space-m);
+  padding: var(--idg-space-2xs);
   border: 2px solid var(--idg-color-border-strong);
   border-radius: var(--idg-shape-radius-md);
   background: var(--idg-color-bg-subtle);

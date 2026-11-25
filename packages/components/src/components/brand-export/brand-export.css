@@ -26,7 +26,7 @@
   flex-direction: column;
   gap: var(--idg-space-xs);
   min-inline-size: 0;
-  padding: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+  padding: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
   border-width: var(--idg-surface-border-width);
   border-style: var(--idg-surface-border-style);
   border-color: var(--idg-surface-border-color);
@@ -102,6 +102,13 @@ code {
   display: flex;
   flex-wrap: wrap;
   gap: var(--idg-space-xs);
+  min-inline-size: 0;
+}
+
+/* A button wider than the room at a doubled text size wraps its label rather than leave the host. */
+.actions idg-button {
+  min-inline-size: 0;
+  max-inline-size: 100%;
 }
 
 .status {

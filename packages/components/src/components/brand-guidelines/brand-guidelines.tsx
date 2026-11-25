@@ -126,7 +126,7 @@ export class IdgBrandGuidelines {
         text: labels.mark,
         logo: readImage(this.kit, "mark"),
         drawn: this.markDrawn,
-        size: "xl",
+        size: "lg",
         missing: labels.noMark,
       },
     ] as const;
