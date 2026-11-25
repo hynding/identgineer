@@ -858,6 +858,51 @@ describe("aborting", () => {
     expect(error.code).toBe("network");
   });
 
+  it("watches the signal without adding a reaction for every chunk of the body", async () => {
+    // A server may send a body one byte at a time; what the store keeps per chunk is then
+    // multiplied by up to 4 MiB. Each promise reaction goes through Promise.prototype.then.
+    const reactionsWhileReading = async (chunks: number): Promise<number> => {
+      const opening = new TextEncoder().encode(`{"data":{"documentId":"${DOCUMENT_ID}","x":"`);
+      let pulled = 0;
+      const { store } = storeWith(
+        () =>
+          new Response(
+            new ReadableStream<Uint8Array>({
+              pull(stream) {
+                if (pulled === 0) stream.enqueue(opening);
+                else if (pulled <= chunks) stream.enqueue(new Uint8Array([97]));
+                else {
+                  stream.enqueue(new TextEncoder().encode('"}}'));
+                  stream.close();
+                }
+                pulled += 1;
+              },
+            }),
+            { headers: { "Content-Type": "application/json" } },
+          ),
+      );
+      const original = Object.getOwnPropertyDescriptor(Promise.prototype, "then");
+      const then = original?.value as (this: unknown, ...handlers: unknown[]) => unknown;
+      let reactions = 0;
+      Reflect.defineProperty(Promise.prototype, "then", {
+        ...original,
+        value(this: unknown, ...handlers: unknown[]) {
+          reactions += 1;
+          return then.apply(this, handlers);
+        },
+      });
+      try {
+        await store.get(DOCUMENT_ID, { signal: new AbortController().signal });
+        return reactions;
+      } finally {
+        if (original !== undefined) Reflect.defineProperty(Promise.prototype, "then", original);
+      }
+    };
+    const few = await reactionsWhileReading(10);
+    const many = await reactionsWhileReading(2010);
+    expect(many - few).toBeLessThan(100);
+  });
+
   it("sends nothing once the signal has aborted", async () => {
     const controller = new AbortController();
     controller.abort();
