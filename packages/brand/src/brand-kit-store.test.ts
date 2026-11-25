@@ -430,7 +430,11 @@ describe("update", () => {
     const stale = rowOf(kitFrom({ tagline: "Old", logo: logo.svg }));
     const { store } = storeWith(() => json({ data: stale }));
     const error = await rejection(store.update(DOCUMENT_ID, kitFrom()));
-    expect(error).toMatchObject({ code: "not-applied", fields: ["tagline", "logo"] });
+    expect(error).toMatchObject({
+      code: "not-applied",
+      documentId: DOCUMENT_ID,
+      fields: ["tagline", "logo"],
+    });
     expect(JSON.stringify(error)).not.toContain("Old");
   });
 
@@ -440,6 +444,18 @@ describe("update", () => {
     );
     const error = await rejection(store.create(kitFrom(), { isPublic: true }));
     expect(error).toMatchObject({ code: "not-applied", fields: ["name", "isPublic"] });
+  });
+
+  it("names the kit a create stored though not as sent, so it can be read again or removed", async () => {
+    const { store } = storeWith(() => json({ data: rowOf(kitFrom({ name: "Other" })) }));
+    const error = await rejection(store.create(kitFrom()));
+    expect(error).toMatchObject({ code: "not-applied", documentId: DOCUMENT_ID, fields: ["name"] });
+    expect(JSON.parse(JSON.stringify(error))).toEqual({
+      name: "BrandKitStoreError",
+      code: "not-applied",
+      documentId: DOCUMENT_ID,
+      fields: ["name"],
+    });
   });
 
   it("keeps whether the kit is public when isPublic is not given", async () => {
