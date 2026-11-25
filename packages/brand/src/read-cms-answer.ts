@@ -9,26 +9,21 @@ const cancel = (response: Response): void => {
   response.body?.cancel().catch(() => undefined);
 };
 
-/** Rejects as soon as `signal` aborts; never settles otherwise. */
-function abortion(signal: AbortSignal): { promise: Promise<never>; done: () => void } {
-  let done = (): void => undefined;
-  const promise = new Promise<never>((_resolve, reject) => {
-    const abort = (): void => {
-      reject(new BrandKitStoreError("network"));
-    };
-    signal.addEventListener("abort", abort);
-    done = () => {
-      signal.removeEventListener("abort", abort);
-    };
-  });
-  promise.catch(() => undefined);
-  return { promise, done };
+const INITIAL_BUFFER_BYTES = 16 * 1024;
+
+/** `bytes` with room for at least `needed`, doubling so that many small chunks copy little. */
+function grown(bytes: Uint8Array, used: number, needed: number, maxBytes: number): Uint8Array {
+  const larger = new Uint8Array(Math.min(maxBytes, Math.max(needed, bytes.byteLength * 2)));
+  larger.set(bytes.subarray(0, used));
+  return larger;
 }
 
 /**
  * Reads at most `maxBytes` of the body, cancelling it as soon as it is longer or `signal` aborts:
  * a fetch may let go of the caller's signal once the headers are in (the identity SDK's
- * authorizedFetch does), so the store watches it itself.
+ * authorizedFetch does), so the store watches it itself. One listener serves the whole read:
+ * cancelling the reader settles the pending read, which then sees the abort, so nothing is kept
+ * per chunk however small the server makes them.
  */
 async function readBytes(
   response: Response,
@@ -43,37 +38,36 @@ async function readBytes(
   const body = response.body;
   if (body === null) return new Uint8Array(0);
   const reader = body.getReader();
-  const aborted = signal === undefined ? undefined : abortion(signal);
-  const chunks: Uint8Array[] = [];
+  const stop = (): void => {
+    reader.cancel().catch(() => undefined);
+  };
+  signal?.addEventListener("abort", stop);
+  let bytes = new Uint8Array(Math.min(maxBytes, INITIAL_BUFFER_BYTES));
   let total = 0;
   try {
     for (;;) {
       if (signal?.aborted === true) throw new BrandKitStoreError("network");
       let chunk: ReadableStreamReadResult<Uint8Array>;
       try {
-        const read = reader.read();
-        chunk = await (aborted === undefined ? read : Promise.race([read, aborted.promise]));
-      } catch (error) {
-        throw error instanceof BrandKitStoreError ? error : new BrandKitStoreError("network");
+        chunk = await reader.read();
+      } catch {
+        throw new BrandKitStoreError("network");
       }
+      if (signal?.aborted === true) throw new BrandKitStoreError("network");
       if (chunk.done) break;
-      total += chunk.value.byteLength;
-      if (total > maxBytes) throw malformed();
-      chunks.push(chunk.value);
+      const needed = total + chunk.value.byteLength;
+      if (needed > maxBytes) throw malformed();
+      if (needed > bytes.byteLength) bytes = grown(bytes, total, needed, maxBytes);
+      bytes.set(chunk.value, total);
+      total = needed;
     }
   } catch (error) {
     reader.cancel().catch(() => undefined);
     throw error;
   } finally {
-    aborted?.done();
+    signal?.removeEventListener("abort", stop);
   }
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return bytes;
+  return bytes.subarray(0, total);
 }
 
 /**
