@@ -263,7 +263,7 @@ describe("idg-brand-export copying", () => {
     const events = listen(root, "idgCopy");
     await press(root, "copy-css", waitForChanges);
     expect(status(root)).toBe(
-      "The stylesheet could not be copied. Its text is selected: copy it yourself.",
+      "The stylesheet could not be copied. The text is selected: copy it yourself.",
     );
     expect(events).toHaveLength(0);
     expect(selected).toEqual([one(root, '[data-artefact="css"] pre code')]);

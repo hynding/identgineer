@@ -44,7 +44,7 @@ export const BRAND_EXPORT_LABELS: BrandExportLabels = {
   copy: "Copy {artefact}",
   download: "Download {artefact}",
   copied: "The {artefact} was copied.",
-  copyFailed: "The {artefact} could not be copied. Its text is selected: copy it yourself.",
+  copyFailed: "The {artefact} could not be copied. The text is selected: copy it yourself.",
   downloaded: "The {artefact} was downloaded as {file}.",
   downloadFailed: "The {artefact} could not be downloaded.",
   emitFailed: "The theme could not be turned into files: it no longer matches its brand kit.",

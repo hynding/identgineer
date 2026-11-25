@@ -259,7 +259,7 @@ test.describe("idg-brand-export copying", () => {
     await expect(page.locator("html[data-brand-ready]")).toHaveCount(1);
     await button(page, "export-text", "copy-css").click();
     await expect(status(page, "export-text")).toHaveText(
-      "The stylesheet could not be copied. Its text is selected: copy it yourself.",
+      "The stylesheet could not be copied. The text is selected: copy it yourself.",
     );
     const selection = await page.evaluate(() => {
       const host = document.querySelector("#export-text");
@@ -290,7 +290,7 @@ test.describe("idg-brand-export copying", () => {
     await expect(page.locator("html[data-brand-ready]")).toHaveCount(1);
     await button(page, "export-text", "copy-tokens").click();
     await expect(status(page, "export-text")).toHaveText(
-      "The design tokens could not be copied. Its text is selected: copy it yourself.",
+      "The design tokens could not be copied. The text is selected: copy it yourself.",
     );
     const selected = await page.evaluate(() => document.getSelection()?.toString() ?? "");
     expect(selected.trimEnd()).toBe(HARBOUR_TOKENS.trimEnd());
