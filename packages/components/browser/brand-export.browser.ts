@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { DESIGNS, LAYOUTS, SCHEMES, THEMES, UX_MODES, applyAxes } from "./axes";
 import { expectNoAxeViolations } from "./accessibility";
+import { CONTENT_SECURITY_POLICY } from "./content-security-policy";
 import { HARBOUR_CSS, HARBOUR_TOKENS, openBrandExport } from "./brand-page";
 import { measureEdges } from "./chip-edge";
 import { contrastRatio } from "./contrast";
@@ -258,7 +259,7 @@ test.describe("idg-brand-export copying", () => {
     await expect(page.locator("html[data-brand-ready]")).toHaveCount(1);
     await button(page, "export-text", "copy-css").click();
     await expect(status(page, "export-text")).toHaveText(
-      "The stylesheet could not be copied, so it is selected: copy it yourself.",
+      "The stylesheet could not be copied. Its text is selected: copy it yourself.",
     );
     const selection = await page.evaluate(() => {
       const host = document.querySelector("#export-text");
@@ -289,7 +290,7 @@ test.describe("idg-brand-export copying", () => {
     await expect(page.locator("html[data-brand-ready]")).toHaveCount(1);
     await button(page, "export-text", "copy-tokens").click();
     await expect(status(page, "export-text")).toHaveText(
-      "The design tokens could not be copied, so it is selected: copy it yourself.",
+      "The design tokens could not be copied. Its text is selected: copy it yourself.",
     );
     const selected = await page.evaluate(() => document.getSelection()?.toString() ?? "");
     expect(selected.trimEnd()).toBe(HARBOUR_TOKENS.trimEnd());
@@ -399,10 +400,9 @@ test.describe("idg-brand-export downloading", () => {
     page,
   }) => {
     const watch = await openBrandExport(page);
-    const response = await page.goto("/fixtures/brand-export.html");
-    expect(response?.headers()["content-security-policy"]).toBe(
-      "default-src 'self'; style-src 'self'; script-src 'self'; require-trusted-types-for 'script'",
-    );
+    // Asked of the server itself: the page's own response is rewritten by the test to the policy.
+    const response = await page.request.get("/fixtures/brand-export.html");
+    expect(response.headers()["content-security-policy"]).toBe(CONTENT_SECURITY_POLICY);
     expect(watch.requests.filter((url) => !url.startsWith(ORIGIN))).toEqual([]);
   });
 });
