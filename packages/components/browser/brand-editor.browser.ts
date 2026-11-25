@@ -914,8 +914,9 @@ function brokenFileLabels(page: Page) {
 
 /**
  * Whatever, in every editor, does not take the narrow form's padding, read as computed against the
- * value resolved in that form: each hex box `--idg-space-3xs`, and each group and file chooser's
- * button half of it, as they give the chooser's label its room.
+ * value resolved in that form: each hex box `--idg-space-3xs` and each group half of it; and each
+ * file chooser's button no inline padding and the whole width of its input, its side room being
+ * what its label leaves.
  */
 function unnarrowedPaddings(page: Page) {
   return page.evaluate(() =>
@@ -945,9 +946,18 @@ function unnarrowedPaddings(page: Page) {
           if (!hexBox) throw new Error("no hex box");
           return padded(`box ${input.getAttribute("name") ?? ""}`, getComputedStyle(hexBox), box);
         }),
-        ...[...form.querySelectorAll('input[type="file"]')].flatMap((input) =>
-          padded(`${input.id} button`, getComputedStyle(input, "::file-selector-button"), half),
-        ),
+        ...[...form.querySelectorAll('input[type="file"]')].flatMap((input) => {
+          const button = getComputedStyle(input, "::file-selector-button");
+          const width = Number.parseFloat(button.width);
+          return [
+            ...padded(`${input.id} button`, button, "0px"),
+            ...(Math.abs(width - input.clientWidth) <= 0.5
+              ? []
+              : [
+                  `${editor.id} ${input.id} button ${button.width} wide of ${String(input.clientWidth)}px`,
+                ]),
+          ];
+        }),
       ];
     }),
   );
