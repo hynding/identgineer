@@ -29,8 +29,12 @@ function runtimeImports(entry: string): { files: Set<string>; packages: Set<stri
 }
 
 describe("the logo entry", () => {
-  it("exports the two functions a component needs to show a logo, and nothing else", () => {
-    expect(Object.keys(logoEntry).sort()).toEqual(["isSanitisedSvgLogo", "logoDataUrl"]);
+  it("exports the functions a component needs to show a logo, and nothing else", () => {
+    expect(Object.keys(logoEntry).sort()).toEqual([
+      "isSanitisedSvgLogo",
+      "logoDataUrl",
+      "logoImage",
+    ]);
   });
 
   it("exports the very functions the package index does", () => {
