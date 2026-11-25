@@ -40,6 +40,17 @@ export const config: Config = {
   // before hydration, which a strict CSP and Trusted Types both refuse.
   invisiblePrehydration: false,
   rollupPlugins: { before: [transpileVariations] },
+  // Left to itself, Stencil groups components that share imports into one bundle, and the logo
+  // sanitiser, the theme generator and the emitters of the brand components ended up in the bundle
+  // of idg-button and 44 others. Any `bundles` entry turns that grouping off: every component, the
+  // brand ones included, is then a bundle of its own, and a page downloads the sanitiser only for
+  // idg-brand-logo and idg-brand-guidelines, and the generator only for idg-brand-export.
+  bundles: [
+    { components: ["idg-brand-logo"] },
+    { components: ["idg-brand-swatches"] },
+    { components: ["idg-brand-guidelines"] },
+    { components: ["idg-brand-export"] },
+  ],
   outputTargets: [
     { type: "dist", esmLoaderPath: "../loader" },
     { type: "dist-custom-elements" },

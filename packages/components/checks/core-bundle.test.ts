@@ -8,9 +8,11 @@ const PACKAGE = fileURLToPath(new URL("..", import.meta.url));
 const BUILDS = ["www/build", "dist/esm"].map((directory) => join(PACKAGE, directory));
 
 // The most bytes of script a page that uses only `idg-button` may load, entry and shared chunks
-// together, for each build. The core components were 326 KB (www) before the brand components; a
-// brand component that lands in the shared chunk raises this, and this fails.
-const CEILING_BYTES: Record<string, number> = { "www/build": 400_000, "dist/esm": 900_000 };
+// together, for each build. Measured at 32,430 (www) and 82,533 (dist) bytes. Before the brand
+// components the button's bundle alone was 326 KB in www, because Stencil grouped it with 44 others,
+// and with the brand components in that group it was 450 KB. A heavy module that lands in a chunk the
+// button loads raises this and fails it.
+const CEILING_BYTES: Record<string, number> = { "www/build": 40_000, "dist/esm": 100_000 };
 
 // Strings only the brand package's heavy code holds: the logo sanitiser's error code, the theme
 // generator's refusal of a bad kit, and the emitter's refusal of an altered theme.
