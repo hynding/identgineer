@@ -190,10 +190,12 @@ export class IdgBrandGuidelines {
     const theme = this.theme;
     const name = readName(kit);
     // The name is at most a level 5, so that its sections are always one deeper; with no name to
-    // head them they take its level, so that none is left under a heading that is not there.
-    const level = Math.min(headingLevel(this.headingLevel, DEFAULT_LEVEL), MAX_NAME_LEVEL);
+    // head them they take the level asked for, 6 included, so that none is left under a heading
+    // that is not there.
+    const requested = headingLevel(this.headingLevel, DEFAULT_LEVEL);
+    const level = Math.min(requested, MAX_NAME_LEVEL);
     const Name = `h${String(level)}`;
-    const Title = `h${String(name === "" ? level : level + 1)}`;
+    const Title = `h${String(name === "" ? requested : level + 1)}`;
     const tagline = readTagline(kit);
     const backings = readBackings(theme);
     const sourceColours = readSourceColours(kit);
