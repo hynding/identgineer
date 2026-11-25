@@ -362,8 +362,8 @@ body limit or origin list (hence the hand-written checks); JSON fields cannot be
 fields cannot name MIME types (strapi-php's global `CAMIS_UPLOAD_ALLOWED_TYPES` is used instead,
 without SVG; brand logos are text for that reason among others); string lengths are counted as
 each target counts them (UTF-16 units on Strapi, code points on strapi-php), hence the doubled
-brand kit name and tagline limits; a field cannot be unique per owner; relations have no delete behaviour, so on strapi-php a property with events cannot
-be deleted until its events are purged; there is no read-only field, so an owner can change
+brand kit name and tagline limits; a field cannot be unique per owner; relations have no delete
+behaviour, so on strapi-php a property with events cannot be deleted until its events are purged; there is no read-only field, so an owner can change
 `ingestKey` after it is issued; and one `protected/` directory is mirrored into both targets.
 
 **Public brand kits.** A `public` read grant on BrandKit conditioned on `record.isPublic == true`
