@@ -257,9 +257,9 @@ base.describe("the checks themselves", () => {
 
 // The costliest logos the sanitiser still accepts, one for each kind of work a renderer does: long
 // edges, crowded on every row; arcs; hairline dashes, of two lengths and of 64; dashes along
-// circles, an ellipse, a rounded rectangle, an arc, a cubic and a diagonal line; solid paint over
-// and over; gradients at the stop limit, opaque and translucent; a fill under a very wide stroke;
-// group opacity layers; masks inside masks; a clip path of crowded edges with the even-odd rule; a
+// circles, an ellipse, a rounded rectangle, an arc, a cubic, a diagonal and a horizontal line;
+// solid paint over and over; gradients at the stop limit, opaque and translucent; a fill under a
+// very wide stroke; group opacity layers; masks inside masks; a clip path of crowded edges with the even-odd rule; a
 // view box far wider than tall; dashes, round dots and round joins on a stroke as wide as the
 // image; clip paths of near-coincident zigzags, which a renderer combining them took minutes over,
 // each written as a mask, and of one such zigzag in every form a clip path of one shape is kept
@@ -271,9 +271,9 @@ base.describe("the checks themselves", () => {
 // pixels and at 2000 with a device scale factor of 2, shown as an image 2000 CSS pixels square at
 // that density (which Chromium rasterises in tiles), and drawn inline at 600, each within its
 // budget (the budgets cover inline logos up to 600 CSS pixels only: see the brand README). On a
-// loaded four-core machine the slowest took about 0.35 seconds at 600 and 1.8 at 2000 (see the
-// brand README), so the budgets leave room for a slow runner, yet a limit raised tenfold would
-// blow through them.
+// loaded four-core machine the slowest took about 0.35 seconds at 600 and 1.8 at 2000, and on an
+// idle one 3.5 shown as an image at 2000 (see the brand README), so the budgets leave room for a
+// slow runner, yet a limit raised tenfold would blow through them.
 const SIZE = 600;
 const LARGE_SIZE = 2000;
 const RENDER_BUDGET_MS = 15_000;
@@ -423,7 +423,7 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
     "drawing-too-costly",
   ],
   // Dashes along anything but one run of horizontal and vertical lines are worked out again for
-  // every tile of a large image the shape's box touches.
+  // every tile of a large image the shape's box touches; along such a run, culled to the tile.
   ...(["butt", "round", "square"] as const).flatMap((cap) =>
     (["3", "5"] as const).map(
       (width) =>
@@ -446,6 +446,7 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
       ["an arc", '<path id="p" d="M50 500A450 450 0 0 1 950 500"'],
       ["a cubic", '<path id="p" d="M50 500C50 251 251 50 500 50"'],
       ["a diagonal line", '<path id="p" d="M0 0L1000 1000"'],
+      ["a horizontal line", '<path id="p" d="M0 500H1000"'],
     ] as const
   ).map(
     ([shape, element]) =>
