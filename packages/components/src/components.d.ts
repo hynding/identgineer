@@ -9,6 +9,8 @@ import { AccordionToggleDetail } from "./components/accordion/accordion-options"
 import { AlertVariant } from "./components/alert/alert-options";
 import { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 import { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
+import { BrandExportDetail, BrandExportTheme } from "./components/brand-export/brand-export-types";
+import { BrandExportLabels } from "./components/brand-export/brand-export-labels";
 import { BrandGuidelinesKit, BrandGuidelinesTheme } from "./components/brand-guidelines/brand-guidelines-types";
 import { BrandGuidelinesLabels } from "./components/brand-guidelines/brand-guidelines-labels";
 import { BrandSwatchesLabels } from "./components/brand-swatches/brand-swatches-labels";
@@ -69,6 +71,8 @@ export { AccordionToggleDetail } from "./components/accordion/accordion-options"
 export { AlertVariant } from "./components/alert/alert-options";
 export { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 export { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
+export { BrandExportDetail, BrandExportTheme } from "./components/brand-export/brand-export-types";
+export { BrandExportLabels } from "./components/brand-export/brand-export-labels";
 export { BrandGuidelinesKit, BrandGuidelinesTheme } from "./components/brand-guidelines/brand-guidelines-types";
 export { BrandGuidelinesLabels } from "./components/brand-guidelines/brand-guidelines-labels";
 export { BrandSwatchesLabels } from "./components/brand-swatches/brand-swatches-labels";
@@ -298,6 +302,44 @@ export namespace Components {
           * @default "neutral"
          */
         "variant": BadgeVariant;
+    }
+    /**
+     * Lets a person take a brand theme away.
+     */
+    interface IdgBrandExport {
+        /**
+          * The text `emitBrandThemeCss` produced.
+         */
+        "css"?: string;
+        /**
+          * The level of the artefacts' headings, 1 to 6.
+          * @default 2
+         */
+        "headingLevel": number;
+        /**
+          * The accessible name of the whole. Defaults to the `name` label.
+         */
+        "label"?: string;
+        /**
+          * The words shown, merged over the English defaults.
+         */
+        "labels"?: Partial<BrandExportLabels>;
+        /**
+          * The brand's name, which the file names are made from.
+         */
+        "name"?: string;
+        /**
+          * A theme from `generateBrandTheme`: the stylesheet and tokens are emitted from it.
+         */
+        "theme"?: BrandExportTheme;
+        /**
+          * The theme id for the usage snippet, when there is no `theme`.
+         */
+        "themeId"?: string;
+        /**
+          * The text `emitBrandThemeTokens` produced.
+         */
+        "tokens"?: string;
     }
     /**
      * A brand guide for one kit: its name and tagline, its logo and mark on a light and a dark backing,
@@ -2232,6 +2274,10 @@ export interface IdgAlertCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgAlertElement;
 }
+export interface IdgBrandExportCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgBrandExportElement;
+}
 export interface IdgCheckboxCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgCheckboxElement;
@@ -2419,6 +2465,27 @@ declare global {
     var HTMLIdgBadgeElement: {
         prototype: HTMLIdgBadgeElement;
         new (): HTMLIdgBadgeElement;
+    };
+    interface HTMLIdgBrandExportElementEventMap {
+        "idgCopy": BrandExportDetail;
+        "idgDownload": BrandExportDetail;
+    }
+    /**
+     * Lets a person take a brand theme away.
+     */
+    interface HTMLIdgBrandExportElement extends Components.IdgBrandExport, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgBrandExportElementEventMap>(type: K, listener: (this: HTMLIdgBrandExportElement, ev: IdgBrandExportCustomEvent<HTMLIdgBrandExportElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgBrandExportElementEventMap>(type: K, listener: (this: HTMLIdgBrandExportElement, ev: IdgBrandExportCustomEvent<HTMLIdgBrandExportElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgBrandExportElement: {
+        prototype: HTMLIdgBrandExportElement;
+        new (): HTMLIdgBrandExportElement;
     };
     /**
      * A brand guide for one kit: its name and tagline, its logo and mark on a light and a dark backing,
@@ -3399,6 +3466,7 @@ declare global {
         "idg-avatar": HTMLIdgAvatarElement;
         "idg-avatar-group": HTMLIdgAvatarGroupElement;
         "idg-badge": HTMLIdgBadgeElement;
+        "idg-brand-export": HTMLIdgBrandExportElement;
         "idg-brand-guidelines": HTMLIdgBrandGuidelinesElement;
         "idg-brand-logo": HTMLIdgBrandLogoElement;
         "idg-brand-swatches": HTMLIdgBrandSwatchesElement;
@@ -3632,6 +3700,52 @@ declare namespace LocalJSX {
           * @default "neutral"
          */
         "variant"?: BadgeVariant;
+    }
+    /**
+     * Lets a person take a brand theme away.
+     */
+    interface IdgBrandExport {
+        /**
+          * The text `emitBrandThemeCss` produced.
+         */
+        "css"?: string;
+        /**
+          * The level of the artefacts' headings, 1 to 6.
+          * @default 2
+         */
+        "headingLevel"?: number;
+        /**
+          * The accessible name of the whole. Defaults to the `name` label.
+         */
+        "label"?: string;
+        /**
+          * The words shown, merged over the English defaults.
+         */
+        "labels"?: Partial<BrandExportLabels>;
+        /**
+          * The brand's name, which the file names are made from.
+         */
+        "name"?: string;
+        /**
+          * Fires after an artefact was put on the clipboard.
+         */
+        "onIdgCopy"?: (event: IdgBrandExportCustomEvent<BrandExportDetail>) => void;
+        /**
+          * Fires after a download of an artefact was started.
+         */
+        "onIdgDownload"?: (event: IdgBrandExportCustomEvent<BrandExportDetail>) => void;
+        /**
+          * A theme from `generateBrandTheme`: the stylesheet and tokens are emitted from it.
+         */
+        "theme"?: BrandExportTheme;
+        /**
+          * The theme id for the usage snippet, when there is no `theme`.
+         */
+        "themeId"?: string;
+        /**
+          * The text `emitBrandThemeTokens` produced.
+         */
+        "tokens"?: string;
     }
     /**
      * A brand guide for one kit: its name and tagline, its logo and mark on a light and a dark backing,
@@ -5662,6 +5776,14 @@ declare namespace LocalJSX {
         "size": BadgeSize;
         "dot": boolean;
     }
+    interface IdgBrandExportAttributes {
+        "css": string;
+        "tokens": string;
+        "themeId": string;
+        "name": string;
+        "label": string;
+        "headingLevel": number;
+    }
     interface IdgBrandGuidelinesAttributes {
         "label": string;
         "headingLevel": number;
@@ -6053,6 +6175,7 @@ declare namespace LocalJSX {
         "idg-avatar": Omit<IdgAvatar, keyof IdgAvatarAttributes> & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes]?: IdgAvatar[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `attr:${K}`]?: IdgAvatarAttributes[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `prop:${K}`]?: IdgAvatar[K] };
         "idg-avatar-group": Omit<IdgAvatarGroup, keyof IdgAvatarGroupAttributes> & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes]?: IdgAvatarGroup[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `attr:${K}`]?: IdgAvatarGroupAttributes[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `prop:${K}`]?: IdgAvatarGroup[K] };
         "idg-badge": Omit<IdgBadge, keyof IdgBadgeAttributes> & { [K in keyof IdgBadge & keyof IdgBadgeAttributes]?: IdgBadge[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `attr:${K}`]?: IdgBadgeAttributes[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `prop:${K}`]?: IdgBadge[K] };
+        "idg-brand-export": Omit<IdgBrandExport, keyof IdgBrandExportAttributes> & { [K in keyof IdgBrandExport & keyof IdgBrandExportAttributes]?: IdgBrandExport[K] } & { [K in keyof IdgBrandExport & keyof IdgBrandExportAttributes as `attr:${K}`]?: IdgBrandExportAttributes[K] } & { [K in keyof IdgBrandExport & keyof IdgBrandExportAttributes as `prop:${K}`]?: IdgBrandExport[K] };
         "idg-brand-guidelines": Omit<IdgBrandGuidelines, keyof IdgBrandGuidelinesAttributes> & { [K in keyof IdgBrandGuidelines & keyof IdgBrandGuidelinesAttributes]?: IdgBrandGuidelines[K] } & { [K in keyof IdgBrandGuidelines & keyof IdgBrandGuidelinesAttributes as `attr:${K}`]?: IdgBrandGuidelinesAttributes[K] } & { [K in keyof IdgBrandGuidelines & keyof IdgBrandGuidelinesAttributes as `prop:${K}`]?: IdgBrandGuidelines[K] };
         "idg-brand-logo": Omit<IdgBrandLogo, keyof IdgBrandLogoAttributes> & { [K in keyof IdgBrandLogo & keyof IdgBrandLogoAttributes]?: IdgBrandLogo[K] } & { [K in keyof IdgBrandLogo & keyof IdgBrandLogoAttributes as `attr:${K}`]?: IdgBrandLogoAttributes[K] } & { [K in keyof IdgBrandLogo & keyof IdgBrandLogoAttributes as `prop:${K}`]?: IdgBrandLogo[K] };
         "idg-brand-swatches": Omit<IdgBrandSwatches, keyof IdgBrandSwatchesAttributes> & { [K in keyof IdgBrandSwatches & keyof IdgBrandSwatchesAttributes]?: IdgBrandSwatches[K] } & { [K in keyof IdgBrandSwatches & keyof IdgBrandSwatchesAttributes as `attr:${K}`]?: IdgBrandSwatchesAttributes[K] } & { [K in keyof IdgBrandSwatches & keyof IdgBrandSwatchesAttributes as `prop:${K}`]?: IdgBrandSwatches[K] };
@@ -6144,6 +6267,10 @@ declare module "@stencil/core" {
              * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
              */
             "idg-badge": LocalJSX.IntrinsicElements["idg-badge"] & JSXBase.HTMLAttributes<HTMLIdgBadgeElement>;
+            /**
+             * Lets a person take a brand theme away.
+             */
+            "idg-brand-export": LocalJSX.IntrinsicElements["idg-brand-export"] & JSXBase.HTMLAttributes<HTMLIdgBrandExportElement>;
             /**
              * A brand guide for one kit: its name and tagline, its logo and mark on a light and a dark backing,
              * its colours (through `idg-brand-swatches`) and gradient, a specimen of its fonts, its corner
