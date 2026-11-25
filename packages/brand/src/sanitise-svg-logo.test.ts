@@ -1010,6 +1010,42 @@ describe("sanitiseSvgLogo, size", () => {
     expect(result.height).toBe(height);
   });
 
+  // The view box's own width and height are read from its numbers as the grammar reads them, run
+  // together or not.
+  it.each([
+    ['viewBox="-10-10 100 100"', 'viewBox="-10-10 100 100" width="100" height="100"', 100, 100],
+    ['viewBox="0 0 100.5.5e2"', 'viewBox="0 0 100.5.5e2" width="100.5" height=".5e2"', 100.5, 50],
+  ] as const)(
+    "sizes a root with %s from its view box's numbers",
+    (root, written, width, height) => {
+      const result = accepted(svg("", root));
+      expect(result.svg).toBe(`<svg ${NS} ${written}/>`);
+      expect([result.width, result.height]).toEqual([width, height]);
+    },
+  );
+
+  it("refuses a root whose run-together view box is under a pixel tall, as under a pixel", () => {
+    expect(refused(svg("", 'viewBox="0 0 100.5.5"')).code).toBe("unsupported-feature");
+  });
+
+  // A view box the root lacks is worked out from its width and height, and written to six
+  // decimals, which the half-pixel rule holds to what the size alone showed.
+  it.each([
+    [
+      'width="10mm" height="100.1234567"',
+      'viewBox="0 0 37.795276 100.123457" width="10mm" height="100.1234567"',
+    ],
+    ['width="1in" height="1e2"', 'viewBox="0 0 96 100" width="1in" height="1e2"'],
+  ])("writes the view box a root with %s lacks to six decimals", (root, written) => {
+    expect(accepted(svg("", root)).svg).toBe(`<svg ${NS} ${written}/>`);
+  });
+
+  it("refuses a root whose width, to six decimals, comes to a million", () => {
+    expect(refused(svg("", 'width="9.999999999999999999999e5" height="100"')).code).toBe(
+      "number-out-of-range",
+    );
+  });
+
   it.each([
     ["no size at all", ""],
     ["only a width", 'width="10"'],

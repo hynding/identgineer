@@ -1938,6 +1938,13 @@
     "outcome": "accept",
     "removed": []
   },
+  "review-no-viewbox-millimetres.svg": {
+    "outcome": "accept",
+    "removed": []
+  },
+  "review-no-viewbox-width-to-a-million.svg": {
+    "outcome": "reject:number-out-of-range"
+  },
   "review-redos-style-url-spaces.svg": {
     "outcome": "accept",
     "removed": [
@@ -2618,6 +2625,13 @@
         "reason": "unsupported-attribute"
       }
     ]
+  },
+  "review-viewbox-run-together-short.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-viewbox-run-together.svg": {
+    "outcome": "accept",
+    "removed": []
   },
   "root-not-svg.svg": {
     "outcome": "reject:not-svg"
