@@ -55,6 +55,42 @@ test.describe("the index page's brand section", () => {
     page.removeAllListeners("console");
   });
 
+  test("edits the brand's kit and saves it to the page's own store, with no violation", async ({
+    page,
+  }) => {
+    const violations: string[] = [];
+    await page.addInitScript(() => {
+      document.addEventListener("securitypolicyviolation", (event) => {
+        console.error(`violation ${event.violatedDirective} ${event.blockedURI}`);
+      });
+    });
+    page.on("console", (message) => {
+      if (message.text().startsWith("violation")) violations.push(message.text());
+    });
+    await page.goto("/index.html");
+    const editor = page.locator("#brand-demo-editor");
+    await expect(page.locator("idg-brand-editor:not(.hydrated)")).toHaveCount(0);
+    await expect(editor.getByRole("form", { name: "Harbour Lights brand kit" })).toHaveCount(1);
+    await expect(editor.getByRole("textbox", { name: "Name", exact: true })).toHaveValue(
+      "Harbour Lights",
+    );
+    await expect(editor.locator("idg-brand-guidelines h3.name")).toHaveText("Harbour Lights");
+    await expect
+      .poll(() =>
+        editor
+          .locator("idg-brand-guidelines idg-brand-logo img")
+          .evaluateAll((images) =>
+            images.every((image) => image instanceof HTMLImageElement && image.naturalWidth > 0),
+          ),
+      )
+      .toBe(true);
+    await editor.getByRole("textbox", { name: "Tagline" }).fill("Every ship comes home");
+    await editor.getByRole("button", { name: "Save brand kit" }).press("Enter");
+    await expect(editor.locator('idg-alert[part="saved"]')).toHaveText("Brand kit saved.");
+    expect(violations).toEqual([]);
+    page.removeAllListeners("console");
+  });
+
   test("is served with the logo policy, and no other page is widened", async ({ page }) => {
     const policy = async (path: string) =>
       (await page.goto(path))?.headers()["content-security-policy"];
