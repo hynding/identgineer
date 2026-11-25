@@ -811,8 +811,8 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
   ],
 ];
 
-/** The largest member of the family the sanitiser accepts; the next is refused with `code`. */
-function costliest(family: (count: number) => string, code: SvgLogoErrorCode): Logo {
+/** The size of the largest member of the family the sanitiser accepts. */
+function costliestCount(family: (count: number) => string): number {
   const accepts = (count: number): boolean => sanitiseSvgLogo(family(count)).ok;
   if (!accepts(1)) throw new Error("the smallest member of the family is refused");
   let low = 1;
@@ -827,7 +827,13 @@ function costliest(family: (count: number) => string, code: SvgLogoErrorCode): L
     if (accepts(middle)) low = middle;
     else high = middle;
   }
-  const over = sanitiseSvgLogo(family(high));
+  return low;
+}
+
+/** The largest member of the family the sanitiser accepts; the next is refused with `code`. */
+function costliest(family: (count: number) => string, code: SvgLogoErrorCode): Logo {
+  const low = costliestCount(family);
+  const over = sanitiseSvgLogo(family(low + 1));
   if (over.ok || over.errors[0]?.code !== code) {
     throw new Error(
       `one more is refused for ${over.ok ? "nothing" : String(over.errors[0]?.code)}`,
@@ -1025,6 +1031,33 @@ test.describe("the costliest logos the sanitiser accepts", () => {
 test.describe(`the costliest logos the sanitiser accepts, at ${String(LARGE_SIZE)} pixels and twice the density`, () => {
   test.describe.configure({ timeout: 120_000 });
   test.use({ deviceScaleFactor: 2, viewport: { width: LARGE_SIZE, height: LARGE_SIZE } });
+
+  // The control for the timing: if the capture cost as much as the drawing, or skipped it, a logo
+  // with four times the paint the overdraw accepts would time no slower than the costliest accepted.
+  test("shows a logo refused for its paint clearly slower than the costliest accepted one", async ({
+    page,
+  }) => {
+    const label = `full-size radial gradients of ${String(STOPS)} translucent stops`;
+    const family = FAMILIES.find(([name]) => name === label)?.[1];
+    if (family === undefined) throw new Error(`no family "${label}"`);
+    const count = costliestCount(family);
+    const raw = family(4 * count);
+    const refused = sanitiseSvgLogo(raw);
+    expect(refused.ok ? undefined : refused.errors[0]?.code).toBe("overdraw-too-large");
+    const accepted = await showImage(page, costliest(family, "overdraw-too-large"), LARGE_SIZE);
+    const over = await showImage(
+      page,
+      {
+        name: `${String(4 * count)} of them, unsanitised`,
+        dataUrl: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(raw)}`,
+      },
+      LARGE_SIZE,
+    );
+    expect(
+      over,
+      `${String(over)} ms refused against ${String(accepted)} ms accepted`,
+    ).toBeGreaterThan(2 * accepted);
+  });
 
   for (const [label, family, code] of FAMILIES) {
     test(`rasterises ${label} within the budget`, async ({ page }) => {
