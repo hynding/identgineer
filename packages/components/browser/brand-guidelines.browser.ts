@@ -314,10 +314,12 @@ test.describe("idg-brand-guidelines with a kit and a theme it cannot trust", () 
     });
     expect(found.count).toBeGreaterThan(30);
     expect(
-      found.names
-        .filter((name) => ["img", "script", "style", "link", "iframe", "svg", "use"].includes(name))
-        .sort(),
-    ).toEqual(["img"].filter(() => found.names.includes("img")));
+      found.names.filter((name) =>
+        ["img", "script", "style", "link", "iframe", "svg", "use", "object", "embed"].includes(
+          name,
+        ),
+      ),
+    ).toEqual([]);
     expect(found.attributes.filter((name) => /^on/i.test(name))).toEqual([]);
     expect(found.heading).toContain(CANARY.slice(0, 10));
     for (const style of found.styles) expect(style).toMatch(/^(?:--_[a-z-]+: [^;]*;? ?)*$/);
@@ -329,11 +331,6 @@ test.describe("idg-brand-guidelines with a kit and a theme it cannot trust", () 
 
   test("keeps the parts that are sound, and drops each that is not", async ({ page }) => {
     await openBrand(page);
-    expect(await texts(page, "guide-hostile", ".corner")).toEqual(
-      ["Large: 1e9px".replace("1e9px", "").trim()]
-        .filter(() => false)
-        .concat(await texts(page, "guide-hostile", ".corner")),
-    );
     const corners = await texts(page, "guide-hostile", ".corner");
     expect(corners).toEqual(["Pill: 9999px"]);
     expect(await countDeep(page, "#guide-hostile", ".gradient")).toBe(1);
