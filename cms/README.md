@@ -105,8 +105,12 @@ media fields:
   only through `<img>` with `logoDataUrl`.
 
 The bound is the sanitiser's output limit, `SVG_LOGO_LIMITS.inputBytes` (512 KiB in UTF-8): no
-output is larger, and a string never has more code points or UTF-16 units than UTF-8 bytes, so the
-limit holds on both targets however they count.
+output is larger, and a string never has more code points or UTF-16 units than UTF-8 bytes, so
+both targets' length checks let every sanitised logo through however they count. The column is
+another matter: strapi-php's migration declares the field as `$table->text(...)` whatever its
+`maxLength`, and MySQL's `TEXT` holds 65,535 bytes, so on MySQL a logo over 64 KiB is refused or
+cut short (see [Capability gaps](#capability-gaps)). sqlite and pgsql `text` hold it, as do
+Strapi's columns.
 
 There is no `themeTokens` field. The theme is derived data the server cannot verify; clients
 generate it from the kit with `generateBrandTheme`, which is deterministic.
@@ -244,8 +248,8 @@ lacks its reason, or if the live contract's server runs with other values for th
 ### Live contract test
 
 `pnpm contract:live` (from the repository root) runs the identity SDK, and the brand kit store of
-`packages/brand` through it, against a real strapi-php backend generated from this directory. It needs `CAMIS_DIR` and PHP 8.3 or newer with the
-extensions Laravel and Filament need (it names the PHP it found when older); the first run also
+`packages/brand` through it, against a real strapi-php backend generated from this directory. It
+needs `CAMIS_DIR` and PHP 8.3 or newer with the extensions Laravel and Filament need (it names the PHP it found when older); the first run also
 needs Composer, as it scaffolds the Laravel app with `camis scaffold filament`, which downloads
 packages from Packagist. `scripts/live-backend.js` then, on every run:
 
@@ -359,11 +363,20 @@ Limits that remain on Strapi, for this model:
 - `remoteDataTransfer` (strapi-php): `strapi transfer` needs a WebSocket server; move data as an
   archive instead (see `DEPLOY.md`).
 
-**Found by the live contract test, not yet fixed in camis.** strapi-php ignores a `null` in an
-update body (the generated serializer's `fromWire` drops every null value), where Strapi clears
-the field, so an update cannot clear a brand kit's `tagline`, `secondaryColor`, `neutralTint`,
-`logo` or `mark` there. `packages/identity/src/live-contract/brand-kit-store.live.test.ts` checks
-the Strapi behaviour and fails until camis clears the field.
+**Found while storing brand kits, not yet fixed in camis.**
+
+- strapi-php ignores a `null` in an update body (the generated serializer's `fromWire` drops
+  every null value), where Strapi clears the field, so an update cannot clear a brand kit's
+  `tagline`, `secondaryColor`, `neutralTint`, `logo` or `mark` there
+  ([hynding/camis#122](https://github.com/hynding/camis/issues/122)). The brand kit store reports
+  such an update as `not-applied` rather than as saved, and
+  `packages/identity/src/live-contract/brand-kit-store.live.test.ts` holds the Strapi behaviour as
+  an expected failure that turns red once camis clears the field.
+- strapi-php's migration declares a `text` field as `$table->text(...)` whatever its `maxLength`
+  ([hynding/camis#123](https://github.com/hynding/camis/issues/123), text columns over 64 KiB).
+  MySQL's `TEXT` holds 65,535 bytes, so a brand kit logo or mark over 64 KiB cannot be stored
+  whole on MySQL. Until camis emits a larger column, deploy strapi-php with that fix, or on pgsql
+  or sqlite. The logo bound stays the sanitiser's.
 
 **Not reported by camis but limiting this model.** Conditions cannot follow a relation (hence the
 denormalised `owner` on Event and ConsentRecord); public endpoints have no declarative throttle,
@@ -372,8 +385,9 @@ fields cannot name MIME types (strapi-php's global `CAMIS_UPLOAD_ALLOWED_TYPES` 
 without SVG; brand logos are text for that reason among others); string lengths are counted as
 each target counts them (UTF-16 units on Strapi, code points on strapi-php), hence the doubled
 brand kit name and tagline limits; a field cannot be unique per owner; relations have no delete
-behaviour, so on strapi-php a property with events cannot be deleted until its events are purged; there is no read-only field, so an owner can change
-`ingestKey` after it is issued; and one `protected/` directory is mirrored into both targets.
+behaviour, so on strapi-php a property with events cannot be deleted until its events are purged;
+there is no read-only field, so an owner can change `ingestKey` after it is issued; and one
+`protected/` directory is mirrored into both targets.
 
 **Public brand kits.** A `public` read grant on BrandKit conditioned on `record.isPublic == true`
 is within what camis enforces on both targets (a read condition of `eq` over `record.<field>`
