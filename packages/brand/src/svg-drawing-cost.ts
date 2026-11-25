@@ -395,20 +395,22 @@ function bezierLength(points: readonly number[], halvings = HALVINGS): number {
 }
 
 /**
- * Below this many times its larger radius, a small arc's chord may be too short for Chromium to tell
- * which way round its ellipse the arc turns. Chromium maps the arc onto a unit circle and works out
- * the angle it turns through in single precision; ends a few single-precision steps apart there can
- * come out turning the other way, which Chromium takes as a whole turn less a hair, and so strokes
- * the whole ellipse. That was seen for chords up to 2^-24.4 of the radius, over radii, radius
- * ratios, turned ellipses, chord directions, both sweeps, and places far from the origin; this
- * stays 2^8 times and more above it.
+ * Below this many times its larger radius, or its ends' coordinates, a small arc's chord may be too
+ * short for Chromium to tell which way round its ellipse the arc turns. Chromium maps the arc onto a
+ * unit circle and works out the angle it turns through in single precision; ends a few
+ * single-precision steps apart there can come out turning the other way, which Chromium takes as a
+ * whole turn less a hair, and so strokes the whole ellipse. That was seen for chords up to 2^-23.6
+ * of the radius, over radii, radius ratios, turned ellipses, chord directions, both sweeps, and
+ * starts from 0.5 to 900,000; this stays 2^7 times and more above it. Single precision holds a
+ * point far from the origin less finely, so the coordinates bound the chord too.
  */
 const SMALL_ARC_CHORD = 2 ** -16;
 
 /**
  * An upper bound of the length of an arc drawn with the small-arc flag, `chord` (as Chromium may
- * read it) apart at its ends and at least `shortest` apart; Infinity for a large arc, or for a chord
- * too short for Chromium to be sure of drawing the small arc (see `SMALL_ARC_CHORD`). SVG picks the
+ * read it) apart at its ends and at least `shortest` apart, the largest of its ends' coordinates
+ * `reach`; Infinity for a large arc, or for a chord too short for Chromium to be sure of drawing the
+ * small arc (see `SMALL_ARC_CHORD`). SVG picks the
  * centre so that a small arc turns at most half a turn round its ellipse (exactly half when its
  * radii are scaled up to reach), and such an arc of a circle is at most a quarter turn's ratio, pi
  * over two, longer than its chord. The ellipse is the circle stretched by its radii, which makes the
@@ -417,9 +419,16 @@ const SMALL_ARC_CHORD = 2 ** -16;
  * chord, and a thousandth more for the curves Chromium draws it with. A flat arc of a huge radius,
  * as editors write a nearly straight segment, is about as long as its chord.
  */
-function smallArcLength(values: readonly number[], chord: number, shortest: number): number {
+function smallArcLength(
+  values: readonly number[],
+  chord: number,
+  shortest: number,
+  reach: number,
+): number {
   const [rx, ry] = [Math.abs(values[0] ?? 0), Math.abs(values[1] ?? 0)];
-  if ((values[3] ?? 0) !== 0 || shortest < SMALL_ARC_CHORD * Math.max(rx, ry)) return Infinity;
+  if ((values[3] ?? 0) !== 0 || shortest < SMALL_ARC_CHORD * Math.max(rx, ry, reach)) {
+    return Infinity;
+  }
   const ratio = (Math.max(rx, ry) / Math.min(rx, ry)) * (1 + 4 * READ);
   return (Math.PI / 2) * ratio * chord * ARC_CURVES;
 }
@@ -552,7 +561,8 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
       );
       const chord = Math.hypot(endX - x, endY - y);
       const slack = lengthSlack(end.local);
-      pen.curve(Math.min(length, smallArcLength(values, chord + slack, chord - slack)));
+      const reach = Math.max(...[x, y, endX, endY].map(Math.abs));
+      pen.curve(Math.min(length, smallArcLength(values, chord + slack, chord - slack, reach)));
     }
     pen.error = end.absolute;
   }
