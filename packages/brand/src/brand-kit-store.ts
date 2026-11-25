@@ -100,8 +100,6 @@ export const MAX_RECORD_BYTES = 4 * 1024 * 1024;
 export const MAX_SUMMARY_BYTES = 8 * 1024;
 const MAX_ENVELOPE_BYTES = 4 * 1024;
 const MAX_FAILURE_BYTES = 64 * 1024;
-const MAX_REPORTED_FIELDS = 20;
-const FIELD_SEGMENT = /^[A-Za-z0-9_]{1,64}$/;
 const WRITABLE_FIELDS: readonly string[] = [...CMS_FIELDS, "isPublic"];
 
 const validation = (fields?: readonly string[]): BrandKitStoreError =>
@@ -196,23 +194,19 @@ function unappliedFields(sent: Record<string, unknown>, record: StoredBrandKit):
   return Object.keys(sent).filter((field) => sent[field] !== answered[field]);
 }
 
-/** The CMS fields a validation error names (`details.errors[].path`), and only the kit's own. */
+/**
+ * The CMS fields a validation error names: the first segment of each `details.errors[].path`,
+ * and only if it is one of the kit's own fields. The rest of a path is the server's to choose,
+ * so it is never passed on, and the list holds each known field at most once.
+ */
 function refusedFields(body: unknown): string[] {
   const errors = own(own(own(body, "error"), "details"), "errors");
   if (!Array.isArray(errors)) return [];
   const fields = new Set<string>();
   for (const entry of errors.slice(0, 100)) {
     const path = own(entry, "path");
-    if (!Array.isArray(path) || path.length === 0) continue;
-    const segments = path.map((segment: unknown) =>
-      typeof segment === "number" ? String(segment) : segment,
-    );
-    if (!segments.every((segment) => typeof segment === "string" && FIELD_SEGMENT.test(segment))) {
-      continue;
-    }
-    if (!WRITABLE_FIELDS.includes(String(segments[0]))) continue;
-    fields.add(segments.join("."));
-    if (fields.size === MAX_REPORTED_FIELDS) break;
+    const field: unknown = Array.isArray(path) ? path[0] : undefined;
+    if (typeof field === "string" && WRITABLE_FIELDS.includes(field)) fields.add(field);
   }
   return [...fields];
 }
