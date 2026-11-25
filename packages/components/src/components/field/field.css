@@ -15,8 +15,8 @@
   gap: calc(var(--idg-space-3xs) * var(--idg-density-gap-scale));
 }
 
-/* A label or an error may be one word longer than a narrow field is wide, at a large text size: it
-   breaks inside the word rather than reach past the field. */
+/* A label may hold a word longer than a narrow field is wide, at a large text size: it breaks
+   inside that word rather than reach past the field. */
 .label {
   display: inline-flex;
   flex-wrap: wrap;
@@ -46,10 +46,17 @@
 
 .hint,
 .error-text {
-  min-inline-size: 0;
   font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
   line-height: var(--idg-font-body-line-height);
-  overflow-wrap: anywhere;
+}
+
+/* The message takes the room beside its mark, but never less than its longest word: where that
+   does not fit, as in a narrow field at a large text size, it goes below the mark instead. A word
+   longer than the whole line breaks. */
+.error-text {
+  flex: 1 1 0%;
+  min-inline-size: min(min-content, 100%);
+  overflow-wrap: break-word;
 }
 
 /* The UX mode's hint switch is a number, so scaling lengths and opacity by it hides or shows the
@@ -68,6 +75,7 @@
 
 .error:not(:empty) {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   align-self: flex-start;
   gap: var(--idg-space-2xs);
