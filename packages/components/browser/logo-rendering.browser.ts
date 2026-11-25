@@ -467,7 +467,7 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
       [
         `hairline dashes ${lengths} along a zigzag`,
         copies(
-          `<path id="p" d="M50 50${Array.from({ length: 100 }, (_, index) => `L${index % 2 === 0 ? "950" : "50"} ${String(50 + index * 9)}`).join("")}" fill="none" stroke="#000" stroke-width="0.1" stroke-dasharray="${dasharray}"/>`,
+          `<path id="p" d="M50 50${Array.from({ length: 10 }, (_, index) => `L${index % 2 === 0 ? "950" : "50"} ${String(50 + index * 90)}`).join("")}" fill="none" stroke="#000" stroke-width="0.1" stroke-dasharray="${dasharray}"/>`,
         ),
         "drawing-too-costly",
       ] as const,

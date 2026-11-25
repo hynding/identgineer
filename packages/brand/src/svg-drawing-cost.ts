@@ -1,5 +1,5 @@
 import type { CleanElement } from "./filter-svg-tree.ts";
-import type { SvgLengthUnit } from "./svg-values.ts";
+import { type SvgLengthUnit, writtenText } from "./svg-values.ts";
 
 /**
  * What drawing each part of a logo's geometry costs, in units of about one stroked straight
@@ -7,7 +7,10 @@ import type { SvgLengthUnit } from "./svg-values.ts";
  * stroked as many lines, an arc as several curves; each shape also costs a fixed amount to set up
  * (what it paints is the overdraw's to count, see `SVG_OVERDRAW_WEIGHTS`); group opacity draws
  * into a layer; a mask or clip path draws its content into a layer each time it is applied; each
- * dash is a segment of its own.
+ * dash is a segment of its own. A large image is rasterised in tiles, and Chromium works out every
+ * dash of a shape again for each tile its box touches, except along one run of horizontal and
+ * vertical lines, whose dashes it culls to the tile: elsewhere a dash weighs ten, measured as an
+ * image 2000 CSS pixels square at twice the density.
  */
 export const SVG_DRAWING_WEIGHTS = Object.freeze({
   line: 1,
@@ -19,6 +22,7 @@ export const SVG_DRAWING_WEIGHTS = Object.freeze({
   layer: 50,
   mask: 200,
   dash: 1,
+  tiledDash: 10,
 });
 
 export interface Geometry {
@@ -30,6 +34,12 @@ export interface Geometry {
   readonly segments: number;
   /** Subpaths: each has its own two caps, and starts its dashes afresh. */
   readonly subpaths: number;
+  /**
+   * Whether the outline is one run of horizontal and vertical lines, each of some length however
+   * Chromium reads its numbers, whose dashes Chromium culls to each tile of a large image; any
+   * other outline's dashes are worked out again for every tile its box touches.
+   */
+  readonly straightRun: boolean;
   /**
    * The most of the outline a square image can show, in sides of the square: a straight segment
    * at most its diagonal; a convex curve (a quadratic, an arc, a whole rectangle or ellipse) at most
@@ -132,6 +142,8 @@ class Pen {
   closed = false;
   /** The letter, in upper case, of the segment just drawn. */
   previous = "";
+  /** Whether every segment so far is a horizontal or vertical line of some length. */
+  axisLines = true;
   box: SvgBox = EMPTY_BOX;
   area = 0;
   private subpathBox: SvgBox = EMPTY_BOX;
@@ -218,6 +230,7 @@ class Pen {
       length: this.length,
       segments: this.segments,
       subpaths: this.subpaths,
+      straightRun: this.axisLines && this.subpaths === 1,
       visibleOutline: this.visibleOutline,
       box: this.box,
       area: Math.min(this.area, boxArea(this.box)),
@@ -359,12 +372,10 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
             error,
             [upper === "H", upper === "V"],
           );
-    pen.to(
-      [endX, endY],
-      weights.line,
-      Math.hypot(endX - x, endY - y) + lengthSlack(end.local),
-      STRAIGHT,
-    );
+    const exact = Math.hypot(endX - x, endY - y);
+    const slack = lengthSlack(end.local);
+    if ((upper !== "H" && upper !== "V") || exact <= slack) pen.axisLines = false;
+    pen.to([endX, endY], weights.line, exact + slack, STRAIGHT);
     pen.error = end.absolute;
   } else if (upper === "Z") {
     pen.to(
@@ -447,6 +458,7 @@ function drawSegment(pen: Pen, command: string, values: readonly number[], first
     }
     pen.error = end.absolute;
   }
+  if (upper !== "M" && upper !== "L" && upper !== "H" && upper !== "V") pen.axisLines = false;
   pen.previous = upper;
 }
 
@@ -587,6 +599,7 @@ function polyline(text: string, closed: boolean): Geometry {
       pen.begin();
     } else {
       const slack = lengthSlack(pen.error, error);
+      pen.axisLines = false;
       pen.to([x, y], SVG_DRAWING_WEIGHTS.line, Math.hypot(x - pen.x, y - pen.y) + slack, STRAIGHT);
       pen.error = error;
     }
@@ -616,6 +629,11 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
     return value !== undefined && "text" in value ? value.text : undefined;
   };
   const length = (name: string): number => userUnits(text(name), percentBase);
+  const spelling = (name: string): string => {
+    const value = element.attributes.get(name);
+    return value !== undefined && "text" in value ? writtenText(value) : "0";
+  };
+  const same = (first: string, second: string): boolean => spelling(first) === spelling(second);
   const { line, cubic } = SVG_DRAWING_WEIGHTS;
   switch (element.name) {
     case "path":
@@ -628,6 +646,7 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
         length: 2 * (width + height) * (1 + READ),
         segments: rounded ? 8 : 4,
         subpaths: 1,
+        straightRun: !rounded && width > 0 && height > 0,
         visibleOutline: CONVEX,
         box: boxOf(length("x"), length("y"), width, height),
         area: width * height,
@@ -642,6 +661,7 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
         length: 2 * Math.PI * Math.max(rx, ry) * (1 + READ),
         segments: 4,
         subpaths: 1,
+        straightRun: false,
         visibleOutline: CONVEX,
         box: boxOf(length("cx") - rx, length("cy") - ry, 2 * rx, 2 * ry),
         area: Math.PI * rx * ry,
@@ -649,16 +669,19 @@ export function measureShape(element: CleanElement, percentBase: number): Geomet
     }
     case "line": {
       const [x1, y1, x2, y2] = [length("x1"), length("y1"), length("x2"), length("y2")];
+      const exact = Math.hypot(x2 - x1, y2 - y1);
+      const slack = lengthSlack(
+        readingError(Math.max(Math.abs(x1), Math.abs(y1))),
+        readingError(Math.max(Math.abs(x2), Math.abs(y2))),
+      );
       return {
         weight: line,
-        length:
-          Math.hypot(x2 - x1, y2 - y1) +
-          lengthSlack(
-            readingError(Math.max(Math.abs(x1), Math.abs(y1))),
-            readingError(Math.max(Math.abs(x2), Math.abs(y2))),
-          ),
+        length: exact + slack,
         segments: 1,
         subpaths: 1,
+        // Ends that share a coordinate written the same are read the same, so the line is exactly
+        // horizontal or vertical; written two ways, they may be read a hair apart.
+        straightRun: (same("x1", "x2") || same("y1", "y2")) && exact > slack,
         visibleOutline: STRAIGHT,
         box: {
           minX: Math.min(x1, x2),

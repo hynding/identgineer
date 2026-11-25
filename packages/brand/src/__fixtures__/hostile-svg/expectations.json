@@ -1851,20 +1851,16 @@
     ]
   },
   "review-da-ellipse-scaled.svg": {
-    "outcome": "accept",
-    "removed": []
+    "outcome": "reject:drawing-too-costly"
   },
   "review-da-group-circles.svg": {
-    "outcome": "accept",
-    "removed": []
+    "outcome": "reject:drawing-too-costly"
   },
   "review-da-mask-dash.svg": {
-    "outcome": "accept",
-    "removed": []
+    "outcome": "reject:drawing-too-costly"
   },
   "review-da-poly-style.svg": {
-    "outcome": "accept",
-    "removed": []
+    "outcome": "reject:drawing-too-costly"
   },
   "review-da-wide-round-64.svg": {
     "outcome": "accept",

@@ -124,7 +124,17 @@ interface Dashes {
   readonly reading: Reading;
 }
 
-function shape(geometry: number, length: number, segments: number, dashes: Dashes): Measure {
+/**
+ * A shape's cost; `dash` is what each dash weighs, more on anything but one run of horizontal and
+ * vertical lines.
+ */
+function shape(
+  geometry: number,
+  length: number,
+  segments: number,
+  dash: number,
+  dashes: Dashes,
+): Measure {
   const { reading } = dashes;
   // Every shape here is one subpath, which may start the pattern afresh: one more repeat.
   const count =
@@ -132,7 +142,7 @@ function shape(geometry: number, length: number, segments: number, dashes: Dashe
       ? (Math.ceil(reading.length(length, segments) / reading.period(dashes.period)) + 1) *
         dashes.perPeriod
       : 0;
-  return { cost: WEIGHT.shape + geometry + count * WEIGHT.dash, masks: 0, depth: 0 };
+  return { cost: WEIGHT.shape + geometry + count * dash, masks: 0, depth: 0 };
 }
 
 class LogoGraph {
@@ -230,7 +240,7 @@ class LogoGraph {
     return {
       id,
       markup: `<path id="${id}" d="${data}"${this.dash(id)}/>`,
-      measure: (dashes) => shape(geometry, length, count, dashes),
+      measure: (dashes) => shape(geometry, length, count, WEIGHT.tiledDash, dashes),
       paint: (_, reading) => filled(Math.min(area, boxArea), visible, length, count, box, reading),
       clipped: false,
     };
@@ -242,7 +252,7 @@ class LogoGraph {
       return {
         id,
         markup: `<rect id="${id}" width="${String(width)}" height="${String(height)}"${this.dash(id)}/>`,
-        measure: (dashes) => shape(4 * WEIGHT.line, 2 * (width + height), 4, dashes),
+        measure: (dashes) => shape(4 * WEIGHT.line, 2 * (width + height), 4, WEIGHT.dash, dashes),
         clipped: false,
         paint: (_, reading) =>
           filled(
@@ -259,7 +269,8 @@ class LogoGraph {
     return {
       id,
       markup: `<circle id="${id}" r="${String(radius)}"${this.dash(id)}/>`,
-      measure: (dashes) => shape(4 * WEIGHT.cubic, 2 * Math.PI * radius, 4, dashes),
+      measure: (dashes) =>
+        shape(4 * WEIGHT.cubic, 2 * Math.PI * radius, 4, WEIGHT.tiledDash, dashes),
       clipped: false,
       paint: (_, reading) =>
         filled(
