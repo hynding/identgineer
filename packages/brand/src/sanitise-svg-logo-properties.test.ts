@@ -627,14 +627,14 @@ describe("sanitiseSvgLogo, linear time", () => {
   // the whole input, not only up to the first limit.
   const limits = {
     ...SVG_LOGO_LIMITS,
-    inputBytes: 16 * 1024 * 1024,
-    elements: 1_000_000,
-    depth: 1_000_000,
+    inputBytes: 64 * 1024 * 1024,
+    elements: 10_000_000,
+    depth: 10_000_000,
     attributesPerElement: 1_000_000,
-    attributeValueLength: 16 * 1024 * 1024,
-    pathDataLength: 16 * 1024 * 1024,
-    textLength: 16 * 1024 * 1024,
-    nameLength: 16 * 1024 * 1024,
+    attributeValueLength: 64 * 1024 * 1024,
+    pathDataLength: 64 * 1024 * 1024,
+    textLength: 64 * 1024 * 1024,
+    nameLength: 64 * 1024 * 1024,
     ids: 1_000_000,
     renderedElements: 10_000_000,
     drawingCost: Number.MAX_SAFE_INTEGER,
@@ -706,21 +706,8 @@ describe("sanitiseSvgLogo, linear time", () => {
     return performance.now() - started;
   }
 
-  /**
-   * The fastest of five runs of each, taken in turn, so a pause for garbage collection or another
-   * process counts less, and a busy spell slows both sizes alike.
-   */
-  function fastestOfEach(small: string, large: string): { small: number; large: number } {
-    let [fastestSmall, fastestLarge] = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
-    for (let run = 0; run < 5; run += 1) {
-      fastestSmall = Math.min(fastestSmall, timed(small));
-      fastestLarge = Math.min(fastestLarge, timed(large));
-    }
-    return { small: fastestSmall, large: fastestLarge };
-  }
-
   // Each shape is read to its end, accepted or refused only there, and is as large as it takes for
-  // the smaller of its two sizes to run for about 10 ms or more on a laptop: a shape the reader
+  // the smallest of its three sizes to run for about 10 ms or more on a laptop: a shape the reader
   // gets through in a fraction of that is made larger rather than timed in the noise.
   it.each<readonly [string, (fill: Fill, bytes: number) => string, number, string]>([
     ["ampersands in a comment", (fill) => root(`<!--${fill("&")}-->`), 32, "accepted"],
@@ -800,24 +787,21 @@ describe("sanitiseSvgLogo, linear time", () => {
     ["greater-than signs in text", (fill) => root(fill(">")), 8, "accepted"],
     ["one long element name", (fill) => root(`<${fill("a")}/>`), 16, "accepted"],
   ])(
-    "reads %s in linear time: four times the input takes far less than sixteen times as long",
+    "reads %s in linear time: sixteen times the input takes far less than quadratic time",
     (_label, build, scale, outcome) => {
       const at = (bytes: number): string =>
         build((unit) => unit.repeat(Math.ceil(bytes / unit.length)), bytes);
-      const [small, large] = [at((QUARTER_MEGABYTE * scale) / 4), at(QUARTER_MEGABYTE * scale)];
-      const result = sanitiseSvgLogoWithLimits(large, undefined, limits);
+      const smallest = (QUARTER_MEGABYTE * scale) / 4;
+      const sizes = [smallest, smallest * 4, smallest * 16] as const;
+      const inputs = new Map(sizes.map((bytes) => [bytes, at(bytes)]));
+      const result = sanitiseSvgLogoWithLimits(inputs.get(sizes[2]) ?? "", undefined, limits);
       expect(result.ok ? "accepted" : result.errors[0]?.code).toBe(outcome);
-      // A ratio, not a time, so a slow machine cannot fail it: linear is about 4, quadratic 16. A
-      // floor of 5 ms keeps a run too short to time from making the ratio noise. Measured again up
-      // to twice, since a busy spell during one measurement can push a linear ratio past the bound
-      // where a quadratic one is past it every time.
-      let ratio = Number.POSITIVE_INFINITY;
-      for (let attempt = 0; attempt < 3 && !(ratio < 8); attempt += 1) {
-        const fastest = fastestOfEach(small, large);
-        ratio = fastest.large / Math.max(fastest.small, 5);
-      }
-      expect(ratio).toBeLessThan(8);
+      // An exponent, not a time, so a slow machine cannot fail it. The floor keeps a run too short
+      // to time from making the fit noise. No retries: the wide span is what tolerates a busy spell.
+      expect(growthExponent(sizes, (bytes) => timed(inputs.get(bytes) ?? ""))).toBeLessThan(
+        GROWTH_EXPONENT_BOUND,
+      );
     },
-    120_000,
+    300_000,
   );
 });
