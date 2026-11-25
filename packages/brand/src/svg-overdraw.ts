@@ -260,10 +260,8 @@ class OverdrawWalk {
       const area = Math.min(scale * local, boxArea(mapBox(matrix, outer))) / this.square;
       const shown = (length: number): number =>
         Math.min(PERIMETER, (stretch(matrix) * length) / this.side);
-      const curved = Math.min(
-        geometry.curvedOutline,
-        (stretch(matrix) * geometry.curvedLength) / this.side,
-      );
+      // A curve is stroked whole, however little of it the image shows.
+      const curved = (stretch(matrix) * geometry.curvedLength) / this.side;
       this.charge(
         Math.min(1, area) * this.paintWeight(paint.stroke, paint.strokeOpacity * alpha) +
           // A stroke's outline runs along both sides of the path, round each join (counted at
@@ -276,8 +274,9 @@ class OverdrawWalk {
               2 * pieces.count * shown(capLength(paint)),
             pieces.spacing < width ? 2 * pieces.count : 0,
           ) +
-          // Along its curves, stroked again for the tiles of a large image.
-          edgeCost(2 * (SVG_OVERDRAW_WEIGHTS.curvedStroke - 1) * curved),
+          // Along its curves, stroked again for each tile of a large image: work in proportion to
+          // their length, which no crowding of rows adds to.
+          2 * (SVG_OVERDRAW_WEIGHTS.curvedStroke - 1) * curved * SVG_OVERDRAW_WEIGHTS.edge,
       );
       box = mapBox(matrix, outer);
     }
