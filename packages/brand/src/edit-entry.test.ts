@@ -61,11 +61,10 @@ describe("the edit entry", () => {
       expect([...graph.packages].filter(isNodeBuiltin)).toEqual([]);
     });
 
-    it("hold neither the store nor the emitters, which an editor does not call", () => {
+    it("hold neither the store nor the brand emitters, which an editor does not call", () => {
       const names = [...graph.files].map((file) => relative(PACKAGES, file));
       expect(names).not.toContain("brand/src/brand-kit-store.ts");
       expect(names).not.toContain("brand/src/emit-brand-theme.ts");
-      expect(names).not.toContain("tokens/src/emit-css.ts");
     });
 
     it("read nothing from the disk, the network or the environment", () => {

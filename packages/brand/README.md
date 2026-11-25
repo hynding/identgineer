@@ -281,6 +281,9 @@ guide shows (`CORNERS`, `TONES`, `CORNER_RADII`, `RADIUS_NAMES`, `FONT_PAIRINGS`
 `@identgineer/brand/emit` has `emitBrandThemeCss` and `emitBrandThemeTokens`: the generator, the
 sanitiser and the tokens emitter read no disk, the token sources being JSON the bundler includes, so
 a page can emit a theme itself. Tests walk each entry's import graph and fail on any Node built-in.
+`@identgineer/brand/edit` has what a page that edits a kit calls: `parseBrandKit`, `generateBrandTheme`,
+`sanitiseSvgLogo`, `SVG_LOGO_LIMITS`, `NAME_MAX_LENGTH` and `TAGLINE_MAX_LENGTH`, without the store
+or the emitters; `idg-brand-editor` uses it.
 `emitBrandTheme(theme)` gives `{ css, tokens, id }` from one regeneration of the theme, so that
 nested getters or `toJSON` methods that answer differently each time cannot give a stylesheet of
 one theme and tokens of another; it refuses an altered theme as the two emitters do.
