@@ -41,11 +41,8 @@ Field names are the IR's neutral camelCase; each target maps them to its own col
 - **Profile** — one per user: `owner` (one-to-one to the user, unique), `displayName`, `avatar`
   (images only), `bio`, `language` (BCP 47; not `locale`, which Strapi and so camis reserve), `timezone` (IANA),
   `marketingOptIn` (default off).
-- **BrandKit** — `owner`, `name`, `tagline`, `logo` and `mark` (images only), `primaryColor`,
-  `secondaryColor`, `neutralColor` (`#rrggbb`), `typePairing` (component: `headingFamily`,
-  `bodyFamily`, restricted to characters that cannot break out of a CSS font string), `corners`
-  (`sharp`, `subtle`, `rounded`, `pill`), `tone` (`calm`, `friendly`, `bold`, `formal`, `playful`),
-  `themeTokens` (JSON generated from the kit), `isPublic` (default off; no public read yet, see gaps).
+- **BrandKit** — the `BrandKit` of `@identgineer/brand` ([Brand kits](#brand-kits)), with
+  `owner` and `isPublic` (default off; a public kit can be read by anyone, see [Roles](#roles)).
 
 ### Tracking (owner only)
 
@@ -61,6 +58,63 @@ Field names are the IR's neutral camelCase; each target maps them to its own col
 
 `User` (`builtin: "user"`) and `File` (`builtin: "file"`) are the targets' own accounts and media
 library.
+
+### Brand kits
+
+A BrandKit row holds one brand kit of `@identgineer/brand` (`packages/brand/src/brand-kit.ts`),
+field for field, so a client maps a row to the package's input and checks it with `parseBrandKit`.
+`tests/brand-kit-model.test.ts` imports the package's constants and fails if an enumeration, a
+length or a pattern below drifts from it.
+
+| Field            | Kit field            | Rule in the CMS                                                                                 |
+| ---------------- | -------------------- | ----------------------------------------------------------------------------------------------- |
+| `brandId`        | `id`                 | Required, 2 to 32 characters, the tokens package's added theme id pattern; becomes `data-theme` |
+| `name`           | `name`               | Required, at most 120 characters (see below)                                                    |
+| `tagline`        | `tagline`            | At most 240 characters (see below)                                                              |
+| `primaryColor`   | `colors.primary`     | Required, `#rrggbb`                                                                             |
+| `secondaryColor` | `colors.secondary`   | `#rrggbb`                                                                                       |
+| `neutralTint`    | `colors.neutralTint` | `#rrggbb`                                                                                       |
+| `typography`     | `typography`         | Required, one of `TYPOGRAPHY_IDS`                                                               |
+| `corners`        | `corners`            | Required, `sharp`, `soft` or `round`                                                            |
+| `tone`           | `tone`               | Required, `calm`, `balanced` or `vivid`                                                         |
+| `logo`           | `logo`               | Long text of at most 524,288 characters: the sanitised SVG                                      |
+| `mark`           | `mark`               | The same                                                                                        |
+
+What the CMS cannot check, every reader does: `parseBrandKit` refuses a reserved brand id, text
+outside the package's character rules, a name over 60 or a tagline over 120 code points, and a logo
+that is not exactly what `sanitiseSvgLogo` returns. The package has no default for `typography`,
+`corners` or `tone`, so neither has the CMS. `brandId` is not unique: a unique id would tell any
+user which ids other users had taken, and two kits with one id only collide on a page that shows
+both.
+
+`name` and `tagline` take twice the package's limits because the two targets count differently.
+The package counts code points; strapi-php counts characters with `mb_strlen` (code points too),
+but Strapi counts UTF-16 units, where a letter outside the Basic Multilingual Plane counts twice.
+At the package's own limits, Strapi would refuse a valid name written in such letters. The looser
+limit lets strapi-php keep a name up to 120 code points that the package refuses; readers then get
+an error for that kit, never the kit.
+
+The logo and mark are text fields holding the SVG exactly as `sanitiseSvgLogo` returned it, not
+media fields:
+
+- The server (PHP on shared hosting) cannot run the sanitiser, so it stores the text as untrusted
+  input and never serves it as an image. It is only ever a JSON string in an API answer.
+- Keeping SVG out of the media library means the CMS origin never serves a user's SVG with an
+  image content type, which would be stored cross-site scripting on that origin when opened
+  directly.
+- Every reader checks the text again with `parseBrandKit` (or `isSanitisedSvgLogo`) and shows it
+  only through `<img>` with `logoDataUrl`.
+
+The bound is the sanitiser's output limit, `SVG_LOGO_LIMITS.inputBytes` (512 KiB in UTF-8): no
+output is larger, and a string never has more code points or UTF-16 units than UTF-8 bytes, so
+both targets' length checks let every sanitised logo through however they count. The column is
+another matter: strapi-php's migration declares the field as `$table->text(...)` whatever its
+`maxLength`, and MySQL's `TEXT` holds 65,535 bytes, so on MySQL a logo over 64 KiB is refused or
+cut short (see [Capability gaps](#capability-gaps)). sqlite and pgsql `text` hold it, as do
+Strapi's columns.
+
+There is no `themeTokens` field. The theme is derived data the server cannot verify; clients
+generate it from the kit with `generateBrandTheme`, which is deterministic.
 
 ### Data minimisation
 
@@ -86,30 +140,43 @@ visitor:
 - Event and ConsentRecord carry a denormalised `owner`. camis conditions cannot follow a relation
   (`record.property.ownerId`), so the owner of the event's property is copied onto the event when
   it is ingested, and the read grant checks `record.ownerId`.
-- `mark` is an image (a logomark), and the type pairing is two family names; Feature 15 may refine
-  both.
+- The logo and mark are sanitised SVG text, not images in the media library (see
+  [Brand kits](#brand-kits)).
 - Profile has no delete action: a profile goes with its account.
 
 ## Roles
 
-| Role            | Content type   | Actions                        | Condition / assign                      | Why                                                                   |
-| --------------- | -------------- | ------------------------------ | --------------------------------------- | --------------------------------------------------------------------- |
-| `public`        | Page           | read                           | —                                       | The site is public content                                            |
-| `public`        | NavigationItem | read                           | —                                       | The site's menus                                                      |
-| `authenticated` | Page           | read                           | —                                       | Signed-in callers do not inherit the public role on Strapi            |
-| `authenticated` | NavigationItem | read                           | —                                       | As above                                                              |
-| `authenticated` | Profile        | create, read, update           | `record.ownerId == user.id`, owner = me | Manage their own profile; no delete                                   |
-| `authenticated` | BrandKit       | create, read, update, delete   | `record.ownerId == user.id`, owner = me | Manage their own brand kits                                           |
-| `authenticated` | Property       | create, read, update, delete   | `record.ownerId == user.id`, owner = me | Manage the sites they track                                           |
-| `authenticated` | Event          | read                           | `record.ownerId == user.id`             | See analytics of their own properties; never write them               |
-| `authenticated` | ConsentRecord  | read                           | `record.ownerId == user.id`             | Show consent evidence for their own properties; never write it        |
-| `authenticated` | File           | create                         | —                                       | Upload an avatar, logo or mark; no listing, editing or deleting files |
-| `super-admin`   | every type     | every action (publish on Page) | —                                       | camis' admin role, as Strapi's Super Admin; signs in to the admin     |
+| Role            | Content type   | Actions                        | Condition / assign                      | Why                                                               |
+| --------------- | -------------- | ------------------------------ | --------------------------------------- | ----------------------------------------------------------------- |
+| `public`        | Page           | read                           | —                                       | The site is public content                                        |
+| `public`        | NavigationItem | read                           | —                                       | The site's menus                                                  |
+| `public`        | BrandKit       | read                           | `record.isPublic == true`               | Show kits their owners made public                                |
+| `authenticated` | Page           | read                           | —                                       | Signed-in callers do not inherit the public role on Strapi        |
+| `authenticated` | NavigationItem | read                           | —                                       | As above                                                          |
+| `authenticated` | Profile        | create, read, update           | `record.ownerId == user.id`, owner = me | Manage their own profile; no delete                               |
+| `authenticated` | BrandKit       | create, read, update, delete   | `record.ownerId == user.id`, owner = me | Manage their own brand kits                                       |
+| `authenticated` | Property       | create, read, update, delete   | `record.ownerId == user.id`, owner = me | Manage the sites they track                                       |
+| `authenticated` | Event          | read                           | `record.ownerId == user.id`             | See analytics of their own properties; never write them           |
+| `authenticated` | ConsentRecord  | read                           | `record.ownerId == user.id`             | Show consent evidence for their own properties; never write it    |
+| `authenticated` | File           | create                         | —                                       | Upload an avatar; no listing, editing or deleting files           |
+| `super-admin`   | every type     | every action (publish on Page) | —                                       | camis' admin role, as Strapi's Super Admin; signs in to the admin |
 
 - New registrations get `authenticated` (`defaultRole`).
-- `public` holds no grant on User, Profile, BrandKit, Property, Event, ConsentRecord or File, no
-  conditioned grant, and no endpoint. Tracking reaches the CMS only through the two ingestion
-  endpoints, which are public by declaration in `camis.json`, not by a grant.
+- `public` holds no grant on User, Profile, Property, Event, ConsentRecord or File, and no
+  endpoint. Its one conditioned grant reads brand kits marked public. Tracking reaches the CMS only
+  through the two ingestion endpoints, which are public by declaration in `camis.json`, not by a
+  grant.
+- A signed-in user holds brand kits under the owner grant only, and reads public kits without
+  their credentials, as the public role (the brand package's store does). A read-only grant of
+  public kits for `authenticated` was tried and dropped: a kit's `owner` cannot be filtered on
+  (strapi-php answers `400 Invalid key owner`, as the user type is not readable), so
+  `GET /api/brand-kits` would mix the caller's kits with every public kit of other users, with
+  nothing in an answer to tell them apart. A kit of someone else is not found (404) for a
+  signed-in user; a public one cannot be changed or deleted by anyone but its owner (403 for the
+  public role). The owner grant is not widened: widening it to public kits would let anyone change
+  them.
+- No role but `super-admin` reads User or File, so a populate of a kit's `owner` shows nothing
+  about the owner to anyone else.
 - "owner = me" is the grant's `assign: { owner: "user.id" }`: the server fills the owner from the
   session on create and ignores an owner sent by the client.
 - Every grant above is enforced as written on both targets: strapi-php, and Strapi's generated
@@ -181,9 +248,9 @@ lacks its reason, or if the live contract's server runs with other values for th
 
 ### Live contract test
 
-`pnpm contract:live` (from the repository root) runs the identity SDK against a real strapi-php
-backend generated from this directory. It needs `CAMIS_DIR` and PHP 8.3 or newer with the
-extensions Laravel and Filament need (it names the PHP it found when older); the first run also
+`pnpm contract:live` (from the repository root) runs the identity SDK, and the brand kit store of
+`packages/brand` through it, against a real strapi-php backend generated from this directory. It
+needs `CAMIS_DIR` and PHP 8.3 or newer with the extensions Laravel and Filament need (it names the PHP it found when older); the first run also
 needs Composer, as it scaffolds the Laravel app with `camis scaffold filament`, which downloads
 packages from Packagist. `scripts/live-backend.js` then, on every run:
 
@@ -291,10 +358,10 @@ Limits that remain on Strapi, for this model:
 
 **Reported by `pnpm cms:generate`.**
 
-- `conditionContext @ <type>.authenticated` (Profile, BrandKit, Property, Event, ConsentRecord):
-  the admin-panel copy of the role cannot read `record.ownerId`, so in the admin panel its
-  condition denies every entry; the content API enforces it. Use the `super-admin` role in the
-  admin.
+- `conditionContext @ <type>.authenticated` (Profile, BrandKit, Property, Event, ConsentRecord)
+  and `@ BrandKit.public`: the admin-panel copy of the role cannot read `record.ownerId` or
+  `record.isPublic`, so in the admin panel its condition denies every entry; the content API
+  enforces it. Use the `super-admin` role in the admin.
 - `userRelationWrite @ <type>.super-admin` (the same five types): to let the role write a relation
   to the user, camis also grants it `users-permissions.user.find`. That adds nothing here:
   `super-admin` already holds every action on users. The `authenticated` role is not reported and
@@ -304,21 +371,45 @@ Limits that remain on Strapi, for this model:
 - `remoteDataTransfer` (strapi-php): `strapi transfer` needs a WebSocket server; move data as an
   archive instead (see `DEPLOY.md`).
 
+**Found while storing brand kits, not yet fixed in camis.**
+
+- strapi-php ignores a `null` in an update body (the generated serializer's `fromWire` drops
+  every null value), where Strapi clears the field, so an update cannot clear a brand kit's
+  `tagline`, `secondaryColor`, `neutralTint`, `logo` or `mark` there
+  ([hynding/camis#122](https://github.com/hynding/camis/issues/122)). The brand kit store reports
+  such an update as `not-applied` rather than as saved, and
+  `packages/identity/src/live-contract/brand-kit-store.live.test.ts` holds the Strapi behaviour as
+  an expected failure that turns red once camis clears the field.
+- strapi-php's migration declares a `text` field as `$table->text(...)` whatever its `maxLength`
+  ([hynding/camis#123](https://github.com/hynding/camis/issues/123), text columns over 64 KiB).
+  MySQL's `TEXT` holds 65,535 bytes, so a brand kit logo or mark over 64 KiB cannot be stored
+  whole on MySQL. Until camis emits a larger column, deploy strapi-php with that fix, or on pgsql
+  or sqlite. The logo bound stays the sanitiser's.
+
 **Not reported by camis but limiting this model.** Conditions cannot follow a relation (hence the
 denormalised `owner` on Event and ConsentRecord); public endpoints have no declarative throttle,
-body limit or origin list (hence the hand-written checks); JSON fields cannot be bounded; media
+body limit or origin list (hence the hand-written checks); no read route has a throttle either, so
+public brand kits, which anyone may list page by page by design, can be enumerated as fast as the
+server answers (pages are capped at 25 rows, `CAMIS_REST_MAX_LIMIT` for strapi-php and
+`protected/config/api.ts` for Strapi, whose generated `maxLimit` reads no variable; a list asks for
+summaries without logos); JSON fields cannot be bounded; media
 fields cannot name MIME types (strapi-php's global `CAMIS_UPLOAD_ALLOWED_TYPES` is used instead,
-without SVG); relations have no delete behaviour, so on strapi-php a property with events cannot
-be deleted until its events are purged; there is no read-only field, so an owner can change
-`ingestKey` after it is issued; and one `protected/` directory is mirrored into both targets.
+without SVG; brand logos are text for that reason among others); string lengths are counted as
+each target counts them (UTF-16 units on Strapi, code points on strapi-php), hence the doubled
+brand kit name and tagline limits; a field cannot be unique per owner; relations have no delete
+behaviour, so on strapi-php a property with events cannot be deleted until its events are purged;
+there is no read-only field, so an owner can change `ingestKey` after it is issued; and one
+`protected/` directory is mirrored into both targets.
 
-**Public brand kits.** There is still no public read of brand kits marked `isPublic`, but it can
-now be modelled safely on both targets: a `public` read grant on BrandKit conditioned on
-`record.isPublic == true` is within what camis enforces on Strapi (a read condition of `eq` over
-`record.<field>` against a literal, with the public role as the caller without a session), where
-before it would have opened every brand kit. The model is left unchanged until the brand identity
-feature (issue #18), which owns the public-read decision; the field is in the model already. A
-signed-in user does not inherit the public role on Strapi, so showing other users' public kits to
-signed-in users needs its own read-only grant for `authenticated`; widening the existing owner grant
-would let anyone change a public kit. When it is added, `tests/roles.test.ts` ("holds no
-conditioned grant") must change with it.
+**Deployment recommendation (Feature 14).** Put a rate limit per client address on
+`GET /api/brand-kits` (and `GET /api/brand-kits/:id`) in the reverse proxy or the host's web server
+config, since neither target throttles reads.
+
+**Public brand kits.** A `public` read grant on BrandKit conditioned on `record.isPublic == true`
+is within what camis enforces on both targets (a read condition of `eq` over `record.<field>`
+against a literal, with the public role as the caller without a session), and the model has it. A
+signed-in user does not inherit the public role on Strapi, and the separate read-only grant for
+`authenticated` that would cover it is left out for the reason given under [Roles](#roles). Both
+targets combine a role's grants on one type with "or" (strapi-php's policy and list scope test each
+condition of the role; Strapi's generated controllers hold each action under every condition that
+grants it), so such a grant would add public kits to every signed-in list, not replace the owner's.

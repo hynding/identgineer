@@ -65,8 +65,8 @@ editorial, pixel) keep their own. A kit's logo and mark are SVG uploads, rebuilt
 dependency-free sanitiser into inert SVG (an allowlist of elements and attributes, no script,
 handlers, external references or `foreignObject`, and bounds on what drawing and painting it may
 cost) and
-shown through `<img>`. See
-[packages/brand/README.md](packages/brand/README.md).
+shown through `<img>`. Kits are stored in the CMS, each owned by its user, through a typed store
+that checks everything it reads back. See [packages/brand/README.md](packages/brand/README.md).
 
 ## Tracking
 
@@ -105,7 +105,7 @@ pnpm typecheck     # tsc across every workspace package
 pnpm test          # Vitest
 pnpm build         # build every package that defines a build script
 pnpm cms:generate  # camis dry run for the CMS (also cms:validate, cms:build); needs CAMIS_DIR
-pnpm contract:live # the identity SDK against a generated strapi-php backend; needs CAMIS_DIR and PHP 8.3 (Composer for the first run)
+pnpm contract:live # the identity SDK and brand kit store against a generated strapi-php backend; needs CAMIS_DIR and PHP 8.3 (Composer for the first run)
 ```
 
 `pnpm test` runs without camis, PHP or a network; `pnpm contract:live` is run by hand (CI has no
