@@ -821,6 +821,38 @@ test.describe("switching the layout while the page is open", () => {
     await expect.poll(() => focusInfo(page)).toMatchObject({ region: "toggle" });
   });
 
+  test("a focused link in a navigation the new layout collapses ends on the toggle, however late the frame", async ({
+    page,
+  }) => {
+    await openShell(page, { layout: "side-rail" });
+    await page.locator("#nav-last").focus();
+    // Still the active element when the frame settles the layout: it is blurred only after.
+    await setLayout(page, "immersive");
+    await frames(page, 3);
+    expect(await focusInfo(page)).toMatchObject({ region: "toggle" });
+  });
+
+  test("a focused toggle that the new layout hides sends focus into the navigation now drawn", async ({
+    page,
+  }) => {
+    await openShell(page, { layout: "split-hero" });
+    await page.locator("#shell").locator('[part="toggle"]').focus();
+    await setLayout(page, "centered");
+    await frames(page, 3);
+    expect(await focusInfo(page)).toMatchObject({ region: "navigation" });
+  });
+
+  test("a link in an open navigation keeps focus when the new layout changes how the navigation opens", async ({
+    page,
+  }) => {
+    await openShell(page, { width: 768, layout: "bento" });
+    await openNavigation(page);
+    await page.locator("#nav-first").focus();
+    await setLayout(page, "immersive");
+    await frames(page, 3);
+    expect(await focusInfo(page)).toEqual({ region: "navigation", id: "nav-first" });
+  });
+
   test("an open disclosure is left open by a layout that also collapses, and reset by one that does not", async ({
     page,
   }) => {

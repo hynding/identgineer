@@ -48,8 +48,7 @@ function isSamePresence(a: Presence, b: Presence): boolean {
 }
 
 // Focus a change took away rests on the page itself, not on another control.
-function isFocusDropped(): boolean {
-  const active = deepActiveElement();
+function isFocusDropped(active: Element | null): boolean {
   return active === null || active === document.body || active === document.documentElement;
 }
 
@@ -454,16 +453,19 @@ export class IdgLayout {
   // navigation it was in has collapsed. The frame callback runs before the page paints, so none of
   // it is seen.
   private settleLayout(taken: Viewport | undefined): void {
+    // Read before readMode(), which can move focus itself when it reopens the navigation.
+    const active = deepActiveElement();
     this.readMode();
     if (!taken) return;
     restoreViewport(window, taken);
     const previous = taken.focused;
     if (!previous) return;
     // The frame comes after the change, and a key pressed in between may have moved focus on. That
-    // choice is the visitor's and is not undone; only a focus the change dropped is put back.
-    if (!isFocusDropped()) return;
+    // choice is the visitor's and is not undone; an element the change hides is still active here.
+    if (active !== previous && !isFocusDropped(active)) return;
     if (isVisible(previous)) {
-      (previous as HTMLElement).focus({ preventScroll: true });
+      if (deepActiveElement() !== previous)
+        (previous as HTMLElement).focus({ preventScroll: true });
       return;
     }
     const inNavigation =
