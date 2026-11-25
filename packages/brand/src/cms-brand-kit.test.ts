@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { brandKitToCms, readCmsBrandKit } from "./cms-brand-kit.ts";
+import { brandKitToCms, readCmsBrandKit, readCmsBrandKitSummary } from "./cms-brand-kit.ts";
 import { sanitiseSvgLogo } from "./sanitise-svg-logo.ts";
 import { kitFrom } from "./test-support.ts";
 
@@ -214,5 +214,33 @@ describe("readCmsBrandKit", () => {
     expect(failure(value).errors).toEqual([
       { path: "", code: "not-an-object", message: "must be an object" },
     ]);
+  });
+});
+
+describe("readCmsBrandKitSummary", () => {
+  it("reads every field but the logo and mark, which it never reads", () => {
+    const hostile =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 1" onload="steal()"><rect width="2" height="1"/></svg>';
+    const result = readCmsBrandKitSummary(minimalRow({ logo: hostile, mark: 5, tagline: "Hi" }));
+    expect(result).toEqual({
+      ok: true,
+      record: {
+        documentId: "pjx5ucx7febfca6f8rtjrxga",
+        isPublic: false,
+        summary: kitFrom({ tone: "calm", tagline: "Hi" }),
+      },
+    });
+    if (result.ok) expect(Object.keys(result.record.summary)).not.toContain("logo");
+  });
+
+  it("refuses what readCmsBrandKit refuses in the other fields", () => {
+    const result = readCmsBrandKitSummary(minimalRow({ primaryColor: "red", extra: 1 }));
+    expect(result).toMatchObject({
+      ok: false,
+      errors: [
+        { path: "extra", code: "unknown-key" },
+        { path: "primaryColor", code: "invalid-color" },
+      ],
+    });
   });
 });

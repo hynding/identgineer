@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BrandKit } from "./brand-kit.ts";
 import { BrandKitStoreError } from "./brand-kit-store-error.ts";
-import { createBrandKitStore, MAX_RECORD_BYTES } from "./brand-kit-store.ts";
+import { createBrandKitStore, MAX_RECORD_BYTES, MAX_SUMMARY_BYTES } from "./brand-kit-store.ts";
 import { brandKitToCms } from "./cms-brand-kit.ts";
 import { sanitiseSvgLogo } from "./sanitise-svg-logo.ts";
 import { kitFrom } from "./test-support.ts";
@@ -10,6 +10,21 @@ const BASE = "https://cms.example.com";
 const KITS = `${BASE}/api/brand-kits`;
 const DOCUMENT_ID = "pjx5ucx7febfca6f8rtjrxga";
 const SECRET = "body-text-that-must-not-leak";
+/** What a list asks the CMS for: every field but the logo and mark. */
+const SUMMARY_FIELDS = [
+  "brandId",
+  "name",
+  "tagline",
+  "primaryColor",
+  "secondaryColor",
+  "neutralTint",
+  "typography",
+  "corners",
+  "tone",
+  "isPublic",
+];
+const UNSANITISED_LOGO =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 1" onload="steal()"><rect width="2" height="1"/></svg>';
 
 interface Sent {
   readonly url: string;
@@ -118,6 +133,7 @@ describe("list", () => {
     expect(`${url.origin}${url.pathname}`).toBe(KITS);
     expect([...url.searchParams]).toEqual([
       ["sort", "id:asc"],
+      ...SUMMARY_FIELDS.map((field, index) => [`fields[${String(index)}]`, field]),
       ["pagination[page]", "1"],
       ["pagination[pageSize]", "10"],
     ]);
@@ -126,7 +142,9 @@ describe("list", () => {
     expect(sent[0]?.init.body).toBeUndefined();
     expect(publicSent).toEqual([]);
     expect(result).toEqual({
-      results: [{ ok: true, record: { documentId: DOCUMENT_ID, isPublic: false, kit: kitFrom() } }],
+      results: [
+        { ok: true, record: { documentId: DOCUMENT_ID, isPublic: false, summary: kitFrom() } },
+      ],
       page: 1,
       pageSize: 10,
       pageCount: 1,
@@ -170,6 +188,31 @@ describe("list", () => {
       ],
     });
     expect(JSON.stringify(results)).not.toContain(SECRET);
+  });
+
+  it("leaves out the logo and mark, ignoring without parsing any logo text that arrives", async () => {
+    const row = rowOf(kitFrom(), { logo: UNSANITISED_LOGO, mark: UNSANITISED_LOGO });
+    const { store } = storeWith(() => json(page([row])));
+    const { results } = await store.list();
+    expect(results).toEqual([
+      { ok: true, record: { documentId: DOCUMENT_ID, isPublic: false, summary: kitFrom() } },
+    ]);
+    expect(JSON.stringify(results)).not.toContain("steal");
+  });
+
+  it("checks every other field of a summary with parseBrandKit", async () => {
+    const { store } = storeWith(() => json(page([rowOf(kitFrom(), { brandId: "dark" })])));
+    const { results } = await store.list();
+    expect(results[0]).toMatchObject({
+      ok: false,
+      errors: [{ path: "brandId", code: "reserved-id" }],
+    });
+  });
+
+  it("bounds a page by the size of summaries, not of logos", async () => {
+    const huge = rowOf(kitFrom(), { logo: "x".repeat(MAX_SUMMARY_BYTES * 2) });
+    const { store } = storeWith(() => json(page([huge])));
+    expect((await rejection(store.list({ pageSize: 1 }))).code).toBe("malformed-response");
   });
 
   it("refuses a page holding more kits than it asked for", async () => {
@@ -365,7 +408,7 @@ describe("public kits", () => {
     expect(publicSent[0]?.init.credentials).toBe("omit");
     expect(headerOf(publicSent[0], "Authorization")).toBeNull();
     expect(result.results).toEqual([
-      { ok: true, record: { documentId: DOCUMENT_ID, isPublic: true, kit: kitFrom() } },
+      { ok: true, record: { documentId: DOCUMENT_ID, isPublic: true, summary: kitFrom() } },
     ]);
   });
 
