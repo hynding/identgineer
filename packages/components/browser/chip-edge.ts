@@ -1,5 +1,19 @@
 import type { Locator } from "@playwright/test";
 
+/** The edge of one element, measured the same way for any element a test names. */
+export interface Edge {
+  /** What the element is: the swatch role it belongs to, or its own class. */
+  readonly label: string;
+  readonly scheme: string;
+  /** The edge, composited where it is translucent, as `rgb()` channels. */
+  readonly edge: string;
+  /** What is behind the element: every background from the page down, composited. */
+  readonly behind: string;
+  readonly width: string;
+  /** WCAG contrast of the edge against what is behind the element. */
+  readonly ratio: number;
+}
+
 export interface ChipEdge {
   readonly role: string;
   readonly scheme: string;
@@ -18,7 +32,16 @@ export interface ChipEdge {
  * translucent surface (the glass design's 42% fill) is judged as drawn and not as its token.
  */
 export async function measureChipEdges(swatches: Locator): Promise<ChipEdge[]> {
-  return swatches.evaluate((host) => {
+  const edges = await measureEdges(swatches, ".chip");
+  return edges.map(({ label, ...rest }) => ({ role: label, ...rest }));
+}
+
+/**
+ * The top edge of every element matching `selector` in a host's shadow root and in the shadow roots
+ * inside it, measured as `measureChipEdges` does: against what is really behind it.
+ */
+export async function measureEdges(host: Locator, selector: string): Promise<Edge[]> {
+  return host.evaluate((element, wanted) => {
     type Colour = [number, number, number, number];
     const parse = (css: string): Colour => {
       const legacy = /^rgba?\(([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:[ ,/]+([\d.]+))?\)$/.exec(css);
@@ -63,18 +86,22 @@ export async function measureChipEdges(swatches: Locator): Promise<ChipEdge[]> {
       return layers.reduceRight((below, layer) => over(layer, below), [255, 255, 255, 1] as Colour);
     };
     const css = (colour: Colour) => `rgb(${colour.slice(0, 3).map(Math.round).join(", ")})`;
-    return [...(host.shadowRoot?.querySelectorAll(".swatch") ?? [])].map((item) => {
-      const chip = item.querySelector(".chip");
-      if (!chip) throw new Error("no chip");
-      const style = getComputedStyle(chip);
-      const background = behind(chip);
+    const collect = (root: ParentNode): Element[] => [
+      ...root.querySelectorAll(wanted),
+      ...[...root.querySelectorAll("*")].flatMap((inner) =>
+        inner.shadowRoot ? collect(inner.shadowRoot) : [],
+      ),
+    ];
+    return collect(element.shadowRoot ?? element).map((item) => {
+      const style = getComputedStyle(item);
+      const background = behind(item);
       const edge = over(parse(style.borderTopColor), background);
       const [lighter, darker] = [luminance(edge), luminance(background)].sort((a, b) => b - a) as [
         number,
         number,
       ];
       return {
-        role: item.querySelector(".role")?.textContent ?? "",
+        label: item.closest(".swatch")?.querySelector(".role")?.textContent ?? item.className,
         scheme: item.closest("[data-scheme]")?.getAttribute("data-scheme") ?? "",
         edge: css(edge),
         behind: css(background),
@@ -82,5 +109,5 @@ export async function measureChipEdges(swatches: Locator): Promise<ChipEdge[]> {
         ratio: (lighter + 0.05) / (darker + 0.05),
       };
     });
-  });
+  }, selector);
 }
