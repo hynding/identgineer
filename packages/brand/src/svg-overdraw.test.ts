@@ -33,6 +33,10 @@ function refusal(input: string): SvgLogoErrorCode | undefined {
   return result.ok ? undefined : result.errors[0]?.code;
 }
 
+// Lengths are bounded over every reading Chromium can make of the numbers, a hair over the exact
+// lengths, so a charge is held to the exact one to within that hair: five decimals.
+const HAIR = 5;
+
 // A 50 by 50 square: a quarter of the view box, and an outline of 200, twice the larger side.
 const SQUARE = 'width="50" height="50"';
 const QUARTER = 0.25;
@@ -76,15 +80,21 @@ describe("the overdraw of a logo", () => {
   });
 
   it("charges a solid fill its area, as a share of the square on the larger side, and its edges", () => {
-    expect(overdraw(`<rect ${SQUARE}/>`)).toBeCloseTo(QUARTER * W.solid + edges(SQUARE_EDGES), 9);
+    expect(overdraw(`<rect ${SQUARE}/>`)).toBeCloseTo(
+      QUARTER * W.solid + edges(SQUARE_EDGES),
+      HAIR,
+    );
     expect(overdraw(`<rect ${SQUARE} fill="#123456"/>`, "0 0 100 50")).toBeCloseTo(
       QUARTER * W.solid + edges(SQUARE_EDGES),
-      9,
+      HAIR,
     );
-    expect(overdraw('<circle r="50"/>')).toBeCloseTo((Math.PI / 4) * W.solid + edges(Math.PI), 9);
+    expect(overdraw('<circle r="50"/>')).toBeCloseTo(
+      (Math.PI / 4) * W.solid + edges(Math.PI),
+      HAIR,
+    );
     expect(overdraw('<path d="M0 0H50V50H0Z"/>')).toBeCloseTo(
       QUARTER * W.solid + edges(SQUARE_EDGES),
-      9,
+      HAIR,
     );
   });
 
@@ -92,12 +102,12 @@ describe("the overdraw of a logo", () => {
     // Two 10 by 10 squares far apart cover 200 square units, not the 8,100 of their common box.
     expect(overdraw('<path d="M0 0h10v10h-10zM80 80h10v10h-10z"/>')).toBeCloseTo(
       0.02 * W.solid + edges(0.8),
-      9,
+      HAIR,
     );
     // A curve stays inside the box of its control points: 50 by 50 here.
     expect(overdraw('<path d="M0 0C0 50 50 50 50 0Z"/>')).toBeCloseTo(
       QUARTER * W.solid + edges((50 + 50 + 50 + 50) * 0.01),
-      9,
+      HAIR,
     );
   });
 
@@ -105,7 +115,7 @@ describe("the overdraw of a logo", () => {
     // A rectangle is convex: no more of its outline than the image's perimeter can be seen.
     expect(overdraw('<rect x="-500" y="-500" width="5000" height="5000"/>')).toBeCloseTo(
       W.solid + edges(4),
-      9,
+      HAIR,
     );
   });
 
@@ -113,10 +123,10 @@ describe("the overdraw of a logo", () => {
     // Shown to fit (the only way a kept logo is shown) in any image, the view box spans the image's
     // width at most, so its larger side is the image's: the bar covers a thousandth of the square.
     const bar = '<rect width="1000" height="1"/>';
-    expect(overdraw(bar, "0 0 1000 1")).toBeCloseTo(0.001 * W.solid + edges(2.002), 9);
+    expect(overdraw(bar, "0 0 1000 1")).toBeCloseTo(0.001 * W.solid + edges(2.002), HAIR);
     expect(
       accepted(`<svg ${NS} viewBox="0 0 1000 1" preserveAspectRatio="none">${bar}</svg>`).overdraw,
-    ).toBeCloseTo(0.001 * W.solid + edges(2.002), 9);
+    ).toBeCloseTo(0.001 * W.solid + edges(2.002), HAIR);
   });
 
   it("bounds how much of each segment's edge can be seen by its kind", () => {
@@ -136,25 +146,28 @@ describe("the overdraw of a logo", () => {
   it("carries the area through transforms, ancestors' and use's included", () => {
     expect(overdraw(`<rect ${SQUARE} transform="scale(2 0.5)"/>`)).toBeCloseTo(
       QUARTER * W.solid + edges(2 * SQUARE_EDGES),
-      9,
+      HAIR,
     );
     // Rotation keeps the area; the outline is no longer.
     expect(overdraw(`<rect ${SQUARE} transform="rotate(45)"/>`)).toBeCloseTo(
       QUARTER * W.solid + edges(SQUARE_EDGES),
-      9,
+      HAIR,
     );
     const defs = '<defs><rect id="a" width="10" height="10"/></defs>';
     expect(
       overdraw(
         `${defs}<g transform="scale(2)"><use href="#a" transform="scale(2)"/><use href="#a" x="20"/></g>`,
       ),
-    ).toBeCloseTo((0.16 + 0.04) * W.solid + edges(1.6) + edges(0.8), 9);
+    ).toBeCloseTo((0.16 + 0.04) * W.solid + edges(1.6) + edges(0.8), HAIR);
     // A use of a use is drawn as often as it is reached.
     expect(
       overdraw(
         `${defs}<g id="b"><use href="#a"/><use href="#a"/></g><use href="#b"/><use href="#b" transform="scale(3)"/>`,
       ),
-    ).toBeCloseTo((2 * 0.01 + 2 * 0.01 + 2 * 0.09) * W.solid + 4 * edges(0.4) + 2 * edges(1.2), 9);
+    ).toBeCloseTo(
+      (2 * 0.01 + 2 * 0.01 + 2 * 0.09) * W.solid + 4 * edges(0.4) + 2 * edges(1.2),
+      HAIR,
+    );
   });
 
   it("grows a stroke by half its width, more where a miter can reach, and charges it apart from the fill", () => {
@@ -169,7 +182,7 @@ describe("the overdraw of a logo", () => {
       (roundArea / 10_000) * W.solid +
         // Four round joins of half a turn at width 4, and two butt caps 4 across.
         strokeEdges(0.4, (4 * 2 * Math.PI + 2 * 4) / 100),
-      9,
+      HAIR,
     );
     // Miter joins reach out to the miter limit, 4 by default.
     const miter = 4 * 2;
@@ -181,7 +194,7 @@ describe("the overdraw of a logo", () => {
         edges(0.4) +
         // Four miter joins up to 4 times 4 long, and two butt caps.
         strokeEdges(0.4, (4 * 16 + 2 * 4) / 100),
-      9,
+      HAIR,
     );
     expect(overdraw('<line x2="50" stroke="#000" stroke-width="0"/>')).toBe(0);
   });
@@ -193,52 +206,53 @@ describe("the overdraw of a logo", () => {
     // and a butt cap 10 across at each end of the one subpath; the line's box grown by the miter.
     const area = (extra: number): number =>
       Math.min(140 * 40, 100 * 10 + 2 * 40 ** 2 + extra) / 10_000;
-    expect(line("")).toBeCloseTo(area(0) * W.solid + strokeEdges(1, (40 + 2 * 10) / 100), 9);
-    // Dashes 5 long every 10: up to 10 whole ones and one more begun, each with two caps and as
-    // much area again as a square cap could add.
-    expect(line('stroke-dasharray="5"')).toBeCloseTo(
+    expect(line("")).toBeCloseTo(area(0) * W.solid + strokeEdges(1, (40 + 2 * 10) / 100), HAIR);
+    // Dashes 5.5 long every 11 (further apart than the stroke is wide, however Chromium reads the
+    // numbers): 9 whole ones and one more begun, and a repeat more for the subpath, each with two
+    // caps and as much area again as a square cap could add.
+    expect(line('stroke-dasharray="5.5"')).toBeCloseTo(
       area(11 * 100) * W.solid + strokeEdges(1, (40 + 2 * 11 * 10) / 100),
-      9,
+      HAIR,
     );
     // A round cap is half a turn, a square one three sides of a square; each dash of four entries
     // has two; an offset moves the dashes but adds none.
-    expect(line('stroke-dasharray="5" stroke-linecap="round"')).toBeCloseTo(
+    expect(line('stroke-dasharray="5.5" stroke-linecap="round"')).toBeCloseTo(
       area(11 * 100) * W.solid + strokeEdges(1, (40 + 2 * 11 * 5 * Math.PI) / 100),
-      9,
+      HAIR,
     );
-    expect(line('stroke-dasharray="5" stroke-linecap="square"')).toBeCloseTo(
+    expect(line('stroke-dasharray="5.5" stroke-linecap="square"')).toBeCloseTo(
       area(11 * 100) * W.solid + strokeEdges(1, (40 + 2 * 11 * 20) / 100),
-      9,
+      HAIR,
     );
-    // Two dashes every 10 start 5 apart on average, closer than the stroke is wide: all 44 caps
+    // Two dashes every 10 start 5 apart on average, closer than the stroke is wide: all 48 caps
     // can share a row.
-    const sides = 2 + (40 + 2 * 22 * 10) / 100;
+    const sides = 2 + (40 + 2 * 24 * 10) / 100;
     expect(line('stroke-dasharray="1 2 3 4" stroke-dashoffset="3"')).toBeCloseTo(
-      area(22 * 100) * W.solid + sides * W.edge * (1 + (44 / W.edgesPerRow) ** 2),
-      9,
+      area(24 * 100) * W.solid + sides * W.edge * (1 + (48 / W.edgesPerRow) ** 2),
+      HAIR,
     );
     // A dash of no length still has its caps.
-    expect(line('stroke-dasharray="0 10" stroke-linecap="round"')).toBeCloseTo(
+    expect(line('stroke-dasharray="0 11" stroke-linecap="round"')).toBeCloseTo(
       area(11 * 100) * W.solid + strokeEdges(1, (40 + 2 * 11 * 5 * Math.PI) / 100),
-      9,
+      HAIR,
     );
     // A dash array inherits, and none turns it off again.
     expect(
       overdraw(
         '<g stroke-dasharray="5"><path d="M0 50H100" fill="none" stroke="#000" stroke-width="10"/></g>',
       ),
-    ).toBeCloseTo(line('stroke-dasharray="5"'), 9);
+    ).toBeCloseTo(line('stroke-dasharray="5"'), HAIR);
     expect(
       overdraw(
         '<g stroke-dasharray="5"><path d="M0 50H100" fill="none" stroke="#000" stroke-width="10" stroke-dasharray="none"/></g>',
       ),
-    ).toBeCloseTo(line(""), 9);
+    ).toBeCloseTo(line(""), HAIR);
     // No cap or join shows more than the image's perimeter.
     expect(
       overdraw(
         '<path d="M0 50H100" fill="none" stroke="#000" stroke-width="5000" stroke-linecap="round"/>',
       ),
-    ).toBeCloseTo(W.solid + strokeEdges(1, 4 + 2 * 4), 9);
+    ).toBeCloseTo(W.solid + strokeEdges(1, 4 + 2 * 4), HAIR);
   });
 
   it("refuses wide strokes whose caps or joins crowd every row", () => {
@@ -276,13 +290,18 @@ describe("the overdraw of a logo", () => {
     const ends = (width: number, pieces: number): number => (4 * width + 2 * pieces * width) / 1000;
     const crowded = (sides: number, crossings: number): number =>
       sides * W.edge * (1 + (Math.max(sides, crossings) / W.edgesPerRow) ** 2);
-    // Dashes 1 long every 2 on a stroke 3 wide: 501 dashes, 1,002 caps on a row.
+    // Dashes 1 long every 2 on a stroke 3 wide: 500 repeats as written, a hair more as Chromium
+    // may read the numbers, so 501 begun and a repeat more for the subpath: 502 dashes, 1,004 caps
+    // on a row.
     expect(dashed(3, 1)).toBeCloseTo(
-      Math.min(1, area(3, 501)) * W.solid + crowded(2 + ends(3, 501), 1002),
-      9,
+      Math.min(1, area(3, 502)) * W.solid + crowded(2 + ends(3, 502), 1004),
+      HAIR,
     );
-    // Dashes 2 apart on a stroke 2 wide do not crowd: charged by their length alone.
-    expect(dashed(2, 1)).toBeCloseTo(area(2, 501) * W.solid + strokeEdges(1, ends(2, 501)), 9);
+    // Dashes 2 apart on a stroke 1.9 wide do not crowd: charged by their length alone.
+    expect(dashed(1.9, 1)).toBeCloseTo(
+      area(1.9, 502) * W.solid + strokeEdges(1, ends(1.9, 502)),
+      HAIR,
+    );
     // The reviewer's ten thousand dashes on a stroke a tenth as wide as the image are refused.
     expect(
       refusal(
@@ -299,12 +318,12 @@ describe("the overdraw of a logo", () => {
     const wide = 10 + 2 * 4 * 2;
     expect(overdraw(`${defs}<g stroke="#000" stroke-width="4"><use href="#a"/></g>`)).toBeCloseTo(
       ((wide * wide) / 10_000) * W.solid + strokeEdges(0.4, (4 * 16 + 2 * 4) / 100),
-      9,
+      HAIR,
     );
     expect(overdraw(`${defs}<use href="#a" stroke="#000" stroke-opacity="0.5"/>`)).toBeCloseTo(
       // A width of 1: the outline of 40 and a 4 by 4 miter at each of 5 vertices, under the box.
       ((40 + 5 * 16) / 10_000) * W.translucent + strokeEdges(0.4, (4 * 4 + 2) / 100),
-      9,
+      HAIR,
     );
   });
 
@@ -313,10 +332,10 @@ describe("the overdraw of a logo", () => {
       overdraw(`${defs}<rect ${SQUARE} ${paint}/>`) - edges(SQUARE_EDGES);
     const stops = (count: number, opacity = ""): string =>
       Array.from({ length: count }, () => `<stop stop-color="#123456"${opacity}/>`).join("");
-    expect(fill('fill="#123456"')).toBeCloseTo(QUARTER * W.solid, 9);
-    expect(fill('fill="#123456" fill-opacity="0.5"')).toBeCloseTo(QUARTER * W.translucent, 9);
-    expect(fill('fill="transparent"')).toBeCloseTo(QUARTER * W.translucent, 9);
-    expect(fill('fill="#123456" opacity="0.5"')).toBeCloseTo(QUARTER * W.translucent, 9);
+    expect(fill('fill="#123456"')).toBeCloseTo(QUARTER * W.solid, HAIR);
+    expect(fill('fill="#123456" fill-opacity="0.5"')).toBeCloseTo(QUARTER * W.translucent, HAIR);
+    expect(fill('fill="transparent"')).toBeCloseTo(QUARTER * W.translucent, HAIR);
+    expect(fill('fill="#123456" opacity="0.5"')).toBeCloseTo(QUARTER * W.translucent, HAIR);
     for (const [count, tier] of [
       [1, 2],
       [2, 2],
@@ -328,15 +347,15 @@ describe("the overdraw of a logo", () => {
       const linear = `<linearGradient id="g">${stops(count)}</linearGradient>`;
       const radial = `<radialGradient id="g">${stops(count)}</radialGradient>`;
       const translucent = `<radialGradient id="g">${stops(count, ' stop-opacity="0.5"')}</radialGradient>`;
-      expect(fill('fill="url(#g)"', linear)).toBeCloseTo(QUARTER * W.gradient[tier], 9);
-      expect(fill('fill="url(#g)"', radial)).toBeCloseTo(QUARTER * W.gradient[tier], 9);
+      expect(fill('fill="url(#g)"', linear)).toBeCloseTo(QUARTER * W.gradient[tier], HAIR);
+      expect(fill('fill="url(#g)"', radial)).toBeCloseTo(QUARTER * W.gradient[tier], HAIR);
       expect(fill('fill="url(#g)"', translucent)).toBeCloseTo(
         QUARTER * W.translucentGradient[tier],
-        9,
+        HAIR,
       );
       expect(fill('fill="url(#g)" fill-opacity="0.5"', linear)).toBeCloseTo(
         QUARTER * W.translucentGradient[tier],
-        9,
+        HAIR,
       );
     }
     // A gradient that borrows its stops through href weighs as the stops it borrows.
@@ -345,14 +364,14 @@ describe("the overdraw of a logo", () => {
         'fill="url(#h)"',
         `<linearGradient id="g">${stops(20)}</linearGradient><radialGradient id="h" href="#g"/>`,
       ),
-    ).toBeCloseTo(QUARTER * W.gradient[32], 9);
+    ).toBeCloseTo(QUARTER * W.gradient[32], HAIR);
   });
 
   it("charges group opacity a layer over the box of what the group draws", () => {
     const two = '<rect width="10" height="10"/><rect x="40" y="40" width="10" height="10"/>';
     expect(overdraw(`<g opacity="0.5">${two}</g>`) - overdraw(`<g>${two}</g>`)).toBeCloseTo(
       QUARTER * W.layer,
-      9,
+      HAIR,
     );
     // A shape with both a fill and a stroke under opacity is drawn into a layer as well.
     const both = `<rect ${SQUARE} stroke="#000" stroke-width="0.000001"`;
@@ -368,16 +387,16 @@ describe("the overdraw of a logo", () => {
       overdraw(`<mask id="m"${mask}>${content}</mask><rect ${SQUARE} mask="url(#m)"/>`);
     const plain = overdraw(`<rect ${SQUARE}/>`);
     const drawnInMask = overdraw(content);
-    expect(masked("")).toBeCloseTo(plain + drawnInMask + QUARTER * W.mask, 9);
+    expect(masked("")).toBeCloseTo(plain + drawnInMask + QUARTER * W.mask, HAIR);
     expect(masked(' mask-type="alpha"')).toBeCloseTo(
       plain + drawnInMask + QUARTER * W.alphaMask,
-      9,
+      HAIR,
     );
     expect(
       overdraw(
         `<defs><mask id="m">${content}</mask><rect id="r" ${SQUARE} mask="url(#m)"/></defs><use href="#r"/><use href="#r"/>`,
       ),
-    ).toBeCloseTo(2 * (plain + drawnInMask + QUARTER * W.mask), 9);
+    ).toBeCloseTo(2 * (plain + drawnInMask + QUARTER * W.mask), HAIR);
   });
 
   it("charges a path whose edges crowd every row more than in proportion to them", () => {
@@ -400,7 +419,7 @@ describe("the overdraw of a logo", () => {
     // Paint does not matter inside a clip path: only coverage.
     expect(
       clipped('<rect width="10" height="10" fill="url(#nowhere)" stroke="#000"/>'),
-    ).toBeCloseTo(plain + QUARTER * W.clip + 0.01 * W.solid + edges(0.4), 9);
+    ).toBeCloseTo(plain + QUARTER * W.clip + 0.01 * W.solid + edges(0.4), HAIR);
     // Edges are charged by their length, so a clip path of long edges costs what it draws.
     const zigzag = `M0 0${Array.from({ length: 50 }, (_, index) => `L${String(2 * index + 1)} ${index % 2 === 0 ? "100" : "0"}`).join("")}Z`;
     expect(clipped(`<path d="${zigzag}"/>`)).toBeGreaterThan(plain + edges(50));
@@ -415,12 +434,12 @@ describe("the overdraw of a logo", () => {
     const small = 0.01 * W.solid + edges(0.4);
     expect(
       clipped('<rect width="10" height="10"/><rect x="20" width="10" height="10"/>'),
-    ).toBeCloseTo(plain + QUARTER * W.alphaMask + 2 * small, 9);
+    ).toBeCloseTo(plain + QUARTER * W.alphaMask + 2 * small, HAIR);
     // A shape a use draws into the clip path counts as one, but its own clip path makes it a mask.
     const inner = '<clipPath id="k"><rect width="5" height="5"/></clipPath>';
     expect(clipped('<use href="#r"/>', '<rect id="r" width="10" height="10"/>')).toBeCloseTo(
       plain + QUARTER * W.clip + small,
-      9,
+      HAIR,
     );
     expect(
       clipped(
@@ -429,7 +448,7 @@ describe("the overdraw of a logo", () => {
       ),
     ).toBeCloseTo(
       plain + QUARTER * W.alphaMask + small + 0.01 * W.clip + 0.0025 * W.solid + edges(0.2),
-      9,
+      HAIR,
     );
   });
 
@@ -439,13 +458,13 @@ describe("the overdraw of a logo", () => {
       overdraw(
         `<clipPath id="c" transform="scale(2)"><rect width="10" height="10"/></clipPath><rect ${SQUARE} clip-path="url(#c)"/>`,
       ),
-    ).toBeCloseTo(plain + QUARTER * W.clip + 0.04 * W.solid + edges(0.8), 9);
+    ).toBeCloseTo(plain + QUARTER * W.clip + 0.04 * W.solid + edges(0.8), HAIR);
     // In bounding box units, the transform applies to the box's units.
     expect(
       overdraw(
         `<clipPath id="c" clipPathUnits="objectBoundingBox" transform="scale(0.5)"><rect width="1" height="1"/></clipPath><rect ${SQUARE} clip-path="url(#c)"/>`,
       ),
-    ).toBeCloseTo(plain + QUARTER * W.clip + 0.0625 * W.solid + edges(1), 9);
+    ).toBeCloseTo(plain + QUARTER * W.clip + 0.0625 * W.solid + edges(1), HAIR);
   });
 });
 
@@ -462,7 +481,7 @@ describe("the overdraw limit", () => {
       svg(`<defs><path id="r" d="M0 0H100V100H0Z"/></defs>${'<use href="#r"/>'.repeat(count)}`);
     const each = W.solid + edges(4);
     const most = Math.floor(SVG_LOGO_LIMITS.overdraw / each);
-    expect(accepted(solid(most)).overdraw).toBeCloseTo(most * each, 6);
+    expect(accepted(solid(most)).overdraw).toBeCloseTo(most * each, 2);
     expect(refusal(solid(most + 1))).toBe("overdraw-too-large");
   });
 
@@ -479,12 +498,12 @@ describe("the overdraw limit", () => {
     expect(refusal(nest([scale, scale, "translate(2)"]))).toBe("number-out-of-range");
     expect(refusal(nest(["skewX(90)"]))).toBe("number-out-of-range");
     // Up to the bound, and anything that shrinks, is drawn.
-    expect(accepted(nest([scale, scale])).overdraw).toBeCloseTo(W.solid + edges(4), 9);
+    expect(accepted(nest([scale, scale])).overdraw).toBeCloseTo(W.solid + edges(4), HAIR);
     expect(accepted(nest(Array(30).fill("scale(0.000001)"))).overdraw).toBe(0);
     // A matrix that flattens the square to a line paints no area, only an edge.
     expect(accepted(nest(["scale(0 1)", "matrix(1 1 1 1 0 0)"])).overdraw).toBeCloseTo(
       edges((Math.SQRT2 * 4) / 100),
-      9,
+      HAIR,
     );
     // A use's offset and a clip path's or a mask's bounding box compose too.
     expect(

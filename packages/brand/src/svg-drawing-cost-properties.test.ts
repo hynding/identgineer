@@ -10,7 +10,10 @@ import { expectSettledLogo } from "./test-support.ts";
 // and overdraw are worked out here from the graph itself, by a model written apart from the
 // sanitiser's, and compared with what the sanitiser measured or why it refused. Nothing is
 // transformed and every paint is the default solid black, so each definition paints the same
-// wherever it is used: its overdraw is its own, drawn as itself or as part of a clip path.
+// wherever it is used: its overdraw is its own, drawn as itself or as part of a clip path. The
+// sanitiser bounds lengths and dash periods over every reading Chromium can make of the numbers, a
+// hair from the exact ones, so its measure must lie between the model read exactly and the model
+// read with every length a hair longer and every period a hair shorter.
 
 /** The view box is 100 by 100: one unit of overdraw is 10,000 square user units. */
 const SIDE = 100;
@@ -44,14 +47,35 @@ interface Paint {
   readonly box: Box;
 }
 
+/** How the model reads a length of so many segments, and a dash period. */
+interface Reading {
+  readonly length: (length: number, segments: number) => number;
+  readonly period: (period: number) => number;
+}
+
+const EXACT: Reading = { length: (length) => length, period: (period) => period };
+/** Longer and shorter than any reading the sanitiser bounds: a ten-thousandth, and a few hundredths
+ * a segment, more than single precision can move a number of this view box. */
+const LOOSEST: Reading = {
+  length: (length, segments) => length * (1 + 1e-4) + segments * 0.05,
+  period: (period) => period * (1 - 1e-4),
+};
+
 /**
  * What a shape paints: its fill, at most the whole image, and its edges, as long as its outline or
  * as `visible`, the most of it the image can show, whichever is less.
  */
-function filled(area: number, visible: number, length: number, box: Box): Paint {
+function filled(
+  area: number,
+  visible: number,
+  length: number,
+  segments: number,
+  box: Box,
+  reading: Reading,
+): Paint {
   // Edges laid end to end across the image that many times put about that many on every row,
   // and each costs more the more there are.
-  const sides = Math.min(visible, length / SIDE);
+  const sides = Math.min(visible, reading.length(length, segments) / SIDE);
   return {
     overdraw:
       Math.min(1, area / (SIDE * SIDE)) * PAINT.solid +
@@ -78,7 +102,7 @@ interface Item {
   readonly markup: string;
   readonly measure: (dashes: Dashes) => Measure;
   /** What it paints, drawn as itself or (`clipping`) as coverage inside a clip path. */
-  readonly paint: (clipping: boolean) => Paint;
+  readonly paint: (clipping: boolean, reading: Reading) => Paint;
   /** Whether it has a clip path or mask of its own; for a clip path, whether what it holds has. */
   readonly clipped: boolean;
 }
@@ -97,11 +121,17 @@ function add(left: Measure, right: Measure): Measure {
 interface Dashes {
   readonly period: number;
   readonly perPeriod: number;
+  readonly reading: Reading;
 }
 
-function shape(geometry: number, length: number, dashes: Dashes): Measure {
+function shape(geometry: number, length: number, segments: number, dashes: Dashes): Measure {
+  const { reading } = dashes;
   // Every shape here is one subpath, which may start the pattern afresh: one more repeat.
-  const count = dashes.period > 0 ? (Math.ceil(length / dashes.period) + 1) * dashes.perPeriod : 0;
+  const count =
+    dashes.period > 0
+      ? (Math.ceil(reading.length(length, segments) / reading.period(dashes.period)) + 1) *
+        dashes.perPeriod
+      : 0;
   return { cost: WEIGHT.shape + geometry + count * WEIGHT.dash, masks: 0, depth: 0 };
 }
 
@@ -111,7 +141,7 @@ class LogoGraph {
   private readonly masks: Item[] = [];
   private readonly shapes: Item[] = [];
   /** The dashing of each dashed shape, by id. */
-  private readonly dashing = new Map<string, Dashes>();
+  private readonly dashing = new Map<string, Omit<Dashes, "reading">>();
 
   constructor(random: () => number) {
     this.random = random;
@@ -197,12 +227,11 @@ class LogoGraph {
     // A straight edge shows at most the image's diagonal; a cubic, three convex pieces, at most
     // three times its perimeter.
     const visible = count * (curves ? 12 : Math.SQRT2);
-    const painted = filled(Math.min(area, boxArea), visible, length, box);
     return {
       id,
       markup: `<path id="${id}" d="${data}"${this.dash(id)}/>`,
-      measure: (dashes) => shape(geometry, length, dashes),
-      paint: () => painted,
+      measure: (dashes) => shape(geometry, length, count, dashes),
+      paint: (_, reading) => filled(Math.min(area, boxArea), visible, length, count, box, reading),
       clipped: false,
     };
   }
@@ -213,30 +242,34 @@ class LogoGraph {
       return {
         id,
         markup: `<rect id="${id}" width="${String(width)}" height="${String(height)}"${this.dash(id)}/>`,
-        measure: (dashes) => shape(4 * WEIGHT.line, 2 * (width + height), dashes),
+        measure: (dashes) => shape(4 * WEIGHT.line, 2 * (width + height), 4, dashes),
         clipped: false,
-        paint: () =>
-          filled(width * height, 4, 2 * (width + height), {
-            minX: 0,
-            minY: 0,
-            maxX: width,
-            maxY: height,
-          }),
+        paint: (_, reading) =>
+          filled(
+            width * height,
+            4,
+            2 * (width + height),
+            4,
+            { minX: 0, minY: 0, maxX: width, maxY: height },
+            reading,
+          ),
       };
     }
     const radius = 1 + this.integer(50);
     return {
       id,
       markup: `<circle id="${id}" r="${String(radius)}"${this.dash(id)}/>`,
-      measure: (dashes) => shape(4 * WEIGHT.cubic, 2 * Math.PI * radius, dashes),
+      measure: (dashes) => shape(4 * WEIGHT.cubic, 2 * Math.PI * radius, 4, dashes),
       clipped: false,
-      paint: () =>
-        filled(Math.PI * radius * radius, 4, 2 * Math.PI * radius, {
-          minX: -radius,
-          minY: -radius,
-          maxX: radius,
-          maxY: radius,
-        }),
+      paint: (_, reading) =>
+        filled(
+          Math.PI * radius * radius,
+          4,
+          2 * Math.PI * radius,
+          4,
+          { minX: -radius, minY: -radius, maxX: radius, maxY: radius },
+          reading,
+        ),
     };
   }
 
@@ -245,7 +278,7 @@ class LogoGraph {
       markup: `<use href="#${target.id}"/>`,
       measure: (dashes) =>
         add({ cost: WEIGHT.element, masks: 0, depth: 0 }, target.measure(dashes)),
-      paint: (clipping) => target.paint(clipping),
+      paint: (clipping, reading) => target.paint(clipping, reading),
       clipped: target.clipped,
     };
   }
@@ -254,7 +287,7 @@ class LogoGraph {
     markup: string;
     measure: (dashes: Dashes) => Measure;
     /** What applying it to a box paints; a mask inside a clip path is not applied. */
-    paint: (box: Box, clipping: boolean) => number;
+    paint: (box: Box, clipping: boolean, reading: Reading) => number;
   } {
     if (mask === undefined) return { markup: "", measure: () => NONE, paint: () => 0 };
     const clip = mask.id.startsWith("c");
@@ -268,11 +301,11 @@ class LogoGraph {
           depth: 1 + inside.depth,
         };
       },
-      paint: (box, clipping) => {
+      paint: (box, clipping, reading) => {
         if (clipping && !clip) return 0;
         // A clip path holding a shape clipped or masked in turn is drawn as an alpha mask.
         const weight = clip ? (mask.clipped ? PAINT.alphaMask : PAINT.clip) : PAINT.mask;
-        return share(box) * weight + mask.paint(clip).overdraw;
+        return share(box) * weight + mask.paint(clip, reading).overdraw;
       },
     };
   }
@@ -298,12 +331,12 @@ class LogoGraph {
           masks: 0,
           depth: 0,
         }),
-      paint: (clipping) => {
-        const painted = uses.map((use) => use.paint(clipping));
+      paint: (clipping, reading) => {
+        const painted = uses.map((use) => use.paint(clipping, reading));
         const box = painted.map((part) => part.box).reduce(joined, NO_BOX);
         const own = painted.reduce((total, part) => total + part.overdraw, 0);
         const opacity = layer && !clipping ? share(box) * PAINT.layer : 0;
-        return { overdraw: own + opacity + applied.paint(box, clipping), box };
+        return { overdraw: own + opacity + applied.paint(box, clipping, reading), box };
       },
       clipped: mask !== undefined,
     };
@@ -324,7 +357,7 @@ class LogoGraph {
         markup: `<clipPath id="${id}">${content.markup}</clipPath>`,
         measure: (dashes) =>
           add({ cost: WEIGHT.element, masks: 0, depth: 0 }, content.measure(dashes)),
-        paint: (clipping) => content.paint(clipping),
+        paint: (clipping, reading) => content.paint(clipping, reading),
         clipped: content.clipped,
       };
     }
@@ -337,15 +370,24 @@ class LogoGraph {
           add(applied.measure(dashes), content.measure(dashes)),
         ),
       // What its content paints each time it is applied.
-      paint: (clipping) => {
-        const inside = content.paint(clipping);
-        return { overdraw: inside.overdraw + applied.paint(inside.box, clipping), box: inside.box };
+      paint: (clipping, reading) => {
+        const inside = content.paint(clipping, reading);
+        return {
+          overdraw: inside.overdraw + applied.paint(inside.box, clipping, reading),
+          box: inside.box,
+        };
       },
       clipped: false,
     };
   }
 
-  build(): { svg: string; expected: Measure; overdraw: number } {
+  build(): {
+    svg: string;
+    expected: Measure;
+    loosest: Measure;
+    overdraw: number;
+    loosestOverdraw: number;
+  } {
     let definitions = "";
     for (let index = 0; index < 2 + this.integer(4); index += 1) {
       const item =
@@ -382,31 +424,36 @@ class LogoGraph {
       }
     }
     const used = [...this.dashing].filter(([id]) => reached.has(id)).map(([, dashing]) => dashing);
-    const dashes: Dashes = {
+    const dashing = {
       period: used.length === 0 ? 0 : Math.min(...used.map(({ period }) => period)),
       perPeriod: used.length === 0 ? 0 : Math.max(...used.map(({ perPeriod }) => perPeriod)),
     };
-    const expected = roots
-      .map((root) => root.measure(dashes))
-      .reduce(add, { cost: WEIGHT.element, masks: 0, depth: 0 });
+    const measured = (reading: Reading): Measure =>
+      roots
+        .map((root) => root.measure({ ...dashing, reading }))
+        .reduce(add, { cost: WEIGHT.element, masks: 0, depth: 0 });
+    const painted = (reading: Reading): number =>
+      roots.reduce((total, root) => total + root.paint(false, reading).overdraw, 0);
     return {
       svg:
         `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs>${definitions}</defs>` +
         `${roots.map((root) => root.markup).join("")}</svg>`,
-      expected,
-      overdraw: roots.reduce((total, root) => total + root.paint(false).overdraw, 0),
+      expected: measured(EXACT),
+      loosest: measured(LOOSEST),
+      overdraw: painted(EXACT),
+      loosestOverdraw: painted(LOOSEST),
     };
   }
 }
 
 describe("the drawing cost, over random graphs of definitions", () => {
-  it("matches a model of its own over 3,000 random logos, and refuses exactly what goes over a limit", () => {
+  it("lies within a hair of a model of its own over 3,000 random logos, and refuses only what goes over a limit within that hair", () => {
     const seed = 15_002;
     const random = seeded(seed);
     const outcomes = new Map<string, number>();
     for (let run = 0; run < 3_000; run += 1) {
       const where = `seed ${String(seed)}, run ${String(run)}`;
-      const { svg, expected, overdraw } = new LogoGraph(random).build();
+      const { svg, expected, loosest, overdraw, loosestOverdraw } = new LogoGraph(random).build();
       const result = sanitiseSvgLogo(svg);
       const over = {
         "masks-too-deep": expected.depth > SVG_LOGO_LIMITS.maskDepth,
@@ -414,12 +461,19 @@ describe("the drawing cost, over random graphs of definitions", () => {
         "drawing-too-costly": expected.cost > SVG_LOGO_LIMITS.drawingCost,
         "overdraw-too-large": overdraw > SVG_LOGO_LIMITS.overdraw,
       };
+      const overLoosest = {
+        ...over,
+        "drawing-too-costly": loosest.cost > SVG_LOGO_LIMITS.drawingCost,
+        "overdraw-too-large": loosestOverdraw > SVG_LOGO_LIMITS.overdraw,
+      };
       const outcome = result.ok ? "accepted" : (result.errors[0]?.code ?? "none");
       outcomes.set(outcome, (outcomes.get(outcome) ?? 0) + 1);
       if (result.ok) {
         expectSettledLogo(result.svg, where);
-        expect(result.drawingCost, where).toBe(expected.cost);
-        expect(result.overdraw, where).toBeCloseTo(overdraw, 6);
+        expect(result.drawingCost, where).toBeGreaterThanOrEqual(expected.cost);
+        expect(result.drawingCost, where).toBeLessThanOrEqual(loosest.cost);
+        expect(result.overdraw, where).toBeGreaterThanOrEqual(overdraw - 1e-9);
+        expect(result.overdraw, where).toBeLessThanOrEqual(loosestOverdraw + 1e-9);
         expect(Object.values(over).some(Boolean), where).toBe(false);
         continue;
       }
@@ -428,7 +482,9 @@ describe("the drawing cost, over random graphs of definitions", () => {
       );
       // Refused for its element count or reference depth, it may be over the others too; refused
       // for one limit, it may be over those checked after it.
-      if (outcome in over) expect(over[outcome as keyof typeof over], where).toBe(true);
+      if (outcome in over) {
+        expect(overLoosest[outcome as keyof typeof overLoosest], where).toBe(true);
+      }
     }
     // Every outcome turns up often enough to mean something.
     for (const outcome of [

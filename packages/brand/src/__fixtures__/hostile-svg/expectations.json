@@ -1741,6 +1741,9 @@
     "outcome": "accept",
     "removed": []
   },
+  "review-arc-float-angle-dash.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
   "review-arc-float-coincide-10-rel.svg": {
     "outcome": "accept",
     "removed": []
@@ -1764,6 +1767,12 @@
   "review-arc-float-radii-scaled-10.svg": {
     "outcome": "accept",
     "removed": []
+  },
+  "review-arc-float-radius-dash-relative.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-arc-float-radius-dash.svg": {
+    "outcome": "reject:drawing-too-costly"
   },
   "review-arc-float-reverse.svg": {
     "outcome": "accept",

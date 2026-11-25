@@ -4,6 +4,7 @@ import { sanitiseSvgLogo } from "./sanitise-svg-logo.ts";
 import { dashPeriod, measurePathData, SVG_DRAWING_WEIGHTS } from "./svg-drawing-cost.ts";
 import { SVG_LOGO_LIMITS } from "./svg-logo-limits.ts";
 import type { SvgLogoAccepted, SvgLogoErrorCode } from "./svg-logo-result.ts";
+import { SVG_GRAMMARS } from "./svg-values.ts";
 
 const NS = 'xmlns="http://www.w3.org/2000/svg"';
 
@@ -80,10 +81,82 @@ describe("measurePathData", () => {
     ["M0 0A10 1 90 0 1 0 10", 14, 2 * Math.PI * 10],
     ["M0 0A1000 0.001 0 0 1 0 10", 14, 2 * Math.PI * 5_000_000],
     ["M0 0A0 5 0 0 1 10 0", 14, 10],
-  ])("weighs %s at %d and bounds its length by %d", (data, weight, length) => {
+  ])("weighs %s at %d and bounds its length by %d, within a hair", (data, weight, length) => {
     const measured = measurePathData(data);
     expect(measured.weight).toBe(weight);
-    expect(measured.length).toBeCloseTo(length, 6);
+    // The bound covers every reading Chromium can make of the numbers, a hair over the exact one.
+    expect(measured.length).toBeGreaterThanOrEqual(length);
+    expect(measured.length).toBeLessThanOrEqual(length * (1 + 2e-3) + 1e-3);
+  });
+});
+
+/** Path data as the sanitiser keeps it, read from a spelling. */
+function kept(written: string): string {
+  const value = SVG_GRAMMARS.d?.(written, SVG_LOGO_LIMITS);
+  if (value === undefined || !("text" in value)) throw new Error(`${written} is not kept`);
+  return value.text;
+}
+
+// Chromium reads each number in single precision, by a reader whose result need not be the nearest
+// single-precision number, so two spellings of one number, or the angle of an arc, can come out a
+// hair apart. Along a radius far smaller than that hair, SVG scales the radii up until the ellipse
+// reaches the end point, by as much as a hair over the radius. Each length and box below is what
+// Chromium 153 measured (`getTotalLength`, `getBBox`) for the path as written.
+describe("an arc, bounded over every reading Chromium can make of its numbers", () => {
+  it.each([
+    ["M0.3 1.1A1e-12 10 .9e6 0 0 0.3 3.1", 21_816_612_864, [-3_590_867, 1.1, 0.5, 5_992_382_977.1]],
+    [
+      "M123.45 2.3A1e-12 3 0 1 1 .12345e3 1.1",
+      36_478_076,
+      [123.45, -11_444_091, 123.45, 4_740_299],
+    ],
+    [
+      "M12.7 0.1A1e-12 1 180 1 1 .127e2 2.1",
+      1_430_510.5,
+      [12.7, -476_836.0625, 12.7, 197_513.9375],
+    ],
+    [
+      "M9.9 0.05A1e-12 1 30 0 1 99e-1 00.05",
+      1_316_289.25,
+      [9.9, -357_627.8125, 206_486.47, 0.09375],
+    ],
+    ["M9.9 33.3l0.2 0A5 1e-8 .9e6 0 1 0.05 033.3", 5_481_423, [0.05, 33.3, 1_505_591.3, 935.51]],
+    [
+      "M12.7 33.3l0.6 0A1 1e-8 .9e6 1 0 0.1 .333e2",
+      1_439_897.25,
+      [-395_490.69, -203.7, 13.34375, 33.3],
+    ],
+    ["M0.3 0A1e-12 1 0 0 0 30e-2 2", 17_694.76, [0.3, -6171.2, 0.3, 2]],
+  ] as const)(
+    "bounds %s by Chromium's length and box",
+    (written, length, [minX, minY, maxX, maxY]) => {
+      const measured = measurePathData(kept(written));
+      expect(measured.length).toBeGreaterThanOrEqual(length);
+      expect(measured.box.minX).toBeLessThanOrEqual(minX);
+      expect(measured.box.minY).toBeLessThanOrEqual(minY);
+      expect(measured.box.maxX).toBeGreaterThanOrEqual(maxX);
+      expect(measured.box.maxY).toBeGreaterThanOrEqual(maxY);
+    },
+  );
+
+  // Where the radii are far larger than any hair Chromium's reading can move the ends by, as in
+  // every arc an editor writes, the bound is the whole ellipse, a hair over.
+  it.each([
+    ["m 2.6458333,5.2916667 a 0.26458333,0.13229167 0 0 1 0.52916667,0", 2 * Math.PI * 0.26458333],
+    ["M10 50A40 40 0 1 0 10.0000004 50", 2 * Math.PI * 40],
+    ["M0 0A0.001 0.001 0 0 1 0.002 0", 2 * Math.PI * 0.001],
+  ])("bounds %s by its whole ellipse, a hair over", (written, length) => {
+    const measured = measurePathData(kept(written));
+    expect(measured.length).toBeGreaterThanOrEqual(length);
+    expect(measured.length).toBeLessThanOrEqual(length * 1.01);
+  });
+
+  // Coincident points Chromium may read apart: each segment's length is bounded over the readings
+  // too, so a dash period far below the hair cannot hide dashes behind a length of nothing.
+  it("bounds segments of no length by the hair Chromium may read them apart by", () => {
+    expect(measurePathData(kept(`M0.3 0${"L30e-2 0L0.3 0".repeat(10)}`)).length).toBeGreaterThan(
+      20 * 2 ** -24 * 0.3,
+    );
   });
 });
 
@@ -97,8 +170,18 @@ describe("dashPeriod", () => {
     ["0.5 0.5", 1],
     ["1mm 1mm", (2 * 96) / 25.4],
     ["1in", 192],
-  ])("reads %s as a period of %d user units", (value, period) => {
-    expect(dashPeriod(value)).toBeCloseTo(period, 9);
+  ])("reads %s as a period of %d user units, at its shortest reading", (value, period) => {
+    // The shortest reading Chromium can make of the lengths, a hair under the exact period.
+    expect(dashPeriod(value)).toBeLessThanOrEqual(period);
+    expect(dashPeriod(value)).toBeGreaterThanOrEqual(period * (1 - 1e-4));
+  });
+
+  // A length far below the smallest normal single-precision number is read by Chromium a step of
+  // the smallest one off, below it as often as above: the period counted is the shortest reading.
+  it("reads a period far below the single-precision range at its shortest reading", () => {
+    const value = `0.${"0".repeat(43)}1`;
+    expect(dashPeriod(value)).toBeGreaterThan(0);
+    expect(dashPeriod(value)).toBeLessThanOrEqual(2 * Math.fround(1e-44));
   });
 
   // A kept dash array holds only the units its grammar keeps (px written as none); anything else
@@ -172,15 +255,17 @@ describe("the drawing cost of a logo", () => {
   });
 
   it("counts the dashes of every shape a dash array could reach, with the shortest period in the logo", () => {
-    // Each subpath starts the pattern afresh, so up to one more repeat each.
-    expect(cost('<path d="M0 0H100" stroke-dasharray="1"/>')).toBe(85);
+    // Each subpath starts the pattern afresh, so up to one more repeat each; and a length a whole
+    // number of periods long is, as Chromium may read the numbers, a hair longer than that, so a
+    // repeat more is begun: 51 of a period of 2 along 100, and one more for the subpath.
+    expect(cost('<path d="M0 0H100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
     expect(
       cost('<g stroke-dasharray="10"><path d="M0 0H100"/><rect width="10" height="10"/></g>'),
-    ).toBe(80);
-    expect(cost('<path d="M0 0H100"/><path d="M0 0H1" stroke-dasharray="1 1"/>')).toBe(120);
-    expect(cost('<rect width="100%" height="100%" stroke-dasharray="1"/>')).toBe(58);
+    ).toBe(82);
+    expect(cost('<path d="M0 0H100"/><path d="M0 0H1" stroke-dasharray="1 1"/>')).toBe(121);
+    expect(cost('<rect width="100%" height="100%" stroke-dasharray="1"/>')).toBe(59);
     expect(cost('<path d="M0 0H100" stroke-dasharray="0 0"/>')).toBe(34);
-    expect(cost('<path d="M0 0H100M0 10H100" stroke-dasharray="1"/>')).toBe(1 + 34 + 102);
+    expect(cost('<path d="M0 0H100M0 10H100" stroke-dasharray="1"/>')).toBe(1 + 34 + 103);
   });
 
   it("counts every dash in each repeat of a dash array, an odd one repeated twice", () => {
@@ -190,13 +275,14 @@ describe("the drawing cost of a logo", () => {
     // 1 2 3: a period of 12 holding 3 dashes, (9 + 1) x 3.
     expect(cost('<path d="M0 0H100" stroke-dasharray="1 2 3"/>')).toBe(1 + 33 + 30);
     // A dash array inherits, so every shape is counted at the shortest period and the most dashes
-    // in a repeat anywhere in the logo: a period of 20 holding 32 dashes here.
+    // in a repeat anywhere in the logo: a period of 20 holding 32 dashes here, five of them along
+    // 100 and a hair more as read, so six begun, and one more for the subpath.
     const long = Array.from({ length: 64 }, () => "5").join(" ");
     expect(
       cost(
         `<path d="M0 0H100" stroke-dasharray="10"/><path d="M0 0H1" stroke-dasharray="${long}"/>`,
       ),
-    ).toBe(1 + (33 + 6 * 32) + (33 + 2 * 32));
+    ).toBe(1 + (33 + 7 * 32) + (33 + 2 * 32));
   });
 
   it("drops what would make the dash count depend on the page: em and ex lengths, percentage dashes, non-scaling strokes", () => {
