@@ -745,6 +745,107 @@ describe("idg-brand-editor uploads", () => {
     expect(second).not.toBe(first);
   });
 
+  it("waits for a logo being read before it saves, busy meanwhile, and saves the new logo", async () => {
+    const store = fakeStore();
+    const { root, waitForChanges } = await mount({ kit: ACME, store });
+    const slow = slowFile(CLEAN_SVG);
+    choose(root, "logo", slow);
+    await waitForChanges();
+    submit(root);
+    await settle(waitForChanges);
+    const button = shadowOf(root).querySelector<HTMLElement & { loading: boolean }>(".submit");
+    expect(store.create).not.toHaveBeenCalled();
+    expect(button?.loading).toBe(true);
+    slow.release();
+    await settle(waitForChanges);
+    const expected = sanitiseSvgLogo(CLEAN_SVG);
+    if (!expected.ok) throw new Error("not a logo");
+    expect(store.create).toHaveBeenCalledTimes(1);
+    expect(store.create.mock.calls[0]?.[0].logo).toBe(expected.svg);
+    expect(textOf(root, 'idg-alert[part="saved"]')).toBe("Brand kit saved.");
+    expect(button?.loading).toBe(false);
+  });
+
+  it("saves nothing when the logo it waited for is refused, and says why on the field", async () => {
+    const store = fakeStore();
+    const { root, waitForChanges } = await mount({ kit: HARBOUR, store });
+    const slow = slowFile(
+      '<!DOCTYPE svg [<!ENTITY x "x">]><svg xmlns="http://www.w3.org/2000/svg"/>',
+    );
+    choose(root, "logo", slow);
+    await waitForChanges();
+    submit(root);
+    await settle(waitForChanges);
+    slow.release();
+    await settle(waitForChanges);
+    expect(store.create).not.toHaveBeenCalled();
+    expect(textOf(root, "#logo-error")).toContain("document type");
+    expect(textOf(root, 'idg-alert[part="error"]')).toBe(
+      "Some fields need a change. Each says what is wrong.",
+    );
+    const button = shadowOf(root).querySelector<HTMLElement & { loading: boolean }>(".submit");
+    expect(button?.loading).toBe(false);
+  });
+
+  it("stops saying the kit is saved once the form is changed again", async () => {
+    const store = fakeStore();
+    const saved = () => shadowOf(root).querySelector('idg-alert[part="saved"]');
+    const { root, waitForChanges } = await mount({ kit: HARBOUR, store });
+    for (const change of [
+      () => {
+        type(root, "brand-tagline", "Home again");
+      },
+      () => {
+        choose(root, "mark", fileOf(CLEAN_SVG));
+      },
+      () => {
+        shadowOf(root).querySelector<HTMLElement>('[data-remove="mark"]')?.click();
+      },
+    ]) {
+      submit(root);
+      await settle(waitForChanges);
+      expect(saved()).not.toBeNull();
+      change();
+      await settle(waitForChanges);
+      expect(saved()).toBeNull();
+    }
+  });
+
+  it("keeps what was removed from an upload that arrived while a save was pending, which did not send it", async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    const store = {
+      create: vi.fn(
+        (kit: BrandKit) =>
+          new Promise((resolve) => {
+            answer = () => {
+              resolve({ ok: true, record: { documentId: "doc-1", isPublic: false, kit } });
+            };
+          }),
+      ),
+      update: vi.fn((documentId: string, kit: BrandKit) =>
+        Promise.resolve({ ok: true, record: { documentId, isPublic: false, kit } }),
+      ),
+    };
+    const { root, waitForChanges } = await mount({ kit: ACME, store });
+    submit(root);
+    await waitForChanges();
+    choose(root, "mark", fileOf(HOSTILE_SVG));
+    await settle(waitForChanges);
+    expect(shadowOf(root).querySelector('[part="removals"]')).not.toBeNull();
+    answer(undefined);
+    await settle(waitForChanges);
+    expect(store.create.mock.calls[0]?.[0].mark).toBeUndefined();
+    expect(shadowOf(root).querySelector('[part="removals"]')).not.toBeNull();
+    expect(textOf(root, 'idg-alert[part="saved"]')).toBe(
+      "Brand kit saved as it was when you saved it. Your later changes are not saved yet.",
+    );
+    submit(root);
+    await settle(waitForChanges);
+    expect(store.update.mock.calls[0]?.[1].mark).toContain("<svg");
+    expect(shadowOf(root).querySelector('[part="removals"]')).toBeNull();
+    expect(textOf(root, 'idg-alert[part="saved"]')).toBe("Brand kit saved.");
+  });
+
   it("is still removed from the page by remove(), which no method of its own hides", async () => {
     const { root } = await mount({ kit: HARBOUR });
     root.remove();
