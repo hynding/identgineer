@@ -358,10 +358,8 @@ test.describe("idg-brand-swatches reflow", () => {
       return {
         lefts: new Set(schemes.map((scheme) => Math.round(scheme.getBoundingClientRect().left)))
           .size,
-        // The host's width is the page's to give: the fixture's headings, set in a wide fallback
-        // font at a doubled root size, make the row wider than 320px, so the page's scroll width
-        // says nothing about the component. What is the component's own is that nothing inside
-        // it is wider than its host.
+        page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        // Nothing inside the component is wider than its host.
         overflow: Math.max(
           0,
           ...[...(host.shadowRoot?.querySelectorAll("*") ?? [])].map(
@@ -374,6 +372,7 @@ test.describe("idg-brand-swatches reflow", () => {
       };
     });
     expect(found.lefts).toBe(1);
+    expect(found.page).toBeLessThanOrEqual(0);
     expect(found.overflow).toBeLessThanOrEqual(0);
     expect(found.clipped).toBe(0);
   });
