@@ -34,9 +34,10 @@ export function integerFrame(width: number, height: number): { width: number; he
 // two when they render, which can be after a second guide has asked about its own pair. Four is
 // two guides' pairs, so each distinct text is read once however many elements ask, in a page of up
 // to two guides. Only the text and its answer are held, and a text is at most the sanitiser's limit
-// (about 500 KB) and its url about as much again, so what is held stays under 4 MB for the texts
-// and 4 MB for the urls.
+// (512 KB) and its url at most three times that, so what is held is at most about 8 MB.
 const REMEMBERED = 4;
+// The sanitiser takes no more than this many bytes, so a longer text is refused and not kept.
+const MAX_REMEMBERED_LENGTH = 512 * 1024;
 const remembered: { readonly logo: string; readonly source: BrandLogoSource | undefined }[] = [];
 
 function read(logo: unknown): BrandLogoSource | undefined {
@@ -54,7 +55,7 @@ function read(logo: unknown): BrandLogoSource | undefined {
  * which is the image's natural size, and not the view box, which may be another shape.
  */
 export function brandLogoSource(logo: unknown): BrandLogoSource | undefined {
-  if (typeof logo !== "string") return read(logo);
+  if (typeof logo !== "string" || logo.length > MAX_REMEMBERED_LENGTH) return read(logo);
   const index = remembered.findIndex((entry) => entry.logo === logo);
   const [found] = index === -1 ? [] : remembered.splice(index, 1);
   const entry = found ?? { logo, source: read(logo) };
