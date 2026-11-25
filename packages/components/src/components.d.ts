@@ -9,6 +9,8 @@ import { AccordionToggleDetail } from "./components/accordion/accordion-options"
 import { AlertVariant } from "./components/alert/alert-options";
 import { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 import { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
+import { BrandGuidelinesKit, BrandGuidelinesTheme } from "./components/brand-guidelines/brand-guidelines-types";
+import { BrandGuidelinesLabels } from "./components/brand-guidelines/brand-guidelines-labels";
 import { BrandLogoSize, BrandLogoVariant } from "./components/brand-logo/brand-logo-options";
 import { BrandSwatchesTheme } from "./components/brand-swatches/brand-swatches-types";
 import { BrandSwatchesLabels } from "./components/brand-swatches/brand-swatches-labels";
@@ -67,6 +69,8 @@ export { AccordionToggleDetail } from "./components/accordion/accordion-options"
 export { AlertVariant } from "./components/alert/alert-options";
 export { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 export { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
+export { BrandGuidelinesKit, BrandGuidelinesTheme } from "./components/brand-guidelines/brand-guidelines-types";
+export { BrandGuidelinesLabels } from "./components/brand-guidelines/brand-guidelines-labels";
 export { BrandLogoSize, BrandLogoVariant } from "./components/brand-logo/brand-logo-options";
 export { BrandSwatchesTheme } from "./components/brand-swatches/brand-swatches-types";
 export { BrandSwatchesLabels } from "./components/brand-swatches/brand-swatches-labels";
@@ -294,6 +298,36 @@ export namespace Components {
           * @default "neutral"
          */
         "variant": BadgeVariant;
+    }
+    /**
+     * A brand guide for one kit.
+     */
+    interface IdgBrandGuidelines {
+        /**
+          * The level of the brand name's heading, 1 to 6; the sections' headings are one deeper.
+          * @default 2
+         */
+        "headingLevel": number;
+        /**
+          * The kit `parseBrandKit` returned. Set it as a property: it is data, not an attribute.
+         */
+        "kit"?: BrandGuidelinesKit;
+        /**
+          * The accessible name of the whole. Defaults to the `name` label.
+         */
+        "label"?: string;
+        /**
+          * The words shown, merged over the English defaults.
+         */
+        "labels"?: Partial<BrandGuidelinesLabels>;
+        /**
+          * The words of the colour swatches the guide holds.
+         */
+        "swatchLabels"?: Record<string, string>;
+        /**
+          * The theme `generateBrandTheme` returned, or its `document`.
+         */
+        "theme"?: BrandGuidelinesTheme;
     }
     /**
      * A brand's logo or mark, or the brand's name where there is none to show.
@@ -2379,6 +2413,15 @@ declare global {
         new (): HTMLIdgBadgeElement;
     };
     /**
+     * A brand guide for one kit.
+     */
+    interface HTMLIdgBrandGuidelinesElement extends Components.IdgBrandGuidelines, HTMLStencilElement {
+    }
+    var HTMLIdgBrandGuidelinesElement: {
+        prototype: HTMLIdgBrandGuidelinesElement;
+        new (): HTMLIdgBrandGuidelinesElement;
+    };
+    /**
      * A brand's logo or mark, or the brand's name where there is none to show.
      * The logo is drawn only through an `<img>` whose source is a data URL, and only when the text is
      * exactly what the brand package's logo sanitiser returns (it is read again and must come back
@@ -3340,6 +3383,7 @@ declare global {
         "idg-avatar": HTMLIdgAvatarElement;
         "idg-avatar-group": HTMLIdgAvatarGroupElement;
         "idg-badge": HTMLIdgBadgeElement;
+        "idg-brand-guidelines": HTMLIdgBrandGuidelinesElement;
         "idg-brand-logo": HTMLIdgBrandLogoElement;
         "idg-brand-swatches": HTMLIdgBrandSwatchesElement;
         "idg-breadcrumb": HTMLIdgBreadcrumbElement;
@@ -3572,6 +3616,36 @@ declare namespace LocalJSX {
           * @default "neutral"
          */
         "variant"?: BadgeVariant;
+    }
+    /**
+     * A brand guide for one kit.
+     */
+    interface IdgBrandGuidelines {
+        /**
+          * The level of the brand name's heading, 1 to 6; the sections' headings are one deeper.
+          * @default 2
+         */
+        "headingLevel"?: number;
+        /**
+          * The kit `parseBrandKit` returned. Set it as a property: it is data, not an attribute.
+         */
+        "kit"?: BrandGuidelinesKit;
+        /**
+          * The accessible name of the whole. Defaults to the `name` label.
+         */
+        "label"?: string;
+        /**
+          * The words shown, merged over the English defaults.
+         */
+        "labels"?: Partial<BrandGuidelinesLabels>;
+        /**
+          * The words of the colour swatches the guide holds.
+         */
+        "swatchLabels"?: Record<string, string>;
+        /**
+          * The theme `generateBrandTheme` returned, or its `document`.
+         */
+        "theme"?: BrandGuidelinesTheme;
     }
     /**
      * A brand's logo or mark, or the brand's name where there is none to show.
@@ -5564,6 +5638,10 @@ declare namespace LocalJSX {
         "size": BadgeSize;
         "dot": boolean;
     }
+    interface IdgBrandGuidelinesAttributes {
+        "label": string;
+        "headingLevel": number;
+    }
     interface IdgBrandLogoAttributes {
         "logo": string;
         "name": string;
@@ -5951,6 +6029,7 @@ declare namespace LocalJSX {
         "idg-avatar": Omit<IdgAvatar, keyof IdgAvatarAttributes> & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes]?: IdgAvatar[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `attr:${K}`]?: IdgAvatarAttributes[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `prop:${K}`]?: IdgAvatar[K] };
         "idg-avatar-group": Omit<IdgAvatarGroup, keyof IdgAvatarGroupAttributes> & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes]?: IdgAvatarGroup[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `attr:${K}`]?: IdgAvatarGroupAttributes[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `prop:${K}`]?: IdgAvatarGroup[K] };
         "idg-badge": Omit<IdgBadge, keyof IdgBadgeAttributes> & { [K in keyof IdgBadge & keyof IdgBadgeAttributes]?: IdgBadge[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `attr:${K}`]?: IdgBadgeAttributes[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `prop:${K}`]?: IdgBadge[K] };
+        "idg-brand-guidelines": Omit<IdgBrandGuidelines, keyof IdgBrandGuidelinesAttributes> & { [K in keyof IdgBrandGuidelines & keyof IdgBrandGuidelinesAttributes]?: IdgBrandGuidelines[K] } & { [K in keyof IdgBrandGuidelines & keyof IdgBrandGuidelinesAttributes as `attr:${K}`]?: IdgBrandGuidelinesAttributes[K] } & { [K in keyof IdgBrandGuidelines & keyof IdgBrandGuidelinesAttributes as `prop:${K}`]?: IdgBrandGuidelines[K] };
         "idg-brand-logo": Omit<IdgBrandLogo, keyof IdgBrandLogoAttributes> & { [K in keyof IdgBrandLogo & keyof IdgBrandLogoAttributes]?: IdgBrandLogo[K] } & { [K in keyof IdgBrandLogo & keyof IdgBrandLogoAttributes as `attr:${K}`]?: IdgBrandLogoAttributes[K] } & { [K in keyof IdgBrandLogo & keyof IdgBrandLogoAttributes as `prop:${K}`]?: IdgBrandLogo[K] };
         "idg-brand-swatches": Omit<IdgBrandSwatches, keyof IdgBrandSwatchesAttributes> & { [K in keyof IdgBrandSwatches & keyof IdgBrandSwatchesAttributes]?: IdgBrandSwatches[K] } & { [K in keyof IdgBrandSwatches & keyof IdgBrandSwatchesAttributes as `attr:${K}`]?: IdgBrandSwatchesAttributes[K] } & { [K in keyof IdgBrandSwatches & keyof IdgBrandSwatchesAttributes as `prop:${K}`]?: IdgBrandSwatches[K] };
         "idg-breadcrumb": Omit<IdgBreadcrumb, keyof IdgBreadcrumbAttributes> & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes]?: IdgBreadcrumb[K] } & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes as `attr:${K}`]?: IdgBreadcrumbAttributes[K] } & { [K in keyof IdgBreadcrumb & keyof IdgBreadcrumbAttributes as `prop:${K}`]?: IdgBreadcrumb[K] };
@@ -6041,6 +6120,10 @@ declare module "@stencil/core" {
              * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
              */
             "idg-badge": LocalJSX.IntrinsicElements["idg-badge"] & JSXBase.HTMLAttributes<HTMLIdgBadgeElement>;
+            /**
+             * A brand guide for one kit.
+             */
+            "idg-brand-guidelines": LocalJSX.IntrinsicElements["idg-brand-guidelines"] & JSXBase.HTMLAttributes<HTMLIdgBrandGuidelinesElement>;
             /**
              * A brand's logo or mark, or the brand's name where there is none to show.
              * The logo is drawn only through an `<img>` whose source is a data URL, and only when the text is
