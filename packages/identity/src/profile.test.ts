@@ -61,6 +61,16 @@ describe("saveProfile", () => {
     });
   });
 
+  it("sends the locale as the language field the CMS stores, and reads it back as locale", async () => {
+    const { api, client, signIn } = setup();
+    await signIn();
+    const created = await client.saveProfile({ displayName: "Ada", locale: "nl-NL" });
+    expect(api.requests.at(-1)?.body).toEqual({ data: { displayName: "Ada", language: "nl-NL" } });
+    expect(created.locale).toBe("nl-NL");
+    expect(created).not.toHaveProperty("language");
+    expect((await client.getProfile())?.locale).toBe("nl-NL");
+  });
+
   it("sends only the profile's own fields", async () => {
     const { api, client, signIn } = setup();
     await signIn();
@@ -106,6 +116,28 @@ describe("saveProfile", () => {
     await expect(client.saveProfile({ displayName: "Ada" })).rejects.toMatchObject({
       code: "validation",
       fields: ["bio"],
+    });
+  });
+
+  it("names a language the server refuses as locale", async () => {
+    const { api, client, signIn } = setup();
+    await signIn();
+    api.respondNext("GET", "/api/profiles", { status: 200, body: { data: [], meta: {} } });
+    api.respondNext("POST", "/api/profiles", {
+      status: 400,
+      body: {
+        data: null,
+        error: {
+          status: 400,
+          name: "ValidationError",
+          message: "x",
+          details: { errors: [{ path: ["language"] }] },
+        },
+      },
+    });
+    await expect(client.saveProfile({ displayName: "Ada" })).rejects.toMatchObject({
+      code: "validation",
+      fields: ["locale"],
     });
   });
 

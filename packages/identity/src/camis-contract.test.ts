@@ -77,6 +77,28 @@ const exerciseClient = async (): Promise<readonly FakeRequest[]> => {
   return api.requests;
 };
 
+describe("the CMS model", () => {
+  it("has every Profile field the client writes, under the name it is sent as", async () => {
+    const model = JSON.parse(readFileSync(CMS_MODEL, "utf8")) as {
+      contentTypes: { name: string; fields: { name: string }[] }[];
+    };
+    const stored = model.contentTypes
+      .find((type) => type.name === "Profile")
+      ?.fields.map((field) => field.name);
+    const { api, client, signIn } = setup();
+    await signIn();
+    await client.saveProfile({
+      displayName: "Ada",
+      bio: "Hello",
+      locale: "en",
+      timezone: "UTC",
+      marketingOptIn: true,
+    });
+    const body = api.requests.at(-1)?.body as { data: Record<string, unknown> };
+    expect(Object.keys(body.data).filter((name) => !stored?.includes(name))).toEqual([]);
+  });
+});
+
 describe.skipIf(!HAS_CAMIS)(TITLE, () => {
   let requests: readonly FakeRequest[] = [];
   let authRequests: readonly FakeRequest[] = [];
