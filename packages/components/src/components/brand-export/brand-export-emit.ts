@@ -1,5 +1,5 @@
 import type { BrandTheme } from "@identgineer/brand";
-import { emitBrandThemeCss, emitBrandThemeTokens } from "@identgineer/brand/emit";
+import { emitBrandTheme } from "@identgineer/brand/emit";
 import { ownValue } from "../../utils/own-value";
 
 export interface EmittedTheme {
@@ -15,9 +15,10 @@ export interface EmittedTheme {
  * one whose id, document or radii differ, so a theme altered after it was generated, one that is not
  * a theme and one whose reads throw all give nothing here.
  *
- * The theme is read once into a plain object that both emitters are given, so getters that answer
- * otherwise the second time cannot give a stylesheet of one theme and tokens of another. The cast
- * is only to hand them the value; they, and not the type, are what decides whether it is one.
+ * The theme is read once into a plain object, which `emitBrandTheme` regenerates once and writes
+ * both texts from, so neither a getter on the theme nor one nested in its kit or its document can
+ * give a stylesheet of one theme and tokens of another. The cast is only to hand it the value; it,
+ * and not the type, decides whether it is a theme.
  */
 export function emitTheme(theme: unknown): EmittedTheme | undefined {
   try {
@@ -28,11 +29,7 @@ export function emitTheme(theme: unknown): EmittedTheme | undefined {
       document: ownValue(theme, "document"),
       radius: ownValue(theme, "radius"),
     } as BrandTheme;
-    return {
-      css: emitBrandThemeCss(snapshot),
-      tokens: emitBrandThemeTokens(snapshot),
-      id: snapshot.id,
-    };
+    return emitBrandTheme(snapshot);
   } catch {
     return undefined;
   }
