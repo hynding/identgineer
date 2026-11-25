@@ -65,8 +65,8 @@ editorial, pixel) keep their own. A kit's logo and mark are SVG uploads, rebuilt
 dependency-free sanitiser into inert SVG (an allowlist of elements and attributes, no script,
 handlers, external references or `foreignObject`, and bounds on what drawing and painting it may
 cost) and
-shown through `<img>`. See
-[packages/brand/README.md](packages/brand/README.md).
+shown through `<img>`. Kits are stored in the CMS, each owned by its user, through a typed store
+that checks everything it reads back. See [packages/brand/README.md](packages/brand/README.md).
 
 ## Tracking
 
