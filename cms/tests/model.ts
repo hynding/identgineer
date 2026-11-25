@@ -41,6 +41,10 @@ export interface Field {
   required?: boolean;
   unique?: boolean;
   pattern?: string;
+  minLength?: number;
+  maxLength?: number;
+  values?: string[];
+  default?: string | number | boolean;
   relationKind?: string;
   target?: string;
   allowedTypes?: string[];
@@ -113,4 +117,11 @@ export const OWNER_CONDITION: Expression = {
   kind: "eq",
   left: { kind: "var", name: "record.ownerId" },
   right: { kind: "var", name: "user.id" },
+};
+
+/** The condition of the read-only grants on public brand kits: `record.isPublic == true`. */
+export const PUBLIC_KIT_CONDITION: Expression = {
+  kind: "eq",
+  left: { kind: "var", name: "record.isPublic" },
+  right: { kind: "lit", value: true },
 };

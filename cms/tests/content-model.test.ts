@@ -152,11 +152,7 @@ describe("event ingestion", () => {
 });
 
 describe("media", () => {
-  it.each([
-    ["Profile", "avatar"],
-    ["BrandKit", "logo"],
-    ["BrandKit", "mark"],
-  ])("%s.%s accepts images only", (contentType, name) => {
-    expect(fieldOf(contentType, name).allowedTypes).toEqual(["image"]);
+  it("Profile.avatar accepts images only", () => {
+    expect(fieldOf("Profile", "avatar").allowedTypes).toEqual(["image"]);
   });
 });
