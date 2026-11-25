@@ -1461,9 +1461,10 @@ stays; a first load is a skeleton, and an error replaces the rows and takes focu
 
 ## Brand
 
-Two elements show a brand from `@identgineer/brand`: `idg-brand-logo` draws its logo or mark, and
-`idg-brand-swatches` its colours. They are presentational: they take the brand package's own data as
-properties, fetch nothing and store nothing. Neither re-derives anything the package decided; the
+Four elements show a brand from `@identgineer/brand`: `idg-brand-logo` draws its logo or mark,
+`idg-brand-swatches` its colours, `idg-brand-guidelines` a guide to one kit and `idg-brand-export`
+its stylesheet and tokens as text to copy or save. They take the brand package's own data as
+properties, fetch nothing and store nothing. None re-derives anything the package decided; the
 swatches add only the contrast ratios, which no theme carries.
 
 ```ts
@@ -1558,7 +1559,87 @@ announces the scheme, the group and the position.
   follows the layout (`--idg-layout-grid-min`), the text follows the UX mode's scale, and the
   schemes sit side by side only where there is room. At 320px, and at 200% zoom or text, it reflows
   to one column without sideways scrolling.
-- The brand gradient is not drawn; the guidelines page will show it.
+- The brand gradient is not drawn by the swatches; `idg-brand-guidelines` shows it.
+
+### `idg-brand-guidelines`
+
+A guide to one brand: its name and tagline, its logo and mark on a light and a dark backing, its
+colours (`idg-brand-swatches` inside), the gradient, a type specimen, the corner radii, the tone, and
+the notes and adjustments the generator made, written as sentences.
+
+| Prop           | Attribute       | Notes                                                            | Default |
+| -------------- | --------------- | ---------------------------------------------------------------- | ------- |
+| `kit`          |                 | a kit from `parseBrandKit`; set as a property, it is data        |         |
+| `theme`        |                 | the theme `generateBrandTheme` made for it (or its `document`)   |         |
+| `label`        | `label`         | the accessible name of the whole                                 |         |
+| `labels`       |                 | `BrandGuidelinesLabels`: every heading, caption and sentence     | English |
+| `swatchLabels` |                 | `Partial<BrandSwatchesLabels>`, passed to the swatches           | English |
+| `headingLevel` | `heading-level` | the level of the name, 1 to 5; the sections are one level deeper | `2`     |
+
+No events and no slots. Parts: `guidelines`, `heading`, `tagline`, `section`, `section-title`,
+`exhibit`, `caption`, `note`, `tone`, `empty`. The kit and theme types are declared here
+(`BrandGuidelinesKit`, `BrandGuidelinesTheme`) and a type test holds `BrandKit` and `BrandTheme` to
+them.
+
+- **Everything from the kit or theme is untrusted.** Text is set as text; nothing is `innerHTML` or
+  a style string. A colour is used only after an exact `#rrggbb` match (the kit's source colours as
+  three whole channels), a radius, gradient position or ratio only after finite and range checks, and
+  the font pairing, corners and tone only as ids of the brand package's own presets
+  (`@identgineer/brand/presets`). Values reach the page as custom properties through the style API.
+- **Malformed parts are left out, never thrown on.** A kit or theme that is a proxy, has a getter
+  that throws or holds the wrong types loses that section (or that item), and the rest is shown. With
+  nothing valid, the `empty` message is shown. Each read is an own-property read inside a `try`.
+- **Logos.** The logo and mark are drawn by `idg-brand-logo` on a tile of the brand's own page
+  colour, with its text and accent, for each scheme; the name stands in where an image is missing or
+  refused. A data URL image needs `img-src 'self' data:` as for `idg-brand-logo`.
+- **Headings.** The name is the heading at `headingLevel`, each section one level below it, so a page
+  chooses where the guide sits in its outline.
+- **Reflow.** Nothing is wider than its host at 320px or at 200% text.
+
+### `idg-brand-export`
+
+Shows a theme's stylesheet and its design tokens as text, each in a labelled, focusable, scrollable
+region, with Copy and Download buttons, and a snippet for loading the theme.
+
+| Prop           | Attribute       | Notes                                                                                       | Default |
+| -------------- | --------------- | ------------------------------------------------------------------------------------------- | ------- |
+| `css`          |                 | the stylesheet text, as `emitBrandThemeCss` returned it                                     |         |
+| `tokens`       |                 | the tokens text, as `emitBrandThemeTokens` returned it                                      |         |
+| `theme`        |                 | a theme from `generateBrandTheme`: emitted in the browser for what `css` and `tokens` leave |         |
+| `themeId`      | `theme-id`      | the theme's id, for the snippet; defaults to the theme's own                                |         |
+| `name`         | `name`          | the brand's name, which the file names are made from; defaults to the theme's kit           |         |
+| `label`        | `label`         | the accessible name of the whole                                                            |         |
+| `labels`       |                 | `BrandExportLabels`: headings, hints, buttons and the messages that follow an action        | English |
+| `headingLevel` | `heading-level` | the level of each artefact's heading, 1 to 6                                                | `2`     |
+
+**Events:** `idgCopy` and `idgDownload`, each with `{ artefact }` (`css`, `tokens` or `snippet`).
+**Parts:** `export`, `artefact`, `title`, `hint`, `code`, `actions`, `status`, `problem`, `empty`.
+
+- **Text only.** Each artefact is a `<pre><code>` set as text, in a region named by its heading that
+  is in the tab order, so a keyboard user can scroll it. Texts over 2,000,000 characters are
+  dropped. A string given as `css` or `tokens` wins over what `theme` would give.
+- **Copy** writes to the clipboard through the clipboard API inside the click, and says so. Where
+  the API is missing or refuses, the text is selected, the region focused, and the status says that
+  it is selected and must be copied by hand. A copy event fires only on success.
+- **Download** makes a `Blob` with an explicit type (`text/css`, `application/json`), a hidden
+  `<a download>` pointing at its object URL, clicks it, and revokes the URL a second later. The file
+  name is a slug of the name of lower case letters, digits and hyphens, at most 40 characters, with
+  `brand` when nothing is left (a Windows device name falls back too). The result is announced.
+- **The snippet** (two `<link>` lines and the `data-theme` attribute) is built only from the
+  validated theme id (letters, digits and hyphens), and only shown where a file exists to load.
+- **Status.** One polite live region (`role="status"`, `aria-live="polite"`, `aria-atomic`) with the
+  same two alternating slots as the variation switcher, so the same message twice is announced twice.
+- **Emitting in the browser works.** `@identgineer/brand/emit` bundles the generator, the sanitiser
+  and the tokens emitter, which read no disk (the token sources are JSON imported at build time). The
+  emitters regenerate from the theme's kit and refuse a theme changed after it was generated, so a
+  tampered theme shows a problem message and no file. Output is byte for byte what Node emits
+  (a browser test compares them).
+- **Content-Security-Policy.** No directive is added. A blob download through `<a download>` and
+  `navigator.clipboard.writeText` in a click are allowed by `default-src 'self'; style-src 'self';
+script-src 'self'; require-trusted-types-for 'script'`, and a browser test runs the whole
+  element under it with no violation and no request off the origin. Reading the clipboard back in a
+  test needs the `clipboard-read` permission, which is not a policy matter.
+- A downloadable, self-contained HTML guide is not part of this element. It is later work.
 
 ## Strict CSP and Trusted Types
 
@@ -1579,7 +1660,8 @@ with no console violation.
 - A brand's logo is a data URL image, which this policy refuses. `idg-brand-logo` is tested under
   the policy with `img-src 'self' data:` added (the one directive the brand package asks for), and
   under this one, where it shows the name instead. The test server gives that policy to the demo
-  index page, which shows two logos, and to no other page.
+  index page, which shows two logos and the guide, and to no other page. `idg-brand-export` draws no
+  image and is tested under the strict policy itself.
 - The custom-elements build was not loaded under the CSP: it needs a bundler, and runs the same
   runtime.
 
@@ -1648,12 +1730,16 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   written out, and `checks/fixture-bootstrap.test.ts` fails when it no longer matches what the
   package builds: copy the new value from `dist/bootstrap.sri.json`. The same plugin transpiles the
   brand and tokens packages, which the brand components import. They import only the narrow entries
-  made for a browser bundle, `@identgineer/brand/logo` (`isSanitisedSvgLogo`, `logoDataUrl` and `logoImage`) and
+  made for a browser bundle, `@identgineer/brand/logo` (`isSanitisedSvgLogo`, `logoDataUrl` and `logoImage`),
+  `@identgineer/brand/presets` (the corner, tone, radius and font-pairing tables),
+  `@identgineer/brand/emit` (`emitBrandThemeCss` and `emitBrandThemeTokens`) and
   `@identgineer/tokens/contrast` (`contrastRatio`), because the packages' indexes also load the
-  theme pipeline, which reads the tokens sources from disk. The sanitiser therefore sits in the
+  rest of the pipeline. Import-graph tests hold each entry to loading no Node built-in. The sanitiser therefore sits in the
   lazy chunk of `idg-brand-logo` alone (its entry bundles to 88.6 KB minified, 29.6 KB gzipped with esbuild, loaded only where that
-  element is used), and `idg-brand-swatches` adds under 8 KB. Together they take the `www/build`
-  directory from 433,865 to 534,311 bytes.
+  element is used), and `idg-brand-swatches` adds under 8 KB. Together they took the `www/build`
+  directory from 433,865 to 534,386 bytes. `idg-brand-guidelines` and `idg-brand-export` take it to
+  661,532 bytes: about 98 KB of that is the theme generator and the emitters in the export's lazy
+  chunk, which only a page that uses `idg-brand-export` loads.
 - **The identity fixture.** `identity.html` wires every identity element to one real client on the
   identity package's fake API (`createFakeIdentityApi`), in the page. The build's second step,
   `scripts/build-sdk-fixtures.ts`, transpiles that package's source and its fake into
