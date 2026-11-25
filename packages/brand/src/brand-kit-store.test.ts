@@ -1000,6 +1000,146 @@ describe("aborting", () => {
   });
 });
 
+describe("a fetch that answers something other than a response", () => {
+  const answering = (value: unknown) => storeWith(() => value as Response);
+  const rowBody = () => JSON.stringify({ data: rowOf(kitFrom()) });
+
+  it.each([
+    [
+      "a signal without removeEventListener",
+      { aborted: false, addEventListener: (): void => undefined },
+    ],
+    [
+      "a signal whose aborted throws",
+      {
+        get aborted(): boolean {
+          throw new Error(SECRET);
+        },
+        addEventListener: (): void => undefined,
+        removeEventListener: (): void => undefined,
+      },
+    ],
+  ])("refuses %s before sending anything", async (_kind, signal) => {
+    const { store, sent } = storeWith(() => json({ data: rowOf(kitFrom()) }));
+    const options = { signal } as unknown as { signal: AbortSignal };
+    expect((await rejection(store.get(DOCUMENT_ID, options))).code).toBe("validation");
+    expect(sent).toEqual([]);
+  });
+
+  it.each([
+    ["nothing", undefined],
+    ["a string", "200"],
+    ["an object without headers", { status: 200, body: null }],
+    ["a status that is not a number", { status: "200", headers: new Headers(), body: null }],
+    [
+      "a status that throws",
+      {
+        get status(): number {
+          throw new Error(SECRET);
+        },
+        headers: new Headers(),
+      },
+    ],
+  ])("reads %s as a malformed response", async (_kind, value) => {
+    const { store } = answering(value);
+    const error = await rejection(store.get(DOCUMENT_ID));
+    expect(error.code).toBe("malformed-response");
+    expect(JSON.stringify(error)).not.toContain(SECRET);
+  });
+
+  it.each([
+    ["a string", '{"data":1}'],
+    ["nothing", undefined],
+    ["an array", [123]],
+  ])("refuses a body chunk that is %s, cancelling the body", async (_kind, chunk) => {
+    let cancelled = false;
+    const body = new ReadableStream<unknown>({
+      start(stream) {
+        stream.enqueue(chunk);
+      },
+      pull: () => new Promise<void>(() => undefined),
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const { store } = answering(
+      new Response(body as ReadableStream<Uint8Array>, {
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    expect((await rejection(store.get(DOCUMENT_ID))).code).toBe("malformed-response");
+    expect(cancelled).toBe(true);
+  });
+
+  const throwing = (): never => {
+    throw new Error(SECRET);
+  };
+
+  it.each([
+    ["headers.get throws", { status: 200, headers: { get: throwing }, body: null }],
+    [
+      "the body throws",
+      {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+        get body(): never {
+          return throwing();
+        },
+      },
+    ],
+    [
+      "getReader throws",
+      {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+        body: { getReader: throwing },
+      },
+    ],
+    [
+      "a refusal's headers.get throws",
+      { status: 429, headers: { get: throwing }, body: { cancel: () => Promise.resolve() } },
+    ],
+  ])("reads an answer as a malformed response when %s", async (_kind, value) => {
+    const error = await rejection(answering(value).store.get(DOCUMENT_ID));
+    expect(error.code).toBe("malformed-response");
+    expect(JSON.stringify(error)).not.toContain(SECRET);
+  });
+
+  it.each([
+    ["throws", throwing],
+    ["rejects", () => Promise.reject(new Error(SECRET))],
+    ["answers no promise", () => undefined],
+  ])("reads a 404 whose body's cancel %s as not found", async (_kind, cancel) => {
+    const { store } = answering({ status: 404, headers: new Headers(), body: { cancel } });
+    expect((await rejection(store.get(DOCUMENT_ID))).code).toBe("not-found");
+  });
+
+  it("reads an abort as a network error when the reader's cancel throws", async () => {
+    const controller = new AbortController();
+    const bytes = new TextEncoder().encode(rowBody());
+    let offset = 0;
+    const reader = {
+      read: () =>
+        new Promise((resolve) => {
+          setTimeout(() => {
+            resolve({ done: false, value: bytes.subarray(offset, offset + 1) });
+            offset += 1;
+          }, 1);
+        }),
+      cancel: throwing,
+    };
+    const { store } = answering({
+      status: 200,
+      headers: new Headers({ "Content-Type": "application/json" }),
+      body: { getReader: () => reader },
+    });
+    const pending = store.get(DOCUMENT_ID, { signal: controller.signal });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    controller.abort();
+    expect((await rejection(pending)).code).toBe("network");
+  });
+});
+
 describe("BrandKitStoreError", () => {
   it("serialises its code and details only", () => {
     const error = new BrandKitStoreError("rate-limited", { retryAfterSeconds: 5 });
