@@ -32,6 +32,8 @@ export interface BrandKitStoreErrorDetails {
   readonly retryAfterSeconds?: number;
   /** The CMS fields refused (`validation`) or not saved as sent (`not-applied`), never a value. */
   readonly fields?: readonly string[];
+  /** The kit the write did store, though not as sent, to read again or remove (`not-applied` only). */
+  readonly documentId?: string;
 }
 
 /** The only error the brand kit store rejects with. */
@@ -41,6 +43,7 @@ export class BrandKitStoreError extends Error {
   declare readonly status?: number;
   declare readonly retryAfterSeconds?: number;
   declare readonly fields?: readonly string[];
+  declare readonly documentId?: string;
 
   constructor(code: BrandKitStoreErrorCode, details: BrandKitStoreErrorDetails = {}) {
     super(MESSAGES[code]);
@@ -60,6 +63,9 @@ export class BrandKitStoreError extends Error {
         enumerable: true,
       });
     }
+    if (details.documentId !== undefined) {
+      Object.defineProperty(this, "documentId", { value: details.documentId, enumerable: true });
+    }
   }
 
   toJSON(): { name: string; code: BrandKitStoreErrorCode } & BrandKitStoreErrorDetails {
@@ -71,6 +77,7 @@ export class BrandKitStoreError extends Error {
         ? {}
         : { retryAfterSeconds: this.retryAfterSeconds }),
       ...(this.fields === undefined ? {} : { fields: this.fields }),
+      ...(this.documentId === undefined ? {} : { documentId: this.documentId }),
     };
   }
 }

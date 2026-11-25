@@ -458,7 +458,10 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
     );
     if (!result.ok) return result;
     const unapplied = unappliedFields(data, result.record);
-    if (unapplied.length > 0) throw new BrandKitStoreError("not-applied", { fields: unapplied });
+    if (unapplied.length > 0) {
+      const { documentId } = result.record;
+      throw new BrandKitStoreError("not-applied", { fields: unapplied, documentId });
+    }
     return result;
   };
 

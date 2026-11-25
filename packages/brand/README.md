@@ -1268,8 +1268,9 @@ session. `isPublic` is sent only when given. The answer is compared with what wa
 the CMS answers otherwise rejects the write as `not-applied`, naming the fields. On strapi-php
 today that is every optional field an update clears (`tagline`, `secondaryColor`, `neutralTint`,
 `logo`, `mark`), since camis drops a `null` in an update body where Strapi clears the field
-([hynding/camis#122](https://github.com/hynding/camis/issues/122)); the other fields are saved, so
-`get` the kit again to see what it now holds. Do not keep `themeTokens` in the CMS: generate the
+([hynding/camis#122](https://github.com/hynding/camis/issues/122)). The write did store a kit,
+with the other fields saved: the error's `documentId` names it, so `get` it to see what it now
+holds, or `remove` it (a `create` that is not applied has still made a new kit). Do not keep `themeTokens` in the CMS: generate the
 theme from the kit, which is deterministic.
 
 A request that fails rejects with a `BrandKitStoreError`, whose message is fixed per code and
@@ -1281,7 +1282,7 @@ never holds a response body, a thrown error's text or a logo:
 | `forbidden`          | 403: the kit can be read but not changed (the public role writing a public kit)                                                    |
 | `not-found`          | 404: no such kit, or one the caller may not read (another user's)                                                                  |
 | `validation`         | The input was refused before sending, or a 400 `ValidationError`; `fields` names CMS fields                                        |
-| `not-applied`        | A write the CMS answered with other values than were sent; `fields` names them                                                     |
+| `not-applied`        | A write the CMS answered with other values than were sent; `fields` names them, `documentId` the kit it stored                     |
 | `rate-limited`       | 429; `retryAfterSeconds` from `Retry-After` (60 when absent, at most 3600)                                                         |
 | `network`            | `fetch` failed to reach the CMS (a redirect too, as fetch refuses to follow it), the body could not be read, or the signal aborted |
 | `request-refused`    | `fetch` refused the request itself, as `authorizedFetch` does for a URL outside its base URL                                       |
