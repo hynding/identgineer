@@ -806,9 +806,10 @@ test.describe("idg-brand-editor across the axes", () => {
 });
 
 /**
- * Each colour field's hex input, in every editor: whether it is about 7ch wide (a whole `#rrggbb`
- * in its own font, with a twentieth to spare for rounding), and whether its invalid mark, where it
- * shows one, is inside its box.
+ * Each colour field's hex input, in every editor: whether the widest `#rrggbb` it can hold shows
+ * whole in it, and whether its invalid mark, where it shows one, is inside its box. The widest is
+ * found in the input's own font: `#000000`, and six of whichever valid hex digit is widest there.
+ * The value is set on the native input only to be measured, and put back.
  */
 function colourInputs(page: Page) {
   return page.evaluate(() => {
@@ -823,15 +824,23 @@ function colourInputs(page: Page) {
           const root = input.shadowRoot;
           const native = root?.querySelector("input.native");
           const box = root?.querySelector(".box");
-          if (!native || !box) throw new Error("no hex input");
+          if (!(native instanceof HTMLInputElement) || !box) throw new Error("no hex input");
           const style = getComputedStyle(native);
           context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-          const sevenCh = 7 * context.measureText("0").width;
+          const digits = "0 1 2 3 4 5 6 7 8 9 a b c d e f A B C D E F".split(" ");
+          const widest = digits.reduce((wide, digit) =>
+            context.measureText(digit).width > context.measureText(wide).width ? digit : wide,
+          );
+          const kept = native.value;
+          const cropped = ["#000000", `#${widest.repeat(6)}`].filter((value) => {
+            native.value = value;
+            return native.scrollWidth > native.clientWidth;
+          });
+          native.value = kept;
           const mark = root?.querySelector(".invalid-mark")?.getBoundingClientRect();
-          const width = native.getBoundingClientRect().width;
           return {
             field: `${editor.id} ${input.getAttribute("name") ?? ""}`,
-            wide: width >= sevenCh * 0.95 ? "yes" : `${String(Math.round(width))}px`,
+            cropped,
             mark:
               mark === undefined || inside(mark, box.getBoundingClientRect()) ? "inside" : "out",
           };
@@ -840,8 +849,8 @@ function colourInputs(page: Page) {
   });
 }
 
-const fitting = (fields: readonly { field: string; wide: string; mark: string }[]) =>
-  fields.filter((field) => field.wide !== "yes" || field.mark !== "inside");
+const fitting = (fields: readonly { field: string; cropped: readonly string[]; mark: string }[]) =>
+  fields.filter((field) => field.cropped.length > 0 || field.mark !== "inside");
 
 test.describe("idg-brand-editor reflow", () => {
   for (const layout of LAYOUTS) {
