@@ -315,6 +315,7 @@ describe("the drawing cost of a logo", () => {
     expect(stroked('<path d="M5 0V100"/>')).toBe(1 + 33 + 52);
     expect(stroked('<rect width="10" height="10"/>')).toBe(1 + 36 + 22);
     expect(stroked('<rect width="10" height="10" rx="0"/>')).toBe(1 + 36 + 22);
+    expect(stroked('<rect width="10" height="10" ry="0"/>')).toBe(1 + 36 + 22);
     // Anything else, even where its numbers come out horizontal, is worked out again for every
     // tile its box touches (the stroke's reach included: half its width, four times over at a
     // miter join), counted on a grid of eight by eight: across the whole image, a share of 1. A
@@ -336,6 +337,16 @@ describe("the drawing cost of a logo", () => {
     expect(stroked('<path d="M0 5L100 5"/>')).toBe(1 + 33 + 52 + (52 * 4) / 4);
     expect(stroked('<path d="M0 5H50H100"/>')).toBe(1 + 34 + 52 + (52 * 4) / 4);
     expect(stroked('<path d="M0 5H100H0"/>')).toBe(1 + 34 + 102 + (102 * 4) / 4);
+    expect(stroked('<polyline points="0,0 100,0"/>')).toBe(1 + 33 + 52 + (52 * 4) / 4);
+    expect(stroked('<path d="M0 0C30 0 70 0 100 0"/>')).toBe(1 + 42 + 52 + (52 * 4) / 4);
+    // Paths of H and V segments, open, closed or in steps, across the whole image.
+    expect(stroked('<path d="M0 0H100V100"/>')).toBe(1 + 34 + 102 + 102 * 4);
+    expect(stroked('<path d="M0 0H50V50H100V100"/>')).toBe(1 + 36 + 102 + 102 * 4);
+    expect(stroked('<path d="M0 0H100V100H0Z"/>')).toBe(1 + 36 + 202 + 202 * 4);
+    // A rectangle with rounded corners, 14 across with its reach: three columns and three rows.
+    expect(stroked('<rect width="10" height="10" rx="1"/>')).toBe(
+      Math.ceil(1 + 76 + 22 + (22 * 4 * 9) / 64),
+    );
     // A small shape in a corner touches few tiles: 9 dashes along a diagonal 14 across with its
     // reach, three columns and three rows, 9 of 64; scaled up ten times, all of them.
     expect(stroked('<line x2="10" y2="10"/>')).toBe(Math.ceil(1 + 33 + 9 + (9 * 4 * 9) / 64));
