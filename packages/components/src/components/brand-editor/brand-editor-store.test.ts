@@ -147,6 +147,13 @@ describe("readStoreFailure", () => {
       code: "validation",
       fields: [],
     });
+    // Array.isArray throws on a revoked proxy, so it is read like every other untrusted value.
+    const revoked = Proxy.revocable([], {});
+    revoked.revoke();
+    expect(readStoreFailure({ code: "validation", fields: revoked.proxy })).toEqual({
+      code: "validation",
+      fields: [],
+    });
     for (const value of [
       undefined,
       null,
