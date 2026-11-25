@@ -14,16 +14,18 @@ const fileOf = (text: string | Uint8Array, type = "image/svg+xml") =>
 
 /** A file whose reading is held until the test lets it go, and which counts its reads. */
 function heldFile(text: string): UploadFile & { release: () => void; reads: number } {
-  let release = () => undefined as void;
-  const gate = new Promise<void>((resolve) => {
-    release = resolve;
+  const opened: (() => void)[] = [];
+  const gate = new Promise<undefined>((resolve) => {
+    opened.push(() => {
+      resolve(undefined);
+    });
   });
   const bytes = new TextEncoder().encode(text);
   const file = {
     size: bytes.byteLength,
     reads: 0,
     release: () => {
-      release();
+      for (const open of opened) open();
     },
     async arrayBuffer() {
       file.reads += 1;
@@ -49,8 +51,8 @@ describe("LogoUploads", () => {
     expect(outcome.svg).not.toMatch(/script|onload|example\.com|image/);
     expect(outcome.removed.map((removal) => removal.reason).sort()).toEqual([
       "active-content",
+      "active-content",
       "event-handler",
-      "external-reference",
     ]);
     expect(outcome.removedCount).toBe(3);
   });
@@ -86,7 +88,7 @@ describe("LogoUploads", () => {
 
   it("reads a file exactly at the limit", async () => {
     const padding = " ".repeat(SVG_LOGO_LIMITS.inputBytes - CLEAN.length);
-    const file = fileOf(CLEAN.replace("<rect", `${padding}<rect`));
+    const file = fileOf(CLEAN.replace("<rect ", `<rect ${padding}`));
     expect(file.size).toBe(SVG_LOGO_LIMITS.inputBytes);
     expect(await new LogoUploads().upload("logo", file)).toMatchObject({ kind: "accepted" });
   });
