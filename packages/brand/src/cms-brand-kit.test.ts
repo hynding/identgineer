@@ -18,7 +18,7 @@ const sanitised = (source: string) => {
 };
 
 /** A row as the CMS answers it: the kit's fields beside its own ids and timestamps. */
-const rowOf = (data: Record<string, unknown>, extra: Record<string, unknown> = {}) => ({
+const rowOf = (data: object, extra: Record<string, unknown> = {}) => ({
   id: 7,
   documentId: "pjx5ucx7febfca6f8rtjrxga",
   ...data,
@@ -198,8 +198,11 @@ describe("readCmsBrandKit", () => {
     ["isPublic", "yes", "wrong-type"],
     ["isPublic", undefined, "missing"],
   ])("refuses %s of %j", (field, value, code) => {
-    const row: Record<string, unknown> = minimalRow({ [field]: value });
-    if (value === undefined) delete row[field];
+    const row = Object.fromEntries(
+      Object.entries(minimalRow({ [field]: value })).filter(
+        ([key]) => value !== undefined || key !== field,
+      ),
+    );
     expect(failure(row).errors).toEqual([expect.objectContaining({ path: field, code })]);
   });
 

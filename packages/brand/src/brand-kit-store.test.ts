@@ -49,9 +49,6 @@ const page = (rows: unknown[], pageSize = 10) => ({
   meta: { pagination: { page: 1, pageSize, pageCount: 1, total: rows.length } },
 });
 
-const failingWith = (status: number, body: unknown = { data: null }, headers = {}) =>
-  fakeFetch(() => json(body, status, headers));
-
 const storeWith = (handler: Handler, publicHandler: Handler = handler) => {
   const authorised = fakeFetch(handler);
   const anonymous = fakeFetch(publicHandler);
@@ -73,7 +70,9 @@ const rejection = async (promise: Promise<unknown>): Promise<BrandKitStoreError>
   throw new Error("expected a rejection");
 };
 
-const bodyOf = (sent: Sent | undefined): unknown => JSON.parse(String(sent?.init.body));
+const textOf = (body: RequestInit["body"]): string => (typeof body === "string" ? body : "");
+
+const bodyOf = (sent: Sent | undefined): unknown => JSON.parse(textOf(sent?.init.body));
 
 const headerOf = (sent: Sent | undefined, name: string): string | null =>
   new Headers(sent?.init.headers).get(name);
@@ -245,7 +244,7 @@ describe("create", () => {
   it("sends the kit in the CMS shape, never an owner, and returns the stored record", async () => {
     const kit = kitFrom({ tagline: "Light the way" });
     const { store, sent } = storeWith((_, init) => {
-      const { data } = JSON.parse(String(init.body)) as { data: Record<string, unknown> };
+      const { data } = JSON.parse(textOf(init.body)) as { data: Record<string, unknown> };
       return json({ data: { id: 1, documentId: DOCUMENT_ID, isPublic: false, ...data } }, 201);
     });
     const result = await store.create({ ...kit, owner: 99 } as BrandKit);
@@ -266,7 +265,7 @@ describe("create", () => {
     let stored: Record<string, unknown> = {};
     const { store } = storeWith((_, init) => {
       if (init.method === "POST") {
-        const { data } = JSON.parse(String(init.body)) as { data: Record<string, unknown> };
+        const { data } = JSON.parse(textOf(init.body)) as { data: Record<string, unknown> };
         stored = { id: 1, documentId: DOCUMENT_ID, isPublic: false, ...data };
       }
       return json({ data: stored, meta: {} });
