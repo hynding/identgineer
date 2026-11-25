@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
-import { logoDataUrl, parseBrandKit, sanitiseSvgLogo } from "@identgineer/brand";
+import { logoDataUrl, parseBrandKit, sanitiseSvgLogo, type SanitisedSvg } from "@identgineer/brand";
 import { describe, expect, it } from "vitest";
 import { brandLogoSource, logoFrame } from "./brand-logo-source";
 
 const FIXTURES = new URL("../../../../brand/src/__fixtures__/", import.meta.url);
 
-function kitLogos(file: string): { logo: string; mark: string } {
+function kitLogos(file: string): { logo: SanitisedSvg; mark: SanitisedSvg } {
   const result = parseBrandKit(JSON.parse(readFileSync(new URL(file, FIXTURES), "utf8")));
   if (!result.ok || result.kit.logo === undefined || result.kit.mark === undefined) {
     throw new Error(`${file} has no logo and mark`);
@@ -13,23 +13,17 @@ function kitLogos(file: string): { logo: string; mark: string } {
   return { logo: result.kit.logo, mark: result.kit.mark };
 }
 
-function sanitised(svg: string): string {
-  const result = sanitiseSvgLogo(svg);
-  if (!result.ok) throw new Error(JSON.stringify(result.errors));
-  return result.svg;
-}
-
 const { logo: LOGO, mark: MARK } = kitLogos("harbour-lights.kit.json");
 
 describe("brandLogoSource", () => {
   it("gives the data url of the logo and the size of its frame", () => {
     expect(brandLogoSource(LOGO)).toEqual({
-      url: logoDataUrl(sanitised(LOGO)),
+      url: logoDataUrl(LOGO),
       width: 120,
       height: 40,
     });
     expect(brandLogoSource(MARK)).toEqual({
-      url: logoDataUrl(sanitised(MARK)),
+      url: logoDataUrl(MARK),
       width: 40,
       height: 40,
     });
