@@ -365,6 +365,27 @@ describe("update", () => {
     });
   });
 
+  it("reports fields the CMS did not clear as not applied, never as a saved kit", async () => {
+    const logo = sanitiseSvgLogo(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 1"><rect width="2" height="1"/></svg>',
+    );
+    if (!logo.ok) throw new Error("expected a logo");
+    // strapi-php today keeps the old value of a field sent as null (hynding/camis#122).
+    const stale = rowOf(kitFrom({ tagline: "Old", logo: logo.svg }));
+    const { store } = storeWith(() => json({ data: stale }));
+    const error = await rejection(store.update(DOCUMENT_ID, kitFrom()));
+    expect(error).toMatchObject({ code: "not-applied", fields: ["tagline", "logo"] });
+    expect(JSON.stringify(error)).not.toContain("Old");
+  });
+
+  it("reports any field the CMS answers differently from what was sent", async () => {
+    const { store } = storeWith(() =>
+      json({ data: rowOf(kitFrom({ name: "Other" }), { isPublic: false }) }),
+    );
+    const error = await rejection(store.create(kitFrom(), { isPublic: true }));
+    expect(error).toMatchObject({ code: "not-applied", fields: ["name", "isPublic"] });
+  });
+
   it("keeps whether the kit is public when isPublic is not given", async () => {
     const { store, sent } = storeWith(() => json({ data: rowOf(kitFrom()) }));
     await store.update(DOCUMENT_ID, kitFrom());
