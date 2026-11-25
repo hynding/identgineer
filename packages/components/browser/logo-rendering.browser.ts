@@ -260,7 +260,8 @@ base.describe("the checks themselves", () => {
 // circles, an ellipse, a rounded rectangle, an arc, a cubic, a diagonal and a horizontal line, and
 // along paths of horizontal and vertical lines (an L, a staircase, a serpentine, a square spiral, a
 // line drawn back and forth, an open path round a square); thin strokes along full-size circles,
-// ellipses and arcs, and along concentric circles; solid paint over and over; gradients at the stop limit, opaque and translucent; a fill under a
+// ellipses and arcs, along concentric circles, along circles and arcs far larger than the image
+// passing through it, and along a rosette of quadratics in one path; solid paint over and over; gradients at the stop limit, opaque and translucent; a fill under a
 // very wide stroke; group opacity layers; masks inside masks; a clip path of crowded edges with the
 // even-odd rule; a view box far wider than tall; dashes, round dots and round joins on a stroke as
 // wide as the image; clip paths of near-coincident zigzags, which a renderer combining them took
@@ -427,6 +428,27 @@ function squareSpiral(sides: number): string {
   return data;
 }
 
+/** `count` points across the image, from 50 to 950. */
+function spread(count: number): number[] {
+  return Array.from({ length: count }, (_, index) =>
+    Number((50 + (index * 900) / Math.max(1, count - 1)).toFixed(2)),
+  );
+}
+
+/**
+ * Path data of a spirograph rosette: `count` quadratics winding 37 times round a ring 450 from the
+ * centre, each bulging out to 600.
+ */
+function rosette(count: number): string {
+  const at = (radius: number, step: number): string => {
+    const angle = (step * 2 * Math.PI * 37) / count;
+    return `${(500 + radius * Math.cos(angle)).toFixed(1)} ${(500 + radius * Math.sin(angle)).toFixed(1)}`;
+  };
+  let data = "M950 500";
+  for (let step = 1; step <= count; step += 1) data += `Q${at(600, step - 0.5)} ${at(450, step)}`;
+  return data;
+}
+
 const FULL = 'width="1000" height="1000"';
 const STOPS = SVG_LOGO_LIMITS.gradientStops;
 
@@ -550,6 +572,42 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
             `<circle cx="500" cy="500" r="${String(490 - (index % 480))}" fill="none" stroke="#000" stroke-width="0.5"/>`,
         ).join(""),
       ),
+    "overdraw-too-large",
+  ],
+  // Chromium strokes a curve whole for every tile, however little of it the image shows.
+  ...([1000, 100_000] as const).map(
+    (radius) =>
+      [
+        `thin circles of radius ${radius.toLocaleString("en")} passing through the image`,
+        (count: number) =>
+          costlyLogo(
+            spread(count)
+              .map(
+                (x) =>
+                  `<circle cx="${String(x)}" cy="${String(500 - radius)}" r="${String(radius)}" fill="none" stroke="#000" stroke-width="0.5"/>`,
+              )
+              .join(""),
+          ),
+        "overdraw-too-large",
+      ] as const,
+  ),
+  [
+    "thin large arcs of radius 1,000 from points across the image",
+    (count) =>
+      costlyLogo(
+        spread(count)
+          .map(
+            (x) =>
+              `<path d="M${String(x)} 500A1000 1000 0 1 1 ${String(x + 1)} 500" fill="none" stroke="#000" stroke-width="0.5"/>`,
+          )
+          .join(""),
+      ),
+    "overdraw-too-large",
+  ],
+  [
+    "a thin rosette of quadratics in 37 turns",
+    (count) =>
+      costlyLogo(`<path d="${rosette(count)}" fill="none" stroke="#000" stroke-width="0.8"/>`),
     "overdraw-too-large",
   ],
   ["full-size solid fills", copies(`<rect id="p" ${FULL} fill="#0f766e"/>`), "overdraw-too-large"],

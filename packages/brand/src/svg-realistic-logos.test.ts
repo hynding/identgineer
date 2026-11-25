@@ -144,6 +144,20 @@ function inkscapeWordmark(): string {
   );
 }
 
+/**
+ * A spirograph rosette, as a guilloche is drawn: one thin stroked path of `count` quadratics
+ * winding `turns` times round a ring 450 from the centre, each bulging out to `reach`.
+ */
+function rosette(count: number, turns: number, reach: number): string {
+  const at = (radius: number, step: number): string => {
+    const angle = (step * 2 * Math.PI * turns) / count;
+    return `${(500 + radius * Math.cos(angle)).toFixed(1)} ${(500 + radius * Math.sin(angle)).toFixed(1)}`;
+  };
+  let data = "M950 500";
+  for (let step = 1; step <= count; step += 1) data += `Q${at(reach, step - 0.5)} ${at(450, step)}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="512" height="512"><path d="${data}" fill="none" stroke="#000" stroke-width="0.8"/></svg>`;
+}
+
 /** Each logo with the most of each budget, in percent, it may use. */
 const REALISTIC: readonly (readonly [string, string, number, number])[] = [
   ["an emblem of 4,000 cubics, filled and stroked", emblem(40, 6), 21, 9],
@@ -169,6 +183,9 @@ const REALISTIC: readonly (readonly [string, string, number, number])[] = [
   ["a wordmark of 8 outlined letters clipping a gradient", textClips(8, 1), 4, 8],
   ["four such wordmarks in one logo", textClips(8, 4), 13, 31],
   ["an Inkscape wordmark of 20 glyphs converted from text", inkscapeWordmark(), 10, 15],
+  ["a rosette of 1,500 quadratics in 11 turns", rosette(1500, 11, 600), 5, 22],
+  ["a rosette of 2,000 quadratics in 7 turns", rosette(2000, 7, 600), 7, 36],
+  ["a rosette of 2,000 quadratics in 37 turns", rosette(2000, 37, 600), 7, 38],
 ];
 
 describe("realistic logos", () => {

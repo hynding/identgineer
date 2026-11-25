@@ -59,10 +59,47 @@ function strokeEdges(sides: number, ends = 0): number {
 
 /**
  * What a stroke's curves as long as `sides` sides of the image cost on top of their outline: both
- * sides of them again, three times over, for the tiles of a large image.
+ * sides of them again, three times over, for the tiles of a large image, in proportion to their
+ * whole length (Chromium strokes a curve whole, for each tile), with no crowding of rows.
  */
 function curvedStrokeEdges(sides: number): number {
-  return edges(2 * (W.curvedStroke - 1) * sides);
+  return 2 * (W.curvedStroke - 1) * sides * W.edge;
+}
+
+/** Holds a charge to `expected` within a ten-thousandth of it, the hair a long curve carries. */
+function expectNear(actual: number, expected: number): void {
+  expect(Math.abs(actual - expected), `${String(actual)} near ${String(expected)}`).toBeLessThan(
+    expected * 1e-4,
+  );
+}
+
+/** The length of a quadratic curve, added up over a million pieces. */
+function quadraticLength(
+  start: readonly [number, number],
+  control: readonly [number, number],
+  end: readonly [number, number],
+): number {
+  const at = (t: number, axis: 0 | 1): number =>
+    (1 - t) ** 2 * start[axis] + 2 * t * (1 - t) * control[axis] + t ** 2 * end[axis];
+  let length = 0;
+  const pieces = 1_000_000;
+  for (let index = 1; index <= pieces; index += 1) {
+    const [t0, t1] = [(index - 1) / pieces, index / pieces];
+    length += Math.hypot(at(t1, 0) - at(t0, 0), at(t1, 1) - at(t0, 1));
+  }
+  return length;
+}
+
+/**
+ * The sides of curve a hairline path in a 100 by 100 view box is charged for re-stroking: its
+ * overdraw less its outline's edges, `outline` sides of path along both sides, over the charge for
+ * one side of curve.
+ */
+function curvedSides(data: string, outline: number): number {
+  const stroked = accepted(
+    svg(`<path d="${data}" fill="none" stroke="#000" stroke-width="0.000001"/>`),
+  ).overdraw;
+  return (stroked - strokeEdges(outline)) / curvedStrokeEdges(1);
 }
 
 describe("the overdraw of a logo", () => {
@@ -146,25 +183,21 @@ describe("the overdraw of a logo", () => {
     // A straight segment shows at most the image's diagonal.
     expect(edges("M-1000 -1000L1000 1000")).toBeCloseTo(strokeEdges(Math.SQRT2), 5);
     // A quadratic curve or an arc is convex: at most the image's perimeter (a stroked curve's
-    // edges charged again for the tiles of a large image, below).
-    expect(edges("M-1000 0Q50 5000 1000 0")).toBeCloseTo(
-      strokeEdges(4) + curvedStrokeEdges(4),
-      CURVED_HAIR,
-    );
-    expect(edges("M0 0A1000 1000 0 1 1 1 0")).toBeCloseTo(
-      strokeEdges(4) + curvedStrokeEdges(4),
-      CURVED_HAIR,
-    );
+    // edges are charged again, whole, for the tiles of a large image: below).
+    // Held between its chord and its control polygon (or whole ellipse), what remains is the
+    // outline's edges, as much of it as the image shows.
+    const quadratic = curvedSides("M-1000 0Q50 5000 1000 0", 4);
+    expect(quadratic).toBeGreaterThan(20);
+    expect(quadratic).toBeLessThanOrEqual((Math.hypot(1050, 5000) + Math.hypot(950, 5000)) / 100);
+    expectNear(curvedSides("M0 0A1000 1000 0 1 1 1 0", 4), 20 * Math.PI * 1.001);
     // A cubic bends at most twice: three convex pieces.
-    expect(edges("M-1000 0C3000 5000 -3000 5000 1000 0")).toBeCloseTo(
-      strokeEdges(12) + curvedStrokeEdges(12),
-      CURVED_HAIR,
-    );
+    const cubic = curvedSides("M-1000 0C3000 5000 -3000 5000 1000 0", 12);
+    expect(cubic).toBeGreaterThan(20);
+    expect(cubic).toBeLessThanOrEqual((2 * Math.hypot(4000, 5000) + 6000) / 100);
     // Short of those, the outline's own length.
-    expect(edges("M0 0Q50 50 100 0")).toBeCloseTo(
-      strokeEdges(Math.SQRT2) + curvedStrokeEdges(Math.SQRT2),
-      CURVED_HAIR,
-    );
+    const short = curvedSides("M0 0Q50 50 100 0", Math.SQRT2);
+    expect(short).toBeGreaterThan(1);
+    expect(short).toBeLessThanOrEqual(Math.SQRT2);
   });
 
   it("charges a stroke's curves again, three times over, for the tiles of a large image, which Chromium strokes them for one by one", () => {
@@ -183,20 +216,96 @@ describe("the overdraw of a logo", () => {
       strokeEdges(SQUARE_EDGES) + curvedStrokeEdges(Math.PI / 10),
       CURVED_HAIR,
     );
-    expect(overdraw(`<path d="M0 0H50C50 50 0 50 0 0" ${hairline}/>`)).toBeCloseTo(
-      strokeEdges(2) + curvedStrokeEdges(1.5),
-      CURVED_HAIR,
-    );
+    const cubic = curvedSides("M0 0H50C50 50 0 50 0 0", 2);
+    expect(cubic).toBeGreaterThan(1);
+    expect(cubic).toBeLessThan(1.5);
     expect(overdraw(`<rect ${SQUARE} ${hairline}/>`)).toBeCloseTo(strokeEdges(SQUARE_EDGES), HAIR);
     // As long as they are drawn, through a transform.
     expect(overdraw(`<circle r="50" transform="scale(0.5)" ${hairline}/>`)).toBeCloseTo(
       strokeEdges(Math.PI / 2) + curvedStrokeEdges(Math.PI / 2),
       CURVED_HAIR,
     );
+    // Whole, however little of it the image shows: a circle a hundred times the image passing
+    // through it, the same drawn a hundred times smaller and scaled up, a large arc of it, a
+    // rounded rectangle of such corners; one ten thousand times the image is refused alone.
+    const huge = 2 * Math.PI * 100;
+    expectNear(
+      overdraw(`<circle cx="50" cy="-9950" r="10000" ${hairline}/>`),
+      strokeEdges(4) + curvedStrokeEdges(huge),
+    );
+    expectNear(
+      overdraw(
+        '<circle cx="0.5" cy="-99.5" r="100" fill="none" stroke="#000" stroke-width="0.00000001" transform="scale(100)"/>',
+      ),
+      strokeEdges(4) + curvedStrokeEdges(huge),
+    );
+    expectNear(
+      overdraw(`<path d="M50 50A10000 10000 0 1 1 51 50" ${hairline}/>`),
+      strokeEdges(4) + curvedStrokeEdges(huge * 1.001),
+    );
+    expectNear(
+      overdraw(`<rect x="-9950" y="50" width="20000" height="20000" rx="10000" ${hairline}/>`),
+      strokeEdges(4) + curvedStrokeEdges(huge),
+    );
+    for (const shape of [
+      '<circle cx="50" cy="-999949" r="999999"',
+      '<ellipse cx="50" cy="-999949" rx="999999" ry="999999"',
+      '<path d="M50 50A999999 999999 0 1 1 51 50"',
+      '<rect x="-499949" y="50" width="999998" height="999998" rx="499999"',
+    ]) {
+      expect(refusal(svg(`${shape} fill="none" stroke="#000" stroke-width="2"/>`)), shape).toBe(
+        "overdraw-too-large",
+      );
+    }
     // A fill, or the coverage of a clip path, is not stroked.
     expect(overdraw('<circle r="50"/>')).toBeCloseTo(
       (Math.PI / 4) * W.solid + edges(Math.PI),
       HAIR,
+    );
+  });
+
+  it("bounds a small arc's curve by its chord, so a nearly flat arc of a huge radius costs about its length", () => {
+    // Thinner than elsewhere: the whole ellipse, 6.3 million long, bounds the stroke's area.
+    const hairline = 'fill="none" stroke="#000" stroke-width="0.000000001"';
+    // A small arc turns at most half way round its ellipse: at most pi over two times its chord,
+    // times the ratio of its radii.
+    expectNear(
+      overdraw(`<path d="M0 50A999999 999999 0 0 1 100 50" ${hairline}/>`),
+      strokeEdges(4) + curvedStrokeEdges((Math.PI / 2) * 1.001),
+    );
+    expectNear(
+      overdraw(`<path d="M0 50A99999 999 0 0 1 100 50" ${hairline}/>`),
+      strokeEdges(4) + curvedStrokeEdges((Math.PI / 2) * (99999 / 999) * 1.001),
+    );
+    // Scaled up to reach, it is half its ellipse: the chord is a diameter.
+    expectNear(
+      overdraw(`<path d="M0 50A1 1 0 0 1 100 50" ${hairline}/>`),
+      strokeEdges(Math.PI * 1.001) + curvedStrokeEdges((Math.PI / 2) * 1.001),
+    );
+  });
+
+  it("bounds a curve's length closer than its control polygon, never short of it", () => {
+    const hairline = 'fill="none" stroke="#000" stroke-width="0.000001"';
+    // The control polygon, 2.24 sides, still bounds the outline's edges.
+    const exact = quadraticLength([0, 50], [50, 150], [100, 50]) / 100;
+    const curved = curvedSides("M0 50Q50 150 100 50", (2 * Math.hypot(50, 100)) / 100);
+    expect(curved).toBeGreaterThanOrEqual(exact);
+    expect(curved).toBeLessThan(exact * 1.01);
+    expect(overdraw(`<path d="M0 50Q50 150 100 50" ${hairline}/>`)).toBeGreaterThan(0);
+  });
+
+  it("charges the curves of one path in proportion to their length, however many cross a row", () => {
+    const hairline = 'fill="none" stroke="#000" stroke-width="0.000001"';
+    // 400 arches across the image and back: a crowded path, whose outline crowds the rows, but
+    // whose curves are stroked again for each tile in proportion to their length alone.
+    const data = `M0 50${"q25 50 50 0q25 -50 50 0".repeat(100)}${"q-25 50 -50 0q-25 -50 -50 0".repeat(100)}`;
+    const polygon = (400 * 2 * Math.hypot(25, 50)) / 100;
+    const exact = (400 * quadraticLength([0, 0], [25, 50], [50, 0])) / 100;
+    const curved = curvedSides(data, polygon);
+    expect(curved).toBeGreaterThanOrEqual(exact);
+    expect(curved).toBeLessThan(exact * 1.01);
+    expect(overdraw(`<path d="${data}" ${hairline}/>`)).toBeLessThan(
+      strokeEdges(polygon) + curvedStrokeEdges(polygon),
     );
   });
 

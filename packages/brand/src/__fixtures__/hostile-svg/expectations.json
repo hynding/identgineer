@@ -1850,6 +1850,24 @@
       }
     ]
   },
+  "review-curve-huge-arcs.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-curve-huge-circles-wide.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-curve-huge-circles.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-curve-huge-dashed-circles.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-curve-huge-ellipses.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
+  "review-curve-huge-rounded-rects.svg": {
+    "outcome": "reject:overdraw-too-large"
+  },
   "review-da-ellipse-scaled.svg": {
     "outcome": "reject:drawing-too-costly"
   },
