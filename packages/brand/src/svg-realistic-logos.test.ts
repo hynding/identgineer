@@ -144,10 +144,100 @@ function inkscapeWordmark(): string {
   );
 }
 
+/**
+ * A spirograph rosette, as a guilloche is drawn: one thin stroked path of `count` quadratics
+ * winding `turns` times round a ring 450 from the centre, each bulging out to `reach`.
+ */
+function rosette(count: number, turns: number, reach: number): string {
+  const at = (radius: number, step: number): string => {
+    const angle = (step * 2 * Math.PI * turns) / count;
+    return `${(500 + radius * Math.cos(angle)).toFixed(1)} ${(500 + radius * Math.sin(angle)).toFixed(1)}`;
+  };
+  let data = "M950 500";
+  for (let step = 1; step <= count; step += 1) data += `Q${at(reach, step - 0.5)} ${at(450, step)}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="512" height="512"><path d="${data}" fill="none" stroke="#000" stroke-width="0.8"/></svg>`;
+}
+
+/** A logo drawn in a view box 1,000 square. */
+function wide(body: string): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="512" height="512">${body}</svg>`;
+}
+
+const fixed = (value: number): string => value.toFixed(2);
+
+/** A sunburst of 360 thin lines from the centre, under 8 dashed rings. */
+function sunburst(): string {
+  const rays = Array.from({ length: 360 }, (_, index) => {
+    const angle = (index * Math.PI) / 180;
+    return `<line x1="500" y1="500" x2="${fixed(500 + 480 * Math.cos(angle))}" y2="${fixed(500 + 480 * Math.sin(angle))}" stroke="#e90" stroke-width="0.8"/>`;
+  });
+  const rings = Array.from(
+    { length: 8 },
+    (_, index) =>
+      `<circle cx="500" cy="500" r="${String(60 + index * 55)}" fill="none" stroke="#930" stroke-width="2" stroke-dasharray="4 4"/>`,
+  );
+  return rays.join("") + rings.join("");
+}
+
+/** A guilloche of 180 thin ellipses, each turned a degree from the last. */
+function guilloche(): string {
+  return Array.from(
+    { length: 180 },
+    (_, index) =>
+      `<ellipse cx="500" cy="500" rx="450" ry="160" transform="rotate(${String(index)} 500 500)" fill="none" stroke="#135" stroke-width="0.4"/>`,
+  ).join("");
+}
+
+/** A handwritten script: one long stroked path of 800 cubics, round capped and joined. */
+function script(): string {
+  let data = "M50 500";
+  for (let index = 0; index < 800; index += 1) {
+    const x = 50 + index * 1.1;
+    data += `C${fixed(x + 10)} ${fixed(400 + 80 * Math.sin(index))} ${fixed(x - 5)} ${fixed(600 - 80 * Math.cos(index * 1.3))} ${fixed(x + 1.1)} 500`;
+  }
+  return `<path d="${data}" fill="none" stroke="#c20" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`;
+}
+
+/** 200 slanted lines hatching a circle they are clipped to, under its outline. */
+function hatchedCircle(): string {
+  const lines = Array.from(
+    { length: 200 },
+    (_, index) =>
+      `<line x1="${String(index * 10 - 1000)}" y1="0" x2="${String(index * 10)}" y2="1000"/>`,
+  );
+  return `<defs><clipPath id="c"><circle cx="500" cy="500" r="400"/></clipPath></defs><g clip-path="url(#c)" stroke="#000" stroke-width="1.5">${lines.join("")}</g><circle cx="500" cy="500" r="400" fill="none" stroke="#000" stroke-width="6"/>`;
+}
+
+/** 60 nested contour lines of a map, each a closed smooth path of 120 quadratics. */
+function contours(): string {
+  return Array.from({ length: 60 }, (_, ring) => {
+    let data = "";
+    for (let index = 0; index <= 120; index += 1) {
+      const angle = (index * 2 * Math.PI) / 120;
+      const radius = 60 + ring * 7 + 20 * Math.sin(5 * angle + ring * 0.3);
+      const point = `${fixed(500 + radius * Math.cos(angle))} ${fixed(500 + radius * Math.sin(angle))}`;
+      data += index === 0 ? `M${point}` : `T${point}`;
+    }
+    return `<path d="${data}z" fill="none" stroke="#753" stroke-width="0.8"/>`;
+  }).join("");
+}
+
+/** One ordinary dashed element added to a logo otherwise solid. */
+const DASHED_PARTS = {
+  "a dashed border":
+    '<rect x="5" y="5" width="990" height="990" fill="none" stroke="#999" stroke-width="2" stroke-dasharray="6 4"/>',
+  "a dashed underline":
+    '<path d="M100 960H900" stroke="#c00" stroke-width="3" stroke-dasharray="8 6"/>',
+  "a dashed ring":
+    '<circle cx="500" cy="500" r="495" fill="none" stroke="#999" stroke-width="2" stroke-dasharray="6 4"/>',
+  "a dotted ring":
+    '<circle cx="500" cy="500" r="495" fill="none" stroke="#999" stroke-width="3" stroke-dasharray="0 6" stroke-linecap="round"/>',
+} as const;
+
 /** Each logo with the most of each budget, in percent, it may use. */
 const REALISTIC: readonly (readonly [string, string, number, number])[] = [
-  ["an emblem of 4,000 cubics, filled and stroked", emblem(40, 6), 21, 5],
-  ["an emblem of 8,000 cubics, filled and stroked", emblem(80, 3), 42, 10],
+  ["an emblem of 4,000 cubics, filled and stroked", emblem(40, 6), 21, 9],
+  ["an emblem of 8,000 cubics, filled and stroked", emblem(80, 3), 42, 17],
   ["traced artwork of 470 KB", traced(470_000), 61, 1],
   [
     "a wordmark of 20 glyphs",
@@ -161,14 +251,92 @@ const REALISTIC: readonly (readonly [string, string, number, number])[] = [
     1,
   ],
   ["10 gradients under 6 clip paths", gradientsUnderClips(), 8, 60],
-  ["300 uses of a 20-cubic symbol", pattern(20), 36, 1],
-  ["300 uses of a 60-cubic symbol", pattern(60), 96, 2],
-  ["dashed rings", dashedRings("1 2"), 2, 1],
-  ["finely dashed rings", dashedRings("0.25 0.5"), 7, 8],
+  ["300 uses of a 20-cubic symbol", pattern(20), 36, 2],
+  ["300 uses of a 60-cubic symbol", pattern(60), 96, 3],
+  ["dashed rings", dashedRings("1 2"), 17, 1],
+  ["finely dashed rings", dashedRings("0.25 0.5"), 64, 9],
   ["a Figma export with 8 alpha masks", figmaMasks(), 4, 60],
   ["a wordmark of 8 outlined letters clipping a gradient", textClips(8, 1), 4, 8],
   ["four such wordmarks in one logo", textClips(8, 4), 13, 31],
   ["an Inkscape wordmark of 20 glyphs converted from text", inkscapeWordmark(), 10, 15],
+  ["a rosette of 1,500 quadratics in 11 turns", rosette(1500, 11, 600), 5, 22],
+  ["a rosette of 2,000 quadratics in 7 turns", rosette(2000, 7, 600), 7, 36],
+  ["a rosette of 2,000 quadratics in 37 turns", rosette(2000, 37, 600), 7, 38],
+  // A dash array costs only the shapes it reaches: one dashed element leaves the rest solid.
+  ["a sunburst of 360 lines under 8 dashed rings", wide(sunburst()), 15, 3],
+  [
+    "a script of 800 cubics with a dashed border",
+    wide(script() + DASHED_PARTS["a dashed border"]),
+    5,
+    11,
+  ],
+  [
+    "a script of 800 cubics with a dashed underline",
+    wide(script() + DASHED_PARTS["a dashed underline"]),
+    5,
+    11,
+  ],
+  [
+    "a script of 800 cubics with a dashed ring",
+    wide(script() + DASHED_PARTS["a dashed ring"]),
+    6,
+    11,
+  ],
+  [
+    "a script of 800 cubics with a dotted ring",
+    wide(script() + DASHED_PARTS["a dotted ring"]),
+    7,
+    11,
+  ],
+  [
+    "a circle hatched by 200 lines with a dashed border",
+    wide(hatchedCircle() + DASHED_PARTS["a dashed border"]),
+    4,
+    4,
+  ],
+  [
+    "a circle hatched by 200 lines with a dashed underline",
+    wide(hatchedCircle() + DASHED_PARTS["a dashed underline"]),
+    4,
+    4,
+  ],
+  [
+    "a circle hatched by 200 lines with a dashed ring",
+    wide(hatchedCircle() + DASHED_PARTS["a dashed ring"]),
+    6,
+    5,
+  ],
+  [
+    "a circle hatched by 200 lines with a dotted ring",
+    wide(hatchedCircle() + DASHED_PARTS["a dotted ring"]),
+    7,
+    5,
+  ],
+  [
+    "a guilloche of 180 ellipses with a dashed border",
+    wide(guilloche() + DASHED_PARTS["a dashed border"]),
+    7,
+    25,
+  ],
+  [
+    "a guilloche of 180 ellipses with a dashed underline",
+    wide(guilloche() + DASHED_PARTS["a dashed underline"]),
+    7,
+    25,
+  ],
+  [
+    "a guilloche of 180 ellipses with a dashed ring",
+    wide(guilloche() + DASHED_PARTS["a dashed ring"]),
+    9,
+    25,
+  ],
+  [
+    "a guilloche of 180 ellipses with a dotted ring",
+    wide(guilloche() + DASHED_PARTS["a dotted ring"]),
+    10,
+    25,
+  ],
+  ["60 contour lines with a dotted ring", wide(contours() + DASHED_PARTS["a dotted ring"]), 26, 7],
 ];
 
 describe("realistic logos", () => {
