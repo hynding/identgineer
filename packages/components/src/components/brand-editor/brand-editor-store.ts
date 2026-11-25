@@ -90,10 +90,11 @@ export interface StoreFailure {
 }
 
 function fieldsOf(value: unknown): DraftField[] {
-  if (!Array.isArray(value)) return [];
   const fields: DraftField[] = [];
   const names: unknown[] = [];
+  // Array.isArray throws on a revoked proxy, so it is inside the try with the spread.
   try {
+    if (!Array.isArray(value)) return [];
     names.push(...(value as unknown[]));
   } catch {
     return [];
