@@ -1,5 +1,5 @@
 import { Component, h, Prop } from "@stencil/core";
-import { oneOf } from "../../utils/choice";
+import { oneOf } from "../../utils/controls-copies";
 import { PROGRESS_SIZES, type ProgressSize } from "./progress-options";
 import { progressRange } from "./progress-range";
 

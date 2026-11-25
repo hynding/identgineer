@@ -1,4 +1,6 @@
-import { safeUrl } from "./safe-url";
+// Only the avatar, which is in the controls bundle, loads images: its copy of safeUrl keeps that
+// bundle from importing a chunk of its own (see controls-copies.ts).
+import { safeUrl } from "./controls-copies";
 
 const NOT_FOR_IMAGES: ReadonlySet<string> = new Set(["mailto", "tel"]);
 const SCHEME = /^([^:/?#]*):/;

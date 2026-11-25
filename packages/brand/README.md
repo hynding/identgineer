@@ -276,6 +276,16 @@ A browser bundle that only draws logos imports `@identgineer/brand/logo`, which 
 the data URL and the size the logo draws at, the root's `width` and `height` in pixels (not the view
 box). It is what `idg-brand-logo` uses, so a logo change costs one check.
 
+Two more entries are made for a browser bundle. `@identgineer/brand/presets` has the tables the
+guide shows (`CORNERS`, `TONES`, `CORNER_RADII`, `RADIUS_NAMES`, `FONT_PAIRINGS`, `TYPOGRAPHY_IDS`).
+`@identgineer/brand/emit` has `emitBrandThemeCss` and `emitBrandThemeTokens`: the generator, the
+sanitiser and the tokens emitter read no disk, the token sources being JSON the bundler includes, so
+a page can emit a theme itself. Tests walk each entry's import graph and fail on any Node built-in.
+`emitBrandTheme(theme)` gives `{ css, tokens, id }` from one regeneration of the theme, so that
+nested getters or `toJSON` methods that answer differently each time cannot give a stylesheet of
+one theme and tokens of another; it refuses an altered theme as the two emitters do.
+`idg-brand-export` uses it.
+
 ### How it works
 
 Nothing from the input is passed through. A strict reader written for this package (no DOM, no
@@ -1251,10 +1261,11 @@ The components package does this for you: `idg-brand-logo` in
 [`@identgineer/components`](../components/README.md#idg-brand-logo) checks the text with
 `isSanitisedSvgLogo`, sets the `src` from `logoDataUrl`, gives the image the frame's size before it
 decodes, and shows the name in its place for anything that is not the sanitiser's output. It
-imports `@identgineer/brand/logo`, an entry of those two functions alone: the package index also
-loads the theme generator and its tokens pipeline, which a browser bundle cannot take. Its colour
-sibling, `idg-brand-swatches`, takes what `generateBrandTheme` returns and lists each role, value
-and contrast pair.
+imports `@identgineer/brand/logo`, an entry of those functions alone, so a bundle that only draws
+logos does not take the theme generator. Its colour sibling, `idg-brand-swatches`, takes what
+`generateBrandTheme` returns and lists each role, value and contrast pair; `idg-brand-guidelines`
+shows a whole kit and theme as a guide, and `idg-brand-export` shows `emitBrandThemeCss` and
+`emitBrandThemeTokens` output to copy or download.
 
 An SVG drawn as an image is the second layer: browsers run no script in it, fire no events, follow
 no links and load nothing external, whatever it holds. Sanitising is still required, because the

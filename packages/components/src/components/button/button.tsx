@@ -1,7 +1,5 @@
 import { AttachInternals, Component, h, Prop, type FunctionalComponent } from "@stencil/core";
-import { oneOf } from "../../utils/choice";
-import { linkRel } from "../../utils/link-rel";
-import { safeUrl } from "../../utils/safe-url";
+import { linkRel, oneOf, safeUrl } from "../../utils/controls-copies";
 import {
   BUTTON_SIZES,
   BUTTON_TYPES,

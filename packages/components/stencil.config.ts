@@ -1,5 +1,6 @@
 import type { Config } from "@stencil/core";
 import ts from "typescript";
+import { BUNDLES } from "./stencil-bundles";
 
 const TRANSPILED_SOURCES = [
   "/packages/variations/src/",
@@ -40,6 +41,8 @@ export const config: Config = {
   // before hydration, which a strict CSP and Trusted Types both refuse.
   invisiblePrehydration: false,
   rollupPlugins: { before: [transpileVariations] },
+  // Which components share a bundle is decided in `stencil-bundles.ts`, where its reasons are.
+  bundles: BUNDLES.map(({ components }) => ({ components: [...components] })),
   outputTargets: [
     { type: "dist", esmLoaderPath: "../loader" },
     { type: "dist-custom-elements" },

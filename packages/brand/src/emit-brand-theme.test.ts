@@ -11,7 +11,7 @@ import { brandRadiusVariableName, TOKEN_NAMES } from "@identgineer/tokens";
 import { describe, expect, it } from "vitest";
 import { COLOR_ROLES } from "./brand-theme-document.ts";
 import { RADIUS_NAMES } from "./corner-radii.ts";
-import { emitBrandThemeCss, emitBrandThemeTokens } from "./emit-brand-theme.ts";
+import { emitBrandTheme, emitBrandThemeCss, emitBrandThemeTokens } from "./emit-brand-theme.ts";
 import { readEmittedCss } from "./emitted-css-grammar.ts";
 import { generateBrandTheme, type BrandTheme } from "./generate-brand-theme.ts";
 import { parseBrandKit } from "./parse-brand-kit.ts";
@@ -200,5 +200,44 @@ describe("emitBrandThemeTokens", () => {
   it("escapes the characters that matter when JSON is embedded in HTML", () => {
     expect(json).not.toMatch(/[<>&\u2028\u2029]/);
     expect(json).toContain("Ben \\u0026 Jerry's");
+  });
+});
+
+describe("emitBrandTheme", () => {
+  const alpha = themeFromFixture("acme");
+  const beta = themeFromFixture("harbour-lights");
+
+  it("gives what the two emitters give, and the id", () => {
+    expect(emitBrandTheme(alpha)).toEqual({
+      css: emitBrandThemeCss(alpha),
+      tokens: emitBrandThemeTokens(alpha),
+      id: alpha.id,
+    });
+  });
+
+  it("refuses a theme altered after it was generated, as the emitters do", () => {
+    const altered = { ...alpha, document: { ...alpha.document, $description: "changed" } };
+    expect(() => emitBrandTheme(altered)).toThrow(/altered after generation/);
+  });
+
+  // The emitters read the kit and the document of the theme they are given, so a theme whose
+  // nested values answer differently each time they are read could give a stylesheet of one theme
+  // and tokens of another. One regeneration serves both texts.
+  it("emits both texts of the one theme it regenerated, whatever nested getters say afterwards", () => {
+    let colourReads = 0;
+    let documentReads = 0;
+    const kit = { ...alpha.kit };
+    Object.defineProperty(kit, "colors", {
+      enumerable: true,
+      get: () => (colourReads++ < 1 ? alpha.kit : beta.kit).colors,
+    });
+    const document = {
+      toJSON: () => (documentReads++ < 1 ? alpha.document : beta.document),
+    };
+    const theme = { ...alpha, kit, document } as unknown as BrandTheme;
+    const emitted = emitBrandTheme(theme);
+    expect(emitted.css).toBe(emitBrandThemeCss(alpha));
+    expect(emitted.tokens).toBe(emitBrandThemeTokens(alpha));
+    expect(emitted.id).toBe(alpha.id);
   });
 });

@@ -1,5 +1,5 @@
 import { Component, Element, Event, h, Prop, State, type EventEmitter } from "@stencil/core";
-import { oneOf } from "../../utils/choice";
+import { oneOf } from "../../utils/controls-copies";
 import { ALERT_ICONS, ALERT_ROLES, ALERT_VARIANTS, type AlertVariant } from "./alert-options";
 
 /**

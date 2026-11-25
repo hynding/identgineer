@@ -1,5 +1,5 @@
 import { Component, h, Prop } from "@stencil/core";
-import { oneOf } from "../../utils/choice";
+import { oneOf } from "../../utils/controls-copies";
 import { BADGE_SIZES, BADGE_VARIANTS, type BadgeSize, type BadgeVariant } from "./badge-options";
 
 /**

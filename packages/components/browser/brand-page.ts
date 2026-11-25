@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
 import {
+  emitBrandThemeCss,
+  emitBrandThemeTokens,
   generateBrandTheme,
   parseBrandKit,
   sanitiseSvgLogo,
@@ -12,6 +14,15 @@ import { expect } from "./fixtures";
 import { BROWSER_PORT } from "./port";
 
 export const BRAND_PAGE = "/fixtures/brand.html";
+/** The export element's page: it draws no image, so it is served under the strict policy and no looser. */
+export const EXPORT_PAGE = "/fixtures/brand-export.html";
+/** The brand elements the fixture holds, each of which must be hydrated before a test reads it. */
+export const BRAND_TAGS = [
+  "idg-brand-logo",
+  "idg-brand-swatches",
+  "idg-brand-guidelines",
+  "idg-brand-export",
+] as const;
 const BRAND_DATA = "/fixtures/brand-data.json";
 const ORIGIN = `http://127.0.0.1:${String(BROWSER_PORT)}`;
 const FIXTURES = new URL("../../brand/src/__fixtures__/", import.meta.url);
@@ -48,7 +59,16 @@ const PALE = kitOf({
   tone: "calm",
 });
 
+export const HARBOUR_KIT: BrandKit = HARBOUR;
 export const HARBOUR_THEME: BrandTheme = generateBrandTheme(HARBOUR);
+/** A kit with no logo and no mark, so the guide shows what stands in for them. */
+export const ACME_KIT: BrandKit = kitOf(
+  JSON.parse(readFileSync(new URL("acme.kit.json", FIXTURES), "utf8")),
+);
+export const ACME_THEME: BrandTheme = generateBrandTheme(ACME_KIT);
+/** What the brand package emits for the harbour theme: the export must show exactly this. */
+export const HARBOUR_CSS: string = emitBrandThemeCss(HARBOUR_THEME);
+export const HARBOUR_TOKENS: string = emitBrandThemeTokens(HARBOUR_THEME);
 
 if (HARBOUR.logo === undefined || HARBOUR.mark === undefined) {
   throw new Error("the fixture kit has no logo and mark");
@@ -68,10 +88,135 @@ const HOSTILE_THEME = {
   dark: HARBOUR_THEME.document.dark,
 };
 
+/**
+ * Markup that would run or load something if any component put it in the page as markup: an image
+ * with a handler, a script and a style that fetches. Every place it is given must show it as text.
+ */
+export const CANARY =
+  '<img src=x onerror="window.__pwned = 1"><script>window.__pwned = 1</script><style>@import url(https://example.com/canary.css)</style>';
+
+/** A kit in which every field is something a hostile writer chose. */
+const HOSTILE_KIT = {
+  id: "hostile",
+  name: `Hostile ${CANARY}`,
+  tagline: `Tagline ${CANARY}`,
+  logo: HOSTILE_LOGO,
+  mark: HOSTILE_LOGO,
+  colors: { primary: [1, 2, 3000], secondary: "red", neutralTint: [27, 42, 74] },
+  typography: 'x"; background: url(https://example.com/font.woff)',
+  corners: "round; background: url(https://example.com/corners.png)",
+  tone: "vivid; background: url(https://example.com/tone.png)",
+};
+
+/** A theme in which the colours, gradient, radii, notes and adjustments are all hostile or malformed. */
+const HOSTILE_GUIDE_THEME = {
+  document: {
+    light: {
+      color: {
+        ...HARBOUR_THEME.document.light.color,
+        bg: { $value: "red; background: url(https://example.com/bg.png)" },
+      },
+      gradient: {
+        brand: {
+          $value: [
+            { color: "#f4c430; background: url(https://example.com/g.png)", position: 0 },
+            { color: "#000000", position: 1 },
+          ],
+        },
+      },
+    },
+    dark: {
+      color: HARBOUR_THEME.document.dark.color,
+      gradient: HARBOUR_THEME.document.dark.gradient,
+    },
+  },
+  radius: {
+    sm: "1rem; background: url(https://example.com/radius.png)",
+    md: "calc(100vw)",
+    lg: "1e9px",
+    pill: "9999px",
+  },
+  notes: [
+    {
+      scheme: "light",
+      kind: "status-near-accent",
+      token: `color.x${CANARY}`,
+      against: "color.accent",
+      distance: 0.05,
+    },
+    {
+      scheme: "dark",
+      kind: "accent-blends-with-page",
+      token: "color.accent",
+      against: "color.bg",
+      contrast: Number.NaN,
+    },
+    {
+      scheme: "dark",
+      kind: "status-near-accent",
+      token: "color.warning",
+      against: "color.accent",
+      distance: 0.04,
+    },
+  ],
+  adjustments: [
+    {
+      scheme: "light",
+      token: "color.link",
+      origin: "primary",
+      requested: "#f4c430",
+      used: `#7e6200${CANARY}`,
+      against: "color.accent-subtle",
+      minimum: 4.5,
+      contrastBefore: 1.28,
+      contrastAfter: 4.5039,
+    },
+    {
+      scheme: "light",
+      token: "color.link",
+      origin: "primary",
+      requested: "#f4c430",
+      used: "#7e6200",
+      against: "color.accent-subtle",
+      minimum: 4.5,
+      contrastBefore: 1.28,
+      contrastAfter: 4.5039,
+    },
+  ],
+};
+
+/** The texts and ids the export is given by hand, which a page may take from anywhere. */
+const HOSTILE_EXPORT = {
+  css: `${CANARY}\n</pre></code>\n[data-theme="x"] { color: red }`,
+  tokens: `{"$description": "${CANARY}"}`,
+  themeId: `"><img src=x onerror="window.__pwned = 1">`,
+  name: `../../etc/passwd${CANARY}`,
+};
+
 const DATA = {
   harbour: { logo: HARBOUR_LOGO, mark: HARBOUR_MARK },
   hostile: { logo: HOSTILE_LOGO },
-  themes: { harbour: HARBOUR_THEME, pale: generateBrandTheme(PALE), hostile: HOSTILE_THEME },
+  themes: {
+    harbour: HARBOUR_THEME,
+    acme: ACME_THEME,
+    pale: generateBrandTheme(PALE),
+    hostile: HOSTILE_THEME,
+    "hostile-guide": HOSTILE_GUIDE_THEME,
+  },
+  kits: { harbour: HARBOUR_KIT, acme: ACME_KIT, hostile: HOSTILE_KIT },
+  alteredTheme: {
+    ...HARBOUR_THEME,
+    document: { ...HARBOUR_THEME.document, $description: "changed after it was generated" },
+  },
+  exports: {
+    harbour: {
+      css: HARBOUR_CSS,
+      tokens: HARBOUR_TOKENS,
+      themeId: HARBOUR_KIT.id,
+      name: HARBOUR_KIT.name,
+    },
+    hostile: HOSTILE_EXPORT,
+  },
 };
 
 export interface Watch {
@@ -84,6 +229,13 @@ export interface Watch {
 export interface OpenOptions {
   /** `strict` is the policy every browser test runs under; `logo` also allows `img-src data:`. */
   readonly policy?: "strict" | "logo";
+  /** The fixture to open: the brand page by default. */
+  readonly page?: typeof BRAND_PAGE | typeof EXPORT_PAGE;
+}
+
+/** Opens the export fixture under the strict policy, with nothing allowed beyond it. */
+export function openBrandExport(page: Page): Promise<Watch> {
+  return openBrand(page, { page: EXPORT_PAGE, policy: "strict" });
 }
 
 /**
@@ -107,7 +259,8 @@ export async function openBrand(page: Page, options: OpenOptions = {}): Promise<
     (url) => url.origin !== ORIGIN,
     (route) => route.abort(),
   );
-  await page.route(`**${BRAND_PAGE}`, async (route) => {
+  const target = options.page ?? BRAND_PAGE;
+  await page.route(`**${target}`, async (route) => {
     const response = await route.fetch();
     const policy =
       options.policy === "strict" ? CONTENT_SECURITY_POLICY : LOGO_CONTENT_SECURITY_POLICY;
@@ -119,10 +272,10 @@ export async function openBrand(page: Page, options: OpenOptions = {}): Promise<
   await page.route(`**${BRAND_DATA}`, (route) =>
     route.fulfill({ contentType: "application/json", body: JSON.stringify(DATA) }),
   );
-  await page.goto(BRAND_PAGE);
+  await page.goto(target);
   await expect(page.locator("html[data-brand-ready]")).toHaveCount(1);
   await expect(
-    page.locator("idg-brand-logo:not(.hydrated), idg-brand-swatches:not(.hydrated)"),
+    page.locator(BRAND_TAGS.map((tag) => `${tag}:not(.hydrated)`).join(", ")),
   ).toHaveCount(0);
   await page.evaluate(() => document.fonts.ready);
   return {

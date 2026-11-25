@@ -24,7 +24,8 @@ export type {
 } from "./cms-brand-kit.ts";
 export { CORNER_RADII } from "./corner-radii.ts";
 export type { BrandRadius, RadiusName } from "./corner-radii.ts";
-export { emitBrandThemeCss, emitBrandThemeTokens } from "./emit-brand-theme.ts";
+export { emitBrandTheme, emitBrandThemeCss, emitBrandThemeTokens } from "./emit-brand-theme.ts";
+export type { EmittedBrandTheme } from "./emit-brand-theme.ts";
 export { FONT_PAIRINGS, TYPOGRAPHY_IDS } from "./font-pairings.ts";
 export type { FontPairing, TypographyId } from "./font-pairings.ts";
 export { isSanitisedSvgLogo } from "./is-sanitised-svg-logo.ts";

@@ -54,7 +54,10 @@ function radiusPreferences(theme: BrandTheme, source: string): ResolvedToken[] {
  * follow brand corners resolve their radii through it, and designs that decline never read it.
  */
 export function emitBrandThemeCss(theme: BrandTheme): string {
-  const trusted = regenerate(theme);
+  return cssOf(regenerate(theme));
+}
+
+function cssOf(trusted: BrandTheme): string {
   const file = `brand/${trusted.id}.json`;
   const parsed = parseTheme({ id: trusted.id, file, json: trusted.document });
   const themeBody = emitThemeCss({
@@ -78,10 +81,33 @@ export function emitBrandThemeCss(theme: BrandTheme): string {
 
 /** The theme as a DTCG theme source, formatted, with HTML-significant characters escaped. */
 export function emitBrandThemeTokens(theme: BrandTheme): string {
-  const json = JSON.stringify(regenerate(theme).document, null, 2);
+  return tokensOf(regenerate(theme));
+}
+
+function tokensOf(trusted: BrandTheme): string {
+  const json = JSON.stringify(trusted.document, null, 2);
   const escaped = json.replace(
     HTML_UNSAFE_JSON,
     (character) => `\\u${(character.codePointAt(0) ?? 0).toString(16).padStart(4, "0")}`,
   );
   return `${escaped}\n`;
+}
+
+/** What `emitBrandTheme` returns: both texts, and the id they are both scoped to. */
+export interface EmittedBrandTheme {
+  readonly css: string;
+  readonly tokens: string;
+  readonly id: string;
+}
+
+/**
+ * Both texts of a theme from one regeneration of it, with the id they are scoped to. Calling the
+ * two emitters in turn reads the theme twice, and a theme whose nested values answer differently
+ * each time (a getter on its kit, a `toJSON` on its document) could give a stylesheet of one theme
+ * and tokens of another; here the theme is regenerated and checked once, and both texts are written
+ * from that regenerated theme, which holds nothing of the one given.
+ */
+export function emitBrandTheme(theme: BrandTheme): EmittedBrandTheme {
+  const trusted = regenerate(theme);
+  return { css: cssOf(trusted), tokens: tokensOf(trusted), id: trusted.id };
 }

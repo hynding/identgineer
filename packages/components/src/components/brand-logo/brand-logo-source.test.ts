@@ -203,3 +203,18 @@ describe("integerFrame", () => {
     }
   });
 });
+
+describe("brandLogoSource asked twice for one logo", () => {
+  it("gives the same answer, and for a text that is not a logo as well", () => {
+    expect(brandLogoSource(LOGO)).toEqual(brandLogoSource(LOGO));
+    expect(brandLogoSource("<svg/>")).toBeUndefined();
+    expect(brandLogoSource("<svg/>")).toBeUndefined();
+  });
+
+  it("does not answer for a logo from what it holds of another, after a different text came between", () => {
+    const first = brandLogoSource(LOGO);
+    const second = brandLogoSource(MARK);
+    expect(second).not.toEqual(first);
+    expect(brandLogoSource(LOGO)).toEqual(first);
+  });
+});

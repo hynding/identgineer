@@ -1,0 +1,330 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.guidelines {
+  --_gap: calc(var(--idg-layout-gap) * var(--idg-density-gap-scale));
+
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--_gap) * 1.5);
+  min-inline-size: 0;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--idg-space-2xs);
+  min-inline-size: 0;
+}
+
+/* The name and the section headings are the page's own display face and ornaments, so a guide
+   reads as part of the page it sits in. */
+.name,
+.section-title {
+  margin: 0;
+  font-family: var(--idg-font-family-display);
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+  text-decoration: var(--idg-ornament-heading-decoration);
+  text-decoration-thickness: 2px;
+  text-transform: var(--idg-ornament-heading-transform);
+  text-underline-offset: 0.2em;
+  overflow-wrap: anywhere;
+}
+
+.name {
+  font-size: calc(var(--idg-font-size-step-4) * var(--idg-ux-type-scale));
+}
+
+.section-title {
+  font-size: calc(var(--idg-font-size-step-2) * var(--idg-ux-type-scale));
+}
+
+.tagline {
+  margin: 0;
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+  overflow-wrap: anywhere;
+}
+
+/* A section is a surface of the page's own design: its fill, border, corners and elevation are the
+   design's, so a brutalist page draws it hard-edged and a glass one translucent. */
+.section {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--_gap);
+  min-inline-size: 0;
+  padding: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  border-width: var(--idg-surface-border-width);
+  border-style: var(--idg-surface-border-style);
+  border-color: var(--idg-surface-border-color);
+  border-radius: var(--idg-shape-radius-lg);
+  background: var(--idg-surface-background);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: var(--idg-elevation-sm);
+}
+
+/* The swatches are surfaces of their own, one for each scheme: a surface around them would take
+   the width a doubled text size needs for a chip beside its value, so they sit on the page. */
+.section[data-section="colours"] {
+  padding: 0;
+  border-width: 0;
+  background: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+p {
+  margin: 0;
+  line-height: var(--idg-font-body-line-height);
+  overflow-wrap: anywhere;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+code {
+  font-family: var(--idg-font-family-mono);
+  overflow-wrap: anywhere;
+}
+
+.note,
+.caption,
+.scheme-name,
+.face-title,
+.subhead,
+.corner-style {
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+}
+
+.note,
+.caption {
+  color: var(--idg-color-text-muted);
+}
+
+.scheme-name,
+.face-title,
+.subhead,
+.term {
+  font-weight: var(--idg-font-weight-semibold);
+}
+
+/* The logo is judged on the brand's own page colours, one tile for each: the tile takes the brand's
+   background and text, and the accent the monogram is drawn in. A tile has an edge in the strong
+   border, which the page keeps at 3:1 against its backgrounds, so a tile as light as the page, or
+   as dark as the dark scheme, is still seen as a shape. */
+.exhibits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--idg-size-s)), 1fr));
+  gap: var(--_gap);
+  min-inline-size: 0;
+}
+
+.exhibit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--idg-space-2xs);
+  min-inline-size: 0;
+}
+
+.tile {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 0;
+  min-block-size: 8rem;
+  padding: var(--idg-space-2xs);
+  border: 2px solid var(--idg-color-border-strong);
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--idg-color-bg-subtle);
+  color: var(--idg-color-text);
+}
+
+/* The page's own text and accent are replaced inside the tile by the brand's, which sit on the
+   brand's page colour at the contrast the generator holds them to. */
+.tile[data-scheme] {
+  --idg-color-text: var(--_text);
+  --idg-color-accent: var(--_accent);
+  --idg-color-on-accent: var(--_on-accent);
+
+  background: var(--_backing);
+  color: var(--_text);
+}
+
+.source,
+.stops,
+.metrics,
+.notes-list,
+.adjustments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--idg-space-2xs);
+}
+
+.source {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--idg-layout-grid-min)), 1fr));
+}
+
+.source-colour {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--idg-space-xs);
+  min-inline-size: 0;
+}
+
+.chip {
+  flex: none;
+  box-sizing: border-box;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border: 2px solid var(--idg-color-border-strong);
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--_chip);
+  box-shadow: var(--idg-elevation-sm);
+}
+
+.details {
+  display: flex;
+  flex: 1 1 6rem;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.role {
+  font-weight: var(--idg-font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.value {
+  color: var(--idg-color-text-muted);
+}
+
+.gradients {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--idg-size-s)), 1fr));
+  gap: var(--_gap);
+  min-inline-size: 0;
+}
+
+.gradient-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--idg-space-2xs);
+  min-inline-size: 0;
+}
+
+.gradient {
+  box-sizing: border-box;
+  block-size: 3rem;
+  border: 2px solid var(--idg-color-border-strong);
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--_gradient);
+}
+
+/* The specimen is set in the pairing's fonts, from the stack the brand package names, and where the
+   page has not loaded one the next in the stack is used. Nothing is fetched. */
+.specimen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--idg-size-s)), 1fr));
+  gap: var(--_gap);
+  min-inline-size: 0;
+}
+
+.face {
+  display: flex;
+  flex-direction: column;
+  gap: var(--idg-space-2xs);
+  min-inline-size: 0;
+}
+
+.sample-heading {
+  font-family: var(--_heading-family, var(--idg-font-family-display));
+  font-size: calc(var(--idg-font-size-step-3) * var(--idg-ux-type-scale));
+  font-weight: var(--_heading-weight, var(--idg-font-display-weight));
+  letter-spacing: var(--_heading-spacing, var(--idg-font-display-letter-spacing));
+  line-height: var(--_heading-line, var(--idg-font-display-line-height));
+}
+
+.sample-body {
+  font-family: var(--_body-family, var(--idg-font-family-body));
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  letter-spacing: var(--_body-spacing, var(--idg-font-body-letter-spacing));
+  line-height: var(--_body-line, var(--idg-font-body-line-height));
+}
+
+.stack,
+.metrics {
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+}
+
+.corners {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--idg-size-2xs)), 1fr));
+  gap: var(--_gap);
+}
+
+.corner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--idg-space-2xs);
+  min-inline-size: 0;
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  overflow-wrap: anywhere;
+}
+
+.corner-shape {
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: 6rem;
+  block-size: 3.5rem;
+  border: 2px solid var(--idg-color-border-strong);
+  border-radius: var(--_radius);
+  background: var(--idg-color-bg-subtle);
+}
+
+.notes,
+.notes-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--idg-space-xs);
+  min-inline-size: 0;
+}
+
+.notes-list,
+.adjustments {
+  padding-inline-start: var(--idg-space-m);
+  list-style: disc;
+}
+
+.empty {
+  color: var(--idg-color-text-muted);
+}
+
+@media (forced-colors: active) {
+  .chip,
+  .gradient,
+  .tile,
+  .corner-shape {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    box-shadow: none;
+  }
+}

@@ -24,6 +24,7 @@ describe("the public API", () => {
         "TONES",
         "TYPOGRAPHY_IDS",
         "createBrandKitStore",
+        "emitBrandTheme",
         "emitBrandThemeCss",
         "emitBrandThemeTokens",
         "generateBrandTheme",
