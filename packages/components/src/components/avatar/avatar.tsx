@@ -1,6 +1,5 @@
 import { Component, h, Prop, State, Watch } from "@stencil/core";
-import { oneOf } from "../../utils/choice";
-import { initials } from "../../utils/initials";
+import { initials, oneOf } from "../../utils/controls-copies";
 import { nameTone } from "../../utils/name-tone";
 import { safeImageUrl } from "../../utils/safe-image-url";
 import {

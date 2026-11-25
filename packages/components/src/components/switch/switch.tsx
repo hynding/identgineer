@@ -10,7 +10,7 @@ import {
   type EventEmitter,
 } from "@stencil/core";
 import type { CheckedDetail } from "../../utils/event-details";
-import { validityFlags } from "../../utils/validity";
+import { validityFlags } from "../../utils/controls-copies";
 
 /**
  * @slot - The label. It also names the switch.

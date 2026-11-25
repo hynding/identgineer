@@ -1,6 +1,5 @@
 import { Component, h, Prop } from "@stencil/core";
-import { linkRel } from "../../utils/link-rel";
-import { safeUrl } from "../../utils/safe-url";
+import { linkRel, safeUrl } from "../../utils/controls-copies";
 
 /**
  * An inline text link. It takes the same hardening as the button's link mode: the url goes

@@ -28,6 +28,25 @@ export function integerFrame(width: number, height: number): { width: number; he
   };
 }
 
+// A guide draws the logo and the mark on several tiles and asks about each more than once, and a
+// large logo takes the sanitiser half a second to read. The answers for the last four texts are
+// kept: a guide asks about its logo and mark when its kit is set, and its tiles ask about the same
+// two when they render, which can be after a second guide has asked about its own pair. Four is
+// two guides' pairs, so each distinct text is read once however many elements ask, in a page of up
+// to two guides. Only the text and its answer are held, and a text is at most the sanitiser's limit
+// (512 KB) and its url at most three times that, so what is held is at most about 8 MB.
+const REMEMBERED = 4;
+// The sanitiser takes no more than this many bytes, so a longer text is refused and not kept.
+const MAX_REMEMBERED_LENGTH = 512 * 1024;
+const remembered: { readonly logo: string; readonly source: BrandLogoSource | undefined }[] = [];
+
+function read(logo: unknown): BrandLogoSource | undefined {
+  const image = logoImage(logo);
+  return image === undefined
+    ? undefined
+    : { url: image.url, ...integerFrame(image.width, image.height) };
+}
+
 /**
  * The image source for a brand's logo, or `undefined` when the text is anything but the logo
  * sanitiser's own output. That check is the whole defence: the text is read again by the sanitiser
@@ -36,8 +55,11 @@ export function integerFrame(width: number, height: number): { width: number; he
  * which is the image's natural size, and not the view box, which may be another shape.
  */
 export function brandLogoSource(logo: unknown): BrandLogoSource | undefined {
-  const image = logoImage(logo);
-  return image === undefined
-    ? undefined
-    : { url: image.url, ...integerFrame(image.width, image.height) };
+  if (typeof logo !== "string" || logo.length > MAX_REMEMBERED_LENGTH) return read(logo);
+  const index = remembered.findIndex((entry) => entry.logo === logo);
+  const [found] = index === -1 ? [] : remembered.splice(index, 1);
+  const entry = found ?? { logo, source: read(logo) };
+  remembered.unshift(entry);
+  remembered.length = Math.min(remembered.length, REMEMBERED);
+  return entry.source;
 }

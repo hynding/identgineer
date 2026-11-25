@@ -12,6 +12,11 @@ export type SwatchScheme = (typeof SWATCH_SCHEMES)[number];
 /** The only colour format the brand package writes: six lower case hex digits. */
 const OWN_COLOUR = /^#[0-9a-f]{6}$/;
 
+/** Whether a value is a colour in the package's own format, which is the only kind any component draws. */
+export function isOwnColour(value: unknown): value is string {
+  return typeof value === "string" && OWN_COLOUR.test(value);
+}
+
 /** A role's colour as a value of the brand package's theme document, or nothing. */
 function colourOf(colours: unknown, role: string): string | undefined {
   if (typeof colours !== "object" || colours === null || !Object.hasOwn(colours, role)) {
@@ -22,7 +27,7 @@ function colourOf(colours: unknown, role: string): string | undefined {
     return undefined;
   }
   const value = (token as { $value?: unknown }).$value;
-  return typeof value === "string" && OWN_COLOUR.test(value) ? value : undefined;
+  return isOwnColour(value) ? value : undefined;
 }
 
 function schemeColours(palette: unknown, scheme: SwatchScheme): ReadonlyMap<string, string> {

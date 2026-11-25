@@ -1,6 +1,8 @@
 /* The demo stylesheet lays sections out as wrapping rows; the swatches are blocks that take the
    whole row, as they would in the page of a brand guide. */
-idg-brand-swatches {
+idg-brand-swatches,
+idg-brand-guidelines,
+idg-brand-export {
   flex: 1 1 100%;
   min-inline-size: 0;
 }
