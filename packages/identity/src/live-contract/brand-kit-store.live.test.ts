@@ -128,6 +128,22 @@ const raw = async (
   return { status: response.status, text: await response.text() };
 };
 
+/** The `fields` the store asks a list for: every field but the logo and mark. */
+const SUMMARY_QUERY = [
+  "brandId",
+  "name",
+  "tagline",
+  "primaryColor",
+  "secondaryColor",
+  "neutralTint",
+  "typography",
+  "corners",
+  "tone",
+  "isPublic",
+]
+  .map((field, index) => `fields[${String(index)}]=${field}`)
+  .join("&");
+
 afterEach(disposeTabs);
 
 describe.skipIf(liveBackend === undefined)(
@@ -219,6 +235,26 @@ describe.skipIf(liveBackend === undefined)(
       expect((await raw("DELETE", `/api/brand-kits/${documentId}`)).status).toBe(403);
       expect((await raw("POST", "/api/brand-kits", { body: { data: {} } })).status).toBe(403);
       expect(recordOf(await owner.store.get(documentId)).kit).toEqual(kit);
+    });
+
+    it("answers a list with the fields asked for, so no logo crosses the wire", async () => {
+      const owner = await signedInUser("kit-fields");
+      await owner.store.create(kitOf({ logo, mark: logo }), { isPublic: true });
+      const fields = SUMMARY_QUERY;
+      for (const jwt of [undefined, owner.jwt]) {
+        const answer = await raw("GET", `/api/brand-kits?${fields}`, {
+          ...(jwt === undefined ? {} : { jwt }),
+        });
+        expect(answer.status).toBe(200);
+        expect(answer.text).toContain('"brandId"');
+        expect(answer.text).not.toContain('"logo"');
+        expect(answer.text).not.toContain('"mark"');
+      }
+      const { results } = await owner.store.list();
+      expect(results[0]).toMatchObject({ ok: true, record: { summary: { id: "harbour-lights" } } });
+      expect(Object.keys(results[0]?.ok === true ? results[0].record.summary : {})).not.toContain(
+        "logo",
+      );
     });
 
     it("keeps a private kit out of every public read", async () => {
