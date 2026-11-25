@@ -165,6 +165,8 @@ function message(labels: BrandEditorLabels, prefix: string, code: string): strin
  * @part form - The form.
  * @part error - The summary of a failed save, or of the fields to change (`role="alert"`).
  * @part saved - The confirmation of a save (`role="status"`).
+ * @part stopped - The note that a save stopped without saving, an image being removed while it
+ *   waited (said through the polite status).
  * @part fieldset - A group of fields: the colours, the presets, the logo and mark.
  * @part image - The upload of the logo or the mark.
  * @part removals - What the sanitiser removed from an upload.
@@ -224,8 +226,15 @@ export class IdgBrandEditor {
   @State() private shown?: Shown;
   @State() private errors: Messages = {};
   @State() private summary?: Summary;
-  /** The confirmation of the last save, until the draft changes. */
-  @State() private saved?: { readonly key: number; readonly text: string };
+  /**
+   * What became of the last save, until the draft changes or another save starts: it was saved,
+   * or it stopped without saving because an image was removed while it waited.
+   */
+  @State() private outcome?: {
+    readonly key: number;
+    readonly text: string;
+    readonly saved: boolean;
+  };
   @State() private pending = false;
   @State() private reading: Readonly<Record<ImageField, boolean>> = { logo: false, mark: false };
   @State() private removals: Partial<Record<ImageField, Removals>> = {};
@@ -283,7 +292,7 @@ export class IdgBrandEditor {
     this.createdUnreported = undefined;
     this.errors = {};
     this.summary = undefined;
-    this.saved = undefined;
+    this.outcome = undefined;
     this.pending = false;
     this.reading = { logo: false, mark: false };
     this.removals = {};
@@ -397,7 +406,7 @@ export class IdgBrandEditor {
   /** Every change to the draft goes through here: what was said about the last save is then past. */
   private change(draft: BrandDraft): void {
     this.draft = draft;
-    this.saved = undefined;
+    this.outcome = undefined;
   }
 
   private edit(field: Exclude<DraftField, ImageField>, value: string): void {
@@ -486,14 +495,15 @@ export class IdgBrandEditor {
    * Waits, busy, for the reads of uploads under way, so a save sends the file just chosen and not
    * the one before it, and the form as it stands when the wait ends. The latest thing that
    * happened to each image during the wait decides: a refusal stops the save and is the field to
-   * change; else a removal stops it quietly, as a change of mind; else it goes on. A replaced kit
+   * change; else a removal stops it without an error, as a change of mind, saying only that it did
+   * not save; else it goes on. A replaced kit
    * or the element leaving the page stops it too.
    */
   private async waitForReads(labels: BrandEditorLabels): Promise<boolean> {
     const attempt = this.attempts.start();
     this.pending = true;
     this.summary = undefined;
-    this.saved = undefined;
+    this.outcome = undefined;
     const waiting: Waiting = { latest: {}, dropped: false };
     this.waiting = waiting;
     try {
@@ -512,7 +522,12 @@ export class IdgBrandEditor {
       this.focusField = refused;
       return false;
     }
-    return !IMAGE_FIELDS.some((field) => waiting.latest[field] === "removed");
+    if (IMAGE_FIELDS.some((field) => waiting.latest[field] === "removed")) {
+      this.outcome = { key: (this.keys += 1), text: labels.saveStopped, saved: false };
+      this.say(labels.saveStopped);
+      return false;
+    }
+    return true;
   }
 
   private async saveKit(): Promise<void> {
@@ -542,7 +557,7 @@ export class IdgBrandEditor {
     const sent = this.draft;
     this.pending = true;
     this.summary = undefined;
-    this.saved = undefined;
+    this.outcome = undefined;
     this.errors = {};
     try {
       const answer =
@@ -568,9 +583,10 @@ export class IdgBrandEditor {
       this.createdUnreported = undefined;
       this.removals = removalsNotSent(this.removals, result.kit);
       // A change made while the store answered is not in what it stored, and the page says so.
-      this.saved = {
+      this.outcome = {
         key: (this.keys += 1),
         text: this.draft === sent ? labels.saved : labels.savedBefore,
+        saved: true,
       };
       this.idgSave.emit({ documentId: saved.documentId, id: saved.id, created });
     } catch (error) {
@@ -822,6 +838,24 @@ export class IdgBrandEditor {
     );
   }
 
+  /**
+   * A save is confirmed in a status alert; a save stopped by a removal is a quiet note, said once
+   * through the polite status, as it is no error.
+   */
+  private renderOutcome() {
+    const outcome = this.outcome;
+    if (outcome === undefined) return null;
+    return outcome.saved ? (
+      <idg-alert key={outcome.key} part="saved" variant="success">
+        {outcome.text}
+      </idg-alert>
+    ) : (
+      <p key={outcome.key} class="note" part="stopped">
+        {outcome.text}
+      </p>
+    );
+  }
+
   render() {
     const labels = this.text();
     const format = numberFormatter(languageOf(this.host));
@@ -880,11 +914,7 @@ export class IdgBrandEditor {
             <legend class="legend">{labels.imagesLegend}</legend>
             {IMAGE_FIELDS.map((field) => this.renderImage(field, labels, size))}
           </fieldset>
-          {this.saved === undefined ? null : (
-            <idg-alert key={this.saved.key} part="saved" variant="success">
-              {this.saved.text}
-            </idg-alert>
-          )}
+          {this.renderOutcome()}
           <idg-button class="submit" part="submit" type="submit" loading={this.pending}>
             {labels.save}
           </idg-button>

@@ -89,6 +89,8 @@ export interface BrandEditorLabels
   readonly saved: string;
   /** After a save, when the form was changed while the store answered. */
   readonly savedBefore: string;
+  /** When a save waiting for an upload stops because an image was removed meanwhile. */
+  readonly saveStopped: string;
   /** The summary of a form with fields to correct. */
   readonly errorFields: string;
   /** On a field the server refused (`validation`). */
@@ -145,6 +147,7 @@ export const BRAND_EDITOR_LABELS: BrandEditorLabels = {
   save: "Save brand kit",
   saved: "Brand kit saved.",
   savedBefore: "Brand kit saved as it was when you saved it. Your later changes are not saved yet.",
+  saveStopped: "Not saved: an image was removed while saving. Save again when ready.",
   errorFields: "Some fields need a change. Each says what is wrong.",
   fieldRefused: "The server refused this value.",
   fieldNotSaved: "The server did not save this value as it was sent.",
