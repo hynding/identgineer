@@ -766,6 +766,125 @@ describe("idg-brand-editor uploads", () => {
     expect(button?.loading).toBe(false);
   });
 
+  describe("a save waiting for a read", () => {
+    const DOCTYPE = '<!DOCTYPE svg [<!ENTITY x "x">]><svg xmlns="http://www.w3.org/2000/svg"/>';
+    const loading = (root: HTMLElement) =>
+      shadowOf(root).querySelector<HTMLElement & { loading: boolean }>(".submit")?.loading;
+    const cleaned = (text: string) => {
+      const result = sanitiseSvgLogo(text);
+      if (!result.ok) throw new Error("not a logo");
+      return result.svg;
+    };
+
+    it("goes on with a file that replaced a refused one, deciding by the form as it ends", async () => {
+      const store = fakeStore();
+      const { root, waitForChanges } = await mount({ kit: ACME, store });
+      const refused = slowFile(DOCTYPE);
+      const mark = slowFile(CLEAN_SVG);
+      choose(root, "logo", refused);
+      choose(root, "mark", mark);
+      await waitForChanges();
+      submit(root);
+      await settle(waitForChanges);
+      refused.release();
+      await settle(waitForChanges);
+      choose(root, "logo", fileOf(CLEAN_SVG));
+      await settle(waitForChanges);
+      expect(store.create).not.toHaveBeenCalled();
+      mark.release();
+      await settle(waitForChanges);
+      expect(store.create).toHaveBeenCalledTimes(1);
+      expect(store.create.mock.calls[0]?.[0]).toMatchObject({
+        logo: cleaned(CLEAN_SVG),
+        mark: cleaned(CLEAN_SVG),
+      });
+      expect(shadowOf(root).querySelector('idg-alert[part="error"]')).toBeNull();
+    });
+
+    it("stops, quietly, when the image it waits for is removed", async () => {
+      const store = fakeStore();
+      const { root, waitForChanges } = await mount({ kit: HARBOUR, store });
+      choose(root, "logo", slowFile(CLEAN_SVG));
+      await waitForChanges();
+      submit(root);
+      await settle(waitForChanges);
+      shadowOf(root).querySelector<HTMLElement>('[data-remove="logo"]')?.click();
+      await settle(waitForChanges);
+      expect(store.create).not.toHaveBeenCalled();
+      expect(store.update).not.toHaveBeenCalled();
+      expect(loading(root)).toBe(false);
+      expect(shadowOf(root).querySelector('idg-alert[part="error"]')).toBeNull();
+      expect(shadowOf(root).querySelector('idg-alert[part="saved"]')).toBeNull();
+    });
+
+    it("stops when the kit is replaced", async () => {
+      const store = fakeStore();
+      const { root, waitForChanges } = await mount({ kit: ACME, store });
+      const slow = slowFile(CLEAN_SVG);
+      choose(root, "logo", slow);
+      await waitForChanges();
+      submit(root);
+      await settle(waitForChanges);
+      root.kit = HARBOUR;
+      await settle(waitForChanges);
+      slow.release();
+      await settle(waitForChanges);
+      expect(store.create).not.toHaveBeenCalled();
+      expect(loading(root)).toBe(false);
+    });
+
+    it("stops when the element leaves the page, even if it is put back", async () => {
+      const store = fakeStore();
+      const { root, waitForChanges } = await mount({ kit: ACME, store });
+      const slow = slowFile(CLEAN_SVG);
+      choose(root, "logo", slow);
+      await waitForChanges();
+      submit(root);
+      await settle(waitForChanges);
+      const parent = root.parentElement;
+      removeHost(root);
+      parent?.append(root);
+      await settle(waitForChanges);
+      slow.release();
+      await settle(waitForChanges);
+      expect(store.create).not.toHaveBeenCalled();
+      expect(loading(root)).toBe(false);
+    });
+
+    it("sends a newer upload that replaced the one it waited for", async () => {
+      const store = fakeStore();
+      const { root, waitForChanges } = await mount({ kit: ACME, store });
+      const slow = slowFile(HOSTILE_SVG);
+      choose(root, "logo", slow);
+      await waitForChanges();
+      submit(root);
+      await settle(waitForChanges);
+      choose(root, "logo", fileOf(CLEAN_SVG));
+      await settle(waitForChanges);
+      slow.release();
+      await settle(waitForChanges);
+      expect(store.create).toHaveBeenCalledTimes(1);
+      expect(store.create.mock.calls[0]?.[0].logo).toBe(cleaned(CLEAN_SVG));
+    });
+
+    it("sends text edited during the wait, and one save for two submits", async () => {
+      const store = fakeStore();
+      const { root, waitForChanges } = await mount({ kit: ACME, store });
+      const slow = slowFile(CLEAN_SVG);
+      choose(root, "logo", slow);
+      await waitForChanges();
+      submit(root);
+      await settle(waitForChanges);
+      type(root, "brand-tagline", "Edited while waiting");
+      submit(root);
+      await settle(waitForChanges);
+      slow.release();
+      await settle(waitForChanges);
+      expect(store.create).toHaveBeenCalledTimes(1);
+      expect(store.create.mock.calls[0]?.[0]).toMatchObject({ tagline: "Edited while waiting" });
+    });
+  });
+
   it("saves nothing when the logo it waited for is refused, and says why on the field", async () => {
     const store = fakeStore();
     const { root, waitForChanges } = await mount({ kit: HARBOUR, store });
