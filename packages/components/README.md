@@ -1768,7 +1768,8 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   imports) is in its own group or in `controls`, apart from two listed exceptions with their
   reason; no group but the brand ones loads the sanitiser, generator or emitters (and the brand
   closures do hold them, so the check cannot pass for want of a string); `controls` imports only
-  chunks that every entry imports; and each group stays within a ceiling of its measured size. What a page loads of a group, its entry and the chunks it
+  chunks that every entry imports; and each group stays within a ceiling of its measured size.
+  What a page loads of a group, its entry and the chunks it
   imports, in bytes:
 
   | Group                  | Components                                                                                                                                                   | `www/build` | `dist/esm` |
@@ -1800,7 +1801,8 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   384,535), the extra time being its forms and variation tools asking for `controls` once they
   render. Moving `idg-skeleton` and `idg-switch` into `controls`, and giving `controls` its own
   helper copies, made the button page 100 ms faster (one round trip fewer) and the dashboard 100
-  ms faster than before (1,033 ms, 23 requests) and left the index page where it was (1,147 ms). Its rows are in the page and
+  ms faster than before (1,033 ms, 23 requests) and left the index page where it was (1,147 ms).
+  Its rows are in the page and
   seen in the same frame (0 ms apart, where one bundle per component left 200 ms).
 
 - **The identity fixture.** `identity.html` wires every identity element to one real client on the

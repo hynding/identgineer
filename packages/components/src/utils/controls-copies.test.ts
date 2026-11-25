@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import * as copy from "./controls-copies";
 import { oneOf } from "./choice";
@@ -77,5 +78,32 @@ describe("the copies the controls bundle holds", () => {
       valid: false,
     };
     expect(copy.validityFlags(state)).toEqual(validityFlags(state));
+  });
+});
+
+// The cases above sample the behaviour; this holds the code itself, so that a change to an original
+// (a scheme added to the allowed ones) or to its copy alone is caught, not only one the samples hit.
+const normalised = (file: string) =>
+  readFileSync(new URL(file, import.meta.url), "utf8")
+    .replaceAll(/\/\*[\s\S]*?\*\//g, "")
+    .replaceAll(/^\s*\/\/.*$/gm, "")
+    .replaceAll(/\bexport\s+/g, "")
+    .replaceAll(/\s+/g, "");
+
+describe("the source of the copies", () => {
+  const copies = normalised("./controls-copies.ts");
+
+  it.each(["choice.ts", "initials.ts", "safe-url.ts", "link-rel.ts", "validity.ts"])(
+    "holds all the code of %s, comments and spacing aside",
+    (original) => {
+      expect(copies).toContain(normalised(`./${original}`));
+    },
+  );
+
+  it("holds nothing that is not one of the originals", () => {
+    const originals = ["choice", "initials", "safe-url", "link-rel", "validity"]
+      .map((name) => normalised(`./${name}.ts`))
+      .join("");
+    expect(copies.length).toBe(originals.length);
   });
 });
