@@ -1888,6 +1888,18 @@
       }
     ]
   },
+  "review-dash-tiled-circles-fine.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-dash-tiled-circles-round.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-dash-tiled-circles-square.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-dash-tiled-hairline-circles.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
   "review-dash-zero-square-cap.svg": {
     "outcome": "accept",
     "removed": []

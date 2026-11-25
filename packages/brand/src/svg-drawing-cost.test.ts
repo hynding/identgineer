@@ -206,6 +206,7 @@ describe("the drawing cost of a logo", () => {
       layer: 50,
       mask: 200,
       dash: 1,
+      tiledDash: 10,
     });
     expect(cost("")).toBe(1);
     expect(cost('<rect width="1" height="1"/>')).toBe(37);
@@ -265,7 +266,27 @@ describe("the drawing cost of a logo", () => {
     expect(cost('<path d="M0 0H100"/><path d="M0 0H1" stroke-dasharray="1 1"/>')).toBe(121);
     expect(cost('<rect width="100%" height="100%" stroke-dasharray="1"/>')).toBe(59);
     expect(cost('<path d="M0 0H100" stroke-dasharray="0 0"/>')).toBe(34);
-    expect(cost('<path d="M0 0H100M0 10H100" stroke-dasharray="1"/>')).toBe(1 + 34 + 103);
+    // Two subpaths are not one run of horizontal and vertical lines, so each dash costs ten.
+    expect(cost('<path d="M0 0H100M0 10H100" stroke-dasharray="1"/>')).toBe(1 + 34 + 1030);
+  });
+
+  it("charges a dash ten times on anything but one run of horizontal and vertical lines, which Chromium works out again for every tile of a large image", () => {
+    // One run of horizontal and vertical lines: a line whose ends share a coordinate written the
+    // same, a rectangle without rounded corners, a path of one move and then only H and V.
+    expect(cost('<line x2="100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
+    expect(cost('<line x1="5" x2="5" y2="100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
+    expect(cost('<rect width="10" height="10" stroke-dasharray="1"/>')).toBe(1 + 36 + 22);
+    expect(cost('<path d="M0 0H100V100h-100v-100" stroke-dasharray="1"/>')).toBe(1 + 36 + 202);
+    // Anything else, even where the numbers come out horizontal: a coordinate written two ways, a
+    // closing segment, a line segment, a polyline, a slanted line, a rounded rectangle, a curve.
+    expect(cost('<line y1="5" y2="5.0" x2="100" stroke-dasharray="1"/>')).toBe(1 + 33 + 520);
+    expect(cost('<path d="M0 0H100V100H0Z" stroke-dasharray="1"/>')).toBe(1 + 36 + 2020);
+    expect(cost('<path d="M0 0L100 0" stroke-dasharray="1"/>')).toBe(1 + 33 + 520);
+    expect(cost('<polyline points="0,0 100,0" stroke-dasharray="1"/>')).toBe(1 + 33 + 520);
+    expect(cost('<line x2="60" y2="80" stroke-dasharray="1"/>')).toBe(1 + 33 + 520);
+    expect(cost('<rect width="10" height="10" rx="1" stroke-dasharray="1"/>')).toBe(1 + 76 + 220);
+    expect(cost('<circle r="10" stroke-dasharray="1"/>')).toBe(1 + 72 + 330);
+    expect(cost('<path d="M0 0C30 0 70 0 100 0" stroke-dasharray="1"/>')).toBe(1 + 42 + 520);
   });
 
   it("counts every dash in each repeat of a dash array, an odd one repeated twice", () => {
