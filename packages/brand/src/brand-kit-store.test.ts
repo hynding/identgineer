@@ -697,6 +697,36 @@ describe("aborting", () => {
     expect(sent[0]?.init.signal).toBe(controller.signal);
   });
 
+  it("stops reading the body on abort, even when the fetch has let go of the signal", async () => {
+    const controller = new AbortController();
+    let cancelled = false;
+    let answered = (): void => undefined;
+    const headersArrived = new Promise<void>((resolve) => {
+      answered = resolve;
+    });
+    // As the identity SDK's authorizedFetch does, the fetch drops the caller's signal once the
+    // headers are in, so only the store can stop the body.
+    const { store } = storeWith(() => {
+      const body = new ReadableStream<Uint8Array>({
+        start(stream) {
+          stream.enqueue(new TextEncoder().encode('{"data":'));
+        },
+        pull: () => new Promise<void>(() => undefined),
+        cancel() {
+          cancelled = true;
+        },
+      });
+      answered();
+      return new Response(body, { headers: { "Content-Type": "application/json" } });
+    });
+    const pending = store.get(DOCUMENT_ID, { signal: controller.signal });
+    await headersArrived;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    controller.abort();
+    expect((await rejection(pending)).code).toBe("network");
+    expect(cancelled).toBe(true);
+  });
+
   it("sends nothing once the signal has aborted", async () => {
     const controller = new AbortController();
     controller.abort();
