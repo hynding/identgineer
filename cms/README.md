@@ -110,9 +110,12 @@ output is larger, and a string never has more code points or UTF-16 units than U
 both targets' length checks let every sanitised logo through however they count. The column is
 another matter, and only on MySQL: with a camis that sizes text columns from `maxLength`
 (hynding/camis#123), the logo and mark (bounded text of 524288 characters) get a `mediumText`
-column (16 MiB, which holds them even at four bytes a character). A MySQL database created before that keeps its `TEXT` columns
-(65,535 bytes) until the runtime schema sync or a hand-written
-`ALTER TABLE ... MODIFY ... MEDIUMTEXT` (or `LONGTEXT`) widens them (see [Capability gaps](#capability-gaps)).
+column (16 MiB, which holds them even at four bytes a character). A MySQL database created before
+that keeps its `TEXT` columns (65,535 bytes) until something widens them: the Content-Type
+Builder's `camis:schema-sync` does, on MySQL and MariaDB only and only when it runs (`camis develop`
+runs it, a plain production deploy does not), and otherwise a hand-written
+`ALTER TABLE ... MODIFY ... MEDIUMTEXT NULL` (or `LONGTEXT`) does (see
+[Capability gaps](#capability-gaps)).
 sqlite and pgsql `text` hold it, as do Strapi's columns.
 
 There is no `themeTokens` field. The theme is derived data the server cannot verify; clients
@@ -385,10 +388,12 @@ Limits that remain on Strapi, for this model:
 - A `text` field's column is sized from its `maxLength` (`text`, `mediumText` or `longText`)
   ([hynding/camis#123](https://github.com/hynding/camis/issues/123)), so the brand kit's `logo` and
   `mark` (524288 characters) are `mediumText` on MySQL. A MySQL database created before the fix keeps
-  its `TEXT` columns (65,535 bytes), as a migration that has run is not run again: the camis
-  schema sync widens such a column when the model declares a larger one, or run
-  `ALTER TABLE ... MODIFY ... MEDIUMTEXT` (or `LONGTEXT`) by hand (camis's CLI README, "Text columns"). Until then a
-  logo or mark over 64 KiB cannot be stored whole there. sqlite and pgsql have one text type. The
+  its `TEXT` columns (65,535 bytes), as a migration that has run is not run again. The Content-Type
+  Builder's `camis:schema-sync` widens such a column when the model declares a larger one, on MySQL
+  and MariaDB only and only when that sync runs (`camis develop` runs it, a plain production deploy
+  has no such step). Otherwise run `ALTER TABLE ... MODIFY ... MEDIUMTEXT NULL` (or `LONGTEXT`) by
+  hand (camis's CLI README, "Text columns"). Until then a logo or mark over 64 KiB cannot be stored
+  whole there. sqlite and pgsql have one text type. The
   column type is not the server's or the request's limit (MySQL's `max_allowed_packet`).
 
 **Not reported by camis but limiting this model.** Conditions cannot follow a relation (hence the
