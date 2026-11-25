@@ -1,0 +1,299 @@
+/* The form and the preview side by side where there is room for both, the preview below the form
+   where there is not. Every size, colour and space is a token, so the design, the layout, the UX
+   mode and the theme of the page all reach the editor. */
+.editor {
+  --_gap: calc(var(--idg-layout-gap) * var(--idg-density-gap-scale));
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: calc(var(--_gap) * 1.5);
+  min-inline-size: 0;
+}
+
+.form {
+  flex: 1 1 var(--idg-size-m);
+  max-inline-size: 100%;
+  container: brand-form / inline-size;
+}
+
+.preview {
+  display: flex;
+  flex: 999 1 var(--idg-size-l);
+  flex-direction: column;
+  gap: var(--_gap);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.preview-title {
+  margin: 0;
+  font-family: var(--idg-font-family-display);
+  font-size: calc(var(--idg-font-size-step-2) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+  text-decoration: var(--idg-ornament-heading-decoration);
+  text-decoration-thickness: 2px;
+  text-transform: var(--idg-ornament-heading-transform);
+  text-underline-offset: 0.2em;
+  overflow-wrap: anywhere;
+}
+
+/* A group of fields is a surface of the page's design: its fill, border, corners and elevation. */
+.group {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  min-inline-size: 0;
+  margin: 0;
+  padding: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  border-width: var(--idg-surface-border-width);
+  border-style: var(--idg-surface-border-style);
+  border-color: var(--idg-surface-border-color);
+  border-radius: var(--idg-shape-radius-lg);
+  background: var(--idg-surface-background);
+  backdrop-filter: var(--idg-surface-backdrop-filter);
+  box-shadow: var(--idg-elevation-sm);
+}
+
+.legend {
+  float: inline-start;
+  inline-size: 100%;
+  margin-block-end: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
+  padding: 0;
+  font-family: var(--idg-font-family-display);
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+  text-transform: var(--idg-ornament-heading-transform);
+  overflow-wrap: anywhere;
+}
+
+.group > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+/* The native colour picker sits at the start of its hex field's box, a target the size the UX mode
+   asks of every control's smallest part. */
+.picker {
+  box-sizing: border-box;
+  flex: none;
+  inline-size: max(1.75em, 24px);
+  block-size: max(1.75em, 24px);
+  margin: 0;
+  margin-inline-start: var(--idg-space-3xs);
+  padding: 0;
+  border-width: var(--idg-border-width);
+  border-style: var(--idg-border-style);
+  border-color: var(--idg-color-border-strong);
+  border-radius: var(--idg-shape-radius-sm);
+  background: none;
+  cursor: pointer;
+}
+
+/* A hex field keeps room for a whole #rrggbb. Where the picker and the text do not fit side by
+   side, as at 320px with large text, the text wraps below the picker inside the box, and the
+   invalid mark after it, so nothing is squeezed to nothing or drawn outside the box. */
+.colour::part(box) {
+  flex-wrap: wrap;
+}
+
+/* A hex value is set in the mono face, as the guide and the swatches show it, so every digit is
+   one ch wide and seven of them with the hash fit in 7ch whatever the digits; the eighth ch is
+   room for the caret after the last digit. */
+.colour::part(control) {
+  flex: 1 1 8ch;
+  min-inline-size: 8ch;
+  font-family: var(--idg-font-family-mono);
+}
+
+/* A narrow form, about 320px of text at 18px, as beside the preview or in a 320px window: each hex
+   field keeps a whole #rrggbb in view, its box padding less. Groups and the file chooser keep
+   their regular look. */
+@container brand-form (inline-size < 20em) {
+  .colour::part(box) {
+    padding-inline: var(--idg-space-3xs);
+  }
+}
+
+/* A squeezed form, its text large against its width, as at 320px with 150% text or more: the file
+   chooser's label is the browser's, in the control font each design and UX mode sets, and its
+   widest word only fits when the button has the group's whole padding box. So the groups keep a
+   little inline padding, which their text and other controls need, and the file input alone is
+   pulled out over it to span the padding box, its button spanning the input with no inline
+   padding of its own, its label centred, its side room whatever the label leaves. Nothing in the
+   group clips, so the input's focus ring shows whole; the margins are logical, so it holds in
+   right-to-left text. 10.5em is measured at 320px from 100% to 200% text: with the regular
+   padding some pairing of design and UX mode breaks the word at forms up to 9em wide, and every
+   pairing fits with room to spare from 9.2em; a 320px window at 100% text gives at least 12em, and
+   the form beside the preview at least 14em. The group's base rule comes before this block; the
+   input's and the button's come after, so their rules here are the more specific ones. */
+@container brand-form (inline-size < 10.5em) {
+  .group {
+    padding-inline: var(--idg-space-3xs);
+  }
+
+  .image-row .file {
+    inline-size: calc(100% + 2 * var(--idg-space-3xs));
+    max-inline-size: none;
+    margin-inline: calc(-1 * var(--idg-space-3xs));
+  }
+
+  .image-row .file::file-selector-button {
+    box-sizing: border-box;
+    inline-size: 100%;
+    padding-inline: 0;
+    text-align: center;
+  }
+}
+
+.picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.picker::-webkit-color-swatch {
+  border: 0;
+  border-radius: var(--idg-shape-radius-sm);
+}
+
+.image {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--idg-space-3xs) * var(--idg-density-gap-scale));
+  min-inline-size: 0;
+}
+
+.image-label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--idg-space-2xs);
+  align-self: flex-start;
+  font-weight: var(--idg-font-weight-semibold);
+  text-transform: var(--idg-ornament-control-transform);
+}
+
+.optional {
+  color: var(--idg-color-text-muted);
+  font-size: 0.85em;
+  font-weight: var(--idg-font-weight-regular);
+  text-transform: none;
+}
+
+.hint,
+.note,
+.error-text {
+  margin: 0;
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-body-line-height);
+}
+
+.hint,
+.note {
+  color: var(--idg-color-text-muted);
+}
+
+.image-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+  min-inline-size: 0;
+}
+
+.image-row > * {
+  max-inline-size: 100%;
+}
+
+.thumbnail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--idg-space-3xs);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+/* The file input is the browser's own and clips what does not fit, so it takes its row's width
+   and its button sits on a line of its own, wrapping its label, above the file name. The button
+   takes the page's control look. */
+.file {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.file::file-selector-button {
+  display: block;
+  box-sizing: border-box;
+  min-block-size: var(--idg-density-target-size);
+  max-inline-size: 100%;
+  margin-block-end: var(--idg-space-3xs);
+  padding-inline: var(--idg-density-control-padding-inline);
+  border-width: var(--idg-border-control-width);
+  border-style: var(--idg-border-control-style);
+  border-color: var(--idg-border-control-color);
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--idg-color-surface-raised);
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+  font-weight: var(--idg-font-weight-semibold);
+  text-transform: var(--idg-ornament-control-transform);
+  white-space: normal;
+  overflow-wrap: break-word;
+  cursor: pointer;
+}
+
+.error:not(:empty) {
+  display: flex;
+  align-items: flex-start;
+  align-self: flex-start;
+  gap: var(--idg-space-2xs);
+  box-sizing: border-box;
+  max-inline-size: 100%;
+  padding: var(--idg-space-3xs) var(--idg-space-2xs);
+  border-radius: var(--idg-shape-radius-sm);
+  background: var(--idg-color-danger-subtle);
+  color: var(--idg-color-on-danger-subtle);
+}
+
+.error-mark {
+  flex: none;
+}
+
+.removals p,
+.removal-list {
+  margin: 0;
+}
+
+.removals-heading {
+  font-weight: var(--idg-font-weight-semibold);
+}
+
+.removal-list {
+  padding-inline-start: 1.25em;
+  overflow-wrap: anywhere;
+}
+
+.form > .submit {
+  align-self: flex-start;
+}
+
+@media (forced-colors: active) {
+  .error:not(:empty) {
+    border: 1px solid CanvasText;
+  }
+
+  .picker {
+    border-color: ButtonText;
+  }
+}

@@ -1,6 +1,7 @@
 import { accessibleNode } from "./accessible-node";
 import { applyAxes, DESIGNS, SCHEMES, UX_MODES } from "./axes";
 import { expectNoAxeViolations } from "./accessibility";
+import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 
 const PAGE = "/fixtures/forms.html";
@@ -104,6 +105,76 @@ test.describe("the live error", () => {
     await expect(alert).toHaveText(/Too short/);
     await expect(field.locator("[aria-live]")).toHaveCount(0);
   });
+});
+
+test.describe("an error in a narrow field", () => {
+  /** Where the error's parts fall against its region and its field, in a field of `width`. */
+  function measure(page: Page, dir: "ltr" | "rtl", width: string, error: string) {
+    return page.locator("#empty-name").evaluate(
+      async (input, [direction, inlineSize, text]) => {
+        const field = input.closest("idg-field");
+        if (!(field instanceof HTMLElement)) throw new Error("no field");
+        field.dir = direction;
+        field.style.inlineSize = inlineSize;
+        field.setAttribute("error", text);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const root = field.shadowRoot;
+        const box = (selector: string) => {
+          const found = root?.querySelector(selector)?.getBoundingClientRect();
+          if (!found) throw new Error(`no ${selector}`);
+          return found;
+        };
+        const host = field.getBoundingClientRect();
+        const region = box(".error");
+        const words = box(".error-text");
+        const mark = box(".error-mark");
+        const node = root?.querySelector(".error-text");
+        const range = document.createRange();
+        range.selectNodeContents(node ?? field);
+        const lines = new Set(
+          [...range.getClientRects()].filter((rect) => rect.width > 0).map((rect) => rect.top),
+        ).size;
+        const inside = (inner: DOMRect, outer: DOMRect) =>
+          inner.left >= outer.left - 0.5 && inner.right <= outer.right + 0.5;
+        return {
+          regionInField: inside(region, host),
+          wordsInRegion: inside(words, region),
+          belowMark: words.top >= mark.bottom - 0.5,
+          lines,
+          // Read back, so a rule the browser drops as invalid cannot pass for one it applies.
+          sizing: node ? getComputedStyle(node).flexBasis : "",
+        };
+      },
+      [dir, width, error] as const,
+    );
+  }
+
+  const LONG = "Pneumonoultramicroscopicsilicovolcanoconiosis";
+
+  for (const dir of ["ltr", "rtl"] as const) {
+    test(`keeps a word wider than the field inside it, broken, in ${dir}`, async ({ page }) => {
+      const found = await measure(page, dir, "10rem", `${LONG} is too long`);
+      expect(found).toMatchObject({
+        regionInField: true,
+        wordsInRegion: true,
+        belowMark: true,
+        sizing: "min-content",
+      });
+      expect(found.lines).toBeGreaterThan(1);
+    });
+
+    test(`keeps a short error beside its mark, on one line, in ${dir}`, async ({ page }) => {
+      const found = await measure(page, dir, "20rem", "Too short");
+      expect(found).toEqual({
+        regionInField: true,
+        wordsInRegion: true,
+        belowMark: false,
+        lines: 1,
+        sizing: "min-content",
+      });
+    });
+  }
 });
 
 test.describe("label click", () => {

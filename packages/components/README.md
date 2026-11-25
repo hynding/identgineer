@@ -44,7 +44,7 @@ to be classified:
 | `idg-button`     | primary edge where the accent does not stand out | `accent-edge`                             | fill       |
 | `idg-card`       | accent variant and everything on it              | `accent`, `on-accent`                     | fill       |
 | `idg-avatar`     | first colour pair of the initials                | `accent`, `on-accent`                     | fill       |
-| `idg-brand-logo` | monogram standing in for a brand's mark          | `accent`, `on-accent`                     | fill       |
+| `idg-brand-logo` | monogram standing in for a brand's mark          | 117,086                                   | 327,029    |
 | `idg-layout`     | skip link                                        | `accent`, `on-accent`                     | fill       |
 | `idg-layout`     | hero glow                                        | `accent`                                  | decoration |
 | demo page        | background glow                                  | `accent`                                  | decoration |
@@ -227,7 +227,9 @@ inferred from attributes. For example the email input is a `textbox` named "Emai
 `selectText()` (a method of `idg-input` only) selects the text of the native input, for a read-only
 value that is meant to be copied, such as a link; it does not focus it, so call `setFocus()` too.
 
-Slots `start` and `end` sit inside the box. The reveal control is a real `<button type="button">`
+Slots `start` and `end` sit inside the box. Parts: `box` (the box that draws the edge, around the
+native input and the slots) and `control` (the native input), for a composite that lays out what
+it slots, as `idg-brand-editor` lets its hex field wrap below its colour picker. The reveal control is a real `<button type="button">`
 with `aria-pressed`; it changes only the native input's `type`, never the value. A shown password is
 hidden again when its form is submitted (before the submit event's listeners run), when the form
 is reset and when the value is set from outside, such as a form clearing it.
@@ -1465,7 +1467,8 @@ Four elements show a brand from `@identgineer/brand`: `idg-brand-logo` draws its
 `idg-brand-swatches` its colours, `idg-brand-guidelines` a guide to one kit and `idg-brand-export`
 its stylesheet and tokens as text to copy or save. They take the brand package's own data as
 properties, fetch nothing and store nothing. None re-derives anything the package decided; the
-swatches add only the contrast ratios, which no theme carries.
+swatches add only the contrast ratios, which no theme carries. A fifth, `idg-brand-editor`, edits
+one kit and saves it through a store the page hands it.
 
 ```ts
 import { generateBrandTheme, parseBrandKit } from "@identgineer/brand";
@@ -1648,6 +1651,107 @@ script-src 'self'; require-trusted-types-for 'script'`, and a browser test runs 
   test needs the `clipboard-read` permission, which is not a policy matter.
 - A downloadable, self-contained HTML guide is not part of this element. It is later work.
 
+### `idg-brand-editor`
+
+A form for one brand kit with a live preview: the name, tagline and theme id; the primary and
+secondary colours and the neutral tint, each a hex field with a native colour picker inside it,
+kept in step; the font pairing, corners and tone from the brand package's presets; and the logo and
+mark as SVG uploads, each with a remove button. The preview is `idg-brand-guidelines`.
+
+```ts
+import { createBrandKitStore } from "@identgineer/brand";
+
+// The store the brand package makes, or anything with its create and update.
+editor.store = createBrandKitStore({ baseUrl, fetch: identity.authorizedFetch });
+editor.documentId = record.documentId; // to update a stored kit; leave it out to create one
+editor.kit = record.kit; // untrusted, as the store returned it
+editor.addEventListener("idgSave", (event) => {
+  // event.detail: { documentId, id, created }
+});
+```
+
+| Prop           | Attribute       | Notes                                                                                         | Default     |
+| -------------- | --------------- | --------------------------------------------------------------------------------------------- | ----------- |
+| `kit`          |                 | the kit to start from; untrusted. Setting it again starts over                                |             |
+| `store`        |                 | `{ create(kit), update(documentId, kit) }`, which the object `createBrandKitStore` fits       |             |
+| `documentId`   | `document-id`   | the stored kit's id: saving updates it. Without one the first save creates, later ones update |             |
+| `label`        | `label`         | the accessible name of the form                                                               | `Brand kit` |
+| `labels`       |                 | `Partial<BrandEditorLabels>`: every word, including one message per error code                | English     |
+| `headingLevel` | `heading-level` | the level of the preview's heading, 1 to 6; the guide starts one level deeper                 | `2`         |
+| `preview`      | `preview`       | whether the preview is shown                                                                  | `true`      |
+
+**Events:** `idgSave` after a save, with `{ documentId, id, created }` and nothing of the kit.
+**Parts:** `form`, `error`, `saved`, `stopped`, `fieldset`, `image`, `removals`, `submit`, `preview`.
+No slots.
+
+- **It saves only through `store`.** The element never creates a store, never fetches and keeps
+  nothing in browser storage; the draft lives in the element. A save calls `create`, or `update`
+  with the document id it was given or the one its first save returned. The button shows `loading`
+  only while the store has not answered, and a second submit then does nothing. A save while a
+  logo or mark is being read waits, busy (a second submit does nothing), until no read is pending,
+  keeping for each image the latest thing that happened to it during the wait (refused, removed or
+  accepted), which a new read of that image clears. If any image's latest is a refusal it stops,
+  keeping the refusal on the field, showing the summary and focusing the first such upload; else
+  if any image's latest is a removal it stops without an error, saying `saveStopped` through the
+  polite status and in a note (`stopped`) where the confirmation would be; else it saves the form
+  as it stands, text edited meanwhile included. Replacing the kit or taking the element off the
+  page also stops it without saving. The confirmation, or the note, goes as soon as the form
+  changes or another save starts, and a change made while the store answered is not in what was
+  stored, so the confirmation then says so (`savedBefore`) and keeps the removals of an image that was not
+  sent. A store that throws
+  or rejects gives an alert, never an exception, and an answer that is not a stored record says the
+  kit was sent but the answer could not be read. A refusal that the store reports as an error with
+  a `BrandKitStoreError` code is one fixed message per code (`saveUnauthorized` to
+  `saveUnexpectedStatus`, and `saveUnknown` for anything else); `validation` and `not-applied` mark
+  the fields the server named (its field names mapped to the form's) with fixed words. Nothing the
+  server said is shown.
+- **Which kit a save changes, and `created`.** A create that stored a kit but did not report it
+  whole (a `not-applied` error with a `documentId`, or an `{ ok: false, documentId }` answer that
+  could not be read back) still stored that kit: the next save updates it rather than creating
+  another. `created` is `true` on the first `idgSave` for a kit this editor created, whether the
+  create itself or a later update is the first save to succeed, and `false` on every other.
+- **Validation is `parseBrandKit`'s.** Each of its codes is one fixed message on the field it names,
+  through `idg-field` with `aria-invalid`. On a save with fields to change, a summary alert is shown
+  and focus goes to the first of them. Nothing is checked twice in another way.
+- **Uploads.** A file is refused by its size against `SVG_LOGO_LIMITS.inputBytes` before a byte is
+  read, whatever its name or type says; then it is read as bytes and passed to `sanitiseSvgLogo`,
+  and only the sanitiser's output is kept, previewed and saved. A refused file shows one fixed
+  message per code on its field and the previous logo stays. What the sanitiser removed is listed
+  (`removals`) before the kit is saved; saving keeps the cleaned file, or the remove button drops
+  it. A read overtaken by a later upload or remove is dropped, as is any read that ends after the
+  element left the page. A kit's own logo is shown only if it is exactly the sanitiser's output;
+  otherwise it is left out and the field says so.
+- **Untrusted text stays text.** The kit's values are read as own properties, and set as input
+  values and text. Raw SVG never reaches the DOM, an attribute, a URL or an event: the logos are
+  drawn by `idg-brand-logo` from the sanitised text.
+- **The preview** runs `parseBrandKit` and `generateBrandTheme` once typing pauses (300 ms after
+  the last change), not on every keystroke; an upload or remove updates the logos at once without
+  working the theme out again. While the draft is invalid the last valid version stays, and says
+  so. The guide is inside the element's shadow root, so the brand's colours style nothing outside
+  it.
+- **Narrow forms.** The form is a container, measured in its own text, in two tiers. The file
+  chooser's button always sits on a line of its own above the file name, wrapping its label
+  between words. Below 20em (beside the preview, or in a 320px window) the hex boxes pad less and
+  each hex field keeps at least 8ch for a whole `#rrggbb`, wrapping below its picker inside the
+  box, with the invalid mark inside it too; groups and the file chooser keep their regular padding.
+  Below 10.5em (large text in a narrow window, as at 320px with 150% text or more) the groups pad
+  `--idg-space-3xs` inline, the file input alone is pulled out over that padding to span the
+  group's padding box (logical margins, so in right-to-left text too, its focus ring whole), and
+  its button spans the input with no inline padding of its own, its label centred, so the label's
+  widest word fits. Browser tests check every layout at 320px with 100% and 125% text, and the
+  default one with 200% in both directions, reading each padding, the button's width and the
+  input's place as computed in the tier it is in; that groups and buttons keep their regular
+  padding beside the preview at 1280px and at 320px with 100% text; and that the widest word fits
+  with at least 4px to spare in all 64 pairings of design and UX mode at 320px and each of 100,
+  125, 150, 175 and 200% text.
+- **Control names** are the fields' names prefixed with `brand-` (`brand-name`, `brand-id`, …): a
+  control named `id` or `name` would shadow the form's own properties.
+- **Content-Security-Policy:** the logos are data URL images, so as for `idg-brand-logo` the page
+  needs `img-src 'self' data:`. Nothing else is added, and a browser test runs the editor under
+  that policy with no violation and no request off the origin.
+- It loads `@identgineer/brand/edit` (the parser, the generator and the sanitiser), not the
+  package's index: no store code and no emitter are in its bundle.
+
 ## Strict CSP and Trusted Types
 
 Every component is verified in Chromium against
@@ -1667,7 +1771,7 @@ with no console violation.
 - A brand's logo is a data URL image, which this policy refuses. `idg-brand-logo` is tested under
   the policy with `img-src 'self' data:` added (the one directive the brand package asks for), and
   under this one, where it shows the name instead. The test server gives that policy to the demo
-  index page, which shows two logos and the guide, and to no other page. `idg-brand-export` draws no
+  index page, which shows two logos, the guide and the editor, and to no other page. `idg-brand-export` draws no
   image and is tested under the strict policy itself.
 - The custom-elements build was not loaded under the CSP: it needs a bundler, and runs the same
   runtime.
@@ -1722,7 +1826,7 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   viewport and forced colours for every overlay (axe runs with each one open), boundary contrast, text contrast of badges, alerts,
   avatars and changes in all 8 themes in light and dark, and axe (wcag2a, wcag2aa, wcag21aa, wcag22aa) across the 8 designs in light and dark and
   the 8 UX modes, no sideways page scroll at 320, 768, 1280 and 2560px under all 8 layouts, and the
-  layout primitives' wrapping, column counts and right-to-left placement, on pages in `fixtures/` (outside `src`, so they never reach the dist collection; `button.html`, `forms.html`, `surfaces.html`, `overlays.html`, `navigation.html`, `layout-primitives.html`, `layout-shell.html`, `variation-switcher.html`, `identity.html`, `brand.html`; copied to `www/fixtures/`; static HTML, no inline
+  layout primitives' wrapping, column counts and right-to-left placement, on pages in `fixtures/` (outside `src`, so they never reach the dist collection; `button.html`, `forms.html`, `surfaces.html`, `overlays.html`, `navigation.html`, `layout-primitives.html`, `layout-shell.html`, `variation-switcher.html`, `identity.html`, `brand.html`, `brand-export.html`, `brand-editor.html`; copied to `www/fixtures/`; static HTML, no inline
   script or style). Build first. Playwright's own Chromium is installed with
   `pnpm --filter @identgineer/components exec playwright install --with-deps chromium`; where that is
   not possible, set `IDG_CHROMIUM_PATH` to a Chromium binary (`/opt/pw-browsers/chromium` is used if it
@@ -1739,8 +1843,9 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   brand and tokens packages, which the brand components import. They import only the narrow entries
   made for a browser bundle, `@identgineer/brand/logo` (`isSanitisedSvgLogo`, `logoDataUrl` and `logoImage`),
   `@identgineer/brand/presets` (the corner, tone, radius and font-pairing tables),
-  `@identgineer/brand/emit` (`emitBrandThemeCss` and `emitBrandThemeTokens`) and
-  `@identgineer/tokens/contrast` (`contrastRatio`), because the packages' indexes also load the
+  `@identgineer/brand/emit` (`emitBrandThemeCss` and `emitBrandThemeTokens`),
+  `@identgineer/brand/edit` (`parseBrandKit`, `generateBrandTheme` and `sanitiseSvgLogo`, for the
+  editor) and `@identgineer/tokens/contrast` (`contrastRatio`), because the packages' indexes also load the
   rest of the pipeline. Import-graph tests hold each entry to loading no Node built-in.
 - **Bundles.** Left to itself, Stencil groups components that share imports, and the logo
   sanitiser, the theme generator and the emitters ended up in the one bundle of `idg-button` and 44
@@ -1761,11 +1866,13 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   round trip, for 250 bytes). Its entry imports only the core chunk every entry imports.
   A page with only `idg-brand-guidelines` waits one hop for the logo and the swatches bundles
   that the guide renders (by design: a component is in one bundle only, and the guide's own
-  entry is the one that creates them).
+  entry is the one that creates them). A page with only `idg-brand-editor` waits one hop for the
+  forms, logo and guide bundles it renders, fetched in parallel, and a second for the swatches the
+  guide renders; `checks/core-bundle.test.ts` lists each of these as an accepted render.
   `stencil-bundles.ts` lists the groups, and `stencil.config.ts` and
   `checks/core-bundle.test.ts` both read it. The check holds this layout from the sources and the
   build: every component is in exactly one group; what a component renders (through the files it
-  imports) is in its own group or in `controls`, apart from two listed exceptions with their
+  imports) is in its own group or in `controls`, apart from listed exceptions with their
   reason; no group but the brand ones loads the sanitiser, generator or emitters (and the brand
   closures do hold them, so the check cannot pass for want of a string); `controls` imports only
   chunks that every entry imports; and each group stays within a ceiling of its measured size.
@@ -1775,22 +1882,26 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   | Group                  | Components                                                                                                                                                   | `www/build` | `dist/esm` |
   | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------: | ---------: |
   | controls               | icon, button, link, badge, progress, alert, avatar, avatar-group, skeleton, switch                                                                           |      57,977 |    117,342 |
-  | forms and identity     | field, input, textarea, checkbox, radio, radio-group, select, sign-in, register, password-reset, profile, session-guard, property-picker, variation-switcher |     153,626 |    309,368 |
+  | forms and identity     | field, input, textarea, checkbox, radio, radio-group, select, sign-in, register, password-reset, profile, session-guard, property-picker, variation-switcher |     153,913 |    309,785 |
   | dashboard              | event-table, table, pagination, stat, sparkline                                                                                                              |      67,796 |    168,578 |
   | consent and overlays   | consent-banner, consent-preferences, dialog, popover, tooltip, toast, toast-region                                                                           |      87,918 |    188,483 |
-  | menus                  | menu, menu-group, menu-item, menu-separator, user-menu                                                                                                       |      49,731 |    126,662 |
+  | menus                  | menu, menu-group, menu-item, menu-separator, user-menu                                                                                                       |      49,796 |    126,820 |
   | tabs                   | tabs, tab, tab-panel                                                                                                                                         |      31,746 |     87,726 |
   | accordion              | accordion, accordion-item                                                                                                                                    |      27,957 |     79,096 |
-  | layout                 | stack, cluster, grid, cover, sidebar, switcher, layout, divider, card, breadcrumb, breadcrumb-item                                                           |      84,021 |    160,349 |
-  | `idg-brand-logo`       | the logo, with the sanitiser                                                                                                                                 |     117,031 |    326,945 |
+  | layout                 | stack, cluster, grid, cover, sidebar, switcher, layout, divider, card, breadcrumb, breadcrumb-item                                                           |      84,127 |    161,055 |
+  | `idg-brand-logo`       | the logo, with the sanitiser                                                                                                                                 |     117,086 |    327,029 |
   | `idg-brand-swatches`   | the swatches                                                                                                                                                 |      29,826 |     84,500 |
-  | `idg-brand-guidelines` | the guide, with the sanitiser                                                                                                                                |     141,269 |    375,346 |
-  | `idg-brand-export`     | the export, with the sanitiser, the generator and the emitters                                                                                               |     219,207 |    500,002 |
+  | `idg-brand-guidelines` | the guide, with the sanitiser                                                                                                                                |     141,319 |    375,430 |
+  | `idg-brand-export`     | the export, with the sanitiser, the generator and the emitters                                                                                               |     219,466 |    500,751 |
+  | `idg-brand-editor`     | the editor, with the sanitiser and the generator, and the guide it previews in                                                                               |     246,861 |    550,359 |
 
-  The loader `identgineer.esm.js` is 12,510 bytes more on every page. The sanitiser (about 90 KB
-  minified) is in the logo's, the guide's and the export's bundles (the export validates a kit with
-  it), the generator and emitters in the export's alone. The whole `www/build` directory is 663,801
-  bytes, against 433,865 before the brand components and 536,437 on main.
+  The loader `identgineer.esm.js` is 12,924 bytes more on every page. The sanitiser (about 90 KB
+  minified) is in the logo's, the guide's, the export's and the editor's bundles (the export
+  validates a kit with it), the generator in the export's and the editor's, and the emitters in the
+  export's alone. The editor's row counts its own entry and chunks; a page with it also loads the
+  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 698,881
+  bytes (663,801 before the editor), against 433,865 before the brand components and 536,437 on
+  main.
 
   Measured against main's grouped build, with 100 ms of latency and 1.5 MB/s (median of five
   runs, fully hydrated): a page with only an `idg-button` in 509 ms (925 ms on main), loading

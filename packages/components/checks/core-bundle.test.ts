@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import ts from "typescript";
 import { BUNDLES } from "../stencil-bundles";
 
 const PACKAGE = fileURLToPath(new URL("..", import.meta.url));
@@ -115,12 +116,23 @@ describe.skipIf(!BUILDS.every((directory) => existsSync(directory)))(
           for (const marker of HEAVY_MARKERS) expect(holds(directory, exported, marker)).toBe(true);
         });
 
+        // The editor validates, previews and sanitises, but never writes a theme: it loads the
+        // package's edit entry, which holds no emitter.
+        it("finds the sanitiser and the generator in the editor's closure, and not the emitter", () => {
+          const editor = loaded(directory, "idg-brand-editor");
+          const [sanitiser = "", generator = "", emitter = ""] = HEAVY_MARKERS;
+          expect(holds(directory, editor, sanitiser)).toBe(true);
+          expect(holds(directory, editor, generator)).toBe(true);
+          expect(holds(directory, editor, emitter)).toBe(false);
+        });
+
         it("keeps the brand components in bundles apart from every other component", () => {
           const brand = [
             "idg-brand-logo",
             "idg-brand-swatches",
             "idg-brand-guidelines",
             "idg-brand-export",
+            "idg-brand-editor",
           ];
           const entries = brand.map((tag) => entryOf(directory, tag));
           expect(new Set(entries).size).toBe(brand.length);
@@ -171,8 +183,40 @@ function sourceFiles(directory: string): string[] {
   });
 }
 
-const withoutComments = (text: string) =>
-  text.replaceAll(/\/\*[\s\S]*?\*\//g, "").replaceAll(/^\s*\/\/.*$/gm, "");
+/**
+ * The source with its comments blanked out, found by the TypeScript parser: a regular expression
+ * would take `/*` inside a string (`accept="image/*"`) for the start of a comment and hide the code
+ * up to the next `*\/`. A comment is the trivia before a token; JSX text is not trivia, so `//` in
+ * it stays.
+ */
+function withoutComments(text: string): string {
+  const source = ts.createSourceFile(
+    "source.tsx",
+    text,
+    ts.ScriptTarget.Latest,
+    false,
+    ts.ScriptKind.TSX,
+  );
+  const comments = new Map<number, number>();
+  const visit = (node: ts.Node): void => {
+    const children = node.getChildren(source);
+    if (children.length === 0 && node.kind !== ts.SyntaxKind.JsxText) {
+      for (const range of ts.getLeadingCommentRanges(text, node.pos) ?? []) {
+        comments.set(range.pos, range.end);
+      }
+    }
+    for (const child of children) visit(child);
+  };
+  visit(source);
+  let blanked = text;
+  for (const [start, end] of comments) {
+    blanked =
+      blanked.slice(0, start) +
+      blanked.slice(start, end).replaceAll(/[^\n]/g, " ") +
+      blanked.slice(end);
+  }
+  return blanked;
+}
 
 /** A component's file, and every module of the package it imports, which can render more elements. */
 function modulesOf(file: string): string[] {
@@ -221,6 +265,19 @@ const ACCEPTED_RENDERS: Record<string, string> = {
     "a guide of the sanitiser's logo tiles; the logo's bundle is requested once the guide renders",
   "idg-brand-guidelines>idg-brand-swatches":
     "the swatches are a bundle of their own, small, and requested once the guide renders",
+  // The editor's fields are the form controls every form uses: copying them into the editor's
+  // group would put them in two bundles, which a component cannot be. They are requested in the
+  // same round trip as the logo and the guide below, so the editor waits one hop in all.
+  "idg-brand-editor>idg-field":
+    "the field around each control is the forms group's; requested with the editor's other parts",
+  "idg-brand-editor>idg-input":
+    "the hex, name, id and tagline inputs are the forms group's own control",
+  "idg-brand-editor>idg-select":
+    "the font pairing, corners and tone are the forms group's own select",
+  "idg-brand-editor>idg-brand-logo":
+    "an upload's thumbnail is the logo element with its sanitiser check; the guide requests it too",
+  "idg-brand-editor>idg-brand-guidelines":
+    "the preview is the guide, a bundle of its own, requested in the same hop as the fields",
 };
 
 describe("the bundles of stencil-bundles.ts, against the components' sources", () => {
@@ -256,6 +313,20 @@ describe("the bundles of stencil-bundles.ts, against the components' sources", (
       "idg-icon",
       "idg-tooltip",
     ]);
+  });
+
+  it("reads a comment marker inside a string or JSX text as text, so a string hides no code", () => {
+    const known = new Set(["idg-badge", "idg-icon", "idg-stat", "idg-tooltip"]);
+    const source = `
+      const accept = "image/*";
+      render() { return <idg-badge />; }
+      const close = '*/';
+      const url = \`https://example.com//path\`;
+      show() { return <p>Use // or /* freely, then <idg-icon /></p>; }
+      /* <idg-stat /> in a comment */
+      // <idg-tooltip /> after a line comment
+    `;
+    expect([...renderedTags(source, known)].sort()).toEqual(["idg-badge", "idg-icon"]);
   });
 
   it("renders only what is in its own group or in controls, bar the accepted", () => {

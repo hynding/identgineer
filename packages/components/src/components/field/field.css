@@ -15,12 +15,16 @@
   gap: calc(var(--idg-space-3xs) * var(--idg-density-gap-scale));
 }
 
+/* A label may hold a word longer than a narrow field is wide, at a large text size: it breaks
+   inside that word rather than reach past the field. */
 .label {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--idg-space-2xs);
   align-self: flex-start;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
   cursor: pointer;
   font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
   font-weight: var(--idg-font-weight-semibold);
@@ -46,6 +50,17 @@
   line-height: var(--idg-font-body-line-height);
 }
 
+/* The message starts as wide as its longest word and grows into the room beside its mark. Where
+   that word does not fit beside the mark, as in a narrow field at a large text size, the message
+   wraps below it; where it is wider than the whole line, it shrinks to the line and that word
+   breaks. An ordinary word that fits is never broken. */
+.error-text {
+  flex: 1 1 min-content;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-wrap: break-word;
+}
+
 /* The UX mode's hint switch is a number, so scaling lengths and opacity by it hides or shows the
    hint in every browser, with no style query. The hint is only collapsed, never removed: the
    control's accessible description carries the same text whether or not it is visible. */
@@ -62,6 +77,7 @@
 
 .error:not(:empty) {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   align-self: flex-start;
   gap: var(--idg-space-2xs);

@@ -9,6 +9,10 @@ import { AccordionToggleDetail } from "./components/accordion/accordion-options"
 import { AlertVariant } from "./components/alert/alert-options";
 import { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 import { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
+import { BrandEditorKit, BrandEditorSaveDetail } from "./components/brand-editor/brand-editor-types";
+import { BrandEditorStore } from "./components/brand-editor/brand-editor-store";
+import { BrandEditorLabels } from "./components/brand-editor/brand-editor-labels";
+import { CountdownClock } from "./identity/throttle-countdown";
 import { BrandExportDetail, BrandExportTheme } from "./components/brand-export/brand-export-types";
 import { BrandExportLabels } from "./components/brand-export/brand-export-labels";
 import { BrandGuidelinesKit, BrandGuidelinesTheme } from "./components/brand-guidelines/brand-guidelines-types";
@@ -41,7 +45,6 @@ import { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item
 import { PasswordResetClient, ProfileClient, RegisterClient, SessionGuardClient, SignInClient, UserMenuClient } from "./identity/identity-types";
 import { PasswordResetMode } from "./components/password-reset/password-reset-options";
 import { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
-import { CountdownClock } from "./identity/throttle-countdown";
 import { SignedInDetail, SignedOutDetail } from "./identity/event-details";
 import { ProfileLabels } from "./components/profile/profile-labels";
 import { ProfileSavedDetail, SessionRevokedDetail } from "./components/profile/profile-types";
@@ -71,6 +74,10 @@ export { AccordionToggleDetail } from "./components/accordion/accordion-options"
 export { AlertVariant } from "./components/alert/alert-options";
 export { AvatarSize, AvatarStatus } from "./components/avatar/avatar-options";
 export { BadgeSize, BadgeVariant } from "./components/badge/badge-options";
+export { BrandEditorKit, BrandEditorSaveDetail } from "./components/brand-editor/brand-editor-types";
+export { BrandEditorStore } from "./components/brand-editor/brand-editor-store";
+export { BrandEditorLabels } from "./components/brand-editor/brand-editor-labels";
+export { CountdownClock } from "./identity/throttle-countdown";
 export { BrandExportDetail, BrandExportTheme } from "./components/brand-export/brand-export-types";
 export { BrandExportLabels } from "./components/brand-export/brand-export-labels";
 export { BrandGuidelinesKit, BrandGuidelinesTheme } from "./components/brand-guidelines/brand-guidelines-types";
@@ -103,7 +110,6 @@ export { MenuItemType, MenuSelectDetail } from "./components/menu-item/menu-item
 export { PasswordResetClient, ProfileClient, RegisterClient, SessionGuardClient, SignInClient, UserMenuClient } from "./identity/identity-types";
 export { PasswordResetMode } from "./components/password-reset/password-reset-options";
 export { PasswordResetLabels } from "./components/password-reset/password-reset-labels";
-export { CountdownClock } from "./identity/throttle-countdown";
 export { SignedInDetail, SignedOutDetail } from "./identity/event-details";
 export { ProfileLabels } from "./components/profile/profile-labels";
 export { ProfileSavedDetail, SessionRevokedDetail } from "./components/profile/profile-types";
@@ -302,6 +308,57 @@ export namespace Components {
           * @default "neutral"
          */
         "variant": BadgeVariant;
+    }
+    /**
+     * A form for one brand kit, with a live preview: the name, tagline and theme id, the colours (a
+     * hex field with a native colour picker in it, kept in step), the font pairing, corners and tone
+     * from the brand package's presets, and the logo and mark as SVG uploads. It saves through the
+     * `store` it is given (`create`, or `update` once there is a `documentId`) and keeps nothing in the
+     * browser: the draft lives in the element and is gone with it.
+     * Everything is validated by `parseBrandKit`, and each of its error codes is one fixed message on
+     * the field it names. An upload is refused by its size before it is read, read as bytes, and
+     * passed through `sanitiseSvgLogo`; only the sanitiser's output is ever kept or drawn, and what it
+     * removed is listed before the kit is saved. Nothing a file, a kit or the server said reaches the
+     * page as markup, and no message repeats it.
+     * The preview is `idg-brand-guidelines` with the kit and the theme `generateBrandTheme` makes of
+     * it, worked out once typing pauses, never on every keystroke. It is drawn in its own region and
+     * styles nothing outside it.
+     */
+    interface IdgBrandEditor {
+        /**
+          * Timers for the pause before the preview is worked out again; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The CMS's id of the kit being edited: saving updates it. Without one, the first save creates a kit, and later saves update the kit it created. Set it with `kit`.
+         */
+        "documentId"?: string;
+        /**
+          * The level of the preview's heading, 1 to 6; the guide inside it starts one level deeper.
+          * @default 2
+         */
+        "headingLevel": number;
+        /**
+          * The kit to start from, as `parseBrandKit` or the store's `get` returned it; none starts an empty kit. Set it as a property: it is data, and untrusted. Setting it again starts over.
+         */
+        "kit"?: BrandEditorKit;
+        /**
+          * The accessible name of the form. Defaults to the `name` label.
+         */
+        "label"?: string;
+        /**
+          * The words shown, merged over the English defaults. Assign a new object to change them.
+         */
+        "labels"?: Partial<BrandEditorLabels>;
+        /**
+          * Whether the live preview is shown.
+          * @default true
+         */
+        "preview": boolean;
+        /**
+          * Where the kit is saved: the object `createBrandKitStore` returns, or anything with its `create` and `update`. Set it as a property. The element never creates one and never fetches.
+         */
+        "store"?: BrandEditorStore;
     }
     /**
      * Lets a person take a brand theme away: the stylesheet and the token source `@identgineer/brand`
@@ -2282,6 +2339,10 @@ export interface IdgAlertCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgAlertElement;
 }
+export interface IdgBrandEditorCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLIdgBrandEditorElement;
+}
 export interface IdgBrandExportCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLIdgBrandExportElement;
@@ -2473,6 +2534,38 @@ declare global {
     var HTMLIdgBadgeElement: {
         prototype: HTMLIdgBadgeElement;
         new (): HTMLIdgBadgeElement;
+    };
+    interface HTMLIdgBrandEditorElementEventMap {
+        "idgSave": BrandEditorSaveDetail;
+    }
+    /**
+     * A form for one brand kit, with a live preview: the name, tagline and theme id, the colours (a
+     * hex field with a native colour picker in it, kept in step), the font pairing, corners and tone
+     * from the brand package's presets, and the logo and mark as SVG uploads. It saves through the
+     * `store` it is given (`create`, or `update` once there is a `documentId`) and keeps nothing in the
+     * browser: the draft lives in the element and is gone with it.
+     * Everything is validated by `parseBrandKit`, and each of its error codes is one fixed message on
+     * the field it names. An upload is refused by its size before it is read, read as bytes, and
+     * passed through `sanitiseSvgLogo`; only the sanitiser's output is ever kept or drawn, and what it
+     * removed is listed before the kit is saved. Nothing a file, a kit or the server said reaches the
+     * page as markup, and no message repeats it.
+     * The preview is `idg-brand-guidelines` with the kit and the theme `generateBrandTheme` makes of
+     * it, worked out once typing pauses, never on every keystroke. It is drawn in its own region and
+     * styles nothing outside it.
+     */
+    interface HTMLIdgBrandEditorElement extends Components.IdgBrandEditor, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLIdgBrandEditorElementEventMap>(type: K, listener: (this: HTMLIdgBrandEditorElement, ev: IdgBrandEditorCustomEvent<HTMLIdgBrandEditorElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLIdgBrandEditorElementEventMap>(type: K, listener: (this: HTMLIdgBrandEditorElement, ev: IdgBrandEditorCustomEvent<HTMLIdgBrandEditorElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLIdgBrandEditorElement: {
+        prototype: HTMLIdgBrandEditorElement;
+        new (): HTMLIdgBrandEditorElement;
     };
     interface HTMLIdgBrandExportElementEventMap {
         "idgCopy": BrandExportDetail;
@@ -3482,6 +3575,7 @@ declare global {
         "idg-avatar": HTMLIdgAvatarElement;
         "idg-avatar-group": HTMLIdgAvatarGroupElement;
         "idg-badge": HTMLIdgBadgeElement;
+        "idg-brand-editor": HTMLIdgBrandEditorElement;
         "idg-brand-export": HTMLIdgBrandExportElement;
         "idg-brand-guidelines": HTMLIdgBrandGuidelinesElement;
         "idg-brand-logo": HTMLIdgBrandLogoElement;
@@ -3716,6 +3810,61 @@ declare namespace LocalJSX {
           * @default "neutral"
          */
         "variant"?: BadgeVariant;
+    }
+    /**
+     * A form for one brand kit, with a live preview: the name, tagline and theme id, the colours (a
+     * hex field with a native colour picker in it, kept in step), the font pairing, corners and tone
+     * from the brand package's presets, and the logo and mark as SVG uploads. It saves through the
+     * `store` it is given (`create`, or `update` once there is a `documentId`) and keeps nothing in the
+     * browser: the draft lives in the element and is gone with it.
+     * Everything is validated by `parseBrandKit`, and each of its error codes is one fixed message on
+     * the field it names. An upload is refused by its size before it is read, read as bytes, and
+     * passed through `sanitiseSvgLogo`; only the sanitiser's output is ever kept or drawn, and what it
+     * removed is listed before the kit is saved. Nothing a file, a kit or the server said reaches the
+     * page as markup, and no message repeats it.
+     * The preview is `idg-brand-guidelines` with the kit and the theme `generateBrandTheme` makes of
+     * it, worked out once typing pauses, never on every keystroke. It is drawn in its own region and
+     * styles nothing outside it.
+     */
+    interface IdgBrandEditor {
+        /**
+          * Timers for the pause before the preview is worked out again; the browser's by default. For tests.
+         */
+        "clock"?: CountdownClock;
+        /**
+          * The CMS's id of the kit being edited: saving updates it. Without one, the first save creates a kit, and later saves update the kit it created. Set it with `kit`.
+         */
+        "documentId"?: string;
+        /**
+          * The level of the preview's heading, 1 to 6; the guide inside it starts one level deeper.
+          * @default 2
+         */
+        "headingLevel"?: number;
+        /**
+          * The kit to start from, as `parseBrandKit` or the store's `get` returned it; none starts an empty kit. Set it as a property: it is data, and untrusted. Setting it again starts over.
+         */
+        "kit"?: BrandEditorKit;
+        /**
+          * The accessible name of the form. Defaults to the `name` label.
+         */
+        "label"?: string;
+        /**
+          * The words shown, merged over the English defaults. Assign a new object to change them.
+         */
+        "labels"?: Partial<BrandEditorLabels>;
+        /**
+          * Fires after a save, with the stored kit's ids and nothing of its content.
+         */
+        "onIdgSave"?: (event: IdgBrandEditorCustomEvent<BrandEditorSaveDetail>) => void;
+        /**
+          * Whether the live preview is shown.
+          * @default true
+         */
+        "preview"?: boolean;
+        /**
+          * Where the kit is saved: the object `createBrandKitStore` returns, or anything with its `create` and `update`. Set it as a property. The element never creates one and never fetches.
+         */
+        "store"?: BrandEditorStore;
     }
     /**
      * Lets a person take a brand theme away: the stylesheet and the token source `@identgineer/brand`
@@ -5800,6 +5949,12 @@ declare namespace LocalJSX {
         "size": BadgeSize;
         "dot": boolean;
     }
+    interface IdgBrandEditorAttributes {
+        "documentId": string;
+        "label": string;
+        "headingLevel": number;
+        "preview": boolean;
+    }
     interface IdgBrandExportAttributes {
         "css": string;
         "tokens": string;
@@ -6199,6 +6354,7 @@ declare namespace LocalJSX {
         "idg-avatar": Omit<IdgAvatar, keyof IdgAvatarAttributes> & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes]?: IdgAvatar[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `attr:${K}`]?: IdgAvatarAttributes[K] } & { [K in keyof IdgAvatar & keyof IdgAvatarAttributes as `prop:${K}`]?: IdgAvatar[K] };
         "idg-avatar-group": Omit<IdgAvatarGroup, keyof IdgAvatarGroupAttributes> & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes]?: IdgAvatarGroup[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `attr:${K}`]?: IdgAvatarGroupAttributes[K] } & { [K in keyof IdgAvatarGroup & keyof IdgAvatarGroupAttributes as `prop:${K}`]?: IdgAvatarGroup[K] };
         "idg-badge": Omit<IdgBadge, keyof IdgBadgeAttributes> & { [K in keyof IdgBadge & keyof IdgBadgeAttributes]?: IdgBadge[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `attr:${K}`]?: IdgBadgeAttributes[K] } & { [K in keyof IdgBadge & keyof IdgBadgeAttributes as `prop:${K}`]?: IdgBadge[K] };
+        "idg-brand-editor": Omit<IdgBrandEditor, keyof IdgBrandEditorAttributes> & { [K in keyof IdgBrandEditor & keyof IdgBrandEditorAttributes]?: IdgBrandEditor[K] } & { [K in keyof IdgBrandEditor & keyof IdgBrandEditorAttributes as `attr:${K}`]?: IdgBrandEditorAttributes[K] } & { [K in keyof IdgBrandEditor & keyof IdgBrandEditorAttributes as `prop:${K}`]?: IdgBrandEditor[K] };
         "idg-brand-export": Omit<IdgBrandExport, keyof IdgBrandExportAttributes> & { [K in keyof IdgBrandExport & keyof IdgBrandExportAttributes]?: IdgBrandExport[K] } & { [K in keyof IdgBrandExport & keyof IdgBrandExportAttributes as `attr:${K}`]?: IdgBrandExportAttributes[K] } & { [K in keyof IdgBrandExport & keyof IdgBrandExportAttributes as `prop:${K}`]?: IdgBrandExport[K] };
         "idg-brand-guidelines": Omit<IdgBrandGuidelines, keyof IdgBrandGuidelinesAttributes> & { [K in keyof IdgBrandGuidelines & keyof IdgBrandGuidelinesAttributes]?: IdgBrandGuidelines[K] } & { [K in keyof IdgBrandGuidelines & keyof IdgBrandGuidelinesAttributes as `attr:${K}`]?: IdgBrandGuidelinesAttributes[K] } & { [K in keyof IdgBrandGuidelines & keyof IdgBrandGuidelinesAttributes as `prop:${K}`]?: IdgBrandGuidelines[K] };
         "idg-brand-logo": Omit<IdgBrandLogo, keyof IdgBrandLogoAttributes> & { [K in keyof IdgBrandLogo & keyof IdgBrandLogoAttributes]?: IdgBrandLogo[K] } & { [K in keyof IdgBrandLogo & keyof IdgBrandLogoAttributes as `attr:${K}`]?: IdgBrandLogoAttributes[K] } & { [K in keyof IdgBrandLogo & keyof IdgBrandLogoAttributes as `prop:${K}`]?: IdgBrandLogo[K] };
@@ -6291,6 +6447,22 @@ declare module "@stencil/core" {
              * A short status or count label. Its meaning is in its text; the variant only adds emphasis.
              */
             "idg-badge": LocalJSX.IntrinsicElements["idg-badge"] & JSXBase.HTMLAttributes<HTMLIdgBadgeElement>;
+            /**
+             * A form for one brand kit, with a live preview: the name, tagline and theme id, the colours (a
+             * hex field with a native colour picker in it, kept in step), the font pairing, corners and tone
+             * from the brand package's presets, and the logo and mark as SVG uploads. It saves through the
+             * `store` it is given (`create`, or `update` once there is a `documentId`) and keeps nothing in the
+             * browser: the draft lives in the element and is gone with it.
+             * Everything is validated by `parseBrandKit`, and each of its error codes is one fixed message on
+             * the field it names. An upload is refused by its size before it is read, read as bytes, and
+             * passed through `sanitiseSvgLogo`; only the sanitiser's output is ever kept or drawn, and what it
+             * removed is listed before the kit is saved. Nothing a file, a kit or the server said reaches the
+             * page as markup, and no message repeats it.
+             * The preview is `idg-brand-guidelines` with the kit and the theme `generateBrandTheme` makes of
+             * it, worked out once typing pauses, never on every keystroke. It is drawn in its own region and
+             * styles nothing outside it.
+             */
+            "idg-brand-editor": LocalJSX.IntrinsicElements["idg-brand-editor"] & JSXBase.HTMLAttributes<HTMLIdgBrandEditorElement>;
             /**
              * Lets a person take a brand theme away: the stylesheet and the token source `@identgineer/brand`
              * emits, and the lines that put the theme on a page. Each is shown in full as text in a focusable,

@@ -16,12 +16,15 @@ import { BROWSER_PORT } from "./port";
 export const BRAND_PAGE = "/fixtures/brand.html";
 /** The export element's page: it draws no image, so it is served under the strict policy and no looser. */
 export const EXPORT_PAGE = "/fixtures/brand-export.html";
-/** The brand elements the fixture holds, each of which must be hydrated before a test reads it. */
+/** The editor's page: it draws the logos it is given and uploaded, so it is served with the logo policy. */
+export const EDITOR_PAGE = "/fixtures/brand-editor.html";
+/** The brand elements the fixtures hold, each of which must be hydrated before a test reads it. */
 export const BRAND_TAGS = [
   "idg-brand-logo",
   "idg-brand-swatches",
   "idg-brand-guidelines",
   "idg-brand-export",
+  "idg-brand-editor",
 ] as const;
 const BRAND_DATA = "/fixtures/brand-data.json";
 const ORIGIN = `http://127.0.0.1:${String(BROWSER_PORT)}`;
@@ -230,7 +233,7 @@ export interface OpenOptions {
   /** `strict` is the policy every browser test runs under; `logo` also allows `img-src data:`. */
   readonly policy?: "strict" | "logo";
   /** The fixture to open: the brand page by default. */
-  readonly page?: typeof BRAND_PAGE | typeof EXPORT_PAGE;
+  readonly page?: typeof BRAND_PAGE | typeof EXPORT_PAGE | typeof EDITOR_PAGE;
 }
 
 /** Opens the export fixture under the strict policy, with nothing allowed beyond it. */

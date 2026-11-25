@@ -24,6 +24,7 @@ import { INPUT_SIZES, INPUT_TYPES, type InputSize, type InputType } from "./inpu
  *
  * @slot start - Content inside the box before the text, such as an icon.
  * @slot end - Content inside the box after the text.
+ * @part box - The box around the native input and its slots, which draws the control's edge.
  * @part control - The native input.
  */
 @Component({
@@ -227,6 +228,7 @@ export class IdgInput {
 
     return (
       <div
+        part="box"
         class={{
           box: true,
           [`size-${size}`]: true,

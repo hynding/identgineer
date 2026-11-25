@@ -106,7 +106,7 @@ if (brandLogo) {
   document.getElementById("brand-demo-swatches").theme = HARBOUR_THEME;
   // The guide reads a kit and a theme as parseBrandKit and generateBrandTheme return them.
   const guide = document.getElementById("brand-demo-guidelines");
-  guide.kit = {
+  const harbourKit = {
     id: "harbour-lights",
     name: "Harbour Lights",
     tagline: "Every ship finds its way home",
@@ -117,6 +117,7 @@ if (brandLogo) {
     corners: "round",
     tone: "vivid",
   };
+  guide.kit = harbourKit;
   guide.theme = HARBOUR_THEME;
   // The export shows texts a page already holds; these are short excerpts of what the brand
   // package emits, so the demo needs none of the pipeline.
@@ -125,4 +126,20 @@ if (brandLogo) {
   files.tokens = '{\n  "color": { "accent": { "$value": "#f4c430" } }\n}\n';
   files.themeId = "harbour-lights";
   files.name = "Harbour Lights";
+
+  // The editor saves through whatever store it is given: a page hands it the object
+  // `createBrandKitStore` returns. This one keeps each saved kit in memory, answering as that store
+  // does, so the demo sends nothing anywhere.
+  const saved = new Map();
+  const keep = (documentId, kit) => {
+    saved.set(documentId, kit);
+    return Promise.resolve({ ok: true, record: { documentId, isPublic: false, kit } });
+  };
+  const editor = document.getElementById("brand-demo-editor");
+  editor.store = {
+    create: (kit) => keep(`demo-${String(saved.size + 1)}`, kit),
+    update: (documentId, kit) => keep(documentId, kit),
+  };
+  editor.documentId = "demo-harbour";
+  editor.kit = harbourKit;
 }
