@@ -179,7 +179,9 @@ class LogoGraph {
   }
 
   private path(id: string): Item {
-    const curves = this.random() < 0.3;
+    const kind = this.random();
+    if (kind < 0.2) return this.axisPath(id);
+    const curves = kind < 0.45;
     const count = 1 + this.integer(curves ? 400 : 3000);
     let data = "M0 0";
     let x = 0;
@@ -242,6 +244,43 @@ class LogoGraph {
       markup: `<path id="${id}" d="${data}"${this.dash(id)}/>`,
       measure: (dashes) => shape(geometry, length, count, WEIGHT.tiledDash, dashes),
       paint: (_, reading) => filled(Math.min(area, boxArea), visible, length, count, box, reading),
+      clipped: false,
+    };
+  }
+
+  /**
+   * A path of H and V segments, each of some length: one segment alone is a line whose dashes
+   * Chromium culls to each tile of a large image; any more, whichever way they turn, are not.
+   */
+  private axisPath(id: string): Item {
+    const count = 1 + (this.random() < 0.3 ? 0 : this.integer(300));
+    let data = "M0 0";
+    let x = 0;
+    let y = 0;
+    let length = 0;
+    let area = 0;
+    let box: Box = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    for (let index = 0; index < count; index += 1) {
+      const horizontal = this.random() < 0.5;
+      const from = horizontal ? x : y;
+      // Anywhere on the axis but where the pen already is.
+      const to = (from + 1 + this.integer(99)) % 100;
+      const [nextX, nextY] = horizontal ? [to, y] : [x, to];
+      data += `${horizontal ? "H" : "V"}${String(to)}`;
+      length += Math.abs(to - from);
+      area += triangle([0, 0], [x, y], [nextX, nextY]);
+      box = joined(box, { minX: nextX, minY: nextY, maxX: nextX, maxY: nextY });
+      x = nextX;
+      y = nextY;
+    }
+    const boxArea = (box.maxX - box.minX) * (box.maxY - box.minY);
+    const dash = count === 1 ? WEIGHT.dash : WEIGHT.tiledDash;
+    return {
+      id,
+      markup: `<path id="${id}" d="${data}"${this.dash(id)}/>`,
+      measure: (dashes) => shape(count * WEIGHT.line, length, count, dash, dashes),
+      paint: (_, reading) =>
+        filled(Math.min(area, boxArea), count * Math.SQRT2, length, count, box, reading),
       clipped: false,
     };
   }

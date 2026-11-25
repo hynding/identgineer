@@ -270,13 +270,23 @@ describe("the drawing cost of a logo", () => {
     expect(cost('<path d="M0 0H100M0 10H100" stroke-dasharray="1"/>')).toBe(1 + 34 + 1030);
   });
 
-  it("charges a dash ten times on anything but one run of horizontal and vertical lines, which Chromium works out again for every tile of a large image", () => {
-    // One run of horizontal and vertical lines: a line whose ends share a coordinate written the
-    // same, a rectangle without rounded corners, a path of one move and then only H and V.
+  it("charges a dash ten times on anything but one horizontal or vertical line or a rectangle, which Chromium works out again for every tile of a large image", () => {
+    // What Chromium culls to the tile: a line whose ends share a coordinate written the same, a
+    // path of one move and one H or V segment, a rectangle without rounded corners.
     expect(cost('<line x2="100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
     expect(cost('<line x1="5" x2="5" y2="100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
+    expect(cost('<path d="M5 0V100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
+    expect(cost('<path d="m5 0h100" stroke-dasharray="1"/>')).toBe(1 + 33 + 52);
     expect(cost('<rect width="10" height="10" stroke-dasharray="1"/>')).toBe(1 + 36 + 22);
-    expect(cost('<path d="M0 0H100V100h-100v-100" stroke-dasharray="1"/>')).toBe(1 + 36 + 202);
+    expect(cost('<rect width="10" height="10" rx="0" stroke-dasharray="1"/>')).toBe(1 + 36 + 22);
+    expect(cost('<rect width="10" height="10" ry="0" stroke-dasharray="1"/>')).toBe(1 + 36 + 22);
+    // A path of more than one H or V segment is not culled, whichever way it turns: an open
+    // rectangle, an L, a staircase, back and forth along one line, on along one line.
+    expect(cost('<path d="M0 0H100V100h-100v-100" stroke-dasharray="1"/>')).toBe(1 + 36 + 2020);
+    expect(cost('<path d="M0 0H100V100" stroke-dasharray="1"/>')).toBe(1 + 34 + 1020);
+    expect(cost('<path d="M0 0H50V50H100V100" stroke-dasharray="1"/>')).toBe(1 + 36 + 1020);
+    expect(cost('<path d="M0 0H100H0" stroke-dasharray="1"/>')).toBe(1 + 34 + 1020);
+    expect(cost('<path d="M0 0H50H100" stroke-dasharray="1"/>')).toBe(1 + 34 + 520);
     // Anything else, even where the numbers come out horizontal: a coordinate written two ways, a
     // closing segment, a line segment, a polyline, a slanted line, a rounded rectangle, a curve.
     expect(cost('<line y1="5" y2="5.0" x2="100" stroke-dasharray="1"/>')).toBe(1 + 33 + 520);
