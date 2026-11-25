@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { generateBrandTheme, parseBrandKit } from "@identgineer/brand";
+import { generateBrandTheme, parseBrandKit, sanitiseSvgLogo } from "@identgineer/brand";
 import { h, render } from "@stencil/vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "../brand-logo/brand-logo";
@@ -46,5 +46,31 @@ describe("how often the guide checks its logos", () => {
     expect(reads.count).toBe(0);
     await setProps({ kit: { ...KIT, mark: KIT.logo } });
     expect(reads.count).toBe(0);
+  });
+});
+
+function logoText(width: number) {
+  const result = sanitiseSvgLogo(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" width="${String(width)}" height="10"><rect width="${String(width)}" height="1"/></svg>`,
+  );
+  if (!result.ok) throw new Error("expected a logo");
+  return result.svg;
+}
+
+describe("how often two guides check their logos", () => {
+  beforeEach(() => {
+    reads.count = 0;
+  });
+
+  it("checks each of four distinct texts once when two guides are given kits in the same task", async () => {
+    const first = { ...KIT, logo: logoText(11), mark: logoText(12) };
+    const second = { ...KIT, logo: logoText(13), mark: logoText(14) };
+    await render(
+      <div>
+        <idg-brand-guidelines kit={first} theme={THEME} />
+        <idg-brand-guidelines kit={second} theme={THEME} />
+      </div>,
+    );
+    expect(reads.count).toBe(4);
   });
 });
