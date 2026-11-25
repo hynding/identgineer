@@ -3,7 +3,7 @@
   "roles": [
     {
       "name": "public",
-      "description": "Callers without a session. Reads site content only; tracking reaches the CMS through the public ingestion endpoints, never through a grant.",
+      "description": "Callers without a session. Reads site content and brand kits their owners made public; tracking reaches the CMS through the public ingestion endpoints, never through a grant.",
       "grants": [
         {
           "contentType": "Page",
@@ -12,6 +12,21 @@
         {
           "contentType": "NavigationItem",
           "actions": ["read"]
+        },
+        {
+          "contentType": "BrandKit",
+          "actions": ["read"],
+          "condition": {
+            "kind": "eq",
+            "left": {
+              "kind": "var",
+              "name": "record.isPublic"
+            },
+            "right": {
+              "kind": "lit",
+              "value": true
+            }
+          }
         }
       ]
     },
@@ -61,6 +76,21 @@
           },
           "assign": {
             "owner": "user.id"
+          }
+        },
+        {
+          "contentType": "BrandKit",
+          "actions": ["read"],
+          "condition": {
+            "kind": "eq",
+            "left": {
+              "kind": "var",
+              "name": "record.isPublic"
+            },
+            "right": {
+              "kind": "lit",
+              "value": true
+            }
           }
         },
         {
