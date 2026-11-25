@@ -105,7 +105,7 @@ pnpm typecheck     # tsc across every workspace package
 pnpm test          # Vitest
 pnpm build         # build every package that defines a build script
 pnpm cms:generate  # camis dry run for the CMS (also cms:validate, cms:build); needs CAMIS_DIR
-pnpm contract:live # the identity SDK against a generated strapi-php backend; needs CAMIS_DIR and PHP 8.3 (Composer for the first run)
+pnpm contract:live # the identity SDK and brand kit store against a generated strapi-php backend; needs CAMIS_DIR and PHP 8.3 (Composer for the first run)
 ```
 
 `pnpm test` runs without camis, PHP or a network; `pnpm contract:live` is run by hand (CI has no

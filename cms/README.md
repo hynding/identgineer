@@ -243,8 +243,8 @@ lacks its reason, or if the live contract's server runs with other values for th
 
 ### Live contract test
 
-`pnpm contract:live` (from the repository root) runs the identity SDK against a real strapi-php
-backend generated from this directory. It needs `CAMIS_DIR` and PHP 8.3 or newer with the
+`pnpm contract:live` (from the repository root) runs the identity SDK, and the brand kit store of
+`packages/brand` through it, against a real strapi-php backend generated from this directory. It needs `CAMIS_DIR` and PHP 8.3 or newer with the
 extensions Laravel and Filament need (it names the PHP it found when older); the first run also
 needs Composer, as it scaffolds the Laravel app with `camis scaffold filament`, which downloads
 packages from Packagist. `scripts/live-backend.js` then, on every run:
@@ -358,6 +358,12 @@ Limits that remain on Strapi, for this model:
   database does not enforce its uniqueness.
 - `remoteDataTransfer` (strapi-php): `strapi transfer` needs a WebSocket server; move data as an
   archive instead (see `DEPLOY.md`).
+
+**Found by the live contract test, not yet fixed in camis.** strapi-php ignores a `null` in an
+update body (the generated serializer's `fromWire` drops every null value), where Strapi clears
+the field, so an update cannot clear a brand kit's `tagline`, `secondaryColor`, `neutralTint`,
+`logo` or `mark` there. `packages/identity/src/live-contract/brand-kit-store.live.test.ts` checks
+the Strapi behaviour and fails until camis clears the field.
 
 **Not reported by camis but limiting this model.** Conditions cannot follow a relation (hence the
 denormalised `owner` on Event and ConsentRecord); public endpoints have no declarative throttle,
