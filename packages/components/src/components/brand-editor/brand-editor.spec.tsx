@@ -853,6 +853,100 @@ describe("idg-brand-editor uploads", () => {
       expect(textOf(root, 'idg-alert[part="saved"]')).toBe("Brand kit saved.");
     });
 
+    /** Saves while a logo is read, removes an image the kit still has, and lets the read end. */
+    const stopByRemoval = async (
+      root: HTMLElement,
+      waitForChanges: () => Promise<void>,
+      removed: "logo" | "mark",
+    ) => {
+      const logo = slowFile(CLEAN_SVG);
+      choose(root, "logo", logo);
+      await waitForChanges();
+      submit(root);
+      await settle(waitForChanges);
+      shadowOf(root).querySelector<HTMLElement>(`[data-remove="${removed}"]`)?.click();
+      await settle(waitForChanges);
+      logo.release();
+      await settle(waitForChanges);
+      expect(stoppedNote(root)).toBe(STOPPED);
+    };
+
+    it("takes back the note when the next save is refused for a field", async () => {
+      const store = fakeStore();
+      const { root, waitForChanges } = await mount({ kit: HARBOUR, store });
+      type(root, "brand-id", "Not An Id");
+      await settle(waitForChanges);
+      await stopByRemoval(root, waitForChanges, "logo");
+      submit(root);
+      await settle(waitForChanges);
+      expect(stoppedNote(root)).toBeUndefined();
+      expect(textOf(root, 'idg-alert[part="error"]')).toBe(
+        "Some fields need a change. Each says what is wrong.",
+      );
+      expect(store.create).not.toHaveBeenCalled();
+    });
+
+    it("takes back the note when the next save finds no store", async () => {
+      const { root, waitForChanges } = await mount({ kit: HARBOUR });
+      await stopByRemoval(root, waitForChanges, "logo");
+      submit(root);
+      await settle(waitForChanges);
+      expect(stoppedNote(root)).toBeUndefined();
+      expect(textOf(root, 'idg-alert[part="error"]')).toBe(
+        "The kit cannot be saved here: no store is connected.",
+      );
+    });
+
+    it("takes back the note when the kit is replaced", async () => {
+      const { root, waitForChanges } = await mount({ kit: HARBOUR, store: fakeStore() });
+      await stopByRemoval(root, waitForChanges, "logo");
+      root.kit = ACME;
+      await settle(waitForChanges);
+      expect(stoppedNote(root)).toBeUndefined();
+    });
+
+    it("takes back the confirmation of the last save while the next one waits for a read", async () => {
+      const store = fakeStore();
+      const { root, waitForChanges } = await mount({ kit: ACME, store });
+      submit(root);
+      await settle(waitForChanges);
+      expect(textOf(root, 'idg-alert[part="saved"]')).toBe("Brand kit saved.");
+      const logo = slowFile(CLEAN_SVG);
+      choose(root, "logo", logo);
+      await waitForChanges();
+      submit(root);
+      await settle(waitForChanges);
+      expect(loading(root)).toBe(true);
+      expect(shadowOf(root).querySelector('idg-alert[part="saved"]')).toBeNull();
+      logo.release();
+      await settle(waitForChanges);
+    });
+
+    it("takes back the confirmation of the last save while the store answers the next one", async () => {
+      let answer: (value: unknown) => void = () => undefined;
+      const stored = { ok: true, record: { documentId: "doc-1", isPublic: false, kit: ACME } };
+      const store = {
+        create: vi.fn(() => Promise.resolve(stored)),
+        update: vi.fn(
+          () =>
+            new Promise((resolve) => {
+              answer = resolve;
+            }),
+        ),
+      };
+      const { root, waitForChanges } = await mount({ kit: ACME, store });
+      submit(root);
+      await settle(waitForChanges);
+      expect(textOf(root, 'idg-alert[part="saved"]')).toBe("Brand kit saved.");
+      submit(root);
+      await settle(waitForChanges);
+      expect(store.update).toHaveBeenCalledTimes(1);
+      expect(loading(root)).toBe(true);
+      expect(shadowOf(root).querySelector('idg-alert[part="saved"]')).toBeNull();
+      answer(stored);
+      await settle(waitForChanges);
+    });
+
     it("stops when the kit is replaced", async () => {
       const store = fakeStore();
       const { root, waitForChanges } = await mount({ kit: ACME, store });
