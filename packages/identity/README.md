@@ -546,7 +546,9 @@ only exposed response headers visible, and an unfollowed redirect answered as an
   credentials and not changeable by anyone else (404 signed in, 403 as the public role), a private
   kit in no public read, no owner shown through `populate`, and the owner set from the session
   whatever a client sends. One test, an update clearing the optional fields the kit no longer has,
-  fails on camis today: strapi-php ignores a `null` in an update body, where Strapi clears the field.
+  is an expected failure (`it.fails`) until
+  [hynding/camis#122](https://github.com/hynding/camis/issues/122) is fixed: strapi-php ignores a
+  `null` in an update body, where Strapi clears the field.
 
 The gaps the first live run found (a profile create refused on `owner`; a taken registration, a
 confirmed resend and the sign-in time telling accounts apart; JSON read from `text/plain`; no

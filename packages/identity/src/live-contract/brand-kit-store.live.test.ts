@@ -160,9 +160,11 @@ describe.skipIf(liveBackend === undefined)(
       expect(await allDocumentIds(owner.store.list)).toEqual([]);
     });
 
-    // Fails on camis today: strapi-php's generated serializer drops every null of an update body
-    // (fromWire's array_filter), so a field cannot be cleared, where Strapi clears it.
-    it("clears the optional fields an update no longer has, as Strapi does", async () => {
+    // An expected failure until https://github.com/hynding/camis/issues/122 is fixed: strapi-php's
+    // generated serializer drops every null of an update body (fromWire's array_filter), so a field
+    // cannot be cleared, where Strapi clears it. Once camis clears it this test passes, `it.fails`
+    // turns that red, and `.fails` comes off.
+    it.fails("clears the optional fields an update no longer has, as Strapi does", async () => {
       const owner = await signedInUser("kit-clear");
       const full = kitOf({
         tagline: "Light the way",
