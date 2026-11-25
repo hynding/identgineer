@@ -14,6 +14,7 @@
 .form {
   flex: 1 1 var(--idg-size-m);
   max-inline-size: 100%;
+  container: brand-form / inline-size;
 }
 
 .preview {
@@ -92,6 +93,30 @@
   border-radius: var(--idg-shape-radius-sm);
   background: none;
   cursor: pointer;
+}
+
+/* A hex field keeps room for a whole #rrggbb. Where the picker and the text do not fit side by
+   side, as at 320px with large text, the text wraps below the picker inside the box, and the
+   invalid mark after it, so nothing is squeezed to nothing or drawn outside the box. */
+.colour::part(box) {
+  flex-wrap: wrap;
+}
+
+.colour::part(control) {
+  flex: 1 1 7ch;
+  min-inline-size: 7ch;
+}
+
+/* A narrow form, as at 320px or with large text, gives its fields the room its groups and boxes
+   would pad: the group keeps its edge, and each hex field keeps a whole #rrggbb in view. */
+@container brand-form (inline-size < 20em) {
+  .group {
+    padding-inline: var(--idg-space-3xs);
+  }
+
+  .colour::part(box) {
+    padding-inline: var(--idg-space-3xs);
+  }
 }
 
 .picker::-webkit-color-swatch-wrapper {

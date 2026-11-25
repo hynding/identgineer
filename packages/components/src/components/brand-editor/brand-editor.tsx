@@ -612,6 +612,7 @@ export class IdgBrandEditor {
         optionalText={required ? undefined : labels.optional}
       >
         <idg-input
+          class="colour"
           name={controlName(field)}
           type="text"
           value={this.draft[field]}

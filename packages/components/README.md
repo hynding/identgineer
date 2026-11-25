@@ -227,7 +227,9 @@ inferred from attributes. For example the email input is a `textbox` named "Emai
 `selectText()` (a method of `idg-input` only) selects the text of the native input, for a read-only
 value that is meant to be copied, such as a link; it does not focus it, so call `setFocus()` too.
 
-Slots `start` and `end` sit inside the box. The reveal control is a real `<button type="button">`
+Slots `start` and `end` sit inside the box. Parts: `box` (the box that draws the edge, around the
+native input and the slots) and `control` (the native input), for a composite that lays out what
+it slots, as `idg-brand-editor` lets its hex field wrap below its colour picker. The reveal control is a real `<button type="button">`
 with `aria-pressed`; it changes only the native input's `type`, never the value. A shown password is
 hidden again when its form is submitted (before the submit event's listeners run), when the form
 is reset and when the value is set from outside, such as a form clearing it.
@@ -1720,6 +1722,10 @@ editor.addEventListener("idgSave", (event) => {
   working the theme out again. While the draft is invalid the last valid version stays, and says
   so. The guide is inside the element's shadow root, so the brand's colours style nothing outside
   it.
+- **Narrow forms.** The form is a container: below 20em (at 320px, or with large text) its groups
+  and hex boxes pad less, and each hex field keeps at least 7ch for a whole `#rrggbb`, wrapping
+  below its picker inside the box, with the invalid mark inside it too. A browser test checks this
+  in every layout at 320px and at 200% text.
 - **Control names** are the fields' names prefixed with `brand-` (`brand-name`, `brand-id`, …): a
   control named `id` or `name` would shadow the form's own properties.
 - **Content-Security-Policy:** the logos are data URL images, so as for `idg-brand-logo` the page
