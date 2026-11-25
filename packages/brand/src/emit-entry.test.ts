@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import * as emitEntry from "./emit-entry.ts";
@@ -7,7 +7,8 @@ import * as brand from "./index.ts";
 import { isNodeBuiltin, runtimeImports } from "./runtime-imports.ts";
 
 const SOURCE = fileURLToPath(new URL(".", import.meta.url));
-const TOKENS = resolve(SOURCE, "../../tokens");
+const PACKAGES = resolve(SOURCE, "../..");
+const TOKENS = resolve(PACKAGES, "tokens");
 const tokensManifest = JSON.parse(readFileSync(resolve(TOKENS, "package.json"), "utf8")) as {
   exports: Record<string, string>;
 };
@@ -39,10 +40,10 @@ describe("the emit entry", () => {
       .map((file) => [file, readFileSync(file, "utf8")] as const);
 
     it("walk past both packages, so the check reads what the emitters really load", () => {
-      const names = [...graph.files].map((file) => file.slice(dirname(SOURCE).length));
-      expect(names.some((name) => name.endsWith("/tokens/src/emit-css.ts"))).toBe(true);
-      expect(names.some((name) => name.endsWith("/brand/src/emit-brand-theme.ts"))).toBe(true);
-      expect(names.some((name) => name.endsWith("/tokens/src/tokens/primitive.json"))).toBe(true);
+      const names = [...graph.files].map((file) => relative(PACKAGES, file));
+      expect(names.some((name) => name === "tokens/src/emit-css.ts")).toBe(true);
+      expect(names.some((name) => name === "brand/src/emit-brand-theme.ts")).toBe(true);
+      expect(names.some((name) => name === "tokens/src/tokens/primitive.json")).toBe(true);
       expect(code.length).toBeGreaterThan(50);
     });
 
@@ -58,7 +59,7 @@ describe("the emit entry", () => {
             text,
           ),
         )
-        .map(([file]) => file.slice(dirname(SOURCE).length));
+        .map(([file]) => relative(PACKAGES, file));
       expect(reading).toEqual([]);
     });
 
