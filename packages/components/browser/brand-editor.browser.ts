@@ -872,6 +872,78 @@ function clippedFileInputs(page: Page) {
   });
 }
 
+/**
+ * Each image upload, in every editor, whose chooser label has a word too wide for the button. The
+ * label lives in the browser's own control, out of reach, and the button breaks a word that does
+ * not fit rather than clip it; so for the measure only, the button is sized to its min-content
+ * with no breaking inside words, which is its widest word plus its own padding and border, and
+ * that must fit in the input.
+ */
+function brokenFileLabels(page: Page) {
+  return page.evaluate(() =>
+    [...document.querySelectorAll("idg-brand-editor")].flatMap((editor) => {
+      const root = editor.shadowRoot;
+      if (!root) throw new Error("no shadow root");
+      // A constructed sheet, as the page's policy refuses a style element.
+      const unbroken = new CSSStyleSheet();
+      unbroken.replaceSync(
+        `.file::file-selector-button {
+          inline-size: min-content !important;
+          max-inline-size: none !important;
+          overflow-wrap: normal !important;
+        }`,
+      );
+      // A copy: the adopted list is live, so the one read here would take the added sheet too.
+      const sheets = [...root.adoptedStyleSheets];
+      root.adoptedStyleSheets = [...sheets, unbroken];
+      const broken = [...root.querySelectorAll('input[type="file"]')]
+        .filter(
+          (input) =>
+            Number.parseFloat(getComputedStyle(input, "::file-selector-button").width) >
+            input.clientWidth + 0.5,
+        )
+        .map((input) => `${editor.id} ${input.id}`);
+      root.adoptedStyleSheets = sheets;
+      return broken;
+    }),
+  );
+}
+
+/**
+ * Whatever, in every editor, does not take the narrow form's padding: each group, each hex box and
+ * each file chooser's button, read as computed against `--idg-space-3xs` resolved in that form.
+ */
+function unnarrowedPaddings(page: Page) {
+  return page.evaluate(() =>
+    [...document.querySelectorAll("idg-brand-editor")].flatMap((editor) => {
+      const form = editor.shadowRoot?.querySelector(".form");
+      if (!form) throw new Error("no form");
+      const probe = document.createElement("div");
+      probe.style.paddingInline = "var(--idg-space-3xs)";
+      form.append(probe);
+      const narrow = getComputedStyle(probe).paddingLeft;
+      probe.remove();
+      const padded = (name: string, style: CSSStyleDeclaration) =>
+        style.paddingLeft === narrow && style.paddingRight === narrow
+          ? []
+          : [`${editor.id} ${name} ${style.paddingLeft} ${style.paddingRight} not ${narrow}`];
+      return [
+        ...[...form.querySelectorAll(".group")].flatMap((group, index) =>
+          padded(`group ${String(index)}`, getComputedStyle(group)),
+        ),
+        ...[...form.querySelectorAll("idg-input.colour")].flatMap((input) => {
+          const box = input.shadowRoot?.querySelector(".box");
+          if (!box) throw new Error("no hex box");
+          return padded(`box ${input.getAttribute("name") ?? ""}`, getComputedStyle(box));
+        }),
+        ...[...form.querySelectorAll('input[type="file"]')].flatMap((input) =>
+          padded(`${input.id} button`, getComputedStyle(input, "::file-selector-button")),
+        ),
+      ];
+    }),
+  );
+}
+
 test.describe("idg-brand-editor reflow", () => {
   for (const layout of LAYOUTS) {
     for (const size of TEXT_SIZES) {
@@ -900,6 +972,8 @@ test.describe("idg-brand-editor reflow", () => {
               misfits: fitting(colours),
               files: files.count,
               clipped: files.clipped,
+              broken: await brokenFileLabels(page),
+              unnarrowed: await unnarrowedPaddings(page),
             };
           })
           .toEqual({
@@ -911,6 +985,8 @@ test.describe("idg-brand-editor reflow", () => {
             misfits: [],
             files: 6,
             clipped: [],
+            broken: [],
+            unnarrowed: [],
           });
       });
     }
@@ -942,6 +1018,8 @@ test.describe("idg-brand-editor reflow", () => {
           misfits: fitting(colours),
           files: files.count,
           clipped: files.clipped,
+          broken: await brokenFileLabels(page),
+          unnarrowed: await unnarrowedPaddings(page),
         };
       })
       .toEqual({
@@ -952,6 +1030,8 @@ test.describe("idg-brand-editor reflow", () => {
         misfits: [],
         files: 6,
         clipped: [],
+        broken: [],
+        unnarrowed: [],
       });
   });
 });
