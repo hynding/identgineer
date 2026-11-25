@@ -259,21 +259,21 @@ base.describe("the checks themselves", () => {
 // edges, crowded on every row; arcs; hairline dashes, of two lengths and of 64; dashes along
 // circles, an ellipse, a rounded rectangle, an arc, a cubic, a diagonal and a horizontal line;
 // solid paint over and over; gradients at the stop limit, opaque and translucent; a fill under a
-// very wide stroke; group opacity layers; masks inside masks; a clip path of crowded edges with the even-odd rule; a
-// view box far wider than tall; dashes, round dots and round joins on a stroke as wide as the
-// image; clip paths of near-coincident zigzags, which a renderer combining them took minutes over,
-// each written as a mask, and of one such zigzag in every form a clip path of one shape is kept
-// (alone, transformed, through a use, under the clip path's transform, even-odd, one inside another,
-// each at 30,000 and at 100,000, and in the box of a unit square); clip paths of a clipped shape and
-// of 43 shapes; a mask holding a clipped shape; and a shape scaled as far as a transform may go.
-// Each is the largest of its family that is accepted (the next one up is refused, for the drawing
-// cost or the overdraw), and must be drawn as an image and inline, rasterised in full at 600 CSS
-// pixels and at 2000 with a device scale factor of 2, shown as an image 2000 CSS pixels square at
-// that density (which Chromium rasterises in tiles), and drawn inline at 600, each within its
-// budget (the budgets cover inline logos up to 600 CSS pixels only: see the brand README). On a
-// loaded four-core machine the slowest took about 0.35 seconds at 600 and 1.8 at 2000, and on an
-// idle one 3.5 shown as an image at 2000 (see the brand README), so the budgets leave room for a
-// slow runner, yet a limit raised tenfold would blow through them.
+// very wide stroke; group opacity layers; masks inside masks; a clip path of crowded edges with the
+// even-odd rule; a view box far wider than tall; dashes, round dots and round joins on a stroke as
+// wide as the image; clip paths of near-coincident zigzags, which a renderer combining them took
+// minutes over, each written as a mask, and of one such zigzag in every form a clip path of one
+// shape is kept (alone, transformed, through a use, under the clip path's transform, even-odd, one
+// inside another, each at 30,000 and at 100,000, and in the box of a unit square); clip paths of a
+// clipped shape and of 43 shapes; a mask holding a clipped shape; and a shape scaled as far as a
+// transform may go. Each is the largest of its family that is accepted (the next one up is refused,
+// for the drawing cost or the overdraw), and must be drawn as an image and inline, rasterised in
+// full at 600 CSS pixels and at 2000 with a device scale factor of 2, shown as an image 2000 CSS
+// pixels square at that density (which Chromium rasterises in tiles), and drawn inline at 600, each
+// within its budget (the budgets cover inline logos up to 600 CSS pixels only: see the brand
+// README). On a loaded four-core machine the slowest took about 0.35 seconds at 600 and 1.8 at
+// 2000, and on an idle one 3.5 shown as an image at 2000 (see the brand README), so the budgets
+// leave room for a slow runner, yet a limit raised tenfold would blow through them.
 const SIZE = 600;
 const LARGE_SIZE = 2000;
 const RENDER_BUDGET_MS = 15_000;
