@@ -71,6 +71,20 @@ describe("saveProfile", () => {
     expect((await client.getProfile())?.locale).toBe("nl-NL");
   });
 
+  it("maps the locale to language when it updates a profile, and sends none when it is omitted", async () => {
+    const { api, client, signIn } = setup();
+    await signIn();
+    await client.saveProfile({ displayName: "Ada", locale: "nl-NL" });
+    const partial = await client.saveProfile({ displayName: "Ada L." });
+    expect(api.requests.at(-1)?.method).toBe("PUT");
+    expect(api.requests.at(-1)?.body).toEqual({ data: { displayName: "Ada L." } });
+    expect(partial.locale).toBe("nl-NL");
+    const updated = await client.saveProfile({ displayName: "Ada L.", locale: "fr" });
+    expect(api.requests.at(-1)?.method).toBe("PUT");
+    expect(api.requests.at(-1)?.body).toEqual({ data: { displayName: "Ada L.", language: "fr" } });
+    expect(updated.locale).toBe("fr");
+  });
+
   it("sends only the profile's own fields", async () => {
     const { api, client, signIn } = setup();
     await signIn();
@@ -139,6 +153,27 @@ describe("saveProfile", () => {
       code: "validation",
       fields: ["locale"],
     });
+  });
+
+  it("drops a server validation error that names locale, which is not a field of the wire", async () => {
+    const { api, client, signIn } = setup();
+    await signIn();
+    api.respondNext("GET", "/api/profiles", { status: 200, body: { data: [], meta: {} } });
+    api.respondNext("POST", "/api/profiles", {
+      status: 400,
+      body: {
+        data: null,
+        error: {
+          status: 400,
+          name: "ValidationError",
+          message: "x",
+          details: { errors: [{ path: ["locale"] }] },
+        },
+      },
+    });
+    const error = await rejection(client.saveProfile({ displayName: "Ada" }));
+    expect(error).toMatchObject({ code: "validation" });
+    expect(error).not.toHaveProperty("fields");
   });
 
   it("maps a forbidden write to unauthorized", async () => {
