@@ -111,20 +111,27 @@
   font-family: var(--idg-font-family-mono);
 }
 
-/* A narrow form, as at 320px or with large text, gives its fields the room its groups and boxes
-   would pad: the group keeps half the narrow space, each hex field keeps a whole #rrggbb in view,
-   and the file chooser's button spans its row with no inline padding of its own, its label
-   centred, so its side room is whatever the label leaves and its widest word, which is the
-   browser's, in the control font each design and UX mode sets, fits. The base rules for the group
-   and the hex box come before this block; the file chooser's comes after, so its narrow rule is
-   the more specific one to win. */
+/* A narrow form, about 320px of text at 18px, as beside the preview or in a 320px window: each hex
+   field keeps a whole #rrggbb in view, its box padding less. Groups and the file chooser keep
+   their regular look. */
 @container brand-form (inline-size < 20em) {
-  .group {
-    padding-inline: calc(var(--idg-space-3xs) / 2);
-  }
-
   .colour::part(box) {
     padding-inline: var(--idg-space-3xs);
+  }
+}
+
+/* A squeezed form, its text large against its width, as at 320px with 150% text or more: the file
+   chooser's label is the browser's, in the control font each design and UX mode sets, and its
+   widest word only fits when the groups give up their inline padding and the button spans its row
+   with none of its own, its label centred, its side room whatever the label leaves. 10.5em is
+   measured at 320px from 100% to 200% text: with the regular padding some pairing of design and
+   UX mode breaks the word at forms up to 9em wide, and every pairing fits with room to spare from
+   9.2em; a 320px window at 100% text gives at least 12em, and the form beside the preview at least
+   14em. The group's base rule comes before this block; the button's comes after, so its rule here
+   is the more specific one. */
+@container brand-form (inline-size < 10.5em) {
+  .group {
+    padding-inline: 0;
   }
 
   .image-row .file::file-selector-button {
