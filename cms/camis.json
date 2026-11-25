@@ -15,7 +15,7 @@
       "name": "File",
       "kind": "collection",
       "builtin": "file",
-      "description": "The media library: avatars, logos, marks and share images.",
+      "description": "The media library: avatars and share images.",
       "fields": []
     },
     {
@@ -119,10 +119,16 @@
           "target": "User",
           "required": true
         },
-        { "type": "string", "name": "name", "required": true, "maxLength": 80 },
-        { "type": "string", "name": "tagline", "maxLength": 140 },
-        { "type": "media", "name": "logo", "multiple": false, "allowedTypes": ["image"] },
-        { "type": "media", "name": "mark", "multiple": false, "allowedTypes": ["image"] },
+        {
+          "type": "string",
+          "name": "brandId",
+          "required": true,
+          "minLength": 2,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+        },
+        { "type": "string", "name": "name", "required": true, "maxLength": 120 },
+        { "type": "string", "name": "tagline", "maxLength": 240 },
         {
           "type": "color",
           "name": "primaryColor",
@@ -130,26 +136,35 @@
           "pattern": "^#[0-9a-fA-F]{6}$"
         },
         { "type": "color", "name": "secondaryColor", "pattern": "^#[0-9a-fA-F]{6}$" },
-        { "type": "color", "name": "neutralColor", "pattern": "^#[0-9a-fA-F]{6}$" },
+        { "type": "color", "name": "neutralTint", "pattern": "^#[0-9a-fA-F]{6}$" },
         {
-          "type": "component",
-          "name": "typePairing",
-          "component": "TypePairing",
-          "repeatable": false
+          "type": "enumeration",
+          "name": "typography",
+          "required": true,
+          "values": [
+            "system",
+            "geometric",
+            "humanist",
+            "grotesque",
+            "classic-serif",
+            "book",
+            "technical"
+          ]
         },
         {
           "type": "enumeration",
           "name": "corners",
-          "values": ["sharp", "subtle", "rounded", "pill"],
-          "default": "subtle"
+          "required": true,
+          "values": ["sharp", "soft", "round"]
         },
         {
           "type": "enumeration",
           "name": "tone",
-          "values": ["calm", "friendly", "bold", "formal", "playful"],
-          "default": "friendly"
+          "required": true,
+          "values": ["calm", "balanced", "vivid"]
         },
-        { "type": "json", "name": "themeTokens" },
+        { "type": "text", "name": "logo", "maxLength": 524288 },
+        { "type": "text", "name": "mark", "maxLength": 524288 },
         { "type": "boolean", "name": "isPublic", "default": false }
       ],
       "options": { "timestamps": true }
@@ -327,24 +342,6 @@
         { "type": "text", "name": "metaDescription", "maxLength": 160 },
         { "type": "media", "name": "shareImage", "multiple": false, "allowedTypes": ["image"] },
         { "type": "boolean", "name": "noIndex", "default": false }
-      ]
-    },
-    {
-      "name": "TypePairing",
-      "names": { "display": "Type pairing", "group": "brand" },
-      "fields": [
-        {
-          "type": "string",
-          "name": "headingFamily",
-          "maxLength": 64,
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9 -]{0,63}$"
-        },
-        {
-          "type": "string",
-          "name": "bodyFamily",
-          "maxLength": 64,
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9 -]{0,63}$"
-        }
       ]
     },
     {

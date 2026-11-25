@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { allows } from "./authorize";
-import { loadIr, loadRoles, OWNER_CONDITION, roleNamed, type Action } from "./model";
+import {
+  loadIr,
+  loadRoles,
+  OWNER_CONDITION,
+  PUBLIC_KIT_CONDITION,
+  roleNamed,
+  type Action,
+} from "./model";
 
 const ir = loadIr();
 const roles = loadRoles();
@@ -22,6 +29,13 @@ const ME = 7;
 const SOMEONE_ELSE = 8;
 const mine = { "user.id": ME, "record.ownerId": ME };
 const theirs = { "user.id": ME, "record.ownerId": SOMEONE_ELSE };
+// Brand kits are read under two grants, so every check of one says whether it is public.
+const myPrivateKit = { ...mine, "record.isPublic": false };
+const myPublicKit = { ...mine, "record.isPublic": true };
+const theirPrivateKit = { ...theirs, "record.isPublic": false };
+const theirPublicKit = { ...theirs, "record.isPublic": true };
+const publicKitForGuest = { "record.ownerId": SOMEONE_ELSE, "record.isPublic": true };
+const privateKitForGuest = { "record.ownerId": SOMEONE_ELSE, "record.isPublic": false };
 
 describe("roles.json", () => {
   it("declares exactly the public, authenticated and super-admin roles", () => {
@@ -59,19 +73,22 @@ describe("the public role", () => {
     expect(publicRole.admin).toBeUndefined();
   });
 
-  it.each(PRIVATE)("cannot read or list %s", (contentType) => {
+  it.each(PRIVATE)("cannot read or list a private %s", (contentType) => {
     expect(allows(publicRole, contentType, "read")).toBe(false);
     expect(allows(publicRole, contentType, "read", { "record.ownerId": null })).toBe(false);
+    expect(allows(publicRole, contentType, "read", privateKitForGuest)).toBe(false);
   });
 
   it.each(ir.contentTypes.map((ct) => ct.name))("cannot write %s", (contentType) => {
     for (const action of WRITES) expect(allows(publicRole, contentType, action)).toBe(false);
   });
 
-  it("is granted nothing beyond reading site content", () => {
+  it("is granted nothing beyond reading site content and public brand kits", () => {
     expect(
       publicRole.grants.filter(
-        (g) => !SITE_CONTENT.includes(g.contentType) || g.actions.some((a) => a !== "read"),
+        (g) =>
+          (!SITE_CONTENT.includes(g.contentType) && g.contentType !== "BrandKit") ||
+          g.actions.some((a) => a !== "read"),
       ),
     ).toEqual([]);
   });
@@ -80,10 +97,22 @@ describe("the public role", () => {
     expect(allows(publicRole, contentType, "read")).toBe(true);
   });
 
-  // Both targets can enforce a conditioned public read now, but the model adds none until the
-  // brand identity feature decides which brand kits are public (issue #18).
-  it("holds no conditioned grant", () => {
-    expect(publicRole.grants.filter((g) => g.condition !== undefined)).toEqual([]);
+  it("holds one conditioned grant: reading brand kits marked public", () => {
+    expect(publicRole.grants.filter((g) => g.condition !== undefined)).toEqual([
+      { contentType: "BrandKit", actions: ["read"], condition: PUBLIC_KIT_CONDITION },
+    ]);
+  });
+
+  it("reads a public brand kit, but never a private one", () => {
+    expect(allows(publicRole, "BrandKit", "read", publicKitForGuest)).toBe(true);
+    expect(allows(publicRole, "BrandKit", "read", privateKitForGuest)).toBe(false);
+    expect(allows(publicRole, "BrandKit", "read", { "record.ownerId": SOMEONE_ELSE })).toBe(false);
+  });
+
+  it("cannot create, change or delete a public brand kit", () => {
+    for (const action of WRITES) {
+      expect(allows(publicRole, "BrandKit", action, publicKitForGuest)).toBe(false);
+    }
   });
 
   it("lists no endpoints or services", () => {
@@ -118,13 +147,34 @@ describe("the authenticated role", () => {
   it.each(OWNED)("cannot touch someone else's %s", (contentType) => {
     for (const action of ACTIONS) {
       expect(allows(authenticated, contentType, action, theirs)).toBe(false);
+      expect(allows(authenticated, contentType, action, theirPrivateKit)).toBe(false);
     }
   });
 
-  it.each(OWNED)("cannot touch a %s whose owner is unknown", (contentType) => {
+  // A kit's owner cannot be filtered on (the user type is not readable), so a list under a second
+  // grant would mix the caller's kits with every public kit, with no way to tell them apart. A
+  // signed-in page reads public kits without its credentials, as the public role.
+  it("cannot touch someone else's public brand kit, so its list holds its own kits only", () => {
+    for (const action of ACTIONS) {
+      expect(allows(authenticated, "BrandKit", action, theirPublicKit)).toBe(false);
+    }
+  });
+
+  it("manages its own brand kit whether it is public or not", () => {
+    for (const kit of [myPrivateKit, myPublicKit]) {
+      for (const action of ["create", "read", "update", "delete"] as const) {
+        expect(allows(authenticated, "BrandKit", action, kit)).toBe(true);
+      }
+    }
+  });
+
+  it.each(OWNED)("cannot touch a private %s whose owner is unknown", (contentType) => {
     for (const action of ACTIONS) {
       expect(allows(authenticated, contentType, action, { "user.id": ME })).toBe(false);
       expect(allows(authenticated, contentType, action, { "record.ownerId": ME })).toBe(false);
+      expect(
+        allows(authenticated, contentType, action, { "user.id": ME, "record.isPublic": false }),
+      ).toBe(false);
     }
   });
 
@@ -165,6 +215,50 @@ describe("the authenticated role", () => {
     expect(authenticated.endpoints ?? []).toEqual([]);
     expect(authenticated.services ?? []).toEqual([]);
   });
+});
+
+describe("brand kit ownership", () => {
+  const brandKitGrants = roles.roles
+    .filter((r) => r.admin !== true)
+    .flatMap((r) => r.grants.filter((g) => g.contentType === "BrandKit"));
+
+  it("fills the owner from the session on every grant that creates, so a client cannot set it", () => {
+    const creating = brandKitGrants.filter((g) => g.actions.includes("create"));
+    expect(creating.length).toBeGreaterThan(0);
+    for (const grant of creating) expect(grant.assign).toEqual({ owner: "user.id" });
+  });
+
+  it("lets no grant but the owner's change or delete a kit, so the owner cannot be changed", () => {
+    for (const grant of brandKitGrants.filter((g) => g.actions.some((a) => a !== "read"))) {
+      expect(grant.condition).toEqual(OWNER_CONDITION);
+    }
+  });
+
+  it("opens public kits to reading only, and only under the public condition", () => {
+    const others = brandKitGrants.filter(
+      (g) => JSON.stringify(g.condition) !== JSON.stringify(OWNER_CONDITION),
+    );
+    expect(others.length).toBeGreaterThan(0);
+    for (const grant of others) {
+      expect(grant).toEqual({
+        contentType: "BrandKit",
+        actions: ["read"],
+        condition: PUBLIC_KIT_CONDITION,
+      });
+    }
+  });
+
+  // A populate of a kit's owner answers only what the caller may read of users and files.
+  it.each(["User", "File"])(
+    "lets no role but the admin read %s, so a populated owner shows nothing",
+    (contentType) => {
+      for (const role of [publicRole, authenticated]) {
+        expect(allows(role, contentType, "read", myPublicKit)).toBe(false);
+        expect(allows(role, contentType, "read", publicKitForGuest)).toBe(false);
+        expect(allows(role, contentType, "read")).toBe(false);
+      }
+    },
+  );
 });
 
 describe("the super-admin role", () => {

@@ -540,7 +540,17 @@ only exposed response headers visible, and an unfollowed redirect answered as an
   as the SDK's readers see it, with the values the SDK acts on (`expiresIn`, `sent`, which session
   is current), step by step, on every server but the short-lived one, a JSON body sent as
   `text/plain` and a form body (415 on both) and a body-less logout among the steps; none is an
-  expected failure.
+  expected failure;
+- `brand-kit-store.live.test.ts`: the brand kit store of `@identgineer/brand` sending through
+  `authorizedFetch` (kept here to share this harness; the brand package does not depend on this
+  one): the owner creating, listing, reading, updating and deleting a kit with its logo kept
+  exactly, another user unable to read, change or delete it (404), a public kit read without
+  credentials and not changeable by anyone else (404 signed in, 403 as the public role), a private
+  kit in no public read, no owner shown through `populate`, and the owner set from the session
+  whatever a client sends, and an update clearing the optional fields the kit no longer has (the
+  logo and mark included), as Strapi does; that needs a camis with the fix for
+  [hynding/camis#122](https://github.com/hynding/camis/issues/122), where strapi-php once ignored a
+  `null` in an update body.
 
 The gaps the first live run found (a profile create refused on `owner`; a taken registration, a
 confirmed resend and the sign-in time telling accounts apart; JSON read from `text/plain`; no
