@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { logoDataUrl, parseBrandKit, sanitiseSvgLogo, type SanitisedSvg } from "@identgineer/brand";
 import { describe, expect, it } from "vitest";
-import { brandLogoSource, logoFrame } from "./brand-logo-source";
+import { brandLogoSource, integerFrame } from "./brand-logo-source";
 
 const FIXTURES = new URL("../../../../brand/src/__fixtures__/", import.meta.url);
 
@@ -19,13 +19,13 @@ describe("brandLogoSource", () => {
   it("gives the data url of the logo and the size of its frame", () => {
     expect(brandLogoSource(LOGO)).toEqual({
       url: logoDataUrl(LOGO),
-      width: 120,
-      height: 40,
+      width: 3000,
+      height: 1000,
     });
     expect(brandLogoSource(MARK)).toEqual({
       url: logoDataUrl(MARK),
-      width: 40,
-      height: 40,
+      width: 1000,
+      height: 1000,
     });
   });
 
@@ -43,7 +43,7 @@ describe("brandLogoSource", () => {
       { idPrefix: "mark-" },
     );
     if (!result.ok) throw new Error("expected a logo");
-    expect(brandLogoSource(result.svg)?.width).toBe(10);
+    expect(brandLogoSource(result.svg)).toMatchObject({ width: 2000, height: 1000 });
   });
 
   // Each is what an upload or a hand-built kit might hold: none is the sanitiser's own output, so
@@ -131,35 +131,75 @@ describe("brandLogoSource", () => {
   });
 });
 
-describe("logoFrame", () => {
+function sanitisedWith(attributes: string): string {
+  const result = sanitiseSvgLogo(
+    `<svg xmlns="http://www.w3.org/2000/svg" ${attributes}><rect width="1" height="1"/></svg>`,
+  );
+  if (!result.ok) throw new Error(JSON.stringify(result.errors));
+  return result.svg;
+}
+
+// The image's natural size is the root's width and height, whatever the view box says, and it goes
+// to the image as whole numbers, since the browser takes no fraction of an attribute.
+describe("the frame brandLogoSource gives", () => {
   it.each([
-    ['viewBox="0 0 120 40" width="120" height="40"', { width: 120, height: 40 }],
-    ['viewBox="0 0 2.5 1.25"', { width: 2.5, height: 1.25 }],
-    ['viewBox="-10 -5 1e2 50"', { width: 100, height: 50 }],
-    ['viewBox="0,0,24,24"', { width: 24, height: 24 }],
-    ['width="10mm" viewBox="0 0 37.795276 37.795276"', { width: 37.795276, height: 37.795276 }],
-  ])("reads the view box of %s", (attributes, frame) => {
-    expect(logoFrame(`<svg xmlns="http://www.w3.org/2000/svg" ${attributes}></svg>`)).toEqual(
-      frame,
-    );
+    [
+      "the shape of the width and height, not of the view box",
+      'viewBox="0 0 120 40" width="200" height="40"',
+      5,
+    ],
+    [
+      "the stretched shape of a preserveAspectRatio none",
+      'viewBox="0 0 120 40" width="300" height="40" preserveAspectRatio="none"',
+      7.5,
+    ],
+    ["a width and height in millimetres", 'viewBox="0 0 100 20" width="100mm" height="20mm"', 5],
+    [
+      "a width and height in inches that differ from the view box",
+      'viewBox="0 0 100 20" width="3in" height="1in"',
+      3,
+    ],
+    ["a fractional view box", 'viewBox="0 0 1.5 1" width="150" height="100"', 1.5],
+    ["a view box under one unit", 'viewBox="0 0 0.5 0.25" width="100" height="50"', 2],
+    ["a fractional size", 'width="210.5" height="80.25"', 210.5 / 80.25],
+    ["a view box alone", 'viewBox="0 0 24 12"', 2],
+  ])("keeps %s", (_name, attributes, ratio) => {
+    const frame = brandLogoSource(sanitisedWith(attributes));
+    expect(Number.isInteger(frame?.width)).toBe(true);
+    expect(Number.isInteger(frame?.height)).toBe(true);
+    expect(Math.min(frame?.width ?? 0, frame?.height ?? 0)).toBeGreaterThanOrEqual(1000);
+    expect((frame?.width ?? 0) / (frame?.height ?? 1)).toBeCloseTo(ratio, 2);
+  });
+});
+
+describe("integerFrame", () => {
+  it.each([
+    [120, 40, 3000, 1000],
+    [40, 120, 1000, 3000],
+    [100, 100, 1000, 1000],
+    [0.5, 0.25, 2000, 1000],
+    [1.5, 1, 1500, 1000],
+    [1, 1, 1000, 1000],
+    [2000, 2000, 1000, 1000],
+  ])("gives %s by %s as %s by %s", (width, height, expectedWidth, expectedHeight) => {
+    expect(integerFrame(width, height)).toEqual({ width: expectedWidth, height: expectedHeight });
   });
 
-  it.each([
-    ["no view box", 'width="10" height="10"'],
-    ["a view box of four numbers short", 'viewBox="0 0 10"'],
-    ["a zero width", 'viewBox="0 0 0 10"'],
-    ["a negative height", 'viewBox="0 0 10 -10"'],
-    ["a number too large to be one", 'viewBox="0 0 1e999 10"'],
-    ["words", 'viewBox="a b c d"'],
-  ])("has no frame for %s", (_name, attributes) => {
-    expect(
-      logoFrame(`<svg xmlns="http://www.w3.org/2000/svg" ${attributes}></svg>`),
-    ).toBeUndefined();
+  it("keeps the shape within a thousandth even where the numbers are awkward", () => {
+    const { width, height } = integerFrame(210.5, 80.25);
+    expect(width / height).toBeCloseTo(210.5 / 80.25, 3);
   });
 
-  it("reads the root element's view box, not one deeper in the document", () => {
-    expect(
-      logoFrame('<svg xmlns="http://www.w3.org/2000/svg"><svg viewBox="0 0 5 5"/></svg>'),
-    ).toBeUndefined();
+  it("stays within what an image attribute can hold for a very long thin frame", () => {
+    for (const [wide, high] of [
+      [999999, 1],
+      [1, 999999],
+    ] as const) {
+      const frame = integerFrame(wide, high);
+      expect(Math.max(frame.width, frame.height)).toBeLessThanOrEqual(1_000_000_000);
+      expect(Number.isInteger(frame.width) && Number.isInteger(frame.height)).toBe(true);
+      expect(Math.min(frame.width, frame.height)).toBeGreaterThanOrEqual(1);
+      expect(frame.width / frame.height).toBeCloseTo(wide / high, 0);
+    }
   });
 });

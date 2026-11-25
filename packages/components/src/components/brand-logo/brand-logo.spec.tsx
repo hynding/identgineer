@@ -75,8 +75,8 @@ describe("idg-brand-logo with a sanitised logo", () => {
   it("gives the image explicit size from the logo's frame, async decoding and no way to load another file", async () => {
     const { root } = await render(<idg-brand-logo logo={LOGO} name="Harbour Lights" />);
     const picture = image(root);
-    expect(picture?.getAttribute("width")).toBe("120");
-    expect(picture?.getAttribute("height")).toBe("40");
+    expect(picture?.getAttribute("width")).toBe("3000");
+    expect(picture?.getAttribute("height")).toBe("1000");
     expect(picture?.getAttribute("decoding")).toBe("async");
     for (const attribute of ["srcset", "sizes", "crossorigin", "usemap", "ismap"]) {
       expect(picture?.hasAttribute(attribute), attribute).toBe(false);
@@ -121,7 +121,7 @@ describe("idg-brand-logo with a sanitised logo", () => {
       <idg-brand-logo logo={MARK} variant="mark" name="Harbour Lights" />,
     );
     expect(image(root)?.getAttribute("src")).toBe(logoDataUrl(MARK));
-    expect(image(root)?.getAttribute("width")).toBe("40");
+    expect(image(root)?.getAttribute("width")).toBe("1000");
     expect(shadow(root).querySelector(".variant-mark")).not.toBeNull();
   });
 
