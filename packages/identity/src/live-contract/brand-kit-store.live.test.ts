@@ -176,11 +176,7 @@ describe.skipIf(liveBackend === undefined)(
       expect(await allDocumentIds(owner.store.list)).toEqual([]);
     });
 
-    // An expected failure until https://github.com/hynding/camis/issues/122 is fixed: strapi-php's
-    // generated serializer drops every null of an update body (fromWire's array_filter), so a field
-    // cannot be cleared, where Strapi clears it. Once camis clears it this test passes, `it.fails`
-    // turns that red, and `.fails` comes off.
-    it.fails("clears the optional fields an update no longer has, as Strapi does", async () => {
+    it("clears the optional fields an update no longer has, as Strapi does", async () => {
       const owner = await signedInUser("kit-clear");
       const full = kitOf({
         tagline: "Light the way",
@@ -190,7 +186,11 @@ describe.skipIf(liveBackend === undefined)(
       });
       const { documentId } = recordOf(await owner.store.create(full));
       const bare = kitOf({ colors: { primary: "#f4c430" } });
-      expect(recordOf(await owner.store.update(documentId, bare)).kit).toEqual(bare);
+      // Rejects as `not-applied` if the server keeps any old value, so a resolved update is a cleared one.
+      const updated = recordOf(await owner.store.update(documentId, bare));
+      expect(updated.kit).toEqual(bare);
+      for (const field of ["tagline", "logo", "mark"] as const)
+        expect(updated.kit).not.toHaveProperty(field);
       expect(recordOf(await owner.store.get(documentId)).kit).toEqual(bare);
     });
 

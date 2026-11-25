@@ -1282,11 +1282,12 @@ Writes take a `BrandKit` that `parseBrandKit` returned, check it again (the type
 JavaScript caller), and send its fields in the CMS shape: colours as `#rrggbb`, an absent optional
 field as `null` and the logo and mark as text. They never send `owner`; the CMS sets it from the
 session. `isPublic` is sent only when given. The answer is compared with what was sent, and a field
-the CMS answers otherwise rejects the write as `not-applied`, naming the fields. On strapi-php
-today that is every optional field an update clears (`tagline`, `secondaryColor`, `neutralTint`,
-`logo`, `mark`), since camis drops a `null` in an update body where Strapi clears the field
-([hynding/camis#122](https://github.com/hynding/camis/issues/122)). The write did store a kit,
-with the other fields saved: the error's `documentId` names it, so `get` it to see what it now
+the CMS answers otherwise rejects the write as `not-applied`, naming the fields. With a camis
+that includes the fix for hynding/camis#122, strapi-php clears an optional field sent as `null`
+(`tagline`, `secondaryColor`, `neutralTint`, `logo`, `mark`), as Strapi does, so an update that
+clears them is applied; an older camis kept the old value and the update was rejected here. The
+check stays as a safeguard against a server that does not apply a write. A write that is not
+applied did store a kit, with the other fields saved: the error's `documentId` names it, so `get` it to see what it now
 holds, or `remove` it (a `create` that is not applied has still made a new kit). Do not keep
 `themeTokens` in the CMS: generate the theme from the kit, which is deterministic.
 
@@ -1312,8 +1313,8 @@ a getter that throws, a body chunk that is not a `Uint8Array`) is a `malformed-r
 A signed-in user reads other users' public kits with `listPublic` and `getPublic`, as the public
 role: `list` and `get` see the user's own kits only (see the CMS README's
 [Roles](../../cms/README.md#roles) for why). The live contract test checks the store against
-strapi-php, its check that an update clears optional fields an expected failure until camis#122 is
-fixed.
+strapi-php, including that an update clears the optional fields, the logo and mark among them,
+without a `not-applied` error (this needs a camis with the fix for hynding/camis#122).
 
 The base URL rules are the identity SDK's, restated in `src/store-base-url.ts` since this package
 may not depend on that one; with the `Retry-After` reading, they are a candidate for a shared

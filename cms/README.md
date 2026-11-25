@@ -108,10 +108,15 @@ media fields:
 The bound is the sanitiser's output limit, `SVG_LOGO_LIMITS.inputBytes` (512 KiB in UTF-8): no
 output is larger, and a string never has more code points or UTF-16 units than UTF-8 bytes, so
 both targets' length checks let every sanitised logo through however they count. The column is
-another matter: strapi-php's migration declares the field as `$table->text(...)` whatever its
-`maxLength`, and MySQL's `TEXT` holds 65,535 bytes, so on MySQL a logo over 64 KiB is refused or
-cut short (see [Capability gaps](#capability-gaps)). sqlite and pgsql `text` hold it, as do
-Strapi's columns.
+another matter, and only on MySQL: with a camis that sizes text columns from `maxLength`
+(hynding/camis#123), the logo and mark (bounded text of 524288 characters) get a `mediumText`
+column (16 MiB, which holds them even at four bytes a character). A MySQL database created before
+that keeps its `TEXT` columns (65,535 bytes) until something widens them: the Content-Type
+Builder's `camis:schema-sync` does, on MySQL and MariaDB only and only when it runs (`camis develop`
+runs it, a plain production deploy does not), and otherwise a hand-written
+`ALTER TABLE ... MODIFY ... MEDIUMTEXT NULL` (or `LONGTEXT`) does (see
+[Capability gaps](#capability-gaps)).
+sqlite and pgsql `text` hold it, as do Strapi's columns.
 
 There is no `themeTokens` field. The theme is derived data the server cannot verify; clients
 generate it from the kit with `generateBrandTheme`, which is deterministic.
@@ -371,20 +376,25 @@ Limits that remain on Strapi, for this model:
 - `remoteDataTransfer` (strapi-php): `strapi transfer` needs a WebSocket server; move data as an
   archive instead (see `DEPLOY.md`).
 
-**Found while storing brand kits, not yet fixed in camis.**
+**Found while storing brand kits, fixed in camis.** Both need a camis that includes the fixes.
 
-- strapi-php ignores a `null` in an update body (the generated serializer's `fromWire` drops
-  every null value), where Strapi clears the field, so an update cannot clear a brand kit's
-  `tagline`, `secondaryColor`, `neutralTint`, `logo` or `mark` there
-  ([hynding/camis#122](https://github.com/hynding/camis/issues/122)). The brand kit store reports
-  such an update as `not-applied` rather than as saved, and
-  `packages/identity/src/live-contract/brand-kit-store.live.test.ts` holds the Strapi behaviour as
-  an expected failure that turns red once camis clears the field.
-- strapi-php's migration declares a `text` field as `$table->text(...)` whatever its `maxLength`
-  ([hynding/camis#123](https://github.com/hynding/camis/issues/123), text columns over 64 KiB).
-  MySQL's `TEXT` holds 65,535 bytes, so a brand kit logo or mark over 64 KiB cannot be stored
-  whole on MySQL. Until camis emits a larger column, deploy strapi-php with that fix, or on pgsql
-  or sqlite. The logo bound stays the sanitiser's.
+- An update that sets an optional field to `null` clears it on strapi-php, as on Strapi, so an
+  update can clear a brand kit's `tagline`, `secondaryColor`, `neutralTint`, `logo` or `mark`
+  ([hynding/camis#122](https://github.com/hynding/camis/issues/122)). An older camis kept the old
+  value. The brand kit store still rejects a write the CMS answers with other values than were sent
+  as `not-applied`, as a safeguard against a server that does not apply it, and
+  `packages/identity/src/live-contract/brand-kit-store.live.test.ts` checks the clearing against
+  the real backend.
+- A `text` field's column is sized from its `maxLength` (`text`, `mediumText` or `longText`)
+  ([hynding/camis#123](https://github.com/hynding/camis/issues/123)), so the brand kit's `logo` and
+  `mark` (524288 characters) are `mediumText` on MySQL. A MySQL database created before the fix keeps
+  its `TEXT` columns (65,535 bytes), as a migration that has run is not run again. The Content-Type
+  Builder's `camis:schema-sync` widens such a column when the model declares a larger one, on MySQL
+  and MariaDB only and only when that sync runs (`camis develop` runs it, a plain production deploy
+  has no such step). Otherwise run `ALTER TABLE ... MODIFY ... MEDIUMTEXT NULL` (or `LONGTEXT`) by
+  hand (camis's CLI README, "Text columns"). Until then a logo or mark over 64 KiB cannot be stored
+  whole there. sqlite and pgsql have one text type. The
+  column type is not the server's or the request's limit (MySQL's `max_allowed_packet`).
 
 **Not reported by camis but limiting this model.** Conditions cannot follow a relation (hence the
 denormalised `owner` on Event and ConsentRecord); public endpoints have no declarative throttle,
