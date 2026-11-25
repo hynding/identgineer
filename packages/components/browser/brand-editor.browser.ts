@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { sanitiseSvgLogo, SVG_LOGO_LIMITS } from "@identgineer/brand";
 import type { Locator, Page } from "@playwright/test";
-import { DESIGNS, LAYOUTS, SCHEMES, THEMES, UX_MODES, applyAxes } from "./axes";
+import { DESIGNS, LAYOUTS, SCHEMES, THEMES, UX_MODES, applyAxes, settle } from "./axes";
 import { expectNoAxeViolations } from "./accessibility";
 import { EDITOR_PAGE, HARBOUR_KIT, openBrand, type Watch } from "./brand-page";
 import { contrastRatio } from "./contrast";
@@ -873,93 +873,120 @@ function clippedFileInputs(page: Page) {
 }
 
 /**
- * Each image upload, in every editor, whose chooser label has a word too wide for the button. The
- * label lives in the browser's own control, out of reach, and the button breaks a word that does
- * not fit rather than clip it; so for the measure only, the button is sized to its min-content
- * with no breaking inside words, which is its widest word plus its own padding and border, and
- * that must fit in the input.
+ * Each image upload, in every editor, whose chooser label's widest word leaves the button less than
+ * `SPARE_PX` to spare. The label lives in the browser's own control, out of reach, and the button
+ * breaks a word that does not fit rather than clip it; so for the measure only, the button is sized
+ * to its min-content with no breaking inside words, which is its widest word plus its own padding
+ * and border, and that plus the spare must fit in the input. The spare keeps a token a pixel wider
+ * from breaking a word unseen.
  */
+const SPARE_PX = 4;
+
 function brokenFileLabels(page: Page) {
-  return page.evaluate(() =>
-    [...document.querySelectorAll("idg-brand-editor")].flatMap((editor) => {
-      const root = editor.shadowRoot;
-      if (!root) throw new Error("no shadow root");
-      // A constructed sheet, as the page's policy refuses a style element.
-      const unbroken = new CSSStyleSheet();
-      unbroken.replaceSync(
-        `.file::file-selector-button {
+  return page.evaluate(
+    (spare) =>
+      [...document.querySelectorAll("idg-brand-editor")].flatMap((editor) => {
+        const root = editor.shadowRoot;
+        if (!root) throw new Error("no shadow root");
+        // A constructed sheet, as the page's policy refuses a style element.
+        const unbroken = new CSSStyleSheet();
+        unbroken.replaceSync(
+          `.file::file-selector-button {
           inline-size: min-content !important;
           max-inline-size: none !important;
           overflow-wrap: normal !important;
         }`,
-      );
-      // A copy: the adopted list is live, so the one read here would take the added sheet too.
-      const sheets = [...root.adoptedStyleSheets];
-      root.adoptedStyleSheets = [...sheets, unbroken];
-      try {
-        return [...root.querySelectorAll('input[type="file"]')].flatMap((input) => {
-          const needed = Number.parseFloat(getComputedStyle(input, "::file-selector-button").width);
-          return needed > input.clientWidth + 0.5
-            ? [
-                `${editor.id} ${input.id} needs ${needed.toFixed(1)}px of ${String(input.clientWidth)}px`,
-              ]
-            : [];
-        });
-      } finally {
-        root.adoptedStyleSheets = sheets;
-      }
-    }),
+        );
+        // A copy: the adopted list is live, so the one read here would take the added sheet too.
+        const sheets = [...root.adoptedStyleSheets];
+        root.adoptedStyleSheets = [...sheets, unbroken];
+        try {
+          return [...root.querySelectorAll('input[type="file"]')].flatMap((input) => {
+            const needed = Number.parseFloat(
+              getComputedStyle(input, "::file-selector-button").width,
+            );
+            return needed + spare > input.clientWidth
+              ? [
+                  `${editor.id} ${input.id} needs ${needed.toFixed(1)}px of ${String(input.clientWidth)}px`,
+                ]
+              : [];
+          });
+        } finally {
+          root.adoptedStyleSheets = sheets;
+        }
+      }),
+    SPARE_PX,
   );
 }
 
 /**
- * Whatever, in every editor, does not take the narrow form's padding, read as computed against the
- * value resolved in that form: each hex box `--idg-space-3xs` and each group half of it; and each
- * file chooser's button no inline padding and the whole width of its input, its side room being
- * what its label leaves.
+ * Whatever, in every editor, is not padded as its form's width in its own text asks, read as
+ * computed against the tokens resolved in that form. Below `NARROW_EM` the hex boxes pad
+ * `--idg-space-3xs`; below `SQUEEZED_EM` the groups pad nothing inline and each file chooser's
+ * button spans its input with no inline padding; otherwise groups and buttons pad as everywhere.
  */
+const NARROW_EM = 20;
+const SQUEEZED_EM = 10.5;
+
 function unnarrowedPaddings(page: Page) {
-  return page.evaluate(() =>
-    [...document.querySelectorAll("idg-brand-editor")].flatMap((editor) => {
-      const form = editor.shadowRoot?.querySelector(".form");
-      if (!form) throw new Error("no form");
-      const resolve = (value: string) => {
-        const probe = document.createElement("div");
-        probe.style.paddingInline = value;
-        form.append(probe);
-        const resolved = getComputedStyle(probe).paddingLeft;
-        probe.remove();
-        return resolved;
-      };
-      const box = resolve("var(--idg-space-3xs)");
-      const half = resolve("calc(var(--idg-space-3xs) / 2)");
-      const padded = (name: string, style: CSSStyleDeclaration, narrow: string) =>
-        style.paddingLeft === narrow && style.paddingRight === narrow
-          ? []
-          : [`${editor.id} ${name} ${style.paddingLeft} ${style.paddingRight} not ${narrow}`];
-      return [
-        ...[...form.querySelectorAll(".group")].flatMap((group, index) =>
-          padded(`group ${String(index)}`, getComputedStyle(group), half),
-        ),
-        ...[...form.querySelectorAll("idg-input.colour")].flatMap((input) => {
-          const hexBox = input.shadowRoot?.querySelector(".box");
-          if (!hexBox) throw new Error("no hex box");
-          return padded(`box ${input.getAttribute("name") ?? ""}`, getComputedStyle(hexBox), box);
-        }),
-        ...[...form.querySelectorAll('input[type="file"]')].flatMap((input) => {
-          const button = getComputedStyle(input, "::file-selector-button");
-          const width = Number.parseFloat(button.width);
-          return [
-            ...padded(`${input.id} button`, button, "0px"),
-            ...(Math.abs(width - input.clientWidth) <= 0.5
-              ? []
-              : [
-                  `${editor.id} ${input.id} button ${button.width} wide of ${String(input.clientWidth)}px`,
-                ]),
-          ];
-        }),
-      ];
-    }),
+  return page.evaluate(
+    ({ narrowEm, squeezedEm }) =>
+      [...document.querySelectorAll("idg-brand-editor")].flatMap((editor) => {
+        const form = editor.shadowRoot?.querySelector(".form");
+        if (!form) throw new Error("no form");
+        const resolve = (value: string) => {
+          const probe = document.createElement("div");
+          probe.style.paddingInline = value;
+          form.append(probe);
+          const resolved = getComputedStyle(probe).paddingLeft;
+          probe.remove();
+          return resolved;
+        };
+        const ems =
+          form.getBoundingClientRect().width / Number.parseFloat(getComputedStyle(form).fontSize);
+        const squeezed = ems < squeezedEm;
+        const tier = squeezed ? "squeezed" : ems < narrowEm ? "narrow" : "wide";
+        const group = squeezed
+          ? "0px"
+          : resolve("calc(var(--idg-space-s) * var(--idg-density-gap-scale))");
+        const button = squeezed ? "0px" : resolve("var(--idg-density-control-padding-inline)");
+        const box = resolve("var(--idg-space-3xs)");
+        const padded = (name: string, style: CSSStyleDeclaration, expected: string) =>
+          style.paddingLeft === expected && style.paddingRight === expected
+            ? []
+            : [
+                `${editor.id} ${tier} ${name} ${style.paddingLeft} ${style.paddingRight} not ${expected}`,
+              ];
+        return [
+          ...[...form.querySelectorAll(".group")].flatMap((element, index) =>
+            padded(`group ${String(index)}`, getComputedStyle(element), group),
+          ),
+          ...(tier === "wide"
+            ? []
+            : [...form.querySelectorAll("idg-input.colour")].flatMap((input) => {
+                const hexBox = input.shadowRoot?.querySelector(".box");
+                if (!hexBox) throw new Error("no hex box");
+                return padded(
+                  `box ${input.getAttribute("name") ?? ""}`,
+                  getComputedStyle(hexBox),
+                  box,
+                );
+              })),
+          ...[...form.querySelectorAll('input[type="file"]')].flatMap((input) => {
+            const style = getComputedStyle(input, "::file-selector-button");
+            const spans = Math.abs(Number.parseFloat(style.width) - input.clientWidth) <= 0.5;
+            return [
+              ...padded(`${input.id} button`, style, button),
+              ...(spans === squeezed
+                ? []
+                : [
+                    `${editor.id} ${tier} ${input.id} button ${style.width} wide of ${String(input.clientWidth)}px`,
+                  ]),
+            ];
+          }),
+        ];
+      }),
+    { narrowEm: NARROW_EM, squeezedEm: SQUEEZED_EM },
   );
 }
 
@@ -1012,25 +1039,54 @@ test.describe("idg-brand-editor reflow", () => {
   }
 
   // The file chooser's label is the browser's, in the control font each design and UX mode sets,
-  // so its widest word is measured in every pairing of them at the narrowest width and largest text.
-  test("fits the file chooser's widest word in every design and UX mode at 320px and 200% text", async ({
+  // so its widest word is measured in every pairing of them at the narrowest width, at each text
+  // size up to 200%.
+  test("fits the file chooser's widest word with room to spare in every design and UX mode at 320px, text 100% to 200%", async ({
     page,
   }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(300_000);
     await page.setViewportSize({ width: 320, height: 800 });
     await openEditor(page);
-    await page.evaluate(() => {
-      document.documentElement.style.fontSize = "200%";
-    });
+    const sizes = ["100%", "125%", "150%", "175%", "200%"];
     const broken: string[] = [];
-    for (const design of DESIGNS) {
-      for (const ux of UX_MODES) {
-        await applyAxes(page, { design, ux });
-        broken.push(...(await brokenFileLabels(page)).map((input) => `${design} ${ux} ${input}`));
+    let measured = 0;
+    for (const size of sizes) {
+      await page.evaluate((fontSize) => {
+        document.documentElement.style.fontSize = fontSize;
+      }, size);
+      for (const design of DESIGNS) {
+        for (const ux of UX_MODES) {
+          await applyAxes(page, { design, ux });
+          measured += 1;
+          broken.push(
+            ...(await brokenFileLabels(page)).map((input) => `${size} ${design} ${ux} ${input}`),
+          );
+        }
       }
     }
-    expect(DESIGNS.length * UX_MODES.length).toBe(64);
+    expect(measured).toBe(5 * 64);
     expect(broken).toEqual([]);
+  });
+
+  test("pads groups and file chooser buttons as everywhere beside the preview at 1280px and at 320px with 100% text", async ({
+    page,
+  }) => {
+    await openEditor(page);
+    for (const width of [1280, 320]) {
+      await page.setViewportSize({ width, height: 800 });
+      await settle(page);
+      const tiers = await page.evaluate(() =>
+        [...document.querySelectorAll("idg-brand-editor")].map((editor) => {
+          const form = editor.shadowRoot?.querySelector(".form");
+          if (!form) throw new Error("no form");
+          return (
+            form.getBoundingClientRect().width / Number.parseFloat(getComputedStyle(form).fontSize)
+          );
+        }),
+      );
+      expect(tiers.every((ems) => ems >= SQUEEZED_EM)).toBe(true);
+      expect(await unnarrowedPaddings(page)).toEqual([]);
+    }
   });
 
   test("reflows at 200% text with errors and removals shown, nothing wider than its host", async ({
