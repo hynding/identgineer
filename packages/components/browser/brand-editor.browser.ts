@@ -805,6 +805,44 @@ test.describe("idg-brand-editor across the axes", () => {
   });
 });
 
+/**
+ * Each colour field's hex input, in every editor: whether it is about 7ch wide (a whole `#rrggbb`
+ * in its own font, with a twentieth to spare for rounding), and whether its invalid mark, where it
+ * shows one, is inside its box.
+ */
+function colourInputs(page: Page) {
+  return page.evaluate(() => {
+    const context = document.createElement("canvas").getContext("2d");
+    if (!context) throw new Error("no canvas");
+    const inside = (inner: DOMRect, outer: DOMRect) =>
+      inner.left >= outer.left - 0.5 && inner.right <= outer.right + 0.5;
+    return [...document.querySelectorAll("idg-brand-editor")].flatMap((editor) =>
+      [...(editor.shadowRoot?.querySelectorAll("idg-input") ?? [])]
+        .filter((input) => input.querySelector(".picker") !== null)
+        .map((input) => {
+          const root = input.shadowRoot;
+          const native = root?.querySelector("input.native");
+          const box = root?.querySelector(".box");
+          if (!native || !box) throw new Error("no hex input");
+          const style = getComputedStyle(native);
+          context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+          const sevenCh = 7 * context.measureText("0").width;
+          const mark = root?.querySelector(".invalid-mark")?.getBoundingClientRect();
+          const width = native.getBoundingClientRect().width;
+          return {
+            field: `${editor.id} ${input.getAttribute("name") ?? ""}`,
+            wide: width >= sevenCh * 0.95 ? "yes" : `${String(Math.round(width))}px`,
+            mark:
+              mark === undefined || inside(mark, box.getBoundingClientRect()) ? "inside" : "out",
+          };
+        }),
+    );
+  });
+}
+
+const fitting = (fields: readonly { field: string; wide: string; mark: string }[]) =>
+  fields.filter((field) => field.wide !== "yes" || field.mark !== "inside");
+
 test.describe("idg-brand-editor reflow", () => {
   for (const layout of LAYOUTS) {
     for (const size of TEXT_SIZES) {
@@ -815,17 +853,31 @@ test.describe("idg-brand-editor reflow", () => {
         await openEditor(page);
         await applyAxes(page, { layout });
         await setTextSize(page, size);
+        // The empty kit's colour is marked invalid, so its mark is measured too.
+        await editor(page, "editor-new")
+          .getByRole("button", { name: "Save brand kit" })
+          .press("Enter");
         await expect
           .poll(async () => {
             const found = await measureReflow(page, EDITORS);
+            const colours = await colourInputs(page);
             return {
               page: found.page <= 0,
               wider: found.wider,
               hosts: found.hosts,
               measured: found.elements > 500,
+              colours: colours.length,
+              misfits: fitting(colours),
             };
           })
-          .toEqual({ page: true, wider: [0, 0, 0], hosts: 3, measured: true });
+          .toEqual({
+            page: true,
+            wider: [0, 0, 0],
+            hosts: 3,
+            measured: true,
+            colours: 9,
+            misfits: [],
+          });
       });
     }
   }
@@ -846,8 +898,15 @@ test.describe("idg-brand-editor reflow", () => {
     await expect
       .poll(async () => {
         const found = await measureReflow(page, EDITORS);
-        return { page: found.page <= 0, wider: found.wider, hosts: found.hosts };
+        const colours = await colourInputs(page);
+        return {
+          page: found.page <= 0,
+          wider: found.wider,
+          hosts: found.hosts,
+          colours: colours.length,
+          misfits: fitting(colours),
+        };
       })
-      .toEqual({ page: true, wider: [0, 0, 0], hosts: 3 });
+      .toEqual({ page: true, wider: [0, 0, 0], hosts: 3, colours: 9, misfits: [] });
   });
 });
