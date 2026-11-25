@@ -104,7 +104,10 @@ export async function readJsonAnswer(
   }
 }
 
-/** A failed answer's body, if it is small readable JSON; anything else is no body. */
+/**
+ * A failed answer's body, if it is small readable JSON; anything else is no body. An abort while
+ * it is read still rejects as a network error, as it would for any other answer.
+ */
 export async function readFailureBody(
   response: Response,
   maxBytes: number,
@@ -113,6 +116,7 @@ export async function readFailureBody(
   try {
     return await readJsonAnswer(response, maxBytes, signal);
   } catch {
+    if (signal?.aborted === true) throw new BrandKitStoreError("network");
     return undefined;
   }
 }
