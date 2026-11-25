@@ -559,19 +559,26 @@ Decisions, with the reason for each:
   `defs`, a `use`, a gradient, a clip path and a mask, and `display` on a gradient; on the root,
   every margin, padding, border (its corners' radii and `border-shape` too) and outline, logical
   and prefixed ones and every part of each included, which move, inset, clip or cover what it
-  draws; on anything, a `clip-path` or `-webkit-clip-path` of a shape or a box rather than a
-  reference, which no clip path attribute can say) is never kept, since the sanitiser keeps geometry only as
+  draws, and its `position` and every inset (`top`, `right`, `bottom`, `left`, `inset` and its
+  logical parts), which move it once it is positioned; on anything, a `clip-path` or
+  `-webkit-clip-path` of a shape or a box rather than a reference, which no clip path attribute can
+  say, and a mask of an image (`mask` or `-webkit-mask` other than `none` or a lone reference,
+  `mask-image`, `-webkit-mask-image`, `-webkit-mask-box-image` or `-webkit-mask-box-image-source`
+  other than `none`), which no mask attribute can say) is never kept, since the sanitiser keeps geometry only as
   attributes, and dropping it alone would draw the element as neither reading does: the element is
   dropped with it, both reported (a gradient dropped so leaves what it painted painting nothing);
   on the root or a clip path, which nothing could stand in for, the logo is refused
   (`unsupported-feature`). A value that draws as if unset is dropped like any other declaration:
   `none` for a transform where the element has no transform attribute for it to undo (and for
-  `translate`, `rotate`, `scale` and an offset path), `visible` content, an `inline` display, and a
-  margin, padding, border or outline every part of which is a zero length or `none`.
+  `translate`, `rotate`, `scale` and an offset path), `visible` content, an `inline` display, a
+  margin, padding, border or outline every part of which is a zero length or `none`, a `static`
+  position, and an inset every part of which is `auto`.
   `-webkit-opacity` is read as the `opacity` it is another name for. A browser test sets every property Chromium's `CSSStyleDeclaration`
   has, prefixed aliases and shorthands included, on each element the sanitiser keeps, and on
-  `defs`, a group holding definitions and a group in a mask, with each of 44 values that would
-  move, resize, hide, clip or border something wherever Chromium takes it, and wherever Chromium
+  `defs`, a group holding definitions and a group in a mask, and on the root after each of the
+  positions `relative`, `absolute`, `fixed` and `sticky` (so an inset is tried where it acts), with
+  each of 45 values that would move, resize, hide, clip, mask or border something wherever Chromium
+  takes it (so `float` and `vertical-align` on the root are tried too, and draw nothing other), and wherever Chromium
   then draws the logo otherwise, requires the sanitiser to refuse the logo, drop the element, or
   draw the output as the original. Its only exceptions are named in it: an outline, which is not on
   the allowlist and which Chromium paints around a shape or group, is dropped, and so is a dash
@@ -1125,9 +1132,9 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. Colours set only by CSS are lost
 (see above).
 
-The tests hold it to that: a hostile corpus of 342 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 141
-refused, and every removal, by element, attribute and reason, for each of the 201 accepted, 40 of
+The tests hold it to that: a hostile corpus of 349 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 146
+refused, and every removal, by element, attribute and reason, for each of the 203 accepted, 40 of
 them with a clip path rewritten as a mask, 39 of which keep that mask in the output: in the
 fortieth, the rewritten clip path was the clip path of another clip path that is then emptied, so
 nothing is left to use it) and

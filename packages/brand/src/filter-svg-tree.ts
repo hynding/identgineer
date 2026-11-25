@@ -8,7 +8,9 @@ import {
   cascadedAs,
   drawsAsInitial,
   GEOMETRY_IN_STYLE,
+  masksByImage,
   ROOT_FRAME,
+  ROOT_PLACING,
   STYLE_ALIASES,
   TRANSFORM_PLACING,
   SVG_ELEMENT_RULES,
@@ -506,8 +508,10 @@ class TreeFilter {
     if (cascadedAs(property) === "clip-path" && !/^\s*(?:url\(|none\s*$)/i.test(value)) {
       return true;
     }
+    if (masksByImage(property, value)) return true;
     const geometry = GEOMETRY_IN_STYLE[source.local];
-    const framing = source.local === "svg" && ROOT_FRAME.test(property);
+    const framing =
+      source.local === "svg" && (ROOT_FRAME.test(property) || ROOT_PLACING.test(property));
     if (geometry === undefined) return false;
     if (framing || geometry.has(property)) {
       return !drawsAsInitial(property, value, new Set(kept.keys()));

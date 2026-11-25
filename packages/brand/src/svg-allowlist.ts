@@ -68,9 +68,42 @@ const SIZING = [
 export const ROOT_FRAME = /^(?:-webkit-)?(?:margin|padding|border|outline)(?:-|$)/;
 
 /**
+ * On the root, its position and every inset that moves it once positioned, logical ones included.
+ */
+export const ROOT_PLACING =
+  /^(?:position|top|right|bottom|left|inset(?:-(?:block|inline)(?:-(?:start|end))?)?)$/;
+
+/**
+ * Style properties that mask an element by an image, which no `mask` attribute can say: the
+ * browser tests find each of them hiding what any drawn element draws.
+ */
+export const MASK_IMAGES: ReadonlySet<string> = new Set([
+  "mask",
+  "-webkit-mask",
+  "mask-image",
+  "-webkit-mask-image",
+  "-webkit-mask-box-image",
+  "-webkit-mask-box-image-source",
+]);
+
+/** A mask the `mask` attribute could say too: none, or one reference to a mask in the document. */
+const MASK_REFERENCE = /^\s*(?:none|url\(\s*(["']?)#[^"'()\s]*\1\s*\))\s*$/i;
+
+/**
+ * Whether a mask property sets an image: anything but none, and for the shorthands, which the
+ * `mask` attribute's grammar reads, anything but none or a lone reference.
+ */
+export function masksByImage(property: string, value: string): boolean {
+  if (!MASK_IMAGES.has(property)) return false;
+  if (property === "mask" || property === "-webkit-mask") return !MASK_REFERENCE.test(value);
+  return value.trim().toLowerCase() !== "none";
+}
+
+/**
  * Style properties Chromium reads as the geometry of an element, or as hiding it, which the
- * sanitiser keeps only as attributes or not at all (and, on the root, `ROOT_FRAME`; on anything,
- * a `clip-path` of a shape or box rather than a reference): the browser tests set every property Chromium
+ * sanitiser keeps only as attributes or not at all (and, on the root, `ROOT_FRAME` and
+ * `ROOT_PLACING`; on anything, a `clip-path` of a shape or box rather than a reference, and a mask
+ * of an image, `MASK_IMAGES`): the browser tests set every property Chromium
  * has on each element and hold the sanitiser to this. Where one is set, dropping it alone would
  * draw the element other than either way, so the element goes with it (the root or a clip path,
  * which nothing could stand in for, is refused).
@@ -113,7 +146,8 @@ const ZERO_LENGTH = /^[+-]?(?:0+(?:\.0*)?|\.0+)(?:[a-z]+|%)?$/;
  * Whether a declaration of a geometry property sets what the element has anyway: the property's
  * initial value, which draws the same picture. A transform of none does so only where there is no
  * transform attribute for it to undo; a margin, padding, border or outline where every part of it
- * is a zero length or `none`.
+ * is a zero length or `none`; a position where it is `static`, and an inset where every part of it
+ * is `auto`.
  */
 export function drawsAsInitial(
   property: string,
@@ -134,6 +168,8 @@ export function drawsAsInitial(
   if (ROOT_FRAME.test(property)) {
     return written.split(/\s+/).every((part) => ZERO_LENGTH.test(part) || part === "none");
   }
+  if (property === "position") return written === "static";
+  if (ROOT_PLACING.test(property)) return written.split(/\s+/).every((part) => part === "auto");
   return false;
 }
 
