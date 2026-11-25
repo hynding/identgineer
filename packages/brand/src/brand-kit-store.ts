@@ -232,8 +232,9 @@ function writableData(
 }
 
 /**
- * The fields a write sent that the CMS answers otherwise: strapi-php keeps the old value of a field
- * sent as null (hynding/camis#122), so an answer is never taken as the kit that was asked for.
+ * The fields a write sent that the CMS answers otherwise: a server that keeps the old value of a
+ * field sent as null (strapi-php did before hynding/camis#122) never has its answer taken as the kit
+ * that was asked for.
  */
 function unappliedFields(sent: Record<string, unknown>, record: StoredBrandKit): string[] {
   const answered: Record<string, unknown> = {

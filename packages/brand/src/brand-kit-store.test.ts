@@ -450,7 +450,7 @@ describe("update", () => {
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 1"><rect width="2" height="1"/></svg>',
     );
     if (!logo.ok) throw new Error("expected a logo");
-    // strapi-php today keeps the old value of a field sent as null (hynding/camis#122).
+    // A server that keeps the old value of a field sent as null (as camis did before #122).
     const stale = rowOf(kitFrom({ tagline: "Old", logo: logo.svg }));
     const { store } = storeWith(() => json({ data: stale }));
     const error = await rejection(store.update(DOCUMENT_ID, kitFrom()));
