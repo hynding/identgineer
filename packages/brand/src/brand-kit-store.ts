@@ -250,24 +250,41 @@ function isSignedOut(error: unknown): boolean {
   }
 }
 
+/**
+ * A page's numbers, held to the request and to each other: the page and size asked for, the page
+ * count that follows from the total, and no more rows than the total leaves for this page.
+ */
+function readPagination(
+  meta: unknown,
+  asked: { readonly page: number; readonly pageSize: number },
+  rows: number,
+): { page: number; pageSize: number; pageCount: number; total: number } {
+  if (!isPlainObject(meta) || !hasOnlyKeys(meta, ["pagination"])) throw malformed();
+  const pagination = own(meta, "pagination");
+  const count = (key: string): number => {
+    const value = own(pagination, key);
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) throw malformed();
+    return value;
+  };
+  const page = count("page");
+  const pageSize = count("pageSize");
+  const pageCount = count("pageCount");
+  const total = count("total");
+  if (page !== asked.page || pageSize !== asked.pageSize) throw malformed();
+  if (pageCount !== Math.ceil(total / pageSize)) throw malformed();
+  if (rows > Math.min(pageSize, Math.max(0, total - (page - 1) * pageSize))) throw malformed();
+  return { page, pageSize, pageCount, total };
+}
+
 function readPage(
   body: unknown,
-  pageSize: number,
+  asked: { readonly page: number; readonly pageSize: number },
   readRecord: (row: unknown) => BrandKitSummaryResult,
 ): BrandKitPage {
   if (!isPlainObject(body) || !hasOnlyKeys(body, ["data", "meta"])) throw malformed();
   const data = own(body, "data");
-  const meta = own(body, "meta");
-  if (!Array.isArray(data) || data.length > pageSize) throw malformed();
-  if (!isPlainObject(meta) || !hasOnlyKeys(meta, ["pagination"])) throw malformed();
-  const pagination = own(meta, "pagination");
-  const count = (key: string, minimum: number): number => {
-    const value = own(pagination, key);
-    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
-      throw malformed();
-    }
-    return value;
-  };
+  if (!Array.isArray(data)) throw malformed();
+  const numbers = readPagination(own(body, "meta"), asked, data.length);
   return Object.freeze({
     results: Object.freeze(
       data.map((row: unknown, index): BrandKitSummaryResult => {
@@ -275,10 +292,7 @@ function readPage(
         return result.ok ? result : { ...result, index };
       }),
     ),
-    page: count("page", 1),
-    pageSize: count("pageSize", 1),
-    pageCount: count("pageCount", 0),
-    total: count("total", 0),
+    ...numbers,
   });
 }
 
@@ -288,7 +302,7 @@ function readSingle(
 ): BrandKitRecordResult {
   if (!isPlainObject(body) || !hasOnlyKeys(body, ["data", "meta"])) throw malformed();
   const data = own(body, "data");
-  if (data === undefined) throw malformed();
+  if (!isPlainObject(data)) throw malformed();
   return readRecord(data);
 }
 
@@ -387,7 +401,7 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
     );
     return readPage(
       body,
-      pageSize,
+      { page, pageSize },
       publicKits ? publicOnly(readCmsBrandKitSummary) : readCmsBrandKitSummary,
     );
   };
