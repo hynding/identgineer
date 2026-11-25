@@ -223,7 +223,7 @@ describe("the drawing cost of a logo", () => {
       layer: 50,
       mask: 200,
       dash: 1,
-      tiledDash: { butt: 4, square: 5, round: 8 },
+      tiledDash: { butt: 4, square: 5, round: 9, wideRound: 24 },
     });
     expect(cost("")).toBe(1);
     expect(cost('<rect width="1" height="1"/>')).toBe(37);
@@ -318,7 +318,7 @@ describe("the drawing cost of a logo", () => {
     // Anything else, even where its numbers come out horizontal, is worked out again for every
     // tile its box touches (the stroke's reach included: half its width, four times over at a
     // miter join), counted on a grid of eight by eight: across the whole image, a share of 1. A
-    // diagonal of 72 dashes costs four more a dash butt, five square and eight round.
+    // diagonal of 72 dashes costs four more a dash butt, five square and nine round.
     expect(stroked('<line x2="100" y2="100"/>')).toBe(1 + 33 + 72 + 72 * 4);
     expect(stroked('<line x2="100" y2="100"/>', ' stroke-linecap="butt"')).toBe(
       1 + 33 + 72 + 72 * 4,
@@ -327,7 +327,7 @@ describe("the drawing cost of a logo", () => {
       1 + 33 + 72 + 72 * 5,
     );
     expect(stroked('<line x2="100" y2="100"/>', ' stroke-linecap="round"')).toBe(
-      1 + 33 + 72 + 72 * 8,
+      1 + 33 + 72 + 72 * 9,
     );
     // A coordinate written two ways, a line segment, a path of two H or V segments: 52 or 102
     // dashes in a box as wide as the image and four high, so eight columns and two rows (one more
@@ -369,7 +369,7 @@ describe("the drawing cost of a logo", () => {
         `<defs>${small} stroke-dasharray="1"/></defs><g stroke-linecap="round"><use href="#p" transform="scale(10)"/></g>`,
         BOX,
       ),
-    ).toBe(1 + 1 + 1 + 33 + 9 + 9 * 8);
+    ).toBe(1 + 1 + 1 + 33 + 9 + 9 * 9);
     // And in a mask's content, from the mask's own ancestors.
     expect(
       cost(
@@ -377,6 +377,51 @@ describe("the drawing cost of a logo", () => {
         BOX,
       ),
     ).toBe(1 + 1 + 1 + 33 + 72 + (36 + 200) + 72 * 4);
+  });
+
+  it("charges a round-capped dash more once its stroke, as drawn, is wider than a tile of eight by eight", () => {
+    const circle = (paint: string, wrap = (shape: string): string => shape): number =>
+      cost(
+        wrap(
+          `<circle cx="50" cy="50" r="45" fill="none" stroke="#000" stroke-dasharray="1"${paint}/>`,
+        ),
+        BOX,
+      );
+    const round = ' stroke-linecap="round"';
+    // 143 dashes across the image: a tile is an eighth of its side, 12.5 here.
+    expect(circle(` stroke-width="12.5"${round}`)).toBe(1 + 72 + 143 + 143 * 9);
+    expect(circle(` stroke-width="12.6"${round}`)).toBe(1 + 72 + 143 + 143 * 24);
+    expect(circle(` stroke-width="100"${round}`)).toBe(1 + 72 + 143 + 143 * 24);
+    // Butt and square caps cost the same however wide.
+    expect(circle(' stroke-width="100" stroke-linecap="butt"')).toBe(1 + 72 + 143 + 143 * 4);
+    expect(circle(' stroke-width="100" stroke-linecap="square"')).toBe(1 + 72 + 143 + 143 * 5);
+    // The width as drawn: scaled by the shape's transform, by the larger of its stretches, or
+    // inherited from a group.
+    expect(circle(` stroke-width="7" transform="scale(2)"${round}`)).toBe(1 + 72 + 143 + 143 * 24);
+    expect(circle(` stroke-width="7" transform="scale(2 1.5)"${round}`)).toBe(
+      1 + 72 + 143 + 143 * 24,
+    );
+    expect(circle(` stroke-width="20" transform="scale(0.5)"${round}`)).toBe(
+      1 + 72 + 143 + 143 * 9,
+    );
+    expect(circle(round, (shape) => `<g stroke-width="20">${shape}</g>`)).toBe(
+      1 + 1 + 72 + 143 + 143 * 24,
+    );
+  });
+
+  it("charges each instance of a round-capped dash by the width it is drawn at", () => {
+    const definition =
+      '<defs><circle id="p" cx="50" cy="50" r="45" fill="none" stroke="#000" stroke-width="7" stroke-linecap="round" stroke-dasharray="1"/></defs>';
+    // Through a use scaled up twice, and one not scaled; or with the width from the use.
+    expect(cost(`${definition}<use href="#p" transform="scale(2)"/><use href="#p"/>`, BOX)).toBe(
+      1 + 2 * (1 + 72 + 143) + 143 * 24 + 143 * 9,
+    );
+    expect(
+      cost(
+        '<defs><circle id="p" cx="50" cy="50" r="45" fill="none" stroke="#000" stroke-linecap="round" stroke-dasharray="1"/></defs><use href="#p" stroke-width="13"/>',
+        BOX,
+      ),
+    ).toBe(1 + 1 + 72 + 143 + 143 * 24);
   });
 
   it("bounds the length of an ellipse by pi times the root of twice the sum of its radii squared, never shorter than it is", () => {
