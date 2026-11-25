@@ -1,5 +1,4 @@
 export { BRAND_ID_MAX_LENGTH, BRAND_ID_MIN_LENGTH, RESERVED_BRAND_IDS } from "./brand-id.ts";
-export { boundSvgPathData } from "./bound-svg-path-data.ts";
 export { CORNERS, TONES } from "./brand-kit.ts";
 export type { BrandColors, BrandKit, Corners, Tone } from "./brand-kit.ts";
 export type { BrandThemeDocument } from "./brand-theme-document.ts";

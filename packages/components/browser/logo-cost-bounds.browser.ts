@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
-import { boundSvgPathData, sanitiseSvgLogo } from "@identgineer/brand";
+import { sanitiseSvgLogo } from "@identgineer/brand";
+// The bound is the cost model's own, read here only to test it, so it is not part of the public API.
+import { boundSvgPathData } from "../../brand/src/bound-svg-path-data.ts";
 import { expect, test } from "./fixtures";
 import { seeded } from "./seeded";
 
