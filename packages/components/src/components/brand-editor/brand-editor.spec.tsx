@@ -730,6 +730,21 @@ describe("idg-brand-editor uploads", () => {
     expect(guide(root)?.kit?.logo).toBe(HARBOUR.logo);
   });
 
+  it("says the same refusal again for a second refused file, as new text in its alert", async () => {
+    const { root, waitForChanges } = await mount({ kit: HARBOUR });
+    const doctype = '<!DOCTYPE svg [<!ENTITY x "x">]><svg xmlns="http://www.w3.org/2000/svg"/>';
+    choose(root, "logo", fileOf(doctype));
+    await settle(waitForChanges);
+    const first = shadowOf(root).querySelector("#logo-error .error-text");
+    expect(first?.textContent).toContain("document type");
+    choose(root, "logo", fileOf(doctype));
+    await settle(waitForChanges);
+    const second = shadowOf(root).querySelector("#logo-error .error-text");
+    expect(second?.textContent).toBe(first?.textContent);
+    // A live region announces what is inserted: the same words in the same node are not.
+    expect(second).not.toBe(first);
+  });
+
   it("is still removed from the page by remove(), which no method of its own hides", async () => {
     const { root } = await mount({ kit: HARBOUR });
     root.remove();
