@@ -258,6 +258,20 @@ describe("the bundles of stencil-bundles.ts, against the components' sources", (
     ]);
   });
 
+  it("reads a comment marker inside a string or JSX text as text, so a string hides no code", () => {
+    const known = new Set(["idg-badge", "idg-icon", "idg-stat", "idg-tooltip"]);
+    const source = `
+      const accept = "image/*";
+      render() { return <idg-badge />; }
+      const close = '*/';
+      const url = \`https://example.com//path\`;
+      show() { return <p>Use // or /* freely, then <idg-icon /></p>; }
+      /* <idg-stat /> in a comment */
+      // <idg-tooltip /> after a line comment
+    `;
+    expect([...renderedTags(source, known)].sort()).toEqual(["idg-badge", "idg-icon"]);
+  });
+
   it("renders only what is in its own group or in controls, bar the accepted", () => {
     const outside: string[] = [];
     for (const { tag, file } of COMPONENTS) {
