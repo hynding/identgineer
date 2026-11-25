@@ -9,6 +9,7 @@ import {
 import { describe, expect, it } from "vitest";
 import {
   isBrandEditorStore,
+  readUnreadDocumentId,
   readSaved,
   readStoreFailure,
   type BrandEditorStore,
@@ -84,6 +85,30 @@ describe("readSaved", () => {
       },
     ]) {
       expect(readSaved(value)).toBeUndefined();
+    }
+  });
+});
+
+describe("readUnreadDocumentId", () => {
+  it("reads the document a write stored but could not read back", () => {
+    expect(readUnreadDocumentId({ ok: false, documentId: "doc-5", errors: [] })).toBe("doc-5");
+  });
+
+  it("reads a stored record, a bad id and anything else as nothing", () => {
+    const revoked = Proxy.revocable({}, {});
+    revoked.revoke();
+    for (const value of [
+      undefined,
+      null,
+      CANARY,
+      { ok: true, record: { documentId: "doc-5", isPublic: false, kit: ACME } },
+      { ok: false, errors: [] },
+      { ok: false, documentId: "has spaces" },
+      { ok: false, documentId: `a${CANARY}` },
+      { ok: "false", documentId: "doc-5" },
+      revoked.proxy,
+    ]) {
+      expect(readUnreadDocumentId(value)).toBeUndefined();
     }
   });
 });

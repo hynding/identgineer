@@ -507,6 +507,40 @@ describe("idg-brand-editor saving", () => {
     await settle(waitForChanges);
     expect(store.create).toHaveBeenCalledTimes(1);
     expect(store.update.mock.calls[0]?.[0]).toBe("doc-7");
+    // The create was not applied whole, so no event said a kit was made: the first that saves it
+    // says so, and only that one.
+    expect(events.seen).toEqual([
+      { type: "idgSave", detail: { documentId: "doc-7", id: "acme", created: true } },
+    ]);
+    submit(root);
+    await settle(waitForChanges);
+    expect(events.seen[1]).toEqual({
+      type: "idgSave",
+      detail: { documentId: "doc-7", id: "acme", created: false },
+    });
+  });
+
+  it("updates the kit a create stored but could not read back, and says it was created once saved", async () => {
+    const store = {
+      create: vi.fn(() => Promise.resolve({ ok: false, documentId: "doc-5", errors: [] })),
+      update: vi.fn((documentId: string, kit: BrandKit) =>
+        Promise.resolve({ ok: true, record: { documentId, isPublic: false, kit } }),
+      ),
+    };
+    const { root, waitForChanges } = await mount({ kit: ACME, store });
+    submit(root);
+    await settle(waitForChanges);
+    expect(textOf(root, 'idg-alert[part="error"]')).toBe(
+      "The kit was sent, but the answer could not be read. Check it before saving again.",
+    );
+    expect(events.seen).toEqual([]);
+    submit(root);
+    await settle(waitForChanges);
+    expect(store.create).toHaveBeenCalledTimes(1);
+    expect(store.update.mock.calls[0]?.[0]).toBe("doc-5");
+    expect(events.seen).toEqual([
+      { type: "idgSave", detail: { documentId: "doc-5", id: "acme", created: true } },
+    ]);
   });
 
   it.each([
