@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import ts from "typescript";
 import { BUNDLES } from "../stencil-bundles";
 
 const PACKAGE = fileURLToPath(new URL("..", import.meta.url));
@@ -171,8 +172,40 @@ function sourceFiles(directory: string): string[] {
   });
 }
 
-const withoutComments = (text: string) =>
-  text.replaceAll(/\/\*[\s\S]*?\*\//g, "").replaceAll(/^\s*\/\/.*$/gm, "");
+/**
+ * The source with its comments blanked out, found by the TypeScript parser: a regular expression
+ * would take `/*` inside a string (`accept="image/*"`) for the start of a comment and hide the code
+ * up to the next `*\/`. A comment is the trivia before a token; JSX text is not trivia, so `//` in
+ * it stays.
+ */
+function withoutComments(text: string): string {
+  const source = ts.createSourceFile(
+    "source.tsx",
+    text,
+    ts.ScriptTarget.Latest,
+    false,
+    ts.ScriptKind.TSX,
+  );
+  const comments = new Map<number, number>();
+  const visit = (node: ts.Node): void => {
+    const children = node.getChildren(source);
+    if (children.length === 0 && node.kind !== ts.SyntaxKind.JsxText) {
+      for (const range of ts.getLeadingCommentRanges(text, node.pos) ?? []) {
+        comments.set(range.pos, range.end);
+      }
+    }
+    for (const child of children) visit(child);
+  };
+  visit(source);
+  let blanked = text;
+  for (const [start, end] of comments) {
+    blanked =
+      blanked.slice(0, start) +
+      blanked.slice(start, end).replaceAll(/[^\n]/g, " ") +
+      blanked.slice(end);
+  }
+  return blanked;
+}
 
 /** A component's file, and every module of the package it imports, which can render more elements. */
 function modulesOf(file: string): string[] {
