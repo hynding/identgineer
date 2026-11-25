@@ -256,7 +256,8 @@ base.describe("the checks themselves", () => {
 });
 
 // The costliest logos the sanitiser still accepts, one for each kind of work a renderer does: long
-// edges, crowded on every row; arcs; hairline dashes, of two lengths and of 64; solid paint over
+// edges, crowded on every row; arcs; hairline dashes, of two lengths and of 64; dashes along
+// circles, an ellipse, a rounded rectangle, an arc, a cubic and a diagonal line; solid paint over
 // and over; gradients at the stop limit, opaque and translucent; a fill under a very wide stroke;
 // group opacity layers; masks inside masks; a clip path of crowded edges with the even-odd rule; a
 // view box far wider than tall; dashes, round dots and round joins on a stroke as wide as the
@@ -267,7 +268,8 @@ base.describe("the checks themselves", () => {
 // of 43 shapes; a mask holding a clipped shape; and a shape scaled as far as a transform may go.
 // Each is the largest of its family that is accepted (the next one up is refused, for the drawing
 // cost or the overdraw), and must be drawn as an image and inline, rasterised in full at 600 CSS
-// pixels and at 2000 with a device scale factor of 2, and drawn inline at 600, each within its
+// pixels and at 2000 with a device scale factor of 2, shown as an image 2000 CSS pixels square at
+// that density (which Chromium rasterises in tiles), and drawn inline at 600, each within its
 // budget (the budgets cover inline logos up to 600 CSS pixels only: see the brand README). On a
 // loaded four-core machine the slowest took about 0.35 seconds at 600 and 1.8 at 2000 (see the
 // brand README), so the budgets leave room for a slow runner, yet a limit raised tenfold would
@@ -420,6 +422,41 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
     ),
     "drawing-too-costly",
   ],
+  // Dashes along anything but one run of horizontal and vertical lines are worked out again for
+  // every tile of a large image the shape's box touches.
+  ...(["butt", "round", "square"] as const).flatMap((cap) =>
+    (["3", "5"] as const).map(
+      (width) =>
+        [
+          `dashed full-size circles ${width} wide, ${cap}-capped, by uses`,
+          copies(
+            `<circle id="p" cx="500" cy="500" r="450" fill="none" stroke="#000" stroke-width="${width}" stroke-linecap="${cap}" stroke-dasharray="8 4"/>`,
+          ),
+          "drawing-too-costly",
+        ] as const,
+    ),
+  ),
+  ...(
+    [
+      ["an ellipse", '<ellipse id="p" cx="500" cy="500" rx="450" ry="200"'],
+      [
+        "a rectangle with rounded corners",
+        '<rect id="p" x="50" y="50" width="900" height="900" rx="100"',
+      ],
+      ["an arc", '<path id="p" d="M50 500A450 450 0 0 1 950 500"'],
+      ["a cubic", '<path id="p" d="M50 500C50 251 251 50 500 50"'],
+      ["a diagonal line", '<path id="p" d="M0 0L1000 1000"'],
+    ] as const
+  ).map(
+    ([shape, element]) =>
+      [
+        `dashes along ${shape}, round-capped`,
+        copies(
+          `${element} fill="none" stroke="#000" stroke-width="5" stroke-linecap="round" stroke-dasharray="8 4"/>`,
+        ),
+        "drawing-too-costly",
+      ] as const,
+  ),
   ...(
     [
       ["of 64 lengths", Array.from({ length: 64 }, () => "1").join(" ")],
@@ -680,6 +717,35 @@ async function rasterise(page: Page, logo: Logo, size: number): Promise<number> 
 }
 
 /**
+ * Shows a logo's data URL as an `<img>` `size` CSS pixels square in a page as large, at the page's
+ * device scale factor, and returns the milliseconds until a screenshot shows it. An image this
+ * large is rasterised in tiles, each tile replaying every path whose box it touches, so this is
+ * timed apart from the single raster a canvas makes.
+ */
+async function showImage(page: Page, logo: Logo, size: number): Promise<number> {
+  await page.setViewportSize({ width: size, height: size });
+  await page.setContent(
+    `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'"><style>body{margin:0}img{display:block}</style>`,
+  );
+  await page.evaluate(async (dataUrl) => {
+    const image = new Image();
+    image.src = dataUrl;
+    await image.decode();
+    Object.assign(window, { pendingLogo: image });
+  }, logo.dataUrl ?? "");
+  await page.screenshot();
+  const started = Date.now();
+  await page.evaluate((size) => {
+    const image = (window as unknown as { pendingLogo: HTMLImageElement }).pendingLogo;
+    image.style.width = `${String(size)}px`;
+    image.style.height = `${String(size)}px`;
+    document.body.append(image);
+  }, size);
+  await page.screenshot({ timeout: RENDER_BUDGET_MS });
+  return Date.now() - started;
+}
+
+/**
  * Puts a logo inline in a box `SIZE` CSS pixels square, at the page's device scale factor, and
  * returns the milliseconds until a screenshot shows it: inline, a large logo is drawn tile by tile,
  * each tile walking every path it touches again, so this is timed apart from the image.
@@ -793,6 +859,13 @@ test.describe(`the costliest logos the sanitiser accepts, at ${String(LARGE_SIZE
       const logo = costliest(family, code);
       expect(await page.evaluate(() => window.devicePixelRatio)).toBe(2);
       expect(await rasterise(page, logo, LARGE_SIZE), logo.name).toBeLessThan(
+        LARGE_RASTER_BUDGET_MS,
+      );
+    });
+
+    test(`shows ${label} as an image within the budget`, async ({ page }) => {
+      const logo = costliest(family, code);
+      expect(await showImage(page, logo, LARGE_SIZE), logo.name).toBeLessThan(
         LARGE_RASTER_BUDGET_MS,
       );
     });
