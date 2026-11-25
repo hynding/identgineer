@@ -125,14 +125,13 @@ interface Dashes {
 
 /**
  * A shape's cost, dashed by its own dash array (`dashes`, none for a solid one; nothing here
- * inherits one); `dash` is what each dash weighs, more on anything but one run of horizontal and
- * vertical lines.
+ * inherits one). Nothing here is stroked, so no dash is worked out again for the tiles of an image:
+ * each weighs one.
  */
 function shape(
   geometry: number,
   length: number,
   segments: number,
-  dash: number,
   dashes: Dashes | undefined,
   reading: Reading,
 ): Measure {
@@ -142,7 +141,7 @@ function shape(
       ? 0
       : (Math.ceil(reading.length(length, segments) / reading.period(dashes.period)) + 1) *
         dashes.perPeriod;
-  return { cost: WEIGHT.shape + geometry + count * dash, masks: 0, depth: 0 };
+  return { cost: WEIGHT.shape + geometry + count * WEIGHT.dash, masks: 0, depth: 0 };
 }
 
 class LogoGraph {
@@ -242,8 +241,7 @@ class LogoGraph {
     return {
       id,
       markup: `<path id="${id}" d="${data}"${this.dash(id)}/>`,
-      measure: (reading) =>
-        shape(geometry, length, count, WEIGHT.tiledDash, this.dashing.get(id), reading),
+      measure: (reading) => shape(geometry, length, count, this.dashing.get(id), reading),
       paint: (_, reading) => filled(Math.min(area, boxArea), visible, length, count, box, reading),
       clipped: false,
     };
@@ -275,12 +273,11 @@ class LogoGraph {
       y = nextY;
     }
     const boxArea = (box.maxX - box.minX) * (box.maxY - box.minY);
-    const dash = count === 1 ? WEIGHT.dash : WEIGHT.tiledDash;
     return {
       id,
       markup: `<path id="${id}" d="${data}"${this.dash(id)}/>`,
       measure: (reading) =>
-        shape(count * WEIGHT.line, length, count, dash, this.dashing.get(id), reading),
+        shape(count * WEIGHT.line, length, count, this.dashing.get(id), reading),
       paint: (_, reading) =>
         filled(Math.min(area, boxArea), count * Math.SQRT2, length, count, box, reading),
       clipped: false,
@@ -294,14 +291,7 @@ class LogoGraph {
         id,
         markup: `<rect id="${id}" width="${String(width)}" height="${String(height)}"${this.dash(id)}/>`,
         measure: (reading) =>
-          shape(
-            4 * WEIGHT.line,
-            2 * (width + height),
-            4,
-            WEIGHT.dash,
-            this.dashing.get(id),
-            reading,
-          ),
+          shape(4 * WEIGHT.line, 2 * (width + height), 4, this.dashing.get(id), reading),
         clipped: false,
         paint: (_, reading) =>
           filled(
@@ -319,14 +309,7 @@ class LogoGraph {
       id,
       markup: `<circle id="${id}" r="${String(radius)}"${this.dash(id)}/>`,
       measure: (reading) =>
-        shape(
-          4 * WEIGHT.cubic,
-          2 * Math.PI * radius,
-          4,
-          WEIGHT.tiledDash,
-          this.dashing.get(id),
-          reading,
-        ),
+        shape(4 * WEIGHT.cubic, 2 * Math.PI * radius, 4, this.dashing.get(id), reading),
       clipped: false,
       paint: (_, reading) =>
         filled(

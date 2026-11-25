@@ -248,7 +248,8 @@ base.describe("the checks themselves", () => {
 
 // The costliest logos the sanitiser still accepts, one for each kind of work a renderer does: long
 // edges, crowded on every row; arcs; hairline dashes, of two lengths and of 64; dashes along
-// circles, an ellipse, a rounded rectangle, an arc, a cubic, a diagonal and a horizontal line, and
+// circles, a guilloche of ellipses, an ellipse, a rounded rectangle, an arc, a cubic, a diagonal and
+// a horizontal line, and
 // along paths of horizontal and vertical lines (an L, a staircase, a serpentine, a square spiral, a
 // line drawn back and forth, an open path round a square); thin strokes along full-size circles,
 // ellipses and arcs, along concentric circles, along circles and arcs far larger than the image
@@ -490,6 +491,18 @@ const FAMILIES: readonly (readonly [string, (count: number) => string, SvgLogoEr
         ] as const,
     ),
   ),
+  [
+    "a guilloche of thin ellipses dashed 3 2, turned across half a turn",
+    (count) =>
+      costlyLogo(
+        Array.from(
+          { length: count },
+          (_, index) =>
+            `<ellipse cx="500" cy="500" rx="450" ry="160" transform="rotate(${((index * 180) / count).toFixed(2)} 500 500)" fill="none" stroke="#000" stroke-width="0.4" stroke-dasharray="3 2"/>`,
+        ).join(""),
+      ),
+    "drawing-too-costly",
+  ],
   ...(
     [
       ["an ellipse", '<ellipse id="p" cx="500" cy="500" rx="450" ry="200"'],

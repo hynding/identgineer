@@ -202,14 +202,16 @@ describe("the overdraw of a logo", () => {
 
   it("charges a stroke's curves again, three times over, for the tiles of a large image, which Chromium strokes them for one by one", () => {
     const hairline = 'fill="none" stroke="#000" stroke-width="0.000001"';
-    // A circle's whole outline is curved; a rounded rectangle's corners make one circle of the
+    // A circle's whole outline is curved, and an ellipse's, no longer than pi times the root of
+    // twice the sum of its radii squared; a rounded rectangle's corners make one circle of the
     // larger radius at most; a straight outline costs only its edges.
     expect(overdraw(`<circle r="50" ${hairline}/>`)).toBeCloseTo(
       strokeEdges(Math.PI) + curvedStrokeEdges(Math.PI),
       CURVED_HAIR,
     );
+    const ellipse = (Math.PI * Math.sqrt(2 * (50 ** 2 + 10 ** 2))) / 100;
     expect(overdraw(`<ellipse rx="50" ry="10" ${hairline}/>`)).toBeCloseTo(
-      strokeEdges(Math.PI) + curvedStrokeEdges(Math.PI),
+      strokeEdges(ellipse) + curvedStrokeEdges(ellipse),
       CURVED_HAIR,
     );
     expect(overdraw(`<rect ${SQUARE} rx="5" ${hairline}/>`)).toBeCloseTo(

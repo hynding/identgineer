@@ -188,6 +188,18 @@ function guilloche(): string {
   ).join("");
 }
 
+/**
+ * A guilloche of `count` thin ellipses dashed `3 2`, turned evenly across half a turn: each dash is
+ * worked out again for the tiles of a large image its ellipse's box touches.
+ */
+function dashedGuilloche(count: number): string {
+  return Array.from(
+    { length: count },
+    (_, index) =>
+      `<ellipse cx="500" cy="500" rx="450" ry="160" transform="rotate(${round((index * 180) / count)} 500 500)" fill="none" stroke="#135" stroke-width="0.4" stroke-dasharray="3 2"/>`,
+  ).join("");
+}
+
 /** A handwritten script: one long stroked path of 800 cubics, round capped and joined. */
 function script(): string {
   let data = "M50 500";
@@ -337,6 +349,8 @@ const REALISTIC: readonly (readonly [string, string, number, number])[] = [
     25,
   ],
   ["60 contour lines with a dotted ring", wide(contours() + DASHED_PARTS["a dotted ring"]), 26, 7],
+  ["a guilloche of 60 ellipses dashed 3 2", wide(dashedGuilloche(60)), 57, 7],
+  ["a guilloche of 100 ellipses dashed 3 2", wide(dashedGuilloche(100)), 95, 11],
 ];
 
 describe("realistic logos", () => {
