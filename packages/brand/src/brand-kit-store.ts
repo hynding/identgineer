@@ -11,6 +11,7 @@ import {
   type BrandKitRecordFailure,
   type BrandKitRecordResult,
   type BrandKitSummaryResult,
+  type StoredBrandKit,
 } from "./cms-brand-kit.ts";
 import { discardBody, readFailureBody, readJsonAnswer } from "./read-cms-answer.ts";
 import { parseRetryAfter } from "./retry-after.ts";
@@ -64,7 +65,10 @@ export interface BrandKitStore {
   ) => Promise<BrandKitRecordResult>;
   /** Stores a new kit; the CMS makes the signed-in user its owner. */
   readonly create: (kit: BrandKit, options?: BrandKitWriteOptions) => Promise<BrandKitRecordResult>;
-  /** Replaces a kit with `kit`, every field of it. */
+  /**
+   * Replaces a kit with `kit`, every field of it. Rejects as `not-applied`, naming the fields, when
+   * the CMS answers a field otherwise than it was sent.
+   */
   readonly update: (
     documentId: string,
     kit: BrandKit,
@@ -173,6 +177,18 @@ function writableData(
     throw validation(fields);
   }
   return { ...brandKitToCms(parsed.kit), ...(isPublic !== undefined && { isPublic }) };
+}
+
+/**
+ * The fields a write sent that the CMS answers otherwise: strapi-php keeps the old value of a field
+ * sent as null (hynding/camis#122), so an answer is never taken as the kit that was asked for.
+ */
+function unappliedFields(sent: Record<string, unknown>, record: StoredBrandKit): string[] {
+  const answered: Record<string, unknown> = {
+    ...brandKitToCms(record.kit),
+    isPublic: record.isPublic,
+  };
+  return Object.keys(sent).filter((field) => sent[field] !== answered[field]);
 }
 
 /** The CMS fields a validation error names (`details.errors[].path`), and only the kit's own. */
@@ -390,7 +406,11 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
     const signal = readSignal(writeOptions);
     const data = writableData(kit, writeOptions);
     const response = await send({ fetch: signedIn, method, path, data, signal });
-    return readSingle(await readJsonAnswer(response, MAX_RECORD_BYTES), readCmsBrandKit);
+    const result = readSingle(await readJsonAnswer(response, MAX_RECORD_BYTES), readCmsBrandKit);
+    if (!result.ok) return result;
+    const unapplied = unappliedFields(data, result.record);
+    if (unapplied.length > 0) throw new BrandKitStoreError("not-applied", { fields: unapplied });
+    return result;
   };
 
   return Object.freeze({

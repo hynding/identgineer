@@ -3,6 +3,7 @@ export type BrandKitStoreErrorCode =
   | "forbidden"
   | "not-found"
   | "validation"
+  | "not-applied"
   | "rate-limited"
   | "network"
   | "malformed-response"
@@ -14,6 +15,7 @@ const MESSAGES: Readonly<Record<BrandKitStoreErrorCode, string>> = {
   forbidden: "You may not change this brand kit.",
   "not-found": "The brand kit was not found.",
   validation: "Some of the brand kit's details are not valid.",
+  "not-applied": "The CMS did not save every change to the brand kit.",
   "rate-limited": "Too many requests. Wait before trying again.",
   network: "The CMS could not be reached.",
   "malformed-response": "The CMS answered with something that is not a brand kit answer.",
@@ -25,7 +27,7 @@ export interface BrandKitStoreErrorDetails {
   readonly status?: number;
   /** Whole seconds until another request is accepted (`rate-limited` only). */
   readonly retryAfterSeconds?: number;
-  /** The CMS fields refused (`validation` only): `primaryColor`, never a value. */
+  /** The CMS fields refused (`validation`) or not saved as sent (`not-applied`), never a value. */
   readonly fields?: readonly string[];
 }
 
