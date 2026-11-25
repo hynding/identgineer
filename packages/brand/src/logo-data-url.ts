@@ -21,6 +21,11 @@ function percentEncode(text: string): string {
   return output;
 }
 
+/** The data URL of a logo already checked by `isSanitisedSvgLogo`: never call it on anything else. */
+export function encodeLogoDataUrl(svg: SanitisedSvg): string {
+  return `data:image/svg+xml;charset=utf-8,${percentEncode(svg)}`;
+}
+
 /**
  * A `data:image/svg+xml` URL for a sanitised logo, for the `src` of an `<img>` (or a CSS
  * `background-image`), never for inlining. Percent-encoded UTF-8: smaller than base64 for SVG's
@@ -33,5 +38,5 @@ export function logoDataUrl(svg: SanitisedSvg): string {
   if (!isSanitisedSvgLogo(svg)) {
     throw new TypeError("logoDataUrl takes only an SVG that sanitiseSvgLogo returned");
   }
-  return `data:image/svg+xml;charset=utf-8,${percentEncode(svg)}`;
+  return encodeLogoDataUrl(svg);
 }
