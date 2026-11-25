@@ -1730,8 +1730,9 @@ editor.addEventListener("idgSave", (event) => {
 - **Narrow forms.** The form is a container: below 20em (at 320px, or with large text) its groups
   and hex boxes pad less, and each hex field keeps at least 8ch for a whole `#rrggbb`, wrapping
   below its picker inside the box, with the invalid mark inside it too. The file chooser's button
-  sits on a line of its own above the file name, wrapping its label, so no upload clips it. A
-  browser test checks this in every layout at 320px and at 200% text.
+  sits on a line of its own above the file name and pads less, so its label wraps between whole
+  words and no upload clips it. A browser test checks this in every layout at 320px and at 200%
+  text, reading each padding as computed and the button's widest word against its input.
 - **Control names** are the fields' names prefixed with `brand-` (`brand-name`, `brand-id`, …): a
   control named `id` or `name` would shadow the form's own properties.
 - **Content-Security-Policy:** the logos are data URL images, so as for `idg-brand-logo` the page
