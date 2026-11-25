@@ -327,6 +327,24 @@ describe("the overdraw of a logo", () => {
     );
   });
 
+  it("holds a small arc's chord to the shortest Chromium may read, by the reading slack, not the chord as written", () => {
+    // Pins the slack only: the radius equals the coordinates here, so this cannot tell whether the
+    // coordinates bound the threshold too (the test above pins that). Ends at about 999,999 are read
+    // to within about 21 (see `lengthSlack`), against a threshold of
+    // 2^-16 of 999,999, about 15.3. A chord of 30 may be read as 9: charged as the whole ellipse,
+    // exactly as the large arc between the same ends. Had the slack been added to the chord rather
+    // than taken from it, the chord would read as 51 and be bounded by itself.
+    const scaled = 'transform="scale(0.0001)" fill="none" stroke="#000" stroke-width="0.0001"';
+    expect(overdraw(`<path d="M999969 50A999999 999999 0 0 1 999999 50" ${scaled}/>`)).toBe(
+      overdraw(`<path d="M999969 50A999999 999999 0 1 1 999999 50" ${scaled}/>`),
+    );
+    // The other side: at the same place a chord of 200 is at least 179 however it is read, over the
+    // threshold, so it is bounded by itself.
+    expect(overdraw(`<path d="M999799 50A999999 999999 0 0 1 999999 50" ${scaled}/>`)).toBeLessThan(
+      overdraw(`<path d="M999799 50A999999 999999 0 1 1 999999 50" ${scaled}/>`),
+    );
+  });
+
   it("bounds a curve's length closer than its control polygon, never short of it", () => {
     const hairline = 'fill="none" stroke="#000" stroke-width="0.000001"';
     // The control polygon, 2.24 sides, still bounds the outline's edges.
