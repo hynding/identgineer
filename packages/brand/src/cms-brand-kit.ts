@@ -25,7 +25,7 @@ export interface StoredBrandKit {
 }
 
 /**
- * A kit as a list gives it: every field but the logo and mark, which a list never reads, and
+ * A kit as a list gives it: every field but the logo and mark, which a list never checks, and
  * `logos: "not-loaded"` saying so. The marker, which a spread copies, keeps a summary out of
  * `update`: written back as a kit, it would clear the logo and mark it never held.
  */
@@ -256,7 +256,8 @@ type Read<Value> =
  * Reads one record: the kit's fields, `documentId` and `isPublic`; the CMS's own ids and
  * timestamps are ignored, and any other key is an error. Reads own properties only, so a
  * `__proto__` or `constructor` key is an unknown key like any other. Without `logos`, the logo
- * and mark are skipped unread, so a list costs nothing for them however long they are.
+ * and mark are dropped unchecked, so a list never sanitises them again; the page's byte bound is
+ * what limits how long they may be.
  */
 function readRecord(value: unknown, logos: boolean): Read<BrandKit> {
   if (!isPlainObject(value)) {
@@ -295,8 +296,8 @@ export function readCmsBrandKit(value: unknown): BrandKitRecordResult {
 }
 
 /**
- * Reads one record of a list into a checked summary, the logo and mark left unread whatever the
- * CMS sent. Never throws.
+ * Reads one record of a list into a checked summary, the logo and mark dropped unchecked whatever
+ * the CMS sent. Never throws.
  */
 export function readCmsBrandKitSummary(value: unknown): BrandKitSummaryResult {
   const read = readRecord(value, false);

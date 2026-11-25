@@ -1231,9 +1231,10 @@ stops a body being read when the given `fetch` has let go of it after the header
 A list answers summaries (`BrandKitSummary`: the kit without `logo` and `mark`, marked
 `logos: "not-loaded"`). It asks the CMS
 for the other fields only (Strapi's `fields` parameter, which strapi-php and Strapi's generated
-controllers both honour for the owner and the public role), and skips any logo or mark text that
-arrives anyway without reading it, so a page of kits with large logos costs no more than one
-without. Checking a logo is not free: `get` and `getPublic` pass the logo and mark through
+controllers both honour for the owner and the public role). A list never checks logo or mark text:
+any that arrives anyway is dropped from the record unchecked. It is still read and parsed with the
+rest of the page, though, and counts towards the page's bound, so a page whose logos arrive anyway
+and push it past that bound is refused as `malformed-response`. Checking a logo is not free: `get` and `getPublic` pass the logo and mark through
 `parseBrandKit`, which sanitises each again to see it is a fixed point, about half a second for a
 logo near the sanitiser's limit (ten kits with two 436 KB logos each took 9.2 seconds). Fetch the
 full kit only for the one being shown or edited. A summary is never written back: `update`

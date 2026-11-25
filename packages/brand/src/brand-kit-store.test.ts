@@ -208,7 +208,7 @@ describe("list", () => {
     expect(JSON.stringify(results)).not.toContain(SECRET);
   });
 
-  it("leaves out the logo and mark, ignoring without parsing any logo text that arrives", async () => {
+  it("leaves out the logo and mark, never checking any logo text that arrives", async () => {
     const row = rowOf(kitFrom(), { logo: UNSANITISED_LOGO, mark: UNSANITISED_LOGO });
     const { store } = storeWith(() => json(page([row])));
     const { results } = await store.list();

@@ -244,7 +244,7 @@ describe("readCmsBrandKit", () => {
 });
 
 describe("readCmsBrandKitSummary", () => {
-  it("reads every field but the logo and mark, which it never reads", () => {
+  it("reads every field but the logo and mark, which it never checks", () => {
     const hostile =
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 1" onload="steal()"><rect width="2" height="1"/></svg>';
     const result = readCmsBrandKitSummary(minimalRow({ logo: hostile, mark: 5, tagline: "Hi" }));
