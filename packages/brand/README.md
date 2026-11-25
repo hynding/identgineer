@@ -1198,8 +1198,8 @@ a page 4000 pixels square full of a dithered gradient took 2 to 3 seconds to enc
 the logo drew (one full-size gradient 2.1 to 3.1, nineteen 3.5), a cost of the test and not of the
 logo, which hid what the budget is for; as a JPEG, about 0.3. Shown that way on a four-core machine
 shared with other work, the worst of three runs, the slowest took 1.8 seconds (masks four deep; the
-dashed circles 1.4 to 1.8), the gradients 1.0 to 1.4, the other dashed families 0.3 to 1.4, thin
-strokes along curves 0.2 to 1.4, and the rest under 1.4; timed with a PNG, the gradients had taken
+dashed circles 1.3 to 1.8), the gradients 1.0 to 1.4, the other dashed families 0.3 to 1.4, thin
+strokes along curves 0.2 to 1.4, and the rest under 1.4; timed with a PNG, the full-size gradients had taken
 3.0 to 4.0 and the concentric circles 2.5. A logo with four times the full-size gradients the
 overdraw accepts must take more than twice as long as the costliest accepted (3.5 to 3.8 seconds
 against 1.1 to 1.4 here, ten runs; with a PNG, 5.8 to 6.1 against 3.4 to 3.6), so the timing cannot
