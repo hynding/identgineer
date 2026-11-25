@@ -14,7 +14,14 @@ export type {
 export { BrandKitStoreError } from "./brand-kit-store-error.ts";
 export type { BrandKitStoreErrorCode, BrandKitStoreErrorDetails } from "./brand-kit-store-error.ts";
 export type { BrandThemeDocument } from "./brand-theme-document.ts";
-export type { BrandKitRecordResult, StoredBrandKit } from "./cms-brand-kit.ts";
+export type {
+  BrandKitRecordFailure,
+  BrandKitRecordResult,
+  BrandKitSummary,
+  BrandKitSummaryResult,
+  StoredBrandKit,
+  StoredBrandKitSummary,
+} from "./cms-brand-kit.ts";
 export { CORNER_RADII } from "./corner-radii.ts";
 export type { BrandRadius, RadiusName } from "./corner-radii.ts";
 export { emitBrandThemeCss, emitBrandThemeTokens } from "./emit-brand-theme.ts";

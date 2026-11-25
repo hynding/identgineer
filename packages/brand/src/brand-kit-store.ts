@@ -6,7 +6,11 @@ import {
   DOCUMENT_ID,
   parseCmsBrandKit,
   readCmsBrandKit,
+  readCmsBrandKitSummary,
+  SUMMARY_FIELDS,
+  type BrandKitRecordFailure,
   type BrandKitRecordResult,
+  type BrandKitSummaryResult,
 } from "./cms-brand-kit.ts";
 import { discardBody, readFailureBody, readJsonAnswer } from "./read-cms-answer.ts";
 import { parseRetryAfter } from "./retry-after.ts";
@@ -41,9 +45,9 @@ export interface BrandKitWriteOptions extends BrandKitRequestOptions {
   readonly isPublic?: boolean;
 }
 
-/** One page of kits: each record a kit or the errors that kept it from being one. */
+/** One page of kit summaries: each record a summary or the errors that kept it from being one. */
 export interface BrandKitPage {
-  readonly results: readonly BrandKitRecordResult[];
+  readonly results: readonly BrandKitSummaryResult[];
   readonly page: number;
   readonly pageSize: number;
   readonly pageCount: number;
@@ -51,7 +55,7 @@ export interface BrandKitPage {
 }
 
 export interface BrandKitStore {
-  /** The signed-in user's kits, one page at a time, oldest first. */
+  /** Summaries of the signed-in user's kits (no logo or mark), one page at a time, oldest first. */
   readonly list: (options?: BrandKitListOptions) => Promise<BrandKitPage>;
   /** One of the signed-in user's kits by its document id. */
   readonly get: (
@@ -67,7 +71,7 @@ export interface BrandKitStore {
     options?: BrandKitWriteOptions,
   ) => Promise<BrandKitRecordResult>;
   readonly remove: (documentId: string, options?: BrandKitRequestOptions) => Promise<void>;
-  /** Every kit whose owner made it public, without credentials. */
+  /** Summaries of every kit whose owner made it public, without credentials. */
   readonly listPublic: (options?: BrandKitListOptions) => Promise<BrandKitPage>;
   /** One public kit by its document id, without credentials. */
   readonly getPublic: (
@@ -83,6 +87,12 @@ export const MAX_PAGE_SIZE = 10;
  * which JSON may write up to three times longer (`\/`, `\"` and `é` escapes), and the rest.
  */
 export const MAX_RECORD_BYTES = 4 * 1024 * 1024;
+/**
+ * The largest summary in a list: a name and tagline at their CMS limits written entirely as
+ * `\uXXXX` escapes, the colours, choices, ids and timestamps, with room to spare.
+ */
+export const MAX_SUMMARY_BYTES = 8 * 1024;
+const MAX_ENVELOPE_BYTES = 4 * 1024;
 const MAX_FAILURE_BYTES = 64 * 1024;
 const MAX_REPORTED_FIELDS = 20;
 const FIELD_SEGMENT = /^[A-Za-z0-9_]{1,64}$/;
@@ -224,7 +234,7 @@ function isSignedOut(error: unknown): boolean {
 function readPage(
   body: unknown,
   pageSize: number,
-  readRecord: (row: unknown) => BrandKitRecordResult,
+  readRecord: (row: unknown) => BrandKitSummaryResult,
 ): BrandKitPage {
   if (!isPlainObject(body) || !hasOnlyKeys(body, ["data", "meta"])) throw malformed();
   const data = own(body, "data");
@@ -241,7 +251,7 @@ function readPage(
   };
   return Object.freeze({
     results: Object.freeze(
-      data.map((row: unknown, index): BrandKitRecordResult => {
+      data.map((row: unknown, index): BrandKitSummaryResult => {
         const result = readRecord(row);
         return result.ok ? result : { ...result, index };
       }),
@@ -264,15 +274,23 @@ function readSingle(
 }
 
 /** A public read must answer public kits only; anything else is refused like a bad field. */
-function readPublicRecord(row: unknown): BrandKitRecordResult {
-  const result = readCmsBrandKit(row);
-  if (!result.ok || result.record.isPublic) return result;
-  return {
-    ok: false,
-    documentId: result.record.documentId,
-    errors: [
-      { path: "isPublic", code: "not-allowed", message: "isPublic: must be true for a public kit" },
-    ],
+function publicOnly<Result extends BrandKitRecordResult | BrandKitSummaryResult>(
+  read: (row: unknown) => Result,
+): (row: unknown) => Result | BrandKitRecordFailure {
+  return (row) => {
+    const result = read(row);
+    if (!result.ok || result.record.isPublic) return result;
+    return {
+      ok: false,
+      documentId: result.record.documentId,
+      errors: [
+        {
+          path: "isPublic",
+          code: "not-allowed",
+          message: "isPublic: must be true for a public kit",
+        },
+      ],
+    };
   };
 }
 
@@ -329,31 +347,38 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
   const listWith = async (
     fetch: BrandKitFetch,
     listOptions: BrandKitListOptions | undefined,
-    publicOnly: boolean,
+    publicKits: boolean,
   ): Promise<BrandKitPage> => {
     const { page, pageSize } = readPageOptions(listOptions);
     const signal = readSignal(listOptions);
     const query = new URLSearchParams();
     query.append("sort", "id:asc");
+    SUMMARY_FIELDS.forEach((field, index) => {
+      query.append(`fields[${String(index)}]`, field);
+    });
     query.append("pagination[page]", String(page));
     query.append("pagination[pageSize]", String(pageSize));
-    if (publicOnly) query.append("filters[isPublic][$eq]", "true");
+    if (publicKits) query.append("filters[isPublic][$eq]", "true");
     const response = await send({ fetch, method: "GET", path: KITS_PATH, query, signal });
-    const body = await readJsonAnswer(response, pageSize * MAX_RECORD_BYTES);
-    return readPage(body, pageSize, publicOnly ? readPublicRecord : readCmsBrandKit);
+    const body = await readJsonAnswer(response, pageSize * MAX_SUMMARY_BYTES + MAX_ENVELOPE_BYTES);
+    return readPage(
+      body,
+      pageSize,
+      publicKits ? publicOnly(readCmsBrandKitSummary) : readCmsBrandKitSummary,
+    );
   };
 
   const getWith = async (
     fetch: BrandKitFetch,
     documentId: string,
     requestOptions: BrandKitRequestOptions | undefined,
-    publicOnly: boolean,
+    publicKits: boolean,
   ): Promise<BrandKitRecordResult> => {
     const path = documentPath(documentId);
     const signal = readSignal(requestOptions);
     const response = await send({ fetch, method: "GET", path, signal });
     const body = await readJsonAnswer(response, MAX_RECORD_BYTES);
-    return readSingle(body, publicOnly ? readPublicRecord : readCmsBrandKit);
+    return readSingle(body, publicKits ? publicOnly(readCmsBrandKit) : readCmsBrandKit);
   };
 
   const write = async (

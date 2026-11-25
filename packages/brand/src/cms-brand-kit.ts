@@ -24,19 +24,35 @@ export interface StoredBrandKit {
   readonly kit: BrandKit;
 }
 
+/** A kit as a list gives it: every field but the logo and mark, which a list never reads. */
+export type BrandKitSummary = Omit<BrandKit, "logo" | "mark">;
+
+/** A summary read back from the CMS: its document id, whether it is public, and the checked fields. */
+export interface StoredBrandKitSummary {
+  readonly documentId: string;
+  readonly isPublic: boolean;
+  readonly summary: BrandKitSummary;
+}
+
 /**
- * One record read from the CMS: the kit, or every problem with it, located by the CMS field
+ * A record that could not be read: every problem with it, located by the CMS field
  * (`primaryColor`) and never repeating the value. `index` places a record in a list, and
  * `documentId` names it when it could be read.
  */
+export interface BrandKitRecordFailure {
+  readonly ok: false;
+  readonly index?: number;
+  readonly documentId?: string;
+  readonly errors: readonly BrandKitError[];
+}
+
+/** One record read from the CMS: the kit, or why it is not one. */
 export type BrandKitRecordResult =
-  | { readonly ok: true; readonly record: StoredBrandKit }
-  | {
-      readonly ok: false;
-      readonly index?: number;
-      readonly documentId?: string;
-      readonly errors: readonly BrandKitError[];
-    };
+  { readonly ok: true; readonly record: StoredBrandKit } | BrandKitRecordFailure;
+
+/** One record of a list read from the CMS: the summary, or why it is not one. */
+export type BrandKitSummaryResult =
+  { readonly ok: true; readonly record: StoredBrandKitSummary } | BrandKitRecordFailure;
 
 type CmsField = keyof CmsBrandKitData;
 
@@ -53,6 +69,12 @@ export const CMS_FIELDS: readonly CmsField[] = [
   "tone",
   "logo",
   "mark",
+];
+
+/** The fields a list asks the CMS for: all but the logo and mark, and whether the kit is public. */
+export const SUMMARY_FIELDS: readonly string[] = [
+  ...CMS_FIELDS.filter((field) => field !== "logo" && field !== "mark"),
+  "isPublic",
 ];
 
 /** The kit's field paths as `parseBrandKit` names them, by CMS field. */
@@ -206,13 +228,22 @@ function readIsPublic(value: unknown, errors: BrandKitError[]): boolean | undefi
   return value;
 }
 
+type Read<Value> =
+  | {
+      readonly ok: true;
+      readonly documentId: string;
+      readonly isPublic: boolean;
+      readonly value: Value;
+    }
+  | BrandKitRecordFailure;
+
 /**
- * Reads one record of a CMS answer (already parsed JSON, untrusted) into a checked kit. Only the
- * kit's fields, `documentId` and `isPublic` are read; the CMS's own ids and timestamps are
- * ignored, and any other key is an error. Reads own properties only, so a `__proto__` or
- * `constructor` key is an unknown key like any other. Never throws.
+ * Reads one record: the kit's fields, `documentId` and `isPublic`; the CMS's own ids and
+ * timestamps are ignored, and any other key is an error. Reads own properties only, so a
+ * `__proto__` or `constructor` key is an unknown key like any other. Without `logos`, the logo
+ * and mark are skipped unread, so a list costs nothing for them however long they are.
  */
-export function readCmsBrandKit(value: unknown): BrandKitRecordResult {
+function readRecord(value: unknown, logos: boolean): Read<BrandKit> {
   if (!isPlainObject(value)) {
     return { ok: false, errors: [error("", "not-an-object", "must be an object")] };
   }
@@ -221,6 +252,7 @@ export function readCmsBrandKit(value: unknown): BrandKitRecordResult {
   let documentIdValue: unknown;
   let isPublicValue: unknown;
   for (const key of Object.keys(value)) {
+    if (!logos && (key === "logo" || key === "mark")) continue;
     const item = ownValue(value, key);
     if (isCmsField(key)) fields[key] = item;
     else if (key === "documentId") documentIdValue = item;
@@ -236,5 +268,24 @@ export function readCmsBrandKit(value: unknown): BrandKitRecordResult {
   if (!parsed.ok || errors.length > 0 || documentId === undefined || isPublic === undefined) {
     return { ok: false, ...(documentId !== undefined && { documentId }), errors };
   }
-  return { ok: true, record: Object.freeze({ documentId, isPublic, kit: parsed.kit }) };
+  return { ok: true, documentId, isPublic, value: parsed.kit };
+}
+
+/** Reads one record of a CMS answer (already parsed JSON, untrusted) into a checked kit. Never throws. */
+export function readCmsBrandKit(value: unknown): BrandKitRecordResult {
+  const read = readRecord(value, true);
+  if (!read.ok) return read;
+  const { documentId, isPublic, value: kit } = read;
+  return { ok: true, record: Object.freeze({ documentId, isPublic, kit }) };
+}
+
+/**
+ * Reads one record of a list into a checked summary, the logo and mark left unread whatever the
+ * CMS sent. Never throws.
+ */
+export function readCmsBrandKitSummary(value: unknown): BrandKitSummaryResult {
+  const read = readRecord(value, false);
+  if (!read.ok) return read;
+  const { documentId, isPublic, value: summary } = read;
+  return { ok: true, record: Object.freeze({ documentId, isPublic, summary }) };
 }
