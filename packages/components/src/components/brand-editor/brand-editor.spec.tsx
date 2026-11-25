@@ -827,20 +827,25 @@ describe("idg-brand-editor uploads", () => {
     it("takes back the note that it did not save on the next change, and on the next save", async () => {
       const store = fakeStore();
       const { root, waitForChanges } = await mount({ kit: HARBOUR, store });
-      const stop = async () => {
-        choose(root, "logo", slowFile(CLEAN_SVG));
+      // Each time an image the kit still has is removed while a logo is read, and the read ends.
+      const stop = async (removed: "logo" | "mark") => {
+        const logo = slowFile(CLEAN_SVG);
+        choose(root, "logo", logo);
         await waitForChanges();
         submit(root);
         await settle(waitForChanges);
-        shadowOf(root).querySelector<HTMLElement>('[data-remove="logo"]')?.click();
+        shadowOf(root).querySelector<HTMLElement>(`[data-remove="${removed}"]`)?.click();
         await settle(waitForChanges);
+        logo.release();
+        await settle(waitForChanges);
+        expect(store.create).not.toHaveBeenCalled();
         expect(stoppedNote(root)).toBe(STOPPED);
       };
-      await stop();
+      await stop("logo");
       type(root, "brand-tagline", "Changed");
       await settle(waitForChanges);
       expect(stoppedNote(root)).toBeUndefined();
-      await stop();
+      await stop("mark");
       submit(root);
       await settle(waitForChanges);
       expect(stoppedNote(root)).toBeUndefined();
