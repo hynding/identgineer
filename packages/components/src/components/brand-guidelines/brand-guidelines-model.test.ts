@@ -101,13 +101,17 @@ describe("the logo and the mark", () => {
     expect(readImage(HARBOUR, "mark")).toBe(HARBOUR.mark);
   });
 
-  it.each([undefined, null, 5, {}, ["<svg/>"], THROWING])(
-    "are nothing when they are %s",
-    (value) => {
-      expect(readImage({ logo: value, mark: value }, "logo")).toBeUndefined();
-      expect(readImage({ logo: value, mark: value }, "mark")).toBeUndefined();
-    },
-  );
+  it.each([
+    ["undefined", undefined],
+    ["null", null],
+    ["a number", 5],
+    ["an object", {}],
+    ["an array", ["<svg/>"]],
+    ["a throwing proxy", THROWING],
+  ])("are nothing when they are %s", (_name, value) => {
+    expect(readImage({ logo: value, mark: value }, "logo")).toBeUndefined();
+    expect(readImage({ logo: value, mark: value }, "mark")).toBeUndefined();
+  });
 
   it("are nothing for a kit that is not an object", () => {
     expect(readImage(undefined, "logo")).toBeUndefined();
