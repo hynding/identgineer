@@ -858,10 +858,15 @@ async function rasterise(page: Page, logo: Logo, size: number): Promise<number> 
  * Shows a logo's data URL as an `<img>` `size` CSS pixels square in a page as large, at the page's
  * device scale factor, and returns the milliseconds until a screenshot shows it. An image this
  * large is rasterised in tiles, each tile replaying every path whose box it touches, so this is
- * timed apart from the single raster a canvas makes.
+ * timed apart from the single raster a canvas makes. The page must already be that size: resizing
+ * it here left a screenshot taken straight after racing the resize, which a loaded runner lost
+ * ("Unable to capture screenshot").
  */
 async function showImage(page: Page, logo: Logo, size: number): Promise<number> {
-  await page.setViewportSize({ width: size, height: size });
+  expect(page.viewportSize(), "the page is as large as the image").toEqual({
+    width: size,
+    height: size,
+  });
   await page.setContent(
     `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'"><style>body{margin:0}img{display:block}</style>`,
   );
@@ -874,7 +879,9 @@ async function showImage(page: Page, logo: Logo, size: number): Promise<number> 
   }, logo.dataUrl ?? "");
   // An image that failed to load would draw nothing, and so be timed as fast.
   expect(loaded, `${logo.name} loads as an image`).toBeGreaterThan(0);
-  await page.screenshot();
+  // Waits for a frame of the empty page, so the drawing alone is timed; a corner of it is enough,
+  // and spares a loaded runner encoding a page of 4000 pixels square that shows nothing.
+  await page.screenshot({ clip: { x: 0, y: 0, width: 1, height: 1 } });
   const started = Date.now();
   await page.evaluate((size) => {
     const image = (window as unknown as { pendingLogo: HTMLImageElement }).pendingLogo;
@@ -993,7 +1000,7 @@ test.describe("the costliest logos the sanitiser accepts", () => {
 
 test.describe(`the costliest logos the sanitiser accepts, at ${String(LARGE_SIZE)} pixels and twice the density`, () => {
   test.describe.configure({ timeout: 120_000 });
-  test.use({ deviceScaleFactor: 2 });
+  test.use({ deviceScaleFactor: 2, viewport: { width: LARGE_SIZE, height: LARGE_SIZE } });
 
   for (const [label, family, code] of FAMILIES) {
     test(`rasterises ${label} within the budget`, async ({ page }) => {
