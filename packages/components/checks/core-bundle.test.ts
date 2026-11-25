@@ -11,16 +11,16 @@ const BUILDS = ["www/build", "dist/esm"].map((directory) => join(PACKAGE, direct
 // component may load (its entry and the chunks it imports), for `www/build` and `dist/esm`. The
 // ceilings are set from the sizes measured in the README, with a margin of about 15%.
 const REPRESENTATIVES: Record<string, { readonly www: number; readonly dist: number }> = {
-  "idg-button": { www: 1_000_000, dist: 1_000_000 },
-  "idg-field": { www: 1_000_000, dist: 1_000_000 },
-  "idg-sign-in": { www: 1_000_000, dist: 1_000_000 },
-  "idg-event-table": { www: 1_000_000, dist: 1_000_000 },
-  "idg-consent-banner": { www: 1_000_000, dist: 1_000_000 },
-  "idg-dialog": { www: 1_000_000, dist: 1_000_000 },
-  "idg-menu": { www: 1_000_000, dist: 1_000_000 },
-  "idg-tabs": { www: 1_000_000, dist: 1_000_000 },
-  "idg-accordion": { www: 1_000_000, dist: 1_000_000 },
-  "idg-stack": { www: 1_000_000, dist: 1_000_000 },
+  "idg-button": { www: 58000, dist: 124000 },
+  "idg-field": { www: 177000, dist: 356000 },
+  "idg-sign-in": { www: 177000, dist: 356000 },
+  "idg-event-table": { www: 81000, dist: 197000 },
+  "idg-consent-banner": { www: 109000, dist: 227000 },
+  "idg-dialog": { www: 109000, dist: 227000 },
+  "idg-menu": { www: 58000, dist: 146000 },
+  "idg-tabs": { www: 37000, dist: 101000 },
+  "idg-accordion": { www: 33000, dist: 91000 },
+  "idg-stack": { www: 97000, dist: 185000 },
 };
 
 // Composites and what they create when they render, which must share one entry: a component that
