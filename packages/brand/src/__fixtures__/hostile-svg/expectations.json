@@ -1874,6 +1874,15 @@
     "outcome": "accept",
     "removed": []
   },
+  "review-dash-dense-hatching-200.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-dash-dense-hatching-240.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
+  "review-dash-dense-hatching-clipped.svg": {
+    "outcome": "reject:drawing-too-costly"
+  },
   "review-dash-negative-rounding-to-zero.svg": {
     "outcome": "accept",
     "removed": [
