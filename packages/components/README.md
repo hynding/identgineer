@@ -1886,7 +1886,7 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   | `idg-brand-swatches`   | the swatches                                                                                                                                                 |      29,826 |     84,500 |
   | `idg-brand-guidelines` | the guide, with the sanitiser                                                                                                                                |     141,319 |    375,430 |
   | `idg-brand-export`     | the export, with the sanitiser, the generator and the emitters                                                                                               |     219,466 |    500,751 |
-  | `idg-brand-editor`     | the editor, with the sanitiser and the generator, and the guide it previews in                                                                               |     246,663 |    550,077 |
+  | `idg-brand-editor`     | the editor, with the sanitiser and the generator, and the guide it previews in                                                                               |     246,663 |    550,161 |
 
   The loader `identgineer.esm.js` is 12,924 bytes more on every page. The sanitiser (about 90 KB
   minified) is in the logo's, the guide's, the export's and the editor's bundles (the export
