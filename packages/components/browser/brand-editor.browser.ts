@@ -913,34 +913,40 @@ function brokenFileLabels(page: Page) {
 }
 
 /**
- * Whatever, in every editor, does not take the narrow form's padding: each group, each hex box and
- * each file chooser's button, read as computed against `--idg-space-3xs` resolved in that form.
+ * Whatever, in every editor, does not take the narrow form's padding, read as computed against the
+ * value resolved in that form: each hex box `--idg-space-3xs`, and each group and file chooser's
+ * button half of it, as they give the chooser's label its room.
  */
 function unnarrowedPaddings(page: Page) {
   return page.evaluate(() =>
     [...document.querySelectorAll("idg-brand-editor")].flatMap((editor) => {
       const form = editor.shadowRoot?.querySelector(".form");
       if (!form) throw new Error("no form");
-      const probe = document.createElement("div");
-      probe.style.paddingInline = "var(--idg-space-3xs)";
-      form.append(probe);
-      const narrow = getComputedStyle(probe).paddingLeft;
-      probe.remove();
-      const padded = (name: string, style: CSSStyleDeclaration) =>
+      const resolve = (value: string) => {
+        const probe = document.createElement("div");
+        probe.style.paddingInline = value;
+        form.append(probe);
+        const resolved = getComputedStyle(probe).paddingLeft;
+        probe.remove();
+        return resolved;
+      };
+      const box = resolve("var(--idg-space-3xs)");
+      const half = resolve("calc(var(--idg-space-3xs) / 2)");
+      const padded = (name: string, style: CSSStyleDeclaration, narrow: string) =>
         style.paddingLeft === narrow && style.paddingRight === narrow
           ? []
           : [`${editor.id} ${name} ${style.paddingLeft} ${style.paddingRight} not ${narrow}`];
       return [
         ...[...form.querySelectorAll(".group")].flatMap((group, index) =>
-          padded(`group ${String(index)}`, getComputedStyle(group)),
+          padded(`group ${String(index)}`, getComputedStyle(group), half),
         ),
         ...[...form.querySelectorAll("idg-input.colour")].flatMap((input) => {
-          const box = input.shadowRoot?.querySelector(".box");
-          if (!box) throw new Error("no hex box");
-          return padded(`box ${input.getAttribute("name") ?? ""}`, getComputedStyle(box));
+          const hexBox = input.shadowRoot?.querySelector(".box");
+          if (!hexBox) throw new Error("no hex box");
+          return padded(`box ${input.getAttribute("name") ?? ""}`, getComputedStyle(hexBox), box);
         }),
         ...[...form.querySelectorAll('input[type="file"]')].flatMap((input) =>
-          padded(`${input.id} button`, getComputedStyle(input, "::file-selector-button")),
+          padded(`${input.id} button`, getComputedStyle(input, "::file-selector-button"), half),
         ),
       ];
     }),
