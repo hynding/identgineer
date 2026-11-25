@@ -1459,6 +1459,102 @@ stays; a first load is a skeleton, and an error replaces the rows and takes focu
 (the row header), Time (a `<time>`), Path and Properties (at most ten, then "+N more"). Parts
 `group`, `caption`, `table`, `status`, `pagination`.
 
+## Brand
+
+Two elements show a brand from `@identgineer/brand`: `idg-brand-logo` draws its logo or mark, and
+`idg-brand-swatches` its colours. They are presentational: they take the brand package's own data as
+properties, fetch nothing and store nothing. Neither re-derives anything the package decided; the
+swatches add only the contrast ratios, which no theme carries.
+
+```ts
+import { generateBrandTheme, parseBrandKit } from "@identgineer/brand";
+
+const kit = parseBrandKit(stored).kit; // after checking `ok`
+logo.logo = kit.logo; // the SVG text exactly as the sanitiser returned it
+logo.name = kit.name;
+swatches.theme = generateBrandTheme(kit); // or its `document`
+```
+
+### `idg-brand-logo`
+
+| Prop         | Attribute    | Notes                                                                               | Default |
+| ------------ | ------------ | ----------------------------------------------------------------------------------- | ------- |
+| `logo`       | `logo`       | the kit's `logo` or `mark`: SVG text exactly as `sanitiseSvgLogo` returned it       |         |
+| `name`       | `name`       | the brand's name: the image's alt, and what is shown without a logo                 |         |
+| `variant`    | `variant`    | `logo` (a wide logo, or the name as a wordmark) or `mark` (a symbol, or a monogram) | `logo`  |
+| `size`       | `size`       | `xs`, `sm`, `md`, `lg`, `xl`: the logo's height, the mark's edge and the text size  | `md`    |
+| `decorative` | `decorative` | an empty alt, for a logo beside the same name written out as text                   | `false` |
+
+No events and no slots. Parts: `image`, `wordmark`, `monogram`. The sizes are the heights `1.25`,
+`1.75`, `2.5`, `3.5` and `5rem`; set the width with the page's own CSS on the element (it is
+`inline-flex`, never wider than its container).
+
+- **Only sanitiser output is drawn.** The text goes through `isSanitisedSvgLogo` of
+  `@identgineer/brand`, which reads it with the sanitiser again and accepts it only if it comes back
+  unchanged. Then, and only then, `logoDataUrl` makes the `src` of an `<img>`. A script, a handler,
+  an external reference, a `foreignObject`, an editor's file, an SVG the sanitiser would still change
+  and anything wrapped around a logo is never drawn, and neither is any part of it put in the page:
+  no SVG element, no `innerHTML`, no `style`. The check runs when `logo` changes, not on every
+  render, and it costs what the sanitiser costs (milliseconds for a real logo, a few hundred for one
+  at the 512 KiB limit).
+- **Image only.** The `<img>` has `decoding="async"`, no `srcset`, `sizes`, `crossorigin` or `usemap`,
+  and a data URL, so it makes no request. Its `width` and `height` are the frame's (from the view
+  box) and its height is set by `size`, so the box has its final shape before anything is decoded:
+  nothing shifts when it loads. It is drawn whole (`object-fit: contain`), and in a container
+  narrower than the logo the box shrinks, never stretching or cropping it.
+- **Content-Security-Policy.** A data URL needs `img-src data:`. The strict policy the components are
+  tested under (`default-src 'self'`) does not allow it, so allow it as the brand package says:
+  `img-src 'self' data:`. Where the browser refuses the image, or it fails to decode, the component
+  shows the name in its place.
+- **Fallback.** With no logo, or one that is not drawn, `variant="logo"` shows the name as a
+  wordmark (text in the theme's display face) and `variant="mark"` a monogram: the first letter of
+  the first and last word in a box with the accent fill and `on-accent` text. With no name as well
+  it draws nothing. The name is cut at 60 characters (the kit's limit) and bidirectional and other
+  invisible characters in it are replaced by a visible mark.
+- **Accessible name.** The image's `alt` is the name (never the logo's own `title`); `decorative`
+  makes it empty. A wordmark is text, so it is its own name (`aria-hidden` when `decorative`); a
+  monogram is a `role="img"` named for the brand, with its letters hidden.
+
+### `idg-brand-swatches`
+
+| Prop     | Attribute | Notes                                                                                   | Default |
+| -------- | --------- | --------------------------------------------------------------------------------------- | ------- |
+| `theme`  |           | a theme from `generateBrandTheme`, or its `document`; set as a property, it is data     |         |
+| `label`  | `label`   | the accessible name of the whole                                                        |         |
+| `labels` |           | `BrandSwatchesLabels`: scheme and group names, the contrast sentence, the empty message | English |
+
+No events and no slots. Parts: `swatches`, `scheme`, `scheme-title`, `group-title`, `swatch`, `chip`,
+`role`, `value`, `pairs`, `empty`. The `label` names a group; each scheme (light, dark) is a named
+group of four lists (page, text, accent, status), one list item per role, so a screen reader
+announces the scheme, the group and the position.
+
+- **Every value is text.** Each item holds the role's name, its value (`#4f46e5`) and, for a
+  foreground colour, a line per background it is used on: `4.62:1 on bg passes 4.5:1`, or
+  `needs 4.5:1` where it is below its WCAG level (4.5 for text, 3 for the other parts of the
+  interface). The ratio is rounded down to two decimals, so a ratio under its minimum is never
+  written as meeting it, and is formatted in the language of the page. The chip is decoration
+  (`aria-hidden`); colour is never the only carrier.
+- **The pairs are the theme's.** They are every pair the tokens package requires of a theme
+  (`CONTRAST_PAIRS`, which a test holds this table to) and the others the brand generator meets for
+  text and accent; each is measured with the tokens package's `contrastRatio`.
+- **Only validated colours reach the page.** A role's value is shown only if it is exactly the
+  package's own format, `#rrggbb` in lower case, and the roles are the fixed list of the theme, never
+  a key the data brings. Anything else (a named colour, `rgb()`, `var()`, a declaration after a
+  colour, markup, a number) leaves that role out, and nothing of it is drawn. The chip's colour is
+  set as one custom property through the style API, never a `style` string or CSS text, which the
+  strict policy would not allow either. With nothing valid at all, the `empty` message is shown.
+- **Chips stay visible.** Each chip has a 2px edge in `border-strong`, which every theme keeps at
+  3:1 against the page, so a colour as light as the page or as dark as the dark scheme is still a
+  shape. Forced colours keep the chip's own colour with a system edge.
+- **No movement.** It has no transition or animation, so reduced motion changes nothing; it has no
+  focusable element, so nothing is in the tab order.
+- **The axes.** Each scheme is a surface of the page's design (its fill, border, corners, blur and
+  elevation), the chips take the design's corners and elevation, the number of swatches in a row
+  follows the layout (`--idg-layout-grid-min`), the text follows the UX mode's scale, and the
+  schemes sit side by side only where there is room. At 320px, and at 200% zoom or text, it reflows
+  to one column without sideways scrolling.
+- The brand gradient is not drawn; the guidelines page will show it.
+
 ## Strict CSP and Trusted Types
 
 Every component is verified in Chromium against
@@ -1475,6 +1571,9 @@ with no console violation.
 - `stencil build` inlines scripts and styles into `www/index.html`, so that page is for local
   development. `www/csp-demo.html` is copied untouched and is the page to load under a CSP. Its
   overlays are wired by `demo.js`, an external module that imports `toast()` from the build.
+- A brand's logo is a data URL image, which this policy refuses. `idg-brand-logo` is tested under
+  the policy with `img-src 'self' data:` added (the one directive the brand package asks for), and
+  under this one, where it shows the name instead.
 - The custom-elements build was not loaded under the CSP: it needs a bundler, and runs the same
   runtime.
 
@@ -1528,7 +1627,7 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   viewport and forced colours for every overlay (axe runs with each one open), boundary contrast, text contrast of badges, alerts,
   avatars and changes in all 8 themes in light and dark, and axe (wcag2a, wcag2aa, wcag21aa, wcag22aa) across the 8 designs in light and dark and
   the 8 UX modes, no sideways page scroll at 320, 768, 1280 and 2560px under all 8 layouts, and the
-  layout primitives' wrapping, column counts and right-to-left placement, on pages in `fixtures/` (outside `src`, so they never reach the dist collection; `button.html`, `forms.html`, `surfaces.html`, `overlays.html`, `navigation.html`, `layout-primitives.html`, `layout-shell.html`, `variation-switcher.html`, `identity.html`; copied to `www/fixtures/`; static HTML, no inline
+  layout primitives' wrapping, column counts and right-to-left placement, on pages in `fixtures/` (outside `src`, so they never reach the dist collection; `button.html`, `forms.html`, `surfaces.html`, `overlays.html`, `navigation.html`, `layout-primitives.html`, `layout-shell.html`, `variation-switcher.html`, `identity.html`, `brand.html`; copied to `www/fixtures/`; static HTML, no inline
   script or style). Build first. Playwright's own Chromium is installed with
   `pnpm --filter @identgineer/components exec playwright install --with-deps chromium`; where that is
   not possible, set `IDG_CHROMIUM_PATH` to a Chromium binary (`/opt/pw-browsers/chromium` is used if it
@@ -1541,7 +1640,13 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   `/variations/bootstrap.js`, which the www build copies from `packages/variations/dist` (that
   package builds first, since this one depends on it). The fixture's `integrity` attribute is
   written out, and `checks/fixture-bootstrap.test.ts` fails when it no longer matches what the
-  package builds: copy the new value from `dist/bootstrap.sri.json`.
+  package builds: copy the new value from `dist/bootstrap.sri.json`. The same plugin transpiles the
+  brand and tokens packages, which the brand components import. They import only the narrow entries
+  made for a browser bundle, `@identgineer/brand/logo` (`isSanitisedSvgLogo` and `logoDataUrl`) and
+  `@identgineer/tokens/contrast` (`contrastRatio`), because the packages' indexes also load the
+  theme pipeline, which reads the tokens sources from disk. The sanitiser therefore sits in the
+  lazy chunk of `idg-brand-logo` alone (about 90 KB minified, 30 KB gzipped, loaded only where
+  that element is used), and `idg-brand-swatches` adds under 8 KB.
 - **The identity fixture.** `identity.html` wires every identity element to one real client on the
   identity package's fake API (`createFakeIdentityApi`), in the page. The build's second step,
   `scripts/build-sdk-fixtures.ts`, transpiles that package's source and its fake into
@@ -1576,6 +1681,21 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   cover ownership at the source, stale answers, hostile text, keyboard and focus,
   axe across every axis, right to left, forced colours, reduced motion, and 200% text at 320px in
   every UX mode.
+- **The brand fixture.** `brand.html` shows both brand elements. The logos and the generated
+  themes (a kit with a logo and a mark, a kit with a white primary, and a theme whose colours are
+  hostile text) come from `brand-data.json`, which `browser/brand-page.ts` generates with the brand
+  package and answers at the network level, so the page cannot be opened without the test. The
+  helper serves the page with the strict policy plus `img-src 'self' data:` (or with the strict
+  policy alone), records every request and every `securitypolicyviolation`, and refuses any other
+  origin. The brand browser tests (`brand-logo.browser.ts`, `brand-swatches.browser.ts`) cover no
+  violation and no request beyond the page's own files, a hostile logo never drawn and never run,
+  the size of the image before it decodes and no layout shift, the logo's proportions at every
+  size, accessible names read from the accessibility tree, the refused data URL under the plain
+  strict policy, contrast of the wordmark and monogram in all 8 themes in light and dark, the
+  swatches' values and ratios against the theme, the chip edges at 3:1 on the page in all 8
+  themes in light and dark, axe across the 8 designs in light and dark, the 8 UX modes and the 8
+  themes, a design signature of its own in each of the 8 designs, the layout's column counts, no
+  motion, and no sideways scroll at 320px in every layout at 100%, 125% and wide text, and at 200%.
 - `src/testing/` holds spec helpers (a recording `ElementInternals`, since the mock DOM has none) and
   is excluded from the Stencil build.
 - `tsconfig.json` is the strict config for tooling and editors. `tsconfig.build.json` is the one

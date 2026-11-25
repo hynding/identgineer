@@ -63,3 +63,33 @@ if (projects && pager && summary) {
 
   showPage(1);
 }
+
+// The brand section of index.html. A page gets these from `parseBrandKit` and `generateBrandTheme`:
+// a logo is the SVG text exactly as the logo sanitiser returned it, and the swatches take a theme's
+// colours (a few roles are enough). The logo is an image of a data URL, so only a page whose policy
+// allows `img-src data:` shows it; csp-demo.html has no such section.
+const brandLogo = document.getElementById("brand-demo-logo");
+if (brandLogo) {
+  brandLogo.logo =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" width="120" height="40"><title>Harbour Lights</title><path d="M14 36h12l-3 -26h-6z" fill="#1b2a4a"/><rect x="16" y="4" width="8" height="6" rx="1" fill="#f4c430"/><rect x="50" y="14" width="64" height="6" rx="3" fill="#1b2a4a"/><rect x="50" y="24" width="40" height="6" rx="3" fill="#1b2a4a"/></svg>';
+  document.getElementById("brand-demo-mark").logo =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="20" fill="#1b2a4a"/><rect x="16" y="7" width="8" height="5" rx="1" fill="#f4c430"/></svg>';
+  document.getElementById("brand-demo-swatches").theme = {
+    light: {
+      color: {
+        bg: { $value: "#f7f8fb" },
+        text: { $value: "#161b2b" },
+        accent: { $value: "#f4c430" },
+        "on-accent": { $value: "#1b2a4a" },
+      },
+    },
+    dark: {
+      color: {
+        bg: { $value: "#0c1222" },
+        text: { $value: "#eef1f8" },
+        accent: { $value: "#f4c430" },
+        "on-accent": { $value: "#1b2a4a" },
+      },
+    },
+  };
+}

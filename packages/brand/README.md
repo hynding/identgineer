@@ -1109,6 +1109,15 @@ directly), and `img-src 'self'` is enough. A `blob:` URL made in the page from t
 (`URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }))`) also works, with `img-src blob:`
 in the policy; it is no safer than a data URL, and must be revoked when the image is gone.
 
+The components package does this for you: `idg-brand-logo` in
+[`@identgineer/components`](../components/README.md#idg-brand-logo) checks the text with
+`isSanitisedSvgLogo`, sets the `src` from `logoDataUrl`, gives the image the frame's size before it
+decodes, and shows the name in its place for anything that is not the sanitiser's output. It
+imports `@identgineer/brand/logo`, an entry of those two functions alone: the package index also
+loads the theme generator and its tokens pipeline, which a browser bundle cannot take. Its colour
+sibling, `idg-brand-swatches`, takes what `generateBrandTheme` returns and lists each role, value
+and contrast pair.
+
 An SVG drawn as an image is the second layer: browsers run no script in it, fire no events, follow
 no links and load nothing external, whatever it holds. Sanitising is still required, because the
 image context is not the only place a logo ends up: it may be downloaded and opened directly (as a
