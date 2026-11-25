@@ -266,13 +266,21 @@ base.describe("the checks themselves", () => {
 // pixels square at that density (which Chromium rasterises in tiles), and drawn inline at 600, each
 // within its budget (the budgets cover inline logos up to 600 CSS pixels only: see the brand
 // README). On a loaded four-core machine the slowest took about 0.35 seconds at 600 and 1.8 at
-// 2000, and on an idle one 3.5 shown as an image at 2000 (see the brand README), so the budgets
+// 2000, and on a shared one 1.8 shown as an image at 2000 (see the brand README), so the budgets
 // leave room for a slow runner, yet a limit raised tenfold would blow through them.
 const SIZE = 600;
 const LARGE_SIZE = 2000;
 const RENDER_BUDGET_MS = 15_000;
 const RASTER_BUDGET_MS = 3_000;
 const LARGE_RASTER_BUDGET_MS = 6_000;
+/**
+ * A timed screenshot is of the whole page, so every tile must be drawn, but encoded as a JPEG: a
+ * PNG of a page 4000 pixels square full of a dithered gradient took 2 to 3 seconds to encode
+ * however little the logo drew, a cost of the test that no page showing the logo pays, and it hid
+ * the drawing the budgets are for. A JPEG took about 0.3. The quality is fixed so that every
+ * family is measured alike.
+ */
+const TIMED_CAPTURE = { type: "jpeg", quality: 80, timeout: RENDER_BUDGET_MS } as const;
 
 function costlyLogo(body: string, root = 'viewBox="0 0 1000 1000"'): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" ${root} width="${String(SIZE)}" height="${String(SIZE)}">${body}</svg>`;
@@ -873,10 +881,11 @@ async function rasterise(page: Page, logo: Logo, size: number): Promise<number> 
 
 /**
  * Shows a logo's data URL as an `<img>` `size` CSS pixels square in a page as large, at the page's
- * device scale factor, and returns the milliseconds until a screenshot shows it. An image this
- * large is rasterised in tiles, each tile replaying every path whose box it touches, so this is
- * timed apart from the single raster a canvas makes. The page must already be that size, made so
- * for the test, so that nothing resizes it between its first frame and the screenshots.
+ * device scale factor, and returns the milliseconds until a screenshot of the whole page shows it
+ * (see `TIMED_CAPTURE`). An image this large is rasterised in tiles, each tile replaying every path
+ * whose box it touches, so this is timed apart from the single raster a canvas makes. The page must
+ * already be that size, made so for the test, so that nothing resizes it between its first frame
+ * and the screenshots.
  */
 async function showImage(page: Page, logo: Logo, size: number): Promise<number> {
   expect(page.viewportSize(), "the page is as large as the image").toEqual({
@@ -919,7 +928,7 @@ async function showImage(page: Page, logo: Logo, size: number): Promise<number> 
     image.style.height = `${String(size)}px`;
     document.body.append(image);
   }, size);
-  await page.screenshot({ timeout: RENDER_BUDGET_MS });
+  await page.screenshot(TIMED_CAPTURE);
   return Date.now() - started;
 }
 
@@ -940,7 +949,7 @@ async function drawInline(page: Page, logo: Logo): Promise<number> {
     if (box === null) throw new Error("no box");
     box.innerHTML = svg;
   }, logo.svg ?? "");
-  await page.screenshot({ timeout: RENDER_BUDGET_MS });
+  await page.screenshot(TIMED_CAPTURE);
   return Date.now() - started;
 }
 
@@ -1011,7 +1020,7 @@ test.describe("the costliest logos the sanitiser accepts", () => {
       const started = Date.now();
       await render(page, [logo], LOGO_POLICY);
       // A screenshot waits for the frame that paints both, so the drawing itself is timed.
-      await page.screenshot({ timeout: RENDER_BUDGET_MS });
+      await page.screenshot(TIMED_CAPTURE);
       expect(Date.now() - started, logo.name).toBeLessThan(RENDER_BUDGET_MS);
       expect(await report(page)).toEqual({ violations: [], broken: [] });
     });
