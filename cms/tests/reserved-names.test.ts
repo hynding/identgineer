@@ -44,6 +44,11 @@ interface Declared {
 // (its `names.api`, else its name) and a relation's inverse API name (`inverseNames.api`, else
 // `inverse`), which lands on the target type, a built-in one included. A built-in type's own
 // fields are not checked, only the inverses of its relations.
+//
+// Not mirrored: the strapi-php target also refuses a name whose database column clashes (a
+// to-one relation `document` makes the column `document_id`; a component `created` with a field
+// `at` makes `created_at`). Those depend on how camis lays out columns, so they are left to
+// `pnpm cms:generate`, which aborts on them.
 const declared = (doc: IrDocument): Declared[] => {
   const inverseOf = (field: Field): Declared[] => {
     const inverse = field.inverseNames?.api ?? field.inverse;
