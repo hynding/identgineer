@@ -131,8 +131,8 @@
   overflow-wrap: anywhere;
 }
 
-/* A pair below its level is said in words and set in the danger colour as well, which is held to 3:1
-   on every page background and is only a second cue. */
+/* A pair below its level is said in words, and set bold and underlined with a wavy line in the
+   ordinary text colour, so the verdict is never carried by colour and keeps the text's own contrast. */
 .failing .verdict {
   color: var(--idg-color-text);
   font-weight: var(--idg-font-weight-semibold);
