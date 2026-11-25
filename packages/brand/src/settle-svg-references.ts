@@ -253,8 +253,8 @@ function percentBase(root: CleanElement): number {
 
 /**
  * What drawing one element costs on its own: a shape its geometry and, wherever a dash array might
- * reach it, its dashes at the densest dashing in the logo, dearer off one run of horizontal and
- * vertical lines; anything else a little; group opacity a layer.
+ * reach it, its dashes at the densest dashing in the logo, dearer off one horizontal or vertical
+ * line or a rectangle; anything else a little; group opacity a layer.
  */
 function ownCost(element: CleanElement, dashing: Dashing, base: number): number {
   const weights = SVG_DRAWING_WEIGHTS;

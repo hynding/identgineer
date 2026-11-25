@@ -8,9 +8,9 @@ import { type SvgLengthUnit, writtenText } from "./svg-values.ts";
  * (what it paints is the overdraw's to count, see `SVG_OVERDRAW_WEIGHTS`); group opacity draws
  * into a layer; a mask or clip path draws its content into a layer each time it is applied; each
  * dash is a segment of its own. A large image is rasterised in tiles, and Chromium works out every
- * dash of a shape again for each tile its box touches, except along one run of horizontal and
- * vertical lines, whose dashes it culls to the tile: elsewhere a dash weighs ten, measured as an
- * image 2000 CSS pixels square at twice the density.
+ * dash of a shape again for each tile its box touches, except along one horizontal or vertical
+ * line and round a rectangle, whose dashes it culls to the tile: elsewhere a dash weighs ten,
+ * measured as an image 2000 CSS pixels square at twice the density.
  */
 export const SVG_DRAWING_WEIGHTS = Object.freeze({
   line: 1,
@@ -35,9 +35,10 @@ export interface Geometry {
   /** Subpaths: each has its own two caps, and starts its dashes afresh. */
   readonly subpaths: number;
   /**
-   * Whether the outline is one run of horizontal and vertical lines, each of some length however
-   * Chromium reads its numbers, whose dashes Chromium culls to each tile of a large image; any
-   * other outline's dashes are worked out again for every tile its box touches.
+   * Whether the outline is one horizontal or vertical line of some length however Chromium reads
+   * its numbers, or a rectangle without rounded corners, whose dashes Chromium culls to each tile of
+   * a large image; any other outline's dashes, a path of two such lines included, are worked out
+   * again for every tile its box touches.
    */
   readonly straightRun: boolean;
   /**
@@ -230,7 +231,7 @@ class Pen {
       length: this.length,
       segments: this.segments,
       subpaths: this.subpaths,
-      straightRun: this.axisLines && this.subpaths === 1,
+      straightRun: this.axisLines && this.subpaths === 1 && this.segments === 1,
       visibleOutline: this.visibleOutline,
       box: this.box,
       area: Math.min(this.area, boxArea(this.box)),
