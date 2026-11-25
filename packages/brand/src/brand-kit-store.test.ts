@@ -790,6 +790,26 @@ describe("aborting", () => {
     expect(sent[0]?.init.signal).toBe(controller.signal);
   });
 
+  it.each([
+    ["an error", new Error("the user left the page")],
+    ["a string", "the user left the page"],
+  ])("reads an abort with %s as its reason as a network error", async (_kind, reason) => {
+    const controller = new AbortController();
+    // The platform's fetch rejects with the signal's reason, whatever it is.
+    const { store } = storeWith(
+      (_, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => {
+            // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- as fetch does
+            reject(init.signal?.reason);
+          });
+        }),
+    );
+    const pending = store.list({ signal: controller.signal });
+    controller.abort(reason);
+    expect((await rejection(pending)).code).toBe("network");
+  });
+
   it("stops reading the body on abort, even when the fetch has let go of the signal", async () => {
     const controller = new AbortController();
     let cancelled = false;
