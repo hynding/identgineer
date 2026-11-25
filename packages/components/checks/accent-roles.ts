@@ -253,6 +253,22 @@ export const ACCENT_ROLE_USES: readonly AccentRoleEntry[] = [
     what: "avatar initials (fifth colour pair)",
   },
   {
+    file: "components/brand-logo/brand-logo.css",
+    selector: ".monogram",
+    property: "background",
+    token: "accent",
+    use: "fill",
+    what: "monogram that stands in for a brand's mark",
+  },
+  {
+    file: "components/brand-logo/brand-logo.css",
+    selector: ".monogram",
+    property: "color",
+    token: "on-accent",
+    use: "fill",
+    what: "monogram letters",
+  },
+  {
     file: "components/breadcrumb-item/breadcrumb-item.css",
     selector: ".linked:hover",
     property: "background",

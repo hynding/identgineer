@@ -1,5 +1,12 @@
 export type { Components, JSX } from "./components";
 export type { AccordionToggleDetail } from "./components/accordion/accordion-options";
+export type { BrandLogoSize, BrandLogoVariant } from "./components/brand-logo/brand-logo-options";
+export type { BrandSwatchesLabels } from "./components/brand-swatches/brand-swatches-labels";
+export type {
+  BrandSwatchesPalette,
+  BrandSwatchesScheme,
+  BrandSwatchesTheme,
+} from "./components/brand-swatches/brand-swatches-types";
 export type { BreadcrumbSeparator } from "./components/breadcrumb/breadcrumb-options";
 export type { ButtonSize, ButtonType, ButtonVariant } from "./components/button/button-options";
 export type {

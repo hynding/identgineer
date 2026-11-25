@@ -1,7 +1,11 @@
 import type { Config } from "@stencil/core";
 import ts from "typescript";
 
-const VARIATIONS_SOURCE = "/packages/variations/src/";
+const TRANSPILED_SOURCES = [
+  "/packages/variations/src/",
+  "/packages/brand/src/",
+  "/packages/tokens/src/",
+];
 
 // @identgineer/variations is consumed as TypeScript source, like every workspace package. Stencil
 // only compiles what its own tsconfig includes, and including a sibling package's source would
@@ -12,7 +16,10 @@ const transpileVariations = {
   name: "transpile-variations",
   transform(code: string, id: string): { code: string; map: null } | null {
     // Module ids use backslashes on Windows.
-    if (!id.replaceAll("\\", "/").includes(VARIATIONS_SOURCE) || !id.endsWith(".ts")) return null;
+    const path = id.replaceAll("\\", "/");
+    if (!TRANSPILED_SOURCES.some((source) => path.includes(source)) || !id.endsWith(".ts")) {
+      return null;
+    }
     const { outputText } = ts.transpileModule(code, {
       fileName: id,
       compilerOptions: {

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./contrast": "./src/contrast.ts",
     "./theme-pipeline": "./src/theme-pipeline.ts",
     "./css": "./dist/index.css",
     "./tokens.css": "./dist/tokens.css",

@@ -271,6 +271,11 @@ plain string cannot reach `logoDataUrl` or a kit by accident; `isSanitisedSvgLog
 any value at run time (it is a fixed point of the sanitiser), and `logoDataUrl` and `parseBrandKit`
 both do.
 
+A browser bundle that only draws logos imports `@identgineer/brand/logo`, which has `isSanitisedSvgLogo`,
+`logoDataUrl` and `logoImage(value)`. `logoImage` checks a logo (one read of the sanitiser, two for a custom id prefix) and gives `{ url, width, height }`:
+the data URL and the size the logo draws at, the root's `width` and `height` in pixels (not the view
+box). It is what `idg-brand-logo` uses, so a logo change costs one check.
+
 ### How it works
 
 Nothing from the input is passed through. A strict reader written for this package (no DOM, no
@@ -1108,6 +1113,15 @@ policy may not allow `data:`, serve the sanitised SVG as a file from your own or
 directly), and `img-src 'self'` is enough. A `blob:` URL made in the page from the sanitised string
 (`URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }))`) also works, with `img-src blob:`
 in the policy; it is no safer than a data URL, and must be revoked when the image is gone.
+
+The components package does this for you: `idg-brand-logo` in
+[`@identgineer/components`](../components/README.md#idg-brand-logo) checks the text with
+`isSanitisedSvgLogo`, sets the `src` from `logoDataUrl`, gives the image the frame's size before it
+decodes, and shows the name in its place for anything that is not the sanitiser's output. It
+imports `@identgineer/brand/logo`, an entry of those two functions alone: the package index also
+loads the theme generator and its tokens pipeline, which a browser bundle cannot take. Its colour
+sibling, `idg-brand-swatches`, takes what `generateBrandTheme` returns and lists each role, value
+and contrast pair.
 
 An SVG drawn as an image is the second layer: browsers run no script in it, fire no events, follow
 no links and load nothing external, whatever it holds. Sanitising is still required, because the

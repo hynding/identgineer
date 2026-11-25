@@ -1,0 +1,19 @@
+/* The demo stylesheet lays sections out as wrapping rows; the swatches are blocks that take the
+   whole row, as they would in the page of a brand guide. */
+idg-brand-swatches {
+  flex: 1 1 100%;
+  min-inline-size: 0;
+}
+
+/* The demo stylesheet's one grid column is as wide as its widest content, and at a doubled root size
+   in a wide fallback font that is wider than a 320px window. The fixture's column is the window's. */
+main {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* The headings are the fixture's own: a word of them is wider than the column at a doubled root
+   size in a wide fallback font, so they break inside the word rather than widen the page. */
+h1,
+h2 {
+  overflow-wrap: anywhere;
+}
