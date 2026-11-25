@@ -1681,7 +1681,8 @@ editor.addEventListener("idgSave", (event) => {
 | `preview`      | `preview`       | whether the preview is shown                                                                  | `true`      |
 
 **Events:** `idgSave` after a save, with `{ documentId, id, created }` and nothing of the kit.
-**Parts:** `form`, `error`, `saved`, `fieldset`, `image`, `removals`, `submit`, `preview`. No slots.
+**Parts:** `form`, `error`, `saved`, `stopped`, `fieldset`, `image`, `removals`, `submit`, `preview`.
+No slots.
 
 - **It saves only through `store`.** The element never creates a store, never fetches and keeps
   nothing in browser storage; the draft lives in the element. A save calls `create`, or `update`
@@ -1691,11 +1692,12 @@ editor.addEventListener("idgSave", (event) => {
   keeping for each image the latest thing that happened to it during the wait (refused, removed or
   accepted), which a new read of that image clears. If any image's latest is a refusal it stops,
   keeping the refusal on the field, showing the summary and focusing the first such upload; else
-  if any image's latest is a removal it stops quietly; else it saves the form as it stands, text
-  edited meanwhile included. Replacing the kit or taking the element off the page also stops it
-  without saving. The confirmation goes as soon
-  as the form changes, and a change made while the store answered is not in what was stored, so
-  the confirmation then says so (`savedBefore`) and keeps the removals of an image that was not
+  if any image's latest is a removal it stops without an error, saying `saveStopped` through the
+  polite status and in a note (`stopped`) where the confirmation would be; else it saves the form
+  as it stands, text edited meanwhile included. Replacing the kit or taking the element off the
+  page also stops it without saving. The confirmation, or the note, goes as soon as the form
+  changes or another save starts, and a change made while the store answered is not in what was
+  stored, so the confirmation then says so (`savedBefore`) and keeps the removals of an image that was not
   sent. A store that throws
   or rejects gives an alert, never an exception, and an answer that is not a stored record says the
   kit was sent but the answer could not be read. A refusal that the store reports as an error with
