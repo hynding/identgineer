@@ -337,11 +337,11 @@ export namespace Components {
          */
         "name"?: string;
         /**
-          * A theme from `generateBrandTheme`. What `css` and `tokens` do not give is emitted from it here, by the brand package's own emitters, and its id and its kit's name are used for the snippet and the file names. Set it as a property.
+          * A theme from `generateBrandTheme`. What `css` and `tokens` do not give is emitted from it here, by the brand package's own emitters, and the id they scoped the stylesheet to is used for the snippet, and its kit's name for the file names. Set it as a property.
          */
         "theme"?: BrandExportTheme;
         /**
-          * The theme id for the usage snippet, when there is no `theme`.
+          * The theme id for the usage snippet when the stylesheet is given as `css`; an emitted one names its own.
          */
         "themeId"?: string;
         /**
@@ -362,7 +362,7 @@ export namespace Components {
      */
     interface IdgBrandGuidelines {
         /**
-          * The level of the brand name's heading, 1 to 6; the sections' headings are one deeper.
+          * The level of the brand name's heading, 1 to 5 (a larger one is 5); the sections' headings are one deeper, or at its level where there is no name.
           * @default 2
          */
         "headingLevel": number;
@@ -3759,11 +3759,11 @@ declare namespace LocalJSX {
          */
         "onIdgDownload"?: (event: IdgBrandExportCustomEvent<BrandExportDetail>) => void;
         /**
-          * A theme from `generateBrandTheme`. What `css` and `tokens` do not give is emitted from it here, by the brand package's own emitters, and its id and its kit's name are used for the snippet and the file names. Set it as a property.
+          * A theme from `generateBrandTheme`. What `css` and `tokens` do not give is emitted from it here, by the brand package's own emitters, and the id they scoped the stylesheet to is used for the snippet, and its kit's name for the file names. Set it as a property.
          */
         "theme"?: BrandExportTheme;
         /**
-          * The theme id for the usage snippet, when there is no `theme`.
+          * The theme id for the usage snippet when the stylesheet is given as `css`; an emitted one names its own.
          */
         "themeId"?: string;
         /**
@@ -3784,7 +3784,7 @@ declare namespace LocalJSX {
      */
     interface IdgBrandGuidelines {
         /**
-          * The level of the brand name's heading, 1 to 6; the sections' headings are one deeper.
+          * The level of the brand name's heading, 1 to 5 (a larger one is 5); the sections' headings are one deeper, or at its level where there is no name.
           * @default 2
          */
         "headingLevel"?: number;

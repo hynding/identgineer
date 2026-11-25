@@ -1567,14 +1567,14 @@ A guide to one brand: its name and tagline, its logo and mark on a light and a d
 colours (`idg-brand-swatches` inside), the gradient, a type specimen, the corner radii, the tone, and
 the notes and adjustments the generator made, written as sentences.
 
-| Prop           | Attribute       | Notes                                                            | Default |
-| -------------- | --------------- | ---------------------------------------------------------------- | ------- |
-| `kit`          |                 | a kit from `parseBrandKit`; set as a property, it is data        |         |
-| `theme`        |                 | the theme `generateBrandTheme` made for it (or its `document`)   |         |
-| `label`        | `label`         | the accessible name of the whole                                 |         |
-| `labels`       |                 | `BrandGuidelinesLabels`: every heading, caption and sentence     | English |
-| `swatchLabels` |                 | `Partial<BrandSwatchesLabels>`, passed to the swatches           | English |
-| `headingLevel` | `heading-level` | the level of the name, 1 to 5; the sections are one level deeper | `2`     |
+| Prop           | Attribute       | Notes                                                                                                      | Default |
+| -------------- | --------------- | ---------------------------------------------------------------------------------------------------------- | ------- |
+| `kit`          |                 | a kit from `parseBrandKit`; set as a property, it is data                                                  |         |
+| `theme`        |                 | the theme `generateBrandTheme` made for it (or its `document`)                                             |         |
+| `label`        | `label`         | the accessible name of the whole                                                                           |         |
+| `labels`       |                 | `BrandGuidelinesLabels`: every heading, caption and sentence                                               | English |
+| `swatchLabels` |                 | `Partial<BrandSwatchesLabels>`, passed to the swatches                                                     | English |
+| `headingLevel` | `heading-level` | the level of the name, 1 to 5 (6 gives 5); the sections are one level deeper, or at its level with no name | `2`     |
 
 No events and no slots. Parts: `guidelines`, `heading`, `tagline`, `section`, `section-title`,
 `exhibit`, `caption`, `note`, `tone`, `empty`. The kit and theme types are declared here
@@ -1606,7 +1606,7 @@ region, with Copy and Download buttons, and a snippet for loading the theme.
 | `css`          |                 | the stylesheet text, as `emitBrandThemeCss` returned it                                     |         |
 | `tokens`       |                 | the tokens text, as `emitBrandThemeTokens` returned it                                      |         |
 | `theme`        |                 | a theme from `generateBrandTheme`: emitted in the browser for what `css` and `tokens` leave |         |
-| `themeId`      | `theme-id`      | the theme's id, for the snippet; defaults to the theme's own                                |         |
+| `themeId`      | `theme-id`      | the theme's id for the snippet, used only for a stylesheet given as `css`                   |         |
 | `name`         | `name`          | the brand's name, which the file names are made from; defaults to the theme's kit           |         |
 | `label`        | `label`         | the accessible name of the whole                                                            |         |
 | `labels`       |                 | `BrandExportLabels`: headings, hints, buttons and the messages that follow an action        | English |
@@ -1616,8 +1616,11 @@ region, with Copy and Download buttons, and a snippet for loading the theme.
 **Parts:** `export`, `artefact`, `title`, `hint`, `code`, `actions`, `status`, `problem`, `empty`.
 
 - **Text only.** Each artefact is a `<pre><code>` set as text, in a region named by its heading that
-  is in the tab order, so a keyboard user can scroll it. Texts over 2,000,000 characters are
-  dropped. A string given as `css` or `tokens` wins over what `theme` would give.
+  is in the tab order, so a keyboard user can scroll it. Texts over 256 KB (262,144 characters;
+  a theme emits a few KB) are dropped. A string given as `css` or `tokens` wins over what `theme` would give.
+  The snippet names the theme the stylesheet shown defines: the id the emitters scoped an emitted
+  stylesheet to (the theme is read once, so both texts come from the same reading), or `themeId`
+  for a stylesheet given as text, and no snippet where there is none.
 - **Copy** writes to the clipboard through the clipboard API inside the click, and says so. Where
   the API is missing or refuses, the text is selected, the region focused, and the status says that
   it is selected and must be copied by hand. A copy event fires only on success.
@@ -1734,12 +1737,30 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   `@identgineer/brand/presets` (the corner, tone, radius and font-pairing tables),
   `@identgineer/brand/emit` (`emitBrandThemeCss` and `emitBrandThemeTokens`) and
   `@identgineer/tokens/contrast` (`contrastRatio`), because the packages' indexes also load the
-  rest of the pipeline. Import-graph tests hold each entry to loading no Node built-in. The sanitiser therefore sits in the
-  lazy chunk of `idg-brand-logo` alone (its entry bundles to 88.6 KB minified, 29.6 KB gzipped with esbuild, loaded only where that
-  element is used), and `idg-brand-swatches` adds under 8 KB. Together they took the `www/build`
-  directory from 433,865 to 534,386 bytes. `idg-brand-guidelines` and `idg-brand-export` take it to
-  661,532 bytes: about 98 KB of that is the theme generator and the emitters in the export's lazy
-  chunk, which only a page that uses `idg-brand-export` loads.
+  rest of the pipeline. Import-graph tests hold each entry to loading no Node built-in.
+- **Bundles.** Left to itself, Stencil groups components that share imports, and the logo
+  sanitiser, the theme generator and the emitters ended up in the one bundle of `idg-button` and 44
+  others: `www/build` held it as a 450,181 byte entry (325,993 before the brand components) and
+  `dist/esm/idg-accordion_47.entry.js` was 846 KB (633 KB before). `bundles` in `stencil.config.ts`
+  lists the brand components, which turns the grouping off, so every component is a bundle of its
+  own and loads only what it imports. What a page loads, entry and shared chunks together
+  (`checks/core-bundle.test.ts` measures it from the build and fails if a core component's closure
+  holds the sanitiser, generator or emitter or passes a ceiling of 40,000 bytes in `www/build` and
+  100,000 in `dist/esm`):
+
+  | Page with only         | `www/build` | `dist/esm` |
+  | ---------------------- | ----------: | ---------: |
+  | `idg-button`           |    32,430 B |   82,533 B |
+  | `idg-brand-swatches`   |    29,826 B |   84,500 B |
+  | `idg-brand-logo`       |   117,072 B |  326,388 B |
+  | `idg-brand-guidelines` |   141,248 B |  374,633 B |
+  | `idg-brand-export`     |   219,211 B |  499,879 B |
+
+  The sanitiser (about 90 KB minified) is loaded by the logo and the guide; the generator and
+  emitters only by the export. The cost is a request for each component's own entry, where a
+  grouped bundle served several. The whole `www/build` directory, all pages together, went from
+  433,865 bytes before the brand components to 670,556 with them.
+
 - **The identity fixture.** `identity.html` wires every identity element to one real client on the
   identity package's fake API (`createFakeIdentityApi`), in the page. The build's second step,
   `scripts/build-sdk-fixtures.ts`, transpiles that package's source and its fake into
