@@ -96,6 +96,14 @@ describe("idg-brand-guidelines headings", () => {
     );
   });
 
+  it("puts the sections at the requested level, even 6, when there is no name to head them", async () => {
+    const { root } = await render(
+      <idg-brand-guidelines kit={{ ...ACME, name: "" }} theme={ACME_THEME} headingLevel={6} />,
+    );
+    expect(all(root, "section h6").length).toBeGreaterThan(2);
+    expect(all(root, "h5")).toHaveLength(0);
+  });
+
   it("puts the sections at the name's level when there is no name to head them", async () => {
     const { root } = await render(
       <idg-brand-guidelines kit={{ ...ACME, name: "" }} theme={ACME_THEME} headingLevel={3} />,
