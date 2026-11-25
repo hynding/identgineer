@@ -17,12 +17,16 @@ Keep each language under the path its own target expects:
 | `IssueIngestKey` hook (Property)   | `app/Hooks/IssueIngestKey.php`     | `src/hooks/issue-ingest-key.ts`                        |
 | `PurgeExpiredEvents` schedule      | `app/Hooks/PurgeExpiredEvents.php` | `src/cron/purge-expired-events.ts`                     |
 | Extra API routes (strapi-php only) | `routes/api-custom.php`            | —                                                      |
+| REST page cap (Strapi only)        | —                                  | `config/api.ts`                                        |
 
 Each path above is seeded by camis as a stub the first time it builds, implementing a generated
 contract (`app/Hooks/Contracts/*.php`, `src/hooks/contracts/*.ts`). Copy a stub here before
 filling it in; editing it under `cms/generated/` would be lost on the next clean build.
 
-Nothing is implemented here yet. Until it is, the seeded stubs are safe: the endpoints answer
+`config/api.ts` replaces Strapi's generated REST settings to cap a page at 25 rows, as
+`CAMIS_REST_MAX_LIMIT` does on strapi-php (see `cms/README.md`); it is inert in the Laravel app.
+
+Nothing else is implemented here yet. Until it is, the seeded stubs are safe: the endpoints answer
 `{ "data": null }` and write nothing, the purge does nothing, and `IssueIngestKey` passes the
 client's key through (it must still match `^pk_[A-Za-z0-9]{19,61}$` and be unique). The tracking
 domain (Feature 9) implements them.

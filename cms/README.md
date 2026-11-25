@@ -380,7 +380,11 @@ Limits that remain on Strapi, for this model:
 
 **Not reported by camis but limiting this model.** Conditions cannot follow a relation (hence the
 denormalised `owner` on Event and ConsentRecord); public endpoints have no declarative throttle,
-body limit or origin list (hence the hand-written checks); JSON fields cannot be bounded; media
+body limit or origin list (hence the hand-written checks); no read route has a throttle either, so
+public brand kits, which anyone may list page by page by design, can be enumerated as fast as the
+server answers (pages are capped at 25 rows, `CAMIS_REST_MAX_LIMIT` for strapi-php and
+`protected/config/api.ts` for Strapi, whose generated `maxLimit` reads no variable; a list asks for
+summaries without logos); JSON fields cannot be bounded; media
 fields cannot name MIME types (strapi-php's global `CAMIS_UPLOAD_ALLOWED_TYPES` is used instead,
 without SVG; brand logos are text for that reason among others); string lengths are counted as
 each target counts them (UTF-16 units on Strapi, code points on strapi-php), hence the doubled
@@ -388,6 +392,10 @@ brand kit name and tagline limits; a field cannot be unique per owner; relations
 behaviour, so on strapi-php a property with events cannot be deleted until its events are purged;
 there is no read-only field, so an owner can change `ingestKey` after it is issued; and one
 `protected/` directory is mirrored into both targets.
+
+**Deployment recommendation (Feature 14).** Put a rate limit per client address on
+`GET /api/brand-kits` (and `GET /api/brand-kits/:id`) in the reverse proxy or the host's web server
+config, since neither target throttles reads.
 
 **Public brand kits.** A `public` read grant on BrandKit conditioned on `record.isPublic == true`
 is within what camis enforces on both targets (a read condition of `eq` over `record.<field>`
