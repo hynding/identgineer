@@ -1276,8 +1276,11 @@ with the other fields saved: the error's `documentId` names it, so `get` it to s
 holds, or `remove` it (a `create` that is not applied has still made a new kit). Do not keep
 `themeTokens` in the CMS: generate the theme from the kit, which is deterministic.
 
-A request that fails rejects with a `BrandKitStoreError`, whose message is fixed per code and
-never holds a response body, a thrown error's text or a logo:
+A request that fails rejects with a `BrandKitStoreError`, never another error, whose message is
+fixed per code and never holds a response body, a thrown error's text or a logo. A signal must
+have `aborted`, `addEventListener` and `removeEventListener`, or the request is refused as
+`validation` before it is sent; anything else odd the given `fetch` answers (no status or headers,
+a getter that throws, a body chunk that is not a `Uint8Array`) is a `malformed-response`:
 
 | `code`               | When                                                                                                                               |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
@@ -1289,7 +1292,7 @@ never holds a response body, a thrown error's text or a logo:
 | `rate-limited`       | 429; `retryAfterSeconds` from `Retry-After` (60 when absent, at most 3600)                                                         |
 | `network`            | `fetch` failed to reach the CMS (a redirect too, as fetch refuses to follow it), the body could not be read, or the signal aborted |
 | `request-refused`    | `fetch` refused the request itself, as `authorizedFetch` does for a URL outside its base URL                                       |
-| `malformed-response` | A 2xx answer that is not a brand kit answer (type, size, encoding, JSON, envelope or pagination)                                   |
+| `malformed-response` | A 2xx answer that is not a brand kit answer (type, size, encoding, JSON, envelope or pagination), or `fetch` answered no response  |
 | `unexpected-status`  | Any other status, and a 3xx from a `fetch` that hands redirects back; `status` holds it                                            |
 
 A signed-in user reads other users' public kits with `listPublic` and `getPublic`, as the public

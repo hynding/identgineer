@@ -5,8 +5,20 @@ const malformed = (): BrandKitStoreError => new BrandKitStoreError("malformed-re
 const isJson = (response: Response): boolean =>
   response.headers.get("Content-Type")?.split(";")[0]?.trim().toLowerCase() === "application/json";
 
+/**
+ * Calls `cancelling` and drops whatever comes of it: a throw, a rejection, or something that is not
+ * a promise, which a fetch the caller supplied may answer.
+ */
+function quietly(cancelling: () => unknown): void {
+  try {
+    Promise.resolve(cancelling()).catch(() => undefined);
+  } catch {
+    // Nothing to report: the body is being let go of either way.
+  }
+}
+
 const cancel = (response: Response): void => {
-  response.body?.cancel().catch(() => undefined);
+  quietly(() => response.body?.cancel());
 };
 
 const INITIAL_BUFFER_BYTES = 16 * 1024;
@@ -45,7 +57,7 @@ async function readBytes(
   if (body === null) return new Uint8Array(0);
   const reader = body.getReader();
   const stop = (): void => {
-    reader.cancel().catch(() => undefined);
+    quietly(() => reader.cancel());
   };
   signal?.addEventListener("abort", stop);
   let bytes: Uint8Array = new Uint8Array(Math.min(maxBytes, INITIAL_BUFFER_BYTES));
@@ -53,7 +65,7 @@ async function readBytes(
   try {
     for (;;) {
       if (isAborted(signal)) throw new BrandKitStoreError("network");
-      let chunk: ReadableStreamReadResult<Uint8Array>;
+      let chunk: ReadableStreamReadResult<unknown>;
       try {
         chunk = await reader.read();
       } catch {
@@ -61,6 +73,7 @@ async function readBytes(
       }
       if (isAborted(signal)) throw new BrandKitStoreError("network");
       if (chunk.done) break;
+      if (!(chunk.value instanceof Uint8Array)) throw malformed();
       const needed = total + chunk.value.byteLength;
       if (needed > maxBytes) throw malformed();
       if (needed > bytes.byteLength) bytes = grown(bytes, total, needed, maxBytes);
@@ -68,7 +81,7 @@ async function readBytes(
       total = needed;
     }
   } catch (error) {
-    reader.cancel().catch(() => undefined);
+    quietly(() => reader.cancel());
     throw error;
   } finally {
     signal?.removeEventListener("abort", stop);

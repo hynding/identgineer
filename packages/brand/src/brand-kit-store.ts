@@ -134,11 +134,54 @@ function hasOnlyKeys(value: object, allowed: readonly string[]): boolean {
 /** A list's summary, or a kit spread from one: it carries the summary's `logos` marker. */
 const isSummary = (kit: unknown): boolean => isPlainObject(kit) && Object.hasOwn(kit, "logos");
 
-const isAbortSignal = (signal: unknown): signal is AbortSignal =>
-  typeof signal === "object" &&
-  signal !== null &&
-  typeof (signal as Partial<AbortSignal>).aborted === "boolean" &&
-  typeof (signal as Partial<AbortSignal>).addEventListener === "function";
+/** Whether `signal` has what the store uses of one; a getter that throws makes it none. */
+function isAbortSignal(signal: unknown): signal is AbortSignal {
+  try {
+    if (typeof signal !== "object" || signal === null) return false;
+    const candidate = signal as Partial<AbortSignal>;
+    return (
+      typeof candidate.aborted === "boolean" &&
+      typeof candidate.addEventListener === "function" &&
+      typeof candidate.removeEventListener === "function"
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Whether a fetch answered something with a numeric status and headers to read. */
+function isResponseLike(value: unknown): value is Response {
+  try {
+    if (typeof value !== "object" || value === null) return false;
+    const { status, headers } = value as { status?: unknown; headers?: unknown };
+    return (
+      Number.isInteger(status) &&
+      typeof headers === "object" &&
+      headers !== null &&
+      typeof (headers as { get?: unknown }).get === "function"
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The operation, rejecting only with a `BrandKitStoreError`. Any other error can only come from
+ * what the given fetch answered (a getter that throws, a body that is not a stream), so it is read
+ * as a malformed response, its text never passed on.
+ */
+function storeErrorsOnly<Args extends unknown[], Result>(
+  operation: (...args: Args) => Promise<Result>,
+): (...args: Args) => Promise<Result> {
+  return async (...args) => {
+    try {
+      return await operation(...args);
+    } catch (error) {
+      if (error instanceof BrandKitStoreError) throw error;
+      throw malformed();
+    }
+  };
+}
 
 function readSignal(options: BrandKitRequestOptions | undefined): AbortSignal | undefined {
   const signal: unknown = options?.signal;
@@ -405,7 +448,7 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
       ...(call.data !== undefined && { body: JSON.stringify({ data: call.data }) }),
       ...(call.signal !== undefined && { signal: call.signal }),
     };
-    let response: Response;
+    let response: unknown;
     try {
       response = await call.fetch(`${storeEndpoint(base, call.path)}${query}`, init);
     } catch (error) {
@@ -413,6 +456,7 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
       if (isAborted(call.signal)) throw new BrandKitStoreError("network");
       throw new BrandKitStoreError(rejectionCode(error));
     }
+    if (!isResponseLike(response)) throw malformed();
     if (response.status < 200 || response.status > 299)
       throw await failureOf(response, call.signal);
     return response;
@@ -488,20 +532,29 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
   };
 
   return Object.freeze({
-    list: (listOptions?: BrandKitListOptions) => listWith(signedIn, listOptions, false),
-    get: (documentId: string, requestOptions?: BrandKitRequestOptions) =>
+    list: storeErrorsOnly((listOptions?: BrandKitListOptions) =>
+      listWith(signedIn, listOptions, false),
+    ),
+    get: storeErrorsOnly((documentId: string, requestOptions?: BrandKitRequestOptions) =>
       getWith(signedIn, documentId, requestOptions, false),
-    create: (kit: BrandKit, writeOptions?: BrandKitWriteOptions) =>
+    ),
+    create: storeErrorsOnly((kit: BrandKit, writeOptions?: BrandKitWriteOptions) =>
       write(undefined, kit, writeOptions),
-    update: (documentId: string, kit: BrandKit, writeOptions?: BrandKitWriteOptions) =>
-      write(documentId, kit, writeOptions),
-    remove: async (documentId: string, requestOptions?: BrandKitRequestOptions) => {
+    ),
+    update: storeErrorsOnly(
+      (documentId: string, kit: BrandKit, writeOptions?: BrandKitWriteOptions) =>
+        write(documentId, kit, writeOptions),
+    ),
+    remove: storeErrorsOnly(async (documentId: string, requestOptions?: BrandKitRequestOptions) => {
       const path = documentPath(documentId);
       const signal = readSignal(requestOptions);
       discardBody(await send({ fetch: signedIn, method: "DELETE", path, signal }));
-    },
-    listPublic: (listOptions?: BrandKitListOptions) => listWith(anonymous, listOptions, true),
-    getPublic: (documentId: string, requestOptions?: BrandKitRequestOptions) =>
+    }),
+    listPublic: storeErrorsOnly((listOptions?: BrandKitListOptions) =>
+      listWith(anonymous, listOptions, true),
+    ),
+    getPublic: storeErrorsOnly((documentId: string, requestOptions?: BrandKitRequestOptions) =>
       getWith(anonymous, documentId, requestOptions, true),
+    ),
   });
 }
