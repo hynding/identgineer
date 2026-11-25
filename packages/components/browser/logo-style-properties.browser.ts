@@ -9,7 +9,8 @@ import { expect, test, type Page } from "@playwright/test";
 // Wherever Chromium then draws the logo otherwise (as an image), the sanitiser must refuse the logo,
 // drop the element, or draw the output as the original does. The only exceptions are the paint-only
 // properties listed below, which are not on the allowlist and are dropped, changing the picture, as
-// the README says of every such drop.
+// the README says of every such drop. Properties that act only together with another (an inset
+// with a position) are also set on the root after each position that makes them act.
 
 const svg = (body: string, root = ""): string =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"${root}>${body}</svg>`;
@@ -22,12 +23,22 @@ interface Probe {
   readonly template: string;
   /** The element the style is on, as a removal names it. */
   readonly element: string;
+  /** Declarations written before each one tried, which the probe drawn without it also has. */
+  readonly before: string;
 }
 
-const probe = (template: string, element: string): Probe => ({ template, element });
+const probe = (template: string, element: string, before = ""): Probe => ({
+  template,
+  element,
+  before,
+});
 
 const PROBES: Readonly<Record<string, Probe>> = {
   root: probe(svg(RECT, "@"), "svg"),
+  "root positioned relatively": probe(svg(RECT, "@"), "svg", "position:relative;"),
+  "root positioned absolutely": probe(svg(RECT, "@"), "svg", "position:absolute;"),
+  "root fixed": probe(svg(RECT, "@"), "svg", "position:fixed;"),
+  "root positioned sticky": probe(svg(RECT, "@"), "svg", "position:sticky;"),
   rect: probe(svg('<rect x="10" y="10" width="50" height="50" rx="5" fill="#f00"@/>'), "rect"),
   "rect with a transform": probe(
     svg('<rect x="10" y="10" width="50" height="50" fill="#f00" transform="rotate(20)"@/>'),
@@ -165,6 +176,7 @@ const VALUES = [
   "path('M0 0H50')",
   "path('M0 0H90V90Z')",
   "path('M0 0H50') 20px",
+  "linear-gradient(transparent, transparent)",
   "inset(10px)",
   "circle(10px)",
   "fill-box",
@@ -237,15 +249,18 @@ async function drawings(page: Page, sources: readonly string[]): Promise<number[
 
 test.describe("every style property Chromium has, on each element the sanitiser keeps", () => {
   test.describe.configure({ timeout: 600_000 });
-  for (const [name, { template, element }] of Object.entries(PROBES)) {
+  for (const [name, { template, element, before }] of Object.entries(PROBES)) {
     test(`is refused, drops the ${name}, or draws as the original wherever its drawing changes`, async ({
       page,
     }) => {
       await page.setContent("<!doctype html><body></body>");
       const list = await declarations(page);
       expect(list.length).toBeGreaterThan(1000);
-      const originals = list.map((declaration) => withStyle(template, declaration));
-      const [plain = 0, ...drawn] = await drawings(page, [withStyle(template, ""), ...originals]);
+      const originals = list.map((declaration) => withStyle(template, `${before}${declaration}`));
+      const [plain = 0, ...drawn] = await drawings(page, [
+        withStyle(template, before),
+        ...originals,
+      ]);
       const changed = list.flatMap((declaration, index) =>
         drawn[index] === plain ||
         PAINT_ONLY.has(declaration.split(":")[0] ?? "") ||

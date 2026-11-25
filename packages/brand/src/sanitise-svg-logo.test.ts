@@ -495,6 +495,24 @@ describe("sanitiseSvgLogo, output", () => {
       "use",
       "-webkit-clip-path",
     ],
+    [
+      "a mask image on a rectangle",
+      '<rect width="6" height="6" style="mask-image:linear-gradient(transparent,transparent)"/>',
+      "rect",
+      "mask-image",
+    ],
+    [
+      "a prefixed mask of an image on a group",
+      '<g style="-webkit-mask:linear-gradient(transparent,transparent)"><rect width="6" height="6"/></g>',
+      "g",
+      "-webkit-mask",
+    ],
+    [
+      "a mask of a reference and an image on a path",
+      '<mask id="m"><rect width="6" height="6" fill="#fff"/></mask><path d="M0 0H6V6Z" style="mask:url(#m), linear-gradient(transparent,transparent)"/>',
+      "path",
+      "mask",
+    ],
   ])("drops an element whose style sets %s, and reports both", (_, body, element, property) => {
     const result = accepted(svg(`${body}<rect width="1" height="1"/>`));
     expect(result.svg).toBe(`${ROOT}<rect width="1" height="1"/></svg>`);
@@ -533,6 +551,17 @@ describe("sanitiseSvgLogo, output", () => {
     expect(output('<rect width="9" height="9" opacity="1" style="-webkit-opacity:0.5"/>')).toBe(
       `${ROOT}<rect width="9" height="9" opacity="0.5"/></svg>`,
     );
+  });
+
+  it.each([
+    ["position:static"],
+    ["top:auto"],
+    ["position:static;inset:auto"],
+    ["inset-inline:auto auto"],
+  ])("keeps a root whose style sets %s, which leaves it where it is", (style) => {
+    expect(
+      accepted(svg('<rect width="9" height="9"/>', `viewBox="0 0 10 10" style="${style}"`)).svg,
+    ).toBe(`${ROOT}<rect width="9" height="9"/></svg>`);
   });
 
   it("keeps a root whose style sets a margin of nothing", () => {
@@ -589,6 +618,32 @@ describe("sanitiseSvgLogo, output", () => {
     [
       "a root moved by its margin",
       svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="margin-left:5px"'),
+    ],
+    [
+      "a root positioned relatively and moved down",
+      svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="position:relative;top:3px"'),
+    ],
+    [
+      "a root positioned absolutely and moved right",
+      svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="position:absolute;left:3px"'),
+    ],
+    [
+      "a root moved by a logical inset",
+      svg(
+        '<rect width="9" height="9"/>',
+        'viewBox="0 0 10 10" style="position:relative;inset-inline-start:3px"',
+      ),
+    ],
+    [
+      "a root fixed in place and moved right",
+      svg('<rect width="9" height="9"/>', 'viewBox="0 0 10 10" style="position:fixed;left:5px"'),
+    ],
+    [
+      "a root masked by an image in its style",
+      svg(
+        '<rect width="9" height="9"/>',
+        'viewBox="0 0 10 10" style="mask-image:linear-gradient(transparent,transparent)"',
+      ),
     ],
     [
       "a root moved by a prefixed logical padding",

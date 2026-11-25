@@ -2514,6 +2514,36 @@
       }
     ]
   },
+  "review-style-mask-box-image-gradient.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "g",
+        "attribute": "style",
+        "property": "-webkit-mask-box-image",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "g",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
+  "review-style-mask-image-gradient.svg": {
+    "outcome": "accept",
+    "removed": [
+      {
+        "element": "rect",
+        "attribute": "style",
+        "property": "mask-image",
+        "reason": "unsupported-attribute"
+      },
+      {
+        "element": "rect",
+        "reason": "unsupported-attribute"
+      }
+    ]
+  },
   "review-style-offset-short.svg": {
     "outcome": "accept",
     "removed": [
@@ -2533,6 +2563,21 @@
     "outcome": "reject:unsupported-feature"
   },
   "review-style-root-border-left.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-root-mask-image.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-root-position-fixed.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-root-position-inset-inline.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-root-position-left.svg": {
+    "outcome": "reject:unsupported-feature"
+  },
+  "review-style-root-position-top.svg": {
     "outcome": "reject:unsupported-feature"
   },
   "review-style-root-style-width.svg": {
