@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { fake, NODE, removeFakes, runFake } from "./fake-php";
+import { MAX_BRAND_KIT_PAGE_SIZE } from "../../packages/brand/src/index.ts";
 import { readCmsText } from "./model";
 
 afterAll(removeFakes);
@@ -101,6 +102,22 @@ describe(".env.example, strapi-php's deployment settings for the identity SDK", 
       positive(settings.get("CAMIS_AUTH_ADDRESS_THROTTLE_PER_MINUTE")?.value),
     ).toBeGreaterThanOrEqual(rate);
     positive(settings.get("CAMIS_REFRESH_THROTTLE_PER_MINUTE")?.value);
+  });
+
+  // Anyone may list public brand kits, so one request may not ask for many rows. The brand kit
+  // store asks for MAX_BRAND_KIT_PAGE_SIZE rows at most.
+  it("caps a REST page at 25 rows, no fewer than the brand kit store asks for", () => {
+    const cap = positive(settings.get("CAMIS_REST_MAX_LIMIT")?.value);
+    expect(cap).toBeLessThanOrEqual(25);
+    expect(cap).toBeGreaterThanOrEqual(MAX_BRAND_KIT_PAGE_SIZE);
+  });
+
+  it("caps Strapi's REST pages as strapi-php's, in the protected config/api.ts", () => {
+    const config = readCmsText("protected/config/api.ts");
+    expect(/maxLimit:\s*(\d+)/.exec(config)?.[1]).toBe(settings.get("CAMIS_REST_MAX_LIMIT")?.value);
+    expect(Number(/defaultLimit:\s*(\d+)/.exec(config)?.[1])).toBeLessThanOrEqual(
+      Number(settings.get("CAMIS_REST_MAX_LIMIT")?.value),
+    );
   });
 
   it("bounds account mail per recipient to a positive number an hour", () => {
