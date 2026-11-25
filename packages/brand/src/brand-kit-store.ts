@@ -393,6 +393,8 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
     try {
       response = await call.fetch(`${storeEndpoint(base, call.path)}${query}`, init);
     } catch (error) {
+      // Fetch rejects with the signal's reason, which may be anything the caller aborted with.
+      if (call.signal?.aborted === true) throw new BrandKitStoreError("network");
       throw new BrandKitStoreError(rejectionCode(error));
     }
     if (response.status < 200 || response.status > 299)
