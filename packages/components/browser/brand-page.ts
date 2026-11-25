@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import {
   generateBrandTheme,
   parseBrandKit,
+  sanitiseSvgLogo,
   type BrandKit,
   type BrandTheme,
 } from "@identgineer/brand";
@@ -18,6 +19,15 @@ const FIXTURES = new URL("../../brand/src/__fixtures__/", import.meta.url);
 /** Text a hostile or careless owner could store as a logo: none of it is sanitiser output. */
 export const HOSTILE_LOGO =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" onload="window.__pwned = 1"><script>window.__pwned = 1</script><foreignObject><iframe src="https://example.com/frame"></iframe></foreignObject><image href="https://example.com/track.png"/></svg>';
+
+/** A logo the sanitiser returns for a root with these attributes: a filled square inside. */
+export function sanitisedLogo(attributes: string): string {
+  const result = sanitiseSvgLogo(
+    `<svg xmlns="http://www.w3.org/2000/svg" ${attributes}><rect width="1" height="1"/></svg>`,
+  );
+  if (!result.ok) throw new Error(JSON.stringify(result.errors));
+  return result.svg;
+}
 
 function kitOf(fields: unknown): BrandKit {
   const result = parseBrandKit(fields);

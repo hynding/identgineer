@@ -2,12 +2,33 @@ import { test as base } from "@playwright/test";
 import { DESIGNS, SCHEMES, THEMES, UX_MODES, applyAxes } from "./axes";
 import { accessibleNode } from "./accessible-node";
 import { expectNoAxeViolations } from "./accessibility";
-import { HARBOUR_LOGO, HOSTILE_LOGO, openBrand } from "./brand-page";
+import { logoImage } from "@identgineer/brand/logo";
+import { HOSTILE_LOGO, openBrand, sanitisedLogo } from "./brand-page";
 import { contrastRatio } from "./contrast";
 import { expect, test } from "./fixtures";
 import { BROWSER_PORT } from "./port";
 
 const ORIGIN = `http://127.0.0.1:${String(BROWSER_PORT)}`;
+
+const FRAMES = [
+  { name: "a logo", attributes: 'viewBox="0 0 120 40" width="120" height="40"' },
+  {
+    name: "a width and height of another shape than the view box",
+    attributes: 'viewBox="0 0 120 40" width="200" height="40"',
+  },
+  {
+    name: "a stretching aspect ratio",
+    attributes: 'viewBox="0 0 120 40" width="300" height="40" preserveAspectRatio="none"',
+  },
+  { name: "a size in millimetres", attributes: 'viewBox="0 0 100 20" width="100mm" height="20mm"' },
+  { name: "a fractional view box", attributes: 'viewBox="0 0 1.5 1" width="150" height="100"' },
+  {
+    name: "a view box under one unit",
+    attributes: 'viewBox="0 0 0.5 0.25" width="100" height="50"',
+  },
+  { name: "a very wide logo", attributes: 'viewBox="0 0 60 3" width="60" height="3"' },
+  { name: "a tall logo", attributes: 'viewBox="0 0 10 40" width="10" height="40"' },
+];
 
 test.describe("idg-brand-logo under the strict policy with img-src data:", () => {
   test("draws the logo and the mark through an image of the data url, and nothing is blocked or fetched", async ({
@@ -73,43 +94,115 @@ test.describe("idg-brand-logo under the strict policy with img-src data:", () =>
     expect(HOSTILE_LOGO).toContain("onload");
   });
 
-  test("gives the image its size before it is decoded, so nothing moves when it loads", async ({
-    page,
-  }) => {
-    await openBrand(page);
-    const measured = await page.evaluate(async (logo) => {
-      const host = document.createElement("idg-brand-logo");
-      host.setAttribute("name", "Harbour Lights");
-      host.setAttribute("size", "lg");
-      host.logo = logo;
-      const probe = document.createElement("p");
-      probe.textContent = "after the logo";
-      const container = document.createElement("div");
-      container.append(host, probe);
-      document.querySelector("main")?.append(container);
-      await host.componentOnReady();
-      const image = host.shadowRoot?.querySelector("img");
-      if (!image) throw new Error("no image");
-      const read = () => ({
-        width: image.getBoundingClientRect().width,
-        height: image.getBoundingClientRect().height,
-        probeTop: probe.getBoundingClientRect().top,
-        complete: image.complete,
-      });
-      const before = read();
-      await image.decode();
-      return { before, after: read() };
-    }, HARBOUR_LOGO);
-    expect(measured.before.width).toBeGreaterThan(0);
-    expect(measured.before.height).toBeGreaterThan(0);
-    expect(measured.after).toMatchObject({
-      width: measured.before.width,
-      height: measured.before.height,
-      probeTop: measured.before.probeTop,
+  // The image's natural size is the root's width and height, which the sanitiser writes and which
+  // may be another shape than the view box, in units, or under one unit across. The box the
+  // component reserves must be that shape before anything is decoded, or the page jumps on load.
+  for (const { name, attributes } of FRAMES) {
+    test(`reserves the frame of ${name} before it is decoded, and nothing moves when it loads`, async ({
+      page,
+    }) => {
+      await openBrand(page);
+      const logo = sanitisedLogo(attributes);
+      const natural = logoImage(logo);
+      if (!natural) throw new Error("not a logo");
+      const measured = await page.evaluate(async (svg) => {
+        let shifted = 0;
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            shifted += (entry as PerformanceEntry & { value: number }).value;
+          }
+        }).observe({ type: "layout-shift", buffered: false });
+        const host = document.createElement("idg-brand-logo");
+        host.setAttribute("name", "Harbour Lights");
+        host.setAttribute("size", "lg");
+        host.logo = svg;
+        const probe = document.createElement("p");
+        probe.textContent = "after the logo";
+        const container = document.createElement("div");
+        container.append(host, probe);
+        // Read synchronously when the image is put in the shadow root: that is the one moment it is
+        // laid out before it has loaded, and a layout read forces the box to be worked out then.
+        interface First {
+          width: number;
+          height: number;
+          probeTop: number;
+          complete: boolean;
+          image: HTMLImageElement;
+        }
+        const seen: { first?: First } = {};
+        // Called back with the node they were taken from as `this`.
+        // eslint-disable-next-line @typescript-eslint/unbound-method
+        const insert = Node.prototype.insertBefore;
+        // eslint-disable-next-line @typescript-eslint/unbound-method
+        const append = Node.prototype.appendChild;
+        const watch = (node: Node) => {
+          const image =
+            node instanceof HTMLImageElement
+              ? node
+              : node instanceof Element
+                ? node.querySelector("img")
+                : null;
+          if (seen.first || !image?.isConnected || image.getRootNode() !== host.shadowRoot) return;
+          const box = image.getBoundingClientRect();
+          seen.first = {
+            width: box.width,
+            height: box.height,
+            probeTop: probe.getBoundingClientRect().top,
+            complete: image.complete,
+            image,
+          };
+        };
+        Node.prototype.insertBefore = function <T extends Node>(
+          this: Node,
+          node: T,
+          ref: Node | null,
+        ): T {
+          const result = insert.call(this, node, ref) as T;
+          watch(node);
+          return result;
+        };
+        Node.prototype.appendChild = function <T extends Node>(this: Node, node: T): T {
+          const result = append.call(this, node) as T;
+          watch(node);
+          return result;
+        };
+        document.querySelector("main")?.append(container);
+        await host.componentOnReady();
+        Node.prototype.insertBefore = insert;
+        Node.prototype.appendChild = append;
+        if (!seen.first) throw new Error("the image was never put in the page");
+        const { image, ...before } = seen.first;
+        await image.decode();
+        const box = image.getBoundingClientRect();
+        const after = {
+          width: box.width,
+          height: box.height,
+          probeTop: probe.getBoundingClientRect().top,
+        };
+        await new Promise((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(resolve);
+          });
+        });
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        return { before, after, shifted };
+      }, logo);
+
+      // The first read is of the image as it is first laid out, unloaded: the box is already the
+      // one the decoded image fills.
+      expect(measured.before.complete).toBe(false);
+      expect(measured.before.width).toBeCloseTo(measured.after.width, 1);
+      expect(measured.before.height).toBeCloseTo(measured.after.height, 1);
+      expect(measured.before.probeTop).toBeCloseTo(measured.after.probeTop, 1);
+      expect(measured.shifted).toBe(0);
+      // And that size is the logo's own shape at the height asked for (lg is 3.5rem).
+      expect(measured.after.height).toBeCloseTo(56, 0);
+      expect(measured.after.width / measured.after.height).toBeCloseTo(
+        natural.width / natural.height,
+        1,
+      );
     });
-    // The logo's frame is 120 by 40, and the image keeps that shape at the size asked for.
-    expect(measured.after.width / measured.after.height).toBeCloseTo(3, 2);
-  });
+  }
 
   test("reports no layout shift once the page is ready", async ({ page }) => {
     await openBrand(page);
@@ -322,6 +415,10 @@ test.describe("idg-brand-logo across the axes", () => {
       );
       host.setAttribute("size", "xl");
     });
+    // The component re-renders after the attribute changes: measure the new name, not the old one.
+    await expect
+      .poll(() => page.locator("#logo-wordmark").locator('[part="wordmark"]').textContent())
+      .toContain("Antidisestablishment");
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
