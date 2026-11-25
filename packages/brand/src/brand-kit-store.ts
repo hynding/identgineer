@@ -63,8 +63,14 @@ export interface BrandKitStore {
     documentId: string,
     options?: BrandKitRequestOptions,
   ) => Promise<BrandKitRecordResult>;
-  /** Stores a new kit; the CMS makes the signed-in user its owner. */
-  readonly create: (kit: BrandKit, options?: BrandKitWriteOptions) => Promise<BrandKitRecordResult>;
+  /**
+   * Stores a new kit; the CMS makes the signed-in user its owner. Like `update`, never takes a
+   * list's summary (or a kit spread from one), which would store a copy without logo and mark.
+   */
+  readonly create: (
+    kit: BrandKit & { readonly logos?: never },
+    options?: BrandKitWriteOptions,
+  ) => Promise<BrandKitRecordResult>;
   /**
    * Replaces a kit with `kit`, every field of it. Rejects as `not-applied`, naming the fields, when
    * the CMS answers a field otherwise than it was sent. Takes a kit `get` answered, never a list's
@@ -464,6 +470,7 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
   ): Promise<BrandKitRecordResult> => {
     const path = documentId === undefined ? KITS_PATH : documentPath(documentId);
     const method = documentId === undefined ? "POST" : "PUT";
+    if (isSummary(kit)) throw validation(["logo", "mark"]);
     const signal = readSignal(writeOptions);
     const data = writableData(kit, writeOptions);
     const response = await send({ fetch: signedIn, method, path, data, signal });
@@ -486,11 +493,8 @@ export function createBrandKitStore(options: BrandKitStoreOptions): BrandKitStor
       getWith(signedIn, documentId, requestOptions, false),
     create: (kit: BrandKit, writeOptions?: BrandKitWriteOptions) =>
       write(undefined, kit, writeOptions),
-    update: async (documentId: string, kit: BrandKit, writeOptions?: BrandKitWriteOptions) => {
-      documentPath(documentId);
-      if (isSummary(kit)) throw validation(["logo", "mark"]);
-      return write(documentId, kit, writeOptions);
-    },
+    update: (documentId: string, kit: BrandKit, writeOptions?: BrandKitWriteOptions) =>
+      write(documentId, kit, writeOptions),
     remove: async (documentId: string, requestOptions?: BrandKitRequestOptions) => {
       const path = documentPath(documentId);
       const signal = readSignal(requestOptions);

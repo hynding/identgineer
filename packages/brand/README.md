@@ -1197,8 +1197,8 @@ for (let page = 1, pageCount = 1; page <= Math.min(pageCount, 20); page += 1) {
   }
 }
 
-// To edit a kit, get it whole: update replaces every field, so it refuses a summary (and a kit
-// spread from one), which would clear the logo and mark.
+// To edit or copy a kit, get it whole: update and create refuse a summary (and a kit spread from
+// one), which would clear or leave out the logo and mark.
 const full = await store.get(documentId); // the whole kit, logo and mark checked
 if (full.ok) {
   const renamed = { ...full.record.kit, name: "Harbour Lights" };
@@ -1240,9 +1240,9 @@ for a logo near the sanitiser's limit (ten kits with two 436 KB logos each took 
 the full kit only for the one being shown or edited.
 
 A summary is never written back: `update` replaces every field, so a summary, or a kit spread from
-one, would clear the logo and mark. Its `logos` marker does not compile as `update`'s kit, and
-`update` refuses it as `validation`, naming `logo` and `mark`, before sending anything; edit the
-kit `get` answers instead.
+one, would clear the logo and mark, and `create` would store a copy without them. Its `logos`
+marker does not compile as the kit of either, and both refuse it as `validation`, naming `logo` and
+`mark`, before sending anything; edit or copy the kit `get` answers instead.
 
 Everything read from the CMS is untrusted:
 
