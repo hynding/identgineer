@@ -1875,18 +1875,18 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   | menus                  | menu, menu-group, menu-item, menu-separator, user-menu                                                                                                       |      49,796 |    126,820 |
   | tabs                   | tabs, tab, tab-panel                                                                                                                                         |      31,746 |     87,726 |
   | accordion              | accordion, accordion-item                                                                                                                                    |      27,957 |     79,096 |
-  | layout                 | stack, cluster, grid, cover, sidebar, switcher, layout, divider, card, breadcrumb, breadcrumb-item                                                           |      84,021 |    160,349 |
+  | layout                 | stack, cluster, grid, cover, sidebar, switcher, layout, divider, card, breadcrumb, breadcrumb-item                                                           |      84,127 |    161,055 |
   | `idg-brand-logo`       | the logo, with the sanitiser                                                                                                                                 |     117,086 |    327,029 |
   | `idg-brand-swatches`   | the swatches                                                                                                                                                 |      29,826 |     84,500 |
   | `idg-brand-guidelines` | the guide, with the sanitiser                                                                                                                                |     141,319 |    375,430 |
   | `idg-brand-export`     | the export, with the sanitiser, the generator and the emitters                                                                                               |     219,466 |    500,751 |
-  | `idg-brand-editor`     | the editor, with the sanitiser and the generator, and the guide it previews in                                                                               |     245,730 |    547,769 |
+  | `idg-brand-editor`     | the editor, with the sanitiser and the generator, and the guide it previews in                                                                               |     245,884 |    548,396 |
 
   The loader `identgineer.esm.js` is 12,922 bytes more on every page. The sanitiser (about 90 KB
   minified) is in the logo's, the guide's, the export's and the editor's bundles (the export
   validates a kit with it), the generator in the export's and the editor's, and the emitters in the
   export's alone. The editor's row counts its own entry and chunks; a page with it also loads the
-  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 697,640
+  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 697,900
   bytes (663,801 before the editor), against 433,865 before the brand components and 536,437 on
   main.
 
