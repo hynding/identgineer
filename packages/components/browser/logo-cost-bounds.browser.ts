@@ -30,7 +30,7 @@ function respelled(random: Random, value: string): string {
     value,
     `${sign}${digits}e-${String(fraction.length)}`,
     `${sign}.${whole}${fraction}e${String(whole.length)}`,
-    `${sign}0${whole}.${fraction}0`.replace(/\.0$/, ".0"),
+    `${sign}0${whole}.${fraction}0`,
     `${sign}${whole}${fraction === "" ? "" : `.${fraction}`}00`.replace(/^(-?\d+)00$/, "$1.00"),
   ]);
 }
