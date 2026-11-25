@@ -35,6 +35,7 @@ describe("fileSlug", () => {
     ["a backslash", "a\\b"],
     ["a colon", "C:evil"],
     ["a reserved device name", "con"],
+    ["a reserved device name with a number", "LPT1"],
     ["an extension", "evil.exe"],
     ["markup", '<img src=x onerror="alert(1)">'],
     ["a bidirectional control", "pay‮fdp.exe"],
@@ -60,6 +61,13 @@ describe("fileSlug", () => {
 
   it.each([undefined, null, 4, {}, [], true, Symbol("x")])(
     "falls back for %s that is not text",
+    (name) => {
+      expect(fileSlug(name)).toBe(FALLBACK_SLUG);
+    },
+  );
+
+  it.each(["con", "PRN", "Aux", "nul", "com1", "LPT9"])(
+    "does not give %j, which a Windows file system reserves for a device",
     (name) => {
       expect(fileSlug(name)).toBe(FALLBACK_SLUG);
     },
