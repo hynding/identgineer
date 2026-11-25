@@ -944,7 +944,8 @@ transform, the dearest). Over some 170,000 small arcs drawn alone, across radii 
 sweeps and starts from 0.5 to 900,000, Chromium drew the whole ellipse only for chords up to
 2^-23.6 of the larger radius; at 2^-16, the costliest now accepted (42 of radius 10,000 with
 chords of 0.0001, stroked whole, and 262 of radius 999,999 with chords of 16, drawn small) take
-0.3 to 0.43 seconds, and the corpus keeps the slow ones as refusals. Of 9,000 generated dashed logos
+0.22 to 0.31 seconds as an `<img>` 2000 CSS pixels wide at twice the density, where a trivial image
+takes 0.22 to 0.25, and the corpus keeps the slow ones as refusals. Of 9,000 generated dashed logos
 in editors' styles, none changed outcome against `main`, counted again once a dash array charged
 only the shapes it reaches.
 Real logos pay little for it: emblems of 8,000 stroked cubics come to 16% of the overdraw, finely
