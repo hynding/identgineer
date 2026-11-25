@@ -1,9 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unused-vars -- a stub the next commit replaces */
 import type { BrandTheme } from "@identgineer/brand";
 import { emitBrandThemeCss, emitBrandThemeTokens } from "@identgineer/brand/emit";
 
 export interface EmittedTheme {
   readonly css: string;
   readonly tokens: string;
+  /** The id both texts are scoped to. */
+  readonly id: string;
 }
 
 /**
@@ -17,8 +20,13 @@ export function emitTheme(theme: unknown): EmittedTheme | undefined {
   try {
     if (typeof theme !== "object" || theme === null) return undefined;
     const candidate = theme as BrandTheme;
-    return { css: emitBrandThemeCss(candidate), tokens: emitBrandThemeTokens(candidate) };
+    return { css: emitBrandThemeCss(candidate), tokens: emitBrandThemeTokens(candidate), id: "" };
   } catch {
     return undefined;
   }
+}
+
+/** Why a theme gave no files. A stub the next commit replaces. */
+export function emitFailure(_theme: unknown): "no-kit" | "altered" {
+  return "altered";
 }

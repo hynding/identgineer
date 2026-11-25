@@ -82,8 +82,27 @@ describe("idg-brand-guidelines headings", () => {
     await setProps({ headingLevel: 9 });
     expect(all(root, "h2")).toHaveLength(1);
     await setProps({ headingLevel: 6 });
+    expect(all(root, "h5").map(text)).toEqual(["Harbour Lights"]);
     expect(all(root, "h6").length).toBeGreaterThan(5);
     expect(all(root, "h7")).toHaveLength(0);
+  });
+
+  it("keeps the name at level 5 or above, so the sections are always one level deeper", async () => {
+    const { root } = await render(
+      <idg-brand-guidelines kit={HARBOUR} theme={HARBOUR_THEME} headingLevel={6} />,
+    );
+    expect(all(root, "h6").every((heading) => heading.classList.contains("section-title"))).toBe(
+      true,
+    );
+  });
+
+  it("puts the sections at the name's level when there is no name to head them", async () => {
+    const { root } = await render(
+      <idg-brand-guidelines kit={{ ...ACME, name: "" }} theme={ACME_THEME} headingLevel={3} />,
+    );
+    expect(all(root, ".name")).toHaveLength(0);
+    expect(all(root, "h4")).toHaveLength(0);
+    expect(all(root, "section h3").length).toBeGreaterThan(2);
   });
 
   it("names every section by its heading", async () => {

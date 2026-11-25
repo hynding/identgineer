@@ -7,7 +7,7 @@ import {
   type BrandTheme,
 } from "@identgineer/brand";
 import { describe, expect, it } from "vitest";
-import { emitTheme } from "./brand-export-emit";
+import { emitFailure, emitTheme } from "./brand-export-emit";
 
 const FIXTURES = new URL("../../../../brand/src/__fixtures__/", import.meta.url);
 const result = parseBrandKit(
@@ -21,7 +21,38 @@ describe("emitTheme", () => {
     expect(emitTheme(THEME)).toEqual({
       css: emitBrandThemeCss(THEME),
       tokens: emitBrandThemeTokens(THEME),
+      id: THEME.id,
     });
+  });
+
+  it("emits both texts from one reading of the theme, whatever its getters say afterwards", () => {
+    let reads = 0;
+    const switching = {
+      get id() {
+        reads += 1;
+        return reads === 1 ? THEME.id : "other-theme";
+      },
+      get kit() {
+        return reads === 0 ? THEME.kit : { ...THEME.kit, id: "other-theme" };
+      },
+      get document() {
+        return THEME.document;
+      },
+      get radius() {
+        return THEME.radius;
+      },
+    };
+    const emitted = emitTheme(switching);
+    expect(emitted?.id).toBe(THEME.id);
+    expect(emitted?.css).toBe(emitBrandThemeCss(THEME));
+    expect(emitted?.tokens).toBe(emitBrandThemeTokens(THEME));
+    expect(emitted?.css).not.toContain("other-theme");
+  });
+
+  it("tells a theme that has no kit from one that no longer matches it", () => {
+    expect(emitTheme({ ...THEME, kit: undefined })).toBeUndefined();
+    expect(emitFailure({ ...THEME, kit: undefined })).toBe("no-kit");
+    expect(emitFailure({ ...THEME, radius: { ...THEME.radius, sm: "1px" } })).toBe("altered");
   });
 
   it("gives nothing for a theme altered after it was generated", () => {

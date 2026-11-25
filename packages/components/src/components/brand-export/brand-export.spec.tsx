@@ -150,6 +150,30 @@ describe("idg-brand-export with a theme", () => {
     expect(text(one(root, '[data-artefact="css"] .hint'))).toContain("harbour-lights.css");
   });
 
+  it("names the theme the emitted stylesheet defines in the snippet, whatever id was given beside it", async () => {
+    const { root } = await render(<idg-brand-export theme={THEME} themeId="another-theme" />);
+    expect(code(root, "snippet")).toContain('<html data-theme="harbour-lights">');
+    expect(code(root, "snippet")).not.toContain("another-theme");
+  });
+
+  it("takes the id for the snippet from themeId alone when the stylesheet is given as text", async () => {
+    const given = await render(
+      <idg-brand-export theme={THEME} css="a { }" themeId="another-theme" />,
+    );
+    expect(code(given.root, "snippet")).toContain('data-theme="another-theme"');
+    const without = await render(<idg-brand-export theme={THEME} css="a { }" />);
+    expect(all(without.root, '[data-artefact="snippet"]')).toHaveLength(0);
+  });
+
+  it("says a theme has no kit, rather than that it no longer matches one", async () => {
+    const { root } = await render(
+      <idg-brand-export theme={{ ...THEME, kit: undefined } as never} />,
+    );
+    expect(text(one(root, '[part="problem"]'))).toBe(
+      "The theme could not be turned into files: it has no brand kit.",
+    );
+  });
+
   it("lets the texts it is given stand in place of what it would emit", async () => {
     const { root } = await render(<idg-brand-export theme={THEME} css="a { }" />);
     expect(code(root, "css")).toBe("a { }");
@@ -239,7 +263,7 @@ describe("idg-brand-export copying", () => {
     const events = listen(root, "idgCopy");
     await press(root, "copy-css", waitForChanges);
     expect(status(root)).toBe(
-      "The stylesheet could not be copied, so it is selected: copy it yourself.",
+      "The stylesheet could not be copied. Its text is selected: copy it yourself.",
     );
     expect(events).toHaveLength(0);
     expect(selected).toEqual([one(root, '[data-artefact="css"] pre code')]);
@@ -367,7 +391,7 @@ describe("idg-brand-export with data it cannot trust", () => {
   it.each([
     ["null", null],
     ["an empty string", ""],
-    ["a string past two million characters", "x".repeat(2_000_001)],
+    ["a string past 256 KB", "x".repeat(262_145)],
     [
       "a throwing proxy",
       new Proxy(
@@ -385,6 +409,13 @@ describe("idg-brand-export with data it cannot trust", () => {
     );
     expect(all(root, '[data-artefact="css"]')).toHaveLength(0);
     expect(code(root, "tokens")).toBe(TOKENS);
+  });
+
+  it("shows an artefact of exactly 256 KB, and the line of one more character is left out", async () => {
+    const edge = await render(<idg-brand-export css={"x".repeat(262_144)} />);
+    expect(code(edge.root, "css")).toHaveLength(262_144);
+    const over = await render(<idg-brand-export css={"x".repeat(262_145)} />);
+    expect(all(over.root, '[data-artefact="css"]')).toHaveLength(0);
   });
 
   it.each([

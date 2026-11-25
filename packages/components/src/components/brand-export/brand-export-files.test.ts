@@ -18,6 +18,8 @@ describe("fileSlug", () => {
     ["  spaced   out  ", "spaced-out"],
     ["Café Münch", "cafe-munch"],
     ["Crème brûlée", "creme-brulee"],
+    // A letter with no ASCII form leaves a hyphen where it was: this is the documented result.
+    ["Ünïcødé Brånd", "unic-de-brand"],
     ["a--b__c", "a-b-c"],
     ["Brand 2", "brand-2"],
     ["x", "x"],
@@ -47,6 +49,13 @@ describe("fileSlug", () => {
     expect(slug).toMatch(SAFE);
     expect(slug).not.toContain("..");
     expect(slug.length).toBeLessThanOrEqual(FILE_SLUG_MAX_LENGTH);
+  });
+
+  it("reads no more of a name than a file name can use, however long it is", () => {
+    const started = performance.now();
+    expect(fileSlug(`harbour${" ".repeat(5_000_000)}lights`)).toBe("harbour");
+    expect(fileSlug("é".repeat(5_000_000))).toBe("e".repeat(FILE_SLUG_MAX_LENGTH));
+    expect(performance.now() - started).toBeLessThan(200);
   });
 
   it.each([

@@ -112,6 +112,15 @@ describe("the notes of a theme", () => {
     expect(list?.omitted).toBe(20);
   });
 
+  it("count no more than they read when the array claims a length that is no number of entries", () => {
+    const claims = new Proxy([NOTE], {
+      get: (target, key) => (key === "length" ? 1e300 : Reflect.get(target, key)),
+    });
+    const list = readNotes({ notes: claims });
+    expect(Number.isSafeInteger(list?.omitted)).toBe(true);
+    expect(list?.omitted).toBe(0);
+  });
+
   it("are nothing for notes that are not an array, or a theme whose reads throw", () => {
     for (const theme of [
       undefined,
