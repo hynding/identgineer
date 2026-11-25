@@ -726,9 +726,18 @@ Dashes are counted from geometry: an upper bound of each shape's length in its o
 curve is no longer than the lines through its control points, an arc than its whole ellipse with its
 radii scaled up as SVG scales them), divided by the dash period, times the dashes in each repeat
 (half the lengths of an even dash array, all of an odd one, which repeats twice over), with a repeat
-more for each subpath, which starts the pattern afresh. Since a dash array inherits, through `use`
-too, every shape is counted at the shortest period and the most dashes in a repeat anywhere in the
-logo. The overdraw counts a stroke's dashes with the same function, so the two cannot disagree.
+more for each subpath, which starts the pattern afresh. A shape with a dash array of its own (an
+attribute, or a property of its `style`, which the sanitiser writes as one) is counted at that one.
+A shape that can inherit a dash array, from an ancestor or from a `use` that draws it (through a
+chain of `use` and groups, and into a mask's content from the mask's ancestors), is counted at the
+shortest period and the most dashes in a repeat anywhere in the logo; a definition is counted once
+however many times it is drawn, so it counts as dashed if any of its instances may be. Every other
+shape is solid, however finely another shape is dashed: one dashed ring beside 360 lines no longer
+makes each line cost dashes, as it did when every shape was counted at the logo's densest dashing,
+which refused 13 of 28 logos of curves or slanted lines with one ordinary dashed border, underline
+or ring added (a script of 800 cubics, a hatched emblem, a guilloche of 180 ellipses, 60 contour
+lines) and a sunburst under dashed rings, all drawn in 0.3 to 1.1 seconds. The overdraw counts a
+stroke's dashes with the same function, so the two cannot disagree.
 Dashing happens in the shape's own user space, so no transform changes the count; that is why
 `vector-effect` (whose non-scaling stroke is dashed after the transforms), percentage dashes and
 `em` and `ex` lengths, all of which depend on the page, are not kept. The cost model reads back only
@@ -764,12 +773,14 @@ rows, 11 uses of a line drawn back and forth ten times, 65 of an open path round
 
 The weight does not grow with the tiles a shape touches, so a dense dashed texture can be refused
 although it draws fast: 200 short diagonal lines across a disc, dashed `2 2` (about 34,000 dashes),
-cost 26,210 at one a dash, and over the limit at ten, yet take 0.5 to 0.8 seconds as such an image;
-240 lines dashed `1 1`, 0.8 to 0.9. Charging a dash by the share of the tiles its shape touches
-would accept them, but a share counted short would let the slow drawings above back in, so it is
-not done. Draw such a texture with fewer, longer dashes, or with its dashes as segments of their
-own (the 34,000 dashes above as subpaths of four paths, 400 KB, cost 19,151 and take 1.1 to 1.3
-seconds). The hostile corpus keeps three such textures as refusals.
+cost 26,210 at one a dash and 198,174 at ten, just within the limit, and take 0.5 to 0.8 seconds
+as such an image; 240 lines dashed `1 1` are over it, yet take 0.8 to 1.1, and so are 60 thin
+ellipses dashed `3 2` in a guilloche (5,743 each), which take about a second. Charging a dash by
+the share of the tiles its shape touches would accept them, but a share counted short would let
+the slow drawings above back in, so it is not done. Draw such a texture with fewer, longer dashes,
+or with its dashes as segments of their own (the 34,000 dashes above as subpaths of four paths,
+400 KB, cost 19,151 and take 1.1 to 1.3 seconds). The hostile corpus keeps two such textures as
+refusals, and the 200 lines as accepted.
 
 The length and the period hold over every reading Chromium can make of the numbers, not only the
 exact one, and so does the box, to within the few single-precision steps a point can be read away.
@@ -852,7 +863,13 @@ the `use` that draws it):
   Bézier curve's length is bounded by the control polygons of its eighths, a small arc's (one
   drawn with the small-arc flag, which turns at most half way round its ellipse) by pi over two
   times its chord times the ratio of its radii, so a nearly flat arc of a huge radius, as editors
-  write one, costs about its chord; a large arc counts as its whole ellipse.
+  write one (a chord of 800 on a radius of 50,000), costs about its chord. That holds only while
+  the chord, as Chromium may read it, is at least 2^-16 of the larger radius and of the
+  coordinates of its ends (single precision holds a point far out less finely): Chromium works
+  an arc out in single precision, and a chord about 2^-24 of the radius can come out turning the
+  other way, a whole turn less a hair, so it strokes the whole ellipse
+  (`M500 500a999999 999999 0 0 1 0.01 0` paints a line across the image). A shorter chord, like
+  a large arc, counts as the whole ellipse.
 - **Stroke ends.** Every join and every cap is outline the rasteriser walks, and on a wide stroke
   it is long: a round join or cap is half a circle of the stroke's width, a square cap twice the
   width, a miter join up to the miter limit times it. Each segment is charged a join and each
@@ -915,7 +932,16 @@ the limit in 37 turns (3,212 quadratics), 2.0 in 7 and 2.5 to 2.7 in one (4,420,
 out of the ring). Tiny curves scattered over the whole image in one path and drawn again by `use`
 are bounded by the drawing cost, not this weight: the costliest took 2.0 to 3.1 seconds. The
 hostile corpus keeps huge circles, ellipses, arcs, rounded rectangles and dashed circles through
-the image as refusals. Of 9,000 generated dashed logos in editors' styles, none changed outcome.
+the image as refusals. Small arcs of radius 999,999 with chords of 0.01, which Chromium strokes as
+whole circles, were charged by their chord: 262 in one path took 8.7 to 17.2 seconds (turned by a
+transform, the dearest). Over some 170,000 small arcs drawn alone, across radii from 10 to
+999,999, radius ratios to 100,000, turned ellipses and paths, chords in eight directions, both
+sweeps and starts from 0.5 to 900,000, Chromium drew the whole ellipse only for chords up to
+2^-23.6 of the larger radius; at 2^-16, the costliest now accepted (42 of radius 10,000 with
+chords of 0.0001, stroked whole, and 262 of radius 999,999 with chords of 16, drawn small) take
+0.3 to 0.43 seconds, and the corpus keeps the slow ones as refusals. Of 9,000 generated dashed logos
+in editors' styles, none changed outcome against `main`, counted again once a dash array charged
+only the shapes it reaches.
 Real logos pay little for it: emblems of 8,000 stroked cubics come to 16% of the overdraw, finely
 dashed rings to 9%, and rosettes of 1,500 and 2,000 quadratics in 7 to 37 turns, which take 1.0 to
 1.6 seconds, to 21% to 37%.
@@ -1246,9 +1272,9 @@ the page puts it, at the size the page gives it). Text in a `title` or `desc` is
 text, so a consumer that shows it must still treat it as text. Colours set only by CSS are lost
 (see above).
 
-The tests hold it to that: a hostile corpus of 366 files (`src/__fixtures__/hostile-svg`, one
-technique each, with the expected outcome in `expectations.json`: the error code for each of the 165
-refused, and every removal, by element, attribute and reason, for each of the 201 accepted, 40 of
+The tests hold it to that: a hostile corpus of 382 files (`src/__fixtures__/hostile-svg`, one
+technique each, with the expected outcome in `expectations.json`: the error code for each of the 180
+refused, and every removal, by element, attribute and reason, for each of the 202 accepted, 40 of
 them with a clip path rewritten as a mask, 39 of which keep that mask in the output: in the
 fortieth, the rewritten clip path was the clip path of another clip path that is then emptied, so
 nothing is left to use it) and
