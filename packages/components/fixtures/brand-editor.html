@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en" data-theme="aurora" data-design="flat" data-ux="comfortable">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>brand editor fixture</title>
+    <link rel="stylesheet" href="/tokens/index.css" />
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/fixtures/brand.css" />
+    <script type="module" src="/build/identgineer.esm.js"></script>
+    <!-- The kits come from /fixtures/brand-data.json, which the browser test answers; the store is a fake in brand-editor.js. -->
+    <script type="module" src="/fixtures/brand-editor.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Brand editor</h1>
+
+      <section id="new" aria-labelledby="new-title">
+        <h2 id="new-title">A new kit</h2>
+        <idg-brand-editor id="editor-new" heading-level="3" label="New brand kit">
+        </idg-brand-editor>
+      </section>
+
+      <section id="existing" aria-labelledby="existing-title">
+        <h2 id="existing-title">A stored kit</h2>
+        <idg-brand-editor
+          id="editor-harbour"
+          data-kit-source="harbour"
+          document-id="harbour-doc"
+          heading-level="3"
+          label="Harbour Lights brand kit"
+        ></idg-brand-editor>
+      </section>
+
+      <section id="untrusted" aria-labelledby="untrusted-title">
+        <h2 id="untrusted-title">An untrusted kit</h2>
+        <idg-brand-editor
+          id="editor-hostile"
+          data-kit-source="hostile"
+          heading-level="3"
+          label="Untrusted brand kit"
+        ></idg-brand-editor>
+      </section>
+    </main>
+  </body>
+</html>

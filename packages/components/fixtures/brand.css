@@ -2,7 +2,8 @@
    whole row, as they would in the page of a brand guide. */
 idg-brand-swatches,
 idg-brand-guidelines,
-idg-brand-export {
+idg-brand-export,
+idg-brand-editor {
   flex: 1 1 100%;
   min-inline-size: 0;
 }
