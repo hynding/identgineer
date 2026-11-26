@@ -24,6 +24,23 @@ h2 {
   overflow-wrap: anywhere;
 }
 
+/* A bare native control is as wide as its size attribute in the browser's own font, which follows the
+   browser's text size and not the page's: a text field of 20 characters is 377px at 200%. It is no
+   wider than what it is in, so it does not take the page past a narrow window. A percentage maximum
+   changes nothing where there is room, nor to what sizes the control by its content. */
+input,
+select,
+textarea,
+button {
+  max-inline-size: 100%;
+}
+
+/* A wrapper around a field in a row of a form is a flex item, which is no narrower than the field's
+   own width unless it may be: it may, so the field's maximum above holds inside it too. */
+form:not(.stack) > div {
+  min-inline-size: 0;
+}
+
 section:not(.stack),
 form:not(.stack) {
   display: flex;
