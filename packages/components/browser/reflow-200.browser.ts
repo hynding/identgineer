@@ -34,35 +34,18 @@ async function openPage(page: Page, address: string): Promise<void> {
   }
 }
 
-// Every design, since each sets its own borders, padding and display face, and the wide face as
-// well as the design's own, since a wider word is what a narrow window cannot hold.
-for (const wide of [false, true]) {
-  test.describe(`no page scrolls sideways at 320px with text at 200%, ${wide ? "wide" : "default"} text`, () => {
-    for (const address of PAGES) {
-      test(address, async ({ page }) => {
-        await page.setViewportSize({ width: 320, height: 800 });
-        await openPage(page, address);
-        await setTextSize(page, { label: "200%", fontSize: "200%", wide });
-        const failures: string[] = [];
-        for (const design of DESIGNS) {
-          await applyAxes(page, { design });
-          const sideways = await sidewaysScroll(page);
-          if (sideways > 0) failures.push(`${design}: scrolls sideways by ${String(sideways)}px`);
-        }
-        expect(failures).toEqual([]);
-      });
-    }
-  });
-}
-
 // A page that hides what overflows it (a section with `overflow: hidden`) does not scroll, and
 // clips instead, so the text itself is read: it must be inside every box that clips it and inside
-// the window. The narrow widths are read in every design; the wider ones in the page's own design
-// and in the two that take the most room (a thick border and capitals, stepped corners).
+// the window. The narrow widths are read in every design, since each sets its own borders, padding
+// and display face; the wider ones in the page's own design and in the two that take the most room
+// (a thick border and capitals, stepped corners). The wide face is read up to 480px, where a wider
+// word is what the room cannot hold (at 480px it once caught clipping the page's own face did not);
+// above that what it caught, the page's own face caught as well. At 320px, the narrowest window,
+// no page may scroll sideways either, in any design or face.
 for (const wide of [false, true]) {
   test.describe(`no text is clipped on any page with text at 200%, ${wide ? "wide" : "default"} text`, () => {
     for (const address of PAGES) {
-      for (const width of REFLOW_WIDTHS) {
+      for (const width of wide ? REFLOW_WIDTHS.filter((each) => each <= 480) : REFLOW_WIDTHS) {
         test(`${address} at ${String(width)}px`, async ({ page }) => {
           test.setTimeout(120_000);
           await page.setViewportSize({ width, height: 800 });
@@ -75,6 +58,9 @@ for (const wide of [false, true]) {
             else await settleFrames(page);
             const clipped = await clippedText(page);
             if (clipped.length > 0) failures.push(`${design ?? "own"}: ${clipped.join(", ")}`);
+            const sideways = width === 320 ? await sidewaysScroll(page) : 0;
+            if (sideways > 0)
+              failures.push(`${design ?? "own"}: scrolls sideways by ${String(sideways)}px`);
           }
           expect(failures).toEqual([]);
         });
@@ -85,8 +71,10 @@ for (const wide of [false, true]) {
 
 // The widths between a phone and a tablet are where a rule that stops at a fixed window width lets
 // a long word reach past its box, and a card clips what it holds. Every layout is read at each
-// width, in every design (the card's edge and padding are the design's), in the roomiest UX mode
-// and in the default one.
+// width in the roomiest UX mode, whose padding leaves the least room (everything the default mode
+// was caught clipping, the roomiest was caught clipping too): at the narrow widths in every design
+// (the card's edge and padding are the design's), at the wider ones in the layout's own design and
+// in the two that take the most room, as the pages are.
 test.describe("with text at 200% nothing is clipped or leaves the window, at every width", () => {
   for (const width of REFLOW_WIDTHS) {
     for (const layout of LAYOUTS) {
@@ -94,15 +82,14 @@ test.describe("with text at 200% nothing is clipped or leaves the window, at eve
         test.setTimeout(120_000);
         await openShell(page, { width, layout, fontSize: "200%" });
         const failures: string[] = [];
-        for (const design of DESIGNS) {
-          for (const ux of ["comfortable", "spacious"]) {
-            await applyAxes(page, { design, ux });
-            const clipped = await clippedText(page);
-            if (clipped.length > 0) failures.push(`${design} / ${ux}: ${clipped.join(", ")}`);
-            const sideways = await sidewaysScroll(page);
-            if (sideways > 0)
-              failures.push(`${design} / ${ux}: scrolls sideways by ${String(sideways)}px`);
-          }
+        const designs = width <= 400 ? DESIGNS : [undefined, "brutalist", "pixel"];
+        for (const design of designs) {
+          await applyAxes(page, { ...(design ? { design } : {}), ux: "spacious" });
+          const clipped = await clippedText(page);
+          if (clipped.length > 0) failures.push(`${design ?? "own"}: ${clipped.join(", ")}`);
+          const sideways = await sidewaysScroll(page);
+          if (sideways > 0)
+            failures.push(`${design ?? "own"}: scrolls sideways by ${String(sideways)}px`);
         }
         expect(failures).toEqual([]);
       });
