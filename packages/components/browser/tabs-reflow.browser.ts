@@ -398,66 +398,108 @@ test("a word wider than a tab in a narrow column stays inside the tab, in every 
   expect(failures).toEqual([]);
 });
 
-// What a tab holds is laid out as it always was, as items in a row centred across the tab with the
-// tab's gap between them: an icon beside a word, a word beside a badge. The reference puts them
-// back in the tab's own row, as they were before the tab had a label element.
-test.describe("a tab holding an icon or a badge lays them out as it did", () => {
+// What a tab holds is laid out by the tab's part as it always was: its items (an icon, a run of
+// text, a badge) are the part's own flex items, so a page's style for the part lays them out, in a
+// row with a gap, in a column, on a baseline or wrapping. Each is compared with the tab's rules as
+// they were before a tab could wrap (one line, as wide as what it holds, no maximum), and the items
+// must stand one after another along the part's direction.
+const PART_STYLES = [
+  "gap: 12px",
+  "flex-direction: column; gap: 4px",
+  "align-items: baseline",
+  "flex-wrap: wrap",
+] as const;
+const BEFORE = `
+  :host, :host([orientation]) { max-inline-size: none; }
+  .tab, :host([orientation]) .tab {
+    inline-size: auto;
+    max-inline-size: none;
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+  .label { display: contents; }`;
+test.describe("a tab holding an icon or a badge lays them out as its part says, as it did", () => {
   for (const width of [375, 1280]) {
     test(`at ${String(width)}px, in every design`, async ({ page }) => {
+      test.setTimeout(90_000);
       await open(page, width);
-      await page.evaluate(() => {
-        const gap = new CSSStyleSheet();
-        gap.replaceSync("#placed idg-tab::part(tab) { gap: 12px; }");
-        document.adoptedStyleSheets = [...document.adoptedStyleSheets, gap];
+      const part = await page.evaluate(() => {
+        const sheet = new CSSStyleSheet();
+        document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+        return document.adoptedStyleSheets.length - 1;
       });
-      await placeTabs(page, "", [["<icon>", "Inbox"], ["Sent ", "<badge>3"], ["Plain"]]);
-      const layout = () =>
-        page.evaluate(() =>
-          [...document.querySelectorAll("#placed idg-tab")].map((tab) => {
+      await placeTabs(page, "", [
+        ["<icon>", "Inbox"],
+        ["Sent ", "<badge>3"],
+        ["Inbox", "<icon>"],
+        ["Plain"],
+      ]);
+      const layout = (column: boolean) =>
+        page.evaluate((stacked) => {
+          const round = (n: number) => Math.round(n * 2) / 2;
+          return [...document.querySelectorAll("#placed idg-tab")].map((tab) => {
             const box = tab.shadowRoot?.querySelector(".tab")?.getBoundingClientRect();
             if (!box) throw new Error("no tab");
             const parts = [...tab.childNodes].flatMap((node) => {
               const range = document.createRange();
               range.selectNodeContents(node);
-              const part =
+              const rect =
                 node instanceof Element
                   ? node.getBoundingClientRect()
                   : range.getBoundingClientRect();
-              return part.width > 0
-                ? [
-                    [part.left - box.left, part.top - box.top, part.width, part.height]
-                      .map((n) => Math.round(n * 2) / 2)
-                      .join(","),
-                  ]
-                : [];
+              return rect.width > 0 ? [rect] : [];
             });
-            return `${(Math.round(box.width * 2) / 2).toString()}x${(Math.round(box.height * 2) / 2).toString()} ${parts.join(" ")}`;
-          }),
-        );
+            const inOrder = parts.every((rect, index) => {
+              const before = parts[index - 1];
+              if (!before) return true;
+              return stacked ? rect.top >= before.bottom - 0.5 : rect.left >= before.right - 0.5;
+            });
+            const where = parts
+              .map((rect) =>
+                [rect.left - box.left, rect.top - box.top, rect.width, rect.height]
+                  .map(round)
+                  .join(","),
+              )
+              .join(" ");
+            return `${String(round(box.width))}x${String(round(box.height))} ${where}${inOrder ? "" : " out of order"}`;
+          });
+        }, column);
       const failures: string[] = [];
-      for (const design of DESIGNS) {
-        await applyAxes(page, { design });
-        const found = await layout();
-        await page.evaluate(() => {
-          for (const tab of document.querySelectorAll("#placed idg-tab")) {
-            const sheet = new CSSStyleSheet();
-            sheet.replaceSync(".label { display: contents; }");
-            if (tab.shadowRoot)
-              tab.shadowRoot.adoptedStyleSheets = [...tab.shadowRoot.adoptedStyleSheets, sheet];
-          }
-        });
-        await settleFrames(page);
-        const expected = await layout();
-        await page.evaluate(() => {
-          for (const tab of document.querySelectorAll("#placed idg-tab")) {
-            if (tab.shadowRoot)
-              tab.shadowRoot.adoptedStyleSheets = tab.shadowRoot.adoptedStyleSheets.slice(0, -1);
-          }
-        });
-        found.forEach((tab, index) => {
-          if (tab !== expected[index])
-            failures.push(`${design}: ${tab}, was ${String(expected[index])}`);
-        });
+      for (const style of PART_STYLES) {
+        await page.evaluate(
+          ({ index, rule }) => {
+            document.adoptedStyleSheets[index]?.replaceSync(
+              `#placed idg-tab::part(tab) { ${rule} }`,
+            );
+          },
+          { index: part, rule: style },
+        );
+        const column = style.includes("column");
+        for (const design of DESIGNS) {
+          await applyAxes(page, { design });
+          const found = await layout(column);
+          await page.evaluate((before) => {
+            for (const tab of document.querySelectorAll("#placed idg-tab")) {
+              const sheet = new CSSStyleSheet();
+              sheet.replaceSync(before);
+              if (tab.shadowRoot)
+                tab.shadowRoot.adoptedStyleSheets = [...tab.shadowRoot.adoptedStyleSheets, sheet];
+            }
+          }, BEFORE);
+          await settleFrames(page);
+          const expected = await layout(column);
+          await page.evaluate(() => {
+            for (const tab of document.querySelectorAll("#placed idg-tab")) {
+              if (tab.shadowRoot)
+                tab.shadowRoot.adoptedStyleSheets = tab.shadowRoot.adoptedStyleSheets.slice(0, -1);
+            }
+          });
+          await settleFrames(page);
+          found.forEach((tab, index) => {
+            if (tab !== expected[index] || tab.endsWith("out of order"))
+              failures.push(`${design}, ${style}: ${tab}, was ${String(expected[index])}`);
+          });
+        }
       }
       expect(failures).toEqual([]);
     });

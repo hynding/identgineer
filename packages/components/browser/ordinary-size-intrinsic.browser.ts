@@ -28,10 +28,11 @@ const tabs = (
   orientation: "horizontal" | "vertical",
   labels: readonly (string | readonly Markup[])[],
   panels: string[],
+  attributes: Readonly<Record<string, string>> = {},
 ): Markup =>
   element(
     "idg-tabs",
-    { label: "Sections", orientation },
+    { label: "Sections", orientation, ...attributes },
     ...labels.map((label, index) =>
       element(
         "idg-tab",
@@ -49,6 +50,12 @@ const MIXED: readonly (readonly Markup[])[] = [
   [element("img", { src: "/fixtures/avatar.svg", width: "24", height: "24", alt: "" }), "Inbox"],
   ["Sent ", element("idg-badge", {}, "3")],
 ];
+
+/** Styles a page may give a tab's part, which lay out what the tab holds, by the tabs' `data-part`. */
+const PART_STYLES: Readonly<Record<string, string>> = {
+  column: "flex-direction: column; gap: 4px",
+  baseline: "align-items: baseline",
+};
 
 const COMPONENTS: Readonly<Record<string, Markup>> = {
   badge: element("idg-badge", { variant: "warning" }, "In review today"),
@@ -82,6 +89,12 @@ const COMPONENTS: Readonly<Record<string, Markup>> = {
   "short vertical tabs": tabs("vertical", ["A", "B"], ["Hi", "Yo"]),
   "tabs with an icon and a badge": tabs("horizontal", MIXED, ["x", "y"]),
   "vertical tabs with an icon and a badge": tabs("vertical", MIXED, ["x", "y"]),
+  "tabs with an icon and a badge in a column": tabs("horizontal", MIXED, ["x", "y"], {
+    "data-part": "column",
+  }),
+  "tabs with an icon and a badge on a baseline": tabs("horizontal", MIXED, ["x", "y"], {
+    "data-part": "baseline",
+  }),
   progress: element("idg-progress", { label: "Sprint fourteen", value: "64", "show-value": "" }),
   stat: element("idg-stat", { label: "Revenue", value: "$48.2k", delta: "12.4%", direction: "up" }),
   button: element("idg-button", {}, "Save all changes"),
@@ -163,7 +176,10 @@ const CONTEXTS: Readonly<
 // this branch's build to serve (CI builds one tree, and a second build of main's components for a
 // test alone is not something it has), so each rule the adjustments changed is set back here to
 // main's value, in a sheet adopted after the component's own, which therefore wins at an equal
-// specificity. It neutralises, and must be kept in step with:
+// specificity. The probe sees only what this sheet sets back: a narrow adjustment it does not undo
+// is in both measurements and so is never compared, and a component with no entry is compared with
+// itself. Every new adjustment for a narrow window or a large text size needs its entry here. It
+// neutralises, and must be kept in step with:
 // - idg-badge: the host's and the badge's percentage maximum, the badge's max-content width and
 //   break-word (main: one line, nowrap, the label cut off with an ellipsis), the padding's reach;
 // - idg-avatar-group: the host's and the row's maximum, its max-content width and its wrapping;
@@ -365,9 +381,9 @@ function sizes(page: Page): Promise<Size[]> {
         }
         if (node instanceof Element && node.getRootNode() instanceof ShadowRoot) {
           // A box the component draws (a background or a border), past the component or the column
-          // it is in; and a
-          // tab, which is drawn when it is chosen, hovered or focused, past its list by more than
-          // the pixel a tab is allowed, so that a fraction of one does not wrap its label.
+          // it is in; and a tab, which is drawn when it is chosen, hovered or focused, past its list
+          // by more than the pixel a tab is allowed, so that a fraction of one does not wrap its
+          // label.
           const tabs = node.classList.contains("tab")
             ? (node.getRootNode() as ShadowRoot).host.closest("idg-tabs")
             : null;
@@ -479,6 +495,15 @@ for (const width of [320, 375, 768]) {
         await page.setViewportSize({ width, height: 900 });
         await page.goto("/fixtures/surfaces.html");
         await hydrated(page);
+        await page.evaluate((styles) => {
+          const sheet = new CSSStyleSheet();
+          sheet.replaceSync(
+            Object.entries(styles)
+              .map(([name, style]) => `[data-part="${name}"] idg-tab::part(tab) { ${style} }`)
+              .join("\n"),
+          );
+          document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+        }, PART_STYLES);
         const failures: string[] = [];
         for (const design of DESIGNS) {
           await applyAxes(page, { design });
