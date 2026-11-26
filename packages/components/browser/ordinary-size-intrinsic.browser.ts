@@ -24,15 +24,31 @@ const element = (
   ...children: Markup[]
 ): Markup => [name, attributes, ...children];
 
-const tabs = (orientation: "horizontal" | "vertical", labels: string[], panels: string[]): Markup =>
+const tabs = (
+  orientation: "horizontal" | "vertical",
+  labels: readonly (string | readonly Markup[])[],
+  panels: string[],
+): Markup =>
   element(
     "idg-tabs",
     { label: "Sections", orientation },
-    ...labels.map((label, index) => element("idg-tab", { value: String(index) }, label)),
+    ...labels.map((label, index) =>
+      element(
+        "idg-tab",
+        { value: String(index) },
+        ...(typeof label === "string" ? [label] : label),
+      ),
+    ),
     ...panels.map((text, index) =>
       element("idg-tab-panel", { value: String(index) }, element("p", {}, text)),
     ),
   );
+
+/** A tab holding an icon and a word, and one holding a word and a badge. */
+const MIXED: readonly (readonly Markup[])[] = [
+  [element("img", { src: "/fixtures/avatar.svg", width: "24", height: "24", alt: "" }), "Inbox"],
+  ["Sent ", element("idg-badge", {}, "3")],
+];
 
 const COMPONENTS: Readonly<Record<string, Markup>> = {
   badge: element("idg-badge", { variant: "warning" }, "In review today"),
@@ -64,6 +80,8 @@ const COMPONENTS: Readonly<Record<string, Markup>> = {
     ["Your name, picture and pronouns.", "b", "c"],
   ),
   "short vertical tabs": tabs("vertical", ["A", "B"], ["Hi", "Yo"]),
+  "tabs with an icon and a badge": tabs("horizontal", MIXED, ["x", "y"]),
+  "vertical tabs with an icon and a badge": tabs("vertical", MIXED, ["x", "y"]),
   progress: element("idg-progress", { label: "Sprint fourteen", value: "64", "show-value": "" }),
   stat: element("idg-stat", { label: "Revenue", value: "$48.2k", delta: "12.4%", direction: "up" }),
   button: element("idg-button", {}, "Save all changes"),
@@ -151,12 +169,14 @@ const CONTEXTS: Readonly<
 // - idg-avatar-group: the host's and the row's maximum, its max-content width and its wrapping;
 // - idg-tab: the host's and the tab's maximum (to the list's end padding, none beside a vertical
 //   list, the list's width under 20rem), the max-content width, break-word, the padding's reach,
-//   and the label's zero minimum (main had no label element: its text was an anonymous flex item);
+//   and the label element, which main had not (display: contents puts what is slotted back in the
+//   tab's own row);
 // - idg-tabs: the vertical list's calc-size minimum, the drawing of a vertical list above its panel
 //   under 20rem, and the panel's break-word;
 // - idg-progress: the label's zero minimum and the label's and value's break-word;
 // - idg-stat: the delta's maximum and break-word;
-// - idg-button: the host's and the control's maximum and the padding's reach;
+// - idg-button: the host's and the control's maximum, their minimum (no narrower than the longest
+//   word, unless the window is narrow against the text) and the padding's reach;
 // - idg-card: the padding's reach, the heading's break-word and the card's break-word up to 40rem
 //   (main: break-word and the smaller padding under 28rem);
 // - idg-select: the padding's, the chevron room's, the invalid mark's and the chevron's reach;
@@ -179,7 +199,7 @@ const REFERENCE: Readonly<Record<string, string>> = {
       white-space: nowrap;
       overflow-wrap: normal;
     }
-    .label { min-inline-size: auto; }`,
+    .label { display: contents; }`,
   "idg-tabs": `
     :host([orientation="vertical"]) .tabs { flex-direction: row; align-items: flex-start; }
     :host([orientation="vertical"]) .list {
@@ -197,8 +217,9 @@ const REFERENCE: Readonly<Record<string, string>> = {
     .value { overflow-wrap: normal; }`,
   "idg-stat": `.delta { max-inline-size: none; overflow-wrap: normal; }`,
   "idg-button": `
-    :host { max-inline-size: none; }
+    :host { min-inline-size: auto; max-inline-size: none; }
     .control {
+      min-inline-size: auto;
       max-inline-size: none;
       padding-inline: calc(var(--idg-density-control-padding-inline) * var(--_padding-scale));
     }`,
@@ -226,11 +247,14 @@ interface Size {
   /** Whether the host is as wide as its content: an inline box, or in a parent that sizes it so. */
   contentSized: boolean;
   /**
-   * How far, in pixels and summed over every run of text, the component's text reaches past the box
-   * it is laid out in, its host or the column it is in; and how far a box the component draws
-   * reaches past that column (a tab, past its list).
+   * How far, in pixels and summed over every run of text, the component's text reaches past the
+   * component, the column it is in, or a box inside it that clips it; and how far a box the
+   * component draws reaches past the component or the column (a tab, past its list by more than a
+   * pixel). Text that only stands in the component's own padding is not counted: it is not broken.
    */
   overflow: number;
+  /** Whether the component is a card whose heading has a word wider than the heading's box. */
+  headingWordWider: boolean;
 }
 
 async function place(page: Page, component: Markup): Promise<void> {
@@ -301,25 +325,22 @@ function sizes(page: Page): Promise<Size[]> {
         const next: Node | null = element.assignedSlot ?? element.parentNode;
         return next instanceof ShadowRoot ? next.host : next instanceof Element ? next : null;
       };
-      // The box a run of text is laid out in: the nearest that is not inline or display: contents.
-      const container = (text: Text): Edges => {
-        let element: Element | null = text.assignedSlot ?? text.parentElement;
-        while (element && ["inline", "contents"].includes(getComputedStyle(element).display)) {
-          element = up(element);
+      // Every box between a run of text and the host that clips what leaves it, by its padding box.
+      const clips = (text: Text): Edges[] => {
+        const found: Edges[] = [];
+        for (
+          let element: Element | null = text.assignedSlot ?? text.parentElement;
+          element;
+          element = up(element)
+        ) {
+          if (getComputedStyle(element).overflowX !== "visible") {
+            const box = element.getBoundingClientRect();
+            const left = box.left + element.clientLeft;
+            found.push({ left, right: left + element.clientWidth });
+          }
+          if (element === host) break;
         }
-        if (!element) return own;
-        const style = getComputedStyle(element);
-        const box = element.getBoundingClientRect();
-        return {
-          left:
-            box.left +
-            Number.parseFloat(style.borderLeftWidth) +
-            Number.parseFloat(style.paddingLeft),
-          right:
-            box.right -
-            Number.parseFloat(style.borderRightWidth) -
-            Number.parseFloat(style.paddingRight),
-        };
+        return found;
       };
       const drawn = (style: CSSStyleDeclaration) =>
         style.backgroundColor !== "rgba(0, 0, 0, 0)" ||
@@ -330,15 +351,18 @@ function sizes(page: Page): Promise<Size[]> {
         if (node instanceof Text && node.data.trim()) {
           const range = document.createRange();
           range.selectNodeContents(node);
-          const limit = narrower(narrower(own, room), container(node));
+          const limits = [narrower(own, room), ...clips(node)];
           let most = 0;
           for (const line of range.getClientRects()) {
-            if (line.width > 0) most = Math.max(most, past(line, limit));
+            if (line.width > 0) {
+              for (const limit of limits) most = Math.max(most, past(line, limit));
+            }
           }
           overflow += most;
         }
         if (node instanceof Element && node.getRootNode() instanceof ShadowRoot) {
-          // A box the component draws (a background or a border), past the column it is in; and a
+          // A box the component draws (a background or a border), past the component or the column
+          // it is in; and a
           // tab, which is drawn when it is chosen, hovered or focused, past its list by more than
           // the pixel a tab is allowed, so that a fraction of one does not wrap its label.
           const tabs = node.classList.contains("tab")
@@ -349,18 +373,43 @@ function sizes(page: Page): Promise<Size[]> {
             const beyond = past(node.getBoundingClientRect(), list.getBoundingClientRect());
             if (beyond > 1.01) overflow += beyond;
           } else if (drawn(getComputedStyle(node)))
-            overflow += past(node.getBoundingClientRect(), room);
+            overflow += past(node.getBoundingClientRect(), narrower(own, room));
         }
         if (node instanceof Element && node.shadowRoot) walk(node.shadowRoot);
         node.childNodes.forEach(walk);
       };
       walk(host);
+      // A card's heading: whether its longest word is wider than the heading's content box.
+      let headingWordWider = false;
+      const heading =
+        host.localName === "idg-card" ? host.shadowRoot?.querySelector(".heading") : null;
+      if (heading) {
+        const style = getComputedStyle(heading);
+        const context = document.createElement("canvas").getContext("2d");
+        if (!context) throw new Error("no canvas");
+        context.font = style.font;
+        const text = heading.textContent;
+        const shown = style.textTransform === "uppercase" ? text.toUpperCase() : text;
+        const spacing = Number.parseFloat(style.letterSpacing) || 0;
+        const widest = Math.max(
+          ...shown
+            .split(/\s+/)
+            .filter(Boolean)
+            .map((word) => context.measureText(word).width + spacing * word.length),
+        );
+        const content =
+          heading.clientWidth -
+          Number.parseFloat(style.paddingLeft) -
+          Number.parseFloat(style.paddingRight);
+        headingWordWider = widest > content + 0.5;
+      }
       return {
         context: parent.dataset.context ?? "",
         width: own.width,
         height: own.height,
         contentSized,
         overflow,
+        headingWordWider,
       };
     }),
   );
@@ -389,11 +438,19 @@ async function withReference(page: Page): Promise<void> {
   await settleFrames(page);
 }
 
-// Every design, since each sets its own borders, padding and faces, at the widths from the
-// narrowest window to a desktop.
-for (const width of [320, 375, 768, 1280]) {
+// Every design, since each sets its own borders, padding and faces, in the narrowest window and a
+// tablet's (above that nothing changes the components again), and at 375px for the card and the
+// vertical tabs, whose rules change between the two.
+const AT_375 = new Set([
+  "card",
+  "vertical tabs",
+  "short vertical tabs",
+  "vertical tabs with an icon and a badge",
+]);
+for (const width of [320, 375, 768]) {
   test.describe(`at ${String(width)}px and 100% text a component is the size it was in a parent sized by its content or a narrow column`, () => {
     for (const [name, component] of Object.entries(COMPONENTS)) {
+      if (width === 375 && !AT_375.has(name)) continue;
       test(name, async ({ page }) => {
         test.setTimeout(120_000);
         await page.setViewportSize({ width, height: 900 });
@@ -420,7 +477,16 @@ for (const width of [320, 375, 768, 1280]) {
               reference.overflow > 1 &&
               size.overflow < reference.overflow - 0.5 &&
               (sameWidth || size.contentSized);
-            if (!(sameWidth && sameHeight) && !mended) {
+            // The one exception: a card's heading breaks a word wider than its box, at any width,
+            // where it used to stand in the card's padding. It is what keeps a heading word from
+            // being clipped by the card's edge with a large root font size, which no media query
+            // sees. Only a card, only taller, and only where a heading word was wider than its box.
+            const heading =
+              component[0] === "idg-card" &&
+              sameWidth &&
+              size.height > reference.height &&
+              reference.headingWordWider;
+            if (!(sameWidth && sameHeight) && !mended && !heading) {
               failures.push(
                 `${design}, ${size.context}: ${String(Math.round(size.width))}x${String(Math.round(size.height))}, was ${String(Math.round(reference.width))}x${String(Math.round(reference.height))}${size.overflow > 1 || reference.overflow > 1 ? `, text ${String(Math.round(size.overflow))}px past it, was ${String(Math.round(reference.overflow))}px` : ""}`,
               );

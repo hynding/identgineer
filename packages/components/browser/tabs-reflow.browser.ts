@@ -316,3 +316,144 @@ test("at 320px with the browser's text at 200% every horizontal tab is inside th
   }
   expect(failures).toEqual([]);
 });
+
+/** Builds tabs of the given labels, each a list of nodes, in a parent of the given style. */
+async function placeTabs(page: Page, style: string, labels: readonly (readonly string[])[]) {
+  await page.evaluate(
+    async ({ rule, tabs }) => {
+      document.querySelector("#placed")?.remove();
+      const parent = document.createElement("div");
+      parent.id = "placed";
+      parent.style.cssText = rule;
+      const host = document.createElement("idg-tabs");
+      host.setAttribute("label", "Placed");
+      tabs.forEach((parts, index) => {
+        const tab = document.createElement("idg-tab");
+        tab.setAttribute("value", String(index));
+        for (const part of parts) {
+          if (part === "<icon>") {
+            const icon = document.createElement("img");
+            icon.src = "/fixtures/avatar.svg";
+            icon.width = 24;
+            icon.height = 24;
+            icon.alt = "";
+            tab.append(icon);
+          } else if (part.startsWith("<badge>")) {
+            const badge = document.createElement("idg-badge");
+            badge.textContent = part.slice("<badge>".length);
+            tab.append(badge);
+          } else tab.append(part);
+        }
+        const panel = document.createElement("idg-tab-panel");
+        panel.setAttribute("value", String(index));
+        panel.textContent = "Panel";
+        host.append(tab, panel);
+      });
+      parent.append(host);
+      document.body.prepend(parent);
+      await customElements.whenDefined("idg-tabs");
+      await Promise.all([...parent.querySelectorAll("img")].map((image) => image.decode()));
+    },
+    { rule: style, tabs: labels },
+  );
+  await hydrated(page);
+  await settleFrames(page);
+}
+
+// A word wider than a tab in a narrow column breaks inside the tab, whose label may be narrower
+// than its longest word, and does not stand out on both sides of it.
+test("a word wider than a tab in a narrow column stays inside the tab, in every design", async ({
+  page,
+}) => {
+  await open(page, 1280);
+  await placeTabs(page, "inline-size: 60px", [
+    ["Internationalisation settings"],
+    ["Notifications"],
+  ]);
+  const failures: string[] = [];
+  for (const design of DESIGNS) {
+    await applyAxes(page, { design });
+    const outside = await page.evaluate(() =>
+      [...document.querySelectorAll("#placed idg-tab")].flatMap((tab) => {
+        const box = tab.shadowRoot?.querySelector(".tab")?.getBoundingClientRect();
+        if (!box) throw new Error("no tab");
+        const range = document.createRange();
+        range.selectNodeContents(tab);
+        return [...range.getClientRects()]
+          .filter(
+            (line) =>
+              line.width > 0 && (line.left < box.left - 0.5 || line.right > box.right + 0.5),
+          )
+          .map(() => tab.textContent.trim());
+      }),
+    );
+    if (outside.length > 0) failures.push(`${design}: ${[...new Set(outside)].join(", ")}`);
+  }
+  expect(failures).toEqual([]);
+});
+
+// What a tab holds is laid out as it always was, as items in a row centred across the tab with the
+// tab's gap between them: an icon beside a word, a word beside a badge. The reference puts them
+// back in the tab's own row, as they were before the tab had a label element.
+test.describe("a tab holding an icon or a badge lays them out as it did", () => {
+  for (const width of [375, 1280]) {
+    test(`at ${String(width)}px, in every design`, async ({ page }) => {
+      await open(page, width);
+      await page.evaluate(() => {
+        const gap = new CSSStyleSheet();
+        gap.replaceSync("#placed idg-tab::part(tab) { gap: 12px; }");
+        document.adoptedStyleSheets = [...document.adoptedStyleSheets, gap];
+      });
+      await placeTabs(page, "", [["<icon>", "Inbox"], ["Sent ", "<badge>3"], ["Plain"]]);
+      const layout = () =>
+        page.evaluate(() =>
+          [...document.querySelectorAll("#placed idg-tab")].map((tab) => {
+            const box = tab.shadowRoot?.querySelector(".tab")?.getBoundingClientRect();
+            if (!box) throw new Error("no tab");
+            const parts = [...tab.childNodes].flatMap((node) => {
+              const range = document.createRange();
+              range.selectNodeContents(node);
+              const part =
+                node instanceof Element
+                  ? node.getBoundingClientRect()
+                  : range.getBoundingClientRect();
+              return part.width > 0
+                ? [
+                    [part.left - box.left, part.top - box.top, part.width, part.height]
+                      .map((n) => Math.round(n * 2) / 2)
+                      .join(","),
+                  ]
+                : [];
+            });
+            return `${(Math.round(box.width * 2) / 2).toString()}x${(Math.round(box.height * 2) / 2).toString()} ${parts.join(" ")}`;
+          }),
+        );
+      const failures: string[] = [];
+      for (const design of DESIGNS) {
+        await applyAxes(page, { design });
+        const found = await layout();
+        await page.evaluate(() => {
+          for (const tab of document.querySelectorAll("#placed idg-tab")) {
+            const sheet = new CSSStyleSheet();
+            sheet.replaceSync(".label { display: contents; }");
+            if (tab.shadowRoot)
+              tab.shadowRoot.adoptedStyleSheets = [...tab.shadowRoot.adoptedStyleSheets, sheet];
+          }
+        });
+        await settleFrames(page);
+        const expected = await layout();
+        await page.evaluate(() => {
+          for (const tab of document.querySelectorAll("#placed idg-tab")) {
+            if (tab.shadowRoot)
+              tab.shadowRoot.adoptedStyleSheets = tab.shadowRoot.adoptedStyleSheets.slice(0, -1);
+          }
+        });
+        found.forEach((tab, index) => {
+          if (tab !== expected[index])
+            failures.push(`${design}: ${tab}, was ${String(expected[index])}`);
+        });
+      }
+      expect(failures).toEqual([]);
+    });
+  }
+});
