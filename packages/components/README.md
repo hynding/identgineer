@@ -107,7 +107,8 @@ a media query counts in follow them. A page that sets its own root font size (`h
 200% }`) gets the adjustments measured in the page's `rem`, the padding that gives way among them,
 but not the ones a media query switches, which counts in the browser's `rem` and not the page's: on
 such a page vertical tabs stay beside their panel, and up to a window of about 600px the panel
-shrinks to a few letters wide to make room for the list (19 to 116px in the demo's designs).
+narrows to make room for the list (about 20 to 135px in the demo's designs: 19 to 54px at 320px,
+about 100 to 135px from 400 to 560px).
 
 A card's heading breaks a word wider than its room inside itself at any window width and any text
 size, not only up to 40rem, since a heading's words are the widest a card holds. That is the one
@@ -126,8 +127,9 @@ tab is room like any other: a label longer than it wraps, where a badge's used t
 ellipsis and a tab's to run past the tab (a badge set to 60px was 30px tall with an ellipsis and is
 about 105px wrapped). CSS cannot tell a width you set from a narrow column without making the
 component a size container, which would change its size wherever it is sized by its content, so the
-ellipsis is not kept for one and not the other. At 320px a vertical list is a few pixels wider than
-it was, so that the selected tab stays inside the list's border, where it used to cross it.
+ellipsis is not kept for one and not the other. At 320px a vertical list is 4 to 11px wider than it
+was in most designs, and 23.5px in brutalist (123 to 146.5px), so that the selected tab stays inside
+the list's border, where it used to cross it.
 
 The vertical list's narrowest width and a button's are set with `calc-size()`. In an engine without
 it a vertical tab may cross its list's border as before, and a button's longest word may run past
@@ -1947,7 +1949,7 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   | dashboard              | event-table, table, pagination, stat, sparkline                                                                                                              |      67,842 |    168,624 |
   | consent and overlays   | consent-banner, consent-preferences, dialog, popover, tooltip, toast, toast-region                                                                           |      87,918 |    188,483 |
   | menus                  | menu, menu-group, menu-item, menu-separator, user-menu                                                                                                       |      49,796 |    126,820 |
-  | tabs                   | tabs, tab, tab-panel                                                                                                                                         |      33,016 |     89,272 |
+  | tabs                   | tabs, tab, tab-panel                                                                                                                                         |      32,827 |     89,076 |
   | accordion              | accordion, accordion-item                                                                                                                                    |      28,036 |     79,214 |
   | layout                 | stack, cluster, grid, cover, sidebar, switcher, layout, divider, card, breadcrumb, breadcrumb-item                                                           |      84,232 |    161,160 |
   | `idg-brand-logo`       | the logo, with the sanitiser                                                                                                                                 |     117,763 |    330,377 |
@@ -1960,7 +1962,7 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   minified) is in the logo's, the guide's, the export's and the editor's bundles (the export
   validates a kit with it), the generator in the export's and the editor's, and the emitters in the
   export's alone. The editor's row counts its own entry and chunks; a page with it also loads the
-  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 702,128
+  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 701,939
   bytes (663,801 before the editor), against 433,865 before the brand components and 536,437 on
   main.
 
