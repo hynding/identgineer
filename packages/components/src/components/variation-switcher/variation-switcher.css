@@ -4,6 +4,11 @@
      row, an inline block) it would be nothing. It is given the size of a small panel, or all of the
      room if there is less, so it fills a block or a cell as before and can still shrink. */
   min-inline-size: min(100%, var(--idg-size-m));
+  /* The minimum is a percentage, which is nothing while the host's own width is what sizes its
+     parent (a max-content grid track, a float, an absolutely positioned or fit-content box). Size
+     containment would then leave it no width at all, so it has an intrinsic one: the same room, or
+     the window if that is less. */
+  contain-intrinsic-inline-size: min(var(--idg-size-m), 100vw);
   container-type: inline-size;
   container-name: idg-variation-switcher;
   color: var(--idg-color-text);

@@ -1164,6 +1164,82 @@ test.describe("idg-brand-editor reflow", () => {
     });
   }
 
+  // The narrowest form there is, 320px with 200% text, is about 5.5em wide. There the remove
+  // button's label keeps each word whole, but a legend does not in the designs that set it in
+  // capitals or a wide display face (brutalist, pixel): its widest word, at the larger display
+  // step, needs about 7em of form, and `overflow-wrap: anywhere` breaks it inside itself instead of
+  // letting it leave the group. Legends are held to whole words from 8em, and the narrower case
+  // is a known gap.
+  for (const [ems, legends] of [
+    [5.5, false],
+    [6, false],
+    [8, true],
+  ] as const) {
+    test(`keeps each word of ${legends ? "a legend and of " : ""}a remove button whole in a form ${String(ems)}em wide, text at 200%, in every design`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await openEditor(page);
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = "200%";
+      });
+      const broken: string[] = [];
+      for (const design of DESIGNS) {
+        await applyAxes(page, { design });
+        broken.push(
+          ...(await page.evaluate(
+            async ({ width, name, legends: checkLegends }) => {
+              const host = document.querySelector<HTMLElement>("#editor-harbour");
+              const form = host?.shadowRoot?.querySelector(".form");
+              if (!host?.shadowRoot || !form) throw new Error("no form");
+              host.style.flex = "none";
+              host.style.inlineSize = `${String(width * Number.parseFloat(getComputedStyle(form).fontSize))}px`;
+              await new Promise((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(resolve)),
+              );
+              const context = document.createElement("canvas").getContext("2d");
+              if (!context) throw new Error("no canvas");
+              const found: string[] = [];
+              const check = (what: string, element: Element) => {
+                const style = getComputedStyle(element);
+                context.font = style.font;
+                const text =
+                  style.textTransform === "uppercase"
+                    ? element.textContent.toUpperCase()
+                    : element.textContent;
+                const widest = Math.max(
+                  ...text
+                    .trim()
+                    .split(/\s+/)
+                    .map((word) => context.measureText(word).width),
+                );
+                const box = element.getBoundingClientRect().width;
+                if (widest > box + 1) {
+                  found.push(
+                    `${name} ${what}: a ${String(Math.round(widest))}px word in ${String(Math.round(box))}px`,
+                  );
+                }
+              };
+              for (const legend of checkLegends
+                ? host.shadowRoot.querySelectorAll(".legend")
+                : []) {
+                check(`legend ${legend.textContent.trim()}`, legend);
+              }
+              for (const button of host.shadowRoot.querySelectorAll("idg-button.remove")) {
+                const label = button.shadowRoot?.querySelector('[part="label"]');
+                if (!label) throw new Error("no label");
+                check(`remove ${button.textContent.trim()}`, label);
+              }
+              return found;
+            },
+            { width: ems, name: design, legends },
+          )),
+        );
+      }
+      expect(broken).toEqual([]);
+    });
+  }
+
   test("pulls a squeezed form's file inputs out over the group padding in right-to-left text too", async ({
     page,
   }) => {

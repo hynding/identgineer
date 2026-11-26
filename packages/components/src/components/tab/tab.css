@@ -60,6 +60,14 @@
 
 :host([orientation="vertical"]) .tab {
   justify-content: flex-start;
+
+  /* A vertical list is at most 40% of its tabs' container, so at a large text size a label can be
+     wider than the list. It wraps, and breaks inside a word that is still too wide, rather than
+     reach into the panel beside it. A horizontal list wraps its tabs instead and keeps each label
+     whole. */
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 :host([selected]) .tab {

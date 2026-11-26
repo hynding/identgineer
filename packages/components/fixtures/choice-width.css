@@ -7,6 +7,9 @@
   gap: 8px;
   inline-size: 220px;
   margin-block-end: 16px;
+  /* The sibling does not shrink and the row is not wide enough for it, by design: the row holds it
+     by scrolling, so a window narrower than the row is not scrolled sideways. */
+  overflow-x: auto;
 }
 
 .fixed {
@@ -18,4 +21,9 @@
   table-layout: auto;
   inline-size: 220px;
   margin-block-end: 16px;
+}
+
+/* A table that cannot be as narrow as its cells' content scrolls in its own box. */
+.scrolling {
+  overflow-x: auto;
 }

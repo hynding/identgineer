@@ -4,10 +4,22 @@ html {
   font-family: var(--idg-font-family-body);
 }
 
+/* One track that may shrink: an implicit track is as wide as the widest minimum of what it holds, so
+   one wide table or heading would stretch the whole page past a narrow window. The gutter is a
+   token that grows with the text, so it is also held to a share of the window: at 200% text in a
+   320px window the token alone would take most of the width from what the page holds. */
 main {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--idg-space-m);
-  padding: var(--idg-space-l);
+  padding: min(var(--idg-space-l), 5vw);
+}
+
+/* A heading word wider than a narrow window, at a large text size, breaks rather than leave it.
+   Anywhere, so that the heading's minimum width follows, and a grid or flex parent can be narrower. */
+h1,
+h2 {
+  overflow-wrap: anywhere;
 }
 
 section:not(.stack),
@@ -107,7 +119,7 @@ idg-tab-panel:not(.hydrated) {
 /* A gallery lays one component's variants out in a grid. Headings and rows span it. */
 section.gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
   gap: var(--idg-space-s);
   align-items: start;
 }
@@ -123,7 +135,7 @@ section.gallery.column {
 }
 
 section.gallery.cards {
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
   align-items: stretch;
 }
 
@@ -147,10 +159,11 @@ section.gallery.cards {
 section.dashboard {
   position: relative;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   isolation: isolate;
   overflow: hidden;
   gap: var(--idg-space-m);
-  padding: var(--idg-space-l);
+  padding: min(var(--idg-space-l), 5vw);
   border-radius: var(--idg-shape-radius-lg);
   background:
     radial-gradient(
@@ -237,19 +250,19 @@ section.dashboard::after {
 
 .dashboard-alerts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
   gap: var(--idg-space-s);
 }
 
 .dashboard-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
   gap: var(--idg-space-m);
 }
 
 .dashboard-panels {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
   gap: var(--idg-space-m);
 }
 

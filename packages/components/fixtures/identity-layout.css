@@ -24,10 +24,15 @@ body {
   gap: var(--idg-space-s);
 }
 
+/* Three columns where there is room, fewer where three cards would not fit the window. */
 .grid-3 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr));
   gap: var(--idg-space-s);
+}
+
+.cards.flex-row {
+  flex-wrap: wrap;
 }
 
 .cards.flex-row > .card,

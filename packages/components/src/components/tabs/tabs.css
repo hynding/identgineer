@@ -49,7 +49,10 @@
   border-inline-end-color: var(--idg-border-color);
 }
 
+/* Beside a vertical list the panel has what the list leaves, which at a large text size can be less
+   than one of its words; a word that does not fit breaks rather than reach past the panel. */
 .panels {
   flex: 1 1 auto;
   min-inline-size: 0;
+  overflow-wrap: break-word;
 }

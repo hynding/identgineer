@@ -1,7 +1,28 @@
+/* The room the chevron takes at the end of the box. At a regular text size it is the icon and a gap
+   of air; where the field is narrow against its text (a share of its width, so it does not follow
+   the text size, and a phone at 200% is where it counts) it keeps only the icon and a small gap,
+   so the value has the room. The padding at the sides is held to a share of the field's width in
+   the same way. A percentage of the field is not a container query, so a field sized by its content
+   is not made a size container and keeps the width its options give it. */
+.box {
+  --_chevron-room: max(
+    calc(1.25em + var(--idg-space-3xs)),
+    min(calc(1.5em + var(--idg-space-2xs)), 27%)
+  );
+  --_pad-inline: min(calc(var(--idg-density-control-padding-inline) * var(--_padding-scale)), 6%);
+
+  padding-inline: var(--_pad-inline);
+}
+
+/* A native select's closed value is one line that is cut with an ellipsis. Chromium lets it wrap, and
+   the box grows with it, so the value is read whole where the field is narrow. A word wider than the
+   field breaks inside itself and is still not cut. */
 .native {
   cursor: pointer;
-  padding-inline-end: calc(1.5em + var(--idg-space-2xs));
+  padding-inline-end: var(--_chevron-room);
+  overflow-wrap: break-word;
   text-overflow: ellipsis;
+  white-space: normal;
 }
 
 .native option,
@@ -12,15 +33,21 @@
 
 .chevron {
   position: absolute;
-  inset-inline-end: var(--idg-density-control-padding-inline);
+  inset-inline-end: var(--_pad-inline);
   inset-block-start: 50%;
   color: var(--idg-color-text-muted);
   pointer-events: none;
   transform: translateY(-50%);
 }
 
+/* The mark stands where the chevron's room is kept, and the chevron's room is its own, so the value
+   does not keep it twice. */
+.invalid .native {
+  padding-inline-end: 0;
+}
+
 .invalid-mark {
-  margin-inline-end: 1.5em;
+  margin-inline-end: var(--_chevron-room);
 }
 
 .disabled .native {
