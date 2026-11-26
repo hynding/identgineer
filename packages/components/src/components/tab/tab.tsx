@@ -39,7 +39,9 @@ export class IdgTab {
         aria-disabled={this.disabled ? "true" : undefined}
       >
         <span class="tab" part="tab">
-          <slot />
+          <span class="label">
+            <slot />
+          </span>
         </span>
       </Host>
     );

@@ -1,7 +1,8 @@
 :host {
   display: inline-flex;
   flex: none;
-  max-inline-size: 100%;
+  /* As wide as the list's content and its end padding, as a tab on one line always could be. */
+  max-inline-size: calc(100% + var(--_list-pad, 0px));
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -48,16 +49,24 @@
   line-height: var(--idg-font-body-line-height);
   text-transform: var(--idg-ornament-control-transform);
   /* A label is one line, and a tab as wide as it on one line to whatever sizes the list by its
-     content, as it always was. A tab alone wider than its list (a long label at a large text size in
-     a narrow window) is as wide as the list and wraps, and breaks inside a word only if one is
-     still wider, rather than reach past the window. The maximum is a percentage, which sizing by
-     content does not count, and break-word, unlike anywhere, makes no tab narrower there. */
+     content, as it always was. A tab alone wider than its list's content and end padding (a long
+     label in a narrow column, or at a large text size in a narrow window) is as wide as those and
+     wraps, and breaks inside a word only if one is still wider, rather than reach past the list's
+     border. The maximum is a percentage, which sizing by content does not count, and break-word,
+     unlike anywhere, makes no tab narrower there. */
   inline-size: max-content;
   max-inline-size: 100%;
   overflow-wrap: break-word;
   transition-property: background-color, border-color, box-shadow, color;
   transition-duration: var(--idg-motion-duration-fast);
   transition-timing-function: var(--idg-motion-easing-standard);
+}
+
+/* The label is what the tab centres, and it may be narrower than its longest word, as an anonymous
+   flex item may not be: a word wider than the tab then breaks inside the tab, where break-word lets
+   it, rather than stand out on both sides of it. Where the label fits it is as wide as it was. */
+.label {
+  min-inline-size: 0;
 }
 
 .tab::after {
@@ -87,8 +96,11 @@
   max-inline-size: none;
 }
 
-@media (max-width: 23rem) {
-  :host([orientation="vertical"]),
+@media (width < 20rem) {
+  :host([orientation="vertical"]) {
+    max-inline-size: calc(100% + var(--_list-pad, 0px));
+  }
+
   :host([orientation="vertical"]) .tab {
     max-inline-size: 100%;
   }
