@@ -215,6 +215,7 @@ interface Edges {
   markEnd: string | undefined;
   markEndToken: string;
   inset: string;
+  insetToken: string;
 }
 
 function edgesOf(page: Page, selector: string): Promise<Edges[]> {
@@ -248,6 +249,7 @@ function edgesOf(page: Page, selector: string): Promise<Edges[]> {
           markEnd: mark ? getComputedStyle(mark).marginRight : undefined,
           markEndToken: resolve("1.5em", "marginLeft"),
           inset: getComputedStyle(chevron).right,
+          insetToken: resolve("var(--idg-density-control-padding-inline)"),
         });
       }
     };
@@ -278,7 +280,8 @@ test.describe("a select looks as it did at 100% text and an ordinary width", () 
         expect(edges.boxPad).toBe(edges.boxPadToken);
         expect(edges.nativeEnd).toBe(edges.nativeEndToken);
         if (edges.markEnd !== undefined) expect(edges.markEnd).toBe(edges.markEndToken);
-        expect(edges.inset).toBe(edges.boxPadToken);
+        // The chevron stands where it always stood, at the unscaled token, whatever the size.
+        expect(edges.inset).toBe(edges.insetToken);
       }
     });
   }
@@ -294,61 +297,88 @@ test.describe("a select sized by its content is as wide as its longest option ne
     ["a max-content grid track", "display: grid; grid-template-columns: max-content"],
     ["a flex row", "display: flex"],
   ] as const;
-  for (const [context, style] of CONTEXTS) {
-    for (const invalid of [false, true]) {
-      test(`in ${context}${invalid ? ", invalid" : ""} at 1280px and 100% text`, async ({
-        page,
-      }) => {
-        await page.setViewportSize({ width: 1280, height: 800 });
-        await page.goto("/fixtures/forms.html");
-        await hydrated(page);
-        const found = await page.evaluate(
-          async ({ rule, mark }) => {
-            const parent = document.createElement("div");
-            parent.style.cssText = rule;
-            const select = document.createElement("idg-select");
-            if (mark) select.setAttribute("invalid", "");
-            for (const text of ["Short", "Old-style serif over system sans", "Mid length"]) {
-              const option = document.createElement("option");
-              option.value = text;
-              option.textContent = text;
-              select.append(option);
+  // The widest a select is at 100% text: the roomiest UX mode (its type scale makes the select's own
+  // text larger than the page's) at the large size, in every design, in the narrowest window, where
+  // a reach measured in the select's own text would already give way.
+  const CASES = [
+    { width: 1280, ux: undefined, size: undefined, designs: [undefined] },
+    { width: 320, ux: "focus", size: "lg", designs: DESIGNS },
+  ] as const;
+  for (const { width, ux, size, designs } of CASES) {
+    for (const [context, style] of CONTEXTS) {
+      for (const invalid of [false, true]) {
+        const mode = ux ? `, ${ux} UX, size ${size ?? ""}, every design` : "";
+        test(`in ${context}${invalid ? ", invalid" : ""} at ${String(width)}px and 100% text${mode}`, async ({
+          page,
+        }) => {
+          await page.setViewportSize({ width, height: 800 });
+          await page.goto("/fixtures/forms.html");
+          await hydrated(page);
+          const failures: string[] = [];
+          for (const design of designs) {
+            if (design || ux)
+              await applyAxes(page, { ...(design ? { design } : {}), ...(ux ? { ux } : {}) });
+            const found = await measureContentSized(page, style, invalid, size);
+            if (Math.abs(found.measured - found.expected) > 0.5 || found.clipped) {
+              failures.push(
+                `${design ?? "own"}: ${String(found.measured)}px, was ${String(found.expected)}px${found.clipped ? ", clipped" : ""}`,
+              );
             }
-            parent.append(select);
-            document.body.append(parent);
-            await customElements.whenDefined("idg-select");
-            await new Promise((resolve) => setTimeout(resolve, 200));
-            const root = select.shadowRoot;
-            const native = root?.querySelector("select");
-            if (!root || !native) throw new Error("no select");
-            const widest = (): number => {
-              select.value = "Old-style serif over system sans";
-              return select.getBoundingClientRect().width;
-            };
-            const measured = widest();
-            const lines = native.getBoundingClientRect().height;
-            // The reference: the same select with the padding and room fixed at their tokens.
-            const reference = new CSSStyleSheet();
-            reference.replaceSync(
-              ".box { padding-inline: calc(var(--idg-density-control-padding-inline) * var(--_padding-scale)); } .native { padding-inline-end: calc(1.5em + var(--idg-space-2xs)); } .invalid .native { padding-inline-end: calc(1.5em + var(--idg-space-2xs)); } .invalid-mark { margin-inline-end: 1.5em; }",
-            );
-            root.adoptedStyleSheets = [...root.adoptedStyleSheets, reference];
-            await new Promise((resolve) =>
-              requestAnimationFrame(() => requestAnimationFrame(resolve)),
-            );
-            const expected = widest();
-            const clipped = native.scrollWidth > native.clientWidth + 1;
-            parent.remove();
-            return { measured, expected, lines, clipped };
-          },
-          { rule: style, mark: invalid },
-        );
-        expect(found.measured).toBeCloseTo(found.expected, 0);
-        expect(found.clipped).toBe(false);
-      });
+          }
+          expect(failures).toEqual([]);
+        });
+      }
     }
   }
 });
+
+/** A select of three options in a parent of this style, measured as it is and with the padding and
+ * the chevron's room fixed at their tokens, which is what it has always been. */
+function measureContentSized(
+  page: Page,
+  rule: string,
+  mark: boolean,
+  size: string | undefined,
+): Promise<{ measured: number; expected: number; clipped: boolean }> {
+  return page.evaluate(
+    async ({ style, invalid, large }) => {
+      const parent = document.createElement("div");
+      parent.style.cssText = style;
+      const select = document.createElement("idg-select");
+      if (invalid) select.setAttribute("invalid", "");
+      if (large) select.setAttribute("size", large);
+      for (const text of ["Short", "Old-style serif over system sans", "Mid length"]) {
+        const option = document.createElement("option");
+        option.value = text;
+        option.textContent = text;
+        select.append(option);
+      }
+      parent.append(select);
+      document.body.append(parent);
+      await customElements.whenDefined("idg-select");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      const root = select.shadowRoot;
+      const native = root?.querySelector("select");
+      if (!root || !native) throw new Error("no select");
+      const widest = (): number => {
+        select.value = "Old-style serif over system sans";
+        return select.getBoundingClientRect().width;
+      };
+      const measured = widest();
+      const reference = new CSSStyleSheet();
+      reference.replaceSync(
+        ".box { padding-inline: calc(var(--idg-density-control-padding-inline) * var(--_padding-scale)); } .native { padding-inline-end: calc(1.5em + var(--idg-space-2xs)); } .invalid .native { padding-inline-end: calc(1.5em + var(--idg-space-2xs)); } .invalid-mark { margin-inline-end: 1.5em; }",
+      );
+      root.adoptedStyleSheets = [...root.adoptedStyleSheets, reference];
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const expected = widest();
+      const clipped = native.scrollWidth > native.clientWidth + 1;
+      parent.remove();
+      return { measured, expected, clipped };
+    },
+    { style: rule, invalid: mark, large: size },
+  );
+}
 
 // The value is one line, as on every page that holds a select, in the dashboard's header and in
 // the brand editor's form, and it stays the same height as the options are chosen through.

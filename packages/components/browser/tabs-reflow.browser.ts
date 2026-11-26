@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { DESIGNS, applyAxes } from "./axes";
 import { expect, test } from "./fixtures";
 import { hydrated, settleFrames } from "./reflow";
-import { setTextSize } from "./text-size";
+import { setBrowserTextSize, setTextSize } from "./text-size";
 
 const PAGE = "/fixtures/navigation.html";
 
@@ -53,15 +53,29 @@ function wordsAndRoom(page: Page) {
   });
 }
 
+// A reader sets a larger text size in the browser's settings, and a media query measures in that
+// size. The list is drawn above its panel by such a query, where the window is short of room for
+// both, so these are read with the browser's text size at 200%. With only the page's root at 200%
+// a media query does not see it: at 320px the list is above its panel at any text size, so that
+// way is read there too.
 test.describe("vertical tabs keep their words whole with text at 200%", () => {
-  for (const width of [320, 480, 600]) {
+  const WAYS = [
+    ...[320, 480, 600].map((width) => ({ width, way: "browser" as const })),
+    { width: 320, way: "page" as const },
+  ];
+  for (const { width, way } of WAYS) {
     for (const wide of [false, true]) {
-      test(`at ${String(width)}px, ${wide ? "wide" : "default"} text, in every design`, async ({
+      test(`at ${String(width)}px, ${wide ? "wide" : "default"} text, set in the ${way === "browser" ? "browser" : "page"}, in every design`, async ({
         page,
       }) => {
         test.setTimeout(90_000);
+        if (way === "browser") await setBrowserTextSize(page, 200);
         await open(page, width);
-        await setTextSize(page, { label: "200%", fontSize: "200%", wide });
+        await setTextSize(page, {
+          label: "200%",
+          fontSize: way === "browser" ? "100%" : "200%",
+          wide,
+        });
         const failures: string[] = [];
         for (const design of DESIGNS) {
           await applyAxes(page, { design });
@@ -102,13 +116,104 @@ test.describe("vertical tabs keep the list beside the panel until the room is sh
     await setTextSize(page, { label: "200%", fontSize: "200%", wide: false });
     await settleFrames(page);
     expect((await arrangement(page)).below).toBe(true);
-    // Whatever way it is drawn, a vertical tablist is announced as vertical and moves by Up and Down.
+    // Whatever way it is drawn, a vertical tablist is announced as vertical and moves by Up and
+    // Down; drawn across, Left and Right move along it too.
     const tabs = page.locator("#tabs-vertical");
     await expect(tabs.locator('[role="tablist"]')).toHaveAttribute("aria-orientation", "vertical");
     await page.locator("#vertical-profile").focus();
     await page.keyboard.press("ArrowDown");
     await expect(page.locator("#vertical-security")).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    await expect(page.locator("#vertical-alerts")).toBeFocused();
+    await page.keyboard.press("ArrowLeft");
+    await expect(page.locator("#vertical-security")).toBeFocused();
+    await page.keyboard.press("ArrowUp");
+    await expect(page.locator("#vertical-profile")).toBeFocused();
   });
+
+  test("in right-to-left text Left moves on along a vertical list drawn across, and Right back", async ({
+    page,
+  }) => {
+    await open(page, 320);
+    await setTextSize(page, { label: "200%", fontSize: "200%", wide: false });
+    await page.locator("#tabs-vertical").evaluate((tabs) => {
+      tabs.setAttribute("dir", "rtl");
+    });
+    await settleFrames(page);
+    expect((await arrangement(page)).below).toBe(true);
+    await page.locator("#vertical-profile").focus();
+    await page.keyboard.press("ArrowLeft");
+    await expect(page.locator("#vertical-security")).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    await expect(page.locator("#vertical-profile")).toBeFocused();
+  });
+
+  test("with the browser's text at 200% the list is above the panel at 600px", async ({ page }) => {
+    await setBrowserTextSize(page, 200);
+    await open(page, 600);
+    expect((await arrangement(page)).below).toBe(true);
+  });
+});
+
+test("Up and Down do nothing in a horizontal list, whatever its width", async ({ page }) => {
+  await open(page, 320);
+  await setTextSize(page, { label: "200%", fontSize: "200%", wide: false });
+  await page.locator("#tab-overview").focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("#tab-overview")).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(page.locator("#tab-overview")).toBeFocused();
+});
+
+// Where a parent is as wide as what it holds (an inline block, a float, a track sized by its
+// content), vertical tabs are as wide as their list, the gap and their panel's content, as they
+// always were: they are not a container with a width of their own.
+test.describe("vertical tabs in a parent sized by its content are as wide as what they hold", () => {
+  const CONTEXTS = [
+    ["an inline block", "display: inline-block"],
+    ["a float", "float: left"],
+    ["a max-content grid track", "display: grid; grid-template-columns: max-content"],
+    ["an absolutely positioned box", "position: absolute"],
+  ] as const;
+  for (const [name, style] of CONTEXTS) {
+    test(`in ${name} at 1280px and 100% text`, async ({ page }) => {
+      await open(page, 1280);
+      const found = await page.evaluate(async (rule) => {
+        const parent = document.createElement("div");
+        parent.style.cssText = rule;
+        const tabs = document.createElement("idg-tabs");
+        tabs.setAttribute("orientation", "vertical");
+        tabs.setAttribute("label", "Letters");
+        for (const [value, label, text] of [
+          ["a", "A", "Hi"],
+          ["b", "B", "Yo"],
+        ] as const) {
+          const tab = document.createElement("idg-tab");
+          tab.setAttribute("value", value);
+          tab.textContent = label;
+          const panel = document.createElement("idg-tab-panel");
+          panel.setAttribute("value", value);
+          panel.textContent = text;
+          tabs.append(tab, panel);
+        }
+        parent.append(tabs);
+        document.body.prepend(parent);
+        await customElements.whenDefined("idg-tabs");
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        const list = tabs.shadowRoot?.querySelector(".list")?.getBoundingClientRect();
+        const panels = tabs.shadowRoot?.querySelector(".panels");
+        const inner = tabs.shadowRoot?.querySelector(".tabs");
+        if (!list || !panels || !inner) throw new Error("no list or panels");
+        const range = document.createRange();
+        range.selectNodeContents(tabs.querySelector("idg-tab-panel:not([hidden])") ?? panels);
+        const content = range.getBoundingClientRect().width;
+        const gap = Number.parseFloat(getComputedStyle(inner).columnGap);
+        return { host: tabs.getBoundingClientRect().width, list: list.width, gap, content };
+      }, style);
+      expect(found.host).toBeCloseTo(found.list + found.gap + found.content, 0);
+      expect(found.host).toBeLessThan(320);
+    });
+  }
 });
 
 test("a tab says which way its list runs, and a vertical tab's label starts at the list's start", async ({

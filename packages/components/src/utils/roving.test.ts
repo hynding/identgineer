@@ -52,6 +52,16 @@ describe("rovingMove", () => {
     expect(rovingMove(0, "ArrowLeft", ENABLED, "vertical", false)).toBeUndefined();
   });
 
+  it("moves with the arrows of both axes in a list that answers both", () => {
+    expect(rovingMove(0, "ArrowDown", ENABLED, "both", false)).toBe(1);
+    expect(rovingMove(0, "ArrowUp", ENABLED, "both", false)).toBe(3);
+    expect(rovingMove(0, "ArrowRight", ENABLED, "both", false)).toBe(1);
+    expect(rovingMove(0, "ArrowLeft", ENABLED, "both", false)).toBe(3);
+    expect(rovingMove(1, "ArrowRight", ENABLED, "both", true)).toBe(0);
+    expect(rovingMove(1, "ArrowLeft", ENABLED, "both", true)).toBe(2);
+    expect(rovingMove(1, "ArrowDown", ENABLED, "both", true)).toBe(2);
+  });
+
   it("swaps the horizontal arrows in right-to-left text but not the vertical ones", () => {
     expect(rovingMove(1, "ArrowRight", ENABLED, "horizontal", true)).toBe(0);
     expect(rovingMove(1, "ArrowLeft", ENABLED, "horizontal", true)).toBe(2);

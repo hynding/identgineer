@@ -283,23 +283,61 @@ describe("idg-tabs keyboard, with automatic activation", () => {
     expect(valueOf(root)).toBe("overview");
   });
 
-  it("uses the vertical arrows, and not the horizontal ones, in a vertical list", async () => {
+  // A vertical list is drawn as a row where the window is short of room, so Left and Right move
+  // too: they have no other job in a vertical list. Up and Down move as announced.
+  it("uses the vertical arrows, and the horizontal ones as well, in a vertical list", async () => {
     const { root, waitForChanges } = await render(
       <idg-tabs orientation="vertical">
         <idg-tab value="a">A</idg-tab>
         <idg-tab value="b">B</idg-tab>
+        <idg-tab value="c">C</idg-tab>
         <idg-tab-panel value="a">A</idg-tab-panel>
         <idg-tab-panel value="b">B</idg-tab-panel>
+        <idg-tab-panel value="c">C</idg-tab-panel>
       </idg-tabs>,
     );
     spyFocus(root);
-    expect(press(tabAt(root, 0), "ArrowRight").defaultPrevented).toBe(false);
     press(tabAt(root, 0), "ArrowDown");
     await waitForChanges();
     expect(valueOf(root)).toBe("b");
     press(tabAt(root, 1), "ArrowUp");
     await waitForChanges();
     expect(valueOf(root)).toBe("a");
+    expect(press(tabAt(root, 0), "ArrowRight").defaultPrevented).toBe(true);
+    await waitForChanges();
+    expect(valueOf(root)).toBe("b");
+    press(tabAt(root, 1), "ArrowLeft");
+    await waitForChanges();
+    expect(valueOf(root)).toBe("a");
+    expect(
+      root.shadowRoot?.querySelector('[role="tablist"]')?.getAttribute("aria-orientation"),
+    ).toBe("vertical");
+  });
+
+  it("swaps the horizontal arrows in a vertical list in right-to-left text", async () => {
+    vi.spyOn(globalThis, "getComputedStyle").mockReturnValue({
+      direction: "rtl",
+    } as CSSStyleDeclaration);
+    const { root, waitForChanges } = await render(
+      <idg-tabs orientation="vertical">
+        <idg-tab value="a">A</idg-tab>
+        <idg-tab value="b">B</idg-tab>
+        <idg-tab value="c">C</idg-tab>
+        <idg-tab-panel value="a">A</idg-tab-panel>
+        <idg-tab-panel value="b">B</idg-tab-panel>
+        <idg-tab-panel value="c">C</idg-tab-panel>
+      </idg-tabs>,
+    );
+    spyFocus(root);
+    press(tabAt(root, 0), "ArrowLeft");
+    await waitForChanges();
+    expect(valueOf(root)).toBe("b");
+    press(tabAt(root, 1), "ArrowRight");
+    await waitForChanges();
+    expect(valueOf(root)).toBe("a");
+    press(tabAt(root, 0), "ArrowDown");
+    await waitForChanges();
+    expect(valueOf(root)).toBe("b");
   });
 
   it("swaps the horizontal arrows in right-to-left text", async () => {
