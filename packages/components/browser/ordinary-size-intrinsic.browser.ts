@@ -180,7 +180,9 @@ const CONTEXTS: Readonly<
 // - idg-card: the padding's reach, the heading's break-word and the card's break-word up to 40rem
 //   (main: break-word and the smaller padding under 28rem);
 // - idg-select: the padding's, the chevron room's, the invalid mark's and the chevron's reach;
-// - idg-alert and idg-accordion-item: break-word on the content and the title.
+// - idg-alert: break-word on the content;
+// - idg-accordion-item: the heading's own box, as wide as its longest word up to the item's edge,
+//   and its break-word.
 const REFERENCE: Readonly<Record<string, string>> = {
   "idg-badge": `
     :host { max-inline-size: none; }
@@ -237,7 +239,7 @@ const REFERENCE: Readonly<Record<string, string>> = {
     .invalid-mark { margin-inline-end: 1.5em; }
     .chevron { inset-inline-end: var(--idg-density-control-padding-inline); }`,
   "idg-alert": `.content { overflow-wrap: normal; }`,
-  "idg-accordion-item": `.title { overflow-wrap: normal; }`,
+  "idg-accordion-item": `.title > slot { display: contents; overflow-wrap: normal; }`,
 };
 
 interface Size {
