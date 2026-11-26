@@ -63,10 +63,18 @@
   transition-timing-function: var(--idg-motion-easing-standard);
 }
 
-/* The label is what the tab centres, and it may be narrower than its longest word, as an anonymous
-   flex item may not be: a word wider than the tab then breaks inside the tab, where break-word lets
-   it, rather than stand out on both sides of it. Where the label fits it is as wide as it was. */
+/* The label holds what is slotted into the tab, laid out as the tab laid it out when it held it
+   itself: a row of items (an icon, a run of text, a badge), centred across, the tab's gap between
+   them. It is a grid and not a flex row only so that its columns may be narrower than what they
+   hold: a run of text then wraps, and a word wider than the tab breaks inside it, where break-word
+   lets it, rather than stand out on both sides of the tab, which an anonymous flex item, never
+   narrower than its longest word, would. Where the label fits it is the row it always was. */
 .label {
+  display: inline-grid;
+  grid-auto-columns: minmax(0, auto);
+  grid-auto-flow: column;
+  align-items: center;
+  gap: inherit;
   min-inline-size: 0;
 }
 
