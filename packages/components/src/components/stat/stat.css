@@ -65,6 +65,8 @@
 }
 
 .delta {
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
   --_background: var(--idg-color-bg-subtle);
   --_text: var(--idg-color-text);
 

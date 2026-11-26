@@ -1,5 +1,6 @@
 :host {
   display: inline-flex;
+  max-inline-size: 100%;
   vertical-align: middle;
 }
 
@@ -9,6 +10,7 @@
 
 .group {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
 }
 

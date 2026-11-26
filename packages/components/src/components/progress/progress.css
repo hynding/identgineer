@@ -17,6 +17,7 @@
 
 .header {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--idg-space-xs);
@@ -30,6 +31,7 @@
 }
 
 .value {
+  overflow-wrap: anywhere;
   color: var(--idg-color-text-muted);
   font-variant-numeric: tabular-nums;
 }

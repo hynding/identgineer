@@ -43,6 +43,10 @@
   flex-direction: column;
   gap: var(--idg-space-3xs);
   min-inline-size: 0;
+  /* A word wider than the room (a title in capitals in a wide face, at a large text size in a narrow
+     window) breaks inside itself in place of leaving the alert. break-word, unlike anywhere, adds
+     nothing to an alert sized by its content. */
+  overflow-wrap: break-word;
 }
 
 .title {

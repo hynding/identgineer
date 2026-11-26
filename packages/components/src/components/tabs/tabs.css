@@ -41,7 +41,9 @@
 
 :host([orientation="vertical"]) .list {
   flex-direction: column;
-  max-inline-size: 40%;
+  /* Up to three fifths of the tabs, so that at a large text size a label is not broken for want of
+     a few pixels; the list is as wide as its longest label where that is less, as it always was. */
+  max-inline-size: 60%;
   padding: max(var(--_pad), var(--idg-space-xs));
   border-block-end: 0;
   border-inline-end-width: var(--idg-border-width);
@@ -55,4 +57,32 @@
   flex: 1 1 auto;
   min-inline-size: 0;
   overflow-wrap: break-word;
+}
+
+/* A vertical list beside its panel needs room for both, and at a large text size in a narrow window
+   it has not: the labels would break inside their words and the panel have a few letters to a line.
+   Then the list is drawn above the panel, in a row that wraps. The list is still a vertical tablist
+   to a reader and to the keyboard (Up and Down, as announced), only drawn across. The host is the
+   container, and only a vertical one, so a horizontal list is as it always was; the intrinsic width
+   stands in for the content, which a size container is not sized by. 18em is the width of the room
+   at 375px and 100% text with some to spare, and less than that is short at any text size. */
+:host([orientation="vertical"]) {
+  contain-intrinsic-inline-size: min(var(--idg-size-m), 100vw);
+  container-type: inline-size;
+}
+
+@container (inline-size < 18em) {
+  :host([orientation="vertical"]) .tabs {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  :host([orientation="vertical"]) .list {
+    flex-direction: row;
+    max-inline-size: 100%;
+    border-inline-end-width: 0;
+    border-block-end-width: var(--idg-border-width);
+    border-block-end-style: var(--idg-border-style);
+    border-block-end-color: var(--idg-border-color);
+  }
 }

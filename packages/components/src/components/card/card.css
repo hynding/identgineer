@@ -191,8 +191,7 @@
      a card's edge clips: a word wider than the card breaks inside itself whatever the window is,
      as it would otherwise leave the card at a large text size in a window wider than the media
      query below reaches. It is a break-word (and not anywhere) and a property of the heading's own
-     box, not of a container, so a card sized by its content is as wide as it was. The body's text is
-     left as it was: a word wider than its room there sits in the padding, as it always has. */
+     box, not of a container, so a card sized by its content is as wide as it was. */
   overflow-wrap: break-word;
 }
 
@@ -215,6 +214,14 @@
 
 .body {
   flex: 1 1 auto;
+}
+
+/* The same holds for the text in the body and the footer: a word wider than the card (a card in a
+   narrow column at a large text size) would leave it, and the card clips what leaves. A word that fits
+   is not broken, and break-word, unlike anywhere, adds nothing to a card sized by its content. */
+.body,
+.footer {
+  overflow-wrap: break-word;
 }
 
 /* The design's own rule above the footer. It is empty in the designs that draw no border. */

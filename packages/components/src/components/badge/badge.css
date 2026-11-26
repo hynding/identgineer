@@ -1,5 +1,6 @@
 :host {
   display: inline-flex;
+  max-inline-size: 100%;
   vertical-align: middle;
 }
 
@@ -16,7 +17,10 @@
   gap: var(--idg-space-2xs);
   max-inline-size: 100%;
   padding-block: var(--idg-space-3xs);
-  padding-inline: var(--idg-space-xs);
+  /* Short of room (a large text size in a narrow window) the padding gives way before the label is
+     cut. The window is what is measured, in a length that sizing by content counts as it is, so a
+     badge is as wide as it was wherever there is room. */
+  padding-inline: clamp(var(--idg-space-3xs), calc(100vw - 12em), var(--idg-space-xs));
   border-width: var(--idg-border-control-width);
   border-style: var(--idg-border-control-style);
   border-color: var(--idg-border-control-color);
@@ -29,7 +33,9 @@
   line-height: var(--idg-font-line-height-snug);
   letter-spacing: var(--idg-font-body-letter-spacing);
   text-transform: var(--idg-ornament-control-transform);
-  white-space: nowrap;
+  /* A label wraps, and breaks inside a word only if one is wider than the room, in place of being
+     cut off with an ellipsis. A badge is as wide as its label wherever there is room for it. */
+  overflow-wrap: anywhere;
 }
 
 .size-sm {
@@ -40,8 +46,6 @@
 
 .label {
   min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* The dot is the text colour, which is always legible on the tone's background. */

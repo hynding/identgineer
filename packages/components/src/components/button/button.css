@@ -1,4 +1,14 @@
+:host {
+  max-inline-size: 100%;
+}
+
 .control {
+  /* A button wider than the room it is in (a long label at a large text size in a narrow window)
+     shrinks to it and wraps its label, and breaks inside a word only if one is still wider. Neither
+     a percentage maximum nor break-word counts in a size that is sized by content, so a button is as
+     wide as its label needs wherever there is room. */
+  max-inline-size: 100%;
+  overflow-wrap: break-word;
   --_height-scale: 1;
   --_padding-scale: 1;
 

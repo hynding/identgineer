@@ -1,28 +1,32 @@
-/* The room the chevron takes at the end of the box. At a regular text size it is the icon and a gap
-   of air; where the field is narrow against its text (a share of its width, so it does not follow
-   the text size, and a phone at 200% is where it counts) it keeps only the icon and a small gap,
-   so the value has the room. The padding at the sides is held to a share of the field's width in
-   the same way. A percentage of the field is not a container query, so a field sized by its content
-   is not made a size container and keeps the width its options give it. */
+/* At an ordinary text size the box pads by the control token, the value keeps the chevron's room
+   beside it, and a value too long for the field ends in an ellipsis on one line, as in every text
+   control. Where the window is narrow against the text, as a phone at 200% text is, the padding and
+   the room give way so the value keeps room for its first word.
+   What decides it is the window's width less twelve times the text size (`--_reach`), which is a
+   length and not a share of the field: a select sized by its content (an inline block, a float, a
+   max-content track, a flex row) is as wide as its longest option needs whatever the window is, and
+   a percentage of its own width would count as nothing there. At 100% text the reach is more than
+   the tokens from a window of 240px up, so nothing changes at any ordinary width. */
 .box {
-  --_chevron-room: max(
-    calc(1.25em + var(--idg-space-3xs)),
-    min(calc(1.5em + var(--idg-space-2xs)), 27%)
+  --_reach: calc(100vw - 12em);
+  --_pad-inline: clamp(
+    var(--idg-space-3xs),
+    var(--_reach),
+    calc(var(--idg-density-control-padding-inline) * var(--_padding-scale))
   );
-  --_pad-inline: min(calc(var(--idg-density-control-padding-inline) * var(--_padding-scale)), 6%);
+  --_chevron-room: clamp(
+    calc(1.25em + var(--idg-space-3xs)),
+    var(--_reach),
+    calc(1.5em + var(--idg-space-2xs))
+  );
 
   padding-inline: var(--_pad-inline);
 }
 
-/* A native select's closed value is one line that is cut with an ellipsis. Chromium lets it wrap, and
-   the box grows with it, so the value is read whole where the field is narrow. A word wider than the
-   field breaks inside itself and is still not cut. */
 .native {
   cursor: pointer;
   padding-inline-end: var(--_chevron-room);
-  overflow-wrap: break-word;
   text-overflow: ellipsis;
-  white-space: normal;
 }
 
 .native option,
@@ -40,14 +44,14 @@
   transform: translateY(-50%);
 }
 
-/* The mark stands where the chevron's room is kept, and the chevron's room is its own, so the value
-   does not keep it twice. */
+/* The mark stands where the chevron's room is kept, so the value does not keep it twice where the
+   window is narrow; at an ordinary size both are as they always were. */
 .invalid .native {
-  padding-inline-end: 0;
+  padding-inline-end: clamp(0px, var(--_reach), calc(1.5em + var(--idg-space-2xs)));
 }
 
 .invalid-mark {
-  margin-inline-end: var(--_chevron-room);
+  margin-inline-end: clamp(1.25em, var(--_reach), 1.5em);
 }
 
 .disabled .native {

@@ -1,6 +1,7 @@
 :host {
   display: inline-flex;
   flex: none;
+  max-inline-size: 100%;
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -26,7 +27,14 @@
   min-block-size: var(--idg-density-target-size);
   min-inline-size: var(--idg-density-target-size);
   padding-block: var(--idg-density-control-padding-block);
-  padding-inline: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+  /* The padding gives way, to a hair's width, where the window is narrow against the text (the
+     window's width less twelve times the text size is less than the padding): a label then has the
+     room its word needs. At 100% text it is the token from a window of 240px up. */
+  padding-inline: clamp(
+    var(--idg-space-3xs),
+    calc(100vw - 12em),
+    calc(var(--idg-space-m) * var(--idg-density-gap-scale))
+  );
   border-width: var(--idg-surface-border-width);
   border-style: var(--idg-surface-border-style);
   border-color: transparent;
@@ -38,7 +46,11 @@
   letter-spacing: var(--idg-font-body-letter-spacing);
   line-height: var(--idg-font-body-line-height);
   text-transform: var(--idg-ornament-control-transform);
-  white-space: nowrap;
+  /* A label is one line while it fits its list, which is as wide as it needs. A tab alone wider than
+     its list (a long label at a large text size in a narrow window) shrinks to it and wraps, and
+     breaks inside a word only if one is still wider, rather than reach past the window. */
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
   transition-property: background-color, border-color, box-shadow, color;
   transition-duration: var(--idg-motion-duration-fast);
   transition-timing-function: var(--idg-motion-easing-standard);
@@ -60,14 +72,6 @@
 
 :host([orientation="vertical"]) .tab {
   justify-content: flex-start;
-
-  /* A vertical list is at most 40% of its tabs' container, so at a large text size a label can be
-     wider than the list. It wraps, and breaks inside a word that is still too wide, rather than
-     reach into the panel beside it. A horizontal list wraps its tabs instead and keeps each label
-     whole. */
-  max-inline-size: 100%;
-  overflow-wrap: anywhere;
-  white-space: normal;
 }
 
 :host([selected]) .tab {
