@@ -150,7 +150,8 @@ const CONTEXTS: Readonly<
 //   break-word (main: one line, nowrap, the label cut off with an ellipsis), the padding's reach;
 // - idg-avatar-group: the host's and the row's maximum, its max-content width and its wrapping;
 // - idg-tab: the host's and the tab's maximum (to the list's end padding, none beside a vertical
-//   list, the list's width under 20rem), the max-content width, break-word, the padding's reach;
+//   list, the list's width under 20rem), the max-content width, break-word, the padding's reach,
+//   and the label's zero minimum (main had no label element: its text was an anonymous flex item);
 // - idg-tabs: the vertical list's calc-size minimum, the drawing of a vertical list above its panel
 //   under 20rem, and the panel's break-word;
 // - idg-progress: the label's zero minimum and the label's and value's break-word;
@@ -177,7 +178,8 @@ const REFERENCE: Readonly<Record<string, string>> = {
       padding-inline: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
       white-space: nowrap;
       overflow-wrap: normal;
-    }`,
+    }
+    .label { min-inline-size: auto; }`,
   "idg-tabs": `
     :host([orientation="vertical"]) .tabs { flex-direction: row; align-items: flex-start; }
     :host([orientation="vertical"]) .list {
@@ -223,8 +225,9 @@ interface Size {
   /** Whether the host is as wide as its content: an inline box, or in a parent that sizes it so. */
   contentSized: boolean;
   /**
-   * How far the component's text reaches past either side of its host, or of the column it is in
-   * where the host is wider than that, in pixels.
+   * How far, in pixels and summed over every run of text, the component's text reaches past the box
+   * it is laid out in, its host or the column it is in; and how far a box the component draws
+   * reaches past that column (a tab, past its list).
    */
   overflow: number;
 }
@@ -278,23 +281,71 @@ function sizes(page: Page): Promise<Size[]> {
   return page.evaluate(() =>
     [...document.querySelectorAll<HTMLElement>("#probe > [data-context]")].map((parent) => {
       const host = parent.querySelector('[class~="hydrated"]');
-      const contentSized =
-        parent.dataset.sized === "content" ||
-        getComputedStyle(host ?? parent).display.startsWith("inline");
       if (!host) throw new Error(`no component in ${parent.dataset.context ?? ""}`);
+      const contentSized =
+        parent.dataset.sized === "content" || getComputedStyle(host).display.startsWith("inline");
       const own = host.getBoundingClientRect();
       const room = parent.getBoundingClientRect();
-      const box = { left: Math.max(own.left, room.left), right: Math.min(own.right, room.right) };
+      interface Edges {
+        left: number;
+        right: number;
+      }
+      const narrower = (one: Edges, other: Edges): Edges => ({
+        left: Math.max(one.left, other.left),
+        right: Math.min(one.right, other.right),
+      });
+      const past = (box: Edges, limit: Edges) =>
+        Math.max(0, box.right - limit.right, limit.left - box.left);
+      const up = (element: Element): Element | null => {
+        const next: Node | null = element.assignedSlot ?? element.parentNode;
+        return next instanceof ShadowRoot ? next.host : next instanceof Element ? next : null;
+      };
+      // The box a run of text is laid out in: the nearest that is not inline or display: contents.
+      const container = (text: Text): Edges => {
+        let element: Element | null = text.assignedSlot ?? text.parentElement;
+        while (element && ["inline", "contents"].includes(getComputedStyle(element).display)) {
+          element = up(element);
+        }
+        if (!element) return own;
+        const style = getComputedStyle(element);
+        const box = element.getBoundingClientRect();
+        return {
+          left:
+            box.left +
+            Number.parseFloat(style.borderLeftWidth) +
+            Number.parseFloat(style.paddingLeft),
+          right:
+            box.right -
+            Number.parseFloat(style.borderRightWidth) -
+            Number.parseFloat(style.paddingRight),
+        };
+      };
+      const drawn = (style: CSSStyleDeclaration) =>
+        style.backgroundColor !== "rgba(0, 0, 0, 0)" ||
+        style.backgroundImage !== "none" ||
+        (style.borderRightStyle !== "none" && Number.parseFloat(style.borderRightWidth) > 0);
       let overflow = 0;
       const walk = (node: Node): void => {
         if (node instanceof Text && node.data.trim()) {
           const range = document.createRange();
           range.selectNodeContents(node);
+          const limit = narrower(narrower(own, room), container(node));
+          let most = 0;
           for (const line of range.getClientRects()) {
-            if (line.width > 0) {
-              overflow = Math.max(overflow, line.right - box.right, box.left - line.left);
-            }
+            if (line.width > 0) most = Math.max(most, past(line, limit));
           }
+          overflow += most;
+        }
+        if (node instanceof Element && node.getRootNode() instanceof ShadowRoot) {
+          // A box the component draws (a background or a border), past the column it is in; and a
+          // tab, which is drawn when it is chosen, hovered or focused, past its list.
+          const tabs = node.classList.contains("tab")
+            ? (node.getRootNode() as ShadowRoot).host.closest("idg-tabs")
+            : null;
+          const list = tabs?.shadowRoot?.querySelector(".list");
+          if (list) overflow += past(node.getBoundingClientRect(), list.getBoundingClientRect());
+          else if (drawn(getComputedStyle(node)))
+            overflow += past(node.getBoundingClientRect(), room);
         }
         if (node instanceof Element && node.shadowRoot) walk(node.shadowRoot);
         node.childNodes.forEach(walk);
