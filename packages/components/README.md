@@ -119,22 +119,19 @@ At 100% text and ordinary widths a component is otherwise the size it was in any
 one sized by its content (a `min-content` or `max-content` track, a table cell, a flex row beside
 other text, an inline block), wherever it fitted: it differs only where its text, or a box it draws,
 reached past the component or the column it was in, or was clipped, and then only by wrapping. Text
-that ran into a component's own padding still does, and so does an accordion heading's word that
-ran over the chevron, but the heading's other lines are then laid out as wide as that word, up to
-the item's edge, so they may hold a word more and the heading be a line shorter than it was (as in
-a 200px column in the brutalist and pixel designs). A label wraps only where the component would otherwise be wider than the room it is in.
-A width you set on a badge or a tab is room like any other: a label longer than it wraps, where a
-badge's used to be cut off with an ellipsis and a tab's to run past the tab (a badge set to 60px was
-30px tall with an ellipsis and is about 105px wrapped). CSS cannot tell a width you set from a
-narrow column without making the component a size container, which would change its size wherever
-it is sized by its content, so the ellipsis is not kept for one and not the other. At 320px a
-vertical list is a few pixels wider than it was, so that the selected tab stays inside the list's
-border, where it used to cross it.
+that ran into a component's own padding still does. A long word in an accordion heading now breaks
+beside the chevron, where it used to run over it, so the item may be taller. A label wraps only
+where the component would otherwise be wider than the room it is in. A width you set on a badge or a
+tab is room like any other: a label longer than it wraps, where a badge's used to be cut off with an
+ellipsis and a tab's to run past the tab (a badge set to 60px was 30px tall with an ellipsis and is
+about 105px wrapped). CSS cannot tell a width you set from a narrow column without making the
+component a size container, which would change its size wherever it is sized by its content, so the
+ellipsis is not kept for one and not the other. At 320px a vertical list is a few pixels wider than
+it was, so that the selected tab stays inside the list's border, where it used to cross it.
 
-The vertical list's narrowest width, a button's, and the room an accordion heading's word has before
-it breaks are set with `calc-size()`. In an engine without it a vertical tab may cross its list's
-border as before, a button's longest word may run past its background in a column narrower than the
-word, as before, and an accordion heading's long word breaks beside the chevron.
+The vertical list's narrowest width and a button's are set with `calc-size()`. In an engine without
+it a vertical tab may cross its list's border as before, and a button's longest word may run past
+its background in a column narrower than the word, as before.
 
 ## `idg-button`
 
@@ -1951,7 +1948,7 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   | consent and overlays   | consent-banner, consent-preferences, dialog, popover, tooltip, toast, toast-region                                                                           |      87,918 |    188,483 |
   | menus                  | menu, menu-group, menu-item, menu-separator, user-menu                                                                                                       |      49,796 |    126,820 |
   | tabs                   | tabs, tab, tab-panel                                                                                                                                         |      33,016 |     89,272 |
-  | accordion              | accordion, accordion-item                                                                                                                                    |      28,233 |     79,416 |
+  | accordion              | accordion, accordion-item                                                                                                                                    |      28,036 |     79,214 |
   | layout                 | stack, cluster, grid, cover, sidebar, switcher, layout, divider, card, breadcrumb, breadcrumb-item                                                           |      84,232 |    161,160 |
   | `idg-brand-logo`       | the logo, with the sanitiser                                                                                                                                 |     117,763 |    330,377 |
   | `idg-brand-swatches`   | the swatches                                                                                                                                                 |      29,826 |     84,500 |
@@ -1963,7 +1960,7 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   minified) is in the logo's, the guide's, the export's and the editor's bundles (the export
   validates a kit with it), the generator in the export's and the editor's, and the emitters in the
   export's alone. The editor's row counts its own entry and chunks; a page with it also loads the
-  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 702,325
+  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 702,128
   bytes (663,801 before the editor), against 433,865 before the brand components and 536,437 on
   main.
 
