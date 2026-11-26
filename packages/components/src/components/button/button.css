@@ -1,12 +1,21 @@
 :host {
+  /* How far past the room it is in a button may be to keep its longest word inside it: as far as it
+     needs where there is room, as it always could be, and not at all where the window is narrow
+     against the text (its width less sixteen times the page's text size), where the room is what
+     the page has. */
+  --_word-reach: max(0px, 100vw - 16rem);
+
+  min-inline-size: calc-size(min-content, min(size, 100% + var(--_word-reach)));
   max-inline-size: 100%;
 }
 
 .control {
   /* A button wider than the room it is in (a long label at a large text size in a narrow window)
-     shrinks to it and wraps its label between words; a word is never broken. A percentage maximum
-     does not count in a size that is sized by content, so a button is as wide as its label needs
-     wherever there is room. */
+     shrinks to it and wraps its label between words; a word is never broken. It is no narrower than
+     its longest word, as it never was, unless the window is narrow against the text, where the
+     room it is in is the most it may have. A percentage does not count in a size that is sized by
+     content, so a button is as wide as its label needs wherever there is room. */
+  min-inline-size: calc-size(min-content, min(size, 100% + var(--_word-reach)));
   max-inline-size: 100%;
   --_height-scale: 1;
   --_padding-scale: 1;
