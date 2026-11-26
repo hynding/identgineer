@@ -366,8 +366,8 @@ async function placeTabs(page: Page, style: string, labels: readonly (readonly s
   await settleFrames(page);
 }
 
-// A word wider than a tab in a narrow column breaks inside the tab, whose label may be narrower
-// than its longest word, and does not stand out on both sides of it.
+// A word wider than a tab in a narrow column breaks inside the tab, where the run of text it is in
+// may be narrower than its longest word, and does not stand out on both sides of it.
 test("a word wider than a tab in a narrow column stays inside the tab, in every design", async ({
   page,
 }) => {
@@ -416,8 +416,7 @@ const BEFORE = `
     max-inline-size: none;
     white-space: nowrap;
     overflow-wrap: normal;
-  }
-  .label { display: contents; }`;
+  }`;
 test.describe("a tab holding an icon or a badge lays them out as its part says, as it did", () => {
   for (const width of [375, 1280]) {
     test(`at ${String(width)}px, in every design`, async ({ page }) => {

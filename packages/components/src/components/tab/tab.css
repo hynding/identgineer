@@ -53,30 +53,17 @@
      content, as it always was. A tab alone wider than its list's content and end padding (a long
      label in a narrow column, or at a large text size in a narrow window) is as wide as those and
      wraps, and breaks inside a word only if one is still wider, rather than reach past the list's
-     border. The maximum is a percentage, which sizing by content does not count, and break-word,
-     unlike anywhere, makes no tab narrower there. */
+     border. The maximum is a percentage, which sizing by content does not count. What is slotted
+     stays the part's own flex items, as a page's style for the part expects; a run of text among
+     them is an item no narrower than its longest word unless that word may break anywhere, so it
+     may, and it breaks only where it does not fit. The tab's own width is its max-content, which
+     anywhere does not change, so no tab is narrower for it where it is sized by its content. */
   inline-size: max-content;
   max-inline-size: 100%;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
   transition-property: background-color, border-color, box-shadow, color;
   transition-duration: var(--idg-motion-duration-fast);
   transition-timing-function: var(--idg-motion-easing-standard);
-}
-
-/* The label holds what is slotted into the tab, laid out as the tab laid it out when it held it
-   itself: a row of items (an icon, a run of text, a badge), centred across, the tab's gap between
-   them. It is a grid and not a flex row only so that its columns may be narrower than what they
-   hold: a run of text then wraps, and a word wider than the tab breaks inside it, where break-word
-   lets it, rather than stand out on both sides of the tab, which an anonymous flex item, never
-   narrower than its longest word, would. Columns that may be empty leave the grid no narrowest
-   width of its own but its gaps, so the tab's flex row may shrink it. Where the label fits it is
-   the row it always was. */
-.label {
-  display: inline-grid;
-  grid-auto-columns: minmax(0, auto);
-  grid-auto-flow: column;
-  align-items: center;
-  gap: inherit;
 }
 
 .tab::after {

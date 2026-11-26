@@ -184,9 +184,8 @@ const CONTEXTS: Readonly<
 //   break-word (main: one line, nowrap, the label cut off with an ellipsis), the padding's reach;
 // - idg-avatar-group: the host's and the row's maximum, its max-content width and its wrapping;
 // - idg-tab: the host's and the tab's maximum (to the list's end padding, none beside a vertical
-//   list, the list's width under 20rem), the max-content width, break-word, the padding's reach,
-//   and the label element, which main had not (display: contents puts what is slotted back in the
-//   tab's own row);
+//   list, the list's width under 20rem), the max-content width, overflow-wrap and the padding's
+//   reach;
 // - idg-tabs: the vertical list's calc-size minimum, the drawing of a vertical list above its panel
 //   under 20rem, and the panel's break-word;
 // - idg-progress: the label's zero minimum and the label's and value's break-word;
@@ -215,8 +214,7 @@ const REFERENCE: Readonly<Record<string, string>> = {
       padding-inline: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
       white-space: nowrap;
       overflow-wrap: normal;
-    }
-    .label { display: contents; }`,
+    }`,
   "idg-tabs": `
     :host([orientation="vertical"]) .tabs { flex-direction: row; align-items: flex-start; }
     :host([orientation="vertical"]) .list {
