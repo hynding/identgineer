@@ -24,10 +24,12 @@ body {
   gap: var(--idg-space-s);
 }
 
-/* Three columns where there is room, fewer where three cards would not fit the window. */
+/* Three columns where there is room, fewer where three cards would not fit the window: 5rem is a
+   card's word and its padding at any text size, and three of them fit a 320px window at 100% text,
+   so the grid is three columns there, as it always was. */
 .grid-3 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 5rem), 1fr));
   gap: var(--idg-space-s);
 }
 
