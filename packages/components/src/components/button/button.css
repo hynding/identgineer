@@ -15,14 +15,15 @@
     var(--idg-density-target-size),
     calc(var(--idg-density-control-height) * var(--_height-scale))
   );
-  /* Where the window is narrow against the text (its width less sixteen times the text size is less
-     than the padding) the padding gives way, to the 3xs step at the least, so the longest word of a
-     label has the room it needs in a narrow column. It is never more than the padding, and it is
-     measured in the window, in a length, so a button is as wide as it was wherever there is room: at
-     100% text, from a window of about 300px up. */
+  /* Where the window is narrow against the text (its width less sixteen times the page's text size,
+     not the button's own, which a UX mode enlarges, is less than the padding) the padding gives way,
+     to the 3xs step at the least, so the longest word of a label has the room it needs in a narrow
+     column. It is never more than the padding, and it is measured in the window, in a length, so a
+     button is as wide as it was wherever there is room: at 100% text, from a window of about 300px
+     up. */
   padding-inline: min(
     calc(var(--idg-density-control-padding-inline) * var(--_padding-scale)),
-    max(var(--idg-space-3xs), calc(100vw - 16em))
+    max(var(--idg-space-3xs), calc(100vw - 16rem))
   );
   padding-block: var(--idg-density-control-padding-block);
   font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));

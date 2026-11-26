@@ -167,13 +167,14 @@
 .body,
 .footer {
   min-inline-size: 0;
-  /* Where the window is narrow against the text (its width less twenty-one times the text size is
-     less than the padding), the padding gives way, to the 2xs step at the least, so a word that is
-     wider than a narrow column's room does not leave the card, which clips it. It is never more than
-     the padding, so a card with none keeps none. The window is measured, in a length, because a percentage of the card would resolve to
-     nothing while a card is sized by its content. At 100% text it is the padding from a window of
-     360px up, and the rule below takes over under 28rem. */
-  padding-inline: min(var(--_pad), max(var(--idg-space-2xs), calc(100vw - 21em)));
+  /* Where the window is narrow against the text (its width less twenty-one times the page's text
+     size, not the card's, is less than the padding), the padding gives way, to the 2xs step at the
+     least, so a word wider than a narrow column's room does not leave the card, which clips it. It
+     is never more than the padding, so a card with none keeps none. The window is measured, in a
+     length, because a percentage of the card would resolve to nothing while a card is sized by its
+     content. At 100% text it is the padding from a window of 360px up, and the rule below takes over
+     under 28rem. */
+  padding-inline: min(var(--_pad), max(var(--idg-space-2xs), calc(100vw - 21rem)));
 }
 
 .header {
