@@ -206,17 +206,17 @@ async function place(page: Page, component: Markup): Promise<void> {
         if (context.beside === "cell") {
           const cell = document.createElement("div");
           cell.style.cssText = "display: table-cell";
-          cell.append(build(tree as Built));
+          cell.append(build(JSON.parse(tree) as Built));
           parent.append(cell, text("display: table-cell", `${long} ${long}`));
         } else {
-          parent.append(build(tree as Built));
+          parent.append(build(JSON.parse(tree) as Built));
           if (context.beside === "flex") parent.append(text("flex: 1 1 auto", long));
         }
         holder.append(parent);
       }
       document.body.prepend(holder);
     },
-    { tree: component, contexts: Object.entries(CONTEXTS), long: LONG },
+    { tree: JSON.stringify(component), contexts: Object.entries(CONTEXTS), long: LONG },
   );
   await hydrated(page);
   await settleFrames(page);

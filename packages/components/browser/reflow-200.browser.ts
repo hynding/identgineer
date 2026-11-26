@@ -294,7 +294,7 @@ test.describe("a select sized by its content is as wide as its longest option ne
   for (const { width, ux, size, designs } of CASES) {
     for (const [context, style] of CONTEXTS) {
       for (const invalid of [false, true]) {
-        const mode = ux ? `, ${ux} UX, size ${size ?? ""}, every design` : "";
+        const mode = ux ? `, ${ux} UX, size ${size}, every design` : "";
         test(`in ${context}${invalid ? ", invalid" : ""} at ${String(width)}px and 100% text${mode}`, async ({
           page,
         }) => {
