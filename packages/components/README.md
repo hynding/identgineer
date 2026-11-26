@@ -108,7 +108,7 @@ a media query counts in follow them. A page that sets its own root font size (`h
 but not the ones a media query switches, which counts in the browser's `rem` and not the page's: on
 such a page vertical tabs stay beside their panel, and up to a window of about 600px the panel
 narrows to make room for the list (about 20 to 135px in the demo's designs: 19 to 54px at 320px,
-about 100 to 135px from 400 to 560px).
+and about 40 to 135px from 400 to 560px, narrowest near 440px).
 
 A card's heading breaks a word wider than its room inside itself at any window width and any text
 size, not only up to 40rem, since a heading's words are the widest a card holds. That is the one
@@ -128,8 +128,14 @@ ellipsis and a tab's to run past the tab (a badge set to 60px was 30px tall with
 about 105px wrapped). CSS cannot tell a width you set from a narrow column without making the
 component a size container, which would change its size wherever it is sized by its content, so the
 ellipsis is not kept for one and not the other. At 320px a vertical list is 4 to 11px wider than it
-was in most designs, and 23.5px in brutalist (123 to 146.5px), so that the selected tab stays inside
-the list's border, where it used to cross it.
+was in most designs, and about 24px in brutalist (123 to 147px), so that the selected tab stays
+inside the list's border, where it used to cross it.
+
+A tab is never narrower than its one line of content unless its list is. So with `flex-wrap: wrap`
+set on a tab's part (`idg-tab::part(tab)`), the tab's items wrap only where the list's width caps the
+tab, and a parent sized by its content (a table cell, a `min-content` track) no longer squeezes the
+tab down to its widest item, as it used to: tabs with an icon or a badge there can be 10 to 50px
+wider than they were. The other part styles (a gap, a column, a baseline) lay the items out as before.
 
 The vertical list's narrowest width and a button's are set with `calc-size()`. In an engine without
 it a vertical tab may cross its list's border as before, and a button's longest word may run past

@@ -402,7 +402,9 @@ test("a word wider than a tab in a narrow column stays inside the tab, in every 
 // text, a badge) are the part's own flex items, so a page's style for the part lays them out, in a
 // row with a gap, in a column, on a baseline or wrapping. Each is compared with the tab's rules as
 // they were before a tab could wrap (one line, as wide as what it holds, no maximum), and the items
-// must stand one after another along the part's direction.
+// must stand one after another along the part's direction. This holds at the tab's full width, which
+// is what is measured here: in a parent sized by its content a wrapping part no longer narrows the
+// tab to its widest item (the README says so), since a tab is as wide as its one line.
 const PART_STYLES = [
   "gap: 12px",
   "flex-direction: column; gap: 4px",
