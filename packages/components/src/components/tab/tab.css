@@ -1,8 +1,9 @@
 :host {
   display: inline-flex;
   flex: none;
-  /* As wide as the list's content and its end padding, as a tab on one line always could be. */
-  max-inline-size: calc(100% + var(--_list-pad, 0px));
+  /* As wide as the list's content and its end padding, as a tab on one line always could be, and a
+     pixel more, so a label that reached a fraction of one past the list does not wrap for it. */
+  max-inline-size: calc(100% + var(--_list-pad, 0px) + 1px);
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -98,7 +99,7 @@
 
 @media (width < 20rem) {
   :host([orientation="vertical"]) {
-    max-inline-size: calc(100% + var(--_list-pad, 0px));
+    max-inline-size: calc(100% + var(--_list-pad, 0px) + 1px);
   }
 
   :host([orientation="vertical"]) .tab {

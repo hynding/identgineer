@@ -204,7 +204,8 @@ const REFERENCE: Readonly<Record<string, string>> = {
     }`,
   "idg-card": `
     .header, .body, .footer { padding-inline: var(--_pad); }
-    .heading, .card { overflow-wrap: normal; }
+    .card { overflow-wrap: normal; }
+    .heading { overflow-wrap: inherit; }
     @media (max-width: 28rem) {
       .card { overflow-wrap: break-word; }
       .header, .body, .footer { padding-inline: min(var(--_pad), var(--idg-space-s)); }
@@ -338,13 +339,16 @@ function sizes(page: Page): Promise<Size[]> {
         }
         if (node instanceof Element && node.getRootNode() instanceof ShadowRoot) {
           // A box the component draws (a background or a border), past the column it is in; and a
-          // tab, which is drawn when it is chosen, hovered or focused, past its list.
+          // tab, which is drawn when it is chosen, hovered or focused, past its list by more than
+          // the pixel a tab is allowed, so that a fraction of one does not wrap its label.
           const tabs = node.classList.contains("tab")
             ? (node.getRootNode() as ShadowRoot).host.closest("idg-tabs")
             : null;
           const list = tabs?.shadowRoot?.querySelector(".list");
-          if (list) overflow += past(node.getBoundingClientRect(), list.getBoundingClientRect());
-          else if (drawn(getComputedStyle(node)))
+          if (list) {
+            const beyond = past(node.getBoundingClientRect(), list.getBoundingClientRect());
+            if (beyond > 1.01) overflow += beyond;
+          } else if (drawn(getComputedStyle(node)))
             overflow += past(node.getBoundingClientRect(), room);
         }
         if (node instanceof Element && node.shadowRoot) walk(node.shadowRoot);
