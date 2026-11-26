@@ -106,19 +106,35 @@ The browser's text size setting and zoom move all of them, since both the page's
 a media query counts in follow them. A page that sets its own root font size (`html { font-size:
 200% }`) gets the adjustments measured in the page's `rem`, the padding that gives way among them,
 but not the ones a media query switches, which counts in the browser's `rem` and not the page's: on
-such a page vertical tabs stay beside their panel, and a card breaks a long word only up to 40rem of
-the browser's text size.
+such a page vertical tabs stay beside their panel, and up to a window of about 600px the panel
+shrinks to a few letters wide to make room for the list (19 to 116px in the demo's designs).
 
-At 100% text and ordinary widths a component is the size it was in any parent, including one sized
-by its content (a `min-content` or `max-content` track, a table cell, a flex row beside other text,
-an inline block), wherever it fitted: it differs only where its text, or a box it draws, reached past
-the component or the column it was in, and then only by wrapping. A label wraps only where the
-component would otherwise be wider than the room it is in. A width you set on a badge or a tab is
-room like any other: a label longer than it wraps, where a badge's used to be cut off with an
-ellipsis and a tab's to run past the tab (a badge set to 60px was 30px tall with an ellipsis and is
-about 105px wrapped). CSS cannot tell a width
-you set from a narrow column without making the component a size container, which would change its
-size wherever it is sized by its content, so the ellipsis is not kept for one and not the other.
+A card's heading breaks a word wider than its room inside itself at any window width and any text
+size, not only up to 40rem, since a heading's words are the widest a card holds. That is the one
+change at 100% text to a component that fitted: a card whose heading's longest word is wider than
+its content box (in a narrow column) is taller than it was, where that word used to run into the
+padding.
+
+At 100% text and ordinary widths a component is otherwise the size it was in any parent, including
+one sized by its content (a `min-content` or `max-content` track, a table cell, a flex row beside
+other text, an inline block), wherever it fitted: it differs only where its text, or a box it draws,
+reached past the component or the column it was in, or was clipped, and then only by wrapping. Text
+that ran into a component's own padding still does, and so does an accordion heading's word that
+ran over the chevron, but the heading's other lines are then laid out as wide as that word, up to
+the item's edge, so they may hold a word more and the heading be a line shorter than it was (as in
+a 200px column in the brutalist and pixel designs). A label wraps only where the component would otherwise be wider than the room it is in.
+A width you set on a badge or a tab is room like any other: a label longer than it wraps, where a
+badge's used to be cut off with an ellipsis and a tab's to run past the tab (a badge set to 60px was
+30px tall with an ellipsis and is about 105px wrapped). CSS cannot tell a width you set from a
+narrow column without making the component a size container, which would change its size wherever
+it is sized by its content, so the ellipsis is not kept for one and not the other. At 320px a
+vertical list is a few pixels wider than it was, so that the selected tab stays inside the list's
+border, where it used to cross it.
+
+The vertical list's narrowest width, a button's, and the room an accordion heading's word has before
+it breaks are set with `calc-size()`. In an engine without it a vertical tab may cross its list's
+border as before, a button's longest word may run past its background in a column narrower than the
+word, as before, and an accordion heading's long word breaks beside the chevron.
 
 ## `idg-button`
 
@@ -1934,8 +1950,8 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   | dashboard              | event-table, table, pagination, stat, sparkline                                                                                                              |      67,842 |    168,624 |
   | consent and overlays   | consent-banner, consent-preferences, dialog, popover, tooltip, toast, toast-region                                                                           |      87,918 |    188,483 |
   | menus                  | menu, menu-group, menu-item, menu-separator, user-menu                                                                                                       |      49,796 |    126,820 |
-  | tabs                   | tabs, tab, tab-panel                                                                                                                                         |      32,927 |     89,183 |
-  | accordion              | accordion, accordion-item                                                                                                                                    |      28,036 |     79,214 |
+  | tabs                   | tabs, tab, tab-panel                                                                                                                                         |      33,016 |     89,272 |
+  | accordion              | accordion, accordion-item                                                                                                                                    |      28,233 |     79,416 |
   | layout                 | stack, cluster, grid, cover, sidebar, switcher, layout, divider, card, breadcrumb, breadcrumb-item                                                           |      84,232 |    161,160 |
   | `idg-brand-logo`       | the logo, with the sanitiser                                                                                                                                 |     117,763 |    330,377 |
   | `idg-brand-swatches`   | the swatches                                                                                                                                                 |      29,826 |     84,500 |
@@ -1947,7 +1963,7 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   minified) is in the logo's, the guide's, the export's and the editor's bundles (the export
   validates a kit with it), the generator in the export's and the editor's, and the emitters in the
   export's alone. The editor's row counts its own entry and chunks; a page with it also loads the
-  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 702,039
+  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 702,325
   bytes (663,801 before the editor), against 433,865 before the brand components and 536,437 on
   main.
 
