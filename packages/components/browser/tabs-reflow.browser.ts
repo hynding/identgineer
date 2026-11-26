@@ -69,8 +69,8 @@ test.describe("vertical tabs keep their words whole with text at 200%", () => {
         page,
       }) => {
         test.setTimeout(90_000);
-        if (way === "browser") await setBrowserTextSize(page, 200);
         await open(page, width);
+        if (way === "browser") await setBrowserTextSize(page, 200);
         await setTextSize(page, {
           label: "200%",
           fontSize: way === "browser" ? "100%" : "200%",
@@ -149,8 +149,9 @@ test.describe("vertical tabs keep the list beside the panel until the room is sh
   });
 
   test("with the browser's text at 200% the list is above the panel at 600px", async ({ page }) => {
-    await setBrowserTextSize(page, 200);
     await open(page, 600);
+    await setBrowserTextSize(page, 200);
+    await settleFrames(page);
     expect((await arrangement(page)).below).toBe(true);
   });
 });
@@ -201,16 +202,20 @@ test.describe("vertical tabs in a parent sized by its content are as wide as wha
         await customElements.whenDefined("idg-tabs");
         await new Promise((resolve) => setTimeout(resolve, 200));
         const list = tabs.shadowRoot?.querySelector(".list")?.getBoundingClientRect();
-        const panels = tabs.shadowRoot?.querySelector(".panels");
+        const panels = tabs.shadowRoot?.querySelector(".panels")?.getBoundingClientRect();
         const inner = tabs.shadowRoot?.querySelector(".tabs");
         if (!list || !panels || !inner) throw new Error("no list or panels");
-        const range = document.createRange();
-        range.selectNodeContents(tabs.querySelector("idg-tab-panel:not([hidden])") ?? panels);
-        const content = range.getBoundingClientRect().width;
         const gap = Number.parseFloat(getComputedStyle(inner).columnGap);
-        return { host: tabs.getBoundingClientRect().width, list: list.width, gap, content };
+        return {
+          host: tabs.getBoundingClientRect().width,
+          list: list.width,
+          gap,
+          panels: panels.width,
+        };
       }, style);
-      expect(found.host).toBeCloseTo(found.list + found.gap + found.content, 0);
+      expect(found.host).toBeCloseTo(found.list + found.gap + found.panels, 0);
+      // Two one-letter tabs and a word: a list and a panel of a few dozen pixels each.
+      expect(found.panels).toBeLessThan(80);
       expect(found.host).toBeLessThan(320);
     });
   }

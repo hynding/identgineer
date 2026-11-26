@@ -63,7 +63,8 @@ export async function setTextSize(page: Page, size: TextSize): Promise<void> {
  * Sets the text size the way a reader does in the browser's settings, by the default font size,
  * and not on the page's root element as `setTextSize` does. A media query measures in that size
  * (its `rem` is the browser's, not the page's), so only this way does a rule that a media query in
- * `rem` switches on see a larger text size. The page's own size is left at 100% of it.
+ * `rem` switches on see a larger text size. The page's own size is left at 100% of it. It lasts
+ * until the page navigates, so it is set after the page is open.
  */
 export async function setBrowserTextSize(page: Page, percent: number): Promise<void> {
   const session = await page.context().newCDPSession(page);

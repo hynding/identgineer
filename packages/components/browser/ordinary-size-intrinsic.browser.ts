@@ -174,6 +174,8 @@ interface Size {
   context: string;
   width: number;
   height: number;
+  /** How far the component's text reaches past either side of its host, in pixels. */
+  overflow: number;
 }
 
 async function place(page: Page, component: Markup): Promise<void> {
@@ -226,7 +228,27 @@ function sizes(page: Page): Promise<Size[]> {
       const host = parent.querySelector('[class~="hydrated"]');
       if (!host) throw new Error(`no component in ${parent.dataset.context ?? ""}`);
       const box = host.getBoundingClientRect();
-      return { context: parent.dataset.context ?? "", width: box.width, height: box.height };
+      let overflow = 0;
+      const walk = (node: Node): void => {
+        if (node instanceof Text && node.data.trim()) {
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          for (const line of range.getClientRects()) {
+            if (line.width > 0) {
+              overflow = Math.max(overflow, line.right - box.right, box.left - line.left);
+            }
+          }
+        }
+        if (node instanceof Element && node.shadowRoot) walk(node.shadowRoot);
+        node.childNodes.forEach(walk);
+      };
+      walk(host);
+      return {
+        context: parent.dataset.context ?? "",
+        width: box.width,
+        height: box.height,
+        overflow,
+      };
     }),
   );
 }
@@ -272,12 +294,16 @@ for (const width of [1280, 375]) {
           found.forEach((size, index) => {
             const reference = expected[index];
             if (!reference) return;
-            if (
-              Math.abs(size.width - reference.width) > 0.5 ||
-              Math.abs(size.height - reference.height) > 0.5
-            ) {
+            const same =
+              Math.abs(size.width - reference.width) <= 0.5 &&
+              Math.abs(size.height - reference.height) <= 0.5;
+            // Where the text reached past the component before (a component whose host may shrink,
+            // squeezed in a flex row below its content), it was broken there, and now has only to
+            // reach no further than it did.
+            const mended = reference.overflow > 1 && size.overflow <= reference.overflow + 0.5;
+            if (!same && !mended) {
               failures.push(
-                `${design ?? "own"}, ${size.context}: ${String(Math.round(size.width))}x${String(Math.round(size.height))}, was ${String(Math.round(reference.width))}x${String(Math.round(reference.height))}`,
+                `${design ?? "own"}, ${size.context}: ${String(Math.round(size.width))}x${String(Math.round(size.height))}, was ${String(Math.round(reference.width))}x${String(Math.round(reference.height))}${size.overflow > 1 ? `, text ${String(Math.round(size.overflow))}px past it, was ${String(Math.round(reference.overflow))}px` : ""}`,
               );
             }
           });
