@@ -54,10 +54,7 @@
      come on top), where the panel keeps the rest. Where the longest tab fits two fifths of the tabs
      this is less than the list is, and changes nothing; sizing by content counts a percentage
      minimum as nothing, so it changes no size there either. */
-  min-inline-size: calc-size(
-    min-content,
-    min(size - var(--_list-pad) - var(--_list-border), 60%)
-  );
+  min-inline-size: calc-size(min-content, min(size - var(--_list-pad) - var(--_list-border), 60%));
   padding: var(--_list-pad);
   border-block-end: 0;
   border-inline-end-width: var(--idg-border-width);
