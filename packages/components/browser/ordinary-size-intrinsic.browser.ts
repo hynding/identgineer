@@ -181,8 +181,7 @@ const CONTEXTS: Readonly<
 //   (main: break-word and the smaller padding under 28rem);
 // - idg-select: the padding's, the chevron room's, the invalid mark's and the chevron's reach;
 // - idg-alert: break-word on the content;
-// - idg-accordion-item: the heading's own box, as wide as its longest word up to the item's edge,
-//   and its break-word.
+// - idg-accordion-item: break-word on the heading.
 const REFERENCE: Readonly<Record<string, string>> = {
   "idg-badge": `
     :host { max-inline-size: none; }
@@ -239,7 +238,7 @@ const REFERENCE: Readonly<Record<string, string>> = {
     .invalid-mark { margin-inline-end: 1.5em; }
     .chevron { inset-inline-end: var(--idg-density-control-padding-inline); }`,
   "idg-alert": `.content { overflow-wrap: normal; }`,
-  "idg-accordion-item": `.title > slot { display: contents; overflow-wrap: normal; }`,
+  "idg-accordion-item": `.title { overflow-wrap: normal; }`,
 };
 
 interface Size {
@@ -257,6 +256,8 @@ interface Size {
   overflow: number;
   /** Whether the component is a card whose heading has a word wider than the heading's box. */
   headingWordWider: boolean;
+  /** How far, in pixels, an accordion heading's text runs across its chevron, at most over its lines. */
+  overChevron: number;
 }
 
 async function place(page: Page, component: Markup): Promise<void> {
@@ -405,6 +406,25 @@ function sizes(page: Page): Promise<Size[]> {
           Number.parseFloat(style.paddingRight);
         headingWordWider = widest > content + 0.5;
       }
+      // An accordion heading's text drawn across its chevron, by the width the two share on a line.
+      let overChevron = 0;
+      for (const item of host.localName === "idg-accordion"
+        ? host.querySelectorAll("idg-accordion-item")
+        : []) {
+        const chevron = item.shadowRoot?.querySelector(".chevron")?.getBoundingClientRect();
+        const slot = item.shadowRoot?.querySelector(".title slot");
+        if (!chevron || !(slot instanceof HTMLSlotElement)) continue;
+        const assigned = slot.assignedNodes({ flatten: true });
+        for (const node of assigned.length > 0 ? assigned : [...slot.childNodes]) {
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          for (const line of range.getClientRects()) {
+            const across = Math.min(line.right, chevron.right) - Math.max(line.left, chevron.left);
+            const down = Math.min(line.bottom, chevron.bottom) - Math.max(line.top, chevron.top);
+            if (down > 0) overChevron = Math.max(overChevron, across);
+          }
+        }
+      }
       return {
         context: parent.dataset.context ?? "",
         width: own.width,
@@ -412,6 +432,7 @@ function sizes(page: Page): Promise<Size[]> {
         contentSized,
         overflow,
         headingWordWider,
+        overChevron,
       };
     }),
   );
@@ -488,7 +509,18 @@ for (const width of [320, 375, 768]) {
               sameWidth &&
               size.height > reference.height &&
               reference.headingWordWider;
-            if (!(sameWidth && sameHeight) && !mended && !heading) {
+            // On main a heading word wider than the room beside an accordion's chevron ran across the
+            // chevron, which is broken though it stays inside the item. Only an accordion, only
+            // where its heading's text crossed the chevron by more than a pixel and now does not,
+            // no narrower or shorter, and wider only where it is as wide as its content.
+            const chevron =
+              component[0] === "idg-accordion" &&
+              reference.overChevron > 1 &&
+              size.overChevron <= 1 &&
+              (sameWidth || size.contentSized) &&
+              size.width >= reference.width - 0.5 &&
+              size.height >= reference.height - 0.5;
+            if (!(sameWidth && sameHeight) && !mended && !heading && !chevron) {
               failures.push(
                 `${design}, ${size.context}: ${String(Math.round(size.width))}x${String(Math.round(size.height))}, was ${String(Math.round(reference.width))}x${String(Math.round(reference.height))}${size.overflow > 1 || reference.overflow > 1 ? `, text ${String(Math.round(size.overflow))}px past it, was ${String(Math.round(reference.overflow))}px` : ""}`,
               );
