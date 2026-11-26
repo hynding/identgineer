@@ -35,8 +35,14 @@ jobs:
 
   browser:
     runs-on: ubuntu-latest
-    # The suite takes about 20 minutes on a runner, so a limit of 20 cancelled runs that were passing.
-    timeout-minutes: 45
+    # The whole suite takes about 37 minutes on one runner, so it runs as two halves side by side,
+    # each about 20 minutes. The limit leaves room for a slow runner: a tighter one once cancelled
+    # runs that were passing.
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -49,4 +55,4 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @identgineer/components exec playwright install --with-deps chromium
       - run: pnpm build
-      - run: pnpm --filter @identgineer/components test:browser
+      - run: pnpm --filter @identgineer/components test:browser --shard=${{ matrix.shard }}/2
