@@ -68,14 +68,15 @@
    them. It is a grid and not a flex row only so that its columns may be narrower than what they
    hold: a run of text then wraps, and a word wider than the tab breaks inside it, where break-word
    lets it, rather than stand out on both sides of the tab, which an anonymous flex item, never
-   narrower than its longest word, would. Where the label fits it is the row it always was. */
+   narrower than its longest word, would. Columns that may be empty leave the grid no narrowest
+   width of its own but its gaps, so the tab's flex row may shrink it. Where the label fits it is
+   the row it always was. */
 .label {
   display: inline-grid;
   grid-auto-columns: minmax(0, auto);
   grid-auto-flow: column;
   align-items: center;
   gap: inherit;
-  min-inline-size: 0;
 }
 
 .tab::after {
