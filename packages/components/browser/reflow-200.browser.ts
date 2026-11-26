@@ -353,14 +353,19 @@ test.describe("a select sized by its content is as wide as its longest option ne
 // The value is one line, as on every page that holds a select, in the dashboard's header and in
 // the brand editor's form, and it stays the same height as the options are chosen through.
 test.describe("a select stays one line, and one height, as options are chosen", () => {
-  for (const address of ["/fixtures/dashboard.html", "/fixtures/brand-editor.html"]) {
+  // Only the page's own pickers are chosen through: the variation switcher's selects change the
+  // design and the UX mode of the page, and with them every height on it.
+  for (const [address, own] of [
+    ["/fixtures/dashboard.html", "idg-property-picker idg-select"],
+    ["/fixtures/brand-editor.html", "idg-brand-editor idg-select"],
+  ] as const) {
     for (const width of [768, 1280]) {
       test(`${address} at ${String(width)}px and 100% text`, async ({ page }) => {
         await page.setViewportSize({ width, height: 900 });
         await openPage(page, address);
         const heights = () =>
           page.evaluate(() => {
-            const found: { name: string; box: number; minimum: number; shown: string }[] = [];
+            const found: { name: string; box: number; lines: number; shown: string }[] = [];
             const walk = (root: Document | ShadowRoot): void => {
               for (const element of root.querySelectorAll("*")) {
                 if (element.shadowRoot) walk(element.shadowRoot);
@@ -371,7 +376,12 @@ test.describe("a select stays one line, and one height, as options are chosen", 
                 found.push({
                   name: element.id || (element.getAttribute("name") ?? "select"),
                   box: box.getBoundingClientRect().height,
-                  minimum: Number.parseFloat(getComputedStyle(box).minHeight),
+                  lines: Math.round(
+                    (native.clientHeight -
+                      Number.parseFloat(getComputedStyle(native).paddingTop) -
+                      Number.parseFloat(getComputedStyle(native).paddingBottom)) /
+                      Number.parseFloat(getComputedStyle(native).lineHeight),
+                  ),
                   shown: native.selectedOptions[0]?.text ?? "",
                 });
               }
@@ -382,9 +392,10 @@ test.describe("a select stays one line, and one height, as options are chosen", 
         const before = await heights();
         expect(before.length).toBeGreaterThan(0);
         for (const select of before) {
-          expect(select.box, `${select.name} "${select.shown}"`).toBeCloseTo(select.minimum, 0);
+          expect(select.lines, `${select.name} "${select.shown}"`).toBe(1);
         }
-        const selects = page.locator("idg-select");
+        const selects = page.locator(own);
+        expect(await selects.count()).toBeGreaterThan(0);
         for (let index = 0; index < (await selects.count()); index += 1) {
           const select = selects.nth(index);
           await select.focus();
@@ -392,6 +403,7 @@ test.describe("a select stays one line, and one height, as options are chosen", 
         }
         const after = await heights();
         expect(after.map((select) => select.box)).toEqual(before.map((select) => select.box));
+        expect(after.every((select) => select.lines === 1)).toBe(true);
       });
     }
   }

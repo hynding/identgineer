@@ -74,9 +74,18 @@ export function clippedText(page: Page): Promise<string[]> {
       `${element.localName}${element.getAttribute("part") ? `::part(${element.getAttribute("part") ?? ""})` : ""}`;
     const walk = (node: Node): void => {
       if (node instanceof Text) {
-        const parent = node.assignedSlot ?? node.parentElement;
-        if (!parent || !node.data.trim() || !parent.checkVisibility()) return;
-        const place = parent.getBoundingClientRect();
+        // The element that holds the text is the one with a box; a slot has none (`display: contents`),
+        // so it only says where the text is drawn, and the boxes around the slot are the ones that clip.
+        const holder = node.parentElement;
+        const parent = node.assignedSlot ?? holder;
+        if (
+          !holder ||
+          !parent ||
+          !node.data.trim() ||
+          !holder.checkVisibility({ visibilityProperty: true })
+        )
+          return;
+        const place = holder.getBoundingClientRect();
         if (place.width <= 1 || place.height <= 1) return;
         const range = document.createRange();
         range.selectNodeContents(node);

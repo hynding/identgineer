@@ -1164,12 +1164,14 @@ test.describe("idg-brand-editor reflow", () => {
     });
   }
 
-  // The narrowest form there is, 320px with 200% text, is about 5.5em wide. There the remove
-  // button's label keeps each word whole, but a legend does not in the designs that set it in
-  // capitals or a wide display face (brutalist, pixel): its widest word, at the larger display
-  // step, needs about 7em of form, and `overflow-wrap: anywhere` breaks it inside itself instead of
-  // letting it leave the group. Legends are held to whole words from 8em, and the narrower case
-  // is a known gap.
+  // The narrowest form on the page, 320px with 200% text, is 8.5em wide as the branch lays it out
+  // (measured; an earlier version of this comment said 5.5em, which was wrong). A remove button's
+  // label keeps each word whole in a form down to 5.5em. A legend does not in the designs that set
+  // it in capitals or a wide display face (brutalist, pixel): its widest word, at the larger display
+  // step, needs about 7em, and `overflow-wrap: anywhere` breaks it inside itself in a form narrower
+  // than 8em instead of letting it leave the group. Legends are therefore checked from 8em, which
+  // covers the 8.5em form the page has at 320px, and a legend in a form narrower than 8em (one the
+  // page does not make) is a known gap, not a tested one.
   for (const [ems, legends] of [
     [5.5, false],
     [6, false],
