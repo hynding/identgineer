@@ -8,10 +8,17 @@
   display: none;
 }
 
+/* The avatars are one row, as wide as all of them, to whatever sizes the group by its content (a
+   track, a table cell, a flex row beside other text), as they always were. In less room than that
+   (a large text size in a narrow window) the row is as wide as the room and wraps onto another,
+   where it would otherwise leave it. The maximum is a percentage, which sizing by content does not
+   count. */
 .group {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
+  inline-size: max-content;
+  max-inline-size: 100%;
 }
 
 /* Each avatar overlaps the one before it by a third, and a ring in the surface colour keeps the

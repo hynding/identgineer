@@ -2,13 +2,15 @@
    beside it, and a value too long for the field ends in an ellipsis on one line, as in every text
    control. Where the window is narrow against the text, as a phone at 200% text is, the padding and
    the room give way so the value keeps room for its first word.
-   What decides it is the window's width less twelve times the text size (`--_reach`), which is a
-   length and not a share of the field: a select sized by its content (an inline block, a float, a
-   max-content track, a flex row) is as wide as its longest option needs whatever the window is, and
-   a percentage of its own width would count as nothing there. At 100% text the reach is more than
-   the tokens from a window of 240px up, so nothing changes at any ordinary width. */
+   What decides it is the window's width less twelve times the page's text size (`--_reach`), which
+   is a length and not a share of the field: a select sized by its content (an inline block, a float,
+   a max-content track, a flex row) is as wide as its longest option needs whatever the window is,
+   and a percentage of its own width would count as nothing there. It is the page's text size and
+   not the select's own, which a UX mode and the large size enlarge, so at 100% text the reach is
+   more than the tokens from a window of 240px up, in every mode and size, and nothing changes at any
+   ordinary width. */
 .box {
-  --_reach: calc(100vw - 12em);
+  --_reach: calc(100vw - 12rem);
   --_pad-inline: clamp(
     var(--idg-space-3xs),
     var(--_reach),
@@ -37,7 +39,13 @@
 
 .chevron {
   position: absolute;
-  inset-inline-end: var(--_pad-inline);
+  /* Where it always stood, at the unscaled token whatever the size, and giving way with the
+     padding where the window is narrow against the text. */
+  inset-inline-end: clamp(
+    var(--idg-space-3xs),
+    var(--_reach),
+    var(--idg-density-control-padding-inline)
+  );
   inset-block-start: 50%;
   color: var(--idg-color-text-muted);
   pointer-events: none;

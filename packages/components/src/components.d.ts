@@ -2070,9 +2070,10 @@ export namespace Components {
     }
     /**
      * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
-     * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
-     * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
-     * its position among its own kind as its value.
+     * (reversed in right-to-left text; a vertical list, which is drawn across where the window is short
+     * of room, answers Left and Right as well as Up and Down), Home and End move between the enabled
+     * tabs, and a panel is shown for the selected tab. Tabs and panels are paired by `value`; one
+     * without a `value` takes its position among its own kind as its value.
      */
     interface IdgTabs {
         /**
@@ -3429,9 +3430,10 @@ declare global {
     }
     /**
      * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
-     * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
-     * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
-     * its position among its own kind as its value.
+     * (reversed in right-to-left text; a vertical list, which is drawn across where the window is short
+     * of room, answers Left and Right as well as Up and Down), Home and End move between the enabled
+     * tabs, and a panel is shown for the selected tab. Tabs and panels are paired by `value`; one
+     * without a `value` takes its position among its own kind as its value.
      */
     interface HTMLIdgTabsElement extends Components.IdgTabs, HTMLStencilElement {
         addEventListener<K extends keyof HTMLIdgTabsElementEventMap>(type: K, listener: (this: HTMLIdgTabsElement, ev: IdgTabsCustomEvent<HTMLIdgTabsElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
@@ -5636,9 +5638,10 @@ declare namespace LocalJSX {
     }
     /**
      * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
-     * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
-     * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
-     * its position among its own kind as its value.
+     * (reversed in right-to-left text; a vertical list, which is drawn across where the window is short
+     * of room, answers Left and Right as well as Up and Down), Home and End move between the enabled
+     * tabs, and a panel is shown for the selected tab. Tabs and panels are paired by `value`; one
+     * without a `value` takes its position among its own kind as its value.
      */
     interface IdgTabs {
         /**
@@ -6825,9 +6828,10 @@ declare module "@stencil/core" {
             "idg-table": LocalJSX.IntrinsicElements["idg-table"] & JSXBase.HTMLAttributes<HTMLIdgTableElement>;
             /**
              * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
-             * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
-             * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
-             * its position among its own kind as its value.
+             * (reversed in right-to-left text; a vertical list, which is drawn across where the window is short
+             * of room, answers Left and Right as well as Up and Down), Home and End move between the enabled
+             * tabs, and a panel is shown for the selected tab. Tabs and panels are paired by `value`; one
+             * without a `value` takes its position among its own kind as its value.
              */
             "idg-tabs": LocalJSX.IntrinsicElements["idg-tabs"] & JSXBase.HTMLAttributes<HTMLIdgTabsElement>;
             "idg-textarea": LocalJSX.IntrinsicElements["idg-textarea"] & JSXBase.HTMLAttributes<HTMLIdgTextareaElement>;

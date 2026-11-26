@@ -15,12 +15,20 @@
   display: inline-flex;
   align-items: center;
   gap: var(--idg-space-2xs);
+  /* As wide as its label on one line, as it always was, to whatever sizes the badge by its content
+     (a track, a table cell, a flex row beside other text). Wider than the room it is in, it is as
+     wide as the room and the label wraps, and breaks inside a word only if one is wider still,
+     where a label on one line would be cut off with an ellipsis. The maximum is a percentage, which
+     sizing by content does not count. */
+  inline-size: max-content;
   max-inline-size: 100%;
   padding-block: var(--idg-space-3xs);
-  /* Short of room (a large text size in a narrow window) the padding gives way before the label is
-     cut. The window is what is measured, in a length that sizing by content counts as it is, so a
-     badge is as wide as it was wherever there is room. */
-  padding-inline: clamp(var(--idg-space-3xs), calc(100vw - 12em), var(--idg-space-xs));
+  /* Short of room (the window's width less twelve times the page's text size is less than the
+     padding, as at a large text size in a narrow window) the padding gives way before the label is
+     cut. The window is what is measured, in a length that sizing by content counts as it is, and in
+     the page's text size (not the badge's own, which a UX mode enlarges), so a badge is as wide as
+     it was wherever there is room: at 100% text, in a window from about 200px up. */
+  padding-inline: clamp(var(--idg-space-3xs), calc(100vw - 12rem), var(--idg-space-xs));
   border-width: var(--idg-border-control-width);
   border-style: var(--idg-border-control-style);
   border-color: var(--idg-border-control-color);
@@ -33,9 +41,9 @@
   line-height: var(--idg-font-line-height-snug);
   letter-spacing: var(--idg-font-body-letter-spacing);
   text-transform: var(--idg-ornament-control-transform);
-  /* A label wraps, and breaks inside a word only if one is wider than the room, in place of being
-     cut off with an ellipsis. A badge is as wide as its label wherever there is room for it. */
-  overflow-wrap: anywhere;
+  /* break-word, and not anywhere: a word is broken only where it would leave the badge, and it does
+     not make the badge any narrower to what sizes it by its content. */
+  overflow-wrap: break-word;
 }
 
 .size-sm {

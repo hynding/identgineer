@@ -30,9 +30,10 @@ function keyOf(item: { value: string }, index: number): string {
 
 /**
  * Follows the WAI-ARIA tabs pattern. One tab is the tab stop, the arrow keys along the tab list
- * (reversed in right-to-left text), Home and End move between the enabled tabs, and a panel is
- * shown for the selected tab. Tabs and panels are paired by `value`; one without a `value` takes
- * its position among its own kind as its value.
+ * (reversed in right-to-left text; a vertical list, which is drawn across where the window is short
+ * of room, answers Left and Right as well as Up and Down), Home and End move between the enabled
+ * tabs, and a panel is shown for the selected tab. Tabs and panels are paired by `value`; one
+ * without a `value` takes its position among its own kind as its value.
  *
  * @slot - `idg-tab-panel` elements.
  * @slot tab - `idg-tab` elements. They are put here for you.
@@ -127,8 +128,11 @@ export class IdgTabs {
       return;
     }
     const enabled = tabs.map((tab) => !tab.disabled);
+    // A vertical list is drawn across where the window is short of room, and Left and Right have
+    // no other job in it, so they move along it too, mirrored in right-to-left text.
     const orientation = oneOf(TABS_ORIENTATIONS, this.orientation, "horizontal");
-    const next = rovingMove(current, event.key, enabled, orientation, this.isRightToLeft());
+    const axes = orientation === "vertical" ? "both" : orientation;
+    const next = rovingMove(current, event.key, enabled, axes, this.isRightToLeft());
     if (next === undefined) return;
     event.preventDefault();
     const activation = oneOf(TABS_ACTIVATIONS, this.activation, "automatic");

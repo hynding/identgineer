@@ -14,7 +14,7 @@ main {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--idg-space-m);
-  padding: clamp(var(--idg-space-xs), calc(100vw - 12em), var(--idg-space-l));
+  padding: clamp(var(--idg-space-xs), calc(100vw - 12rem), var(--idg-space-l));
 }
 
 /* A heading word wider than a narrow window, at a large text size, breaks rather than leave it.
@@ -165,7 +165,7 @@ section.dashboard {
   isolation: isolate;
   overflow: hidden;
   gap: var(--idg-space-m);
-  padding: clamp(var(--idg-space-xs), calc(100vw - 12em), var(--idg-space-l));
+  padding: clamp(var(--idg-space-xs), calc(100vw - 12rem), var(--idg-space-l));
   border-radius: var(--idg-shape-radius-lg);
   background:
     radial-gradient(

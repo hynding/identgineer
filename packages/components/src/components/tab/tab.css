@@ -28,11 +28,12 @@
   min-inline-size: var(--idg-density-target-size);
   padding-block: var(--idg-density-control-padding-block);
   /* The padding gives way, to a hair's width, where the window is narrow against the text (the
-     window's width less twelve times the text size is less than the padding): a label then has the
-     room its word needs. At 100% text it is the token from a window of 240px up. */
+     window's width less twelve times the page's text size, not the tab's own, which a UX mode
+     enlarges, is less than the padding): a label then has the room its word needs. At 100% text it
+     is the token from a window of 240px up. */
   padding-inline: clamp(
     var(--idg-space-3xs),
-    calc(100vw - 12em),
+    calc(100vw - 12rem),
     calc(var(--idg-space-m) * var(--idg-density-gap-scale))
   );
   border-width: var(--idg-surface-border-width);
@@ -46,11 +47,14 @@
   letter-spacing: var(--idg-font-body-letter-spacing);
   line-height: var(--idg-font-body-line-height);
   text-transform: var(--idg-ornament-control-transform);
-  /* A label is one line while it fits its list, which is as wide as it needs. A tab alone wider than
-     its list (a long label at a large text size in a narrow window) shrinks to it and wraps, and
-     breaks inside a word only if one is still wider, rather than reach past the window. */
+  /* A label is one line, and a tab as wide as it on one line to whatever sizes the list by its
+     content, as it always was. A tab alone wider than its list (a long label at a large text size in
+     a narrow window) is as wide as the list and wraps, and breaks inside a word only if one is
+     still wider, rather than reach past the window. The maximum is a percentage, which sizing by
+     content does not count, and break-word, unlike anywhere, makes no tab narrower there. */
+  inline-size: max-content;
   max-inline-size: 100%;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   transition-property: background-color, border-color, box-shadow, color;
   transition-duration: var(--idg-motion-duration-fast);
   transition-timing-function: var(--idg-motion-easing-standard);
@@ -70,8 +74,24 @@
   transition-timing-function: var(--idg-motion-easing-emphasized);
 }
 
+/* Beside its panel, a vertical list is as wide as its longest tab, or near it, and a tab is as wide
+   as its label, as it always was, where a share of the list would break a word for want of a few
+   pixels. Drawn above the panel, where the window is short of room (the same query as idg-tabs'),
+   the list is a row, and a tab no wider than it, as in a horizontal list. */
+:host([orientation="vertical"]) {
+  max-inline-size: none;
+}
+
 :host([orientation="vertical"]) .tab {
   justify-content: flex-start;
+  max-inline-size: none;
+}
+
+@media (max-width: 23rem) {
+  :host([orientation="vertical"]),
+  :host([orientation="vertical"]) .tab {
+    max-inline-size: 100%;
+  }
 }
 
 :host([selected]) .tab {
