@@ -42,10 +42,15 @@
 :host([orientation="vertical"]) .list {
   flex-direction: column;
   max-inline-size: 40%;
-  /* Never so narrow that a tab, which is as wide as its label, reaches past the list's border: it
-     may stand in the list's padding, as it always could, but no further. Where the longest tab fits
-     two fifths of the tabs this is less than the list is, and changes nothing. */
-  min-inline-size: calc-size(min-content, size - 2 * max(var(--_pad), var(--idg-space-xs)));
+  /* Not so narrow that a tab, which is as wide as its label, reaches past the list's border: it may
+     stand in the list's end padding and on its border, as it always could, but no further, unless
+     that would take the list past half of the tabs, where the panel keeps the rest. Where the
+     longest tab fits two fifths of the tabs this is less than the list is, and changes nothing;
+     sizing by content counts a percentage minimum as nothing, so it changes no size there either. */
+  min-inline-size: calc-size(
+    min-content,
+    min(size - max(var(--_pad), var(--idg-space-xs)) - var(--idg-border-width), 50%)
+  );
   padding: max(var(--_pad), var(--idg-space-xs));
   border-block-end: 0;
   border-inline-end-width: var(--idg-border-width);
