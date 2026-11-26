@@ -6,7 +6,7 @@ import { BRAND_PAGE, EDITOR_PAGE, EXPORT_PAGE, openBrand } from "./brand-page";
 import { expect, test } from "./fixtures";
 import { openShell } from "./layout-shell-page";
 import { REFLOW_WIDTHS, clippedText, hydrated, settleFrames, sidewaysScroll } from "./reflow";
-import { setTextSize } from "./text-size";
+import { setBrowserTextSize, setTextSize } from "./text-size";
 
 const FIXTURES = fileURLToPath(new URL("../www/fixtures", import.meta.url));
 const BRAND_PAGES: readonly string[] = [BRAND_PAGE, EXPORT_PAGE, EDITOR_PAGE];
@@ -34,23 +34,45 @@ async function openPage(page: Page, address: string): Promise<void> {
   }
 }
 
+/** How a reader has text at 200%: the browser's text size, or a page that sets its own root size. */
+type Way = "browser" | "page";
+
+/**
+ * Sets the text to 200%. A reader does it in the browser's settings (or by zoom, which a narrow
+ * window stands for here): the page's rem and the rem a media query measures in both follow, so
+ * every rule that gives way to a large text size, the media queries among them, is in play. A page
+ * that sets its own root size is the other way: its rem grows, but a media query does not see it.
+ */
+async function textAt200(page: Page, way: Way, wide: boolean): Promise<void> {
+  if (way === "browser") await setBrowserTextSize(page, 200);
+  await setTextSize(page, { label: "200%", fontSize: way === "browser" ? "100%" : "200%", wide });
+}
+
 // A page that hides what overflows it (a section with `overflow: hidden`) does not scroll, and
 // clips instead, so the text itself is read: it must be inside every box that clips it and inside
-// the window. The narrow widths are read in every design, since each sets its own borders, padding
-// and display face; the wider ones in the page's own design and in the two that take the most room
-// (a thick border and capitals, stepped corners). The wide face is read up to 480px, where a wider
-// word is what the room cannot hold (at 480px it once caught clipping the page's own face did not);
-// above that what it caught, the page's own face caught as well. At 320px, the narrowest window,
-// no page may scroll sideways either, in any design or face.
-for (const wide of [false, true]) {
-  test.describe(`no text is clipped on any page with text at 200%, ${wide ? "wide" : "default"} text`, () => {
+// the window, and no page may scroll sideways. The text is at 200% by the browser's text size, as a
+// reader sets it; the narrow widths are read in every design, since each sets its own borders,
+// padding and display face; the wider ones in the page's own design and in the two that take the
+// most room (a thick border and capitals, stepped corners). The wide face is read up to 480px, where
+// a wider word is what the room cannot hold (at 480px it once caught clipping the page's own face did
+// not); above that what it caught, the page's own face caught as well. A page that sets its own root
+// size to 200% is read too, in the page's face: there the media queries do not switch, and only the
+// padding that gives way by the page's rem keeps its text in the window.
+const SWEEPS = [
+  { way: "browser", wide: false },
+  { way: "browser", wide: true },
+  { way: "page", wide: false },
+] as const;
+for (const { way, wide } of SWEEPS) {
+  const name = `${way === "browser" ? "the browser's text size" : "the page's root size"} at 200%, ${wide ? "wide" : "default"} text`;
+  test.describe(`no text is clipped and no page scrolls sideways with ${name}`, () => {
     for (const address of PAGES) {
       for (const width of wide ? REFLOW_WIDTHS.filter((each) => each <= 480) : REFLOW_WIDTHS) {
         test(`${address} at ${String(width)}px`, async ({ page }) => {
           test.setTimeout(120_000);
           await page.setViewportSize({ width, height: 800 });
           await openPage(page, address);
-          await setTextSize(page, { label: "200%", fontSize: "200%", wide });
+          await textAt200(page, way, wide);
           const designs = width <= 400 ? DESIGNS : [undefined, "brutalist", "pixel"];
           const failures: string[] = [];
           for (const design of designs) {
@@ -58,7 +80,7 @@ for (const wide of [false, true]) {
             else await settleFrames(page);
             const clipped = await clippedText(page);
             if (clipped.length > 0) failures.push(`${design ?? "own"}: ${clipped.join(", ")}`);
-            const sideways = width === 320 ? await sidewaysScroll(page) : 0;
+            const sideways = await sidewaysScroll(page);
             if (sideways > 0)
               failures.push(`${design ?? "own"}: scrolls sideways by ${String(sideways)}px`);
           }
@@ -71,16 +93,17 @@ for (const wide of [false, true]) {
 
 // The widths between a phone and a tablet are where a rule that stops at a fixed window width lets
 // a long word reach past its box, and a card clips what it holds. Every layout is read at each
-// width in the roomiest UX mode, whose padding leaves the least room (everything the default mode
-// was caught clipping, the roomiest was caught clipping too): at the narrow widths in every design
-// (the card's edge and padding are the design's), at the wider ones in the layout's own design and
-// in the two that take the most room, as the pages are.
-test.describe("with text at 200% nothing is clipped or leaves the window, at every width", () => {
+// width, with the browser's text size at 200%, in the roomiest UX mode, whose padding leaves the
+// least room (everything the default mode was caught clipping, the roomiest was caught clipping
+// too): at the narrow widths in every design (the card's edge and padding are the design's), at the
+// wider ones in the layout's own design and in the two that take the most room, as the pages are.
+test.describe("with the browser's text at 200% nothing is clipped or leaves the window, at every width", () => {
   for (const width of REFLOW_WIDTHS) {
     for (const layout of LAYOUTS) {
       test(`${layout} at ${String(width)}px`, async ({ page }) => {
         test.setTimeout(120_000);
-        await openShell(page, { width, layout, fontSize: "200%" });
+        await openShell(page, { width, layout });
+        await setBrowserTextSize(page, 200);
         const failures: string[] = [];
         const designs = width <= 400 ? DESIGNS : [undefined, "brutalist", "pixel"];
         for (const design of designs) {
@@ -162,7 +185,7 @@ function shownValues(page: Page): Promise<Shown[]> {
 // always did. Where the window is narrow against the text, the padding and the room kept for the
 // chevron give way (by lengths of the window and of the text, so they do not depend on the field's
 // own size, which a field sized by its content has not got), and the value keeps its first word.
-test.describe("a select's shown value keeps its first word with text at 200%", () => {
+test.describe("a select's shown value keeps its first word with the browser's text at 200%", () => {
   for (const address of ["/fixtures/forms.html", "/fixtures/brand-editor.html"]) {
     for (const width of REFLOW_WIDTHS) {
       for (const wide of [false, true]) {
@@ -170,7 +193,7 @@ test.describe("a select's shown value keeps its first word with text at 200%", (
         test(`${address} at ${String(width)}px, ${font}`, async ({ page }) => {
           await page.setViewportSize({ width, height: 800 });
           await openPage(page, address);
-          await setTextSize(page, { label: "200%", fontSize: "200%", wide });
+          await textAt200(page, "browser", wide);
           await settleFrames(page);
           const found = await shownValues(page);
           expect(found.length).toBeGreaterThanOrEqual(address.includes("forms") ? 5 : 9);

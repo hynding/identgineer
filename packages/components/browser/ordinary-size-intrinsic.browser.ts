@@ -1,15 +1,16 @@
 import type { Page } from "@playwright/test";
-import { applyAxes } from "./axes";
+import { DESIGNS, applyAxes } from "./axes";
 import { expect, test } from "./fixtures";
 import { hydrated, settleFrames } from "./reflow";
 
 // The adjustments for a large text size in a narrow window (padding that gives way, labels that
 // wrap, a list drawn above its panel) must not change a component anywhere there is room. Each
 // component below is placed in the parents that size it by its content, beside text that competes
-// for the room, and measured twice: as it is, and with those adjustments taken back out by a
-// reference sheet that restores the rules the component had before them. The two must be the same
-// size. Comparing in the page, and not with numbers measured once, holds in every face a machine
-// may have (a machine without Inter falls back to a wider face) and in every design.
+// for the room, and in narrow columns of a fixed width, and measured twice: as it is, and with those
+// adjustments taken back out by a reference sheet that restores the rules the component had before
+// them. The two must be the same size. Comparing in the page, and not with numbers measured once,
+// holds in every face a machine may have (a machine without Inter falls back to a wider face) and in
+// every design.
 
 const LONG =
   "Some sibling text that is long enough to compete for room in the row and to wrap over lines";
@@ -106,34 +107,71 @@ const COMPONENTS: Readonly<Record<string, Markup>> = {
   ),
 };
 
-/** Each parent: its style, and whether long text sits beside the component in it. */
-const CONTEXTS: Readonly<Record<string, { style: string; beside: "none" | "flex" | "cell" }>> = {
-  "a flex row beside long text": { style: "display: flex; gap: 8px", beside: "flex" },
-  "a table cell beside long text": { style: "display: table; inline-size: 100%", beside: "cell" },
+/**
+ * Each parent: its style, whether it sizes the component by its content or gives it a fixed width,
+ * and whether long text sits beside the component in it.
+ */
+const CONTEXTS: Readonly<
+  Record<string, { style: string; sized: "content" | "fixed"; beside: "none" | "flex" | "cell" }>
+> = {
+  "a flex row beside long text": {
+    style: "display: flex; gap: 8px",
+    sized: "content",
+    beside: "flex",
+  },
+  "a table cell beside long text": {
+    style: "display: table; inline-size: 100%",
+    sized: "content",
+    beside: "cell",
+  },
   "a min-content grid track": {
     style: "display: grid; grid-template-columns: min-content",
+    sized: "content",
     beside: "none",
   },
   "a max-content grid track": {
     style: "display: grid; grid-template-columns: max-content",
+    sized: "content",
     beside: "none",
   },
-  "an inline block": { style: "display: inline-block", beside: "none" },
+  "an inline block": { style: "display: inline-block", sized: "content", beside: "none" },
+  "a 150px column": { style: "inline-size: 150px", sized: "fixed", beside: "none" },
+  "a 200px column": { style: "inline-size: 200px", sized: "fixed", beside: "none" },
+  "a 260px column": { style: "inline-size: 260px", sized: "fixed", beside: "none" },
 };
 
 // What each component had before the narrow adjustments, by the rules those adjustments changed.
+// A true comparison would be against the components as main builds them, but the suite has only
+// this branch's build to serve (CI builds one tree, and a second build of main's components for a
+// test alone is not something it has), so each rule the adjustments changed is set back here to
+// main's value, in a sheet adopted after the component's own, which therefore wins at an equal
+// specificity. It neutralises, and must be kept in step with:
+// - idg-badge: the host's and the badge's percentage maximum, the badge's max-content width and
+//   break-word (main: one line, nowrap, the label cut off with an ellipsis), the padding's reach;
+// - idg-avatar-group: the host's and the row's maximum, its max-content width and its wrapping;
+// - idg-tab: the host's and the tab's maximum (to the list's end padding, none beside a vertical
+//   list, the list's width under 20rem), the max-content width, break-word, the padding's reach;
+// - idg-tabs: the vertical list's calc-size minimum, the drawing of a vertical list above its panel
+//   under 20rem, and the panel's break-word;
+// - idg-progress: the label's zero minimum and the label's and value's break-word;
+// - idg-stat: the delta's maximum and break-word;
+// - idg-button: the host's and the control's maximum and the padding's reach;
+// - idg-card: the padding's reach, the heading's break-word and the card's break-word up to 40rem
+//   (main: break-word and the smaller padding under 28rem);
+// - idg-select: the padding's, the chevron room's, the invalid mark's and the chevron's reach;
+// - idg-alert and idg-accordion-item: break-word on the content and the title.
 const REFERENCE: Readonly<Record<string, string>> = {
   "idg-badge": `
     :host { max-inline-size: none; }
-    .badge { inline-size: auto; white-space: nowrap; overflow-wrap: normal; }
+    .badge { inline-size: auto; max-inline-size: none; white-space: nowrap; overflow-wrap: normal; }
     .badge:not(.size-sm) { padding-inline: var(--idg-space-xs); }
     .label { overflow: hidden; text-overflow: ellipsis; }`,
   "idg-avatar-group": `
     :host { max-inline-size: none; }
     .group { inline-size: auto; max-inline-size: none; flex-wrap: nowrap; }`,
   "idg-tab": `
-    :host { max-inline-size: none; }
-    .tab {
+    :host, :host([orientation]) { max-inline-size: none; }
+    .tab, :host([orientation]) .tab {
       inline-size: auto;
       max-inline-size: none;
       padding-inline: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
@@ -141,10 +179,18 @@ const REFERENCE: Readonly<Record<string, string>> = {
       overflow-wrap: normal;
     }`,
   "idg-tabs": `
-    :host { container-type: normal; contain-intrinsic-inline-size: none; }
+    :host([orientation="vertical"]) .tabs { flex-direction: row; align-items: flex-start; }
+    :host([orientation="vertical"]) .list {
+      flex-direction: column;
+      max-inline-size: 40%;
+      min-inline-size: auto;
+      border-block-end: 0;
+      border-inline-end-width: var(--idg-border-width);
+      border-inline-end-style: var(--idg-border-style);
+      border-inline-end-color: var(--idg-border-color);
+    }
     .panels { overflow-wrap: normal; }`,
   "idg-progress": `
-    .header { flex-wrap: nowrap; }
     .label { min-inline-size: auto; overflow-wrap: normal; }
     .value { overflow-wrap: normal; }`,
   "idg-stat": `.delta { max-inline-size: none; overflow-wrap: normal; }`,
@@ -174,7 +220,12 @@ interface Size {
   context: string;
   width: number;
   height: number;
-  /** How far the component's text reaches past either side of its host, in pixels. */
+  /** Whether the host is as wide as its content: an inline box, or in a parent that sizes it so. */
+  contentSized: boolean;
+  /**
+   * How far the component's text reaches past either side of its host, or of the column it is in
+   * where the host is wider than that, in pixels.
+   */
   overflow: number;
 }
 
@@ -202,6 +253,7 @@ async function place(page: Page, component: Markup): Promise<void> {
       for (const [name, context] of contexts) {
         const parent = document.createElement("div");
         parent.dataset.context = name;
+        parent.dataset.sized = context.sized;
         parent.style.cssText = `${context.style}; margin-block-end: 24px`;
         if (context.beside === "cell") {
           const cell = document.createElement("div");
@@ -226,8 +278,13 @@ function sizes(page: Page): Promise<Size[]> {
   return page.evaluate(() =>
     [...document.querySelectorAll<HTMLElement>("#probe > [data-context]")].map((parent) => {
       const host = parent.querySelector('[class~="hydrated"]');
+      const contentSized =
+        parent.dataset.sized === "content" ||
+        getComputedStyle(host ?? parent).display.startsWith("inline");
       if (!host) throw new Error(`no component in ${parent.dataset.context ?? ""}`);
-      const box = host.getBoundingClientRect();
+      const own = host.getBoundingClientRect();
+      const room = parent.getBoundingClientRect();
+      const box = { left: Math.max(own.left, room.left), right: Math.min(own.right, room.right) };
       let overflow = 0;
       const walk = (node: Node): void => {
         if (node instanceof Text && node.data.trim()) {
@@ -245,8 +302,9 @@ function sizes(page: Page): Promise<Size[]> {
       walk(host);
       return {
         context: parent.dataset.context ?? "",
-        width: box.width,
-        height: box.height,
+        width: own.width,
+        height: own.height,
+        contentSized,
         overflow,
       };
     }),
@@ -276,16 +334,19 @@ async function withReference(page: Page): Promise<void> {
   await settleFrames(page);
 }
 
-for (const width of [1280, 375]) {
-  test.describe(`at ${String(width)}px and 100% text a component is the size it was in a parent sized by its content`, () => {
+// Every design, since each sets its own borders, padding and faces, at the widths from the
+// narrowest window to a desktop.
+for (const width of [320, 375, 768, 1280]) {
+  test.describe(`at ${String(width)}px and 100% text a component is the size it was in a parent sized by its content or a narrow column`, () => {
     for (const [name, component] of Object.entries(COMPONENTS)) {
       test(name, async ({ page }) => {
+        test.setTimeout(120_000);
         await page.setViewportSize({ width, height: 900 });
         await page.goto("/fixtures/surfaces.html");
         await hydrated(page);
         const failures: string[] = [];
-        for (const design of [undefined, "brutalist", "pixel"]) {
-          if (design) await applyAxes(page, { design });
+        for (const design of DESIGNS) {
+          await applyAxes(page, { design });
           await place(page, component);
           const found = await sizes(page);
           await withReference(page);
@@ -294,16 +355,19 @@ for (const width of [1280, 375]) {
           found.forEach((size, index) => {
             const reference = expected[index];
             if (!reference) return;
-            const same =
-              Math.abs(size.width - reference.width) <= 0.5 &&
-              Math.abs(size.height - reference.height) <= 0.5;
-            // Where the text reached past the component before (a component whose host may shrink,
-            // squeezed in a flex row below its content), it was broken there, and now has only to
-            // reach no further than it did.
-            const mended = reference.overflow > 1 && size.overflow <= reference.overflow + 0.5;
-            if (!same && !mended) {
+            const sameWidth = Math.abs(size.width - reference.width) <= 0.5;
+            const sameHeight = Math.abs(size.height - reference.height) <= 0.5;
+            // A difference is allowed only where the text reached past the component before (a
+            // component squeezed below its content, in a flex row or a narrow column), and now
+            // reaches less far: the text wraps, so the component may grow taller, and it may be
+            // wider only where it is as wide as its content, which reached past it.
+            const mended =
+              reference.overflow > 1 &&
+              size.overflow < reference.overflow - 0.5 &&
+              (sameWidth || size.contentSized);
+            if (!(sameWidth && sameHeight) && !mended) {
               failures.push(
-                `${design ?? "own"}, ${size.context}: ${String(Math.round(size.width))}x${String(Math.round(size.height))}, was ${String(Math.round(reference.width))}x${String(Math.round(reference.height))}${size.overflow > 1 ? `, text ${String(Math.round(size.overflow))}px past it, was ${String(Math.round(reference.overflow))}px` : ""}`,
+                `${design}, ${size.context}: ${String(Math.round(size.width))}x${String(Math.round(size.height))}, was ${String(Math.round(reference.width))}x${String(Math.round(reference.height))}${size.overflow > 1 || reference.overflow > 1 ? `, text ${String(Math.round(size.overflow))}px past it, was ${String(Math.round(reference.overflow))}px` : ""}`,
               );
             }
           });

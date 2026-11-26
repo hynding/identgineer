@@ -12,8 +12,11 @@ async function open(page: Page, width: number): Promise<void> {
   await hydrated(page);
 }
 
-/** Every word of the vertical tabs' labels and of the panel shown, and the room each has. */
-function wordsAndRoom(page: Page) {
+/**
+ * Every word of the vertical tabs' labels and of the panel shown that has less room than it needs,
+ * and every tab that reaches past its list onto the panel beside it.
+ */
+function brokenOrOverlapping(page: Page) {
   return page.evaluate(() => {
     const tabs = document.querySelector("#tabs-vertical");
     if (!tabs) throw new Error("no vertical tabs");
@@ -33,16 +36,29 @@ function wordsAndRoom(page: Page) {
         }
       }
     };
+    const list = tabs.shadowRoot?.querySelector(".list")?.getBoundingClientRect();
+    const panels = tabs.shadowRoot?.querySelector(".panels")?.getBoundingClientRect();
+    if (!list || !panels) throw new Error("no list or panels");
+    const beside = panels.top < list.bottom - 1;
+    if (beside && panels.left < list.right - 1 && panels.right > list.left + 1) {
+      broken.push(
+        `the panel starts ${String(Math.round(list.right - panels.left))}px inside the list`,
+      );
+    }
     for (const tab of tabs.querySelectorAll("idg-tab")) {
       const label = tab.shadowRoot?.querySelector(".tab");
       if (!label) throw new Error("no tab label");
       const style = getComputedStyle(label);
+      const box = label.getBoundingClientRect();
       const room =
-        label.getBoundingClientRect().width -
+        box.width -
         Number.parseFloat(style.paddingLeft) -
         Number.parseFloat(style.paddingRight) -
         2 * Number.parseFloat(style.borderLeftWidth);
       check(`tab ${tab.textContent.trim()}`, tab.textContent.trim(), style, room);
+      if (box.right > list.right + 0.5 || box.left < list.left - 0.5) {
+        broken.push(`tab ${tab.textContent.trim()} reaches past its list`);
+      }
     }
     for (const paragraph of tabs.querySelectorAll("idg-tab-panel p")) {
       if (!paragraph.checkVisibility()) continue;
@@ -55,31 +71,23 @@ function wordsAndRoom(page: Page) {
 
 // A reader sets a larger text size in the browser's settings, and a media query measures in that
 // size. The list is drawn above its panel by such a query, where the window is short of room for
-// both, so these are read with the browser's text size at 200%. With only the page's root at 200%
-// a media query does not see it: at 320px the list is above its panel at any text size, so that
-// way is read there too.
-test.describe("vertical tabs keep their words whole with text at 200%", () => {
-  const WAYS = [
-    ...[320, 480, 600].map((width) => ({ width, way: "browser" as const })),
-    { width: 320, way: "page" as const },
-  ];
-  for (const { width, way } of WAYS) {
+// both (below 20rem, 640px at 200% text), and beside it from there up, so these are read with the
+// browser's text size at 200% on either side of that width and at the widths between a phone and a
+// tablet. No word of a label or of the panel breaks, and no tab reaches onto the panel.
+test.describe("vertical tabs keep their words whole and their tabs in their list with the browser's text at 200%", () => {
+  for (const width of [320, 400, 480, 600, 639, 640, 700, 767, 768]) {
     for (const wide of [false, true]) {
-      test(`at ${String(width)}px, ${wide ? "wide" : "default"} text, set in the ${way === "browser" ? "browser" : "page"}, in every design`, async ({
+      test(`at ${String(width)}px, ${wide ? "wide" : "default"} text, in every design`, async ({
         page,
       }) => {
         test.setTimeout(90_000);
         await open(page, width);
-        if (way === "browser") await setBrowserTextSize(page, 200);
-        await setTextSize(page, {
-          label: "200%",
-          fontSize: way === "browser" ? "100%" : "200%",
-          wide,
-        });
+        await setBrowserTextSize(page, 200);
+        await setTextSize(page, { label: "200%", fontSize: "100%", wide });
         const failures: string[] = [];
         for (const design of DESIGNS) {
           await applyAxes(page, { design });
-          failures.push(...(await wordsAndRoom(page)).map((word) => `${design}: ${word}`));
+          failures.push(...(await brokenOrOverlapping(page)).map((word) => `${design}: ${word}`));
         }
         expect(failures).toEqual([]);
       });
@@ -102,18 +110,40 @@ function arrangement(page: Page) {
 }
 
 test.describe("vertical tabs keep the list beside the panel until the room is short", () => {
-  for (const width of [375, 768, 1280]) {
+  for (const width of [320, 375, 768, 1280]) {
     test(`at ${String(width)}px and 100% text the list is beside the panel`, async ({ page }) => {
       await open(page, width);
       expect((await arrangement(page)).beside).toBe(true);
     });
   }
 
-  test("at 320px and 200% text the list is above the panel, and the list still runs top to bottom for the arrow keys", async ({
+  for (const width of [640, 768]) {
+    test(`at ${String(width)}px with the browser's text at 200% the list is beside the panel`, async ({
+      page,
+    }) => {
+      await open(page, width);
+      await setBrowserTextSize(page, 200);
+      await settleFrames(page);
+      expect((await arrangement(page)).beside).toBe(true);
+    });
+  }
+
+  for (const width of [320, 600, 639]) {
+    test(`at ${String(width)}px with the browser's text at 200% the list is above the panel`, async ({
+      page,
+    }) => {
+      await open(page, width);
+      await setBrowserTextSize(page, 200);
+      await settleFrames(page);
+      expect((await arrangement(page)).below).toBe(true);
+    });
+  }
+
+  test("drawn above the panel, the list still runs top to bottom for the arrow keys", async ({
     page,
   }) => {
     await open(page, 320);
-    await setTextSize(page, { label: "200%", fontSize: "200%", wide: false });
+    await setBrowserTextSize(page, 200);
     await settleFrames(page);
     expect((await arrangement(page)).below).toBe(true);
     // Whatever way it is drawn, a vertical tablist is announced as vertical and moves by Up and
@@ -135,7 +165,7 @@ test.describe("vertical tabs keep the list beside the panel until the room is sh
     page,
   }) => {
     await open(page, 320);
-    await setTextSize(page, { label: "200%", fontSize: "200%", wide: false });
+    await setBrowserTextSize(page, 200);
     await page.locator("#tabs-vertical").evaluate((tabs) => {
       tabs.setAttribute("dir", "rtl");
     });
@@ -147,18 +177,38 @@ test.describe("vertical tabs keep the list beside the panel until the room is sh
     await page.keyboard.press("ArrowRight");
     await expect(page.locator("#vertical-profile")).toBeFocused();
   });
+});
 
-  test("with the browser's text at 200% the list is above the panel at 600px", async ({ page }) => {
-    await open(page, 600);
-    await setBrowserTextSize(page, 200);
-    await settleFrames(page);
-    expect((await arrangement(page)).below).toBe(true);
-  });
+// The list is as wide as two fifths of the tabs, as it always was, but not so narrow that a tab
+// crosses its border onto the panel: in brutalist, whose border is thick and whose labels are
+// capitals, a 375px window at 100% text once had the Security tab 3px past the list's border, and
+// 10px in a wider face.
+test.describe("a vertical tab stays inside its list's border at 100% text", () => {
+  for (const wide of [false, true]) {
+    test(`brutalist at 375px, ${wide ? "wide" : "default"} text`, async ({ page }) => {
+      await open(page, 375);
+      await setTextSize(page, { label: "100%", fontSize: "100%", wide });
+      await applyAxes(page, { design: "brutalist" });
+      const past = await page.evaluate(() => {
+        const host = document.querySelector("#tabs-vertical");
+        const list = host?.shadowRoot?.querySelector(".list")?.getBoundingClientRect();
+        if (!host || !list) throw new Error("no list");
+        return [...host.querySelectorAll("idg-tab")].flatMap((tab) => {
+          const box = tab.shadowRoot?.querySelector(".tab")?.getBoundingClientRect();
+          if (!box) throw new Error("no tab");
+          return box.right > list.right + 0.5
+            ? [`${tab.textContent.trim()} ${String(Math.round(box.right - list.right))}px`]
+            : [];
+        });
+      });
+      expect(past).toEqual([]);
+    });
+  }
 });
 
 test("Up and Down do nothing in a horizontal list, whatever its width", async ({ page }) => {
   await open(page, 320);
-  await setTextSize(page, { label: "200%", fontSize: "200%", wide: false });
+  await setBrowserTextSize(page, 200);
   await page.locator("#tab-overview").focus();
   await page.keyboard.press("ArrowDown");
   await expect(page.locator("#tab-overview")).toBeFocused();
@@ -177,47 +227,51 @@ test.describe("vertical tabs in a parent sized by its content are as wide as wha
     ["an absolutely positioned box", "position: absolute"],
   ] as const;
   for (const [name, style] of CONTEXTS) {
-    test(`in ${name} at 1280px and 100% text`, async ({ page }) => {
-      await open(page, 1280);
-      const found = await page.evaluate(async (rule) => {
-        const parent = document.createElement("div");
-        parent.style.cssText = rule;
-        const tabs = document.createElement("idg-tabs");
-        tabs.setAttribute("orientation", "vertical");
-        tabs.setAttribute("label", "Letters");
-        for (const [value, label, text] of [
-          ["a", "A", "Hi"],
-          ["b", "B", "Yo"],
-        ] as const) {
-          const tab = document.createElement("idg-tab");
-          tab.setAttribute("value", value);
-          tab.textContent = label;
-          const panel = document.createElement("idg-tab-panel");
-          panel.setAttribute("value", value);
-          panel.textContent = text;
-          tabs.append(tab, panel);
-        }
-        parent.append(tabs);
-        document.body.prepend(parent);
-        await customElements.whenDefined("idg-tabs");
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        const list = tabs.shadowRoot?.querySelector(".list")?.getBoundingClientRect();
-        const panels = tabs.shadowRoot?.querySelector(".panels")?.getBoundingClientRect();
-        const inner = tabs.shadowRoot?.querySelector(".tabs");
-        if (!list || !panels || !inner) throw new Error("no list or panels");
-        const gap = Number.parseFloat(getComputedStyle(inner).columnGap);
-        return {
-          host: tabs.getBoundingClientRect().width,
-          list: list.width,
-          gap,
-          panels: panels.width,
-        };
-      }, style);
-      expect(found.host).toBeCloseTo(found.list + found.gap + found.panels, 0);
-      // Two one-letter tabs and a word: a list and a panel of a few dozen pixels each.
-      expect(found.panels).toBeLessThan(80);
-      expect(found.host).toBeLessThan(320);
-    });
+    for (const width of [320, 1280]) {
+      test(`in ${name} at ${String(width)}px and 100% text`, async ({ page }) => {
+        await open(page, width);
+        const found = await page.evaluate(async (rule) => {
+          const parent = document.createElement("div");
+          parent.style.cssText = rule;
+          const tabs = document.createElement("idg-tabs");
+          tabs.setAttribute("orientation", "vertical");
+          tabs.setAttribute("label", "Letters");
+          for (const [value, label, text] of [
+            ["a", "A", "Hi"],
+            ["b", "B", "Yo"],
+          ] as const) {
+            const tab = document.createElement("idg-tab");
+            tab.setAttribute("value", value);
+            tab.textContent = label;
+            const panel = document.createElement("idg-tab-panel");
+            panel.setAttribute("value", value);
+            panel.textContent = text;
+            tabs.append(tab, panel);
+          }
+          parent.append(tabs);
+          document.body.prepend(parent);
+          await customElements.whenDefined("idg-tabs");
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          const list = tabs.shadowRoot?.querySelector(".list")?.getBoundingClientRect();
+          const panels = tabs.shadowRoot?.querySelector(".panels")?.getBoundingClientRect();
+          const inner = tabs.shadowRoot?.querySelector(".tabs");
+          if (!list || !panels || !inner) throw new Error("no list or panels");
+          const gap = Number.parseFloat(getComputedStyle(inner).columnGap);
+          return {
+            host: tabs.getBoundingClientRect().width,
+            list: list.width,
+            gap,
+            panels: panels.width,
+            beside: panels.left >= list.right - 1,
+          };
+        }, style);
+        expect(found.beside).toBe(true);
+        expect(found.host).toBeCloseTo(found.list + found.gap + found.panels, 0);
+        // Two one-letter tabs and a word: a list and a panel of a few dozen pixels each.
+        expect(found.panels).toBeLessThan(80);
+        expect(found.host).toBeLessThan(320);
+      });
+    }
   }
 });
 
@@ -241,12 +295,13 @@ test("a tab says which way its list runs, and a vertical tab's label starts at t
   expect(found.horizontal.attribute).toBe("horizontal");
 });
 
-test("at 320px and 200% text every horizontal tab is inside the window, in every design, in the wide face", async ({
+test("at 320px with the browser's text at 200% every horizontal tab is inside the window, in every design, in the wide face", async ({
   page,
 }) => {
   test.setTimeout(90_000);
   await open(page, 320);
-  await setTextSize(page, { label: "200%", fontSize: "200%", wide: true });
+  await setBrowserTextSize(page, 200);
+  await setTextSize(page, { label: "200%", fontSize: "100%", wide: true });
   const failures: string[] = [];
   for (const design of DESIGNS) {
     await applyAxes(page, { design });
