@@ -41,15 +41,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  --_gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
-  --_padding-inline: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
-
-  gap: var(--_gap);
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
   inline-size: 100%;
   min-block-size: max(var(--idg-density-target-size), var(--idg-density-control-height));
   margin: 0;
   padding-block: var(--idg-density-control-padding-block);
-  padding-inline: var(--_padding-inline);
+  padding-inline: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
   border: 0;
   border-radius: inherit;
   background: transparent;
@@ -89,22 +86,9 @@
 .title {
   flex: 1 1 auto;
   min-inline-size: 0;
-}
-
-/* A word of a heading wider than the room beside the chevron runs on over the chevron and the
-   padding, as it always did, but no further: where it would leave the item, at a large text size
-   in a narrow window or in a wide display face, it breaks inside itself at the item's edge. For
-   that the box the heading is laid out in is as wide as its longest word, up to the edge, so where
-   that word is wider than the room beside the chevron the heading's other lines are as wide too
-   and may hold a word more than they did. CSS cannot wrap the lines at one width and break a word
-   at another. Where the words fit beside the chevron nothing changes. Break-word adds nothing to an
-   item sized by its content. An engine without calc-size breaks the word beside the chevron. */
-.title > slot {
-  display: block;
-  min-inline-size: calc-size(
-    min-content,
-    min(size, 100% + var(--_gap) + 1.25em + var(--_padding-inline))
-  );
+  /* A word of a heading in a wide display face can be wider than the room beside the chevron, at a
+     large text size in a narrow window. It then breaks inside itself and does not leave the item.
+     Unlike anywhere, break-word adds nothing to an item sized by its content. */
   overflow-wrap: break-word;
 }
 
