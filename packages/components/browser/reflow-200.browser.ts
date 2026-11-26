@@ -18,6 +18,7 @@ const DRIVEN = new Set(["logo-render.html"]);
 // Every page the build serves, read from it, so a new fixture joins the sweep without an edit here.
 const PAGES = [
   "/index.html",
+  "/csp-demo.html",
   ...readdirSync(FIXTURES)
     .filter((file) => file.endsWith(".html") && !DRIVEN.has(file))
     .sort()
@@ -33,19 +34,54 @@ async function openPage(page: Page, address: string): Promise<void> {
   }
 }
 
-test.describe("no page scrolls sideways at 320px with text at 200%", () => {
-  for (const address of PAGES) {
-    test(address, async ({ page }) => {
-      await page.setViewportSize({ width: 320, height: 800 });
-      await openPage(page, address);
-      await page.evaluate(() => {
-        document.documentElement.style.fontSize = "200%";
+// Every design, since each sets its own borders, padding and display face, and the wide face as
+// well as the design's own, since a wider word is what a narrow window cannot hold.
+for (const wide of [false, true]) {
+  test.describe(`no page scrolls sideways at 320px with text at 200%, ${wide ? "wide" : "default"} text`, () => {
+    for (const address of PAGES) {
+      test(address, async ({ page }) => {
+        await page.setViewportSize({ width: 320, height: 800 });
+        await openPage(page, address);
+        await setTextSize(page, { label: "200%", fontSize: "200%", wide });
+        const failures: string[] = [];
+        for (const design of DESIGNS) {
+          await applyAxes(page, { design });
+          const sideways = await sidewaysScroll(page);
+          if (sideways > 0) failures.push(`${design}: scrolls sideways by ${String(sideways)}px`);
+        }
+        expect(failures).toEqual([]);
       });
-      await settleFrames(page);
-      expect(await sidewaysScroll(page)).toBeLessThanOrEqual(0);
-    });
-  }
-});
+    }
+  });
+}
+
+// A page that hides what overflows it (a section with `overflow: hidden`) does not scroll, and
+// clips instead, so the text itself is read: it must be inside every box that clips it and inside
+// the window. The narrow widths are read in every design; the wider ones in the page's own design
+// and in the two that take the most room (a thick border and capitals, stepped corners).
+for (const wide of [false, true]) {
+  test.describe(`no text is clipped on any page with text at 200%, ${wide ? "wide" : "default"} text`, () => {
+    for (const address of PAGES) {
+      for (const width of REFLOW_WIDTHS) {
+        test(`${address} at ${String(width)}px`, async ({ page }) => {
+          test.setTimeout(120_000);
+          await page.setViewportSize({ width, height: 800 });
+          await openPage(page, address);
+          await setTextSize(page, { label: "200%", fontSize: "200%", wide });
+          const designs = width <= 400 ? DESIGNS : [undefined, "brutalist", "pixel"];
+          const failures: string[] = [];
+          for (const design of designs) {
+            if (design) await applyAxes(page, { design });
+            else await settleFrames(page);
+            const clipped = await clippedText(page);
+            if (clipped.length > 0) failures.push(`${design ?? "own"}: ${clipped.join(", ")}`);
+          }
+          expect(failures).toEqual([]);
+        });
+      }
+    }
+  });
+}
 
 // The widths between a phone and a tablet are where a rule that stops at a fixed window width lets
 // a long word reach past its box, and a card clips what it holds. Every layout is read at each
@@ -77,12 +113,11 @@ test.describe("with text at 200% nothing is clipped or leaves the window, at eve
 interface Shown {
   where: string;
   text: string;
-  /** The value's content box, in pixels, and the widest word of the value, as the select draws it. */
+  /** The value's content box, in pixels, and the first word of the value, as the select draws it. */
   room: number;
-  widest: number;
+  first: number;
   em: number;
-  cutAcross: boolean;
-  cutDown: boolean;
+  lines: number;
   underChevron: boolean;
 }
 
@@ -104,7 +139,7 @@ function shownValues(page: Page): Promise<Shown[]> {
         if (!context) throw new Error("no canvas");
         context.font = style.font;
         const words = chosen.text.split(/\s+/).filter(Boolean);
-        const widest = Math.max(...words.map((word) => context.measureText(word).width));
+        const first = context.measureText(words[0] ?? "").width;
         const box = native.getBoundingClientRect();
         const rtl = style.direction === "rtl";
         const start = rtl
@@ -119,10 +154,14 @@ function shownValues(page: Page): Promise<Shown[]> {
           where: element.id || (element.getAttribute("name") ?? "select"),
           text: chosen.text,
           room: text.right - text.left,
-          widest,
+          first,
           em: Number.parseFloat(style.fontSize),
-          cutAcross: native.scrollWidth > native.clientWidth + 1,
-          cutDown: native.scrollHeight > native.clientHeight + 1,
+          lines: Math.round(
+            (native.clientHeight -
+              Number.parseFloat(style.paddingTop) -
+              Number.parseFloat(style.paddingBottom)) /
+              Number.parseFloat(style.lineHeight),
+          ),
           underChevron: mark.left < text.right - 1 && mark.right > text.left + 1,
         });
       }
@@ -132,16 +171,12 @@ function shownValues(page: Page): Promise<Shown[]> {
   });
 }
 
-// A native select's closed value does not wrap by default, so the component lets it, and trims the
-// padding and the room it keeps for the chevron where the field is narrow against its text. A value
-// is not cut when the select shows every line of it, nothing runs under the chevron, and each line
-// is wider than a few letters: a word breaks only where it is wider than the whole field.
-test.describe("a select's shown value is not cut with text at 200%", () => {
-  const fixtures = [
-    ["/fixtures/forms.html", 9],
-    ["/fixtures/brand-editor.html", 9],
-  ] as const;
-  for (const [address, count] of fixtures) {
+// A native select's closed value is one line and ends in an ellipsis where it does not fit, as it
+// always did. Where the window is narrow against the text, the padding and the room kept for the
+// chevron give way (by lengths of the window and of the text, so they do not depend on the field's
+// own size, which a field sized by its content has not got), and the value keeps its first word.
+test.describe("a select's shown value keeps its first word with text at 200%", () => {
+  for (const address of ["/fixtures/forms.html", "/fixtures/brand-editor.html"]) {
     for (const width of REFLOW_WIDTHS) {
       for (const wide of [false, true]) {
         const font = wide ? "wide text" : "default text";
@@ -151,15 +186,14 @@ test.describe("a select's shown value is not cut with text at 200%", () => {
           await setTextSize(page, { label: "200%", fontSize: "200%", wide });
           await settleFrames(page);
           const found = await shownValues(page);
-          expect(found.length).toBeGreaterThanOrEqual(address.includes("forms") ? 5 : count);
+          expect(found.length).toBeGreaterThanOrEqual(address.includes("forms") ? 5 : 9);
           const failures = found.flatMap((value) => {
             const problems: string[] = [];
-            if (value.cutAcross) problems.push("cut across");
-            if (value.cutDown) problems.push("cut down");
+            if (value.lines > 1) problems.push("wraps");
             if (value.underChevron) problems.push("runs under the chevron");
-            if (value.room < Math.min(value.widest, 3 * value.em))
+            if (value.room < Math.min(value.first, 3 * value.em))
               problems.push(
-                `only ${String(Math.round(value.room))}px for a ${String(Math.round(value.widest))}px word`,
+                `only ${String(Math.round(value.room))}px for a ${String(Math.round(value.first))}px first word`,
               );
             return problems.length > 0
               ? [`${value.where} "${value.text}": ${problems.join(", ")}`]
@@ -170,4 +204,224 @@ test.describe("a select's shown value is not cut with text at 200%", () => {
       }
     }
   }
+});
+
+/** The tokens the select's padding and chevron room are made of, resolved on the select's own box. */
+interface Edges {
+  boxPad: string;
+  boxPadToken: string;
+  nativeEnd: string;
+  nativeEndToken: string;
+  markEnd: string | undefined;
+  markEndToken: string;
+  inset: string;
+}
+
+function edgesOf(page: Page, selector: string): Promise<Edges[]> {
+  return page.evaluate((query) => {
+    const found: Edges[] = [];
+    const walk = (root: Document | ShadowRoot): void => {
+      for (const element of root.querySelectorAll("*")) {
+        if (element.shadowRoot) walk(element.shadowRoot);
+        if (!element.matches(query)) continue;
+        const inner = element.shadowRoot;
+        const box = inner?.querySelector<HTMLElement>(".box");
+        const native = inner?.querySelector<HTMLElement>(".native");
+        const mark = inner?.querySelector<HTMLElement>(".invalid-mark");
+        const chevron = inner?.querySelector<HTMLElement>(".chevron");
+        if (!box || !native || !chevron) throw new Error("a select without its parts");
+        const scale = getComputedStyle(box).getPropertyValue("--_padding-scale") || "1";
+        const resolve = (value: string, property: "paddingLeft" | "marginLeft" = "paddingLeft") => {
+          const probe = document.createElement("div");
+          if (property === "paddingLeft") probe.style.paddingInline = value;
+          else probe.style.marginInline = value;
+          box.append(probe);
+          const resolved = getComputedStyle(probe)[property];
+          probe.remove();
+          return resolved;
+        };
+        found.push({
+          boxPad: getComputedStyle(box).paddingLeft,
+          boxPadToken: resolve(`calc(var(--idg-density-control-padding-inline) * ${scale})`),
+          nativeEnd: getComputedStyle(native).paddingRight,
+          nativeEndToken: resolve("calc(1.5em + var(--idg-space-2xs))"),
+          markEnd: mark ? getComputedStyle(mark).marginRight : undefined,
+          markEndToken: resolve("1.5em", "marginLeft"),
+          inset: getComputedStyle(chevron).right,
+        });
+      }
+    };
+    walk(document);
+    return found;
+  }, selector);
+}
+
+// At an ordinary text size nothing about a select is other than it was: the box pads by the
+// control token, the value by the chevron's room beside it, the invalid mark and the chevron stand
+// where they stood. Only a window narrow against its text gives any of it up.
+test.describe("a select looks as it did at 100% text and an ordinary width", () => {
+  for (const width of [320, 375, 768, 1280]) {
+    test(`${String(width)}px: the padding, the chevron's room and the invalid mark are the tokens' own`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto("/fixtures/forms.html");
+      await hydrated(page);
+      await page.evaluate(() => {
+        for (const select of document.querySelectorAll("idg-select")) {
+          select.shadowRoot?.querySelector(".box")?.classList.add("size-lg");
+        }
+      });
+      const found = [...(await edgesOf(page, "idg-select"))];
+      expect(found.length).toBeGreaterThanOrEqual(5);
+      for (const edges of found) {
+        expect(edges.boxPad).toBe(edges.boxPadToken);
+        expect(edges.nativeEnd).toBe(edges.nativeEndToken);
+        if (edges.markEnd !== undefined) expect(edges.markEnd).toBe(edges.markEndToken);
+        expect(edges.inset).toBe(edges.boxPadToken);
+      }
+    });
+  }
+});
+
+// A select sized by its content (an inline block, a float, a max-content track, a flex row) is as
+// wide as its longest option needs: the same as with the padding and the chevron's room fixed at
+// their tokens, which is what it has always been.
+test.describe("a select sized by its content is as wide as its longest option needs", () => {
+  const CONTEXTS = [
+    ["an inline block", "display: inline-block"],
+    ["a float", "float: left"],
+    ["a max-content grid track", "display: grid; grid-template-columns: max-content"],
+    ["a flex row", "display: flex"],
+  ] as const;
+  for (const [context, style] of CONTEXTS) {
+    for (const invalid of [false, true]) {
+      test(`in ${context}${invalid ? ", invalid" : ""} at 1280px and 100% text`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width: 1280, height: 800 });
+        await page.goto("/fixtures/forms.html");
+        await hydrated(page);
+        const found = await page.evaluate(
+          async ({ rule, mark }) => {
+            const parent = document.createElement("div");
+            parent.style.cssText = rule;
+            const select = document.createElement("idg-select");
+            if (mark) select.setAttribute("invalid", "");
+            for (const text of ["Short", "Old-style serif over system sans", "Mid length"]) {
+              const option = document.createElement("option");
+              option.value = text;
+              option.textContent = text;
+              select.append(option);
+            }
+            parent.append(select);
+            document.body.append(parent);
+            await customElements.whenDefined("idg-select");
+            await new Promise((resolve) => setTimeout(resolve, 200));
+            const root = select.shadowRoot;
+            const native = root?.querySelector("select");
+            if (!root || !native) throw new Error("no select");
+            const widest = (): number => {
+              select.value = "Old-style serif over system sans";
+              return select.getBoundingClientRect().width;
+            };
+            const measured = widest();
+            const lines = native.getBoundingClientRect().height;
+            // The reference: the same select with the padding and room fixed at their tokens.
+            const reference = new CSSStyleSheet();
+            reference.replaceSync(
+              ".box { padding-inline: calc(var(--idg-density-control-padding-inline) * var(--_padding-scale)); } .native { padding-inline-end: calc(1.5em + var(--idg-space-2xs)); } .invalid .native { padding-inline-end: calc(1.5em + var(--idg-space-2xs)); } .invalid-mark { margin-inline-end: 1.5em; }",
+            );
+            root.adoptedStyleSheets = [...root.adoptedStyleSheets, reference];
+            await new Promise((resolve) =>
+              requestAnimationFrame(() => requestAnimationFrame(resolve)),
+            );
+            const expected = widest();
+            const clipped = native.scrollWidth > native.clientWidth + 1;
+            parent.remove();
+            return { measured, expected, lines, clipped };
+          },
+          { rule: style, mark: invalid },
+        );
+        expect(found.measured).toBeCloseTo(found.expected, 0);
+        expect(found.clipped).toBe(false);
+      });
+    }
+  }
+});
+
+// The value is one line, as on every page that holds a select, in the dashboard's header and in
+// the brand editor's form, and it stays the same height as the options are chosen through.
+test.describe("a select stays one line, and one height, as options are chosen", () => {
+  for (const address of ["/fixtures/dashboard.html", "/fixtures/brand-editor.html"]) {
+    for (const width of [768, 1280]) {
+      test(`${address} at ${String(width)}px and 100% text`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await openPage(page, address);
+        const heights = () =>
+          page.evaluate(() => {
+            const found: { name: string; box: number; minimum: number; shown: string }[] = [];
+            const walk = (root: Document | ShadowRoot): void => {
+              for (const element of root.querySelectorAll("*")) {
+                if (element.shadowRoot) walk(element.shadowRoot);
+                if (element.localName !== "idg-select") continue;
+                const box = element.shadowRoot?.querySelector(".box");
+                const native = element.shadowRoot?.querySelector("select");
+                if (!box || !native) throw new Error("no select");
+                found.push({
+                  name: element.id || (element.getAttribute("name") ?? "select"),
+                  box: box.getBoundingClientRect().height,
+                  minimum: Number.parseFloat(getComputedStyle(box).minHeight),
+                  shown: native.selectedOptions[0]?.text ?? "",
+                });
+              }
+            };
+            walk(document);
+            return found;
+          });
+        const before = await heights();
+        expect(before.length).toBeGreaterThan(0);
+        for (const select of before) {
+          expect(select.box, `${select.name} "${select.shown}"`).toBeCloseTo(select.minimum, 0);
+        }
+        const selects = page.locator("idg-select");
+        for (let index = 0; index < (await selects.count()); index += 1) {
+          const select = selects.nth(index);
+          await select.focus();
+          for (let press = 0; press < 3; press += 1) await page.keyboard.press("ArrowDown");
+        }
+        const after = await heights();
+        expect(after.map((select) => select.box)).toEqual(before.map((select) => select.box));
+      });
+    }
+  }
+});
+
+// The helper that finds clipped text must see text slotted straight into a component, which
+// sits in the component's slot and not in its parent.
+test("the clipped text helper reports bare text slotted into a clipping component", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 800, height: 600 });
+  await page.setContent(`<!doctype html><body></body>`);
+  await page.evaluate(() => {
+    class Narrow extends HTMLElement {
+      constructor() {
+        super();
+        const root = this.attachShadow({ mode: "open" });
+        const frame = document.createElement("div");
+        frame.style.cssText = "width: 60px; overflow: hidden";
+        frame.append(document.createElement("slot"));
+        root.append(frame);
+      }
+    }
+    customElements.define("idg-narrow", Narrow);
+    const host = document.createElement("idg-narrow");
+    host.textContent = "Accessibilityaccessibility";
+    host.style.cssText = "display: block; white-space: nowrap";
+    document.body.append(host);
+  });
+  const found = await clippedText(page);
+  expect(found.length).toBe(1);
+  expect(found[0]).toContain("Accessibility");
 });

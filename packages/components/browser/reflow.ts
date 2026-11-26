@@ -74,7 +74,7 @@ export function clippedText(page: Page): Promise<string[]> {
       `${element.localName}${element.getAttribute("part") ? `::part(${element.getAttribute("part") ?? ""})` : ""}`;
     const walk = (node: Node): void => {
       if (node instanceof Text) {
-        const parent = node.parentElement;
+        const parent = node.assignedSlot ?? node.parentElement;
         if (!parent || !node.data.trim() || !parent.checkVisibility()) return;
         const place = parent.getBoundingClientRect();
         if (place.width <= 1 || place.height <= 1) return;
