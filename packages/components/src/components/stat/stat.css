@@ -64,7 +64,12 @@
   overflow-wrap: anywhere;
 }
 
+/* A delta wider than the room (a large text size in a narrow window) is as wide as the room and
+   breaks inside its word. The maximum is a percentage and the break a break-word, so neither makes
+   a stat narrower to what sizes it by its content. */
 .delta {
+  max-inline-size: 100%;
+  overflow-wrap: break-word;
   --_background: var(--idg-color-bg-subtle);
   --_text: var(--idg-color-text);
 

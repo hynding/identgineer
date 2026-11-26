@@ -1,4 +1,22 @@
+:host {
+  /* How far past the room it is in a button may be to keep its longest word inside it: as far as it
+     needs where there is room, as it always could be, and not at all where the window is narrow
+     against the text (its width less sixteen times the page's text size), where the room is what
+     the page has. */
+  --_word-reach: max(0px, 100vw - 16rem);
+
+  min-inline-size: calc-size(min-content, min(size, 100% + var(--_word-reach)));
+  max-inline-size: 100%;
+}
+
 .control {
+  /* A button wider than the room it is in (a long label at a large text size in a narrow window)
+     shrinks to it and wraps its label between words; a word is never broken. It is no narrower than
+     its longest word, as it never was, unless the window is narrow against the text, where the
+     room it is in is the most it may have. A percentage does not count in a size that is sized by
+     content, so a button is as wide as its label needs wherever there is room. */
+  min-inline-size: calc-size(min-content, min(size, 100% + var(--_word-reach)));
+  max-inline-size: 100%;
   --_height-scale: 1;
   --_padding-scale: 1;
 
@@ -6,7 +24,16 @@
     var(--idg-density-target-size),
     calc(var(--idg-density-control-height) * var(--_height-scale))
   );
-  padding-inline: calc(var(--idg-density-control-padding-inline) * var(--_padding-scale));
+  /* Where the window is narrow against the text (its width less sixteen times the page's text size,
+     not the button's own, which a UX mode enlarges, is less than the padding) the padding gives way,
+     to the 3xs step at the least, so the longest word of a label has the room it needs in a narrow
+     column. It is never more than the padding, and it is measured in the window, in a length, so a
+     button is as wide as it was wherever there is room: at 100% text, from a window of about 300px
+     up. */
+  padding-inline: min(
+    calc(var(--idg-density-control-padding-inline) * var(--_padding-scale)),
+    max(var(--idg-space-3xs), calc(100vw - 16rem))
+  );
   padding-block: var(--idg-density-control-padding-block);
   font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
   box-shadow: var(--idg-elevation-sm);

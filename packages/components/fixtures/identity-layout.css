@@ -24,10 +24,19 @@ body {
   gap: var(--idg-space-s);
 }
 
+/* Three columns, as it always was, from the narrowest window up at 100% text, and fewer where three
+   cards would not fit (a large text size in a narrow window): a column is a quarter of the grid at
+   the least, so there are never four, and 5rem at the least, a card's word and its padding at any
+   text size. The columns are filled and not fitted, so a signed-out guard's one paragraph takes one
+   column, as it did, and not the row. */
 .grid-3 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(max(5rem, 25%), 1fr));
   gap: var(--idg-space-s);
+}
+
+.cards.flex-row {
+  flex-wrap: wrap;
 }
 
 .cards.flex-row > .card,

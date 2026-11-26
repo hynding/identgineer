@@ -4,10 +4,41 @@ html {
   font-family: var(--idg-font-family-body);
 }
 
+/* One track that may shrink: an implicit track is as wide as the widest minimum of what it holds, so
+   one wide table or heading would stretch the whole page past a narrow window. The gutter is a
+   token that grows with the text, so it gives way, to a small one, where the window's width less
+   twelve times the text size is less than it: at 200% text in a 320px window the token alone would
+   take most of the width from what the page holds. At 100% text that width is the token from a
+   window of 240px up, so an ordinary text size is not changed. */
 main {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--idg-space-m);
-  padding: var(--idg-space-l);
+  padding: clamp(var(--idg-space-xs), calc(100vw - 12rem), var(--idg-space-l));
+}
+
+/* A heading word wider than a narrow window, at a large text size, breaks rather than leave it.
+   Anywhere, so that the heading's minimum width follows, and a grid or flex parent can be narrower. */
+h1,
+h2 {
+  overflow-wrap: anywhere;
+}
+
+/* A bare native control is as wide as its size attribute in the browser's own font, which follows the
+   browser's text size and not the page's: a text field of 20 characters is 377px at 200%. It is no
+   wider than what it is in, so it does not take the page past a narrow window. A percentage maximum
+   changes nothing where there is room, nor to what sizes the control by its content. */
+input,
+select,
+textarea,
+button {
+  max-inline-size: 100%;
+}
+
+/* A wrapper around a field in a row of a form is a flex item, which is no narrower than the field's
+   own width unless it may be: it may, so the field's maximum above holds inside it too. */
+form:not(.stack) > div {
+  min-inline-size: 0;
 }
 
 section:not(.stack),
@@ -107,7 +138,7 @@ idg-tab-panel:not(.hydrated) {
 /* A gallery lays one component's variants out in a grid. Headings and rows span it. */
 section.gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
   gap: var(--idg-space-s);
   align-items: start;
 }
@@ -123,7 +154,7 @@ section.gallery.column {
 }
 
 section.gallery.cards {
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
   align-items: stretch;
 }
 
@@ -147,10 +178,11 @@ section.gallery.cards {
 section.dashboard {
   position: relative;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   isolation: isolate;
   overflow: hidden;
   gap: var(--idg-space-m);
-  padding: var(--idg-space-l);
+  padding: clamp(var(--idg-space-xs), calc(100vw - 12rem), var(--idg-space-l));
   border-radius: var(--idg-shape-radius-lg);
   background:
     radial-gradient(
@@ -237,24 +269,25 @@ section.dashboard::after {
 
 .dashboard-alerts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
   gap: var(--idg-space-s);
 }
 
 .dashboard-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
   gap: var(--idg-space-m);
 }
 
 .dashboard-panels {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
   gap: var(--idg-space-m);
 }
 
 .activity {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--idg-space-xs);
   margin: 0 0 var(--idg-space-s);
   padding: 0;
@@ -263,12 +296,18 @@ section.dashboard::after {
 
 .activity li {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--idg-space-xs);
 }
 
 .who {
-  flex: 1 1 auto;
+  /* A basis of nothing, and not of the name's own width, so the name is not what makes the line
+     break: the avatar and the badge are, and only when they do not fit together. The name takes what
+     is left, as it did, and wraps in it. */
+  flex: 1 1 0;
+  min-inline-size: 0;
+  overflow-wrap: break-word;
   font-weight: var(--idg-font-weight-semibold);
 }
 

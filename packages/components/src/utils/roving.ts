@@ -20,17 +20,19 @@ export function nextRovingIndex(
   return undefined;
 }
 
-export type RovingOrientation = "horizontal" | "vertical";
+/** The axis a list moves along, or both, for a list that may be drawn either way. */
+export type RovingOrientation = "horizontal" | "vertical" | "both";
 
 const AXIS_KEYS: Readonly<Record<RovingOrientation, readonly string[]>> = {
   horizontal: ["ArrowLeft", "ArrowRight"],
   vertical: ["ArrowUp", "ArrowDown"],
+  both: ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"],
 };
 
 /**
  * Where a key moves focus in a list laid out along one axis, as in tabs and an accordion: the
  * arrows of that axis step (wrapping, skipping disabled items), Home and End go to the first and
- * last enabled item, and the arrows of the other axis do nothing.
+ * last enabled item, and the arrows of the other axis do nothing, unless the list answers both.
  */
 export function rovingMove(
   current: number,

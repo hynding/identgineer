@@ -178,15 +178,22 @@ test.describe("idg-tabs keyboard", () => {
     await expect.poll(() => selectedTabs(page, "tabs-manual")).toEqual(["notes"]);
   });
 
-  test("a vertical list uses the vertical arrows", async ({ page }) => {
+  // A vertical list may be drawn across in a narrow window, so it answers Left and Right as well.
+  test("a vertical list uses the vertical arrows, and the horizontal ones too", async ({
+    page,
+  }) => {
     await openNavigation(page);
     await page.locator("#vertical-profile").focus();
-    await page.keyboard.press("ArrowRight");
-    await expect.poll(() => focusedId(page)).toBe("vertical-profile");
     await page.keyboard.press("ArrowDown");
     await expect.poll(() => focusedId(page)).toBe("vertical-security");
     await page.keyboard.press("ArrowUp");
     await expect.poll(() => focusedId(page)).toBe("vertical-profile");
+    await page.keyboard.press("ArrowRight");
+    await expect.poll(() => focusedId(page)).toBe("vertical-security");
+    await page.keyboard.press("ArrowRight");
+    await expect.poll(() => focusedId(page)).toBe("vertical-alerts");
+    await page.keyboard.press("ArrowLeft");
+    await expect.poll(() => focusedId(page)).toBe("vertical-security");
   });
 
   test("a tab can be chosen with the mouse, and a disabled one cannot", async ({ page }) => {

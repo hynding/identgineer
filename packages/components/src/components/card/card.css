@@ -167,7 +167,14 @@
 .body,
 .footer {
   min-inline-size: 0;
-  padding-inline: var(--_pad);
+  /* Where the window is narrow against the text (its width less twenty-one times the page's text
+     size, not the card's, is less than the padding), the padding gives way, to the 2xs step at the
+     least, so a word wider than a narrow column's room does not leave the card, which clips it. It
+     is never more than the padding, so a card with none keeps none. The window is measured, in a
+     length, because a percentage of the card would resolve to nothing while a card is sized by its
+     content. At 100% text it is the padding from a window of 360px up, and the rule below takes over
+     under 28rem. */
+  padding-inline: min(var(--_pad), max(var(--idg-space-2xs), calc(100vw - 21rem)));
 }
 
 .header {
@@ -187,6 +194,12 @@
   text-decoration-thickness: 2px;
   text-transform: var(--idg-ornament-heading-transform);
   text-underline-offset: 0.2em;
+  /* A heading is in the display face, often in capitals, so its words are wide, and it is the text
+     a card's edge clips: a word wider than the card breaks inside itself whatever the window is,
+     as it would otherwise leave the card at a large text size in a window wider than the media
+     query below reaches. It is a break-word (and not anywhere) and a property of the heading's own
+     box, not of a container, so a card sized by its content is as wide as it was. */
+  overflow-wrap: break-word;
 }
 
 .stretch {
@@ -251,13 +264,18 @@
    counts rem at the browser's own size, so it does not follow the page's text size, which the
    padding, being in rem, does. 28rem is --idg-size-l: a window narrower than a phone held upright. */
 @media (max-width: 28rem) {
-  .card {
-    overflow-wrap: break-word;
-  }
-
   .header,
   .body,
   .footer {
     padding-inline: min(var(--_pad), var(--idg-space-s));
+  }
+}
+
+/* A word wider than the room it has breaks inside itself in a window up to 40rem, a little over a
+   tablet held upright, where a page's columns are narrow and its text may be large: the card clips what
+   leaves it. Above that a word wider than the room sits in the padding, as it always has. */
+@media (max-width: 40rem) {
+  .card {
+    overflow-wrap: break-word;
   }
 }

@@ -93,6 +93,54 @@ idg-toast-region:not(.hydrated) {
 }
 ```
 
+### Large text in a narrow window
+
+At 200% text on a phone the components give up a little to keep every word readable: a button's,
+a badge's, a tab's and a select's inline padding, and a card's, shrink, a long badge, tab or button
+label wraps, an avatar group wraps onto a second row, and vertical tabs draw their list above the
+panel. These adjustments follow the window, not the container: they switch on where the window is
+narrow against the text size (a length in `vw` less one in `rem`, or a media query in `rem`), so a
+component in a narrow container on a wide window keeps its ordinary padding, as it always did.
+
+The browser's text size setting and zoom move all of them, since both the page's `rem` and the `rem`
+a media query counts in follow them. A page that sets its own root font size (`html { font-size:
+200% }`) gets the adjustments measured in the page's `rem`, the padding that gives way among them,
+but not the ones a media query switches, which counts in the browser's `rem` and not the page's: on
+such a page vertical tabs stay beside their panel, and up to a window of about 600px the panel
+narrows to make room for the list (about 20 to 135px in the demo's designs: 19 to 54px at 320px,
+and about 40 to 135px from 400 to 560px, narrowest near 440px).
+
+A card's heading breaks a word wider than its room inside itself at any window width and any text
+size, not only up to 40rem, since a heading's words are the widest a card holds. That is the one
+change at 100% text to a component that fitted: a card whose heading's longest word is wider than
+its content box (in a narrow column) is taller than it was, where that word used to run into the
+padding.
+
+At 100% text and ordinary widths a component is otherwise the size it was in any parent, including
+one sized by its content (a `min-content` or `max-content` track, a table cell, a flex row beside
+other text, an inline block), wherever it fitted: it differs only where its text, or a box it draws,
+reached past the component or the column it was in, or was clipped, and then only by wrapping. Text
+that ran into a component's own padding still does. A long word in an accordion heading now breaks
+beside the chevron, where it used to run over it, so the item may be taller. A label wraps only
+where the component would otherwise be wider than the room it is in. A width you set on a badge or a
+tab is room like any other: a label longer than it wraps, where a badge's used to be cut off with an
+ellipsis and a tab's to run past the tab (a badge set to 60px was 30px tall with an ellipsis and is
+about 105px wrapped). CSS cannot tell a width you set from a narrow column without making the
+component a size container, which would change its size wherever it is sized by its content, so the
+ellipsis is not kept for one and not the other. At 320px a vertical list is 4 to 11px wider than it
+was in most designs, and about 24px in brutalist (123 to 147px), so that the selected tab stays
+inside the list's border, where it used to cross it.
+
+A tab is never narrower than its one line of content unless its list is. So with `flex-wrap: wrap`
+set on a tab's part (`idg-tab::part(tab)`), the tab's items wrap only where the list's width caps the
+tab, and a parent sized by its content (a table cell, a `min-content` track) no longer squeezes the
+tab down to its widest item, as it used to: tabs with an icon or a badge there can be 10 to 50px
+wider than they were. The other part styles (a gap, a column, a baseline) lay the items out as before.
+
+The vertical list's narrowest width and a button's are set with `calc-size()`. In an engine without
+it a vertical tab may cross its list's border as before, and a button's longest word may run past
+its background in a column narrower than the word, as before.
+
 ## `idg-button`
 
 | Prop        | Attribute    | Values                                    | Default   |
@@ -425,6 +473,11 @@ shape as well.
 (`sm`, `md`) and `dot` (a leading dot in the text colour). The label is the default slot. Each
 variant is the theme's subtle background with its on-subtle text, which the token build keeps at
 4.5:1 in every theme and scheme (and the browser tests recompute it). Parts: `badge`, `dot`, `label`.
+A badge is as wide as its label on one line to anything that sizes it by its content. In less room
+than that (a narrow column, a width you set on it, or a large text size in a narrow window) it is as
+wide as the room and the label wraps, breaking inside a word only if one is wider still; it is not
+cut off with an ellipsis, as it used to be (see [Large text in a narrow
+window](#large-text-in-a-narrow-window)).
 
 ### `idg-avatar` and `idg-avatar-group`
 
@@ -777,8 +830,24 @@ and the selection state on the light-DOM `idg-tab` and `idg-tab-panel` elements 
   tab, the enabled tab nearest to where the selection was takes over (the first, at load).
 
 - **Keyboard.** Arrows move along the orientation (mirrored in right-to-left), Home and End jump,
-  disabled tabs are skipped. Only the selected tab is in the tab order, and the panel takes
-  `tabindex="0"` only when its content has nothing focusable.
+  disabled tabs are skipped. A vertical list also answers Left and Right (mirrored in right-to-left),
+  since it may be drawn across (below); Up and Down do nothing in a horizontal list. Only the
+  selected tab is in the tab order, and the panel takes `tabindex="0"` only when its content has
+  nothing focusable.
+- **Vertical tabs in a narrow window.** Beside its panel a vertical list is as wide as its longest
+  tab, up to two fifths of the tabs (a tab may stand in the list's end padding and on its border),
+  or wider if that is what keeps a tab inside the list's border, up to three fifths for the list's
+  content. Where the window is short of room for both, narrower than 20rem (320px at 100% text,
+  640px with the browser's text at 200% or zoomed to 200%), the list is drawn above the panel as a
+  row that wraps; it is still announced as vertical (`aria-orientation="vertical"`). From 320px at
+  100% text the list is beside its panel, as it always was. This follows the browser's text size and
+  zoom, not a root font size the page sets, and the window, not the container: in a narrow column
+  on a wide window the list stays beside its panel.
+- **Labels.** A tab is as wide as its label on one line, and may reach into its list's end padding,
+  as it always could. A tab wider than that (in a horizontal list, or a vertical one drawn across, in
+  a narrow column or at a large text size) is as wide as the list's content and end padding and wraps
+  its label between words, breaking inside a word only if one is wider still. A width you set on a
+  tab wraps its label the same way, where it used to run past the tab.
 - Removing or disabling the selected tab selects a neighbour; tabs and panels added later are
   picked up, and moving the whole component keeps the selection.
 
@@ -1881,25 +1950,25 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
 
   | Group                  | Components                                                                                                                                                   | `www/build` | `dist/esm` |
   | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------: | ---------: |
-  | controls               | icon, button, link, badge, progress, alert, avatar, avatar-group, skeleton, switch                                                                           |      57,977 |    117,342 |
-  | forms and identity     | field, input, textarea, checkbox, radio, radio-group, select, sign-in, register, password-reset, profile, session-guard, property-picker, variation-switcher |     153,913 |    309,785 |
-  | dashboard              | event-table, table, pagination, stat, sparkline                                                                                                              |      67,796 |    168,578 |
+  | controls               | icon, button, link, badge, progress, alert, avatar, avatar-group, skeleton, switch                                                                           |      58,518 |    117,883 |
+  | forms and identity     | field, input, textarea, checkbox, radio, radio-group, select, sign-in, register, password-reset, profile, session-guard, property-picker, variation-switcher |     154,541 |    310,452 |
+  | dashboard              | event-table, table, pagination, stat, sparkline                                                                                                              |      67,842 |    168,624 |
   | consent and overlays   | consent-banner, consent-preferences, dialog, popover, tooltip, toast, toast-region                                                                           |      87,918 |    188,483 |
   | menus                  | menu, menu-group, menu-item, menu-separator, user-menu                                                                                                       |      49,796 |    126,820 |
-  | tabs                   | tabs, tab, tab-panel                                                                                                                                         |      31,746 |     87,726 |
-  | accordion              | accordion, accordion-item                                                                                                                                    |      27,957 |     79,096 |
-  | layout                 | stack, cluster, grid, cover, sidebar, switcher, layout, divider, card, breadcrumb, breadcrumb-item                                                           |      84,127 |    161,055 |
-  | `idg-brand-logo`       | the logo, with the sanitiser                                                                                                                                 |     117,086 |    327,029 |
+  | tabs                   | tabs, tab, tab-panel                                                                                                                                         |      32,827 |     89,076 |
+  | accordion              | accordion, accordion-item                                                                                                                                    |      28,036 |     79,214 |
+  | layout                 | stack, cluster, grid, cover, sidebar, switcher, layout, divider, card, breadcrumb, breadcrumb-item                                                           |      84,232 |    161,160 |
+  | `idg-brand-logo`       | the logo, with the sanitiser                                                                                                                                 |     117,763 |    330,377 |
   | `idg-brand-swatches`   | the swatches                                                                                                                                                 |      29,826 |     84,500 |
-  | `idg-brand-guidelines` | the guide, with the sanitiser                                                                                                                                |     141,319 |    375,430 |
-  | `idg-brand-export`     | the export, with the sanitiser, the generator and the emitters                                                                                               |     219,466 |    500,751 |
-  | `idg-brand-editor`     | the editor, with the sanitiser and the generator, and the guide it previews in                                                                               |     246,861 |    550,359 |
+  | `idg-brand-guidelines` | the guide, with the sanitiser                                                                                                                                |     141,996 |    378,778 |
+  | `idg-brand-export`     | the export, with the sanitiser, the generator and the emitters                                                                                               |     220,148 |    504,099 |
+  | `idg-brand-editor`     | the editor, with the sanitiser and the generator, and the guide it previews in                                                                               |     247,538 |    553,707 |
 
-  The loader `identgineer.esm.js` is 12,924 bytes more on every page. The sanitiser (about 90 KB
+  The loader `identgineer.esm.js` is 12,926 bytes more on every page. The sanitiser (about 90 KB
   minified) is in the logo's, the guide's, the export's and the editor's bundles (the export
   validates a kit with it), the generator in the export's and the editor's, and the emitters in the
   export's alone. The editor's row counts its own entry and chunks; a page with it also loads the
-  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 698,881
+  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 701,939
   bytes (663,801 before the editor), against 433,865 before the brand components and 536,437 on
   main.
 

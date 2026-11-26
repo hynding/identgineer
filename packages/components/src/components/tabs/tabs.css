@@ -13,6 +13,12 @@
   --_pad: calc(
     var(--idg-focus-ring-offset) + var(--idg-focus-ring-width) * var(--idg-focus-emphasis)
   );
+  /* The list's padding, which a tab inherits through its slot: a tab may reach into the list's end
+     padding, as it always could, before its label wraps. */
+  --_list-pad: max(var(--_pad), var(--idg-space-xs));
+  /* The list's border as a length: a design without borders sets the token to a bare 0, which a
+     calculation cannot subtract from a length, so the query below makes it 0px there. */
+  --_list-border: var(--idg-border-width);
 
   display: flex;
   flex-direction: column;
@@ -33,7 +39,7 @@
   gap: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
   flex-wrap: wrap;
   max-inline-size: 100%;
-  padding: max(var(--_pad), var(--idg-space-xs));
+  padding: var(--_list-pad);
   border-block-end-width: var(--idg-border-width);
   border-block-end-style: var(--idg-border-style);
   border-block-end-color: var(--idg-border-color);
@@ -42,14 +48,59 @@
 :host([orientation="vertical"]) .list {
   flex-direction: column;
   max-inline-size: 40%;
-  padding: max(var(--_pad), var(--idg-space-xs));
+  /* Not so narrow that a tab, which is as wide as its label, reaches past the list's border: it may
+     stand in the list's end padding and on its border, as it always could, but no further, unless
+     that would make the list's content wider than three fifths of the tabs (its padding and border
+     come on top), where the panel keeps the rest. Where the longest tab fits two fifths of the tabs
+     this is less than the list is, and changes nothing; sizing by content counts a percentage
+     minimum as nothing, so it changes no size there either. */
+  min-inline-size: calc-size(min-content, min(size - var(--_list-pad) - var(--_list-border), 60%));
+  padding: var(--_list-pad);
   border-block-end: 0;
   border-inline-end-width: var(--idg-border-width);
   border-inline-end-style: var(--idg-border-style);
   border-inline-end-color: var(--idg-border-color);
 }
 
+@container style(--idg-border-width: 0) {
+  .list {
+    --_list-border: 0px;
+  }
+}
+
+/* Beside a vertical list the panel has what the list leaves, which in a narrow column can be less
+   than one of its words; a word that does not fit breaks rather than reach past the panel. Unlike
+   anywhere, break-word makes the tabs no narrower to what sizes them by their content. */
 .panels {
   flex: 1 1 auto;
   min-inline-size: 0;
+  overflow-wrap: break-word;
+}
+
+/* A vertical list beside its panel needs room for both, and where the window is short of it (a
+   large text size in a window narrower than a tablet, or a window narrower than any phone) it has
+   not: the labels would break and the panel have a few letters to a line. Then the list is drawn
+   above the panel, in a row that wraps. It is still a vertical tablist to a reader and to the
+   keyboard (Up and Down move along it, as announced, and so do Left and Right). The window is what
+   is measured, in rem, which a media query counts in the browser's text size (and which zoom
+   enlarges): 20rem is 320px at 100% text, so from the narrowest phone up the list is beside its
+   panel as it always was, and with the browser's text at 200% it is above it in a window narrower
+   than 640px. A page that sets its own root font size does not move this width. In a narrow
+   container on a wide window the list stays beside its panel, as it always did. The tabs' own sizes
+   do not change: sizing by content counts them as before. idg-tab draws its label to the row by the
+   same query. */
+@media (width < 20rem) {
+  :host([orientation="vertical"]) .tabs {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  :host([orientation="vertical"]) .list {
+    flex-direction: row;
+    max-inline-size: 100%;
+    border-inline-end-width: 0;
+    border-block-end-width: var(--idg-border-width);
+    border-block-end-style: var(--idg-border-style);
+    border-block-end-color: var(--idg-border-color);
+  }
 }

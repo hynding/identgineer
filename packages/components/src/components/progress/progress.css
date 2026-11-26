@@ -15,6 +15,11 @@
   gap: var(--idg-space-3xs);
 }
 
+/* The label and the value share one line, as they always did: a line that wrapped would make a
+   progress narrower to what sizes it by its content (a track, a table cell), which counts a wrapping
+   line by its widest part alone. Short of room, the label gives way to the value and breaks inside
+   a word, which only happens where the line is narrower than the label's longest word and the
+   value, a width that sizing by content never gives it. */
 .header {
   display: flex;
   align-items: baseline;
@@ -25,11 +30,14 @@
 }
 
 .label {
+  min-inline-size: 0;
+  overflow-wrap: break-word;
   font-weight: var(--idg-font-weight-semibold);
   text-transform: var(--idg-ornament-control-transform);
 }
 
 .value {
+  overflow-wrap: break-word;
   color: var(--idg-color-text-muted);
   font-variant-numeric: tabular-nums;
 }

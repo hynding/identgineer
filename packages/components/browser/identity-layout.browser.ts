@@ -1,7 +1,8 @@
 import type { Page } from "@playwright/test";
 import { REGISTRY } from "@identgineer/variations";
-import { settle } from "./axes";
+import { DESIGNS, applyAxes, settle } from "./axes";
 import { expect, test } from "./fixtures";
+import { setBrowserTextSize } from "./text-size";
 
 const PAGE = "/fixtures/identity-layout.html";
 const FORMS = "idg-sign-in, idg-register, idg-password-reset";
@@ -190,5 +191,54 @@ test.describe("idg-session-guard in a flex row or a grid", () => {
         await page.locator(`[data-case="twin-${layout}"]`).ariaSnapshot(),
       );
     }
+  });
+});
+
+/** Each three-column case: its tracks, and the width of each item it shows against one track's. */
+function threeColumnCases(page: Page) {
+  return page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>(".grid-3")].map((grid) => {
+      const tracks = getComputedStyle(grid).gridTemplateColumns.split(" ").map(Number.parseFloat);
+      const items = [...grid.querySelectorAll(".card, p")]
+        .map((item) => item.getBoundingClientRect().width)
+        .filter((width) => width > 0);
+      return { name: grid.dataset.case ?? "", tracks, items };
+    }),
+  );
+}
+
+// The grid of cards is three columns at an ordinary text size, as it always was, from the
+// narrowest window up, and a signed-out guard's one paragraph takes one of them; only a large text
+// size in a narrow window gives it fewer, where three cards' words would not fit.
+test.describe("the three-column cases are three columns at 100% text", () => {
+  for (const width of [320, 768, 1280]) {
+    test(`at ${String(width)}px, in every design`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await open(page);
+      const failures: string[] = [];
+      for (const design of DESIGNS) {
+        await applyAxes(page, { design });
+        for (const { name, tracks, items } of await threeColumnCases(page)) {
+          const [first = 0] = tracks;
+          if (tracks.length !== 3 || tracks.some((track) => Math.abs(track - first) > 0.5)) {
+            failures.push(`${design}, ${name}: tracks ${tracks.join(" ")}`);
+          }
+          if (items.length === 0 || items.some((item) => Math.abs(item - first) > 0.5)) {
+            failures.push(
+              `${design}, ${name}: items ${items.join(" ")} in a ${String(first)}px track`,
+            );
+          }
+        }
+      }
+      expect(failures).toEqual([]);
+    });
+  }
+
+  test("with the browser's text at 200% in a 320px window there are fewer", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 900 });
+    await open(page);
+    await setBrowserTextSize(page, 200);
+    await settle(page);
+    for (const { tracks } of await threeColumnCases(page)) expect(tracks.length).toBeLessThan(3);
   });
 });

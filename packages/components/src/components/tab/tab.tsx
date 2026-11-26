@@ -28,7 +28,7 @@ export class IdgTab {
   @Prop() tabbable = false;
 
   /** Set by the tabs: which way the list runs. */
-  @Prop() orientation: TabsOrientation = "horizontal";
+  @Prop({ reflect: true }) orientation: TabsOrientation = "horizontal";
 
   render() {
     return (

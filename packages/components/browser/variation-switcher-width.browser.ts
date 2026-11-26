@@ -89,6 +89,65 @@ test.describe("the variation switcher cannot collapse where its container sizes 
   });
 });
 
+// Where the switcher's own box is what sizes its parent (a track sized by its content, a float, an
+// absolutely positioned box, a box that fits its content) a percentage of that parent is nothing yet,
+// so the host, a size container with no content to size it, would have no width at all.
+test.describe("the variation switcher has a width where its parent is sized by it", () => {
+  const CONTEXTS: readonly (readonly [string, string])[] = [
+    ["a max-content grid track", "display: grid; grid-template-columns: max-content"],
+    ["a min-content grid track", "display: grid; grid-template-columns: min-content"],
+    ["a float", "float: left"],
+    ["an absolutely positioned box", "position: absolute"],
+    ["a fit-content box", "inline-size: fit-content"],
+    ["a max-content box", "inline-size: max-content"],
+    ["a min-content box", "inline-size: min-content"],
+    ["an inline flex box", "display: inline-flex"],
+    ["an inline block", "display: inline-block"],
+    ["a table", "display: table"],
+  ];
+  for (const [width, fontSize] of [
+    [1280, "100%"],
+    [320, "200%"],
+  ] as const) {
+    test(`in a window of ${String(width)}px with text at ${fontSize} it is the size token, or the window if that is narrower, in ${String(CONTEXTS.length)} such contexts`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto("/fixtures/variation-switcher.html");
+      await expect(page.locator("idg-variation-switcher:not(.hydrated)")).toHaveCount(0);
+      await page.evaluate((size) => {
+        document.documentElement.style.fontSize = size;
+      }, fontSize);
+      const room = await lengthOf(page, SIZE_M);
+      const found = await page.evaluate(async (contexts) => {
+        const result: { name: string; width: number }[] = [];
+        for (const [name, style] of contexts) {
+          const parent = document.createElement("div");
+          for (const declaration of style.split(";")) {
+            const [property, value] = declaration.split(":").map((part) => part.trim());
+            if (property && value) parent.style.setProperty(property, value);
+          }
+          const host = document.createElement("idg-variation-switcher");
+          parent.append(host);
+          document.body.append(parent);
+          await new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          );
+          result.push({ name, width: host.getBoundingClientRect().width });
+          parent.remove();
+        }
+        return result;
+      }, CONTEXTS);
+      const expected = Math.min(room, width);
+      expect(found.length).toBe(CONTEXTS.length);
+      for (const context of found) {
+        expect(context.width, context.name).toBeGreaterThanOrEqual(expected - 1);
+        expect(context.width, context.name).toBeLessThanOrEqual(width + 1);
+      }
+    });
+  }
+});
+
 test.describe("in a narrow window the switcher's words break inside its panel", () => {
   for (const [name, selector, size] of [
     ["heading", '[part="heading"]', "3rem"],
