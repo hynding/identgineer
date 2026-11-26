@@ -93,6 +93,19 @@ idg-toast-region:not(.hydrated) {
 }
 ```
 
+### Large text in a narrow window
+
+At 200% text on a phone the components give up a little to keep every word readable: a button's,
+a badge's, a tab's and a select's inline padding, and a card's, shrink, a long badge, tab or button
+label wraps, an avatar group wraps onto a second row, and vertical tabs draw their list above the
+panel. These adjustments follow the window, not the container: they switch on where the window is
+narrow against the page's text size (a length in `vw` less one in `rem`, or a media query in `rem`,
+which counts the browser's text size), so a component in a narrow container on a wide window keeps
+its ordinary padding, as it always did. At 100% text and ordinary widths a component is the size
+it was in any parent, including one sized by its content (a `min-content` or `max-content` track, a
+table cell, a flex row beside other text, an inline block); a label wraps only where the component
+would otherwise be wider than the room it is in.
+
 ## `idg-button`
 
 | Prop        | Attribute    | Values                                    | Default   |
@@ -425,6 +438,10 @@ shape as well.
 (`sm`, `md`) and `dot` (a leading dot in the text colour). The label is the default slot. Each
 variant is the theme's subtle background with its on-subtle text, which the token build keeps at
 4.5:1 in every theme and scheme (and the browser tests recompute it). Parts: `badge`, `dot`, `label`.
+A badge is as wide as its label on one line to anything that sizes it by its content. In less room
+than that (a narrow column, or a large text size in a narrow window) it is as wide as the room and
+the label wraps, breaking inside a word only if one is wider still; it is not cut off with an
+ellipsis.
 
 ### `idg-avatar` and `idg-avatar-group`
 
@@ -777,8 +794,18 @@ and the selection state on the light-DOM `idg-tab` and `idg-tab-panel` elements 
   tab, the enabled tab nearest to where the selection was takes over (the first, at load).
 
 - **Keyboard.** Arrows move along the orientation (mirrored in right-to-left), Home and End jump,
-  disabled tabs are skipped. Only the selected tab is in the tab order, and the panel takes
-  `tabindex="0"` only when its content has nothing focusable.
+  disabled tabs are skipped. A vertical list also answers Left and Right (mirrored in right-to-left),
+  since it may be drawn across (below); Up and Down do nothing in a horizontal list. Only the
+  selected tab is in the tab order, and the panel takes `tabindex="0"` only when its content has
+  nothing focusable.
+- **Vertical tabs in a narrow window.** Beside its panel a vertical list is as wide as its longest
+  tab, up to two fifths of the tabs (a tab may stand in the list's end padding), or wider if that
+  is what keeps a tab inside the list's border, up to half. Where the window is short of room for
+  both, narrower than 23rem (368px at 100% text, 736px at 200% browser text), the list is drawn above
+  the panel as a row that wraps; it is still announced as vertical (`aria-orientation="vertical"`).
+  This follows the window, not the container: in a narrow column on a wide window the list stays
+  beside its panel. In a horizontal list, or a vertical one drawn across, a tab wider than the
+  list is as wide as the list and wraps its label between words.
 - Removing or disabling the selected tab selects a neighbour; tabs and panels added later are
   picked up, and moving the whole component keeps the selection.
 
@@ -1881,25 +1908,25 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
 
   | Group                  | Components                                                                                                                                                   | `www/build` | `dist/esm` |
   | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------: | ---------: |
-  | controls               | icon, button, link, badge, progress, alert, avatar, avatar-group, skeleton, switch                                                                           |      57,977 |    117,342 |
-  | forms and identity     | field, input, textarea, checkbox, radio, radio-group, select, sign-in, register, password-reset, profile, session-guard, property-picker, variation-switcher |     153,913 |    309,785 |
-  | dashboard              | event-table, table, pagination, stat, sparkline                                                                                                              |      67,796 |    168,578 |
+  | controls               | icon, button, link, badge, progress, alert, avatar, avatar-group, skeleton, switch                                                                           |      58,326 |    117,691 |
+  | forms and identity     | field, input, textarea, checkbox, radio, radio-group, select, sign-in, register, password-reset, profile, session-guard, property-picker, variation-switcher |     154,541 |    310,452 |
+  | dashboard              | event-table, table, pagination, stat, sparkline                                                                                                              |      67,842 |    168,624 |
   | consent and overlays   | consent-banner, consent-preferences, dialog, popover, tooltip, toast, toast-region                                                                           |      87,918 |    188,483 |
   | menus                  | menu, menu-group, menu-item, menu-separator, user-menu                                                                                                       |      49,796 |    126,820 |
-  | tabs                   | tabs, tab, tab-panel                                                                                                                                         |      31,746 |     87,726 |
-  | accordion              | accordion, accordion-item                                                                                                                                    |      27,957 |     79,096 |
-  | layout                 | stack, cluster, grid, cover, sidebar, switcher, layout, divider, card, breadcrumb, breadcrumb-item                                                           |      84,127 |    161,055 |
-  | `idg-brand-logo`       | the logo, with the sanitiser                                                                                                                                 |     117,086 |    327,029 |
+  | tabs                   | tabs, tab, tab-panel                                                                                                                                         |      32,666 |     88,915 |
+  | accordion              | accordion, accordion-item                                                                                                                                    |      28,036 |     79,214 |
+  | layout                 | stack, cluster, grid, cover, sidebar, switcher, layout, divider, card, breadcrumb, breadcrumb-item                                                           |      84,232 |    161,160 |
+  | `idg-brand-logo`       | the logo, with the sanitiser                                                                                                                                 |     117,763 |    330,377 |
   | `idg-brand-swatches`   | the swatches                                                                                                                                                 |      29,826 |     84,500 |
-  | `idg-brand-guidelines` | the guide, with the sanitiser                                                                                                                                |     141,319 |    375,430 |
-  | `idg-brand-export`     | the export, with the sanitiser, the generator and the emitters                                                                                               |     219,466 |    500,751 |
-  | `idg-brand-editor`     | the editor, with the sanitiser and the generator, and the guide it previews in                                                                               |     246,861 |    550,359 |
+  | `idg-brand-guidelines` | the guide, with the sanitiser                                                                                                                                |     141,996 |    378,778 |
+  | `idg-brand-export`     | the export, with the sanitiser, the generator and the emitters                                                                                               |     220,148 |    504,099 |
+  | `idg-brand-editor`     | the editor, with the sanitiser and the generator, and the guide it previews in                                                                               |     247,538 |    553,707 |
 
-  The loader `identgineer.esm.js` is 12,924 bytes more on every page. The sanitiser (about 90 KB
+  The loader `identgineer.esm.js` is 12,926 bytes more on every page. The sanitiser (about 90 KB
   minified) is in the logo's, the guide's, the export's and the editor's bundles (the export
   validates a kit with it), the generator in the export's and the editor's, and the emitters in the
   export's alone. The editor's row counts its own entry and chunks; a page with it also loads the
-  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 698,881
+  forms, logo, guide and swatches groups it renders. The whole `www/build` directory is 701,586
   bytes (663,801 before the editor), against 433,865 before the brand components and 536,437 on
   main.
 
