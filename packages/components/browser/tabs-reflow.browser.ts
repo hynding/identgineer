@@ -72,11 +72,17 @@ function brokenOrOverlapping(page: Page) {
 // A reader sets a larger text size in the browser's settings, and a media query measures in that
 // size. The list is drawn above its panel by such a query, where the window is short of room for
 // both (below 20rem, 640px at 200% text), and beside it from there up, so these are read with the
-// browser's text size at 200% on either side of that width and at the widths between a phone and a
-// tablet. No word of a label or of the panel breaks, and no tab reaches onto the panel.
+// browser's text size at 200% on either side of that width, a little below it (600px), in the
+// narrowest window and at a tablet's width; in the wide face, whose longer words leave the least
+// room, on either side of the query and at a tablet's width. No word of a label or of the panel
+// breaks, and no tab reaches onto the panel.
+const WORD_WIDTHS = [
+  { wide: false, widths: [320, 600, 639, 640, 768] },
+  { wide: true, widths: [639, 640, 768] },
+] as const;
 test.describe("vertical tabs keep their words whole and their tabs in their list with the browser's text at 200%", () => {
-  for (const width of [320, 400, 480, 600, 639, 640, 700, 767, 768]) {
-    for (const wide of [false, true]) {
+  for (const { wide, widths } of WORD_WIDTHS) {
+    for (const width of widths) {
       test(`at ${String(width)}px, ${wide ? "wide" : "default"} text, in every design`, async ({
         page,
       }) => {

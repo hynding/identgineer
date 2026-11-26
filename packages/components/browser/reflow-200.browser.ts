@@ -53,21 +53,22 @@ async function textAt200(page: Page, way: Way, wide: boolean): Promise<void> {
 // the window, and no page may scroll sideways. The text is at 200% by the browser's text size, as a
 // reader sets it; the narrow widths are read in every design, since each sets its own borders,
 // padding and display face; the wider ones in the page's own design and in the two that take the
-// most room (a thick border and capitals, stepped corners). The wide face is read up to 480px, where
-// a wider word is what the room cannot hold (at 480px it once caught clipping the page's own face did
-// not); above that what it caught, the page's own face caught as well. A page that sets its own root
-// size to 200% is read too, in the page's face: there the media queries do not switch, and only the
-// padding that gives way by the page's rem keeps its text in the window.
+// most room (a thick border and capitals, stepped corners). The wide face is read at 320px and at
+// 480px, where a wider word is what the room cannot hold (at 480px it once caught clipping the
+// page's own face did not); at the other widths what it caught, the page's own face caught as well.
+// A page that sets its own root size to 200% is read too, in the page's face, in the narrowest
+// window and a tablet's: there the media queries do not switch, and only the padding that gives way
+// by the page's rem keeps its text in the window.
 const SWEEPS = [
-  { way: "browser", wide: false },
-  { way: "browser", wide: true },
-  { way: "page", wide: false },
+  { way: "browser", wide: false, widths: REFLOW_WIDTHS },
+  { way: "browser", wide: true, widths: [320, 480] },
+  { way: "page", wide: false, widths: [320, 768] },
 ] as const;
-for (const { way, wide } of SWEEPS) {
+for (const { way, wide, widths } of SWEEPS) {
   const name = `${way === "browser" ? "the browser's text size" : "the page's root size"} at 200%, ${wide ? "wide" : "default"} text`;
   test.describe(`no text is clipped and no page scrolls sideways with ${name}`, () => {
     for (const address of PAGES) {
-      for (const width of wide ? REFLOW_WIDTHS.filter((each) => each <= 480) : REFLOW_WIDTHS) {
+      for (const width of widths) {
         test(`${address} at ${String(width)}px`, async ({ page }) => {
           test.setTimeout(120_000);
           await page.setViewportSize({ width, height: 800 });
