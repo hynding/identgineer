@@ -167,7 +167,13 @@
 .body,
 .footer {
   min-inline-size: 0;
-  padding-inline: var(--_pad);
+  /* Where the window is narrow against the text (its width less twenty-one times the text size is
+     less than the padding), the padding gives way, to the 2xs step at the least, so a word that is
+     wider than a narrow column's room does not leave the card, which clips it. It is never more than
+     the padding, so a card with none keeps none. The window is measured, in a length, because a percentage of the card would resolve to
+     nothing while a card is sized by its content. At 100% text it is the padding from a window of
+     360px up, and the rule below takes over under 28rem. */
+  padding-inline: min(var(--_pad), max(var(--idg-space-2xs), calc(100vw - 21em)));
 }
 
 .header {
@@ -216,14 +222,6 @@
   flex: 1 1 auto;
 }
 
-/* The same holds for the text in the body and the footer: a word wider than the card (a card in a
-   narrow column at a large text size) would leave it, and the card clips what leaves. A word that fits
-   is not broken, and break-word, unlike anywhere, adds nothing to a card sized by its content. */
-.body,
-.footer {
-  overflow-wrap: break-word;
-}
-
 /* The design's own rule above the footer. It is empty in the designs that draw no border. */
 .footer {
   position: relative;
@@ -265,13 +263,18 @@
    counts rem at the browser's own size, so it does not follow the page's text size, which the
    padding, being in rem, does. 28rem is --idg-size-l: a window narrower than a phone held upright. */
 @media (max-width: 28rem) {
-  .card {
-    overflow-wrap: break-word;
-  }
-
   .header,
   .body,
   .footer {
     padding-inline: min(var(--_pad), var(--idg-space-s));
+  }
+}
+
+/* A word wider than the room it has breaks inside itself in a window up to 40rem, a little over a
+   tablet held upright, where a page's columns are narrow and its text may be large: the card clips what
+   leaves it. Above that a word wider than the room sits in the padding, as it always has. */
+@media (max-width: 40rem) {
+  .card {
+    overflow-wrap: break-word;
   }
 }
