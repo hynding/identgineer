@@ -93,10 +93,12 @@
 
 /* A word of a heading wider than the room beside the chevron runs on over the chevron and the
    padding, as it always did, but no further: where it would leave the item, at a large text size
-   in a narrow window or in a wide display face, it breaks inside itself at the item's edge. Lines
-   still wrap at the room beside the chevron; only the box the heading's words are laid out in may
-   be as wide as its longest word, up to the edge. Break-word adds nothing to an item sized by its
-   content. An engine without calc-size breaks the word beside the chevron. */
+   in a narrow window or in a wide display face, it breaks inside itself at the item's edge. For
+   that the box the heading is laid out in is as wide as its longest word, up to the edge, so where
+   that word is wider than the room beside the chevron the heading's other lines are as wide too
+   and may hold a word more than they did. CSS cannot wrap the lines at one width and break a word
+   at another. Where the words fit beside the chevron nothing changes. Break-word adds nothing to an
+   item sized by its content. An engine without calc-size breaks the word beside the chevron. */
 .title > slot {
   display: block;
   min-inline-size: calc-size(
