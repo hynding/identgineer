@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseHtmlToDocument } from "@stencil/core/mock-doc";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { HEADERS_FILE, styleSource } from "../scripts/security-headers";
 import { navigationRoutes, pageFile, prerenderedPages } from "../src/routes";
 
@@ -55,27 +55,37 @@ describe("the site's build output", () => {
   });
 });
 
-// Reads the build output, so it needs the site built first.
+// Reads the build output, so it needs the site built first. Vitest runs the body of a skipped
+// block to collect its tests, so nothing is read there but the names of the pages, and only from a
+// build that is there; the rest is read before the tests run.
 describe.skipIf(!built)("the built site", () => {
-  const headers = JSON.parse(readFileSync(join(WWW, HEADERS_FILE), "utf8")) as Record<
-    string,
-    string
-  >;
-  const policy = headers["Content-Security-Policy"] ?? "";
-  const styleSources = new Set(
-    policy
-      .split("; ")
-      .find((directive) => directive.startsWith("style-src "))
-      ?.split(" ")
-      .slice(1),
-  );
-  const htmlFiles = filesIn(WWW).filter((file) => file.endsWith(".html"));
-  const pages = new Map(htmlFiles.map((file) => [file, readPage(file)]));
-  const home = pages.get("index.html");
-  const canonical = home?.elements
-    .find((element) => element.localName === "link" && element.getAttribute("rel") === "canonical")
-    ?.getAttribute("href");
-  const siteOrigin = new URL(canonical ?? "invalid:").origin;
+  const htmlFiles = built ? filesIn(WWW).filter((file) => file.endsWith(".html")) : [];
+  let styleSources = new Set<string>();
+  let pages = new Map<string, BuiltPage>();
+  let siteOrigin = "";
+
+  beforeAll(() => {
+    const headers = JSON.parse(readFileSync(join(WWW, HEADERS_FILE), "utf8")) as Record<
+      string,
+      string
+    >;
+    const policy = headers["Content-Security-Policy"] ?? "";
+    styleSources = new Set(
+      policy
+        .split("; ")
+        .find((directive) => directive.startsWith("style-src "))
+        ?.split(" ")
+        .slice(1),
+    );
+    pages = new Map(htmlFiles.map((file) => [file, readPage(file)]));
+    const canonical = pages
+      .get("index.html")
+      ?.elements.find(
+        (element) => element.localName === "link" && element.getAttribute("rel") === "canonical",
+      )
+      ?.getAttribute("href");
+    siteOrigin = new URL(canonical ?? "invalid:").origin;
+  });
 
   it("has a file for every live route and a 404 page", () => {
     for (const route of navigationRoutes()) expect(htmlFiles).toContain(pageFile(route.path));
