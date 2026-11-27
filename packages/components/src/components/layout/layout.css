@@ -104,7 +104,17 @@
   border-block-end: var(--_rule);
 }
 
+/* Where the menu button is drawn, the brand shares the bar's grid with it, or has a row of its own,
+   and its width is the bar's to give, never its content's. It is a container there, so what the
+   page puts in it can size itself to the room the brand has (a name that must not break, set no
+   larger than fits in 100cqi), and so never runs under the menu button. That is the base rule, as
+   the shell's own arrangement, which an engine without container style queries draws in every
+   layout, has the menu button. Where the navigation is in the bar, where the bar wraps (immersive)
+   and where the brand sits on the split hero, the brand is as wide as its content and no container,
+   which the rules for those say. */
 .brand {
+  container-type: inline-size;
+  justify-self: stretch;
   grid-area: brand;
   display: flex;
   align-items: center;
@@ -350,23 +360,12 @@
   }
 }
 
-/* Where the menu button is drawn, the brand shares the bar's grid with it, or has a row of its own,
-   and its width is the bar's to give, never its content's. It is a container there, so what the
-   page puts in it can size itself to the room the brand has (a name that must not break, set no
-   larger than fits in 100cqi), and so never runs under the menu button. Where the navigation is in
-   the bar there is no button, and the brand is as wide as its content; so it is where the bar wraps
-   (immersive) and where the brand sits on the split hero, which the layouts below say. */
-@container idg-nav style(--_nav: disclosure) {
+/* Where the navigation is in the bar there is no menu button, and the brand is as wide as its
+   content, so it is no container (see the brand above). */
+@container idg-nav style(--_nav: inline) {
   .brand {
-    container-type: inline-size;
-    justify-self: stretch;
-  }
-}
-
-@container idg-nav style(--_nav: drawer) {
-  .brand {
-    container-type: inline-size;
-    justify-self: stretch;
+    container-type: normal;
+    justify-self: auto;
   }
 }
 
