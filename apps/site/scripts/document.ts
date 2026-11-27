@@ -12,6 +12,8 @@ export interface DocumentAssets {
 export interface DocumentInput {
   readonly metadata: PageMetadata;
   readonly component: PageComponent;
+  /** The component's attributes: a reading page's content, as JSON. */
+  readonly attributes?: Readonly<Record<string, string>>;
   readonly assets: DocumentAssets;
 }
 
@@ -36,7 +38,12 @@ function meta(attribute: "name" | "property", key: string, content: string): str
  * variation bootstrap runs first and blocks, and the stylesheets are plain links, which also block,
  * so a visitor's stored or shared choice is on the root before anything is painted.
  */
-export function renderDocument({ metadata, component, assets }: DocumentInput): string {
+export function renderDocument({
+  metadata,
+  component,
+  attributes = {},
+  assets,
+}: DocumentInput): string {
   const head = [
     '<meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
@@ -58,7 +65,9 @@ export function renderDocument({ metadata, component, assets }: DocumentInput): 
     "<!doctype html>",
     '<html lang="en">',
     `<head>${head.join("")}</head>`,
-    `<body><${component}></${component}></body>`,
+    `<body><${component}${Object.entries(attributes)
+      .map(([name, value]) => ` ${name}="${escape(value)}"`)
+      .join("")}></${component}></body>`,
     "</html>",
   ].join("\n");
 }
