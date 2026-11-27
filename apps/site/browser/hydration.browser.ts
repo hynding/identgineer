@@ -4,19 +4,35 @@ import { LAYOUTS, PAGES, hydrated } from "./pages";
 
 const CLIENT_BUILD = "**/build/site.esm.js";
 
+/** How far down the page the second screen is taken: past a hero as tall as the window. */
+const SCROLLED = 700;
+
+/** The first screen, and the screen after scrolling down by SCROLLED. */
+async function screens(page: Page): Promise<[Buffer, Buffer]> {
+  await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(() => {
+    window.scrollTo(0, 0);
+  });
+  const first = await page.screenshot({ animations: "disabled" });
+  await page.evaluate((y) => {
+    window.scrollTo(0, y);
+  }, SCROLLED);
+  const scrolled = await page.screenshot({ animations: "disabled" });
+  return [first, scrolled];
+}
+
 /**
- * The first screen as prerendered, with scripts allowed but the client build replaced by an empty
- * module: what a visitor sees before hydration, including what depends on scripting being enabled.
+ * The page as prerendered, with scripts allowed but the client build replaced by an empty module:
+ * what a visitor sees before hydration, including what depends on scripting being enabled.
  */
-async function prerendered(page: Page, url: string): Promise<Buffer> {
+async function prerendered(page: Page, url: string): Promise<[Buffer, Buffer]> {
   await page.route(CLIENT_BUILD, (route) =>
     route.fulfill({ contentType: "text/javascript", body: "" }),
   );
   await page.goto(url);
-  await page.evaluate(() => document.fonts.ready);
-  const shot = await page.screenshot({ animations: "disabled" });
+  const shots = await screens(page);
   await page.unroute(CLIENT_BUILD);
-  return shot;
+  return shots;
 }
 
 /**
@@ -58,8 +74,8 @@ async function changedShare(browser: Browser, before: Buffer, after: Buffer): Pr
   }
 }
 
-// Hydration takes over the prerendered page as it is: nothing in the first screen moves, appears
-// twice or changes colour when the client build arrives.
+// Hydration takes over the prerendered page as it is: nothing in the first screen, or in a screen
+// further down, moves, appears twice or changes colour when the client build arrives.
 for (const { name, path, component } of PAGES) {
   for (const layout of LAYOUTS) {
     test(`${name} in ${layout} looks the same before and after hydration`, async ({
@@ -68,11 +84,17 @@ for (const { name, path, component } of PAGES) {
     }) => {
       await page.setViewportSize({ width: 1280, height: 900 });
       const url = `${path}?idg-layout=${layout}`;
-      const before = await prerendered(page, url);
+      const [first, scrolled] = await prerendered(page, url);
       await page.goto(url);
       await hydrated(page, component);
-      const after = await page.screenshot({ animations: "disabled" });
-      expect(await changedShare(browser, before, after)).toBeLessThan(0.0001);
+      const [firstAfter, scrolledAfter] = await screens(page);
+      expect(await changedShare(browser, first, firstAfter), "the first screen").toBeLessThan(
+        0.0001,
+      );
+      expect(
+        await changedShare(browser, scrolled, scrolledAfter),
+        `${String(SCROLLED)}px down`,
+      ).toBeLessThan(0.0001);
     });
   }
 }
