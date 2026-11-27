@@ -447,19 +447,27 @@ final class IngestEventEndpointTest extends TestCase
         $this->assertSame(0, Event::query()->count());
     }
 
+    /** Two Origin headers as Apache and nginx pass them to PHP: one value, joined with ", ". */
     public function test_an_origin_joined_from_two_headers_is_refused_with_403(): void
     {
         $this->ingest(self::batch(), ['HTTP_ORIGIN' => self::ORIGIN.', '.self::ORIGIN])->assertStatus(403);
+        $this->ingest(self::batch(), ['HTTP_ORIGIN' => self::ORIGIN.', https://evil.example'])->assertStatus(403);
+        $this->ingest(self::batch(), ['HTTP_ORIGIN' => 'https://evil.example, '.self::ORIGIN])->assertStatus(403);
         $this->assertSame(0, Event::query()->count());
     }
 
+    /** Two key headers as Apache and nginx pass them to PHP: one value, joined with ", ". */
     public function test_a_key_header_joined_from_two_headers_is_refused_with_404(): void
     {
         $key = $this->property->ingest_key;
         $this->ingest(self::batch(), ['HTTP_X_IDG_WRITE_KEY' => $key.', '.$key])->assertStatus(404);
     }
 
-    /** The handler alone, given a header Symfony holds twice (as a server that keeps both passes it). */
+    /**
+     * The handler alone, given a header bag that holds two values. No PHP SAPI builds one from a
+     * request (the built-in server keeps the first value; Apache and nginx join them, as above): it
+     * models a request built in code or by a runtime that keeps both values apart.
+     */
     private function handleWithRepeated(string $header, string $value): int
     {
         $request = Request::create('/api/ingest/events', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_ORIGIN' => self::ORIGIN, 'HTTP_X_IDG_WRITE_KEY' => $this->property->ingest_key], json_encode(self::batch(), JSON_THROW_ON_ERROR));
@@ -473,7 +481,7 @@ final class IngestEventEndpointTest extends TestCase
         return $response->getStatusCode();
     }
 
-    public function test_a_header_sent_twice_is_refused_like_the_strapi_handler_does(): void
+    public function test_a_header_bag_holding_two_values_is_refused_like_the_strapi_handler_does(): void
     {
         $this->assertSame(403, $this->handleWithRepeated('Origin', self::ORIGIN));
         $this->assertSame(404, $this->handleWithRepeated('X-Idg-Write-Key', (string) $this->property->ingest_key));

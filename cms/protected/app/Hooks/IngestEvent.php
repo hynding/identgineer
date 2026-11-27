@@ -31,8 +31,10 @@ use PDOException;
  * Checks in this order, each refusal in Strapi's error body: media type and Content-Encoding (415,
  * any coding but identity), body size against INGEST_MAX_BODY_BYTES (413, before decoding), the
  * batch (400, whole batch), the key (404, alike for an unknown and an inactive one: one query asks
- * for both; a header sent twice counts as none), the Origin header against the property's allowed
- * origins (403; sent twice, refused), the key's rate (429 with Retry-After). Then each accepted
+ * for both), the Origin header against the property's allowed origins (403), the key's rate (429
+ * with Retry-After). A header sent twice reaches PHP as the server passes it: Apache and nginx
+ * join the values with ", ", which matches no key or origin and is refused; PHP's built-in server
+ * keeps only the first. Then each accepted
  * event is stored against the key's own property and owner, and the answer is 202 with no body. An
  * event not allowed, outside the time window or already stored is skipped. A database failure
  * answers 503, which the SDK retries, and is logged by its class alone: the exception's message
@@ -93,7 +95,7 @@ final class IngestEvent implements IngestEventEndpoint
         return false;
     }
 
-    /** A header's value when it is sent once; null when absent or sent more than once. */
+    /** A header's one value; null when absent or when the header bag holds more than one value. */
     private static function single(Request $request, string $name): ?string
     {
         $values = $request->headers->all($name);
