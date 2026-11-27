@@ -148,17 +148,45 @@ final class PropertySummaryEndpointTest extends TestCase
         self::assertSame(1, $answer->json('data.events.value'));
     }
 
-    public function test_refuses_a_caller_without_a_session_before_the_handler(): void
+    public function test_refuses_a_caller_without_a_session_before_the_handler_uncached(): void
     {
-        $this->summary($this->mine->document_id, '?range=7d')->assertForbidden();
+        $answer = $this->summary($this->mine->document_id, '?range=7d');
+
+        $answer->assertForbidden();
+        self::assertStringContainsString('no-store', (string) $answer->headers->get('Cache-Control'));
     }
 
-    public function test_refuses_a_token_that_is_not_one(): void
+    public function test_refuses_a_token_that_is_not_one_uncached(): void
     {
-        $this->get('/api/properties/'.$this->mine->document_id.'/summary?range=7d', [
+        $answer = $this->get('/api/properties/'.$this->mine->document_id.'/summary?range=7d', [
             'Accept' => 'application/json',
             'Authorization' => 'Bearer 1|not-a-token',
-        ])->assertUnauthorized();
+        ]);
+
+        $answer->assertUnauthorized();
+        self::assertStringContainsString('no-store', (string) $answer->headers->get('Cache-Control'));
+    }
+
+    public function test_refuses_a_caller_past_the_throttle_uncached(): void
+    {
+        config(['camis-endpoints.PropertySummary.throttle_per_minute' => 1]);
+        $this->summary($this->mine->document_id, '?range=7d', $this->me)->assertOk();
+
+        $answer = $this->summary($this->mine->document_id, '?range=7d', $this->me);
+
+        $answer->assertStatus(429);
+        self::assertStringContainsString('no-store', (string) $answer->headers->get('Cache-Control'));
+    }
+
+    public function test_leaves_the_cache_headers_of_other_routes_alone(): void
+    {
+        $answer = $this->get('/api/properties/'.$this->mine->document_id.'?fields[0]=name', [
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer '.$this->me->createToken('test', ['*'])->plainTextToken,
+        ]);
+
+        $answer->assertOk();
+        self::assertStringNotContainsString('no-store', (string) $answer->headers->get('Cache-Control'));
     }
 
     /** @return array<string, array{string}> */

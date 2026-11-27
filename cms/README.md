@@ -350,8 +350,12 @@ public: only `authenticated` lists it in `roles.json`. Its handler (`protected/`
 | `429`  | More than 60 a minute from one address (camis' throttle)                                      |
 | `503`  | The database failed; the error's class is logged, never its message, an id or an event's text |
 
-Every answer carries `Cache-Control: no-store` (strapi-php's framework writes it as
-`no-store, private`). Each figure is `{ value, previous, series }`: `events` counts every event,
+Every answer of the handler carries `Cache-Control: no-store` (strapi-php's framework writes it as
+`no-store, private`). On strapi-php so do camis' refusals before the handler (401, 403, 429), through
+the protected global middleware `App\Summary\SummaryNoStore`. On Strapi those three refusals carry
+no `Cache-Control`: they come from the users-permissions plugin and camis' guard middleware, and only
+a global middleware could add it, which `protected/` cannot add without replacing camis' generated
+`config/middlewares.ts`. They hold no data, only the error. Each figure is `{ value, previous, series }`: `events` counts every event,
 `pageViews` the `page_view` events, `visitors` the distinct `sessionId`s (events without one are not
 counted) over the whole range, not the sum of the buckets. `series` holds 24 hourly buckets for
 `24h`, 7 or 30 daily ones for the others, in UTC, oldest first; `previous` is the same count over

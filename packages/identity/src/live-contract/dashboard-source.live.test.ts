@@ -260,9 +260,10 @@ describe.skipIf(liveBackend === undefined)(
     });
 
     it("refuses the summary to a caller without a session, and the source to a signed-out page", async () => {
-      expect((await raw(`/api/properties/${aliceShop.documentId}/summary?range=7d`)).status).toBe(
-        403,
-      );
+      const anonymous = await raw(`/api/properties/${aliceShop.documentId}/summary?range=7d`);
+      expect(anonymous.status).toBe(403);
+      // camis refuses it before the handler; the protected SummaryNoStore keeps it uncached too.
+      expect(anonymous.cacheControl).toContain("no-store");
       expect((await raw("/api/events")).status).toBe(403);
       expect((await raw("/api/properties")).status).toBe(403);
       // A page whose identity client has no session: authorizedFetch sends nothing.

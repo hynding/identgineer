@@ -119,7 +119,9 @@ counter, keyed by a hash.
 through only a role that lists it in `roles.json` (`authenticated`), and answers 403 without a
 session and 401 for a bad token before the handler runs. On strapi-php it is
 `App\Hooks\PropertySummary`; on Strapi the `property-summary` controller. Both, in this order,
-every answer with `Cache-Control: no-store`:
+every answer with `Cache-Control: no-store` (on strapi-php camis' refusals before the handler get it
+too, from `app/Summary/SummaryNoStore.php`, prepended to Laravel's global middleware by
+`app/Providers/AppServiceProvider.php`; Strapi's refusals before the controller have none):
 
 1. **400** unless the query string holds `range` exactly once, as `24h`, `7d` or `30d` (strapi-php
    reads the raw query string, so `range[]=7d` and a repeated `range` are refused as on Strapi).
