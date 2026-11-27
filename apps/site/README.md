@@ -35,6 +35,28 @@ ordinary links with full page loads.
 An address the site does not have gets `404.html`, which the server sends with status 404. It has no
 canonical link and asks not to be indexed.
 
+### One page, eight arrangements
+
+The home page is one set of markup: each section is a head, a body and a visual. `src/styles/site.css`
+arranges them by the layout, with container style queries on `--idg-layout-shell` (which
+`data-layout` sets) and size queries on the content's own width, all in tokens:
+
+| Layout       | How the content is arranged                                                                 |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| `top-bar`    | A product page: the sections zigzag, text on one side and its example on the other.         |
+| `side-rail`  | A reference manual: sections ruled off, each heading in a narrow column that stays in view. |
+| `split-hero` | Numbered steps, one under another, in the half beside the pinned hero.                      |
+| `magazine`   | An issue: a lead story, two stories side by side with a rule between, a boxed feature.      |
+| `dashboard`  | Dense panels with title bars on a twelve-column grid.                                       |
+| `centered`   | One narrow column with centred headings.                                                    |
+| `bento`      | Tiles of different sizes on one grid.                                                       |
+| `immersive`  | Full-width bands, alternately tinted, with large centred headings.                          |
+
+The "On this page" aside stays in view where it is beside the content, and is not drawn where a
+layout would put it after the content (`centered`, `side-rail` and `split-hero`). Every column has
+a minimum that follows the type scale, so a word, a figure or the site's name is never broken
+inside itself; `browser/fit.browser.ts` checks that across designs, layouts and UX modes.
+
 ## How it is built
 
 1. **`stencil build --prod`** compiles the site's components together with the component library.

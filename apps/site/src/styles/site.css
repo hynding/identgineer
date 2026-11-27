@@ -70,7 +70,7 @@ body {
   overflow-wrap: break-word;
 }
 
-.site-layout :is(.lede, .feature-copy > p) {
+.site-layout :is(.lede, .feature-body > p) {
   font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
   line-height: var(--idg-font-line-height-snug);
 }
@@ -99,6 +99,14 @@ body {
   gap: var(--idg-space-2xs);
   color: inherit;
   text-decoration: none;
+}
+
+/* The name is one word, and never broken: in a narrow bar, or at a large type scale, it is set
+   smaller instead, no larger than fits beside the menu button in a window of the bar's width. The
+   bar is the shell's, a container, so the limit is a share of its width. */
+.brand-name {
+  font-size: min(1em, 6cqi);
+  white-space: nowrap;
 }
 
 .brand-mark {
@@ -135,6 +143,7 @@ body {
    made for that. */
 
 .hero {
+  container: hero / inline-size;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--idg-size-l)), 1fr));
   align-items: center;
@@ -160,8 +169,10 @@ body {
   text-transform: uppercase;
 }
 
+/* As large as the scale makes it, but never so large that its longest word is wider than the hero:
+   a word is at most about seven of its letters' height wide. */
 .site-layout .hero-title {
-  font-size: calc(var(--idg-font-size-step-6) * var(--idg-ux-type-scale));
+  font-size: min(calc(var(--idg-font-size-step-6) * var(--idg-ux-type-scale)), 13cqi);
   line-height: var(--idg-font-line-height-tight);
 }
 
@@ -173,9 +184,11 @@ body {
   color: var(--idg-color-text);
 }
 
+/* A card holding a figure is never narrower than the figure at the current type size, so the
+   figure never breaks; the cards go one under another first. */
 .hero-showcase > * {
-  flex: 1 1 var(--idg-size-xs);
-  min-inline-size: 0;
+  flex: 1 1 calc(var(--idg-size-xs) * var(--idg-ux-type-scale));
+  min-inline-size: min(100%, calc(var(--idg-size-xs) * var(--idg-ux-type-scale)));
 }
 
 .hero-showcase > .showcase-profile {
@@ -252,20 +265,61 @@ figcaption {
   background: var(--idg-color-text);
 }
 
-/* The features */
+/* The features
 
-.feature {
-  container-type: inline-size;
-  display: grid;
-  gap: calc(var(--idg-space-l) * var(--idg-density-gap-scale));
-  margin-block-end: var(--idg-layout-section-gap);
-  scroll-margin-block-start: var(--idg-space-m);
+   One set of markup: every section is a head (kicker and heading), a body (its text) and a visual.
+   How the sections sit on the page, and how a section's three parts sit in it, follows the layout
+   (`--idg-layout-shell`, which `data-layout` sets), so each of the eight arranges the same content
+   in its own way. Below 40rem of content every layout stacks the three parts. */
+
+/* The sections are laid out on a grid whose columns follow the width of the content, which the
+   wrapper around them, a container, gives. */
+.home {
+  container: home / inline-size;
+  /* A column is never narrower than a tile's text at the current type size. */
+  --_tile: calc(var(--idg-size-xs) * var(--idg-ux-type-scale));
+  --_card: calc(var(--idg-size-s) * var(--idg-ux-type-scale));
 }
 
-.feature-copy {
+.sections {
+  counter-reset: feature;
+  display: grid;
+  gap: var(--idg-layout-section-gap);
+  padding-block-end: var(--idg-layout-section-gap);
+}
+
+.feature {
+  counter-increment: feature;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas:
+    "head"
+    "body"
+    "visual";
+  align-content: start;
+  gap: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+  min-inline-size: 0;
+  scroll-margin-block-start: calc(var(--idg-layout-sticky-inset) + var(--idg-space-m));
+}
+
+.feature-head {
+  grid-area: head;
+  display: grid;
+  gap: var(--idg-space-2xs);
+  align-content: start;
+}
+
+.feature-body {
+  grid-area: body;
   display: grid;
   gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
   align-content: start;
+}
+
+.feature-visual {
+  grid-area: visual;
+  min-inline-size: 0;
 }
 
 .feature-kicker {
@@ -305,16 +359,19 @@ figcaption {
 .preview {
   display: grid;
   gap: var(--idg-space-xs);
+  align-content: start;
   margin: 0;
 }
 
-.dashboard-preview {
+/* Each stat as wide as its figure needs at the current type size, the progress across them all. */
+.figures {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--idg-size-xs)), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--_tile) * 1.25), 1fr));
+  align-content: start;
   gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
 }
 
-.dashboard-preview > :last-child {
+.figures-wide {
   grid-column: 1 / -1;
 }
 
@@ -322,7 +379,8 @@ figcaption {
    and fonts for what is inside it. */
 .themes {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--idg-size-xs)), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--_tile)), 1fr));
+  align-content: start;
   gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
   margin: 0;
   padding: 0;
@@ -332,6 +390,7 @@ figcaption {
 .theme-tile {
   display: grid;
   gap: var(--idg-space-2xs);
+  min-inline-size: 0;
   padding: var(--idg-space-s);
   border: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
   border-radius: var(--idg-shape-radius-lg);
@@ -339,8 +398,11 @@ figcaption {
   color: var(--idg-color-text);
 }
 
+/* The sample and the swatches share a row where the tile has room, and the swatches go under the
+   sample where it does not. */
 .theme-sample {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--idg-space-xs);
@@ -358,6 +420,7 @@ figcaption {
 
 .theme-swatches {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--idg-space-3xs);
 }
 
@@ -370,8 +433,16 @@ figcaption {
    and one would leave an axis on a row of its own. A container query cannot read a token, so the
    widths are written out: 36rem holds two cards of --idg-size-s, 60rem four of --idg-size-xs plus
    their gaps. */
+.feature-variations .feature-visual {
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+}
+
 .axes {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
 }
 
@@ -410,7 +481,7 @@ figcaption {
   align-items: center;
   justify-content: space-between;
   gap: var(--idg-space-m);
-  padding: var(--idg-space-l);
+  padding: clamp(var(--idg-space-s), 6cqi, var(--idg-space-l));
   border-radius: var(--idg-shape-radius-lg);
   background: var(--idg-color-accent-subtle);
   color: var(--idg-color-on-accent-subtle);
@@ -423,15 +494,435 @@ figcaption {
   gap: var(--idg-space-xs);
 }
 
+/* A figure is read whole, so it never breaks inside itself. */
 .figure {
   font-family: var(--idg-font-family-display);
   font-size: calc(var(--idg-font-size-step-6) * var(--idg-ux-type-scale));
   font-weight: var(--idg-font-display-weight);
   line-height: 1;
+  white-space: nowrap;
 }
 
 .figure-label {
   max-inline-size: var(--idg-size-s);
+}
+
+/* The pages to come: a card is never narrower than its heading at the current type size. */
+.next {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--_card)), 1fr));
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+}
+
+/* top-bar, and any layout that sets none of its own: a product page. The sections zigzag, text on
+   one side and what it describes on the other; the variations and the pages to come take the whole
+   width. */
+@container home (min-inline-size: 40rem) {
+  /* The text keeps together at the top of its side, however tall the other side is. */
+  .feature {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "head visual"
+      "body visual";
+    column-gap: calc(var(--idg-space-xl) * var(--idg-density-gap-scale));
+  }
+
+  .feature-tracking {
+    grid-template-areas:
+      "visual head"
+      "visual body";
+  }
+
+  .feature-variations,
+  .feature-next {
+    grid-template-areas:
+      "head body"
+      "visual visual";
+  }
+}
+
+/* side-rail: a reference manual. Each section is ruled off from the last, its heading in a narrow
+   column of its own that stays in view while its text and examples scroll past. */
+@container style(--idg-layout-shell: side-rail) {
+  .feature {
+    padding-block-start: var(--idg-space-l);
+    border-block-start: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+  }
+
+  .site-layout .feature h2 {
+    font-size: calc(var(--idg-font-size-step-2) * var(--idg-ux-type-scale));
+  }
+
+  @container home (min-inline-size: 40rem) {
+    .feature,
+    .feature-tracking,
+    .feature-variations,
+    .feature-next {
+      grid-template-columns: minmax(min(var(--_tile) * 1.2, 30%), 1fr) minmax(0, 3fr);
+      grid-template-areas:
+        "head body"
+        "head visual";
+    }
+
+    .feature-head {
+      position: sticky;
+      inset-block-start: var(--idg-space-m);
+      align-self: start;
+    }
+  }
+}
+
+/* split-hero: the content is the narrow half beside the hero, read as numbered steps, one under
+   another. */
+@container style(--idg-layout-shell: split-hero) {
+  .feature,
+  .feature-tracking,
+  .feature-variations,
+  .feature-next {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "head"
+      "body"
+      "visual";
+  }
+
+  .feature-kicker::before {
+    content: counter(feature, decimal-leading-zero) / "";
+    margin-inline-end: var(--idg-space-2xs);
+    padding-inline-end: var(--idg-space-2xs);
+    border-inline-end: var(--idg-border-width) var(--idg-border-style) currentcolor;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* magazine: an issue. The first section is the lead story across the page, two stories run side by
+   side under it with a rule between them, the variations are a boxed feature between heavy rules,
+   and the pages to come close the issue. */
+@container style(--idg-layout-shell: magazine) {
+  .feature-kicker {
+    padding-block-end: var(--idg-space-3xs);
+    border-block-end: var(--idg-border-width) var(--idg-border-style) currentcolor;
+    justify-self: start;
+  }
+
+  @container home (min-inline-size: 44rem) {
+    .sections {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      column-gap: calc(var(--idg-space-xl) * var(--idg-density-gap-scale));
+    }
+
+    .feature {
+      grid-column: 1 / -1;
+    }
+
+    .feature-identity {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      grid-template-areas:
+        "head head"
+        "body visual";
+    }
+
+    .site-layout .feature-identity h2 {
+      font-size: calc(var(--idg-font-size-step-5) * var(--idg-ux-type-scale));
+    }
+
+    .feature-tracking,
+    .feature-brand-kits {
+      grid-column: span 3;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas:
+        "head"
+        "body"
+        "visual";
+    }
+
+    .feature-brand-kits {
+      position: relative;
+    }
+
+    /* The rule between the two stories, in the middle of the gap. */
+    .feature-brand-kits::before {
+      content: "";
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: calc(var(--idg-space-xl) * var(--idg-density-gap-scale) / -2);
+      border-inline-start: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+    }
+
+    .feature-variations {
+      padding-block: var(--idg-space-l);
+      border-block: calc(var(--idg-border-width) * 3) solid var(--idg-color-text);
+    }
+
+    .feature-next .next {
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--_card)), 1fr));
+    }
+  }
+
+  @container home (min-inline-size: 60rem) {
+    .feature-identity .feature-body > p {
+      columns: 2;
+      column-gap: var(--idg-space-l);
+    }
+  }
+}
+
+/* dashboard: dense panels on one grid, each with a title bar, smaller type and tighter spacing. */
+@container style(--idg-layout-shell: dashboard) {
+  .sections {
+    gap: var(--idg-layout-gap);
+  }
+
+  .feature {
+    gap: var(--idg-space-s);
+    padding: clamp(var(--idg-space-2xs), 4cqi, var(--idg-space-s));
+    border: var(--idg-surface-border-width) var(--idg-surface-border-style)
+      var(--idg-surface-border-color);
+    border-radius: var(--idg-shape-radius-md);
+    background: var(--idg-surface-background);
+  }
+
+  .feature-head {
+    padding-block-end: var(--idg-space-2xs);
+    border-block-end: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+  }
+
+  .site-layout .feature h2 {
+    font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+  }
+
+  .site-layout .feature-body > p {
+    font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  }
+
+  @container home (min-inline-size: 40rem) {
+    .sections {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+
+    .feature,
+    .feature-tracking,
+    .feature-variations,
+    .feature-next {
+      grid-column: 1 / -1;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas:
+        "head"
+        "body"
+        "visual";
+    }
+  }
+
+  @container home (min-inline-size: 56rem) {
+    .feature-identity {
+      grid-column: 1 / 6;
+    }
+
+    .feature-tracking {
+      grid-column: 6 / -1;
+    }
+
+    .feature-brand-kits {
+      grid-column: 1 / 6;
+    }
+
+    .feature-variations {
+      grid-column: 6 / -1;
+    }
+  }
+}
+
+/* centered: one narrow column, its headings centred over their text, and no aside beside it to
+   look across to. */
+@container style(--idg-layout-shell: centered) {
+  .feature,
+  .feature-tracking,
+  .feature-variations,
+  .feature-next {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "head"
+      "body"
+      "visual";
+  }
+
+  .feature-head {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .site-layout::part(aside) {
+    display: none;
+  }
+}
+
+/* side-rail and split-hero put the aside after the content, where a list of the sections above it
+   is no help; the side-rail's headings and the split hero's numbers already say where the reader is. */
+@container style(--idg-layout-shell: side-rail) {
+  .site-layout::part(aside) {
+    display: none;
+  }
+}
+
+@container style(--idg-layout-shell: split-hero) {
+  .site-layout::part(aside) {
+    display: none;
+  }
+}
+
+/* bento: every section is a tile of its own on one grid, of different sizes, the sign-in form the
+   largest, the variations on the accent's tint. */
+@container style(--idg-layout-shell: bento) {
+  .sections {
+    gap: var(--idg-layout-gap);
+  }
+
+  /* In a narrow window the content is one tile already, and its sections are read in it plainly;
+     with room, each section is a tile of its own. */
+  @container home (min-inline-size: 40rem) {
+    .feature {
+      padding: var(--idg-space-m);
+      border: var(--idg-surface-border-width) var(--idg-surface-border-style)
+        var(--idg-surface-border-color);
+      border-radius: var(--idg-shape-radius-xl);
+      background: var(--idg-surface-background);
+    }
+
+    .feature-variations {
+      background: var(--idg-color-bg-subtle);
+    }
+
+    .sections {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .feature,
+    .feature-tracking,
+    .feature-variations,
+    .feature-next {
+      grid-column: 1 / -1;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas:
+        "head"
+        "body"
+        "visual";
+    }
+  }
+
+  /* A wide tile for the sign-in form beside a narrow one for the figures, then tiles across. */
+  @container home (min-inline-size: 52rem) {
+    .feature-identity {
+      grid-column: span 4;
+    }
+
+    .feature-tracking {
+      grid-column: span 2;
+    }
+
+    .feature-brand-kits,
+    .feature-variations,
+    .feature-next {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      grid-template-areas:
+        "head body"
+        "visual visual";
+    }
+
+    .feature-brand-kits .themes {
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--_tile)), 1fr));
+    }
+  }
+
+  /* The aside is a tile as tall as the page; its links stay in view. */
+  .on-this-page {
+    position: sticky;
+    inset-block-start: var(--idg-space-m);
+  }
+}
+
+/* immersive: every section a band across the whole window, alternately tinted, its heading large
+   and centred over a centred column. */
+@container style(--idg-layout-shell: immersive) {
+  .sections {
+    gap: 0;
+    padding-block-end: 0;
+  }
+
+  .feature,
+  .feature-tracking,
+  .feature-variations,
+  .feature-next {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "head"
+      "body"
+      "visual";
+    justify-items: center;
+    padding-block: var(--idg-layout-section-gap);
+    text-align: center;
+  }
+
+  /* The band reaches the edges of the window. A shadow and a clip draw it there without widening
+     the page, so nothing scrolls sideways. */
+  .feature:nth-child(even) {
+    background: var(--idg-color-bg-subtle);
+    box-shadow: 0 0 0 100vmax var(--idg-color-bg-subtle);
+    clip-path: inset(0 -100vmax);
+  }
+
+  .site-layout .feature h2 {
+    font-size: calc(var(--idg-font-size-step-5) * var(--idg-ux-type-scale));
+  }
+
+  .feature-head,
+  .feature-body {
+    justify-items: center;
+    max-inline-size: var(--idg-density-measure);
+  }
+
+  .feature-visual {
+    inline-size: 100%;
+    max-inline-size: var(--idg-size-2xl);
+    text-align: start;
+  }
+
+  .checks {
+    justify-items: start;
+    text-align: start;
+  }
+}
+
+/* Where the aside is a card beside the content, its links stay in view while the page scrolls. A
+   container query cannot see the shell's own width from here, so the window's stands in: the shell
+   is as wide as the window, and puts the aside beside the content from 72rem. */
+@media (min-width: 73rem) {
+  @container style(--idg-layout-shell: top-bar) {
+    .site-layout::part(aside) {
+      position: sticky;
+      inset-block-start: calc(var(--idg-layout-sticky-inset) + var(--idg-space-m));
+    }
+  }
+
+  @container style(--idg-layout-shell: magazine) {
+    .site-layout::part(aside) {
+      position: sticky;
+      inset-block-start: var(--idg-space-m);
+    }
+  }
+
+  @container style(--idg-layout-shell: immersive) {
+    .site-layout::part(aside) {
+      position: sticky;
+      inset-block-start: var(--idg-space-m);
+    }
+  }
 }
 
 /* The aside: links to the sections of the page */
