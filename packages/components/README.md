@@ -1100,6 +1100,14 @@ animate out. Where the page runs no script (`@media (scripting: none)`, a shell 
 declarative shadow DOM), there is no menu button: the navigation is inline in every layout and at
 every width.
 
+Wherever the menu button is drawn and the bar's grid gives the brand its width (beside the button, or
+on a row of its own), the `brand` part is an inline-size container, so a container query unit in what
+the page slots there measures the room the bar leaves the brand. A name that must not break can be
+set no larger than that, as `font-size: min(1em, 100cqi / 6.8)` for a word of about seven letters'
+height in the widest face, and never runs under the menu button. Where the navigation is in the bar,
+where the bar wraps (`immersive`) and where the brand sits on the split hero, the brand is as wide as
+its content and is no container.
+
 Changing `data-layout` while the page is open keeps the scroll position and keeps focus on the same
 element; focus that was in a navigation the new layout collapses goes to the menu button. Where a
 layout pins its chrome (`top-bar` at large, `dashboard`), `scroll-padding-block-start` is set on the
