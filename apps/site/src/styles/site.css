@@ -1275,6 +1275,12 @@ figcaption {
   min-inline-size: 0;
 }
 
+/* A guide with nothing shown in it (a page outside the docs, where the contents are in the aside)
+   takes no row of its own. */
+.reading-guide:not(:has(> :not(.contents-inline))) {
+  display: none;
+}
+
 .site-layout :is(.contents, .docs-pages) h2 {
   font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
 }
@@ -1318,8 +1324,10 @@ figcaption {
   }
 }
 
+/* The guide sits beside the article where it holds the docs' own navigation; the table of contents
+   is in the shell's aside, as the home page's is (below for the layouts that draw none). */
 @container reading (min-inline-size: 46rem) {
-  .reading-body {
+  .reading-body.with-section {
     grid-template-columns: minmax(var(--idg-size-xs), 1fr) minmax(0, 3fr);
     grid-template-areas:
       "guide article"
@@ -1327,18 +1335,57 @@ figcaption {
     column-gap: calc(var(--idg-space-xl) * var(--idg-density-gap-scale));
   }
 
-  .reading-guide {
+  .with-section > .reading-guide {
     grid-area: guide;
     position: sticky;
     inset-block-start: calc(var(--_sticky-inset) + var(--idg-space-m));
   }
 
-  .prose {
+  .with-section > .prose {
     grid-area: article;
   }
 
-  .pager {
+  .with-section > .pager {
     grid-area: pager;
+  }
+}
+
+/* The copy of the table of contents beside the article, for the layouts that draw no aside. */
+.contents-inline {
+  display: none;
+}
+
+/* centered, side-rail and split-hero draw no aside (see the home page's rules), so the table of
+   contents is in the guide, beside the article where there is room, before it where there is not. */
+@container style(--idg-layout-shell: centered) or style(--idg-layout-shell: side-rail) or
+  style(--idg-layout-shell: split-hero) {
+  .contents-inline,
+  .reading-guide:not(:has(> :not(.contents-inline))) {
+    display: grid;
+  }
+
+  @container reading (min-inline-size: 46rem) {
+    .reading-body {
+      grid-template-columns: minmax(var(--idg-size-xs), 1fr) minmax(0, 3fr);
+      grid-template-areas:
+        "guide article"
+        ". pager";
+      column-gap: calc(var(--idg-space-xl) * var(--idg-density-gap-scale));
+    }
+
+    .reading-guide {
+      grid-area: guide;
+      position: sticky;
+      inset-block-start: calc(var(--_sticky-inset) + var(--idg-space-m));
+    }
+
+    .prose {
+      grid-area: article;
+    }
+
+    .pager {
+      grid-area: pager;
+    }
   }
 }
 
@@ -1635,18 +1682,17 @@ figcaption {
     gap: 0;
   }
 
-  .reading-body {
+  .reading-body,
+  .reading-body.with-section {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: none;
   }
 
-  .reading-guide,
-  .prose,
-  .pager {
+  .reading-body > :is(.reading-guide, .prose, .pager) {
     grid-area: auto;
   }
 
-  .reading-guide {
+  .reading-body > .reading-guide {
     position: static;
     padding-block-end: var(--idg-layout-section-gap);
   }
