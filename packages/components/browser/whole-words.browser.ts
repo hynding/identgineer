@@ -2,12 +2,17 @@ import type { Page } from "@playwright/test";
 import { DESIGNS, UX_MODES, applyAxes } from "./axes";
 import { expect, test } from "./fixtures";
 import { hydrated, settleFrames } from "./reflow";
+import { withoutCalcSize } from "./without-calc-size";
 
 // A page may let the words of a region break anywhere, so that no long word in it ever leaves it
 // (idg-layout's hero does), and that is inherited by every component placed there. A figure or a
 // button's label is read whole, so neither takes it up: in a parent sized by its content, where an
 // inherited break anywhere would make the content as narrow as a letter, each is still as wide as
-// its longest word.
+// its longest word. In a row narrower than the label's longest word, in a window with room, the
+// button keeps the word whole and reaches past the row, as a button's smallest size allows.
+//
+// An engine without `calc-size()`, with which the stat and the button set their smallest size,
+// must keep the words whole too, so each case is also run with it taken out of the styles.
 
 const FIGURE = "12,480";
 const LABEL = "Surprise me";
@@ -28,12 +33,32 @@ async function placeInBreakAnywhereColumn(page: Page): Promise<void> {
       stat.setAttribute("value", figure);
       const button = document.createElement("idg-button");
       button.textContent = label;
+      // A row as narrow as the button's label less a little, sized once the button is drawn.
+      const row = document.createElement("div");
+      row.id = "whole-words-row";
+      row.style.display = "flex";
+      row.style.overflowWrap = "anywhere";
+      const narrow = document.createElement("idg-button");
+      narrow.textContent = label;
+      row.append(narrow);
       column.append(stat, button);
-      document.body.prepend(column);
+      document.body.prepend(column, row);
     },
     { figure: FIGURE, label: LABEL },
   );
   await hydrated(page);
+  await settleFrames(page);
+}
+
+/** Sets the row 8px narrower than the button in the column, which is as wide as its longest word. */
+async function narrowRow(page: Page): Promise<void> {
+  await settleFrames(page);
+  await page.evaluate(() => {
+    const row = document.getElementById("whole-words-row");
+    const word = document.querySelector("#whole-words idg-button")?.getBoundingClientRect().width;
+    if (!row || word === undefined) throw new Error("the row or the button is missing");
+    row.style.inlineSize = `${String(Math.round(word) - 8)}px`;
+  });
   await settleFrames(page);
 }
 
@@ -44,6 +69,7 @@ function brokenWords(page: Page): Promise<string[]> {
     const texts = [
       column?.querySelector("idg-stat")?.shadowRoot?.querySelector('[part="value"]'),
       column?.querySelector("idg-button"),
+      document.querySelector("#whole-words-row idg-button"),
     ];
     const broken: string[] = [];
     for (const holder of texts) {
@@ -69,21 +95,28 @@ function brokenWords(page: Page): Promise<string[]> {
 }
 
 test.describe("a figure and a button label keep their words whole where the page breaks words anywhere", () => {
-  test("in a column as narrow as its content, in every design and UX mode", async ({ page }) => {
-    test.setTimeout(120_000);
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto("/fixtures/surfaces.html");
-    await hydrated(page);
-    await placeInBreakAnywhereColumn(page);
-    const failures: string[] = [];
-    for (const design of DESIGNS) {
-      for (const ux of UX_MODES) {
-        await applyAxes(page, { design, ux });
-        await settleFrames(page);
-        const broken = await brokenWords(page);
-        if (broken.length > 0) failures.push(`${design}/${ux}: ${broken.join(", ")}`);
+  for (const engine of ["with calc-size()", "without calc-size()"] as const) {
+    test(`in a column as narrow as its content and a row narrower than the label, in every design and UX mode, ${engine}`, async ({
+      page,
+    }) => {
+      test.setTimeout(120_000);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto("/fixtures/surfaces.html");
+      await hydrated(page);
+      await placeInBreakAnywhereColumn(page);
+      if (engine === "without calc-size()") {
+        expect(await withoutCalcSize(page), "calc-size() taken out").toBeGreaterThan(0);
       }
-    }
-    expect(failures).toEqual([]);
-  });
+      const failures: string[] = [];
+      for (const design of DESIGNS) {
+        for (const ux of UX_MODES) {
+          await applyAxes(page, { design, ux });
+          await narrowRow(page);
+          const broken = await brokenWords(page);
+          if (broken.length > 0) failures.push(`${design}/${ux}: ${broken.join(", ")}`);
+        }
+      }
+      expect(failures).toEqual([]);
+    });
+  }
 });
