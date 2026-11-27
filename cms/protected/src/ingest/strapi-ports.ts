@@ -10,6 +10,7 @@ export interface DocumentServiceLike {
 
 export interface StrapiLike {
   documents(uid: string): DocumentServiceLike;
+  readonly log: { error(message: string): void };
 }
 
 /** A repeatable component's rows as the document service returns them. */
@@ -72,25 +73,31 @@ export const findActivePropertyIn =
 /**
  * Stores an event unless one with its dedupeKey is stored. Strapi creates no unique index (camis'
  * strapi target enforces `unique` in its validator, by a read), so the read and the write run under
- * a lock per dedupeKey in this process: race-free in the one process local Strapi runs.
+ * a lock per dedupeKey in this process: race-free in the one process local Strapi runs. When the
+ * write fails and the row is there after all (another process stored it in between, which Strapi's
+ * unique check refuses), it is a duplicate, not a failure.
  */
 export const storeEventIn = (strapi: StrapiLike) => {
   const pending = new Map<string, Promise<unknown>>();
   const events = () => strapi.documents("api::event.event");
+  const isStored = async (dedupeKey: string): Promise<boolean> =>
+    (await events().findFirst({ filters: { dedupeKey: { $eq: dedupeKey } }, fields: ["id"] })) !==
+    null;
   const storeOnce = async (property: StrapiProperty, row: EventRow) => {
-    const existing = await events().findFirst({
-      filters: { dedupeKey: { $eq: row.dedupeKey } },
-      fields: ["id"],
-    });
-    if (existing !== null) return "duplicate" as const;
-    await events().create({
-      data: {
-        ...row,
-        occurredAt: row.occurredAt.toISOString(),
-        property: property.documentId,
-        owner: property.ownerDocumentId,
-      },
-    });
+    if (await isStored(row.dedupeKey)) return "duplicate" as const;
+    try {
+      await events().create({
+        data: {
+          ...row,
+          occurredAt: row.occurredAt.toISOString(),
+          property: property.documentId,
+          owner: property.ownerDocumentId,
+        },
+      });
+    } catch (error) {
+      if (await isStored(row.dedupeKey)) return "duplicate" as const;
+      throw error;
+    }
     return "stored" as const;
   };
   return async (property: StrapiProperty, row: EventRow): Promise<"stored" | "duplicate"> => {

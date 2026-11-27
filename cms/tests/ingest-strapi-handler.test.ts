@@ -36,12 +36,23 @@ const filterValue = (params: Record<string, unknown>, field: string): unknown =>
 const fakeStrapi = (properties: PropertyRow[]) => {
   const events: Record<string, unknown>[] = [];
   const queries: Record<string, unknown>[] = [];
+  const logged: string[] = [];
+  /** Set to make the next calls fail as a database does, its error naming the query and the key. */
+  const failures = { lookup: false, store: false, storeAsDuplicate: false };
+  const databaseError = (sql: string) =>
+    Object.assign(new Error(`SQLITE_ERROR: no such table: properties: ${sql}`), {
+      code: "SQLITE_ERROR",
+      sql,
+    });
   const services: Record<string, DocumentServiceLike> = {
     "api::property.property": {
       async findFirst(params) {
         queries.push(params);
         await pause();
         const key = filterValue(params, "ingestKey");
+        if (failures.lookup) {
+          throw databaseError(`select * from properties where ingest_key = '${String(key)}'`);
+        }
         const active = filterValue(params, "active");
         const row = properties.find((p) => p.ingestKey === key && p.active === active);
         return row === undefined ? null : { ...row };
@@ -58,19 +69,32 @@ const fakeStrapi = (properties: PropertyRow[]) => {
       },
       async create({ data }) {
         await pause();
+        if (failures.storeAsDuplicate) {
+          // Another process stored it between this one's read and its write: Strapi's unique
+          // check refuses the write, and the row is there.
+          events.push(data);
+          throw Object.assign(new Error("This attribute must be unique"), {
+            name: "ValidationError",
+            details: {
+              errors: [{ path: ["dedupeKey"], message: "This attribute must be unique" }],
+            },
+          });
+        }
+        if (failures.store) throw databaseError(`insert into events values ('${KEY}')`);
         events.push(data);
         return data;
       },
     },
   };
   const strapi: StrapiLike = {
+    log: { error: (message: string) => logged.push(message) },
     documents: (uid) => {
       const service = services[uid];
       if (service === undefined) throw new Error(`unexpected uid ${uid}`);
       return service;
     },
   };
-  return { strapi, events, queries };
+  return { strapi, events, queries, logged, failures };
 };
 
 const property = (fields: Partial<PropertyRow> = {}): PropertyRow => ({
@@ -118,19 +142,24 @@ const send = async (
     type?: string;
     key?: string | null;
     origin?: string | null;
-    length?: string;
+    /** Content-Length as sent; null sends none (a chunked body). */
+    length?: string | null;
+    /** More headers, a list for one sent more than once. */
+    headers?: Record<string, string | string[]>;
   },
 ): Promise<Sent> => {
   const sent: Sent = { status: 404, body: undefined, headers: {} };
   const text = typeof options.body === "string" ? options.body : JSON.stringify(options.body);
-  const headers: Record<string, string> = {
+  const headers: Record<string, string | string[]> = {
     "content-type": options.type ?? "application/json",
-    "content-length": options.length ?? String(Buffer.byteLength(text)),
     "user-agent": USER_AGENT,
     "x-forwarded-for": ADDRESS,
   };
+  if (options.length !== null)
+    headers["content-length"] = options.length ?? String(Buffer.byteLength(text));
   if (options.origin !== null) headers.origin = options.origin ?? ORIGIN;
   if (options.key !== null) headers["x-idg-write-key"] = options.key ?? KEY;
+  Object.assign(headers, options.headers);
   const context: IngestContext = {
     request: { headers, body: options.body },
     get status() {
@@ -290,6 +319,43 @@ describe("the Strapi ingestion handler refuses", () => {
     expect(answer.status).toBe(415);
   });
 
+  it.each(["gzip", "deflate", "br", "GZIP", "gzip, identity", "x-unknown"])(
+    "a body sent with Content-Encoding %s with 415, though the parser inflated it",
+    async (encoding) => {
+      const answer = await send(handler, {
+        body: batchOf(),
+        length: "40",
+        headers: { "content-encoding": encoding },
+      });
+      expect(answer.status).toBe(415);
+      expect(answer.body).toMatchObject({ error: { name: "UnsupportedMediaTypeError" } });
+      expect(backend.events).toEqual([]);
+    },
+  );
+
+  it("but takes Content-Encoding identity, which is no encoding", async () => {
+    const answer = await send(handler, {
+      body: batchOf(),
+      headers: { "content-encoding": " Identity " },
+    });
+    expect(answer.status).toBe(202);
+  });
+
+  it("a text body over the limit with 413 when it declares no length", async () => {
+    boot([property()], { INGEST_MAX_BODY_BYTES: "100" });
+    const body = JSON.stringify(beaconOf({ events: [wireEvent({ path: `/${"a".repeat(60)}` })] }));
+    const answer = await send(handler, { body, type: "text/plain", length: null, key: null });
+    expect(answer.status).toBe(413);
+  });
+
+  it("a parsed JSON body over the limit with 413, whatever length it declared", async () => {
+    boot([property()], { INGEST_MAX_BODY_BYTES: "100" });
+    const body = batchOf({ events: [wireEvent({ path: `/${"a".repeat(60)}` })] });
+    expect((await send(handler, { body, length: "50" })).status).toBe(413);
+    expect((await send(handler, { body, length: null })).status).toBe(413);
+    expect(backend.events).toEqual([]);
+  });
+
   it("a body over INGEST_MAX_BODY_BYTES with 413, before parsing it", async () => {
     boot([property()], { INGEST_MAX_BODY_BYTES: "100" });
     expect((await send(handler, { body: "{".repeat(101), type: "text/plain" })).status).toBe(413);
@@ -366,5 +432,84 @@ describe("the Strapi ingestion handler refuses", () => {
     expect((await send(handler, { body: batchOf() })).status).toBe(202);
     expect((await send(handler, { body: batchOf(), key: OTHER_KEY })).status).toBe(202);
     expect((await send(handler, { body: batchOf() })).status).toBe(429);
+  });
+});
+
+describe("the Strapi ingestion handler, on a database failure", () => {
+  const UNAVAILABLE = {
+    data: null,
+    error: {
+      status: 503,
+      name: "ServiceUnavailableError",
+      message: "Service Unavailable",
+      details: {},
+    },
+  };
+
+  it("answers 503 when the key cannot be looked up, which the SDK retries", async () => {
+    backend.failures.lookup = true;
+    expect(await send(handler, { body: batchOf() })).toEqual({
+      status: 503,
+      body: UNAVAILABLE,
+      headers: {},
+    });
+  });
+
+  it("answers 503 when an event cannot be stored, so the batch is sent again", async () => {
+    backend.failures.store = true;
+    expect((await send(handler, { body: batchOf() })).status).toBe(503);
+    backend.failures.store = false;
+    expect((await send(handler, { body: batchOf() })).status).toBe(202);
+    expect(backend.events).toHaveLength(1);
+  });
+
+  it("reports the failure without the query, the key, the body or a header", async () => {
+    backend.failures.lookup = true;
+    await send(handler, { body: batchOf() });
+    backend.failures.lookup = false;
+    backend.failures.store = true;
+    await send(handler, { body: batchOf({ events: [wireEvent({ user: "visitor_42" })] }) });
+    expect(backend.logged).toHaveLength(2);
+    const log = backend.logged.join("\n");
+    expect(log).toContain("IngestEvent");
+    for (const secret of [KEY, "select", "insert", "visitor_42", ORIGIN, USER_AGENT, ADDRESS]) {
+      expect(log).not.toContain(secret);
+    }
+  });
+
+  it("skips an event another process stored between the read and the write", async () => {
+    backend.failures.storeAsDuplicate = true;
+    expect((await send(handler, { body: batchOf() })).status).toBe(202);
+    expect(backend.logged).toEqual([]);
+  });
+});
+
+describe("the Strapi ingestion handler, on repeated headers", () => {
+  it.each([
+    ["sent twice", [ORIGIN, ORIGIN]],
+    ["joined by the server", `${ORIGIN}, ${ORIGIN}`],
+  ])("refuses an Origin %s with 403", async (_label, origin) => {
+    const answer = await send(handler, { body: batchOf(), headers: { origin } });
+    expect(answer.status).toBe(403);
+    expect(backend.events).toEqual([]);
+  });
+
+  it.each([
+    ["sent twice", [KEY, KEY]],
+    ["joined by the server", `${KEY}, ${KEY}`],
+  ])("refuses a write key header %s with 404", async (_label, key) => {
+    const answer = await send(handler, { body: batchOf(), headers: { "x-idg-write-key": key } });
+    expect(answer.status).toBe(404);
+    expect(backend.queries).toEqual([]);
+  });
+});
+
+describe("the Strapi ingestion handler's key limit", () => {
+  it("counts under the property's id, so a property's next key shares its count", async () => {
+    const row = property();
+    boot([row], { INGEST_KEY_RATE_PER_MINUTE: "1" });
+    expect((await send(handler, { body: batchOf() })).status).toBe(202);
+    row.ingestKey = OTHER_KEY;
+    expect((await send(handler, { body: batchOf(), key: OTHER_KEY })).status).toBe(429);
   });
 });

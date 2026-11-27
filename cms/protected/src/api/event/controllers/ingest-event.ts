@@ -24,9 +24,16 @@ export interface IngestContext {
 /** Keys counted apart in one minute; past it they share one count (cms/README.md). */
 const MAX_TRACKED_KEYS = 10_000;
 
+/** A header sent once; undefined when absent or sent more than once, so neither is trusted. */
 const header = (context: IngestContext, name: string): string | undefined => {
   const value = context.request.headers[name];
-  return Array.isArray(value) ? value[0] : value;
+  return Array.isArray(value) ? (value.length === 1 ? value[0] : undefined) : value;
+};
+
+/** Every value of a header, joined as one list, for a header any value of which counts. */
+const headerList = (context: IngestContext, name: string): string | undefined => {
+  const value = context.request.headers[name];
+  return Array.isArray(value) ? value.join(",") : value;
 };
 
 const ERRORS = {
@@ -36,6 +43,7 @@ const ERRORS = {
   413: ["PayloadTooLargeError", "Entity too large"],
   415: ["UnsupportedMediaTypeError", "The request body must be application/json or text/plain"],
   429: ["RateLimitError", "Too many requests, please try again later."],
+  503: ["ServiceUnavailableError", "Service Unavailable"],
 } as const;
 
 /** 202 with an empty body; a refusal in Strapi's error body, which names no field. */
@@ -66,6 +74,12 @@ export default ({ strapi }: { strapi: StrapiLike }) => {
       now: () => performance.now(),
     }),
     settings,
+    // The error's class only: its message may hold the query, the key and the body's values.
+    reportFailure: (stage: "lookup" | "store", errorName: string) => {
+      strapi.log.error(
+        `IngestEvent: the database failed at the ${stage} (${errorName}); answered 503`,
+      );
+    },
     now: () => Date.now(),
   };
   return {
@@ -73,6 +87,7 @@ export default ({ strapi }: { strapi: StrapiLike }) => {
       const answer = await handleIngest(
         {
           contentType: header(context, "content-type"),
+          contentEncoding: headerList(context, "content-encoding"),
           contentLength: header(context, "content-length"),
           origin: header(context, "origin"),
           writeKeyHeader: header(context, "x-idg-write-key"),
