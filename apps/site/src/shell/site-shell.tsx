@@ -2,7 +2,7 @@ import { Build, h, type FunctionalComponent } from "@stencil/core";
 // Brings the component library's collection into this build, so Stencil compiles, prerenders and
 // hydrates its components together with the site's own.
 import "@identgineer/components";
-import { navigationRoutes, type RoutePath } from "../routes";
+import { ROUTES, navigationRoutes, type RoutePath } from "../routes";
 import { BrandMark } from "./brand-mark";
 
 const APPEARANCE_DIALOG = "appearance";
@@ -17,9 +17,19 @@ export function openAppearance(): void {
   void dialog?.showModal();
 }
 
+/**
+ * The current page is marked as the page; the page a section's page sits under (the docs index for
+ * a guide) is marked as the current one of its set.
+ */
+function currentness(path: RoutePath, current: RoutePath | undefined): "page" | "true" | undefined {
+  if (path === current) return "page";
+  const parent = ROUTES.find((route) => route.path === current)?.parent;
+  return path === parent ? "true" : undefined;
+}
+
 function PageLinks({ current }: SiteShellProps, slot?: string) {
   return navigationRoutes().map((route) => (
-    <a slot={slot} href={route.path} aria-current={route.path === current ? "page" : undefined}>
+    <a slot={slot} href={route.path} aria-current={currentness(route.path, current)}>
       {route.label}
     </a>
   ));
