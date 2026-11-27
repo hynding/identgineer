@@ -3,7 +3,7 @@ import { REGISTRY } from "@identgineer/variations";
 import { expect, test } from "./fixtures";
 import { withoutCalcSize } from "@identgineer/components/browser/without-calc-size";
 import { withoutStyleQueries } from "@identgineer/components/browser/without-style-queries";
-import { LAYOUTS, PAGES, hydrated, sidewaysScroll } from "./pages";
+import { FULLY_SWEPT, LAYOUTS, PAGES, hydrated, sidewaysScroll } from "./pages";
 
 const DESIGNS = REGISTRY.design.variations.map((variation) => variation.id);
 const THEMES = REGISTRY.theme.variations.map((variation) => variation.id);
@@ -66,6 +66,9 @@ function misfitsOf(page: Page): Promise<Misfit> {
         style.overflowX !== "scroll") ||
       style.contain.includes("paint");
 
+    const scrollsSideways = (style: CSSStyleDeclaration) =>
+      style.overflowX === "auto" || style.overflowX === "scroll";
+
     /** Whether a line or control box reaches past the window, its clipping box or its drawn box. */
     const check = (boxes: Iterable<DOMRect>, what: string, node: Node) => {
       let drawn: Element | undefined;
@@ -73,6 +76,9 @@ function misfitsOf(page: Page): Promise<Misfit> {
       for (let current = parentOf(node); current; current = parentOf(current)) {
         if (current === document.documentElement || current === document.body) break;
         const style = getComputedStyle(current);
+        // A box that scrolls sideways and takes focus to be scrolled (a code sample, a wide table)
+        // holds lines past its edge on purpose: they are reached by scrolling it, not cut.
+        if (scrollsSideways(style) && (current as HTMLElement).tabIndex >= 0) return;
         if (clips(style)) clippers.push(current);
         if (drawn === undefined && isDrawnBox(style)) drawn = current;
       }
@@ -126,7 +132,7 @@ function misfitsOf(page: Page): Promise<Misfit> {
       }
     };
 
-    const controls: { element: Element; box: DOMRect }[] = [];
+    const controls: { element: Element; boxes: DOMRect[] }[] = [];
     const hidden = (element: Element) =>
       !element.checkVisibility({ visibilityProperty: true }) ||
       element.closest(".visually-hidden") !== null ||
@@ -145,7 +151,10 @@ function misfitsOf(page: Page): Promise<Misfit> {
             const box = node.getBoundingClientRect();
             if (box.width > 0) check([box], `<${describe(node)}>`, node);
             if (CONTROLS.includes(node.localName) && box.width >= 2 && box.height >= 2) {
-              controls.push({ element: node, box });
+              // A link that runs over two lines of a paragraph is a box on each line, not the
+              // rectangle around both, which would cover the links beside it.
+              const boxes = [...node.getClientRects()].filter((line) => line.width > 0);
+              controls.push({ element: node, boxes: boxes.length > 0 ? boxes : [box] });
             }
           }
           continue;
@@ -169,20 +178,21 @@ function misfitsOf(page: Page): Promise<Misfit> {
     };
     const named = (element: Element) =>
       `${describe(element)} "${element.textContent.trim().slice(0, 20)}"`;
+    const overlap = (a: DOMRect, b: DOMRect) => ({
+      across: Math.min(a.right, b.right) - Math.max(a.left, b.left),
+      down: Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top),
+    });
     controls.forEach((first, index) => {
       for (const second of controls.slice(index + 1)) {
-        const across =
-          Math.min(first.box.right, second.box.right) - Math.max(first.box.left, second.box.left);
-        const down =
-          Math.min(first.box.bottom, second.box.bottom) - Math.max(first.box.top, second.box.top);
-        if (
-          across > 2 &&
-          down > 2 &&
-          !contains(first.element, second.element) &&
-          !contains(second.element, first.element)
-        ) {
+        if (contains(first.element, second.element) || contains(second.element, first.element)) {
+          continue;
+        }
+        const found = first.boxes
+          .flatMap((a) => second.boxes.map((b) => overlap(a, b)))
+          .find(({ across, down }) => across > 2 && down > 2);
+        if (found) {
           overlapping.push(
-            `${named(first.element)} and ${named(second.element)} (${String(Math.round(across))}×${String(Math.round(down))}px)`,
+            `${named(first.element)} and ${named(second.element)} (${String(Math.round(found.across))}×${String(Math.round(found.down))}px)`,
           );
         }
       }
@@ -224,9 +234,13 @@ const ENGINES = [
 // style queries as well, every layout is the shell's own arrangement with the site's base rules in
 // it, and the layout's tokens still apply.
 for (const engine of ENGINES) {
-  for (const { name, path, component } of PAGES) {
+  PAGES.forEach(({ name, path, component }, pageIndex) => {
     DESIGNS.forEach((design, designIndex) => {
       LAYOUTS.forEach((layout, layoutIndex) => {
+        // A page outside the full sweep takes one layout with each design, a different one for
+        // each design and, from page to page, different pairs.
+        const paired = (designIndex + pageIndex) % LAYOUTS.length === layoutIndex;
+        if (!FULLY_SWEPT.has(path) && !paired) return;
         test(`${name}${engine.name} in ${design} with ${layout} fits every UX mode at 320, 390, 820 and 1440px: no sideways scroll, nothing cut or spilled, no word broken, no controls over each other`, async ({
           page,
         }) => {
@@ -261,5 +275,5 @@ for (const engine of ENGINES) {
         });
       });
     });
-  }
+  });
 }

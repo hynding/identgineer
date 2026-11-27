@@ -1223,3 +1223,447 @@ figcaption {
 .page-list-description {
   color: var(--idg-color-text-muted);
 }
+
+/* The reading pages
+
+   One set of markup for every reading page: the title and summary in the hero; then the guide
+   (the docs' own navigation and the table of contents), the article cut into sections at its
+   level 2 headings, and, in the docs, links to the page before and after. With room for both, the
+   guide is a column beside the article that stays in view; with less, it comes first. */
+
+.page-hero {
+  container: page-hero / inline-size;
+  display: grid;
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  justify-items: start;
+  padding-block: var(--idg-space-m);
+}
+
+/* As large as the scale makes it, but never so large that its longest word ("Identgineer", in the
+   widest face in capitals) is wider than the hero: a word is at most about nine of its letters'
+   height wide. */
+.site-layout .page-hero h1 {
+  font-size: min(calc(var(--idg-font-size-step-5) * var(--idg-ux-type-scale)), 11cqi);
+  line-height: var(--idg-font-line-height-tight);
+}
+
+/* The room the reading page has, which decides whether the guide sits beside the article. */
+.reading {
+  container: reading / inline-size;
+}
+
+.reading-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--idg-layout-section-gap);
+  align-items: start;
+  padding-block-end: var(--idg-layout-section-gap);
+  --_sticky-inset: var(--idg-layout-sticky-inset);
+}
+
+.reading-guide {
+  display: grid;
+  gap: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+  align-content: start;
+  min-inline-size: 0;
+}
+
+.site-layout :is(.contents, .docs-pages) h2 {
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+}
+
+.contents,
+.docs-pages {
+  display: grid;
+  gap: var(--idg-space-xs);
+}
+
+.contents ul,
+.docs-pages ul {
+  display: grid;
+  gap: var(--idg-space-2xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.contents ul ul {
+  margin-block-start: var(--idg-space-2xs);
+  padding-inline-start: var(--idg-space-s);
+}
+
+/* The page of the docs being read, marked as the navigation marks it: not a link's colour, and a
+   bar in the accent's indicator colour at its start. */
+.docs-pages a[aria-current="page"] {
+  color: var(--idg-color-text);
+  font-weight: var(--idg-font-weight-semibold);
+  text-decoration: none;
+  padding-inline-start: var(--idg-space-2xs);
+  border-inline-start: var(--idg-space-3xs) solid var(--idg-color-accent-indicator);
+}
+
+/* Where the guide comes before the article, the docs' pages are one row that wraps. */
+@container reading not (min-inline-size: 46rem) {
+  .docs-pages ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--idg-space-2xs) var(--idg-space-m);
+  }
+}
+
+@container reading (min-inline-size: 46rem) {
+  .reading-body {
+    grid-template-columns: minmax(var(--idg-size-xs), 1fr) minmax(0, 3fr);
+    grid-template-areas:
+      "guide article"
+      ". pager";
+    column-gap: calc(var(--idg-space-xl) * var(--idg-density-gap-scale));
+  }
+
+  .reading-guide {
+    grid-area: guide;
+    position: sticky;
+    inset-block-start: calc(var(--_sticky-inset) + var(--idg-space-m));
+  }
+
+  .prose {
+    grid-area: article;
+  }
+
+  .pager {
+    grid-area: pager;
+  }
+}
+
+/* Each column is the width it is given and no wider, whatever a long word or name inside asks. */
+.prose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--idg-layout-section-gap);
+  min-inline-size: 0;
+}
+
+.prose-intro,
+.prose-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  align-content: start;
+  min-inline-size: 0;
+}
+
+.prose :is(h2, h3, h4) {
+  scroll-margin-block-start: calc(var(--_sticky-inset) + var(--idg-space-m));
+}
+
+/* A section's heading is never larger than its column holds its longest word at (a tenth of the
+   column fits a word of about ten letters in the widest display faces, set in capitals). */
+.site-layout .prose-section > h2 {
+  font-size: min(calc(var(--idg-font-size-step-3) * var(--idg-ux-type-scale)), 10cqi);
+}
+
+.prose :is(h3, h4) {
+  margin-block-start: var(--idg-space-xs);
+}
+
+.site-layout .prose h4 {
+  margin-block-end: 0;
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+}
+
+.prose-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--idg-space-2xs);
+  max-inline-size: var(--idg-density-measure);
+  margin: 0;
+  padding-inline-start: var(--idg-space-l);
+  overflow-wrap: break-word;
+}
+
+.prose :is(p, li, td) code {
+  padding: 0 0.2em;
+  border-radius: var(--idg-shape-radius-sm);
+  background: var(--idg-color-bg-subtle);
+  font-family: var(--idg-font-family-mono);
+  font-size: 0.9em;
+}
+
+/* A code sample: its language, its caption and the copy button over the code, which keeps its
+   lines as they are and scrolls along itself when one is wider than the column. */
+.code-sample {
+  display: grid;
+  min-inline-size: 0;
+  margin: 0;
+  border: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--idg-color-bg-subtle);
+}
+
+.code-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--idg-space-2xs) var(--idg-space-xs);
+  padding: var(--idg-space-2xs) var(--idg-space-xs) var(--idg-space-2xs) var(--idg-space-s);
+  border-block-end: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+}
+
+.code-language {
+  font-weight: var(--idg-font-weight-semibold);
+  letter-spacing: var(--idg-font-letter-spacing-wider);
+  text-transform: uppercase;
+}
+
+.code-copy {
+  margin-inline-start: auto;
+}
+
+.code-sample pre {
+  margin: 0;
+  padding: var(--idg-space-s);
+  overflow-x: auto;
+  font-family: var(--idg-font-family-mono);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-line-height-snug);
+  tab-size: 2;
+  color: var(--idg-color-text);
+}
+
+.code-sample pre:focus-visible,
+.table-scroll:focus-visible {
+  outline: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis)) var(--idg-focus-ring-style)
+    var(--idg-color-focus-ring);
+  outline-offset: var(--idg-focus-ring-offset);
+}
+
+.callout {
+  max-inline-size: var(--idg-density-measure);
+}
+
+/* A table as wide as its column, or wider where its words need it, when it scrolls along itself:
+   no word in a cell is broken. */
+.table-scroll {
+  max-inline-size: 100%;
+  overflow-x: auto;
+}
+
+.table-scroll table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.table-scroll caption {
+  padding-block-end: var(--idg-space-2xs);
+  font-weight: var(--idg-font-weight-semibold);
+  text-align: start;
+}
+
+.table-scroll :is(th, td) {
+  padding: var(--idg-space-2xs) var(--idg-space-s) var(--idg-space-2xs) 0;
+  border-block-end: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-scroll th {
+  font-weight: var(--idg-font-weight-semibold);
+}
+
+.example {
+  display: grid;
+  gap: var(--idg-space-xs);
+  min-inline-size: 0;
+  margin: 0;
+}
+
+/* The sign-in form at the width a form has beside its text on the home page. */
+.example-sign-in > idg-card {
+  max-inline-size: var(--idg-size-l);
+}
+
+/* The page before and after: one box each, side by side where both fit, each filling its row. */
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+}
+
+.pager-link {
+  display: grid;
+  flex: 1 1 calc(var(--idg-size-xs) * var(--idg-ux-type-scale));
+  gap: var(--idg-space-3xs);
+  padding: var(--idg-space-s);
+  border: var(--idg-surface-border-width) var(--idg-surface-border-style)
+    var(--idg-surface-border-color);
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--idg-surface-background);
+}
+
+.pager-next {
+  text-align: end;
+}
+
+.pager-direction {
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+}
+
+.pager-title {
+  font-weight: var(--idg-font-weight-semibold);
+}
+
+/* The reading pages in each layout, as the home page's sections are arranged in it. */
+
+/* side-rail: a reference manual, each section ruled off, its heading marked by the accent. */
+@container style(--idg-layout-shell: side-rail) {
+  .prose-section {
+    padding-block-start: var(--idg-space-l);
+    border-block-start: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+  }
+
+  .prose-section > h2 {
+    padding-inline-start: var(--idg-space-s);
+    border-inline-start: var(--idg-space-3xs) solid var(--idg-color-accent);
+  }
+
+  .site-layout .prose-section > h2 {
+    font-size: min(calc(var(--idg-font-size-step-2) * var(--idg-ux-type-scale)), 10cqi);
+  }
+}
+
+/* split-hero: the content is the narrow half beside the hero, its sections numbered steps. */
+@container style(--idg-layout-shell: split-hero) {
+  .prose {
+    counter-reset: section;
+  }
+
+  .prose-section {
+    counter-increment: section;
+  }
+
+  .prose-section > h2::before {
+    content: counter(section, decimal-leading-zero) / "";
+    display: block;
+    margin-block-end: var(--idg-space-3xs);
+    color: var(--idg-color-link);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+}
+
+/* magazine: the introduction set large as a standfirst, each section's heading over a rule. */
+@container style(--idg-layout-shell: magazine) {
+  .site-layout .prose-intro > p {
+    font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+    line-height: var(--idg-font-line-height-snug);
+  }
+
+  .prose-section > h2 {
+    padding-block-end: var(--idg-space-2xs);
+    border-block-end: var(--idg-space-3xs) solid var(--idg-color-text);
+  }
+}
+
+/* dashboard: every section a panel with a tinted title bar, in smaller type. */
+@container style(--idg-layout-shell: dashboard) {
+  .prose {
+    gap: var(--idg-layout-gap);
+  }
+
+  .prose-section {
+    --_panel-pad: clamp(var(--idg-space-2xs), 4cqi, var(--idg-space-s));
+
+    padding: var(--_panel-pad);
+    border: var(--idg-surface-border-width) var(--idg-surface-border-style)
+      var(--idg-surface-border-color);
+    border-radius: var(--idg-shape-radius-md);
+    background: var(--idg-surface-background);
+  }
+
+  .prose-section > h2 {
+    margin: calc(-1 * var(--_panel-pad)) calc(-1 * var(--_panel-pad)) 0;
+    padding: var(--idg-space-2xs) var(--_panel-pad);
+    border-block-end: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+    border-start-start-radius: inherit;
+    border-start-end-radius: inherit;
+    background: var(--idg-color-bg-subtle);
+  }
+
+  .site-layout .prose-section > h2 {
+    font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+  }
+}
+
+/* centered: one narrow column, the headings centred over their text. */
+@container style(--idg-layout-shell: centered) {
+  .prose-section > h2 {
+    text-align: center;
+  }
+}
+
+/* bento: with room, every section a tile of its own on the grid's gap. */
+@container style(--idg-layout-shell: bento) {
+  @container reading (min-inline-size: 40rem) {
+    .prose {
+      gap: var(--idg-layout-gap);
+    }
+
+    .prose-intro,
+    .prose-section {
+      padding: var(--idg-space-m);
+      border: var(--idg-surface-border-width) var(--idg-surface-border-style)
+        var(--idg-surface-border-color);
+      border-radius: var(--idg-shape-radius-xl);
+      background: var(--idg-surface-background);
+    }
+  }
+}
+
+/* immersive: every other section a tinted band across the window, the headings large and
+   centred. The guide comes first in every width, so no band runs under it. */
+@container style(--idg-layout-shell: immersive) {
+  .reading-body,
+  .prose {
+    gap: 0;
+  }
+
+  .reading-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: none;
+  }
+
+  .reading-guide,
+  .prose,
+  .pager {
+    grid-area: auto;
+  }
+
+  .reading-guide {
+    position: static;
+    padding-block-end: var(--idg-layout-section-gap);
+  }
+
+  .prose-intro,
+  .prose-section {
+    padding-block: var(--idg-layout-section-gap);
+  }
+
+  .prose-section:nth-child(even) {
+    background: var(--idg-color-bg-subtle);
+    box-shadow: 0 0 0 100vmax var(--idg-color-bg-subtle);
+    clip-path: inset(0 -100vmax);
+  }
+
+  .prose-section > h2 {
+    text-align: center;
+  }
+
+  .site-layout .prose-section > h2 {
+    font-size: min(calc(var(--idg-font-size-step-4) * var(--idg-ux-type-scale)), 10cqi);
+  }
+
+  .pager {
+    padding-block-start: var(--idg-layout-section-gap);
+  }
+}

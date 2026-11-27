@@ -1,4 +1,4 @@
-import { Component, h } from "@stencil/core";
+import { Component, Prop, h } from "@stencil/core";
 import { navigationRoutes } from "../../routes";
 import { SiteShell } from "../../shell/site-shell";
 
@@ -8,9 +8,12 @@ import { SiteShell } from "../../shell/site-shell";
  */
 @Component({ tag: "site-not-found" })
 export class SiteNotFound {
+  /** The labels the CMS gives the navigation's pages, as JSON, from the prerenderer. */
+  @Prop() readonly navigation: string = "";
+
   render() {
     return (
-      <SiteShell current={undefined}>
+      <SiteShell current={undefined} navigation={this.navigation}>
         <section class="not-found" aria-labelledby="not-found-title">
           <p class="not-found-code" aria-hidden="true">
             404

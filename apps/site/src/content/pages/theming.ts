@@ -144,7 +144,13 @@ export const THEMING = page({
     bullets(
       "It must block, so it has no async, no defer and no module type.",
       "It holds no inline code, so a strict policy needs only script-src 'self', and it works with Trusted Types.",
-      "It only reads. A choice is stored by the switcher, or by applyVariations with persist.",
+      [
+        "It only reads. A choice is stored by the switcher, or by ",
+        code("applyVariations"),
+        " with ",
+        code("persist"),
+        ".",
+      ],
       [
         "A shared address such as ",
         code("?idg-theme=ember"),

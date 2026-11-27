@@ -7,19 +7,61 @@
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 export namespace Components {
     /**
+     * A reading page: one content page drawn as semantic HTML, the title and summary in the hero, the
+     * body as an article cut into sections at its level 2 headings, a table of contents built from its
+     * headings and, in the docs, the section's navigation and links to the page before and after.
+     * The page arrives as JSON in an attribute the prerenderer wrote, and is validated again here
+     * before anything is drawn: every piece of it becomes an element or text, never markup.
+     */
+    interface SiteContentPage {
+        /**
+          * The labels the CMS gives the navigation's pages, as JSON, from the prerenderer.
+          * @default ""
+         */
+        "navigation": string;
+        /**
+          * The content page, as JSON.
+          * @default ""
+         */
+        "page": string;
+    }
+    /**
      * The home page: what Identgineer is, shown with its own components. Every colour, space, type size
      * and corner comes from the tokens, so each theme, design, layout and UX mode re-skins it.
      */
     interface SiteHome {
+        /**
+          * The labels the CMS gives the navigation's pages, as JSON, from the prerenderer.
+          * @default ""
+         */
+        "navigation": string;
     }
     /**
      * The page a server sends for an address the site does not have. It is served at that address, so
      * every link on it is root-relative and nothing in the navigation is marked as current.
      */
     interface SiteNotFound {
+        /**
+          * The labels the CMS gives the navigation's pages, as JSON, from the prerenderer.
+          * @default ""
+         */
+        "navigation": string;
     }
 }
 declare global {
+    /**
+     * A reading page: one content page drawn as semantic HTML, the title and summary in the hero, the
+     * body as an article cut into sections at its level 2 headings, a table of contents built from its
+     * headings and, in the docs, the section's navigation and links to the page before and after.
+     * The page arrives as JSON in an attribute the prerenderer wrote, and is validated again here
+     * before anything is drawn: every piece of it becomes an element or text, never markup.
+     */
+    interface HTMLSiteContentPageElement extends Components.SiteContentPage, HTMLStencilElement {
+    }
+    var HTMLSiteContentPageElement: {
+        prototype: HTMLSiteContentPageElement;
+        new (): HTMLSiteContentPageElement;
+    };
     /**
      * The home page: what Identgineer is, shown with its own components. Every colour, space, type size
      * and corner comes from the tokens, so each theme, design, layout and UX mode re-skins it.
@@ -41,32 +83,83 @@ declare global {
         new (): HTMLSiteNotFoundElement;
     };
     interface HTMLElementTagNameMap {
+        "site-content-page": HTMLSiteContentPageElement;
         "site-home": HTMLSiteHomeElement;
         "site-not-found": HTMLSiteNotFoundElement;
     }
 }
 declare namespace LocalJSX {
     /**
+     * A reading page: one content page drawn as semantic HTML, the title and summary in the hero, the
+     * body as an article cut into sections at its level 2 headings, a table of contents built from its
+     * headings and, in the docs, the section's navigation and links to the page before and after.
+     * The page arrives as JSON in an attribute the prerenderer wrote, and is validated again here
+     * before anything is drawn: every piece of it becomes an element or text, never markup.
+     */
+    interface SiteContentPage {
+        /**
+          * The labels the CMS gives the navigation's pages, as JSON, from the prerenderer.
+          * @default ""
+         */
+        "navigation"?: string;
+        /**
+          * The content page, as JSON.
+          * @default ""
+         */
+        "page"?: string;
+    }
+    /**
      * The home page: what Identgineer is, shown with its own components. Every colour, space, type size
      * and corner comes from the tokens, so each theme, design, layout and UX mode re-skins it.
      */
     interface SiteHome {
+        /**
+          * The labels the CMS gives the navigation's pages, as JSON, from the prerenderer.
+          * @default ""
+         */
+        "navigation"?: string;
     }
     /**
      * The page a server sends for an address the site does not have. It is served at that address, so
      * every link on it is root-relative and nothing in the navigation is marked as current.
      */
     interface SiteNotFound {
+        /**
+          * The labels the CMS gives the navigation's pages, as JSON, from the prerenderer.
+          * @default ""
+         */
+        "navigation"?: string;
     }
+
+    interface SiteContentPageAttributes {
+        "navigation": string;
+        "page": string;
+    }
+    interface SiteHomeAttributes {
+        "navigation": string;
+    }
+    interface SiteNotFoundAttributes {
+        "navigation": string;
+    }
+
     interface IntrinsicElements {
-        "site-home": SiteHome;
-        "site-not-found": SiteNotFound;
+        "site-content-page": Omit<SiteContentPage, keyof SiteContentPageAttributes> & { [K in keyof SiteContentPage & keyof SiteContentPageAttributes]?: SiteContentPage[K] } & { [K in keyof SiteContentPage & keyof SiteContentPageAttributes as `attr:${K}`]?: SiteContentPageAttributes[K] } & { [K in keyof SiteContentPage & keyof SiteContentPageAttributes as `prop:${K}`]?: SiteContentPage[K] };
+        "site-home": Omit<SiteHome, keyof SiteHomeAttributes> & { [K in keyof SiteHome & keyof SiteHomeAttributes]?: SiteHome[K] } & { [K in keyof SiteHome & keyof SiteHomeAttributes as `attr:${K}`]?: SiteHomeAttributes[K] } & { [K in keyof SiteHome & keyof SiteHomeAttributes as `prop:${K}`]?: SiteHome[K] };
+        "site-not-found": Omit<SiteNotFound, keyof SiteNotFoundAttributes> & { [K in keyof SiteNotFound & keyof SiteNotFoundAttributes]?: SiteNotFound[K] } & { [K in keyof SiteNotFound & keyof SiteNotFoundAttributes as `attr:${K}`]?: SiteNotFoundAttributes[K] } & { [K in keyof SiteNotFound & keyof SiteNotFoundAttributes as `prop:${K}`]?: SiteNotFound[K] };
     }
 }
 export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
+            /**
+             * A reading page: one content page drawn as semantic HTML, the title and summary in the hero, the
+             * body as an article cut into sections at its level 2 headings, a table of contents built from its
+             * headings and, in the docs, the section's navigation and links to the page before and after.
+             * The page arrives as JSON in an attribute the prerenderer wrote, and is validated again here
+             * before anything is drawn: every piece of it becomes an element or text, never markup.
+             */
+            "site-content-page": LocalJSX.IntrinsicElements["site-content-page"] & JSXBase.HTMLAttributes<HTMLSiteContentPageElement>;
             /**
              * The home page: what Identgineer is, shown with its own components. Every colour, space, type size
              * and corner comes from the tokens, so each theme, design, layout and UX mode re-skins it.

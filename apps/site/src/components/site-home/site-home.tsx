@@ -1,4 +1,4 @@
-import { Component, h, State } from "@stencil/core";
+import { Component, Prop, State, h } from "@stencil/core";
 import { REGISTRY, applyVariations, shuffleVariations } from "@identgineer/variations";
 import { isOverview, linkableRoutes } from "../../routes";
 import { describeLook, lookCount } from "../../shell/appearance";
@@ -30,6 +30,9 @@ function formatCount(count: number): string {
  */
 @Component({ tag: "site-home" })
 export class SiteHome {
+  /** The labels the CMS gives the navigation's pages, as JSON, from the prerenderer. */
+  @Prop() readonly navigation: string = "";
+
   @State() private announcement = "";
 
   private readonly shuffle = (): void => {
