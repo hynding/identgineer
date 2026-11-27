@@ -30,7 +30,7 @@ export function contentSecurityPolicy(styles: readonly string[]): string {
     ["style-src 'self'", ...hashes].join(" "),
     "img-src 'self'",
     "base-uri 'none'",
-    "form-action 'self'",
+    "form-action 'none'",
     "frame-ancestors 'none'",
     "require-trusted-types-for 'script'",
     "trusted-types 'none'",

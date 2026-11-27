@@ -59,10 +59,10 @@ describe("the content security policy", () => {
     expect(policy).not.toMatch(/unsafe-|https?:|\*|data:/);
   });
 
-  it("allows only same-origin images and no plugins, frames, base or foreign forms", () => {
+  it("allows only same-origin images and no plugins, frames, base or form submission", () => {
     expect(directives.get("img-src")).toEqual(["'self'"]);
     expect(directives.get("base-uri")).toEqual(["'none'"]);
-    expect(directives.get("form-action")).toEqual(["'self'"]);
+    expect(directives.get("form-action")).toEqual(["'none'"]);
     expect(directives.get("frame-ancestors")).toEqual(["'none'"]);
   });
 });

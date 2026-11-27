@@ -57,7 +57,10 @@ canonical link and asks not to be indexed.
    `MutationObserver` and native `validity`); `scripts/server-document.ts` gives each the answer a
    browser gives before anything has happened.
 3. The prerenderer then writes **`www/_headers.json`**: the content security policy and the other
-   security headers, which a deployment must send with every response.
+   security headers, which a deployment must send with every response. It also removes what
+   Stencil's `www` output writes that no page loads (its dev server's `host.config.json`, the loader
+   for browsers without modules and an empty entry); the built-site check fails on any file in
+   `www` that no page needs.
 
 Stencil's own prerender (`www` with `prerenderConfig`) was not used: it inlines component styles and
 loader scripts into each page, which the policy would have to allow or the build would have to
@@ -90,7 +93,7 @@ The build writes the policy the pages need; nothing else may be loaded:
 
 ```text
 default-src 'none'; script-src 'self'; style-src 'self' 'sha256-…' …; img-src 'self';
-base-uri 'none'; form-action 'self'; frame-ancestors 'none';
+base-uri 'none'; form-action 'none'; frame-ancestors 'none';
 require-trusted-types-for 'script'; trusted-types 'none'
 ```
 
@@ -103,10 +106,14 @@ require-trusted-types-for 'script'; trusted-types 'none'
 - **Trusted Types** are required and no policy may be created: neither the components nor the
   bootstrap script write HTML from a string.
 - **Nothing from another origin**, fonts included: the themes use system fonts.
+- **No form posts anywhere** (`form-action 'none'`): the sign-in form on the home page is an inert
+  preview. A page with a form that posts will name its target here.
 
 With the policy, `_headers.json` holds `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`,
 `Permissions-Policy`, `Referrer-Policy`, `X-Content-Type-Options` and `X-Frame-Options`. The browser
 tests serve the site with exactly these headers (`scripts/static-server.ts`, also used by `dev`).
+`_headers.json` is a build product for the deployment, which turns it into its own header rules; it
+need not be served itself.
 
 ## Tests
 
