@@ -384,6 +384,12 @@ refused with 400, on both targets; ingestion still writes and checks it.
 - On the hour (or at midnight) the current range has just begun its last bucket, so it covers up
   to one bucket less time than `previous` until that bucket ends.
 - Visitors are sessions, so one person in two tabs or after the session timeout counts twice.
+- The throttle (60 a minute) is camis' and counts per client address, not per user, and a request
+  without a token counts too (camis' role check refuses it after the throttle has counted it).
+  Everyone behind one address (a shared NAT, an office) shares one budget, and anyone on that
+  address, signed in or not, can use it up, leaving the dashboard answered 429 until the minute
+  passes. camis offers no throttle keyed by user, and a second limiter in the handler would still
+  sit behind camis' per-address one.
 - Events have no index on `(property, occurredAt)` (camis generates none), so a summary scans a
   property's events; retention bounds how many there are.
 - `listProperties` stops after 200 properties; the rest are not shown.
