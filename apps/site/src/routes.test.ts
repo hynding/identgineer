@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   NOT_FOUND_PAGE,
   ROUTES,
+  isOverview,
   linkableRoutes,
   navigationRoutes,
   pageFile,
@@ -59,6 +60,16 @@ describe("the route table", () => {
 describe("the navigation", () => {
   it("holds the live routes in table order and nothing coming", () => {
     expect(navigationRoutes().map((route) => route.path)).toEqual(live.map((route) => route.path));
+  });
+
+  it("leads the home page's links with the overview of the features, live or coming", () => {
+    const [first, ...rest] = linkableRoutes();
+    expect(first?.path).toBe("/features/");
+    expect(first && isOverview(first)).toBe(true);
+    expect(rest.some(isOverview)).toBe(false);
+    if (!first) return;
+    expect(isOverview({ ...first, status: "live", component: "site-home" })).toBe(true);
+    expect(isOverview({ ...first, status: "coming" })).toBe(true);
   });
 
   it("points the home page at every other route, live or coming", () => {
