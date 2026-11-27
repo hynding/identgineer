@@ -300,10 +300,10 @@ Local Strapi is never booted by any script here.
 - On local Strapi the body parser inflates a compressed body (up to its 1 MB JSON limit) before the
   handler refuses it with 415; camis' guard compares only the declared length (a camis gap). The
   parser itself refuses a coding it does not know, `IDENTITY` in capitals among them, with 415 in
-  Koa's plain error body rather than Strapi's; strapi-php reads codings without regard to case and
+  Strapi's error body under the name `Error` and without details, and logs it; strapi-php reads codings without regard to case and
   takes `IDENTITY`. Where the handler is reached, both targets read codings alike.
 - Allowed origins cannot be `localhost`. To try tracking locally, serve the test page over https on
-  a name under `localhost`, which browsers resolve to this machine (for example
+  a name under `localhost`, which Chrome and Firefox resolve to this machine (for example
   `https://shop.localhost:5173`, with a locally trusted certificate such as one from mkcert), and
   list that origin on the property.
 - Invalid UTF-8 is refused (400) on strapi-php; on Strapi the body parser replaces it with U+FFFD

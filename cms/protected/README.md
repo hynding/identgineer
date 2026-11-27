@@ -56,12 +56,15 @@ the 65,536-byte body cap. Then the handler, in this order, each refusal in Strap
 5. **403** when `Origin` is absent or not one of the property's `allowedOrigins` (compared exactly;
    the model refuses an origin a browser never sends, such as one with `:443`).
 
+6. **429** with `Retry-After` past `INGEST_KEY_RATE_PER_MINUTE` for the key, counted under the
+   property's id (in the cache on strapi-php, in bounded per-process memory on Strapi).
+7. **202** with no body. Each accepted event becomes one Event row with `property` and `owner` from
+   the key's property; an event skipped (below) changes nothing in the answer.
+
 A header sent twice (`Origin` or `X-Idg-Write-Key`) depends on what the server hands the handler.
 Node (Strapi) joins the values with `, `, and so do Apache and nginx in front of PHP; the joined
 value matches no origin or key, so the request is refused (403 or 404). PHP's built-in server, the
-one `pnpm contract:live` uses, keeps only the first value, so there the second is ignored. 6. **429** with `Retry-After` past `INGEST_KEY_RATE_PER_MINUTE` for the key, counted under the
-property's id (in the cache on strapi-php, in bounded per-process memory on Strapi). 7. **202** with no body. Each accepted event becomes one Event row with `property` and `owner` from
-the key's property; an event skipped (below) changes nothing in the answer.
+one `pnpm contract:live` uses, keeps only the first value, so there the second is ignored.
 
 **Database failures answer 503**, which the SDK retries with backoff (it retries any `5xx` and
 `429`, and drops a batch on any other `4xx`); events stored before the failure are skipped as
@@ -114,8 +117,8 @@ counter, keyed by a hash.
   cryptographically secure generator (`Str::random()` in PHP, `crypto.randomInt` in Node), ignoring
   its input. The field is not required, so a create sends no key.
 - `DropClientIngestKey` (Property's create and update routes) removes `ingestKey` from the body's
-  `data` (camis' generated controllers refuse any other `data`, a multipart body's JSON text
-  among them, with 400) and, on strapi-php, from the query
+  `data` (any other `data`, a multipart body's JSON text among them, is refused with 400 by
+  camis' generated controllers or by Strapi's own) and, on strapi-php, from the query
   string, before the controller validates it. A key is therefore never set, changed, cleared or
   probed through the content API on either target.
 - `PurgeExpiredEvents` (daily) deletes, for each property, the events older than its
