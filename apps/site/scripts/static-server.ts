@@ -1,6 +1,6 @@
 import { createServer, type Server, type ServerResponse } from "node:http";
 import { readFileSync, statSync } from "node:fs";
-import { extname, join, normalize, sep } from "node:path";
+import { extname, join, normalize, posix, sep } from "node:path";
 import { HEADERS_FILE } from "./security-headers.ts";
 
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
@@ -57,12 +57,16 @@ export function startStaticServer(root: string, port: number, host = "127.0.0.1"
       .end(readFileSync(path));
   };
   const server = createServer((request, response) => {
-    const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+    // Leading slashes are one: a request target that starts with two would be read as a host.
+    const target = (request.url ?? "/").replace(/^\/+/, "/");
+    const pathname = new URL(target, "http://localhost").pathname;
     const path = resolveInside(root, pathname);
     if (path !== undefined && isFile(path)) {
       send(response, 200, path);
     } else if (path !== undefined && isFile(join(path, "index.html"))) {
-      response.writeHead(308, { ...headers, Location: `${pathname}/` }).end();
+      // Tidied again, so the answer is never a path that starts with two slashes, another host.
+      const folder = posix.normalize(pathname).replace(/^\/+/, "");
+      response.writeHead(308, { ...headers, Location: `/${folder}/` }).end();
     } else {
       send(response, 404, join(root, NOT_FOUND_FILE));
     }
