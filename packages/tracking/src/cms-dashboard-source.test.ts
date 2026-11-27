@@ -474,11 +474,26 @@ describe("summary", () => {
       "a missing figure",
       () => ({ data: { propertyId: MINE, range: "7d", visitors: METRIC(7), events: METRIC(7) } }),
     ],
+    [
+      "events that are not the sum of their buckets",
+      () => ({ data: { ...summaryOf(MINE, "7d").data, events: { ...METRIC(7), value: 4 } } }),
+    ],
+    [
+      "page views that are not the sum of their buckets",
+      () => ({ data: { ...summaryOf(MINE, "7d").data, pageViews: { ...METRIC(7), value: 2 } } }),
+    ],
     ["no data", () => ({ data: null })],
     ["something beside the data", () => ({ ...summaryOf(MINE, "7d"), error: {} })],
   ])("rejects an answer with %s as invalid-response", async (_label, body) => {
     const { source } = fakeCms({ answer: () => json(body()) });
     expect((await rejection(source.summary(MINE, "7d"))).code).toBe("invalid-response");
+  });
+
+  it("takes visitors below the sum of their buckets: one visitor seen in two buckets counts once", async () => {
+    const visitors = { value: 1, previous: 0, series: [0, 0, 0, 0, 0, 1, 1] };
+    const body = { data: { ...summaryOf(MINE, "7d").data, visitors } };
+    const { source } = fakeCms({ answer: () => json(body) });
+    expect((await source.summary(MINE, "7d")).visitors).toEqual(visitors);
   });
 
   it.each([["1h"], [""], [undefined], ["24H"]])(

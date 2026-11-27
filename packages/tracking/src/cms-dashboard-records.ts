@@ -140,13 +140,18 @@ export function readPagination(
   return { page, pageSize, pageCount, total };
 }
 
-function readMetric(value: unknown, length: number): CmsStatMetric | undefined {
+/**
+ * A figure of the summary. A count of events (`summed`) is the sum of its buckets, as both CMS
+ * targets compute it; distinct visitors are not, as one visitor in two buckets counts once.
+ */
+function readMetric(value: unknown, length: number, summed: boolean): CmsStatMetric | undefined {
   if (!isPlainObject(value)) return undefined;
   const figure = own(value, "value");
   const previous = own(value, "previous");
   const series = own(value, "series");
   if (!isCount(figure) || !isCount(previous) || !Array.isArray(series)) return undefined;
   if (series.length !== length || !series.every(isCount)) return undefined;
+  if (summed && series.reduce((sum, count) => sum + count, 0) !== figure) return undefined;
   return { value: figure, previous, series: [...series] };
 }
 
@@ -158,9 +163,9 @@ export function readSummary(
 ): CmsStatSummary | undefined {
   if (own(data, "propertyId") !== propertyId || own(data, "range") !== range) return undefined;
   const length = SERIES_LENGTH[range];
-  const visitors = readMetric(own(data, "visitors"), length);
-  const pageViews = readMetric(own(data, "pageViews"), length);
-  const events = readMetric(own(data, "events"), length);
+  const visitors = readMetric(own(data, "visitors"), length, false);
+  const pageViews = readMetric(own(data, "pageViews"), length, true);
+  const events = readMetric(own(data, "events"), length, true);
   if (!visitors || !pageViews || !events) return undefined;
   return { propertyId, range, visitors, pageViews, events };
 }

@@ -355,7 +355,8 @@ Every answer carries `Cache-Control: no-store` (strapi-php's framework writes it
 `pageViews` the `page_view` events, `visitors` the distinct `sessionId`s (events without one are not
 counted) over the whole range, not the sum of the buckets. `series` holds 24 hourly buckets for
 `24h`, 7 or 30 daily ones for the others, in UTC, oldest first; `previous` is the same count over
-the range before. The range ends where the current UTC hour (for `24h`) or day ends, so the last
+the range before. The `value` of `events` and `pageViews` is the sum of its `series` (the
+client refuses an answer where it is not). The range ends where the current UTC hour (for `24h`) or day ends, so the last
 bucket is the one in progress. Each answer costs two grouped queries on the events of one property
 (a `CASE` over the bucket edges, then `COUNT(DISTINCT …)` for visitors), with bound times and no
 function of a database, so the same SQL runs on sqlite, MySQL and PostgreSQL.
