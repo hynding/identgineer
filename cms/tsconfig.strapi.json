@@ -1,0 +1,18 @@
+{
+  // The protected TypeScript as the generated Strapi project compiles it (its tsconfig.json, as
+  // camis writes it): the ES2020 library and CommonJS, so nothing newer slips into the handlers.
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "ignoreDeprecations": "6.0",
+    "lib": ["ES2020"],
+    "target": "ES2019",
+    "strict": false,
+    "noImplicitThis": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["protected/src/**/*.ts", "protected/config/**/*.ts"]
+}
