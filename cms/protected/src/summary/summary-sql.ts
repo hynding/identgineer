@@ -48,6 +48,15 @@ export function checkedTables(tables: EventTables): EventTables {
 const at = (ms: number): Date => new Date(ms);
 
 /**
+ * A session id as its distinct count compares it. Strapi's `mysql` client (MySQL and MariaDB)
+ * compares text in the column's collation, which by default folds case, and session ids are
+ * base64url, where "aB" and "Ab" are two sessions: there the bytes are compared. sqlite and
+ * PostgreSQL compare text byte for byte already, so their SQL is left as it is.
+ */
+const sessionOf = (column: string, client: string): string =>
+  client === "mysql" ? `CAST(${column} AS BINARY)` : column;
+
+/**
  * The two grouped counts that make a summary, over at most twice the range and without loading a
  * row: each bucket's events, page views and distinct sessions (bucket -1 is the range before), and
  * the distinct sessions of each whole range. A bucket is chosen by comparing the time with the
@@ -59,9 +68,11 @@ export function summaryQueries(
   window: SummaryWindow,
   tables: EventTables,
   propertyRowId: number,
+  client: string,
 ): { readonly buckets: SummaryQuery; readonly visitors: SummaryQuery } {
   const t = checkedTables(tables);
   const occurredAt = `e.${t.occurredAt}`;
+  const session = sessionOf(`e.${t.sessionId}`, client);
   const from =
     `FROM ${t.table} AS e JOIN ${t.link.table} AS l ON l.${t.link.eventColumn} = e.id ` +
     `WHERE l.${t.link.propertyColumn} = ? AND ${occurredAt} >= ? AND ${occurredAt} < ?`;
@@ -75,14 +86,14 @@ export function summaryQueries(
         "SELECT bucketed.bucket AS bucket, COUNT(*) AS events, " +
         "SUM(CASE WHEN bucketed.name = ? THEN 1 ELSE 0 END) AS page_views, " +
         "COUNT(DISTINCT bucketed.session_id) AS visitors " +
-        `FROM (SELECT ${bucket} AS bucket, e.${t.name} AS name, e.${t.sessionId} AS session_id ${from}) AS bucketed ` +
+        `FROM (SELECT ${bucket} AS bucket, e.${t.name} AS name, ${session} AS session_id ${from}) AS bucketed ` +
         "GROUP BY bucketed.bucket",
       bindings: ["page_view", at(window.start), ...edges.map(at), ...scope],
     },
     visitors: {
       sql:
-        `SELECT COUNT(DISTINCT CASE WHEN ${occurredAt} >= ? THEN e.${t.sessionId} END) AS current_visitors, ` +
-        `COUNT(DISTINCT CASE WHEN ${occurredAt} < ? THEN e.${t.sessionId} END) AS previous_visitors ${from}`,
+        `SELECT COUNT(DISTINCT CASE WHEN ${occurredAt} >= ? THEN ${session} END) AS current_visitors, ` +
+        `COUNT(DISTINCT CASE WHEN ${occurredAt} < ? THEN ${session} END) AS previous_visitors ${from}`,
       bindings: [at(window.start), at(window.start), ...scope],
     },
   };

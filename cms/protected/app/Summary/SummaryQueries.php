@@ -40,11 +40,15 @@ final class SummaryQueries
     /**
      * @return array{buckets: array{sql: string, bindings: list<int|string>}, visitors: array{sql: string, bindings: list<int|string>}}
      */
-    public static function for(SummaryWindow $window, string $table, int $propertyId): array
+    public static function for(SummaryWindow $window, string $table, int $propertyId, string $driver): array
     {
         if (preg_match(self::IDENTIFIER, $table) !== 1) {
             throw new InvalidArgumentException('PropertySummary: unexpected events table name');
         }
+        // MySQL and MariaDB compare text in the column's collation, which by default folds case,
+        // and session ids are base64url, where "aB" and "Ab" are two sessions: there the bytes are
+        // compared. sqlite and PostgreSQL compare text byte for byte already.
+        $session = in_array($driver, ['mysql', 'mariadb'], true) ? 'CAST(session_id AS BINARY)' : 'session_id';
         $from = "FROM {$table} WHERE property_id = ? AND occurred_at >= ? AND occurred_at < ?";
         $scope = [$propertyId, self::time($window->previousStart), self::time($window->end)];
         $edges = $window->edges();
@@ -60,13 +64,13 @@ final class SummaryQueries
                 'sql' => 'SELECT bucketed.bucket AS bucket, COUNT(*) AS events, '
                     .'SUM(CASE WHEN bucketed.name = ? THEN 1 ELSE 0 END) AS page_views, '
                     .'COUNT(DISTINCT bucketed.session_id) AS visitors '
-                    ."FROM (SELECT {$bucket} AS bucket, name, session_id {$from}) AS bucketed "
+                    ."FROM (SELECT {$bucket} AS bucket, name, {$session} AS session_id {$from}) AS bucketed "
                     .'GROUP BY bucketed.bucket',
                 'bindings' => ['page_view', self::time($window->start), ...array_map(self::time(...), $edges), ...$scope],
             ],
             'visitors' => [
-                'sql' => 'SELECT COUNT(DISTINCT CASE WHEN occurred_at >= ? THEN session_id END) AS current_visitors, '
-                    ."COUNT(DISTINCT CASE WHEN occurred_at < ? THEN session_id END) AS previous_visitors {$from}",
+                'sql' => "SELECT COUNT(DISTINCT CASE WHEN occurred_at >= ? THEN {$session} END) AS current_visitors, "
+                    ."COUNT(DISTINCT CASE WHEN occurred_at < ? THEN {$session} END) AS previous_visitors {$from}",
                 'bindings' => [self::time($window->start), self::time($window->start), ...$scope],
             ],
         ];

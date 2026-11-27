@@ -69,7 +69,7 @@ interface Filters {
   readonly owner: { id: { $eq: unknown } };
 }
 
-const fakeStrapi = (events: readonly StoredEvent[] = EVENTS) => {
+const fakeStrapi = (events: readonly StoredEvent[] = EVENTS, client = "sqlite") => {
   const database = strapiEventDatabase(events);
   const lookups: Record<string, unknown>[] = [];
   const logged: string[] = [];
@@ -98,6 +98,7 @@ const fakeStrapi = (events: readonly StoredEvent[] = EVENTS) => {
       };
     },
     db: {
+      dialect: { client },
       metadata: {
         get(uid) {
           expect(uid).toBe("api::event.event");
@@ -282,6 +283,26 @@ describe("GET /api/properties/:id/summary on Strapi", () => {
         data: { propertyId: MINE, range: vector.range, ...vector.expected },
       });
     }
+  });
+});
+
+describe("the counts Strapi's mysql client is sent", () => {
+  it("compare session ids by their bytes, so sessions differing only by case are two visitors", async () => {
+    const { strapi } = fakeStrapi(EVENTS, "mysql");
+    const sent: string[] = [];
+    // MySQL is not here to run them: record the SQL and answer as mysql2 does for no rows.
+    const raw = (sql: string) => {
+      sent.push(sql);
+      return Promise.resolve([[], []]);
+    };
+    const answer = await request(
+      { ...strapi, db: { ...strapi.db, connection: { raw } } },
+      { id: MINE, range: "7d" },
+    );
+    expect(answer.status).toBe(200);
+    expect(sent).toHaveLength(2);
+    for (const sql of sent) expect(sql).toContain("CAST(e.session_id AS BINARY)");
+    expect(sent.join(" ")).not.toMatch(/DISTINCT (bucketed\.|CASE WHEN [^)]* THEN )e\.session_id/);
   });
 });
 

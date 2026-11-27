@@ -359,7 +359,10 @@ the range before. The `value` of `events` and `pageViews` is the sum of its `ser
 client refuses an answer where it is not). The range ends where the current UTC hour (for `24h`) or day ends, so the last
 bucket is the one in progress. Each answer costs two grouped queries on the events of one property
 (a `CASE` over the bucket edges, then `COUNT(DISTINCT …)` for visitors), with bound times and no
-function of a database, so the same SQL runs on sqlite, MySQL and PostgreSQL.
+function of a database, so the same SQL runs on sqlite, MySQL and PostgreSQL. One part differs by
+driver: MySQL's and MariaDB's default collations fold case, and session ids are base64url, where
+`aB` and `Ab` are two sessions, so there the distinct counts compare `CAST(session_id AS BINARY)`;
+sqlite and PostgreSQL compare bytes already and are sent the plain column.
 
 Both targets are held to the same `tests/fixtures/property-summary-vectors.json`: the Strapi
 handler in Vitest over `node:sqlite` with Strapi's tables (`tests/summary-*.test.ts`), strapi-php's
@@ -386,8 +389,11 @@ refused with 400, on both targets; ingestion still writes and checks it.
   panel can do that) leaves its earlier events readable by the earlier owner and out of the new
   owner's lists, while the summary counts them for the new owner.
 - The SQL was run on sqlite, MariaDB 10.11 and PostgreSQL 16 (strapi-php's, with native and emulated
-  prepares), and Strapi's on sqlite through Strapi 5.48 itself, once, by hand. Strapi's on MySQL and
-  PostgreSQL, and MySQL 8 itself, were not run.
+  prepares), and Strapi's on sqlite through Strapi 5.48 itself, once, by hand. Strapi's MySQL form
+  was run on MariaDB 10.11 through PDO, on tables shaped as Strapi's, with every vector (sessions
+  differing only by case among them), but not through knex and `mysql2`, which are not installed
+  here; Vitest checks the SQL Strapi's `mysql` client is sent. Strapi's on PostgreSQL, and MySQL 8
+  itself, were not run.
 
 ## Commands
 

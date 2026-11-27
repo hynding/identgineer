@@ -419,6 +419,43 @@
           "series": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
         }
       }
+    },
+    {
+      "name": "7d: sessions that differ only by case are different visitors, as session ids are base64url",
+      "now": "2026-03-10T14:25:00.000Z",
+      "range": "7d",
+      "events": [
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T10:00:00.000Z",
+          "sessionId": "sessionAbCdEf00000"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T10:01:00.000Z",
+          "sessionId": "sessionabcdef00000"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T10:02:00.000Z",
+          "sessionId": "SESSIONABCDEF00000"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-01T10:00:00.000Z",
+          "sessionId": "Prevsession0000000"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-01T10:01:00.000Z",
+          "sessionId": "prevsession0000000"
+        }
+      ],
+      "expected": {
+        "visitors": { "value": 3, "previous": 2, "series": [0, 0, 0, 0, 0, 0, 3] },
+        "pageViews": { "value": 3, "previous": 2, "series": [0, 0, 0, 0, 0, 0, 3] },
+        "events": { "value": 3, "previous": 2, "series": [0, 0, 0, 0, 0, 0, 3] }
+      }
     }
   ]
 }

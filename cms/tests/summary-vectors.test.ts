@@ -69,7 +69,7 @@ describe("the Strapi handler's counts on the shared vectors", () => {
       })),
     );
     const window = summaryWindow(Date.parse(vector.now), vector.range);
-    const queries = summaryQueries(window, STRAPI_EVENT_TABLES, PROPERTY);
+    const queries = summaryQueries(window, STRAPI_EVENT_TABLES, PROPERTY, "sqlite");
     const buckets = await database.connection.raw(queries.buckets.sql, queries.buckets.bindings);
     const [visitors] = await database.connection.raw(
       queries.visitors.sql,
@@ -90,7 +90,7 @@ describe("the summary's queries", () => {
   const window = summaryWindow(Date.parse("2026-03-10T14:25:00.000Z"), "30d");
 
   it("bind every value, the property and the times, and write none into the SQL", () => {
-    const { buckets, visitors } = summaryQueries(window, STRAPI_EVENT_TABLES, PROPERTY);
+    const { buckets, visitors } = summaryQueries(window, STRAPI_EVENT_TABLES, PROPERTY, "sqlite");
     for (const query of [buckets, visitors]) {
       expect(query.sql).not.toMatch(/'|2026|\bpage_view\b/);
       expect(query.sql.split("?").length - 1).toBe(query.bindings.length);
@@ -100,11 +100,24 @@ describe("the summary's queries", () => {
   });
 
   it("read at most twice the range", () => {
-    const { buckets } = summaryQueries(window, STRAPI_EVENT_TABLES, PROPERTY);
+    const { buckets } = summaryQueries(window, STRAPI_EVENT_TABLES, PROPERTY, "sqlite");
     const times = buckets.bindings.filter((value) => value instanceof Date).map(Number);
     expect(Math.min(...times)).toBe(window.previousStart);
     expect(Math.max(...times)).toBe(window.end);
     expect(window.end - window.previousStart).toBe(60 * 86_400_000);
+  });
+
+  // MySQL's and MariaDB's default collations fold case, and session ids are base64url, where
+  // "aB" and "Ab" are two sessions; sqlite and PostgreSQL compare bytes already.
+  it("count distinct sessions by their bytes on MySQL, and leave sqlite and PostgreSQL as they are", () => {
+    const plain = summaryQueries(window, STRAPI_EVENT_TABLES, PROPERTY, "sqlite");
+    expect(summaryQueries(window, STRAPI_EVENT_TABLES, PROPERTY, "postgres")).toEqual(plain);
+    const mysql = summaryQueries(window, STRAPI_EVENT_TABLES, PROPERTY, "mysql");
+    for (const query of [plain.buckets, plain.visitors]) expect(query.sql).not.toMatch(/BINARY/);
+    expect(mysql.buckets.sql).toContain("CAST(e.session_id AS BINARY) AS session_id");
+    expect(mysql.visitors.sql.match(/THEN CAST\(e\.session_id AS BINARY\) END/g)).toHaveLength(2);
+    expect(mysql.buckets.bindings).toEqual(plain.buckets.bindings);
+    expect(mysql.visitors.bindings).toEqual(plain.visitors.bindings);
   });
 
   it("refuse a table or column name they would have to quote", () => {

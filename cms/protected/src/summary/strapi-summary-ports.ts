@@ -21,6 +21,8 @@ export interface SummaryStrapiLike {
     findFirst(params: Record<string, unknown>): Promise<Record<string, unknown> | null>;
   };
   readonly db: {
+    /** Strapi's dialect: `client` is `sqlite`, `mysql` (MySQL and MariaDB) or `postgres`. */
+    readonly dialect: { readonly client: string };
     readonly metadata: {
       get(uid: string): {
         readonly tableName: string;
@@ -90,7 +92,7 @@ export const countEventsIn = (strapi: SummaryStrapiLike) => {
   let tables: EventTables | undefined;
   return async (window: SummaryWindow, propertyRowId: number): Promise<SummaryFigures> => {
     tables = tables ?? eventTablesOf(strapi);
-    const queries = summaryQueries(window, tables, propertyRowId);
+    const queries = summaryQueries(window, tables, propertyRowId, strapi.db.dialect.client);
     const connection = strapi.db.connection;
     const buckets = rowsOf(await connection.raw(queries.buckets.sql, queries.buckets.bindings));
     const visitors = rowsOf(await connection.raw(queries.visitors.sql, queries.visitors.bindings));

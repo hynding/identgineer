@@ -29,13 +29,27 @@ describe.skipIf(!hasPhp)(
     const run = () => {
       const result = spawnSync("php", [script, SUMMARY_VECTORS_PATH], { encoding: "utf8" });
       if (result.status !== 0) throw new Error(`php failed: ${result.stderr}${result.stdout}`);
-      return JSON.parse(result.stdout) as { answers: { name: string; figures: unknown }[] };
+      return JSON.parse(result.stdout) as {
+        answers: { name: string; figures: unknown }[];
+        sql: Record<string, { buckets: string; visitors: string }>;
+      };
     };
-    const { answers } = hasPhp && php.stdout === "yes" ? run() : { answers: [] };
+    const { answers, sql } = hasPhp && php.stdout === "yes" ? run() : { answers: [], sql: {} };
 
     it("ran on every vector", () => {
       expect(php.stdout, "PHP needs pdo_sqlite for these tests").toBe("yes");
       expect(answers.map((answer) => answer.name)).toEqual(vectors.map((vector) => vector.name));
+    });
+
+    // MySQL's and MariaDB's default collations fold case; session ids are base64url.
+    it("counts distinct sessions by their bytes on mysql and mariadb, and leaves sqlite and pgsql as they are", () => {
+      expect(sql.pgsql).toEqual(sql.sqlite);
+      expect(JSON.stringify(sql.sqlite)).not.toMatch(/BINARY/);
+      for (const driver of ["mysql", "mariadb"]) {
+        const queries = sql[driver];
+        expect(queries?.buckets).toContain("CAST(session_id AS BINARY) AS session_id");
+        expect(queries?.visitors.match(/THEN CAST\(session_id AS BINARY\) END/g)).toHaveLength(2);
+      }
     });
 
     it.each(vectors.map((vector, index) => [vector.name, index] as const))("%s", (_name, index) => {

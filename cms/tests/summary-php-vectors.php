@@ -34,7 +34,7 @@ foreach ($vectors as $vector) {
     }
     $nowMs = (int) round((new DateTimeImmutable($vector['now']))->format('U.u') * 1000);
     $window = SummaryWindow::of($nowMs, $vector['range']);
-    $queries = SummaryQueries::for($window, 'events', PROPERTY);
+    $queries = SummaryQueries::for($window, 'events', PROPERTY, 'sqlite');
     $buckets = $pdo->prepare($queries['buckets']['sql']);
     $buckets->execute($queries['buckets']['bindings']);
     $visitors = $pdo->prepare($queries['visitors']['sql']);
@@ -42,4 +42,12 @@ foreach ($vectors as $vector) {
     $answers[] = ['name' => $vector['name'], 'figures' => SummaryFigures::of($window, $buckets->fetchAll(), $visitors->fetch() ?: null)];
 }
 
-echo json_encode(['php' => PHP_VERSION, 'answers' => $answers], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+// The SQL each Laravel driver is sent, for the same window, so the test can compare the dialects.
+$window = SummaryWindow::of(0, '7d');
+$sql = [];
+foreach (['sqlite', 'pgsql', 'mysql', 'mariadb'] as $driver) {
+    $queries = SummaryQueries::for($window, 'events', PROPERTY, $driver);
+    $sql[$driver] = ['buckets' => $queries['buckets']['sql'], 'visitors' => $queries['visitors']['sql']];
+}
+
+echo json_encode(['php' => PHP_VERSION, 'answers' => $answers, 'sql' => $sql], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);

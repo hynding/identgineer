@@ -129,7 +129,8 @@ every answer with `Cache-Control: no-store`:
    answer identically.
 4. **200** with the figures, from two grouped queries over the property's events
    (`app/Summary/SummaryQueries.php`, `src/summary/summary-sql.ts`): the bucket of each event by a
-   `CASE` over bound edge times, then the distinct sessions of the range and of the one before. The
+   `CASE` over bound edge times, then the distinct sessions of the range and of the one before (on MySQL and MariaDB by
+   their bytes, as the default collations fold case). The
    clock is the server's, in UTC (`SummaryWindow.php`, `summary-window.ts`).
 5. **503** when the database fails, logged as `PropertySummary: the database failed at the <stage>
 (<error class>)`, never with the error's message, the id or an event's text.

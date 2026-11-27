@@ -107,7 +107,7 @@ final class PropertySummary implements PropertySummaryEndpoint
     {
         $model = new Event;
         $connection = $model->getConnection();
-        $queries = SummaryQueries::for($window, $connection->getTablePrefix().$model->getTable(), $propertyId);
+        $queries = SummaryQueries::for($window, $connection->getTablePrefix().$model->getTable(), $propertyId, $connection->getDriverName());
         $buckets = $connection->select($queries['buckets']['sql'], $queries['buckets']['bindings']);
         $visitors = $connection->select($queries['visitors']['sql'], $queries['visitors']['bindings']);
 
