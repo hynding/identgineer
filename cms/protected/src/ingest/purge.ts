@@ -7,11 +7,16 @@ export interface PurgePorts {
   readonly now: () => number;
 }
 
-/** Deletes each property's events older than its retentionDays; returns how many in all. */
+/**
+ * Deletes each property's events older than its retentionDays; returns how many in all. A property
+ * whose retentionDays is below 1 or not a whole number (the model allows 1 to 400, so only a row
+ * written past it) keeps every event: an unreadable setting never deletes, as on strapi-php.
+ */
 export const purgeExpiredEvents = async (ports: PurgePorts): Promise<number> => {
   const now = ports.now();
   let deleted = 0;
   for (const property of await ports.properties()) {
+    if (!Number.isInteger(property.retentionDays) || property.retentionDays < 1) continue;
     deleted += await ports.deleteEventsBefore(
       property.id,
       new Date(now - property.retentionDays * DAY_MS),

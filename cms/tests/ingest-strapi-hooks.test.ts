@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import purgeTask, { type QueryEngineLike } from "../protected/src/cron/purge-expired-events.ts";
+import { purgeExpiredEvents } from "../protected/src/ingest/purge.ts";
 import { issueIngestKey, newIngestKey } from "../protected/src/hooks/issue-ingest-key.ts";
 import dropClientIngestKey, {
   type WriteContext,
@@ -121,5 +122,25 @@ describe("PurgeExpiredEvents on Strapi", () => {
     expect(cutoffs[0]?.[1]).toBe(day);
     expect(cutoffs[1]?.[0]).toBe(2);
     expect(cutoffs[1]?.[1]).toBe(180 * day);
+  });
+
+  it("deletes nothing of a property whose retentionDays is below 1 or not a whole number", async () => {
+    const deleted: number[] = [];
+    await purgeExpiredEvents({
+      properties: () =>
+        Promise.resolve([
+          { id: 1, retentionDays: 0 },
+          { id: 2, retentionDays: -5 },
+          { id: 3, retentionDays: 1.5 },
+          { id: 4, retentionDays: Number.NaN },
+          { id: 5, retentionDays: 30 },
+        ]),
+      deleteEventsBefore: (propertyId) => {
+        deleted.push(propertyId);
+        return Promise.resolve(0);
+      },
+      now: () => Date.parse("2026-03-10T12:00:00.000Z"),
+    });
+    expect(deleted).toEqual([5]);
   });
 });
