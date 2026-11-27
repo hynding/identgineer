@@ -112,6 +112,33 @@ describe("validatedSource", () => {
     await expect(source.summary("p1", "7d")).rejects.toMatchObject({ code: "unavailable" });
   });
 
+  it("answers unavailable, without the getter's error, when reading an error's name, code or prototype throws", async () => {
+    const leak = () => {
+      throw new Error("leak: token abc123");
+    };
+    const throwingName = new Error("x");
+    Object.defineProperty(throwingName, "name", { get: leak });
+    const throwingCode = new Error("x");
+    Object.defineProperty(throwingCode, "name", { value: "DashboardError" });
+    Object.defineProperty(throwingCode, "code", { get: leak });
+    const throwingPrototype = new Proxy(new Error("x"), { getPrototypeOf: leak });
+    const source = validatedSource({
+      listProperties: () => Promise.reject(throwingName),
+      listEvents: () => Promise.reject(throwingCode),
+      summary: () => Promise.reject(throwingPrototype),
+    });
+    for (const call of [
+      source.listProperties(),
+      source.listEvents("p1", QUERY),
+      source.summary("p1", "7d"),
+    ]) {
+      const error = await call.catch((caught: unknown) => caught);
+      expect(error).toBeInstanceOf(DashboardError);
+      expect(error).toMatchObject({ code: "unavailable" });
+      expect((error as Error).message).not.toMatch(/leak|abc123/);
+    }
+  });
+
   it("turns any other failure into an unavailable error, without its message", async () => {
     const source = validatedSource({
       listProperties: () => Promise.reject(new TypeError("token abc123 expired")),

@@ -41,15 +41,27 @@ function lookalikeCode(error: unknown): DashboardErrorCode | undefined {
 // A failure the page can act on is passed on as it is. Anything else (a network error, a bug in a
 // source) may carry a token or an address in its message, so only the fact survives; so does only
 // the code of a lookalike, whose message this package did not write.
+function carried(method: Method, error: unknown): DashboardError {
+  if (error instanceof DashboardError) return error;
+  const code = lookalikeCode(error);
+  return code === undefined
+    ? new DashboardError("unavailable", `${method}: the source could not answer`)
+    : new DashboardError(code, `${method}: the source answered ${code}`);
+}
+
 async function guarded<T>(method: Method, call: () => Promise<T>): Promise<T> {
   try {
     return await call();
   } catch (error) {
-    if (error instanceof DashboardError) throw error;
-    const code = lookalikeCode(error);
-    if (code !== undefined)
-      throw new DashboardError(code, `${method}: the source answered ${code}`);
-    throw new DashboardError("unavailable", `${method}: the source could not answer`);
+    let answer: DashboardError;
+    try {
+      answer = carried(method, error);
+    } catch {
+      // A getter or proxy trap on the error threw while it was looked at: its error is the
+      // source's too, and may carry a secret, so it is dropped like any other.
+      answer = new DashboardError("unavailable", `${method}: the source could not answer`);
+    }
+    throw answer;
   }
 }
 
