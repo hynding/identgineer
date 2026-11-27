@@ -67,11 +67,15 @@ function escapeAttribute(value: string): string {
   return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
 }
 
-async function render(page: string, navigation = ""): Promise<Document> {
+async function render(
+  page: string,
+  navigation = "",
+  component = "site-content-page",
+): Promise<Document> {
   const hydrate = (await import(pathToFileURL(HYDRATE).href)) as HydrateModule;
   const attributes = `page="${escapeAttribute(page)}" navigation="${escapeAttribute(navigation)}"`;
   const results = await hydrate.renderToString(
-    `<!doctype html><html><head></head><body><site-content-page ${attributes}></site-content-page></body></html>`,
+    `<!doctype html><html><head></head><body><${component} ${attributes}></${component}></body></html>`,
     {
       url: "https://identgineer.example/docs/theming/",
       serializeShadowRoot: "declarative-shadow-dom",
@@ -240,4 +244,16 @@ describe.skipIf(!built)("a reading page, as the prerenderer draws it", () => {
     expect(refused.querySelector("h1")?.textContent).toBe("This page could not be shown");
     expect(refused.querySelector("article")).toBeNull();
   });
+});
+
+describe.skipIf(!built)("every page, as the prerenderer draws it", () => {
+  it.each(["site-home", "site-not-found", "site-content-page"])(
+    "%s takes the navigation's labels from the CMS",
+    async (component) => {
+      const navigation = JSON.stringify({ header: { "/tracking/": "Analytics" }, footer: {} });
+      const document = await render(JSON.stringify(PAGE), navigation, component);
+      const label = document.querySelector('a[slot="navigation"][href="/tracking/"]')?.textContent;
+      expect(label).toBe("Analytics");
+    },
+  );
 });
