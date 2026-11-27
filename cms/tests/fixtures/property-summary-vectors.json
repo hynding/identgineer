@@ -1,0 +1,424 @@
+{
+  "description": "GET /api/properties/:id/summary on both targets: the events stored for the property (and, with \"other\": true, for another property), the server's clock and the range, and the figures the handler must answer. The range ends where the UTC hour (24h) or day (7d, 30d) that holds now ends; buckets are half-open and oldest first. Read by cms/tests/summary-vectors.test.ts (the Strapi query on sqlite), cms/tests/summary-php-vectors.test.ts (strapi-php's query on sqlite, plain PHP) and protected/tests/Feature/Summary (the endpoint in the live app).",
+  "vectors": [
+    {
+      "name": "24h: an empty property answers zeros in 24 buckets",
+      "now": "2026-03-10T14:25:00.000Z",
+      "range": "24h",
+      "events": [
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T14:00:00.000Z",
+          "sessionId": "other-session-0001",
+          "other": true
+        }
+      ],
+      "expected": {
+        "visitors": {
+          "value": 0,
+          "previous": 0,
+          "series": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        },
+        "pageViews": {
+          "value": 0,
+          "previous": 0,
+          "series": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        },
+        "events": {
+          "value": 0,
+          "previous": 0,
+          "series": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        }
+      }
+    },
+    {
+      "name": "7d: an empty property answers zeros in 7 buckets",
+      "now": "2026-03-10T14:25:00.000Z",
+      "range": "7d",
+      "events": [],
+      "expected": {
+        "visitors": { "value": 0, "previous": 0, "series": [0, 0, 0, 0, 0, 0, 0] },
+        "pageViews": { "value": 0, "previous": 0, "series": [0, 0, 0, 0, 0, 0, 0] },
+        "events": { "value": 0, "previous": 0, "series": [0, 0, 0, 0, 0, 0, 0] }
+      }
+    },
+    {
+      "name": "30d: an empty property answers zeros in 30 buckets",
+      "now": "2026-03-10T14:25:00.000Z",
+      "range": "30d",
+      "events": [],
+      "expected": {
+        "visitors": {
+          "value": 0,
+          "previous": 0,
+          "series": [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+          ]
+        },
+        "pageViews": {
+          "value": 0,
+          "previous": 0,
+          "series": [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+          ]
+        },
+        "events": {
+          "value": 0,
+          "previous": 0,
+          "series": [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+          ]
+        }
+      }
+    },
+    {
+      "name": "24h: each edge of the range, of the range before it and of an hour",
+      "now": "2026-03-10T14:25:00.000Z",
+      "range": "24h",
+      "events": [
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-09T15:00:00.000Z",
+          "sessionId": "session-one-000001"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-09T14:59:59.999Z",
+          "sessionId": "session-one-000001"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T14:59:59.999Z",
+          "sessionId": "session-two-000002"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T15:00:00.000Z",
+          "sessionId": "session-three-0003"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-08T15:00:00.000Z",
+          "sessionId": "session-four-00004"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-08T14:59:59.999Z",
+          "sessionId": "session-five-00005"
+        },
+        {
+          "name": "signup",
+          "occurredAt": "2026-03-10T14:25:00.000Z",
+          "sessionId": "session-two-000002"
+        },
+        { "name": "signup", "occurredAt": "2026-03-09T15:59:59.999Z", "sessionId": null },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-09T16:00:00.000Z",
+          "sessionId": "session-six-000006"
+        }
+      ],
+      "expected": {
+        "visitors": {
+          "value": 3,
+          "previous": 2,
+          "series": [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+        },
+        "pageViews": {
+          "value": 3,
+          "previous": 2,
+          "series": [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+        },
+        "events": {
+          "value": 5,
+          "previous": 2,
+          "series": [2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]
+        }
+      }
+    },
+    {
+      "name": "7d: days in UTC from a clock on midnight, and sessions across day edges",
+      "now": "2026-03-10T00:00:00.000Z",
+      "range": "7d",
+      "events": [
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-04T00:00:00.000Z",
+          "sessionId": "session-a-0000000a"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-04T23:59:59.999Z",
+          "sessionId": "session-a-0000000a"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-05T00:00:00.000Z",
+          "sessionId": "session-a-0000000a"
+        },
+        {
+          "name": "click",
+          "occurredAt": "2026-03-10T00:00:00.000Z",
+          "sessionId": "session-b-0000000b"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T23:59:59.999Z",
+          "sessionId": "session-a-0000000a"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-03T23:59:59.999Z",
+          "sessionId": "session-a-0000000a"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-02-25T00:00:00.000Z",
+          "sessionId": "session-c-0000000c"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-02-24T23:59:59.999Z",
+          "sessionId": "session-d-0000000d"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-11T00:00:00.000Z",
+          "sessionId": "session-b-0000000b"
+        },
+        { "name": "page_view", "occurredAt": "2026-03-06T12:00:00.000Z", "sessionId": null }
+      ],
+      "expected": {
+        "visitors": { "value": 2, "previous": 2, "series": [1, 1, 0, 0, 0, 0, 2] },
+        "pageViews": { "value": 5, "previous": 2, "series": [2, 1, 1, 0, 0, 0, 1] },
+        "events": { "value": 6, "previous": 2, "series": [2, 1, 1, 0, 0, 0, 2] }
+      }
+    },
+    {
+      "name": "30d: days across a month's end, and another property's events never count",
+      "now": "2026-04-01T09:30:00.000Z",
+      "range": "30d",
+      "events": [
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-03T00:00:00.000Z",
+          "sessionId": "session-one-000001"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-31T23:59:59.999Z",
+          "sessionId": "session-one-000001"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-04-01T00:00:00.000Z",
+          "sessionId": "session-two-000002"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-02-01T00:00:00.000Z",
+          "sessionId": "session-three-0003"
+        },
+        {
+          "name": "signup",
+          "occurredAt": "2026-03-02T23:59:59.999Z",
+          "sessionId": "session-three-0003"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-01-31T23:59:59.999Z",
+          "sessionId": "session-four-00004"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-15T10:00:00.000Z",
+          "sessionId": "session-nine-00009",
+          "other": true
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-02-10T10:00:00.000Z",
+          "sessionId": "session-nine-00009",
+          "other": true
+        }
+      ],
+      "expected": {
+        "visitors": {
+          "value": 2,
+          "previous": 1,
+          "series": [
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+          ]
+        },
+        "pageViews": {
+          "value": 3,
+          "previous": 1,
+          "series": [
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+          ]
+        },
+        "events": {
+          "value": 3,
+          "previous": 2,
+          "series": [
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+          ]
+        }
+      }
+    },
+    {
+      "name": "24h: one session in every hour counts once over the range",
+      "now": "2026-03-10T14:25:00.000Z",
+      "range": "24h",
+      "events": [
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-09T15:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-09T16:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-09T17:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-09T18:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-09T19:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-09T20:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-09T21:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-09T22:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-09T23:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T00:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T01:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T02:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T03:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T04:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T05:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T06:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T07:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T08:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T09:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T10:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T11:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T12:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T13:30:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T14:20:00.000Z",
+          "sessionId": "session-x-0000000x"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-10T14:10:00.000Z",
+          "sessionId": "session-y-0000000y"
+        },
+        {
+          "name": "page_view",
+          "occurredAt": "2026-03-09T03:00:00.000Z",
+          "sessionId": "session-x-0000000x"
+        }
+      ],
+      "expected": {
+        "visitors": {
+          "value": 2,
+          "previous": 1,
+          "series": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
+        },
+        "pageViews": {
+          "value": 25,
+          "previous": 1,
+          "series": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
+        },
+        "events": {
+          "value": 25,
+          "previous": 1,
+          "series": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
+        }
+      }
+    }
+  ]
+}
