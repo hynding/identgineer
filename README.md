@@ -94,7 +94,7 @@ docs/PLAN.md          Feature plan and working process
 
 ## Prerequisites
 
-- Node.js 22 or newer (see `.nvmrc`)
+- Node.js 22.13 or newer (see `.nvmrc`)
 - pnpm 10 (pinned in `package.json` via `packageManager`; enable with `corepack enable`)
 
 ## Common commands
