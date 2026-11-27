@@ -33,8 +33,8 @@ interface Owner {
 }
 
 interface StoredEvent {
+  readonly documentId: string;
   readonly name: string;
-  readonly dedupeKey: string;
   readonly occurredAt: string;
   readonly sessionId: string | null;
   readonly path: string | null;
@@ -284,11 +284,16 @@ describe.skipIf(liveBackend === undefined)(
         ["page_view", "/pricing?utm_source=news", "news.example.org", null],
         ["signup_completed", "/pricing?utm_source=news", null, { plan: "pro" }],
       ]);
+      // The dedupe key is stored, but private: no API answer carries it.
+      const database = new DatabaseSync(main().database, { readOnly: true });
+      const lookup = database.prepare("SELECT dedupe_key FROM events WHERE document_id = ?");
       for (const event of events) {
-        expect(event.dedupeKey).toMatch(/^[0-9a-f]{64}$/);
+        expect(Object.keys(event)).not.toContain("dedupeKey");
+        expect(lookup.get(event.documentId)?.dedupe_key).toMatch(/^[0-9a-f]{64}$/);
         expect(event.sessionId).toMatch(/^[A-Za-z0-9_-]{16,64}$/);
         expect(Math.abs(Date.parse(event.occurredAt) - Date.now())).toBeLessThan(60_000);
       }
+      database.close();
       expect(JSON.stringify(events)).not.toContain(VISITOR);
     });
 
