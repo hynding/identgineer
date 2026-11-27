@@ -1409,7 +1409,8 @@ test.describe("the brand is the measure of what the page puts in it beside the m
       await page.evaluate(() => {
         const probe = document.createElement("span");
         probe.id = "brand-probe";
-        probe.style.display = "block";
+        // Out of the brand's flow, so that nothing in the brand narrows it.
+        probe.style.position = "absolute";
         probe.style.inlineSize = "100cqi";
         probe.style.blockSize = "1px";
         document.getElementById("brand-link")?.append(probe);
