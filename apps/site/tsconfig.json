@@ -8,7 +8,8 @@
     "jsxFragmentFactory": "Fragment",
     "types": ["node"],
     "allowImportingTsExtensions": true,
-    "exactOptionalPropertyTypes": false
+    "exactOptionalPropertyTypes": false,
+    "paths": { "@identgineer/components": ["../../packages/components/src/index.ts"] }
   },
   "include": ["src", "scripts", "checks", "browser", "*.config.ts"],
   "exclude": ["node_modules", "www", "hydrate"]

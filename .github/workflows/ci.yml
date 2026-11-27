@@ -31,6 +31,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
+      # A build regenerates the committed component declarations; a difference means they are stale.
+      - run: git diff --exit-code
       - run: pnpm audit --audit-level=high
 
   browser:

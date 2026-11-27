@@ -3,7 +3,8 @@
   "compilerOptions": {
     "noEmit": false,
     "verbatimModuleSyntax": false,
-    "rewriteRelativeImportExtensions": true
+    "rewriteRelativeImportExtensions": true,
+    "paths": {}
   },
   "include": ["src"],
   "exclude": ["node_modules", "www", "hydrate", "src/**/*.test.ts"]

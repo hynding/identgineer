@@ -44,6 +44,10 @@ canonical link and asks not to be indexed.
    components package does. Two outputs are written: `www/build`, the client build the pages load,
    and `hydrate/`, the server build that renders them. The `www` copy step adds the tokens
    stylesheet, the variation bootstrap script, the site stylesheet and the icon under `www/assets`.
+   The library's built types are not there before its build, and CI lints and type-checks first, so
+   `tsconfig.json` maps `@identgineer/components` to its source, whose `src/components.d.ts` is
+   committed. `tsconfig.build.json` drops the mapping, so Stencil reads the built collection. Both
+   `src/components.d.ts` files are written again by every build, and CI fails if that changes them.
 2. **`scripts/prerender.ts`** renders every page with the hydrate build's `renderToString`. The
    document it starts from (`scripts/document.ts`) puts the variation bootstrap script first in the
    head, blocking and checked by its integrity, then the stylesheets as plain links, so a stored or
