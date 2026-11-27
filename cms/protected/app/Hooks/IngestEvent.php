@@ -12,12 +12,15 @@ use App\Ingest\TrackingBatch;
 use App\Models\Event;
 use App\Models\Property;
 use App\Support\StrapiError;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use PDOException;
 
 /**
  * Ring 2 endpoint — hand-written, from the seed camis wrote. POST /api/ingest/events, public: no
@@ -25,12 +28,15 @@ use Illuminate\Support\Facades\RateLimiter;
  * handler is its only authorization. camis' guard has already refused a caller over the endpoint's
  * rate, another media type and a body over 65536 bytes (config/camis-endpoints.php).
  *
- * Checks in this order, each refusal in Strapi's error body: media type (415), body size against
- * INGEST_MAX_BODY_BYTES (413, before decoding), the batch (400, whole batch), the key (404, alike for
- * an unknown and an inactive one: one query asks for both), the Origin header against the property's
- * allowed origins (403), the key's rate (429 with Retry-After). Then each accepted event is stored
- * against the key's own property and owner, and the answer is 202 with no body. An event not
- * allowed, outside the time window or already stored is skipped.
+ * Checks in this order, each refusal in Strapi's error body: media type and Content-Encoding (415,
+ * any coding but identity), body size against INGEST_MAX_BODY_BYTES (413, before decoding), the
+ * batch (400, whole batch), the key (404, alike for an unknown and an inactive one: one query asks
+ * for both; a header sent twice counts as none), the Origin header against the property's allowed
+ * origins (403; sent twice, refused), the key's rate (429 with Retry-After). Then each accepted
+ * event is stored against the key's own property and owner, and the answer is 202 with no body. An
+ * event not allowed, outside the time window or already stored is skipped. A database failure
+ * answers 503, which the SDK retries, and is logged by its class alone: the exception's message
+ * holds the query with its bindings (the key, the body's values).
  *
  * Never read: the caller's address, its User-Agent, cookies. The write key is compared, never
  * stored, and the per-key count is kept under the property's id.
@@ -45,27 +51,74 @@ final class IngestEvent implements IngestEventEndpoint
         if (! in_array($type, self::ACCEPTED_TYPES, true)) {
             throw new StrapiError(415, 'UnsupportedMediaTypeError', 'The request body must be application/json or text/plain');
         }
+        if (self::encoded($request)) {
+            throw new StrapiError(415, 'UnsupportedMediaTypeError', 'The request body must not be encoded (Content-Encoding)');
+        }
         $body = self::boundedBody($request, max(1, (int) config('ingest.max_body_bytes', TrackingBatch::MAX_BYTES)));
         try {
             $batch = TrackingBatch::parse($body);
         } catch (InvalidTrackingBatch) {
             throw StrapiError::validation('Invalid batch');
         }
-        $writeKey = $batch['transport'] === 'beacon' ? $batch['writeKey'] : $request->headers->get('X-Idg-Write-Key');
+        $writeKey = $batch['transport'] === 'beacon' ? $batch['writeKey'] : self::single($request, 'X-Idg-Write-Key');
         $property = is_string($writeKey) && preg_match(TrackingBatch::WRITE_KEY_PATTERN, $writeKey) === 1
-            ? Property::query()->where('ingest_key', $writeKey)->where('active', true)->with(IngestPolicy::RELATIONS)->first()
+            ? self::database('lookup', static fn (): ?Property => Property::query()->where('ingest_key', $writeKey)->where('active', true)->with(IngestPolicy::RELATIONS)->first())
             : null;
         if (! $property instanceof Property) {
             throw new StrapiError(404, 'NotFoundError', 'Not Found');
         }
         $policy = IngestPolicy::fromProperty($property);
-        if (! in_array($request->headers->get('Origin'), $policy->allowedOrigins, true)) {
+        if (! in_array(self::single($request, 'Origin'), $policy->allowedOrigins, true)) {
             throw new StrapiError(403, 'ForbiddenError', 'Forbidden');
         }
-        self::limitKey($property);
-        self::store($batch, $property, $policy);
+        // The count is kept in the cache, which may be the database too.
+        self::database('limit', static fn () => self::limitKey($property));
+        self::database('store', static fn () => self::store($batch, $property, $policy));
 
         return new Response('', 202);
+    }
+
+    /** Any Content-Encoding but identity: the cap and the parser read the body as sent. */
+    private static function encoded(Request $request): bool
+    {
+        foreach ($request->headers->all('Content-Encoding') as $header) {
+            foreach (explode(',', (string) $header) as $coding) {
+                $coding = strtolower(trim($coding));
+                if ($coding !== '' && $coding !== 'identity') {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /** A header's value when it is sent once; null when absent or sent more than once. */
+    private static function single(Request $request, string $name): ?string
+    {
+        $values = $request->headers->all($name);
+
+        return count($values) === 1 && is_string($values[0]) ? $values[0] : null;
+    }
+
+    /**
+     * Runs a database step; a failure answers 503 and is logged by the exception's class only,
+     * never its message, bindings or the request.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $step
+     * @return T
+     */
+    private static function database(string $stage, callable $step): mixed
+    {
+        try {
+            return $step();
+        } catch (QueryException|PDOException $error) {
+            Log::error('IngestEvent: the database failed at the '.$stage.' ('.class_basename($error).'); answered 503');
+
+            throw new StrapiError(503, 'ServiceUnavailableError', 'Service Unavailable');
+        }
     }
 
     /** The body, refused (413) when it declares or holds more than $max bytes; never read past $max + 1. */

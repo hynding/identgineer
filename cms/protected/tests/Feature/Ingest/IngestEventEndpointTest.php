@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Ingest;
 
+use App\Hooks\IngestEvent;
 use App\Hooks\PurgeExpiredEvents;
 use App\Ingest\IngestedEvent;
 use App\Models\Event;
 use App\Models\Property;
 use App\Models\User;
+use App\Support\StrapiError;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -41,6 +45,8 @@ final class IngestEventEndpointTest extends TestCase
         // Each test its own marker, looked for in the database and the log afterwards.
         $this->userAgent = 'IngestProbe/'.Str::random(24);
         config(['camis-endpoints.IngestEvent.throttle_per_minute' => 1000, 'ingest.key_rate_per_minute' => 1000]);
+        // A decoy first, so the property's owner is not user 1 and a stored owner id must be its own.
+        User::factory()->create();
         $this->property = $this->property();
     }
 
@@ -391,5 +397,131 @@ final class IngestEventEndpointTest extends TestCase
             $short->getKey().':'.IngestedEvent::dedupeKey((int) $short->getKey(), 'new'),
             $this->property->getKey().':'.IngestedEvent::dedupeKey((int) $this->property->getKey(), 'old'),
         ], $kept);
+    }
+
+    public function test_the_owner_stored_is_the_propertys_own_not_the_first_user(): void
+    {
+        $this->assertAccepted($this->ingest(self::batch()));
+        $this->assertNotSame(1, (int) $this->property->owner_id);
+        $this->assertSame((int) $this->property->owner_id, (int) Event::query()->sole()->owner_id);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function encodings(): iterable
+    {
+        yield 'gzip' => ['gzip'];
+        yield 'deflate' => ['deflate'];
+        yield 'br' => ['br'];
+        yield 'upper case' => ['GZIP'];
+        yield 'a list with identity' => ['gzip, identity'];
+        yield 'an unknown coding' => ['x-unknown'];
+    }
+
+    #[DataProvider('encodings')]
+    public function test_a_body_with_any_content_encoding_but_identity_is_refused_with_415(string $encoding): void
+    {
+        $this->ingest(self::batch(), ['HTTP_CONTENT_ENCODING' => $encoding])
+            ->assertStatus(415)
+            ->assertJsonPath('error.name', 'UnsupportedMediaTypeError');
+        $this->assertSame(0, Event::query()->count());
+    }
+
+    public function test_content_encoding_identity_is_no_encoding_and_is_accepted(): void
+    {
+        $this->assertAccepted($this->ingest(self::batch(), ['HTTP_CONTENT_ENCODING' => ' Identity ']));
+    }
+
+    public function test_the_handlers_own_size_check_holds_without_a_content_length(): void
+    {
+        config(['ingest.max_body_bytes' => 100]);
+        $body = json_encode($this->beacon(['events' => [self::event(['path' => '/'.str_repeat('a', 60)])]]), JSON_THROW_ON_ERROR);
+        $this->ingest($body, ['CONTENT_TYPE' => 'text/plain', 'CONTENT_LENGTH' => null, 'HTTP_X_IDG_WRITE_KEY' => null])->assertStatus(413);
+        $this->assertSame(0, Event::query()->count());
+    }
+
+    public function test_a_body_that_is_not_utf8_is_refused_with_400(): void
+    {
+        $body = '{"v":1,"sentAt":'.self::nowMs().',"transport":"fetch","events":[{"id":"'.self::EVENT_ID.'","name":"signup_completed","at":'.self::nowMs().',"properties":{"plan":"'."\xC3\x28".'"}}]}';
+        $this->ingest($body)->assertStatus(400);
+        $this->ingest($body, ['CONTENT_TYPE' => 'text/plain'])->assertStatus(400);
+        $this->assertSame(0, Event::query()->count());
+    }
+
+    public function test_an_origin_joined_from_two_headers_is_refused_with_403(): void
+    {
+        $this->ingest(self::batch(), ['HTTP_ORIGIN' => self::ORIGIN.', '.self::ORIGIN])->assertStatus(403);
+        $this->assertSame(0, Event::query()->count());
+    }
+
+    public function test_a_key_header_joined_from_two_headers_is_refused_with_404(): void
+    {
+        $key = $this->property->ingest_key;
+        $this->ingest(self::batch(), ['HTTP_X_IDG_WRITE_KEY' => $key.', '.$key])->assertStatus(404);
+    }
+
+    /** The handler alone, given a header Symfony holds twice (as a server that keeps both passes it). */
+    private function handleWithRepeated(string $header, string $value): int
+    {
+        $request = Request::create('/api/ingest/events', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_ORIGIN' => self::ORIGIN, 'HTTP_X_IDG_WRITE_KEY' => $this->property->ingest_key], json_encode(self::batch(), JSON_THROW_ON_ERROR));
+        $request->headers->set($header, [$value, $value]);
+        try {
+            $response = (new IngestEvent)->handle($request);
+        } catch (StrapiError $error) {
+            return $error->status;
+        }
+
+        return $response->getStatusCode();
+    }
+
+    public function test_a_header_sent_twice_is_refused_like_the_strapi_handler_does(): void
+    {
+        $this->assertSame(403, $this->handleWithRepeated('Origin', self::ORIGIN));
+        $this->assertSame(404, $this->handleWithRepeated('X-Idg-Write-Key', (string) $this->property->ingest_key));
+        $this->assertSame(0, Event::query()->count());
+    }
+
+    private function logText(): string
+    {
+        return is_file(storage_path('logs/laravel.log')) ? (string) file_get_contents(storage_path('logs/laravel.log')) : '';
+    }
+
+    public function test_a_database_failure_in_the_lookup_answers_503_and_logs_no_key_or_query(): void
+    {
+        $before = strlen($this->logText());
+        Schema::rename('properties', 'properties_gone');
+        $this->ingest(self::batch())->assertStatus(503)->assertJsonPath('error.name', 'ServiceUnavailableError');
+        $log = substr($this->logText(), $before);
+        $this->assertStringContainsString('IngestEvent', $log);
+        foreach ([$this->property->ingest_key, 'select', 'properties', self::ORIGIN, $this->userAgent, self::ADDRESS] as $secret) {
+            $this->assertStringNotContainsString($secret, $log);
+        }
+    }
+
+    public function test_a_database_failure_in_the_store_answers_503_and_logs_no_key_or_value(): void
+    {
+        $before = strlen($this->logText());
+        Schema::rename('events', 'events_gone');
+        $this->ingest(self::batch(['events' => [self::event(['user' => 'visitor_42', 'properties' => ['plan' => 'secret-plan']])]]))->assertStatus(503);
+        $log = substr($this->logText(), $before);
+        $this->assertStringContainsString('IngestEvent', $log);
+        foreach ([$this->property->ingest_key, 'insert', 'secret-plan', 'visitor_42', self::EVENT_ID] as $secret) {
+            $this->assertStringNotContainsString($secret, $log);
+        }
+    }
+
+    public function test_the_purge_deletes_nothing_of_a_property_whose_retention_is_below_one_day(): void
+    {
+        foreach ([0, -5] as $days) {
+            $property = $this->property(['retention_days' => $days]);
+            Event::query()->create([
+                'name' => 'page_view',
+                'dedupe_key' => IngestedEvent::dedupeKey((int) $property->getKey(), 'old'),
+                'occurred_at' => Carbon::now()->subDays(30),
+                'property_id' => $property->getKey(),
+                'owner_id' => $property->owner_id,
+            ]);
+        }
+        (new PurgeExpiredEvents)->run();
+        $this->assertSame(2, Event::query()->count());
     }
 }
