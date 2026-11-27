@@ -1096,7 +1096,9 @@ inert; a **drawer** is a modal dialog (`showModal`): focus moves in, the page be
 scroll-locked, Escape or the close button or a press on the backdrop closes it and focus returns to
 the menu button. Following a link closes either. If the container grows until the navigation is drawn
 inline, an open panel or drawer is reset without moving focus. The drawer slides in but does not
-animate out.
+animate out. Where the page runs no script (`@media (scripting: none)`, a shell prerendered with
+declarative shadow DOM), there is no menu button: the navigation is inline in every layout and at
+every width.
 
 Changing `data-layout` while the page is open keeps the scroll position and keeps focus on the same
 element; focus that was in a navigation the new layout collapses goes to the menu button. Where a

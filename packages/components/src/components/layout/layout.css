@@ -1524,3 +1524,11 @@
     color: HighlightText;
   }
 }
+
+/* Without a script the menu button could not open anything, so there is none: the navigation is in
+   the bar, as it is where the bar has room, in every layout and at every width. */
+@media (scripting: none) {
+  .shell {
+    --_nav: inline !important;
+  }
+}

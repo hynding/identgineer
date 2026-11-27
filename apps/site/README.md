@@ -66,9 +66,15 @@ strip, and it adds module preloads the site does not need.
 ### Without JavaScript
 
 Every page reads and navigates as plain HTML: the shell's landmarks, skip link and every component's
-look come from declarative shadow DOM and the stylesheets. The header's menu button needs a script,
-so the footer always lists the pages as well. The appearance panel is the one thing that needs a
-script: under `@media (scripting: none)` its buttons are not drawn and the footer says so. The
+look come from declarative shadow DOM and the stylesheets. A menu button would need a script, so
+without one `idg-layout` draws none and shows the navigation in the bar; the footer lists the pages
+as well. The appearance panel is the one thing that needs a script: under `@media (scripting: none)`
+its buttons are not drawn and the footer says so.
+
+With scripting on but the client build failed to load, the appearance buttons, Surprise me and the
+menu button are drawn and do nothing. They are not held back until the build has run: that would
+draw them late on every page, a change in the first screen at each load, to cover a failure the
+page cannot detect before the build either arrives or does not. The
 panel's dialog and switcher are drawn in the browser only, so the prerendered page never shows the
 default choices before the switcher has read the visitor's.
 
