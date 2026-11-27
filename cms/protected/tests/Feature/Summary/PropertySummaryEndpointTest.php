@@ -148,34 +148,63 @@ final class PropertySummaryEndpointTest extends TestCase
         self::assertSame(1, $answer->json('data.events.value'));
     }
 
-    public function test_refuses_a_caller_without_a_session_before_the_handler_uncached(): void
+    /**
+     * The route's path as a client may spell it: Laravel's router matches the decoded path, so an
+     * encoded letter or slash still reaches the summary.
+     *
+     * @return array<string, array{string}>
+     */
+    public static function spellings(): array
     {
-        $answer = $this->summary($this->mine->document_id, '?range=7d');
+        return [
+            'plain' => ['/summary'],
+            'with an encoded letter' => ['/summar%79'],
+            'with an encoded slash' => ['%2Fsummary'],
+        ];
+    }
+
+    private function refusal(string $spelling, array $headers = []): TestResponse
+    {
+        return $this->get('/api/properties/'.$this->mine->document_id.$spelling.'?range=7d', ['Accept' => 'application/json', ...$headers]);
+    }
+
+    #[DataProvider('spellings')]
+    public function test_refuses_a_caller_without_a_session_before_the_handler_uncached(string $spelling): void
+    {
+        $answer = $this->refusal($spelling);
 
         $answer->assertForbidden();
         self::assertStringContainsString('no-store', (string) $answer->headers->get('Cache-Control'));
     }
 
-    public function test_refuses_a_token_that_is_not_one_uncached(): void
+    #[DataProvider('spellings')]
+    public function test_refuses_a_token_that_is_not_one_uncached(string $spelling): void
     {
-        $answer = $this->get('/api/properties/'.$this->mine->document_id.'/summary?range=7d', [
-            'Accept' => 'application/json',
-            'Authorization' => 'Bearer 1|not-a-token',
-        ]);
+        $answer = $this->refusal($spelling, ['Authorization' => 'Bearer 1|not-a-token']);
 
         $answer->assertUnauthorized();
         self::assertStringContainsString('no-store', (string) $answer->headers->get('Cache-Control'));
     }
 
-    public function test_refuses_a_caller_past_the_throttle_uncached(): void
+    #[DataProvider('spellings')]
+    public function test_refuses_a_caller_past_the_throttle_uncached(string $spelling): void
     {
         config(['camis-endpoints.PropertySummary.throttle_per_minute' => 1]);
-        $this->summary($this->mine->document_id, '?range=7d', $this->me)->assertOk();
+        $token = ['Authorization' => 'Bearer '.$this->me->createToken('test', ['*'])->plainTextToken];
+        $this->refusal($spelling, $token)->assertOk();
 
-        $answer = $this->summary($this->mine->document_id, '?range=7d', $this->me);
+        $answer = $this->refusal($spelling, $token);
 
         $answer->assertStatus(429);
         self::assertStringContainsString('no-store', (string) $answer->headers->get('Cache-Control'));
+    }
+
+    public function test_leaves_a_path_that_only_begins_like_the_summary_alone(): void
+    {
+        $answer = $this->get('/api/properties/'.$this->mine->document_id.'/summary-of-something?range=7d', ['Accept' => 'application/json']);
+
+        $answer->assertNotFound();
+        self::assertStringNotContainsString('no-store', (string) $answer->headers->get('Cache-Control'));
     }
 
     public function test_leaves_the_cache_headers_of_other_routes_alone(): void
