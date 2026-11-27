@@ -271,6 +271,20 @@ export class SiteHome {
     );
   }
 
+  /** What the features page will cover: the sections of this page, but the pages to come. */
+  private renderTopics() {
+    return (
+      <ul class="next-topics">
+        {ON_THIS_PAGE.filter(({ id }) => id !== "next").map(({ label }) => (
+          <li>
+            <idg-icon name="check" />
+            {label}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
   private renderNext() {
     return (
       <section class="feature feature-next" id="next" aria-labelledby="next-title">
@@ -284,20 +298,23 @@ export class SiteHome {
           <p>The pages still to come, each made from the same components and tokens as this one.</p>
         </div>
         <div class="feature-visual next">
-          {linkableRoutes().map((route) =>
-            route.status === "live" ? (
-              <idg-card heading={route.label} href={route.path} variant="raised">
-                {route.description}
-              </idg-card>
-            ) : (
-              <idg-card heading={route.label} variant="outlined">
-                <idg-badge slot="header" variant="info" size="sm">
-                  Coming soon
-                </idg-badge>
-                {route.description}
-              </idg-card>
-            ),
-          )}
+          <div class="next-cards">
+            {linkableRoutes().map((route, index) =>
+              route.status === "live" ? (
+                <idg-card heading={route.label} href={route.path} variant="raised">
+                  {route.description}
+                </idg-card>
+              ) : (
+                <idg-card heading={route.label} variant="outlined">
+                  <idg-badge slot="header" variant="info" size="sm">
+                    Coming soon
+                  </idg-badge>
+                  {route.description}
+                  {index === 0 ? this.renderTopics() : null}
+                </idg-card>
+              ),
+            )}
+          </div>
         </div>
       </section>
     );

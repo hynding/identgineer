@@ -195,13 +195,12 @@ body {
   min-inline-size: calc-size(min-content, min(size, 100%));
 }
 
-/* An engine without calc-size() (Firefox, Safari) keeps a card, a figure or a card of the pages to
-   come no narrower than what it holds needs, with no limit at the row's width: the type, a card's
-   heading and its padding give way in a narrow column, so it fits there too. */
+/* An engine without calc-size() (Firefox, Safari) keeps a card of the showcase or of the figures no
+   narrower than what it holds needs, with no limit at the row's width; a figure is never wider than
+   a phone's column at any type scale, so it fits there too. */
 @supports not (min-inline-size: calc-size(min-content, size)) {
   .hero-showcase > *,
-  .figures > *,
-  .next > * {
+  .figures > * {
     min-inline-size: min-content;
   }
 }
@@ -293,7 +292,6 @@ figcaption {
   container: home / inline-size;
   /* A column is never narrower than a tile's text at the current type size. */
   --_tile: calc(var(--idg-size-xs) * var(--idg-ux-type-scale));
-  --_card: calc(var(--idg-size-s) * var(--idg-ux-type-scale));
 }
 
 .sections {
@@ -545,31 +543,77 @@ figcaption {
   max-inline-size: var(--idg-size-s);
 }
 
-/* The pages to come: a card is never narrower than its heading's longest word needs, in the
-   current face and type size, up to the width of the row, so no heading breaks inside a word. The
-   cards on a row share what is left of it. The first, the overview of the features, takes the room
-   of two: with the six after it, the last row holds two cards or more wherever a row holds up to
-   six, where seven cards of one size would leave one alone on the last row at three a row. */
+/* The pages to come: one grid of equal columns, one, two, three or four of them as the row has room
+   for a card no narrower than its heading's longest word needs (about seventeen of the cards' text
+   size, in the widest face in capitals at any type scale). The first card, the overview of the
+   features with a list of what they cover, spans two columns, or the whole row where there are
+   fewer than four: with the six after it, every row is full. The row is a container of its own,
+   and its text size is the cards', so its thresholds follow the type scale. */
 .next {
-  display: flex;
-  flex-wrap: wrap;
+  container: next / inline-size;
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+}
+
+.next-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
 }
 
-.next > * {
-  flex: 1 1 var(--_card);
-  min-inline-size: calc-size(min-content, min(size, 100%));
+/* Each card is a container too: it takes its column's width whatever its content would ask, and
+   its heading is sized to the card rather than to the row. */
+.next-cards > * {
+  container-type: inline-size;
 }
 
-/* Where the content is narrower than a card's heading can be (a phone's window, a large type scale
-   and a wide face in capitals), the heading is set smaller rather than broken: its longest word is
-   at most about nine of its letters' height wide, which a ninth of the content's width holds. */
+.next-cards > :first-child {
+  grid-column: 1 / -1;
+}
+
+@container next (min-inline-size: 35em) {
+  .next-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container next (min-inline-size: 53em) {
+  .next-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container next (min-inline-size: 71em) {
+  .next-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .next-cards > :first-child {
+    grid-column: span 2;
+  }
+}
+
+/* Where a card is narrower than its heading can be (a phone's window, a large type scale and a wide
+   face in capitals), the heading is set smaller rather than broken: its longest word is at most
+   about nine of its letters' height wide, which the card holds, with its padding, at an eighth of
+   its width. */
 .next idg-card::part(heading) {
-  font-size: min(calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale)), 9cqi);
+  font-size: min(calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale)), 8cqi);
 }
 
-.next > :first-child {
-  flex-basis: calc(var(--_card) * 2 + var(--idg-space-s) * var(--idg-density-gap-scale));
+/* What the features will cover, in as many columns as the card has room for. */
+.next-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--idg-space-3xs) var(--idg-space-s);
+  margin: var(--idg-space-xs) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.next-topics li {
+  display: flex;
+  align-items: center;
+  gap: var(--idg-space-3xs);
 }
 
 /* top-bar, and any layout that sets none of its own: a product page. The sections zigzag, text on
@@ -600,6 +644,18 @@ figcaption {
   }
 }
 
+/* top-bar in a narrow column: what each section describes is shown on a tinted panel of its own,
+   as a product page shows its screens. */
+@container style(--idg-layout-shell: top-bar) {
+  @container home not (min-inline-size: 40rem) {
+    .feature-visual {
+      padding: var(--idg-space-s);
+      border-radius: var(--idg-shape-radius-lg);
+      background: var(--idg-color-bg-subtle);
+    }
+  }
+}
+
 /* side-rail: a reference manual. Each section is ruled off from the last, its heading in a narrow
    column of its own that stays in view while its text and examples scroll past. */
 @container style(--idg-layout-shell: side-rail) {
@@ -610,6 +666,12 @@ figcaption {
 
   .site-layout .feature h2 {
     font-size: calc(var(--idg-font-size-step-2) * var(--idg-ux-type-scale));
+  }
+
+  /* A manual's entry: its heading marked off by a heavy rule in the accent at its start. */
+  .feature-head {
+    padding-inline-start: var(--idg-space-s);
+    border-inline-start: calc(var(--idg-border-width) * 3) solid var(--idg-color-accent);
   }
 
   @container home (min-inline-size: 40rem) {
@@ -646,12 +708,18 @@ figcaption {
       "visual";
   }
 
+  /* Each step's number large, in the display face, beside its kicker. */
   .feature-kicker::before {
     content: counter(feature, decimal-leading-zero) / "";
     margin-inline-end: var(--idg-space-2xs);
-    padding-inline-end: var(--idg-space-2xs);
+    padding-inline-end: var(--idg-space-xs);
     border-inline-end: var(--idg-border-width) var(--idg-border-style) currentcolor;
+    font-family: var(--idg-font-family-display);
+    font-size: calc(var(--idg-font-size-step-4) * var(--idg-ux-type-scale));
+    font-weight: var(--idg-font-display-weight);
     font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    line-height: 1;
   }
 }
 
@@ -752,17 +820,24 @@ figcaption {
   }
 
   .feature {
+    --_panel-pad: clamp(var(--idg-space-2xs), 4cqi, var(--idg-space-s));
+
     gap: var(--idg-space-s);
-    padding: clamp(var(--idg-space-2xs), 4cqi, var(--idg-space-s));
+    padding: var(--_panel-pad);
     border: var(--idg-surface-border-width) var(--idg-surface-border-style)
       var(--idg-surface-border-color);
     border-radius: var(--idg-shape-radius-md);
     background: var(--idg-surface-background);
   }
 
+  /* Each panel's head is its title bar: tinted, across the panel's top edge to edge. */
   .feature-head {
-    padding-block-end: var(--idg-space-2xs);
+    margin: calc(-1 * var(--_panel-pad)) calc(-1 * var(--_panel-pad)) 0;
+    padding: var(--idg-space-2xs) var(--_panel-pad);
     border-block-end: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+    border-start-start-radius: inherit;
+    border-start-end-radius: inherit;
+    background: var(--idg-color-bg-subtle);
   }
 
   .site-layout .feature h2 {
@@ -774,8 +849,8 @@ figcaption {
   }
 
   /* With room, the sign-in form and the figures are two panels side by side; the brand kits, the
-     variations and the pages to come are panels across the grid, the brand kits' text beside their
-     tiles, so no panel is drawn taller than what it holds beside a taller one. 34rem is the
+     variations and the pages to come are panels across the grid, under their title bars, the brand
+     kits' text beside their tiles, so no panel is drawn taller than what it holds beside a taller one. 34rem is the
      content beside the rail on a tablet: two panels of --idg-size-s and their padding. */
   @container home (min-inline-size: 34rem) {
     .sections {
@@ -807,19 +882,8 @@ figcaption {
       grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
       grid-template-rows: auto 1fr;
       grid-template-areas:
-        "head visual"
+        "head head"
         "body visual";
-    }
-  }
-
-  @container home (min-inline-size: 56rem) {
-    .feature-variations,
-    .feature-next {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-      grid-template-rows: auto 1fr;
-      grid-template-areas:
-        "head body"
-        "visual visual";
     }
   }
 }

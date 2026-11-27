@@ -41,32 +41,41 @@ The home page is one set of markup: each section is a head, a body and a visual.
 arranges them by the layout, with container style queries on `--idg-layout-shell` (which
 `data-layout` sets) and size queries on the content's own width, all in tokens:
 
-| Layout       | How the content is arranged                                                                 |
-| ------------ | ------------------------------------------------------------------------------------------- |
-| `top-bar`    | A product page: the sections zigzag, text on one side and its example on the other.         |
-| `side-rail`  | A reference manual: sections ruled off, each heading in a narrow column that stays in view. |
-| `split-hero` | Numbered steps, one under another, in the half beside the pinned hero.                      |
-| `magazine`   | An issue: a lead story, two stories side by side with a rule between, a boxed feature.      |
-| `dashboard`  | Dense panels with title bars: sign-in and figures side by side, the rest across the grid.   |
-| `centered`   | One narrow column with centred headings.                                                    |
-| `bento`      | Tiles of different sizes on one grid; on a tablet, the sign-in beside its text.             |
-| `immersive`  | Full-width bands, alternately tinted, with large centred headings.                          |
+| Layout       | How the content is arranged                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------- |
+| `top-bar`    | A product page: the sections zigzag; on a phone each example sits on a tinted panel.          |
+| `side-rail`  | A reference manual: sections ruled off, each heading marked by an accent rule, in view.       |
+| `split-hero` | Numbered steps, one under another, large numbers, in the half beside the pinned hero.         |
+| `magazine`   | An issue: a lead story, two stories side by side with a rule between, a boxed feature.        |
+| `dashboard`  | Panels with tinted title bars: sign-in and figures side by side, the rest across the grid.    |
+| `centered`   | One narrow column with centred headings.                                                      |
+| `bento`      | Tiles on one grid: wide tiles, text beside example, and the sign-in and figures side by side. |
+| `immersive`  | Full-width bands, alternately tinted, with large centred headings.                            |
 
 The "On this page" aside stays in view where it is beside the content, and is not drawn where a
-layout would put it after the content (`centered`, `side-rail` and `split-hero`). Cards and figures
-are never narrower than their content needs in the current face and type size, up to the width of
-the row, and the site's name is no larger than the room idg-layout's brand has beside the menu
-button, so a word, a figure or the name is never broken inside itself and nothing runs under
-anything else; `browser/fit.browser.ts` checks that for every design with every layout and every UX
-mode.
+layout would put it after the content (`centered`, `side-rail` and `split-hero`). Sections side by
+side come out about as tall as each other (`browser/balance.browser.ts`), and the pages to come are
+one grid of equal columns, the first card, with what the features cover, spanning two or the row.
+
+What holds where: at 320 to 1440px, with text at the browser's own size, in every design, layout
+and UX mode, with Inter or a wider fallback face, no word, figure or the site's name is broken inside
+itself, nothing runs under anything else or out of its box, and the page does not scroll sideways.
+The cards and figures are never narrower than their content needs in the current face and type
+size, and the site's name is no larger than the room idg-layout's brand has beside the menu button.
+That holds in Chromium, in an engine without `calc-size()` (Firefox, Safari), where the cards and
+figures fall back to `min-content` and idg-stat and idg-button to their own fallbacks, and in one
+without container style queries; `browser/fit.browser.ts` checks all three. With text at 200% in a
+phone's window, a word wider than its column breaks rather than leave it, and in an engine without
+`calc-size()` a figure keeps its width there and may reach past a narrow card.
 
 A browser without container style queries applies none of the eight arrangements, idg-layout's or
 the site's: whatever the layout, it gets the shell's own arrangement (the bar, then the hero, the
 content and the "On this page" list one under another, at the content's measure), with the menu
-button, and the site's base rules in it, the sections zigzagging from 40rem of content and stacked
-below that. The tokens a layout sets (gaps, measure) still apply. The base rules are written for
-that shell, and the style queries only add to them; `browser/fit.browser.ts` takes every style query
-out of a page and checks that it still fits in every layout and width.
+button beside a brand that is the container of its room, and the site's base rules in it, the
+sections zigzagging from 40rem of content and stacked below that. The tokens a layout sets (gaps,
+measure) and the design and UX mode still apply. The base rules are written for that shell, and
+the style queries only add to them; `browser/fit.browser.ts` takes every style query out of a page
+and checks the whole sweep again.
 
 ## How it is built
 
@@ -164,11 +173,13 @@ need not be served itself.
   already on the root before the body exists; hydration changes nothing in the first screen or 700px
   down; the current page is marked and the first Tab reaches the skip link; the headers are the ones
   the build wrote; every page in every layout reads and navigates with JavaScript off, with its
-  links in the bar and no menu button; and every page fits every design with every layout and every
-  UX mode (the theme and the scheme turning with them) at 320, 390, 820 and 1440px, and without
-  container style queries, with no sideways scroll, nothing cut or spilling out of its box, no word,
-  figure or name broken inside itself and no two controls over each other. Any console error,
-  policy violation or request to another origin fails a test.
+  links in the bar and no menu button; every page fits every design with every layout and every UX
+  mode (the theme and the scheme turning with them) at 320, 390, 820 and 1440px, as Chromium draws
+  it, without `calc-size()` and without container style queries, with no sideways scroll, nothing
+  cut or spilling out of its box, no word, figure or name broken inside itself and no two controls
+  over each other; and in bento, dashboard and magazine at 768 to 1440px no section beside another
+  is more than a fifth empty below its content. Any console error, policy violation or request to
+  another origin fails a test.
 
 `IDG_CPU_THROTTLE=6` runs the hydration tests with the page's CPU six times slower, as a slow CI
 runner is; add `--repeat-each=3` to repeat them.
