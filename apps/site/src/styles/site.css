@@ -101,11 +101,14 @@ body {
   text-decoration: none;
 }
 
-/* The name is one word, and never broken: in a narrow bar, or at a large type scale, it is set
-   smaller instead, no larger than fits beside the menu button in a window of the bar's width. The
-   bar is the shell's, a container, so the limit is a share of its width. */
+/* The name is one word, and never broken: where the room is short it goes under the mark, and in a
+   narrow bar, or at a large type scale, it is set smaller instead. Where the menu button is drawn
+   the brand is a container of the room the bar leaves it (idg-layout), so the name is no larger
+   than fits in that room: it is at most about 6.8 of its letters' height wide, in the widest face a
+   theme sets (a monospace one). Where the navigation is in the bar there is no button, and the
+   limit is a share of the whole bar, which leaves the name its size. */
 .brand-name {
-  font-size: min(1em, 6cqi);
+  font-size: min(1em, 100cqi / 6.8);
   white-space: nowrap;
 }
 
@@ -184,11 +187,13 @@ body {
   color: var(--idg-color-text);
 }
 
-/* A card holding a figure is never narrower than the figure at the current type size, so the
-   figure never breaks; the cards go one under another first. */
+/* A card holding a figure is never narrower than what it holds needs (the figure, whole, in the
+   current face and type size), up to the width of the showcase, so the figure never breaks: the
+   cards go one under another first. */
 .hero-showcase > * {
   flex: 1 1 calc(var(--idg-size-xs) * var(--idg-ux-type-scale));
   min-inline-size: min(100%, calc(var(--idg-size-xs) * var(--idg-ux-type-scale)));
+  min-inline-size: calc-size(min-content, min(size, 100%));
 }
 
 .hero-showcase > .showcase-profile {
@@ -363,16 +368,23 @@ figcaption {
   margin: 0;
 }
 
-/* Each stat as wide as its figure needs at the current type size, the progress across them all. */
+/* Each stat as wide as its figure needs in the current face and type size, and no narrower than
+   a tile, the progress across them all. */
 .figures {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--_tile) * 1.25), 1fr));
+  display: flex;
+  flex-wrap: wrap;
   align-content: start;
   gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
 }
 
-.figures-wide {
-  grid-column: 1 / -1;
+.figures > * {
+  flex: 1 1 calc(var(--_tile) * 1.25);
+  min-inline-size: min(100%, calc(var(--_tile) * 1.25));
+  min-inline-size: calc-size(min-content, min(size, 100%));
+}
+
+.figures > .figures-wide {
+  flex-basis: 100%;
 }
 
 /* Every built-in theme on a tile of its own: `data-theme` on the tile sets that theme's colours
@@ -487,6 +499,23 @@ figcaption {
   color: var(--idg-color-on-accent-subtle);
 }
 
+/* In a column narrower than a phone's (a narrow window with a large type scale, a wide face in
+   capitals), the box and its buttons take a small padding and the buttons drop their icons, so the
+   longest word of a label still fits inside the box. */
+@container (max-inline-size: 20rem) {
+  .combinations {
+    padding: var(--idg-space-s) var(--idg-space-xs);
+  }
+
+  .combinations idg-button::part(control) {
+    padding-inline: var(--idg-space-xs);
+  }
+
+  .combinations idg-icon[slot="start"] {
+    display: none;
+  }
+}
+
 .combinations-figure {
   display: flex;
   flex-wrap: wrap;
@@ -507,11 +536,32 @@ figcaption {
   max-inline-size: var(--idg-size-s);
 }
 
-/* The pages to come: a card is never narrower than its heading at the current type size. */
+/* The pages to come: a card is never narrower than its heading's longest word needs, in the
+   current face and type size, up to the width of the row, so no heading breaks inside a word. The
+   cards on a row share what is left of it. The first, the overview of the features, takes the room
+   of two: with the six after it, the last row holds two cards or more wherever a row holds up to
+   six, where seven cards of one size would leave one alone on the last row at three a row. */
 .next {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--_card)), 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+}
+
+.next > * {
+  flex: 1 1 var(--_card);
+  min-inline-size: min(100%, var(--_card));
+  min-inline-size: calc-size(min-content, min(size, 100%));
+}
+
+/* Where the content is narrower than a card's heading can be (a phone's window, a large type scale
+   and a wide face in capitals), the heading is set smaller rather than broken: its longest word is
+   at most about nine of its letters' height wide, which a ninth of the content's width holds. */
+.next idg-card::part(heading) {
+  font-size: min(calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale)), 9cqi);
+}
+
+.next > :first-child {
+  flex-basis: calc(var(--_card) * 2 + var(--idg-space-s) * var(--idg-density-gap-scale));
 }
 
 /* top-bar, and any layout that sets none of its own: a product page. The sections zigzag, text on
@@ -656,10 +706,6 @@ figcaption {
       padding-block: var(--idg-space-l);
       border-block: calc(var(--idg-border-width) * 3) solid var(--idg-color-text);
     }
-
-    .feature-next .next {
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--_card)), 1fr));
-    }
   }
 
   @container home (min-inline-size: 60rem) {
@@ -698,6 +744,9 @@ figcaption {
     font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
   }
 
+  /* With room, the sign-in form and the figures are two panels side by side; the brand kits, the
+     variations and the pages to come are panels across the grid, the brand kits' text beside their
+     tiles, so no panel is drawn taller than what it holds beside a taller one. */
   @container home (min-inline-size: 40rem) {
     .sections {
       grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -715,23 +764,32 @@ figcaption {
         "body"
         "visual";
     }
-  }
 
-  @container home (min-inline-size: 56rem) {
     .feature-identity {
-      grid-column: 1 / 6;
+      grid-column: 1 / 7;
     }
 
     .feature-tracking {
-      grid-column: 6 / -1;
+      grid-column: 7 / -1;
     }
 
     .feature-brand-kits {
-      grid-column: 1 / 6;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "head visual"
+        "body visual";
     }
+  }
 
-    .feature-variations {
-      grid-column: 6 / -1;
+  @container home (min-inline-size: 56rem) {
+    .feature-variations,
+    .feature-next {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "head body"
+        "visual visual";
     }
   }
 }
@@ -782,8 +840,19 @@ figcaption {
     gap: var(--idg-layout-gap);
   }
 
-  /* In a narrow window the content is one tile already, and its sections are read in it plainly;
-     with room, each section is a tile of its own. */
+  /* In a narrow window the content is one tile already, and its sections are read in it, each
+     ruled off from the last; with room, each section is a tile of its own. */
+  @container home not (min-inline-size: 40rem) {
+    .sections {
+      gap: var(--idg-layout-section-gap);
+    }
+
+    .feature + .feature {
+      padding-block-start: var(--idg-layout-section-gap);
+      border-block-start: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+    }
+  }
+
   @container home (min-inline-size: 40rem) {
     .feature {
       padding: var(--idg-space-m);
@@ -813,16 +882,41 @@ figcaption {
         "body"
         "visual";
     }
+
+    /* On a tablet: the sign-in form in a wide tile beside its text, then the figures and the brand
+       kits in two tiles side by side. */
+    .feature-identity {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "head visual"
+        "body visual";
+    }
+
+    .feature-tracking,
+    .feature-brand-kits {
+      grid-column: span 3;
+    }
   }
 
   /* A wide tile for the sign-in form beside a narrow one for the figures, then tiles across. */
   @container home (min-inline-size: 52rem) {
     .feature-identity {
       grid-column: span 4;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas:
+        "head"
+        "body"
+        "visual";
     }
 
     .feature-tracking {
       grid-column: span 2;
+    }
+
+    .feature-brand-kits {
+      grid-column: 1 / -1;
     }
 
     .feature-brand-kits,
@@ -832,10 +926,6 @@ figcaption {
       grid-template-areas:
         "head body"
         "visual visual";
-    }
-
-    .feature-brand-kits .themes {
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--_tile)), 1fr));
     }
   }
 
@@ -978,14 +1068,18 @@ figcaption {
 /* The 404 page */
 
 .not-found {
+  container-type: inline-size;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
   justify-items: start;
 }
 
+/* As large as the scale makes it, but never wider than the page's column: three figures are at most
+   about two of their height wide. */
 .not-found-code {
   font-family: var(--idg-font-family-display);
-  font-size: calc(var(--idg-font-size-step-6) * 2 * var(--idg-ux-type-scale));
+  font-size: min(calc(var(--idg-font-size-step-6) * 2 * var(--idg-ux-type-scale)), 45cqi);
   font-weight: var(--idg-font-display-weight);
   line-height: 1;
   color: var(--idg-color-link);
