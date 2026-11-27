@@ -192,8 +192,18 @@ body {
    cards go one under another first. */
 .hero-showcase > * {
   flex: 1 1 calc(var(--idg-size-xs) * var(--idg-ux-type-scale));
-  min-inline-size: min(100%, calc(var(--idg-size-xs) * var(--idg-ux-type-scale)));
   min-inline-size: calc-size(min-content, min(size, 100%));
+}
+
+/* An engine without calc-size() (Firefox, Safari) keeps a card, a figure or a card of the pages to
+   come no narrower than what it holds needs, with no limit at the row's width: the type, a card's
+   heading and its padding give way in a narrow column, so it fits there too. */
+@supports not (min-inline-size: calc-size(min-content, size)) {
+  .hero-showcase > *,
+  .figures > *,
+  .next > * {
+    min-inline-size: min-content;
+  }
 }
 
 .hero-showcase > .showcase-profile {
@@ -379,7 +389,6 @@ figcaption {
 
 .figures > * {
   flex: 1 1 calc(var(--_tile) * 1.25);
-  min-inline-size: min(100%, calc(var(--_tile) * 1.25));
   min-inline-size: calc-size(min-content, min(size, 100%));
 }
 
@@ -549,7 +558,6 @@ figcaption {
 
 .next > * {
   flex: 1 1 var(--_card);
-  min-inline-size: min(100%, var(--_card));
   min-inline-size: calc-size(min-content, min(size, 100%));
 }
 
