@@ -15,9 +15,10 @@ prerendered, so a change is seen after the next `dev` (or `build`). `IDG_SITE_PO
 
 ## Settings
 
-| Variable       | Meaning                                                                                                                            | Default                        |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| `IDG_SITE_URL` | The site's public address, the root of an origin (`https://identgineer.dev`). Canonical links and Open Graph URLs are built on it. | `https://identgineer.example/` |
+| Variable       | Meaning                                                                                                                                    | Default                        |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
+| `IDG_SITE_URL` | The site's public address, the root of an origin (`https://identgineer.dev`). Canonical links, Open Graph URLs and the sitemap use it.     | `https://identgineer.example/` |
+| `IDG_CMS_URL`  | The CMS's address (`https://cms.example.com`, or `http://localhost:1337`), read at build time for the reading pages and navigation labels. | unset: the repository's pages  |
 
 The default is on a reserved domain, so a build that forgot the setting never points at anyone's
 site. An address with a path, a query, a fragment or credentials is refused: every link of the site is
@@ -33,7 +34,61 @@ until it is `live`. Each live route is written to `<path>index.html`, and links 
 ordinary links with full page loads.
 
 An address the site does not have gets `404.html`, which the server sends with status 404. It has no
-canonical link and asks not to be indexed.
+canonical link and asks not to be indexed. The build writes `sitemap.xml`, every live route by its
+canonical address (not the 404 page, nor a page whose SEO asks for `noIndex`), and `robots.txt`, which
+names it.
+
+### Reading pages
+
+Features, Identity, Tracking and the docs (the index, Getting started, the theming guide and the
+security notes) are reading pages: one component, `site-content-page`, draws each from a content page
+in `src/content/pages/`, written from the packages' READMEs and the guides in `docs/`. A route names
+its page by `content: "<slug>"`; a docs guide names the docs index as its `parent`, which gives the
+docs their own section navigation, marked with `aria-current`, and links to the page before and after.
+
+A content page (`src/content/content-page.ts`) is data, never HTML: a slug, a title, a summary, SEO
+fields (`metaTitle`, `metaDescription`, `noIndex`) and a body of blocks:
+
+| Block       | What it holds                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------- |
+| `heading`   | Level 2, 3 or 4, as text. The first is level 2 and none skips a level.                   |
+| `paragraph` | Runs of text, each strong, emphasised or code, and links.                                |
+| `list`      | Bulleted or numbered items, each runs of text and links.                                 |
+| `code`      | A sample in one of `html`, `css`, `ts`, `js`, `json`, `sh` or `text`, with a caption.    |
+| `callout`   | A note or a warning, with a title, holding runs of text and links.                       |
+| `table`     | A caption, up to six column headings and rows of cells of runs.                          |
+| `example`   | A live example by name: `sign-in`, `dashboard-figures` or `theme-tiles`, with a caption. |
+
+`parseContentPage` (`src/content/validate-content-page.ts`) gives a valid page or an error that says
+which page, which block, which field and which rule: an unknown key or block, an unknown example or
+language, a heading that skips a level or repeats an id, a control or direction-changing character,
+or a length past its bound (`CONTENT_LIMITS`, including the body's text as a whole). A link is a live
+path of the route table, the `#id` of a heading of the same page, or an `https:` address without
+credentials; anything else (`javascript:`, `data:`, `//host`, `http:`) is refused. The prerenderer
+passes the page to the component as JSON, and the component checks it again before it draws
+anything; every piece becomes an element or text, never markup. An external link gets
+`rel="noopener noreferrer"`. A code sample is plain text with a copy button that is drawn only with
+scripting, and no highlighter.
+
+### The CMS
+
+With `IDG_CMS_URL` set, the build reads the CMS's public REST API (`scripts/cms-content.ts`):
+`GET api/pages?status=published&populate[seo]=true` and `GET api/navigation-items`, as Strapi 5 and
+strapi-php both answer them (`{ data: [records], meta: { pagination } }`). Each Page record's
+`body` is the CMS's rich text (a `blocks` field), made into a body (`scripts/strapi-blocks.ts`):
+paragraphs, headings, lists and code as they are, a quote as a note; an image is refused, since the
+site loads nothing from another origin, and tables and examples cannot come from the CMS. The record
+is then checked by the same validator as the repository's pages and, if valid, replaces the static
+page of the same slug. A navigation item may give a page of the navigation another label in the bar
+or the footer; it can never add a link.
+
+What can go wrong never fails the build: a record that is invalid, a draft (no `publishedAt`), a slug
+the site has no route for, or a page missing from the answer leaves the static copy, and the build
+prints a warning that names it and why. The read is bounded: `https:` only (or `http:` on
+`localhost`, `127.0.0.1` or `[::1]`), no credentials, query or fragment in the address, no
+credentials sent, no redirect followed, one 10 s deadline for all of it, 1 MiB per answer (by
+`Content-Length` and as read), `application/json` only, a status of 200 only, and 4 answers of 25
+records per collection. With the setting unset no request is made.
 
 ### One page, eight arrangements
 

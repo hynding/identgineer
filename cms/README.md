@@ -36,6 +36,12 @@ Field names are the IR's neutral camelCase; each target maps them to its own col
 - **NavigationItem** — `label`, `href` (a site path or an `https://` URL), `order`, `placement`
   (`header`, `footer`, `utility`). Read-only API, like Page.
 
+The site's build reads both when `IDG_CMS_URL` names the CMS: a published page replaces the
+repository's page of the same slug, and a header or footer item relabels a page of the site's
+navigation. A page's body may hold paragraphs, headings, lists, quotes and code; an image is refused.
+Each record is checked as the repository's pages are, and one that fails leaves the repository's copy
+(see [apps/site/README.md](../apps/site/README.md#the-cms)).
+
 ### Identity (owner only)
 
 - **Profile** — one per user: `owner` (one-to-one to the user, unique), `displayName`, `avatar`
