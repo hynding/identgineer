@@ -90,8 +90,11 @@ body {
 
 /* The site's name */
 
+/* Where the bar is too narrow for the mark and the name side by side (a phone, a wide face, a large
+   type scale), the name goes under the mark rather than breaking inside the word. */
 .brand {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--idg-space-2xs);
   color: inherit;
