@@ -47,15 +47,26 @@ arranges them by the layout, with container style queries on `--idg-layout-shell
 | `side-rail`  | A reference manual: sections ruled off, each heading in a narrow column that stays in view. |
 | `split-hero` | Numbered steps, one under another, in the half beside the pinned hero.                      |
 | `magazine`   | An issue: a lead story, two stories side by side with a rule between, a boxed feature.      |
-| `dashboard`  | Dense panels with title bars on a twelve-column grid.                                       |
+| `dashboard`  | Dense panels with title bars: sign-in and figures side by side, the rest across the grid.   |
 | `centered`   | One narrow column with centred headings.                                                    |
-| `bento`      | Tiles of different sizes on one grid.                                                       |
+| `bento`      | Tiles of different sizes on one grid; on a tablet, the sign-in beside its text.             |
 | `immersive`  | Full-width bands, alternately tinted, with large centred headings.                          |
 
 The "On this page" aside stays in view where it is beside the content, and is not drawn where a
-layout would put it after the content (`centered`, `side-rail` and `split-hero`). Every column has
-a minimum that follows the type scale, so a word, a figure or the site's name is never broken
-inside itself; `browser/fit.browser.ts` checks that across designs, layouts and UX modes.
+layout would put it after the content (`centered`, `side-rail` and `split-hero`). Cards and figures
+are never narrower than their content needs in the current face and type size, up to the width of
+the row, and the site's name is no larger than the room idg-layout's brand has beside the menu
+button, so a word, a figure or the name is never broken inside itself and nothing runs under
+anything else; `browser/fit.browser.ts` checks that for every design with every layout and every UX
+mode.
+
+A browser without container style queries applies none of the eight arrangements, idg-layout's or
+the site's: whatever the layout, it gets the shell's own arrangement (the bar, then the hero, the
+content and the "On this page" list one under another, at the content's measure), with the menu
+button, and the site's base rules in it, the sections zigzagging from 40rem of content and stacked
+below that. The tokens a layout sets (gaps, measure) still apply. The base rules are written for
+that shell, and the style queries only add to them; `browser/fit.browser.ts` takes every style query
+out of a page and checks that it still fits in every layout and width.
 
 ## How it is built
 
@@ -153,10 +164,11 @@ need not be served itself.
   already on the root before the body exists; hydration changes nothing in the first screen or 700px
   down; the current page is marked and the first Tab reaches the skip link; the headers are the ones
   the build wrote; every page in every layout reads and navigates with JavaScript off, with its
-  links in the bar and no menu button; and every page fits each design, layout and UX mode at 320,
-  390, 820 and 1440px, with no sideways scroll, nothing cut or spilling out of its box, and no word,
-  figure or name broken inside itself. Any console error, policy violation or request to another
-  origin fails a test.
+  links in the bar and no menu button; and every page fits every design with every layout and every
+  UX mode (the theme and the scheme turning with them) at 320, 390, 820 and 1440px, and without
+  container style queries, with no sideways scroll, nothing cut or spilling out of its box, no word,
+  figure or name broken inside itself and no two controls over each other. Any console error,
+  policy violation or request to another origin fails a test.
 
 `IDG_CPU_THROTTLE=6` runs the hydration tests with the page's CPU six times slower, as a slow CI
 runner is; add `--repeat-each=3` to repeat them.

@@ -236,3 +236,70 @@ for (const { name, path, component } of PAGES) {
     });
   });
 }
+
+/**
+ * Takes every container style query out of the page's styles, the shadow roots' included, as a
+ * browser without style queries never applies them; returns how many it took out.
+ */
+function withoutStyleQueries(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    let removed = 0;
+    const prune = (rules: CSSRuleList, owner: CSSStyleSheet | CSSGroupingRule) => {
+      for (let index = rules.length - 1; index >= 0; index -= 1) {
+        const rule = rules[index];
+        if (rule instanceof CSSContainerRule && rule.conditionText.includes("style(")) {
+          owner.deleteRule(index);
+          removed += 1;
+        } else if (rule instanceof CSSGroupingRule) {
+          prune(rule.cssRules, rule);
+        }
+      }
+    };
+    const sheets = new Set<CSSStyleSheet>([
+      ...document.styleSheets,
+      ...document.adoptedStyleSheets,
+    ]);
+    const collect = (root: Document | ShadowRoot) => {
+      for (const element of root.querySelectorAll("*")) {
+        if (!element.shadowRoot) continue;
+        for (const sheet of element.shadowRoot.adoptedStyleSheets) sheets.add(sheet);
+        for (const sheet of element.shadowRoot.styleSheets) sheets.add(sheet);
+        collect(element.shadowRoot);
+      }
+    };
+    collect(document);
+    for (const sheet of sheets) prune(sheet.cssRules, sheet);
+    return removed;
+  });
+}
+
+// A browser without container style queries applies neither idg-layout's arrangements nor the
+// site's: every layout is the shell's own arrangement, one column, with the site's own base rules
+// in it, and that must fit as well as any layout does.
+for (const { name, path, component } of PAGES) {
+  test(`${name} without container style queries fits in every layout at 320, 390, 820 and 1440px`, async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    const problems: string[] = [];
+    for (const layout of LAYOUTS) {
+      await page.setViewportSize({ width: FIT_WIDTHS[0], height: 900 });
+      await page.goto(`${path}?idg-layout=${layout}`);
+      await hydrated(page, component);
+      expect(await withoutStyleQueries(page), "style queries taken out").toBeGreaterThan(0);
+      for (const width of FIT_WIDTHS) {
+        await page.setViewportSize({ width, height: 900 });
+        await settled(page);
+        const where = `${layout} at ${String(width)}px`;
+        const sideways = await sidewaysScroll(page);
+        if (sideways > 0) problems.push(`${where}: scrolls ${String(sideways)}px sideways`);
+        const { brokenWords, cut, spilled, overlapping } = await misfitsOf(page);
+        for (const word of brokenWords) problems.push(`${where}: "${word}" broken`);
+        for (const what of cut) problems.push(`${where}: ${what} cut`);
+        for (const what of spilled) problems.push(`${where}: ${what} spilled`);
+        for (const pair of overlapping) problems.push(`${where}: ${pair} overlap`);
+      }
+    }
+    expect(problems).toEqual([]);
+  });
+}

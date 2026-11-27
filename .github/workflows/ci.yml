@@ -61,8 +61,9 @@ jobs:
 
   site-browser:
     runs-on: ubuntu-latest
-    # A job of its own, so the components suite's two halves are not slowed. About two minutes of
-    # tests after the build; the limit leaves room for a slow runner.
+    # A job of its own, so the components suite's two halves are not slowed. About six minutes of
+    # tests after the build on a runner's two workers, most of it the sweep of every design, layout
+    # and UX mode; the limit leaves room for a slow runner.
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
