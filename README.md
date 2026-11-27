@@ -78,6 +78,16 @@ events the page declares are collected, and URLs are reduced to a path. See
 model, the options, the wire format and what the collecting server must enforce. Its
 `/dashboard` entry reads a signed-in user's properties, events and figures back from the CMS.
 
+## Website
+
+`apps/site` is the project's website: a Stencil app built from the project's own components, tokens
+and variation runtime, prerendered to static HTML with declarative shadow DOM, so every page reads
+and navigates without JavaScript and re-skins live across the four axes with it. The variation
+bootstrap runs before the first paint, and the build writes the strict content security policy the
+pages need (inline styles only by hash, no inline script, Trusted Types, nothing from another
+origin) to `www/_headers.json` for the deployment to send. `IDG_SITE_URL` sets its public address.
+See [apps/site/README.md](apps/site/README.md).
+
 ## Repository layout
 
 ```
@@ -106,6 +116,7 @@ pnpm lint          # ESLint with type-aware typescript-eslint
 pnpm typecheck     # tsc across every workspace package
 pnpm test          # Vitest
 pnpm build         # build every package that defines a build script
+pnpm --filter @identgineer/site dev  # build the website and serve it locally
 pnpm cms:generate  # camis dry run for the CMS (also cms:validate, cms:build); needs CAMIS_DIR
 pnpm contract:live # the identity SDK and brand kit store against a generated strapi-php backend; needs CAMIS_DIR and PHP 8.3 (Composer for the first run)
 ```

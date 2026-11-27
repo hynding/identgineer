@@ -31,6 +31,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
+      # A build regenerates the committed component declarations; a difference means they are stale.
+      - run: git diff --exit-code
       - run: pnpm audit --audit-level=high
 
   browser:
@@ -56,3 +58,37 @@ jobs:
       - run: pnpm --filter @identgineer/components exec playwright install --with-deps chromium
       - run: pnpm build
       - run: pnpm --filter @identgineer/components test:browser --shard=${{ matrix.shard }}/2
+
+  site-browser:
+    runs-on: ubuntu-latest
+    # A job of its own, so the components suite's two halves are not slowed. The sweep of every
+    # design, layout and UX mode runs in three engines (Chromium, without calc-size() as Safari, and
+    # without calc-size() or container style queries as Firefox), about fourteen minutes on two
+    # workers. Playwright's shards split by the number of tests, not their length, so the suite runs
+    # as three parts by name instead: each engine's sweep, the first with every other test, about
+    # six, four and four minutes after the build. The limit leaves room for a slow runner.
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: chromium and the rest
+            filter: --grep-invert "without calc-size"
+          - part: without calc-size()
+            filter: --grep "without calc-size.. in "
+          - part: without calc-size() or style queries
+            filter: --grep "without calc-size.. or "
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @identgineer/site exec playwright install --with-deps chromium
+      # The site and the workspace packages it is built from, and nothing else.
+      - run: pnpm --filter "@identgineer/site..." build
+      - run: pnpm --filter @identgineer/site test:browser ${{ matrix.filter }}

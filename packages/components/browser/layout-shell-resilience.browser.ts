@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { LAYOUTS, UX_MODES } from "./axes";
+import { LAYOUTS, UX_MODES, applyAxes } from "./axes";
 import { expect, test } from "./fixtures";
 import {
   focusInfo,
@@ -13,6 +13,7 @@ import {
   type Regions,
 } from "./layout-shell-page";
 import { setTextSize, TEXT_SIZES } from "./text-size";
+import { withoutStyleQueries } from "./without-style-queries";
 
 /** What a page puts into the shell that the fixture does not, so the layouts are held to it. */
 type Change =
@@ -826,27 +827,47 @@ test.describe("the menu button does not move, in any UX mode, at larger text or 
 });
 
 test.describe("a window that shrinks and grows a pixel at a time", () => {
-  test("the split hero is pinned only while it fits, and a focused hero link is in the window", async ({
+  test("the split hero is pinned whole while it fits, by its end once it does not, and a focused hero link is in the window", async ({
     page,
   }) => {
     test.setTimeout(180_000);
     await openShell(page, { width: 1280, height: 900, layout: "split-hero" });
-    const state = () =>
-      page.locator("#shell").evaluate((host) => {
-        const tree = host.shadowRoot;
-        const hero = tree?.querySelector<HTMLElement>('[part="hero"]');
+    /** Where the hero is in the window after the page is scrolled down by `by`. */
+    const heroAfterScrolling = async (by: number) => {
+      await page.evaluate((y) => {
+        window.scrollTo(0, y);
+      }, by);
+      await frames(page, 2);
+      return page.locator("#shell").evaluate((host) => {
+        const hero = host.shadowRoot?.querySelector<HTMLElement>('[part="hero"]');
+        const box = hero?.getBoundingClientRect();
         return {
-          tall: tree?.querySelector('[part="shell"]')?.classList.contains("hero-tall") ?? false,
           position: hero ? getComputedStyle(hero).position : "",
+          top: box?.top ?? Number.NaN,
+          bottom: box?.bottom ?? Number.NaN,
+          height: box?.height ?? Number.NaN,
+          window: window.innerHeight,
         };
       });
-    expect(await state()).toEqual({ tall: false, position: "sticky" });
+    };
+    const fits = await heroAfterScrolling(700);
+    expect(fits.position).toBe("sticky");
+    expect(fits.top).toBe(0);
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+    });
     for (let height = 900; height >= 360; height -= 1) {
       await page.setViewportSize({ width: 1280, height });
       await frames(page, 1);
     }
     await frames(page, 3);
-    expect(await state()).toEqual({ tall: true, position: "static" });
+    const tall = await heroAfterScrolling(2000);
+    expect(tall.height, "the hero is taller than the window").toBeGreaterThan(tall.window);
+    expect(tall.position).toBe("sticky");
+    expect(tall.bottom, "the hero's end is in the window").toBeLessThanOrEqual(tall.window);
+    expect(tall.bottom, "and held at its end").toBeGreaterThanOrEqual(tall.window - 1);
+    const start = await heroAfterScrolling(0);
+    expect(start.top, "the hero's start is at the top of the page").toBe(0);
     await page.evaluate(() => {
       window.scrollTo(0, 800);
     });
@@ -863,7 +884,8 @@ test.describe("a window that shrinks and grows a pixel at a time", () => {
       await frames(page, 1);
     }
     await frames(page, 3);
-    expect(await state()).toEqual({ tall: false, position: "sticky" });
+    const fitsAgain = await heroAfterScrolling(700);
+    expect(fitsAgain.top).toBe(0);
   });
 });
 
@@ -1373,4 +1395,123 @@ test.describe("the arrangement follows the width however the page has read the s
       expect(state.lastTop, "the items stack").toBeGreaterThan(state.firstTop + 10);
     });
   }
+});
+
+test.describe("the brand is the measure of what the page puts in it beside the menu button", () => {
+  // A brand that must not break (a name of one word) can only fit by sizing itself to the room the
+  // bar leaves it, and that room is what a container query unit in the brand measures wherever the
+  // bar is a grid that places the brand beside the menu button or on a row of its own: a slotted
+  // element 100cqi wide is as wide as the brand. A bar that wraps (immersive) puts the menu button
+  // on the next line instead, where the brand is wider than the room left. Either way what the page
+  // puts in the brand stays in it. An engine without container style queries (Firefox) draws every
+  // layout as the shell's own arrangement, the menu button beside the brand, and holds to the same.
+  for (const engine of ["", " without container style queries"]) {
+    for (const layout of LAYOUTS) {
+      test(`${layout}${engine}: 100cqi in the brand is the brand's own width, which stays clear of the menu button, in every UX mode`, async ({
+        page,
+      }) => {
+        test.setTimeout(120_000);
+        await openShell(page, { width: 320, layout });
+        if (engine !== "") {
+          expect(await withoutStyleQueries(page), "style queries taken out").toBeGreaterThan(0);
+        }
+        await page.evaluate(() => {
+          const probe = document.createElement("span");
+          probe.id = "brand-probe";
+          // Out of the brand's flow, so that nothing in the brand narrows it.
+          probe.style.position = "absolute";
+          probe.style.inlineSize = "100cqi";
+          probe.style.blockSize = "1px";
+          document.getElementById("brand-link")?.append(probe);
+        });
+        const failures: string[] = [];
+        for (const ux of UX_MODES) {
+          await applyAxes(page, { ux });
+          for (const width of [320, 390, 600, 820]) {
+            await page.setViewportSize({ width, height: 800 });
+            await frames(page, 2);
+            const found = await page.locator("#shell").evaluate((host) => {
+              const brand = host.shadowRoot?.querySelector<HTMLElement>('[part="brand"]');
+              const toggle = host.shadowRoot?.querySelector<HTMLElement>('[part="toggle"]');
+              const probe = document.getElementById("brand-probe");
+              const link = document.getElementById("brand-link");
+              const header = host.shadowRoot?.querySelector<HTMLElement>('[part="header"]');
+              if (!brand || !toggle || !probe || !link || !header) throw new Error("missing");
+              if (!toggle.checkVisibility()) return undefined;
+              const room = brand.getBoundingClientRect();
+              const button = toggle.getBoundingClientRect();
+              const across = Math.min(room.right, button.right) - Math.max(room.left, button.left);
+              const down = Math.min(room.bottom, button.bottom) - Math.max(room.top, button.top);
+              const content = link.getBoundingClientRect();
+              return {
+                grid: getComputedStyle(header).display === "grid",
+                probe: probe.getBoundingClientRect().width,
+                brand: brand.clientWidth,
+                spill: Math.max(content.right - room.right, room.left - content.left),
+                overlap: across > 0.5 && down > 0.5,
+              };
+            });
+            if (!found) continue;
+            const where = `${ux} at ${String(width)}px`;
+            if (found.grid && Math.abs(found.probe - found.brand) > 0.5) {
+              failures.push(
+                `${where}: 100cqi is ${String(found.probe)}px, the brand ${String(found.brand)}px`,
+              );
+            }
+            if (found.overlap) failures.push(`${where}: the brand runs under the menu button`);
+            if (found.spill > 1) {
+              failures.push(`${where}: the brand's content leaves it by ${String(found.spill)}px`);
+            }
+          }
+        }
+        expect(failures).toEqual([]);
+      });
+    }
+  }
+});
+
+test.describe("without a script", () => {
+  // A browser that runs no script cannot be asked for here, so the rule for one is made to apply:
+  // the shell's own `@media (scripting: none)` rule is given a media list that always matches.
+  test("the navigation is in the bar, with no menu button, in every layout and at every width", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await openShell(page);
+    const found = await page.locator("#shell").evaluate((host) => {
+      let rules = 0;
+      for (const sheet of host.shadowRoot?.adoptedStyleSheets ?? []) {
+        for (const rule of sheet.cssRules) {
+          if (rule instanceof CSSMediaRule && rule.conditionText === "(scripting: none)") {
+            rule.media.mediaText = "all";
+            rules += 1;
+          }
+        }
+      }
+      return rules;
+    });
+    expect(found, "the shell's rule for a browser without a script").toBe(1);
+    const failures: string[] = [];
+    for (const layout of LAYOUTS) {
+      await setLayout(page, layout);
+      for (const width of [320, 390, 820, 1280]) {
+        await page.setViewportSize({ width, height: 800 });
+        await frames(page, 2);
+        const state = await page.locator("#shell").evaluate((host) => {
+          const toggle = host.shadowRoot?.querySelector<HTMLElement>('[part="toggle"]');
+          const links = [...host.querySelectorAll<HTMLElement>('[slot="navigation"]')];
+          return {
+            toggle: toggle?.checkVisibility() ?? false,
+            hidden: links
+              .filter((link) => !link.checkVisibility())
+              .map((link) => link.id || link.textContent),
+          };
+        });
+        const where = `${layout} at ${String(width)}px`;
+        if (state.toggle) failures.push(`${where}: the menu button is drawn`);
+        if (state.hidden.length > 0) failures.push(`${where}: ${state.hidden.join(", ")} hidden`);
+      }
+    }
+    expect(failures).toEqual([]);
+  });
 });

@@ -137,9 +137,17 @@ tab, and a parent sized by its content (a table cell, a `min-content` track) no 
 tab down to its widest item, as it used to: tabs with an icon or a badge there can be 10 to 50px
 wider than they were. The other part styles (a gap, a column, a baseline) lay the items out as before.
 
-The vertical list's narrowest width and a button's are set with `calc-size()`. In an engine without
-it a vertical tab may cross its list's border as before, and a button's longest word may run past
-its background in a column narrower than the word, as before.
+The vertical list's narrowest width, a button's and a stat's figure's are set with `calc-size()`.
+In an engine without it (Firefox, Safari) a vertical tab may cross its list's border as before. A
+button falls back, under `@supports not`, to a largest size of the room it is in plus the same reach
+past it, so its longest word stays whole wherever the window has room, as with `calc-size()`; a
+`full-width` button's control fills its row as a flex item there, with the same largest size, rather
+than at a set 100%. Where the window is narrow against the text the word breaks inside the button. A stat's figure falls back
+to `overflow-wrap: break-word`: it is whole wherever what holds the stat sizes it by its content,
+and breaks only where the stat is narrower than it, but at 200% text in a phone's window a parent
+sized by its content is as wide as the figure, where `calc-size()` would let it break to fit.
+`browser/whole-words.browser.ts` holds the button, a `full-width` button in a column narrower than
+a word, and the figure whole in both engines.
 
 ## `idg-button`
 
@@ -1096,7 +1104,19 @@ inert; a **drawer** is a modal dialog (`showModal`): focus moves in, the page be
 scroll-locked, Escape or the close button or a press on the backdrop closes it and focus returns to
 the menu button. Following a link closes either. If the container grows until the navigation is drawn
 inline, an open panel or drawer is reset without moving focus. The drawer slides in but does not
-animate out.
+animate out. Where the page runs no script (`@media (scripting: none)`, a shell prerendered with
+declarative shadow DOM), there is no menu button: the navigation is inline in every layout and at
+every width.
+
+Wherever the menu button is drawn and the bar's grid gives the brand its width (beside the button, or
+on a row of its own), the `brand` part is an inline-size container, so a container query unit in what
+the page slots there measures the room the bar leaves the brand. A name that must not break can be
+set no larger than that, as `font-size: min(1em, 100cqi / 6.8)` for a word of about seven letters'
+height in the widest face, and never runs under the menu button. Where the navigation is in the bar,
+where the bar wraps (`immersive`) and where the brand sits on the split hero, the brand is as wide as
+its content and is no container. The container is the brand's base rule, and those exceptions are
+style queries, so an engine without container style queries, which draws every layout as the
+shell's own arrangement with the menu button, has the brand as the measure of its room too.
 
 Changing `data-layout` while the page is open keeps the scroll position and keeps focus on the same
 element; focus that was in a navigation the new layout collapses goes to the menu button. Where a
@@ -1111,9 +1131,11 @@ and the navigation under it, which scrolls. The menu button does not move when t
 
 **Missing regions.** A layout that has no hero arranges itself without one: the `immersive` header
 becomes a bar of the page on a surface of its own instead of being laid over the hero, and
-`split-hero` stays one column instead of leaving half of the page empty. A split hero is pinned
-only while it fits in the window: one taller than the window (a short window, larger text, a long
-hero) scrolls with the page, and the content still scrolls beside it, so nothing of it is hidden. A region with nothing slotted
+`split-hero` stays one column instead of leaving half of the page empty. A split hero is held by
+its end: one that fits in the window is pinned whole, and one taller than the window (a short
+window, larger text, a long hero) scrolls with the page until its end is in view and stays there
+while the content scrolls beside it, so nothing of it is hidden. The stylesheet alone decides
+this, so a prerendered page looks the same before the script runs as after. A region with nothing slotted
 into it is not drawn, and the layouts leave no gap for it.
 
 **Escape and focus.** Escape closes an open panel only when it happens in the menu button or the
@@ -1245,8 +1267,9 @@ none`) and get an edge in `CanvasText`. The panel has no motion of its own.
   output is different: it is not bundled, so its switcher files keep a bare
   `import … from "@identgineer/variations"`, and that package is TypeScript source until it is
   published with built output (planned with the publishing feature). Until then the collection
-  output is not a supported entry for this component. Consume the loader or the custom-elements
-  build.
+  output is not a supported entry for this component outside this repository: consume the loader or
+  the custom-elements build. Inside it, `apps/site` consumes the collection, with the same transpile
+  step for the workspace sources as this package's own build.
 - **Types.** The switcher's public types (`VariationsChangeDetail`, `VariationState`, `StateKey`,
   `ThemeId`, `DesignId`, `LayoutId`, `UxModeId`, `SchemeChoice`, `SwitcherOrientation`) are declared in
   this package, so `dist/types` never refers to the variations source. A compile-time test holds them
@@ -1902,8 +1925,10 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   not possible, set `IDG_CHROMIUM_PATH` to a Chromium binary (`/opt/pw-browsers/chromium` is used if it
   exists). `IDG_BROWSER_PORT` changes the port (4173). Only Chromium is run.
 - **Variations in the build.** `@identgineer/variations` is TypeScript source with `.ts` import
-  specifiers. Stencil only compiles its own `src`, so `stencil.config.ts` carries a small rollup
-  plugin that transpiles that package's files (and nothing else), and `tsconfig.json` allows `.ts`
+  specifiers. Stencil only compiles its own `src`, so `stencil.config.ts` uses a small rollup
+  plugin, `stencil-workspace-sources.ts` (exported as
+  `@identgineer/components/stencil-workspace-sources` for `apps/site`'s build), that transpiles
+  that package's files (and nothing else), and `tsconfig.json` allows `.ts`
   import specifiers for the type check while `tsconfig.build.json` turns that off again, which
   emit requires. The `variation-switcher.html` fixture loads the bootstrap script from
   `/variations/bootstrap.js`, which the www build copies from `packages/variations/dist` (that

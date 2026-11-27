@@ -13,6 +13,8 @@ export default tseslint.config(
       "**/.stencil/",
       "**/loader/",
       "packages/components/src/components.d.ts",
+      "apps/site/hydrate/",
+      "apps/site/src/components.d.ts",
       "**/coverage/",
       "**/test-results/",
       "**/playwright-report/",

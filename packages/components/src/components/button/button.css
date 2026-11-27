@@ -9,6 +9,17 @@
   max-inline-size: 100%;
 }
 
+/* An engine without calc-size() (Firefox, Safari) drops the two smallest sizes, and the button's
+   smallest is its longest word (its label breaks a word only where the button is narrower). The
+   largest it may then be is the room it is in and the same reach past it, so a row narrower than
+   the word leaves it whole wherever the window has room, as calc-size() does. */
+@supports not (min-inline-size: calc-size(min-content, size)) {
+  :host,
+  .control {
+    max-inline-size: calc(100% + var(--_word-reach));
+  }
+}
+
 .control {
   /* A button wider than the room it is in (a long label at a large text size in a narrow window)
      shrinks to it and wraps its label between words; a word is never broken. It is no narrower than
@@ -45,6 +56,18 @@
 
 :host([full-width]) .control {
   inline-size: 100%;
+}
+
+/* Without calc-size() the full-width control fills the row as a flex item, not by a set width, and
+   its smallest size is a flex item's automatic one: its longest word, capped by its largest size,
+   the room and the same reach past it as the host's. */
+@supports not (min-inline-size: calc-size(min-content, size)) {
+  :host([full-width]) .control {
+    flex: 1 1 100%;
+    min-inline-size: auto;
+    max-inline-size: calc(100% + var(--_word-reach));
+    inline-size: auto;
+  }
 }
 
 /* Size */
@@ -170,6 +193,11 @@
 
 .label {
   min-inline-size: 0;
+  /* A label is as wide as its longest word wherever the rules for the control above give it room,
+     even in a region of the page that lets words break anywhere (idg-layout's hero does): inherited,
+     that would make the label as narrow as a letter, and a row that sizes the button by its content
+     would break its words. A word breaks only where the button is narrower than it. */
+  overflow-wrap: break-word;
 }
 
 .spinner {

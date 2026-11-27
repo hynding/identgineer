@@ -141,15 +141,11 @@ export class IdgLayout {
 
   @State() private modalOpen = false;
 
-  // The hero is taller than the window, which a layout that pins the hero cannot show whole.
-  @State() private heroTall = false;
-
   private shell?: HTMLElement;
   private toggle?: HTMLButtonElement;
   private drawer?: HTMLDialogElement;
   private main?: HTMLElement;
   private navigationElement?: HTMLElement;
-  private heroElement?: HTMLElement;
   private headerElement?: HTMLElement;
   private heldBar?: CSSStyleSheet;
   private mode: NavigationMode = "inline";
@@ -199,7 +195,6 @@ export class IdgLayout {
     this.readPresence();
     this.observeSizes();
     this.readMode();
-    this.readHero();
     // The attribute was in the markup, so nothing changed for the watcher to see.
     if (this.navigationOpen) this.openDrawer();
   }
@@ -237,13 +232,6 @@ export class IdgLayout {
     if (target?.closest('[slot="navigation"]')?.closest("[href]") != null) {
       this.navigationOpen = false;
     }
-  }
-
-  // A pinned hero stops resizing once it is as tall as its content, however much the window shrinks
-  // after that, so the window is watched as well as the hero.
-  @Listen("resize", { target: "window" })
-  handleWindowResize(): void {
-    this.readHero();
   }
 
   // Focus alone does not bring a half-hidden item of a navigation that scrolls into view. Only the
@@ -291,24 +279,10 @@ export class IdgLayout {
   private observeSizes(): void {
     if (typeof ResizeObserver === "undefined") return;
     this.resizeObserver?.disconnect();
-    this.resizeObserver = new ResizeObserver(this.readSizes);
+    this.resizeObserver = new ResizeObserver(this.readMode);
     this.resizeObserver.observe(this.host);
     if (this.toggle) this.resizeObserver.observe(this.toggle);
     if (this.drawer) this.resizeObserver.observe(this.drawer);
-    if (this.heroElement) this.resizeObserver.observe(this.heroElement);
-  }
-
-  private readonly readSizes = (): void => {
-    this.readMode();
-    this.readHero();
-  };
-
-  // A hero is at least as tall as the window where a layout pins it, so a taller one is the hero's
-  // own content, and it stays at that height once it is let go, so the answer does not flip back.
-  private readHero(): void {
-    const height = this.heroElement?.offsetHeight ?? 0;
-    const tall = height > window.innerHeight + 1;
-    if (tall !== this.heroTall) this.heroTall = tall;
   }
 
   private readonly readMode = (): void => {
@@ -518,7 +492,7 @@ export class IdgLayout {
     const hasHeader = presence.brand || presence.navigation || presence.actions;
     return (
       <div
-        class={{ shell: true, "no-hero": !presence.hero, "hero-tall": this.heroTall }}
+        class={{ shell: true, "no-hero": !presence.hero }}
         part="shell"
         ref={(element) => (this.shell = element)}
       >
@@ -582,12 +556,7 @@ export class IdgLayout {
             <slot name="actions" onSlotchange={this.readPresence} />
           </div>
         </header>
-        <div
-          class="hero"
-          part="hero"
-          hidden={!presence.hero}
-          ref={(element) => (this.heroElement = element)}
-        >
+        <div class="hero" part="hero" hidden={!presence.hero}>
           <slot name="hero" onSlotchange={this.readPresence} />
         </div>
         <main

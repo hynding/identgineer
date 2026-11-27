@@ -1,0 +1,1225 @@
+/* The site's own styles, for the content of its pages; idg-layout draws every region around it.
+
+   Every colour, space, type size and corner is a token, so the eight themes, designs, layouts and
+   UX modes re-skin all of it. Sizes adapt to the room a block has (intrinsic grids and the layout
+   primitives), never to the width of the window. */
+
+body {
+  margin: 0;
+  background: var(--idg-color-bg);
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+}
+
+/* Only the appearance controls need a script. Without one they are not drawn, and a note in the
+   footer says so. */
+.script-note {
+  display: none;
+}
+
+@media (scripting: none) {
+  .needs-script {
+    display: none !important;
+  }
+
+  .script-note {
+    display: block;
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Text */
+
+.site-layout :is(h1, h2, h3) {
+  margin: 0;
+  font-family: var(--idg-font-family-display);
+  font-weight: var(--idg-font-display-weight);
+  letter-spacing: var(--idg-font-display-letter-spacing);
+  line-height: var(--idg-font-display-line-height);
+  text-transform: var(--idg-ornament-heading-transform);
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+
+.site-layout h1 {
+  font-size: calc(var(--idg-font-size-step-5) * var(--idg-ux-type-scale));
+}
+
+.site-layout h2 {
+  font-size: calc(var(--idg-font-size-step-3) * var(--idg-ux-type-scale));
+}
+
+.site-layout h3 {
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+}
+
+.site-layout p {
+  margin: 0;
+  max-inline-size: var(--idg-density-measure);
+  overflow-wrap: break-word;
+}
+
+.site-layout :is(.lede, .feature-body > p) {
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+  line-height: var(--idg-font-line-height-snug);
+}
+
+.site-layout a:not([slot]) {
+  color: var(--idg-color-link);
+  text-decoration-thickness: var(--idg-border-width);
+  text-underline-offset: 0.2em;
+}
+
+.site-layout a:not([slot]):focus-visible,
+.brand:focus-visible {
+  outline: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis)) var(--idg-focus-ring-style)
+    var(--idg-color-focus-ring);
+  outline-offset: var(--idg-focus-ring-offset);
+}
+
+/* The site's name */
+
+/* Where the bar is too narrow for the mark and the name side by side (a phone, a wide face, a large
+   type scale), the name goes under the mark rather than breaking inside the word. */
+.brand {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--idg-space-2xs);
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The name is one word, and never broken: where the room is short it goes under the mark, and in a
+   narrow bar, or at a large type scale, it is set smaller instead. Where the menu button is drawn
+   the brand is a container of the room the bar leaves it (idg-layout), so the name is no larger
+   than fits in that room: it is at most about 6.8 of its letters' height wide, in the widest face a
+   theme sets (a monospace one). Where the navigation is in the bar there is no button, and the
+   limit is a share of the whole bar, which leaves the name its size. */
+.brand-name {
+  font-size: min(1em, 100cqi / 6.8);
+  white-space: nowrap;
+}
+
+.brand-mark {
+  flex: none;
+  inline-size: 1.6em;
+  block-size: 1.6em;
+}
+
+.brand-mark-tile {
+  fill: var(--idg-color-accent);
+  rx: var(--idg-shape-radius-md);
+}
+
+.brand-mark-glyph {
+  fill: var(--idg-color-on-accent);
+}
+
+.brand-mark-spark {
+  fill: var(--idg-color-accent-subtle);
+}
+
+@media (forced-colors: active) {
+  .brand-mark-tile {
+    fill: CanvasText;
+  }
+
+  .brand-mark-glyph,
+  .brand-mark-spark {
+    fill: Canvas;
+  }
+}
+
+/* The hero. idg-layout paints it on the accent's subtle colour, so its text keeps to the colour
+   made for that. */
+
+.hero {
+  container: hero / inline-size;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--idg-size-l)), 1fr));
+  align-items: center;
+  gap: calc(var(--idg-space-xl) * var(--idg-density-gap-scale));
+  padding-block: var(--idg-space-m);
+}
+
+.hero-copy {
+  display: grid;
+  gap: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+  justify-items: start;
+}
+
+.hero-actions {
+  justify-self: stretch;
+}
+
+.eyebrow,
+.feature-kicker {
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-semibold);
+  letter-spacing: var(--idg-font-letter-spacing-wider);
+  text-transform: uppercase;
+}
+
+/* As large as the scale makes it, but never so large that its longest word is wider than the hero:
+   a word is at most about seven of its letters' height wide. */
+.site-layout .hero-title {
+  font-size: min(calc(var(--idg-font-size-step-6) * var(--idg-ux-type-scale)), 13cqi);
+  line-height: var(--idg-font-line-height-tight);
+}
+
+.hero-showcase {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  min-inline-size: 0;
+  color: var(--idg-color-text);
+}
+
+/* A card holding a figure is never narrower than what it holds needs (the figure, whole, in the
+   current face and type size), up to the width of the showcase, so the figure never breaks: the
+   cards go one under another first. */
+.hero-showcase > * {
+  flex: 1 1 calc(var(--idg-size-xs) * var(--idg-ux-type-scale));
+  min-inline-size: calc-size(min-content, min(size, 100%));
+}
+
+/* An engine without calc-size() (Firefox, Safari) keeps a card of the showcase or of the figures no
+   narrower than what it holds needs, with no limit at the row's width; a figure is never wider than
+   a phone's column at any type scale, so it fits there too. */
+@supports not (min-inline-size: calc-size(min-content, size)) {
+  .hero-showcase > *,
+  .figures > * {
+    min-inline-size: min-content;
+  }
+}
+
+.hero-showcase > .showcase-profile {
+  flex-basis: 100%;
+}
+
+.profile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--idg-space-s);
+}
+
+.profile-text {
+  flex: 1 1 var(--idg-size-xs);
+  min-inline-size: 0;
+}
+
+.profile-name {
+  font-weight: var(--idg-font-weight-semibold);
+}
+
+.profile-detail,
+.palette-title,
+.axis-says,
+figcaption {
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+}
+
+.palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--idg-space-2xs);
+  margin: var(--idg-space-xs) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.swatch {
+  display: block;
+  inline-size: var(--idg-space-l);
+  block-size: var(--idg-space-l);
+  border: var(--idg-border-width) solid var(--idg-color-border);
+  border-radius: var(--idg-shape-radius-pill);
+  forced-color-adjust: none;
+}
+
+.swatch-accent {
+  background: var(--idg-color-accent);
+}
+
+.swatch-accent-subtle {
+  background: var(--idg-color-accent-subtle);
+}
+
+.swatch-success {
+  background: var(--idg-color-success);
+}
+
+.swatch-warning {
+  background: var(--idg-color-warning);
+}
+
+.swatch-danger {
+  background: var(--idg-color-danger);
+}
+
+.swatch-info {
+  background: var(--idg-color-info);
+}
+
+.swatch-text {
+  background: var(--idg-color-text);
+}
+
+/* The features
+
+   One set of markup: every section is a head (kicker and heading), a body (its text) and a visual.
+   How the sections sit on the page, and how a section's three parts sit in it, follows the layout
+   (`--idg-layout-shell`, which `data-layout` sets), so each of the eight arranges the same content
+   in its own way. Below 40rem of content every layout stacks the three parts. */
+
+/* The sections are laid out on a grid whose columns follow the width of the content, which the
+   wrapper around them, a container, gives. */
+.home {
+  container: home / inline-size;
+  /* A column is never narrower than a tile's text at the current type size. */
+  --_tile: calc(var(--idg-size-xs) * var(--idg-ux-type-scale));
+}
+
+.sections {
+  counter-reset: feature;
+  display: grid;
+  gap: var(--idg-layout-section-gap);
+  padding-block-end: var(--idg-layout-section-gap);
+}
+
+/* The height of the layout's sticky bar, which a layout without one sets to a unitless 0: arithmetic
+   on that in a length would make the whole declaration invalid, so it is read through a property
+   registered as a length, where 0 is 0px, set where it is used. */
+@property --_sticky-inset {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+.feature {
+  counter-increment: feature;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas:
+    "head"
+    "body"
+    "visual";
+  align-content: start;
+  gap: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+  min-inline-size: 0;
+  --_sticky-inset: var(--idg-layout-sticky-inset);
+
+  scroll-margin-block-start: calc(var(--_sticky-inset) + var(--idg-space-m));
+}
+
+.feature-head {
+  grid-area: head;
+  display: grid;
+  gap: var(--idg-space-2xs);
+  align-content: start;
+}
+
+.feature-body {
+  grid-area: body;
+  display: grid;
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  align-content: start;
+}
+
+.feature-visual {
+  grid-area: visual;
+  min-inline-size: 0;
+}
+
+.feature-kicker {
+  display: flex;
+  align-items: center;
+  gap: var(--idg-space-2xs);
+  color: var(--idg-color-link);
+}
+
+.checks {
+  display: grid;
+  gap: var(--idg-space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checks li {
+  position: relative;
+  padding-inline-start: var(--idg-space-l);
+  max-inline-size: var(--idg-density-measure);
+}
+
+/* A tick drawn from two borders, in the success colour, with no image to fetch. */
+.checks li::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: var(--idg-space-2xs);
+  inset-block-start: 0.2em;
+  inline-size: 0.35em;
+  block-size: 0.7em;
+  border: solid var(--idg-color-success);
+  border-width: 0 0.15em 0.15em 0;
+  transform: rotate(45deg);
+}
+
+.preview {
+  display: grid;
+  gap: var(--idg-space-xs);
+  align-content: start;
+  margin: 0;
+}
+
+/* Each stat as wide as its figure needs in the current face and type size, and no narrower than
+   a tile, the progress across them all. */
+.figures {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: start;
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+}
+
+.figures > * {
+  flex: 1 1 calc(var(--_tile) * 1.25);
+  min-inline-size: calc-size(min-content, min(size, 100%));
+}
+
+.figures > .figures-wide {
+  flex-basis: 100%;
+}
+
+/* Every built-in theme on a tile of its own: `data-theme` on the tile sets that theme's colours
+   and fonts for what is inside it. The eight tiles sit one, two, four or eight to a row, as many
+   as the row holds at no narrower than --idg-size-xs at the current type size, so no row is left
+   part empty. The tiles' room is a container whose text size is the page's, so its thresholds
+   follow the type scale: 21em holds two tiles and their gap, 43em four and 87em eight. */
+.themes-room {
+  container: themes / inline-size;
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+}
+
+.themes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@container themes (min-inline-size: 21em) {
+  .themes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container themes (min-inline-size: 43em) {
+  .themes {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@container themes (min-inline-size: 87em) {
+  .themes {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+}
+
+.theme-tile {
+  display: grid;
+  gap: var(--idg-space-2xs);
+  min-inline-size: 0;
+  padding: var(--idg-space-s);
+  border: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+  border-radius: var(--idg-shape-radius-lg);
+  background: var(--idg-color-bg);
+  color: var(--idg-color-text);
+}
+
+/* The sample and the swatches share a row where the tile has room, and the swatches go under the
+   sample where it does not. */
+.theme-sample {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--idg-space-xs);
+  font-family: var(--idg-font-family-display);
+  font-size: calc(var(--idg-font-size-step-4) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-display-weight);
+  line-height: 1;
+  color: var(--idg-color-link);
+}
+
+.theme-name {
+  font-family: var(--idg-font-family-body);
+  font-weight: var(--idg-font-weight-semibold);
+}
+
+.theme-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--idg-space-3xs);
+}
+
+.theme-swatches .swatch {
+  inline-size: var(--idg-space-m);
+  block-size: var(--idg-space-m);
+}
+
+/* The four axes in one row where there is room, then two by two, then one under another: three
+   and one would leave an axis on a row of its own. A container query cannot read a token, so the
+   widths are written out: 36rem holds two cards of --idg-size-s, 60rem four of --idg-size-xs plus
+   their gaps. */
+.feature-variations .feature-visual {
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+}
+
+.axes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+}
+
+@container (min-inline-size: 36rem) {
+  .axes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (min-inline-size: 60rem) {
+  .axes {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.axis-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--idg-space-3xs);
+  margin: var(--idg-space-xs) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.axis-values li {
+  padding: var(--idg-space-3xs) var(--idg-space-2xs);
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--idg-color-accent-subtle);
+  color: var(--idg-color-on-accent-subtle);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+}
+
+.combinations {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--idg-space-m);
+  padding: clamp(var(--idg-space-s), 6cqi, var(--idg-space-l));
+  border-radius: var(--idg-shape-radius-lg);
+  background: var(--idg-color-accent-subtle);
+  color: var(--idg-color-on-accent-subtle);
+}
+
+/* In a column narrower than a phone's (a narrow window with a large type scale, a wide face in
+   capitals), the box and its buttons take a small padding and the buttons drop their icons, so the
+   longest word of a label still fits inside the box. */
+@container (max-inline-size: 20rem) {
+  .combinations {
+    padding: var(--idg-space-s) var(--idg-space-xs);
+  }
+
+  .combinations idg-button::part(control) {
+    padding-inline: var(--idg-space-xs);
+  }
+
+  .combinations idg-icon[slot="start"] {
+    display: none;
+  }
+}
+
+.combinations-figure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--idg-space-xs);
+}
+
+/* A figure is read whole, so it never breaks inside itself. */
+.figure {
+  font-family: var(--idg-font-family-display);
+  font-size: calc(var(--idg-font-size-step-6) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-display-weight);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.figure-label {
+  max-inline-size: var(--idg-size-s);
+}
+
+/* The pages to come: one grid of equal columns, one, two, three or four of them as the row has room
+   for a card no narrower than its heading's longest word needs (about seventeen of the cards' text
+   size, in the widest face in capitals at any type scale). The first card, the overview of the
+   features with a list of what they cover, spans two columns, or the whole row where there are
+   fewer than four: with the six after it, every row is full. The row is a container of its own,
+   and its text size is the cards', so its thresholds follow the type scale. */
+.next {
+  container: next / inline-size;
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+}
+
+.next-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+}
+
+/* Each card is a container too: it takes its column's width whatever its content would ask, and
+   its heading is sized to the card rather than to the row. */
+.next-cards > * {
+  container-type: inline-size;
+}
+
+.next-cards > .next-overview {
+  grid-column: 1 / -1;
+}
+
+@container next (min-inline-size: 35em) {
+  .next-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container next (min-inline-size: 53em) {
+  .next-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container next (min-inline-size: 71em) {
+  .next-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .next-cards > .next-overview {
+    grid-column: span 2;
+  }
+}
+
+/* Where a card is narrower than its heading can be (a phone's window, a large type scale and a wide
+   face in capitals), the heading is set smaller rather than broken: its longest word is at most
+   about nine of its letters' height wide, which the card holds, with its padding, at an eighth of
+   its width. */
+.next idg-card::part(heading) {
+  font-size: min(calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale)), 8cqi);
+}
+
+/* What the features will cover, in as many columns as the card has room for. */
+.next-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--idg-space-3xs) var(--idg-space-s);
+  margin: var(--idg-space-xs) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.next-topics li {
+  display: flex;
+  align-items: center;
+  gap: var(--idg-space-3xs);
+}
+
+/* top-bar, and any layout that sets none of its own: a product page. The sections zigzag, text on
+   one side and what it describes on the other; the variations and the pages to come take the whole
+   width. */
+@container home (min-inline-size: 40rem) {
+  /* The text keeps together at the top of its side, however tall the other side is. */
+  .feature {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "head visual"
+      "body visual";
+    column-gap: calc(var(--idg-space-xl) * var(--idg-density-gap-scale));
+  }
+
+  .feature-tracking {
+    grid-template-areas:
+      "visual head"
+      "visual body";
+  }
+
+  .feature-variations,
+  .feature-next {
+    grid-template-areas:
+      "head body"
+      "visual visual";
+  }
+}
+
+/* top-bar in a narrow column: what each section describes is shown on a tinted panel of its own,
+   as a product page shows its screens. */
+@container style(--idg-layout-shell: top-bar) {
+  @container home not (min-inline-size: 40rem) {
+    .feature-visual {
+      padding: var(--idg-space-s);
+      border-radius: var(--idg-shape-radius-lg);
+      background: var(--idg-color-bg-subtle);
+    }
+  }
+}
+
+/* side-rail: a reference manual. Each section is ruled off from the last, its heading in a narrow
+   column of its own that stays in view while its text and examples scroll past. */
+@container style(--idg-layout-shell: side-rail) {
+  .feature {
+    padding-block-start: var(--idg-space-l);
+    border-block-start: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+  }
+
+  .site-layout .feature h2 {
+    font-size: calc(var(--idg-font-size-step-2) * var(--idg-ux-type-scale));
+  }
+
+  /* A manual's entry: its heading marked off by a heavy rule in the accent at its start, as heavy
+     in a design without borders. */
+  .feature-head {
+    padding-inline-start: var(--idg-space-s);
+    border-inline-start: var(--idg-space-3xs) solid var(--idg-color-accent);
+  }
+
+  @container home (min-inline-size: 40rem) {
+    .feature,
+    .feature-tracking,
+    .feature-variations,
+    .feature-next {
+      grid-template-columns: minmax(min(var(--_tile) * 1.2, 30%), 1fr) minmax(0, 3fr);
+      grid-template-areas:
+        "head body"
+        "head visual";
+    }
+
+    .feature-head {
+      position: sticky;
+      inset-block-start: var(--idg-space-m);
+      align-self: start;
+    }
+  }
+}
+
+/* split-hero: the content is the narrow half beside the hero, read as numbered steps, one under
+   another. */
+@container style(--idg-layout-shell: split-hero) {
+  .feature,
+  .feature-tracking,
+  .feature-variations,
+  .feature-next {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "head"
+      "body"
+      "visual";
+  }
+
+  /* Each step's number large, in the display face, beside its kicker. */
+  .feature-kicker::before {
+    content: counter(feature, decimal-leading-zero) / "";
+    margin-inline-end: var(--idg-space-2xs);
+    padding-inline-end: var(--idg-space-xs);
+    border-inline-end: var(--idg-border-width) var(--idg-border-style) currentcolor;
+    font-family: var(--idg-font-family-display);
+    font-size: calc(var(--idg-font-size-step-4) * var(--idg-ux-type-scale));
+    font-weight: var(--idg-font-display-weight);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    line-height: 1;
+  }
+}
+
+/* magazine: an issue. The first section is the lead story across the page, two stories run side by
+   side under it with a rule between them, the variations are a boxed feature between heavy rules,
+   and the pages to come close the issue. */
+@container style(--idg-layout-shell: magazine) {
+  .feature-kicker {
+    padding-block-end: var(--idg-space-3xs);
+    border-block-end: var(--idg-border-width) var(--idg-border-style) currentcolor;
+    justify-self: start;
+  }
+
+  @container home (min-inline-size: 44rem) {
+    .sections {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      column-gap: calc(var(--idg-space-xl) * var(--idg-density-gap-scale));
+    }
+
+    .feature {
+      grid-column: 1 / -1;
+    }
+
+    /* Each story its heading across, its text in the wider column and its example beside it. The
+       brand kits keep a section's own stack, their eight theme tiles across under their text, where
+       a column would hold one a row. */
+    .feature-identity,
+    .feature-tracking {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "head head"
+        "body visual";
+    }
+
+    .site-layout .feature-identity h2 {
+      font-size: calc(var(--idg-font-size-step-5) * var(--idg-ux-type-scale));
+    }
+
+    .feature-variations {
+      padding-block: var(--idg-space-l);
+      border-block: var(--idg-space-3xs) solid var(--idg-color-text);
+    }
+  }
+
+  /* With room for two columns of reading, the tracking and the brand kits run side by side under
+     the lead, with a rule between them; the figures go one under another, so the two stories come
+     out about as long as each other. */
+  @container home (min-inline-size: 60rem) {
+    .feature-identity .feature-body > p {
+      columns: 2;
+      column-gap: var(--idg-space-l);
+    }
+
+    .feature-tracking,
+    .feature-brand-kits {
+      grid-column: span 3;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas:
+        "head"
+        "body"
+        "visual";
+    }
+
+    .feature-tracking .figures > * {
+      flex-basis: 100%;
+    }
+
+    .feature-brand-kits {
+      position: relative;
+    }
+
+    /* The rule between the two stories, in the middle of the gap. */
+    .feature-brand-kits::before {
+      content: "";
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: calc(var(--idg-space-xl) * var(--idg-density-gap-scale) / -2);
+      border-inline-start: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+    }
+  }
+}
+
+/* dashboard: dense panels on one grid, each with a title bar, smaller type and tighter spacing. */
+@container style(--idg-layout-shell: dashboard) {
+  .sections {
+    gap: var(--idg-layout-gap);
+  }
+
+  .feature {
+    --_panel-pad: clamp(var(--idg-space-2xs), 4cqi, var(--idg-space-s));
+
+    gap: var(--idg-space-s);
+    padding: var(--_panel-pad);
+    border: var(--idg-surface-border-width) var(--idg-surface-border-style)
+      var(--idg-surface-border-color);
+    border-radius: var(--idg-shape-radius-md);
+    background: var(--idg-surface-background);
+  }
+
+  /* Each panel's head is its title bar: tinted, across the panel's top edge to edge. */
+  .feature-head {
+    margin: calc(-1 * var(--_panel-pad)) calc(-1 * var(--_panel-pad)) 0;
+    padding: var(--idg-space-2xs) var(--_panel-pad);
+    border-block-end: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+    border-start-start-radius: inherit;
+    border-start-end-radius: inherit;
+    background: var(--idg-color-bg-subtle);
+  }
+
+  .site-layout .feature h2 {
+    font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+  }
+
+  .site-layout .feature-body > p {
+    font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  }
+
+  /* With room, the sign-in form and the figures are two panels side by side; the brand kits, the
+     variations and the pages to come are panels across the grid, under their title bars, the brand
+     kits' text beside their tiles, so no panel is drawn taller than what it holds beside a taller
+     one. 34rem is the content beside the rail on a tablet: two panels of --idg-size-s and their
+     padding. */
+  @container home (min-inline-size: 34rem) {
+    .sections {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+
+    .feature,
+    .feature-tracking,
+    .feature-variations,
+    .feature-next {
+      grid-column: 1 / -1;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas:
+        "head"
+        "body"
+        "visual";
+    }
+
+    .feature-identity {
+      grid-column: 1 / 7;
+    }
+
+    .feature-tracking {
+      grid-column: 7 / -1;
+    }
+
+    .feature-brand-kits {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "head head"
+        "body visual";
+    }
+  }
+}
+
+/* centered: one narrow column, its headings centred over their text, and no aside beside it to
+   look across to. */
+@container style(--idg-layout-shell: centered) {
+  .feature,
+  .feature-tracking,
+  .feature-variations,
+  .feature-next {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "head"
+      "body"
+      "visual";
+  }
+
+  .feature-head {
+    justify-items: center;
+    text-align: center;
+  }
+
+  /* The hero's text is centred; the cards under it read from their start, the profile's name
+     beside its avatar. */
+  .hero-showcase {
+    text-align: start;
+  }
+
+  .site-layout::part(aside) {
+    display: none;
+  }
+}
+
+/* side-rail and split-hero put the aside after the content, where a list of the sections above it
+   is no help; the side-rail's headings and the split hero's numbers already say where the reader is. */
+@container style(--idg-layout-shell: side-rail) {
+  .site-layout::part(aside) {
+    display: none;
+  }
+}
+
+@container style(--idg-layout-shell: split-hero) {
+  .site-layout::part(aside) {
+    display: none;
+  }
+}
+
+/* bento: every section is a tile of its own on one grid, of different sizes, the sign-in form the
+   largest, the variations on the accent's tint. */
+@container style(--idg-layout-shell: bento) {
+  .sections {
+    gap: var(--idg-layout-gap);
+  }
+
+  /* In a narrow window the content is one tile already, and its sections are read in it, each
+     ruled off from the last; with room, each section is a tile of its own. */
+  @container home not (min-inline-size: 40rem) {
+    .sections {
+      gap: var(--idg-layout-section-gap);
+    }
+
+    .feature + .feature {
+      padding-block-start: var(--idg-layout-section-gap);
+      border-block-start: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+    }
+  }
+
+  @container home (min-inline-size: 40rem) {
+    .feature {
+      padding: var(--idg-space-m);
+      border: var(--idg-surface-border-width) var(--idg-surface-border-style)
+        var(--idg-surface-border-color);
+      border-radius: var(--idg-shape-radius-xl);
+      background: var(--idg-surface-background);
+    }
+
+    .feature-variations {
+      background: var(--idg-color-bg-subtle);
+    }
+
+    .sections {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .feature,
+    .feature-tracking,
+    .feature-variations,
+    .feature-next {
+      grid-column: 1 / -1;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas:
+        "head"
+        "body"
+        "visual";
+    }
+
+    /* A wide tile for the sign-in form beside its text, one for the figures beside theirs, and one
+       for the brand kits, their text above their tiles: on a tablet, two sections side by side would
+       leave one a narrow column half empty beside the other. */
+    .feature-identity {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "head visual"
+        "body visual";
+    }
+
+    .feature-tracking {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "visual head"
+        "visual body";
+    }
+
+    .feature-brand-kits,
+    .feature-variations,
+    .feature-next {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "head body"
+        "visual visual";
+    }
+  }
+
+  /* With more room the sign-in and the figures are two tiles of one size side by side, each its
+     text above its example, which come out about as tall as each other. */
+  @container home (min-inline-size: 52rem) {
+    .feature-identity,
+    .feature-tracking {
+      grid-column: span 3;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas:
+        "head"
+        "body"
+        "visual";
+    }
+  }
+
+  /* The aside is a tile as tall as the page; its links stay in view. */
+  .on-this-page {
+    position: sticky;
+    inset-block-start: var(--idg-space-m);
+  }
+}
+
+/* immersive: every section a band across the whole window, alternately tinted, its heading large
+   and centred over a centred column. */
+@container style(--idg-layout-shell: immersive) {
+  .sections {
+    gap: 0;
+    padding-block-end: 0;
+  }
+
+  .feature,
+  .feature-tracking,
+  .feature-variations,
+  .feature-next {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "head"
+      "body"
+      "visual";
+    justify-items: center;
+    padding-block: var(--idg-layout-section-gap);
+    text-align: center;
+  }
+
+  /* The band reaches the edges of the window. A shadow and a clip draw it there without widening
+     the page, so nothing scrolls sideways. */
+  .feature:nth-child(even) {
+    background: var(--idg-color-bg-subtle);
+    box-shadow: 0 0 0 100vmax var(--idg-color-bg-subtle);
+    clip-path: inset(0 -100vmax);
+  }
+
+  .site-layout .feature h2 {
+    font-size: calc(var(--idg-font-size-step-5) * var(--idg-ux-type-scale));
+  }
+
+  .feature-head,
+  .feature-body {
+    justify-items: center;
+    max-inline-size: var(--idg-density-measure);
+  }
+
+  .feature-visual {
+    inline-size: 100%;
+    max-inline-size: var(--idg-size-2xl);
+    text-align: start;
+  }
+
+  .checks {
+    justify-items: start;
+    text-align: start;
+  }
+}
+
+/* Where the aside is a card beside the content, its links stay in view while the page scrolls. A
+   container query cannot see the shell's own width from here, so the window's stands in: the shell
+   is as wide as the window, and puts the aside beside the content from 72rem. */
+@media (min-width: 73rem) {
+  @container style(--idg-layout-shell: top-bar) {
+    .site-layout::part(aside) {
+      --_sticky-inset: var(--idg-layout-sticky-inset);
+
+      position: sticky;
+      inset-block-start: calc(var(--_sticky-inset) + var(--idg-space-m));
+    }
+  }
+
+  @container style(--idg-layout-shell: magazine) {
+    .site-layout::part(aside) {
+      position: sticky;
+      inset-block-start: var(--idg-space-m);
+    }
+  }
+
+  @container style(--idg-layout-shell: immersive) {
+    .site-layout::part(aside) {
+      position: sticky;
+      inset-block-start: var(--idg-space-m);
+    }
+  }
+}
+
+/* The aside: links to the sections of the page */
+
+.on-this-page {
+  display: grid;
+  gap: var(--idg-space-xs);
+}
+
+.site-layout .on-this-page h2 {
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+}
+
+.on-this-page ul,
+.site-footer-pages ul,
+.page-list {
+  display: grid;
+  gap: var(--idg-space-2xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The footer */
+
+.site-footer {
+  display: grid;
+  gap: var(--idg-space-m);
+}
+
+.site-footer-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--idg-space-xs);
+}
+
+.site-footer-brand .brand-mark {
+  font-size: calc(var(--idg-font-size-step-2) * var(--idg-ux-type-scale));
+}
+
+.site-footer-pages ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--idg-space-xs) var(--idg-space-m);
+}
+
+.colophon,
+.script-note {
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+}
+
+/* The 404 page */
+
+.not-found {
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
+  justify-items: start;
+}
+
+/* As large as the scale makes it, but never wider than the page's column: three figures are at most
+   about two of their height wide. */
+.not-found-code {
+  font-family: var(--idg-font-family-display);
+  font-size: min(calc(var(--idg-font-size-step-6) * 2 * var(--idg-ux-type-scale)), 45cqi);
+  font-weight: var(--idg-font-display-weight);
+  line-height: 1;
+  color: var(--idg-color-link);
+}
+
+.page-list li {
+  display: grid;
+}
+
+.page-list-description {
+  color: var(--idg-color-text-muted);
+}

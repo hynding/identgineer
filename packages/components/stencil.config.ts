@@ -1,38 +1,6 @@
 import type { Config } from "@stencil/core";
-import ts from "typescript";
 import { BUNDLES } from "./stencil-bundles";
-
-const TRANSPILED_SOURCES = [
-  "/packages/variations/src/",
-  "/packages/brand/src/",
-  "/packages/tokens/src/",
-];
-
-// @identgineer/variations is consumed as TypeScript source, like every workspace package. Stencil
-// only compiles what its own tsconfig includes, and including a sibling package's source would
-// make it emit that package's files next to this one. So the files of that package alone are
-// transpiled here, one by one, which erases types and leaves every import as written. That is
-// transpilation only: a type error in that source is caught by `pnpm typecheck`, never by this build.
-const transpileVariations = {
-  name: "transpile-variations",
-  transform(code: string, id: string): { code: string; map: null } | null {
-    // Module ids use backslashes on Windows.
-    const path = id.replaceAll("\\", "/");
-    if (!TRANSPILED_SOURCES.some((source) => path.includes(source)) || !id.endsWith(".ts")) {
-      return null;
-    }
-    const { outputText } = ts.transpileModule(code, {
-      fileName: id,
-      compilerOptions: {
-        target: ts.ScriptTarget.ES2022,
-        module: ts.ModuleKind.ESNext,
-        verbatimModuleSyntax: true,
-        isolatedModules: true,
-      },
-    });
-    return { code: outputText, map: null };
-  },
-};
+import { transpileWorkspaceSources } from "./stencil-workspace-sources";
 
 export const config: Config = {
   namespace: "identgineer",
@@ -40,7 +8,7 @@ export const config: Config = {
   // The lazy loader would otherwise inject a <style> through innerHTML to hide components
   // before hydration, which a strict CSP and Trusted Types both refuse.
   invisiblePrehydration: false,
-  rollupPlugins: { before: [transpileVariations] },
+  rollupPlugins: { before: [transpileWorkspaceSources] },
   // Which components share a bundle is decided in `stencil-bundles.ts`, where its reasons are.
   bundles: BUNDLES.map(({ components }) => ({ components: [...components] })),
   outputTargets: [
