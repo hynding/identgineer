@@ -938,6 +938,12 @@ figcaption {
     text-align: center;
   }
 
+  /* The hero's text is centred; the cards under it read from their start, the profile's name
+     beside its avatar. */
+  .hero-showcase {
+    text-align: start;
+  }
+
   .site-layout::part(aside) {
     display: none;
   }
