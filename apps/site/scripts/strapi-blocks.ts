@@ -11,16 +11,17 @@ import { CODE_LANGUAGES, type CodeLanguage } from "../src/content/content-page.t
  * checks every link, character and bound as it does for the repository's pages.
  */
 export class StrapiBlocksError extends Error {
-  constructor(
-    readonly block: number,
-    readonly type: string | undefined,
-    reason: string,
-  ) {
+  readonly block: number;
+  readonly type: string | undefined;
+
+  constructor(block: number, type: string | undefined, reason: string) {
     super(
       block === 0
         ? `body: ${reason}`
         : `block ${String(block)}${type === undefined ? "" : ` (${type})`}: ${reason}`,
     );
+    this.block = block;
+    this.type = type;
   }
 }
 

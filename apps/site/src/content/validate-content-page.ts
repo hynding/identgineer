@@ -63,11 +63,11 @@ const FORBIDDEN_IN_CODE =
 /* eslint-enable no-control-regex */
 
 class Refusal extends Error {
-  constructor(
-    readonly path: string,
-    message: string,
-  ) {
+  readonly path: string;
+
+  constructor(path: string, message: string) {
     super(message);
+    this.path = path;
   }
 }
 
@@ -200,7 +200,11 @@ class BodyReader {
     [];
   block = 0;
 
-  constructor(private readonly context: ValidationContext) {}
+  private readonly context: ValidationContext;
+
+  constructor(context: ValidationContext) {
+    this.context = context;
+  }
 
   private count(value: string): string {
     this.textLength += value.length;
