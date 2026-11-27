@@ -469,6 +469,13 @@ figcaption {
   color: var(--idg-color-link);
 }
 
+/* The letters keep the room the widest theme's face takes for them (Citrus's, about 1.4 of their
+   size), so every tile of a row needs the same room and puts its swatches beside them, or under
+   them, as the others do. */
+.theme-letters {
+  min-inline-size: 1.45em;
+}
+
 .theme-name {
   font-family: var(--idg-font-family-body);
   font-weight: var(--idg-font-weight-semibold);

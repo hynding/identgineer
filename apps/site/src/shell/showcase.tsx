@@ -52,7 +52,7 @@ export function ThemeTiles() {
       {REGISTRY.theme.variations.map((theme) => (
         <li class="theme-tile" data-theme={theme.id}>
           <span class="theme-sample" aria-hidden="true">
-            Aa
+            <span class="theme-letters">Aa</span>
             <span class="theme-swatches">
               <span class="swatch swatch-accent" />
               <span class="swatch swatch-accent-subtle" />
