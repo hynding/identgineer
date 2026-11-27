@@ -19,7 +19,11 @@ const rows = (value: unknown): Record<string, unknown>[] =>
     : [];
 
 const strings = (list: Record<string, unknown>[], field: string): string[] =>
-  list.flatMap((row) => (typeof row[field] === "string" ? [row[field]] : []));
+  list.flatMap((row) => {
+    // Through a local: Strapi's TypeScript (5.4) does not narrow an access by a variable key.
+    const value = row[field];
+    return typeof value === "string" ? [value] : [];
+  });
 
 export interface StrapiProperty extends IngestProperty {
   readonly documentId: string;
