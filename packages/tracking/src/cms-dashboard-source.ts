@@ -30,6 +30,8 @@ import type {
 export const MAX_DASHBOARD_PAGE_SIZE = 25;
 /** The most properties `listProperties` follows pages for: the components' own limit. */
 export const MAX_DASHBOARD_PROPERTIES = 200;
+// The pages that hold that many properties: the server's pageCount never sets how many are asked.
+const MAX_PROPERTY_PAGES = Math.ceil(MAX_DASHBOARD_PROPERTIES / MAX_DASHBOARD_PAGE_SIZE);
 
 const RANGES: readonly CmsStatRange[] = ["24h", "7d", "30d"];
 const SORT_FIELDS = { time: "occurredAt", name: "name" } as const;
@@ -326,13 +328,17 @@ export function createCmsDashboardSource(options: CmsDashboardSourceOptions): Cm
   return Object.freeze({
     listProperties: guarded("listProperties", async (): Promise<CmsTrackedProperty[]> => {
       const seen = new Map<string, CmsTrackedProperty>();
-      for (let page = 1; seen.size < MAX_DASHBOARD_PROPERTIES; page += 1) {
+      for (let page = 1; page <= MAX_PROPERTY_PAGES; page += 1) {
         const { properties, pagination } = await propertyPage(page);
+        const before = seen.size;
         for (const property of properties) {
           if (seen.size < MAX_DASHBOARD_PROPERTIES && !seen.has(property.id)) {
             seen.set(property.id, property);
           }
         }
+        // A page that adds nothing (empty, or rows already seen) ends the list, whatever the
+        // server says is left, so a server that answers the same page forever is asked twice.
+        if (seen.size === before || seen.size >= MAX_DASHBOARD_PROPERTIES) break;
         if (page >= pagination.pageCount) break;
       }
       return [...seen.values()];

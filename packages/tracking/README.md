@@ -66,11 +66,11 @@ bearer token), so the CMS answers only that user's properties. `baseUrl` is an h
 follows no redirect and is never cached; every answer is read to a bounded size and must be
 exactly what the model allows.
 
-| Method                  | Request                                                    | Notes                                                                                       |
-| ----------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `listProperties()`      | `GET /api/properties` (name and domain only), page by page | Up to `MAX_DASHBOARD_PROPERTIES` (200); never the `ingestKey`; origin is `https://<domain>` |
-| `listEvents(id, query)` | `GET /api/events` filtered by the property                 | `pageSize` at most `MAX_DASHBOARD_PAGE_SIZE` (25); an empty answer is confirmed (below)     |
-| `summary(id, range)`    | `GET /api/properties/<id>/summary?range=24h\|7d\|30d`      | One call                                                                                    |
+| Method                  | Request                                                    | Notes                                                                                                                                              |
+| ----------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listProperties()`      | `GET /api/properties` (name and domain only), page by page | Up to `MAX_DASHBOARD_PROPERTIES` (200), in at most 8 pages, stopping at a page that adds none; never the `ingestKey`; origin is `https://<domain>` |
+| `listEvents(id, query)` | `GET /api/events` filtered by the property                 | `pageSize` at most `MAX_DASHBOARD_PAGE_SIZE` (25); an empty answer is confirmed (below)                                                            |
+| `summary(id, range)`    | `GET /api/properties/<id>/summary?range=24h\|7d\|30d`      | One call                                                                                                                                           |
 
 It rejects only with `CmsDashboardError`, whose `name` is `"DashboardError"` so that
 `validatedSource` carries its `code` on, with a fixed message that holds no id, URL or server text:

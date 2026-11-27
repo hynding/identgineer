@@ -267,6 +267,41 @@ describe("listProperties", () => {
     expect(await source.listProperties()).toHaveLength(25);
   });
 
+  const MAX_PAGES = Math.ceil(MAX_DASHBOARD_PROPERTIES / MAX_DASHBOARD_PAGE_SIZE);
+  const endless = (rowsOf: (page: number) => readonly PropertyRow[]) =>
+    fakeCms({
+      answer: (url) => {
+        if (!url.pathname.endsWith("/api/properties")) return undefined;
+        const page = Number(url.searchParams.get("pagination[page]"));
+        if (page > 1_000) throw new Error("the client did not stop");
+        return json({
+          data: rowsOf(page),
+          meta: { pagination: { page, pageSize: 25, pageCount: 1_000_000, total: 25_000_000 } },
+        });
+      },
+    });
+
+  it("stops at the first page that adds no property, when the server claims endless empty pages", async () => {
+    const { source, sent } = endless((page) =>
+      page === 1 ? Array.from({ length: 25 }, (_, i) => property(i)) : [],
+    );
+    expect(await source.listProperties()).toHaveLength(25);
+    expect(sent).toHaveLength(2);
+  });
+
+  it("stops at the first page that adds no property, when the server sends the same rows again", async () => {
+    const rows = Array.from({ length: 25 }, (_, i) => property(i));
+    const { source, sent } = endless(() => rows);
+    expect(await source.listProperties()).toHaveLength(25);
+    expect(sent).toHaveLength(2);
+  });
+
+  it(`asks for at most ${String(MAX_PAGES)} pages, however few properties each one adds`, async () => {
+    const { source, sent } = endless((page) => [property(page)]);
+    expect(await source.listProperties()).toHaveLength(MAX_PAGES);
+    expect(sent).toHaveLength(MAX_PAGES);
+  });
+
   it.each([401])("rejects %s as unauthenticated", async (status) => {
     const { source } = fakeCms({ answer: () => json({}, status) });
     expect((await rejection(source.listProperties())).code).toBe("unauthenticated");
