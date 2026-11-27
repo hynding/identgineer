@@ -68,3 +68,29 @@ describe("page metadata", () => {
     });
   });
 });
+
+describe("the metadata of a reading page", () => {
+  const theming = page("docs/theming/index.html");
+
+  it("is the route's, when its content page sets nothing of its own", () => {
+    const metadata = pageMetadata(theming, SITE, {});
+    expect(metadata.title).toBe(`${theming.title} · ${SITE_NAME}`);
+    expect(metadata.description).toBe(theming.description);
+    expect(metadata.robots).toBeUndefined();
+  });
+
+  it("takes the title and description its content page sets", () => {
+    const metadata = pageMetadata(theming, SITE, {
+      metaTitle: "Themes",
+      metaDescription: "How the looks are made.",
+    });
+    expect(metadata.title).toBe(`Themes · ${SITE_NAME}`);
+    expect(metadata.description).toBe("How the looks are made.");
+    expect(metadata.openGraph).toContainEqual(["og:description", "How the looks are made."]);
+  });
+
+  it("keeps it out of search results when its content page asks", () => {
+    expect(pageMetadata(theming, SITE, { noIndex: true }).robots).toBe("noindex");
+    expect(pageMetadata(theming, SITE, { noIndex: false }).robots).toBeUndefined();
+  });
+});
