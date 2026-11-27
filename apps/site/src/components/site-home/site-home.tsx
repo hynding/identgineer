@@ -1,6 +1,6 @@
 import { Component, h, State } from "@stencil/core";
 import { REGISTRY, applyVariations, shuffleVariations } from "@identgineer/variations";
-import { linkableRoutes } from "../../routes";
+import { isOverview, linkableRoutes } from "../../routes";
 import { describeLook, lookCount } from "../../shell/appearance";
 import { SiteShell, openAppearance } from "../../shell/site-shell";
 
@@ -301,21 +301,32 @@ export class SiteHome {
         </div>
         <div class="feature-visual next">
           <div class="next-cards">
-            {linkableRoutes().map((route, index) =>
-              route.status === "live" ? (
-                <idg-card heading={route.label} href={route.path} variant="raised">
+            {linkableRoutes().map((route) => {
+              const overview = isOverview(route);
+              return route.status === "live" ? (
+                <idg-card
+                  class={{ "next-overview": overview }}
+                  heading={route.label}
+                  href={route.path}
+                  variant="raised"
+                >
                   {route.description}
+                  {overview ? this.renderTopics() : null}
                 </idg-card>
               ) : (
-                <idg-card heading={route.label} variant="outlined">
+                <idg-card
+                  class={{ "next-overview": overview }}
+                  heading={route.label}
+                  variant="outlined"
+                >
                   <idg-badge slot="header" variant="info" size="sm">
                     Coming soon
                   </idg-badge>
                   {route.description}
-                  {index === 0 ? this.renderTopics() : null}
+                  {overview ? this.renderTopics() : null}
                 </idg-card>
-              ),
-            )}
+              );
+            })}
           </div>
         </div>
       </section>

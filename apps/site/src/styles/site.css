@@ -603,7 +603,7 @@ figcaption {
   container-type: inline-size;
 }
 
-.next-cards > :first-child {
+.next-cards > .next-overview {
   grid-column: 1 / -1;
 }
 
@@ -624,7 +624,7 @@ figcaption {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .next-cards > :first-child {
+  .next-cards > .next-overview {
     grid-column: span 2;
   }
 }

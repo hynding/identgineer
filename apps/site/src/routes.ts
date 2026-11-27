@@ -139,6 +139,14 @@ export function navigationRoutes(): readonly LiveRoute[] {
   return ROUTES.filter(isLive);
 }
 
+/**
+ * The overview of the features, which leads the home page's links: its card spans two columns and
+ * lists what the features cover, whether the page is live yet or coming.
+ */
+export function isOverview(route: Route): boolean {
+  return route.path === "/features/";
+}
+
 /** The routes the home page points to: everything but itself, live or coming. */
 export function linkableRoutes(): readonly Route[] {
   return ROUTES.filter((route) => route.path !== "/");
