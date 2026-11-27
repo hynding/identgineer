@@ -8,8 +8,7 @@ use App\Hooks\Contracts\PropertySummaryEndpoint;
 use App\Models\Event;
 use App\Models\Property;
 use App\Models\User;
-use App\Summary\SummaryFigures;
-use App\Summary\SummaryQueries;
+use App\Summary\SummaryCounts;
 use App\Summary\SummaryWindow;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -29,7 +28,7 @@ use UnexpectedValueException;
  * sent more than once, is 400 before any lookup; a caller without a user (an API token, which the
  * route lets through) is 403; then one query asks for the property by its document id and the
  * caller as owner, so a property that does not exist and one that is someone else's are both 404,
- * with the same body, after the same work. Then two grouped counts (App\Summary\SummaryQueries)
+ * with the same body, after the same work. Then two grouped counts (App\Summary\SummaryCounts)
  * make the figures, without loading an event. Every answer of the handler carries
  * Cache-Control: no-store. A database failure is 503, logged by the error's class alone: its
  * message holds the query and its bindings. No event text is read, so none can be logged.
@@ -106,12 +105,8 @@ final class PropertySummary implements PropertySummaryEndpoint
     private static function figures(SummaryWindow $window, int $propertyId): array
     {
         $model = new Event;
-        $connection = $model->getConnection();
-        $queries = SummaryQueries::for($window, $connection->getTablePrefix().$model->getTable(), $propertyId, $connection->getDriverName());
-        $buckets = $connection->select($queries['buckets']['sql'], $queries['buckets']['bindings']);
-        $visitors = $connection->select($queries['visitors']['sql'], $queries['visitors']['bindings']);
 
-        return SummaryFigures::of($window, $buckets, $visitors[0] ?? null);
+        return SummaryCounts::of($window, $model->getConnection(), $model->getTable(), $propertyId);
     }
 
     /**

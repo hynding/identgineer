@@ -164,7 +164,9 @@ held to `cms/tests/fixtures/property-summary-vectors.json`.
 - Vitest (`cms/tests/ingest-*.test.ts`) tests the Strapi side against a fake document service, and
   `cms/tests/ingest-php-vectors.test.ts` runs `app/Ingest`'s validator and normaliser on the shared
   vectors with plain PHP (no Laravel app), so `pnpm test` and CI hold both targets to them.
-  `cms/tests/summary-php-vectors.test.ts` does the same for `app/Summary` with PDO sqlite, and
+  `cms/tests/summary-php-vectors.test.ts` does the same for `app/Summary` with PDO sqlite (through
+  `SummaryCounts`, the hook's counting, on a stand-in connection that also shows a `mariadb` driver
+  gets the byte-wise SQL), and
   `cms/tests/summary-*.test.ts` run the Strapi handler and its SQL over `node:sqlite`.
 - `cms/tsconfig.strapi.json` type-checks `src/` and `config/` as the generated Strapi project
   compiles them (CommonJS, the ES2020 library, `strict` off), as part of `pnpm typecheck`.

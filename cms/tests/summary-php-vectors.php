@@ -13,10 +13,47 @@ $summary = __DIR__.'/../protected/app/Summary';
 require $summary.'/SummaryWindow.php';
 require $summary.'/SummaryQueries.php';
 require $summary.'/SummaryFigures.php';
+require $summary.'/SummaryCounts.php';
 
+use App\Summary\SummaryCounts;
 use App\Summary\SummaryFigures;
 use App\Summary\SummaryQueries;
 use App\Summary\SummaryWindow;
+
+/**
+ * The parts of Laravel's database connection that SummaryCounts uses: the driver's name, the
+ * table prefix and select, run here on PDO and recorded.
+ */
+final class StubConnection
+{
+    /** @var list<string> */
+    public array $sent = [];
+
+    public function __construct(private readonly string $driver, private readonly ?PDO $pdo = null) {}
+
+    public function getDriverName(): string
+    {
+        return $this->driver;
+    }
+
+    public function getTablePrefix(): string
+    {
+        return '';
+    }
+
+    /** @param list<int|string> $bindings */
+    public function select(string $query, array $bindings = []): array
+    {
+        $this->sent[] = $query;
+        if ($this->pdo === null) {
+            return [];
+        }
+        $statement = $this->pdo->prepare($query);
+        $statement->execute($bindings);
+
+        return $statement->fetchAll();
+    }
+}
 
 const PROPERTY = 3;
 const OTHER_PROPERTY = 4;
@@ -34,12 +71,7 @@ foreach ($vectors as $vector) {
     }
     $nowMs = (int) round((new DateTimeImmutable($vector['now']))->format('U.u') * 1000);
     $window = SummaryWindow::of($nowMs, $vector['range']);
-    $queries = SummaryQueries::for($window, 'events', PROPERTY, 'sqlite');
-    $buckets = $pdo->prepare($queries['buckets']['sql']);
-    $buckets->execute($queries['buckets']['bindings']);
-    $visitors = $pdo->prepare($queries['visitors']['sql']);
-    $visitors->execute($queries['visitors']['bindings']);
-    $answers[] = ['name' => $vector['name'], 'figures' => SummaryFigures::of($window, $buckets->fetchAll(), $visitors->fetch() ?: null)];
+    $answers[] = ['name' => $vector['name'], 'figures' => SummaryCounts::of($window, new StubConnection('sqlite', $pdo), 'events', PROPERTY)];
 }
 
 // The SQL each Laravel driver is sent, for the same window, so the test can compare the dialects.
@@ -50,4 +82,12 @@ foreach (['sqlite', 'pgsql', 'mysql', 'mariadb'] as $driver) {
     $sql[$driver] = ['buckets' => $queries['buckets']['sql'], 'visitors' => $queries['visitors']['sql']];
 }
 
-echo json_encode(['php' => PHP_VERSION, 'answers' => $answers, 'sql' => $sql], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+// What the hook's counting sends through a connection, by the connection's own driver name.
+$sent = [];
+foreach (['sqlite', 'mariadb'] as $driver) {
+    $connection = new StubConnection($driver);
+    SummaryCounts::of($window, $connection, 'events', PROPERTY);
+    $sent[$driver] = $connection->sent;
+}
+
+echo json_encode(['php' => PHP_VERSION, 'answers' => $answers, 'sql' => $sql, 'sent' => $sent], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);

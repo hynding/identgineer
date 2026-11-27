@@ -32,9 +32,11 @@ describe.skipIf(!hasPhp)(
       return JSON.parse(result.stdout) as {
         answers: { name: string; figures: unknown }[];
         sql: Record<string, { buckets: string; visitors: string }>;
+        sent: Record<string, string[]>;
       };
     };
-    const { answers, sql } = hasPhp && php.stdout === "yes" ? run() : { answers: [], sql: {} };
+    const { answers, sql, sent } =
+      hasPhp && php.stdout === "yes" ? run() : { answers: [], sql: {}, sent: {} };
 
     it("ran on every vector", () => {
       expect(php.stdout, "PHP needs pdo_sqlite for these tests").toBe("yes");
@@ -50,6 +52,14 @@ describe.skipIf(!hasPhp)(
         expect(queries?.buckets).toContain("CAST(session_id AS BINARY) AS session_id");
         expect(queries?.visitors.match(/THEN CAST\(session_id AS BINARY\) END/g)).toHaveLength(2);
       }
+    });
+
+    // The hook counts through SummaryCounts, which reads the driver from the connection itself.
+    it("sends the counts in the form of the connection's own driver", () => {
+      expect(sent.sqlite).toHaveLength(2);
+      expect(sent.mariadb).toHaveLength(2);
+      for (const query of sent.sqlite ?? []) expect(query).not.toMatch(/BINARY/);
+      for (const query of sent.mariadb ?? []) expect(query).toContain("CAST(session_id AS BINARY)");
     });
 
     it.each(vectors.map((vector, index) => [vector.name, index] as const))("%s", (_name, index) => {
