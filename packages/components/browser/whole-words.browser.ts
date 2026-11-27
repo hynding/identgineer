@@ -9,18 +9,23 @@ import { withoutCalcSize } from "./without-calc-size";
 // button's label is read whole, so neither takes it up: in a parent sized by its content, where an
 // inherited break anywhere would make the content as narrow as a letter, each is still as wide as
 // its longest word. In a row narrower than the label's longest word, in a window with room, the
-// button keeps the word whole and reaches past the row, as a button's smallest size allows.
+// button keeps the word whole and reaches past the row, as a button's smallest size allows, and so
+// does a full-width button (the sign-in and consent forms' kind) in a column narrower than a word.
 //
 // An engine without `calc-size()`, with which the stat and the button set their smallest size,
 // must keep the words whole too, so each case is also run with it taken out of the styles.
 
 const FIGURE = "12,480";
 const LABEL = "Surprise me";
+const FULL_WIDTH_LABEL = "Open the appearance panel";
 
-/** Places a stat and a button in a column as narrow as its content, whose words break anywhere. */
+/**
+ * Places a stat and a button in a column as narrow as its content, a button in a row and a
+ * full-width button in a narrow column, all where words break anywhere.
+ */
 async function placeInBreakAnywhereColumn(page: Page): Promise<void> {
   await page.evaluate(
-    ({ figure, label }) => {
+    ({ figure, label, fullWidthLabel }) => {
       document.getElementById("whole-words")?.remove();
       const column = document.createElement("div");
       column.id = "whole-words";
@@ -41,10 +46,19 @@ async function placeInBreakAnywhereColumn(page: Page): Promise<void> {
       const narrow = document.createElement("idg-button");
       narrow.textContent = label;
       row.append(narrow);
+      // A column of 120px, narrower than "appearance" at any type size, with a full-width button.
+      const narrowColumn = document.createElement("div");
+      narrowColumn.id = "whole-words-full-width";
+      narrowColumn.style.inlineSize = "120px";
+      narrowColumn.style.overflowWrap = "anywhere";
+      const fullWidth = document.createElement("idg-button");
+      fullWidth.setAttribute("full-width", "");
+      fullWidth.textContent = fullWidthLabel;
+      narrowColumn.append(fullWidth);
       column.append(stat, button);
-      document.body.prepend(column, row);
+      document.body.prepend(column, row, narrowColumn);
     },
-    { figure: FIGURE, label: LABEL },
+    { figure: FIGURE, label: LABEL, fullWidthLabel: FULL_WIDTH_LABEL },
   );
   await hydrated(page);
   await settleFrames(page);
@@ -70,6 +84,7 @@ function brokenWords(page: Page): Promise<string[]> {
       column?.querySelector("idg-stat")?.shadowRoot?.querySelector('[part="value"]'),
       column?.querySelector("idg-button"),
       document.querySelector("#whole-words-row idg-button"),
+      document.querySelector("#whole-words-full-width idg-button"),
     ];
     const broken: string[] = [];
     for (const holder of texts) {
