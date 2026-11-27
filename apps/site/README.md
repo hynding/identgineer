@@ -71,10 +71,8 @@ default choices before the switcher has read the visitor's.
 ### Hydration
 
 The client build takes over the prerendered page as it is: the browser suite compares the first
-screen before and after hydration in each layout. One difference is by design and out of the first
-screen: `split-hero` pins its hero only while it fits in the window, which `idg-layout` measures with
-its script, so a hero taller than the window is pinned until hydration and scrolls with the page
-after it.
+screen before and after hydration in each layout. Nothing the page looks like is decided by a
+script, so nothing moves when the client build arrives.
 
 ## The policy
 

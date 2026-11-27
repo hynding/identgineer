@@ -826,27 +826,47 @@ test.describe("the menu button does not move, in any UX mode, at larger text or 
 });
 
 test.describe("a window that shrinks and grows a pixel at a time", () => {
-  test("the split hero is pinned only while it fits, and a focused hero link is in the window", async ({
+  test("the split hero is pinned whole while it fits, by its end once it does not, and a focused hero link is in the window", async ({
     page,
   }) => {
     test.setTimeout(180_000);
     await openShell(page, { width: 1280, height: 900, layout: "split-hero" });
-    const state = () =>
-      page.locator("#shell").evaluate((host) => {
-        const tree = host.shadowRoot;
-        const hero = tree?.querySelector<HTMLElement>('[part="hero"]');
+    /** Where the hero is in the window after the page is scrolled down by `by`. */
+    const heroAfterScrolling = async (by: number) => {
+      await page.evaluate((y) => {
+        window.scrollTo(0, y);
+      }, by);
+      await frames(page, 2);
+      return page.locator("#shell").evaluate((host) => {
+        const hero = host.shadowRoot?.querySelector<HTMLElement>('[part="hero"]');
+        const box = hero?.getBoundingClientRect();
         return {
-          tall: tree?.querySelector('[part="shell"]')?.classList.contains("hero-tall") ?? false,
           position: hero ? getComputedStyle(hero).position : "",
+          top: box?.top ?? Number.NaN,
+          bottom: box?.bottom ?? Number.NaN,
+          height: box?.height ?? Number.NaN,
+          window: window.innerHeight,
         };
       });
-    expect(await state()).toEqual({ tall: false, position: "sticky" });
+    };
+    const fits = await heroAfterScrolling(700);
+    expect(fits.position).toBe("sticky");
+    expect(fits.top).toBe(0);
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+    });
     for (let height = 900; height >= 360; height -= 1) {
       await page.setViewportSize({ width: 1280, height });
       await frames(page, 1);
     }
     await frames(page, 3);
-    expect(await state()).toEqual({ tall: true, position: "static" });
+    const tall = await heroAfterScrolling(2000);
+    expect(tall.height, "the hero is taller than the window").toBeGreaterThan(tall.window);
+    expect(tall.position).toBe("sticky");
+    expect(tall.bottom, "the hero's end is in the window").toBeLessThanOrEqual(tall.window);
+    expect(tall.bottom, "and held at its end").toBeGreaterThanOrEqual(tall.window - 1);
+    const start = await heroAfterScrolling(0);
+    expect(start.top, "the hero's start is at the top of the page").toBe(0);
     await page.evaluate(() => {
       window.scrollTo(0, 800);
     });
@@ -863,7 +883,8 @@ test.describe("a window that shrinks and grows a pixel at a time", () => {
       await frames(page, 1);
     }
     await frames(page, 3);
-    expect(await state()).toEqual({ tall: false, position: "sticky" });
+    const fitsAgain = await heroAfterScrolling(700);
+    expect(fitsAgain.top).toBe(0);
   });
 });
 

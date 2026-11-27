@@ -765,24 +765,22 @@
       color: var(--idg-color-on-accent-subtle);
     }
 
+    /* The hero is held by its end: one that fits in the window is pinned whole, and one taller than
+       the window scrolls with the page until its end is in view and is pinned there, so nothing of
+       it is ever hidden. The stylesheet alone decides, so the page looks the same before any script
+       has run as after. */
     .shell:not(.no-hero) .hero {
       position: sticky;
-      inset-block-start: 0;
+      inset-block-end: 0;
       grid-column: 1;
       grid-row: 1 / 4;
-      align-self: start;
+      align-self: end;
       box-sizing: border-box;
       min-block-size: var(--idg-size-screen);
       margin: 0;
       padding-block: calc(var(--_bar) + var(--_section)) var(--_section);
       padding-inline: var(--_section);
       border-radius: 0;
-    }
-
-    /* A hero taller than the window cannot be pinned without hiding its end, so it scrolls with the
-       page, and the content still scrolls beside it. */
-    .shell:not(.no-hero).hero-tall .hero {
-      position: static;
     }
 
     .shell:not(.no-hero) .main,

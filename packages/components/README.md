@@ -1111,9 +1111,11 @@ and the navigation under it, which scrolls. The menu button does not move when t
 
 **Missing regions.** A layout that has no hero arranges itself without one: the `immersive` header
 becomes a bar of the page on a surface of its own instead of being laid over the hero, and
-`split-hero` stays one column instead of leaving half of the page empty. A split hero is pinned
-only while it fits in the window: one taller than the window (a short window, larger text, a long
-hero) scrolls with the page, and the content still scrolls beside it, so nothing of it is hidden. A region with nothing slotted
+`split-hero` stays one column instead of leaving half of the page empty. A split hero is held by
+its end: one that fits in the window is pinned whole, and one taller than the window (a short
+window, larger text, a long hero) scrolls with the page until its end is in view and stays there
+while the content scrolls beside it, so nothing of it is hidden. The stylesheet alone decides
+this, so a prerendered page looks the same before the script runs as after. A region with nothing slotted
 into it is not drawn, and the layouts leave no gap for it.
 
 **Escape and focus.** Escape closes an open panel only when it happens in the menu button or the
