@@ -395,15 +395,41 @@ figcaption {
 }
 
 /* Every built-in theme on a tile of its own: `data-theme` on the tile sets that theme's colours
-   and fonts for what is inside it. */
+   and fonts for what is inside it. The eight tiles sit one, two, four or eight to a row, as many
+   as the row holds at no narrower than --idg-size-xs at the current type size, so no row is left
+   part empty. The tiles' room is a container whose text size is the page's, so its thresholds
+   follow the type scale: 21em holds two tiles and their gap, 43em four and 87em eight. */
+.themes-room {
+  container: themes / inline-size;
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+}
+
 .themes {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--_tile)), 1fr));
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+@container themes (min-inline-size: 21em) {
+  .themes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container themes (min-inline-size: 43em) {
+  .themes {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@container themes (min-inline-size: 87em) {
+  .themes {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
 }
 
 .theme-tile {

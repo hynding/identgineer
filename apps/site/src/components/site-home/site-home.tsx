@@ -201,21 +201,23 @@ export class SiteHome {
             sees them. These are the eight themes that ship:
           </p>
         </div>
-        <ul class="feature-visual themes">
-          {REGISTRY.theme.variations.map((theme) => (
-            <li class="theme-tile" data-theme={theme.id}>
-              <span class="theme-sample" aria-hidden="true">
-                Aa
-                <span class="theme-swatches">
-                  <span class="swatch swatch-accent" />
-                  <span class="swatch swatch-accent-subtle" />
-                  <span class="swatch swatch-text" />
+        <div class="feature-visual themes-room">
+          <ul class="themes">
+            {REGISTRY.theme.variations.map((theme) => (
+              <li class="theme-tile" data-theme={theme.id}>
+                <span class="theme-sample" aria-hidden="true">
+                  Aa
+                  <span class="theme-swatches">
+                    <span class="swatch swatch-accent" />
+                    <span class="swatch swatch-accent-subtle" />
+                    <span class="swatch swatch-text" />
+                  </span>
                 </span>
-              </span>
-              <span class="theme-name">{theme.label}</span>
-            </li>
-          ))}
-        </ul>
+                <span class="theme-name">{theme.label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
     );
   }
