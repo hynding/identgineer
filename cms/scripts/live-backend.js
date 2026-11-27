@@ -490,6 +490,7 @@ const startServer = async (server, shared) => {
     hideAccountExistence: server.hideAccountExistence ?? true,
     accessTokenLifetimeSeconds: server.accessTokenLifespan ?? ACCESS_TOKEN_LIFESPAN,
     ...ratesOf(server),
+    database: env.DB_DATABASE,
   };
 };
 

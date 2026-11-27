@@ -11,7 +11,8 @@ import { linkParameterIn, mailsIn } from "./mail-log.ts";
 
 /** One running strapi-php server, as cms/scripts/live-backend.js describes it. */
 export interface LiveServer {
-  readonly name: "main" | "confirmation" | "disclosing" | "throttled" | "shortLived";
+  readonly name:
+    "main" | "confirmation" | "disclosing" | "throttled" | "shortLived" | "ingestLimited";
   readonly url: string;
   readonly emailConfirmation: boolean;
   /** CAMIS_AUTH_HIDE_ACCOUNT_EXISTENCE: off only on the disclosing server, as Strapi answers. */
@@ -21,6 +22,11 @@ export interface LiveServer {
   readonly throttlePerMinute: number;
   readonly addressThrottlePerMinute: number;
   readonly refreshThrottlePerMinute: number;
+  /** The ingestion endpoint's rates: per address (camis' guard) and per key (the handler). */
+  readonly ingestThrottlePerMinute: number;
+  readonly ingestKeyRatePerMinute: number;
+  /** The server's sqlite database file. */
+  readonly database: string;
 }
 
 export interface LiveBackend {
