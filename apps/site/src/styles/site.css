@@ -675,8 +675,12 @@ figcaption {
       grid-column: 1 / -1;
     }
 
-    .feature-identity {
+    /* Each story its heading across, its text in the wider column and its example beside it. */
+    .feature-identity,
+    .feature-tracking,
+    .feature-brand-kits {
       grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      grid-template-rows: auto 1fr;
       grid-template-areas:
         "head head"
         "body visual";
@@ -684,6 +688,21 @@ figcaption {
 
     .site-layout .feature-identity h2 {
       font-size: calc(var(--idg-font-size-step-5) * var(--idg-ux-type-scale));
+    }
+
+    .feature-variations {
+      padding-block: var(--idg-space-l);
+      border-block: calc(var(--idg-border-width) * 3) solid var(--idg-color-text);
+    }
+  }
+
+  /* With room for two columns of reading, the tracking and the brand kits run side by side under
+     the lead, with a rule between them; the figures go one under another, so the two stories come
+     out about as long as each other. */
+  @container home (min-inline-size: 60rem) {
+    .feature-identity .feature-body > p {
+      columns: 2;
+      column-gap: var(--idg-space-l);
     }
 
     .feature-tracking,
@@ -697,6 +716,10 @@ figcaption {
         "visual";
     }
 
+    .feature-tracking .figures > * {
+      flex-basis: 100%;
+    }
+
     .feature-brand-kits {
       position: relative;
     }
@@ -708,18 +731,6 @@ figcaption {
       inset-block: 0;
       inset-inline-start: calc(var(--idg-space-xl) * var(--idg-density-gap-scale) / -2);
       border-inline-start: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
-    }
-
-    .feature-variations {
-      padding-block: var(--idg-space-l);
-      border-block: calc(var(--idg-border-width) * 3) solid var(--idg-color-text);
-    }
-  }
-
-  @container home (min-inline-size: 60rem) {
-    .feature-identity .feature-body > p {
-      columns: 2;
-      column-gap: var(--idg-space-l);
     }
   }
 }
@@ -892,8 +903,9 @@ figcaption {
         "visual";
     }
 
-    /* On a tablet: the sign-in form in a wide tile beside its text, then the figures and the brand
-       kits in two tiles side by side. */
+    /* A wide tile for the sign-in form beside its text, one for the figures beside theirs, and one
+       for the brand kits, their text above their tiles: on a tablet, two sections side by side would
+       leave one a narrow column half empty beside the other. */
     .feature-identity {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       grid-template-rows: auto 1fr;
@@ -902,39 +914,37 @@ figcaption {
         "body visual";
     }
 
-    .feature-tracking,
-    .feature-brand-kits {
-      grid-column: span 3;
-    }
-  }
-
-  /* A wide tile for the sign-in form beside a narrow one for the figures, then tiles across. */
-  @container home (min-inline-size: 52rem) {
-    .feature-identity {
-      grid-column: span 4;
-      grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: auto auto 1fr;
-      grid-template-areas:
-        "head"
-        "body"
-        "visual";
-    }
-
     .feature-tracking {
-      grid-column: span 2;
-    }
-
-    .feature-brand-kits {
-      grid-column: 1 / -1;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "visual head"
+        "visual body";
     }
 
     .feature-brand-kits,
     .feature-variations,
     .feature-next {
       grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      grid-template-rows: auto 1fr;
       grid-template-areas:
         "head body"
         "visual visual";
+    }
+  }
+
+  /* With more room the sign-in and the figures are two tiles of one size side by side, each its
+     text above its example, which come out about as tall as each other. */
+  @container home (min-inline-size: 52rem) {
+    .feature-identity,
+    .feature-tracking {
+      grid-column: span 3;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas:
+        "head"
+        "body"
+        "visual";
     }
   }
 
