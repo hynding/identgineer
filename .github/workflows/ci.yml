@@ -63,10 +63,10 @@ jobs:
     runs-on: ubuntu-latest
     # A job of its own, so the components suite's two halves are not slowed. The sweep of every
     # design, layout and UX mode runs in three engines (Chromium, without calc-size() as Safari, and
-    # without calc-size() or container style queries as Firefox), about fifteen minutes on two
+    # without calc-size() or container style queries as Firefox), about fourteen minutes on two
     # workers. Playwright's shards split by the number of tests, not their length, so the suite runs
-    # as three parts by name instead: each engine's sweep, the first with every other test, each
-    # about five to six minutes after the build. The limit leaves room for a slow runner.
+    # as three parts by name instead: each engine's sweep, the first with every other test, about
+    # six, four and four minutes after the build. The limit leaves room for a slow runner.
     timeout-minutes: 20
     strategy:
       fail-fast: false
