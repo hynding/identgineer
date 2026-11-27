@@ -56,3 +56,23 @@ jobs:
       - run: pnpm --filter @identgineer/components exec playwright install --with-deps chromium
       - run: pnpm build
       - run: pnpm --filter @identgineer/components test:browser --shard=${{ matrix.shard }}/2
+
+  site-browser:
+    runs-on: ubuntu-latest
+    # A job of its own, so the components suite's two halves are not slowed. About two minutes of
+    # tests after the build; the limit leaves room for a slow runner.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @identgineer/site exec playwright install --with-deps chromium
+      # The site and the workspace packages it is built from, and nothing else.
+      - run: pnpm --filter "@identgineer/site..." build
+      - run: pnpm --filter @identgineer/site test:browser
