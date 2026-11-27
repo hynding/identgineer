@@ -3,6 +3,10 @@ export const PLACEHOLDER_SITE_URL = "https://identgineer.example/";
 
 const SETTING = "IDG_SITE_URL";
 
+/** Labels of letters and digits, with hyphens inside them, one dot apart (IDN is punycode by now). */
+const HOST_NAME = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$/;
+const IPV6_ADDRESS = /^\[[0-9a-f:.]+\]$/;
+
 function refuse(given: string, reason: string): never {
   throw new Error(`${SETTING} ${JSON.stringify(given)} ${reason}`);
 }
@@ -26,6 +30,10 @@ export function siteUrlFrom(environment: Readonly<Record<string, string | undefi
   }
   if (url.username !== "" || url.password !== "") {
     refuse(given, "must not hold a user name or password");
+  }
+  // `new URL` keeps characters no host name has, such as quotes and braces, as they are written.
+  if (!HOST_NAME.test(url.hostname) && !IPV6_ADDRESS.test(url.hostname)) {
+    refuse(given, "must name its host with letters, digits, dots and hyphens");
   }
   // `new URL` drops an empty `?` or `#`, so the text is checked as well as the parsed parts.
   if (url.pathname !== "/" || url.search !== "" || url.hash !== "" || /[?#]/.test(given)) {

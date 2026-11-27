@@ -16,6 +16,9 @@ describe("the site's public address", () => {
     ["https://identgineer.dev/", "https://identgineer.dev/"],
     ["https://WWW.Identgineer.dev:8443", "https://www.identgineer.dev:8443/"],
     ["http://localhost:4174", "http://localhost:4174/"],
+    ["https://bücher.dev", "https://xn--bcher-kva.dev/"],
+    ["http://127.0.0.1:4174", "http://127.0.0.1:4174/"],
+    ["http://[::1]:4174", "http://[::1]:4174/"],
   ])("takes %s as %s", (given, expected) => {
     expect(siteUrlFrom({ IDG_SITE_URL: given }).href).toBe(expected);
   });
@@ -27,6 +30,12 @@ describe("the site's public address", () => {
     ["https://identgineer.dev/site/", "must be the root of its origin"],
     ["https://identgineer.dev/?a=1", "must be the root of its origin"],
     ["https://identgineer.dev/#top", "must be the root of its origin"],
+    ['https://ident"gineer.dev', "must name its host with letters, digits, dots and hyphens"],
+    ["https://it's.dev", "must name its host with letters, digits, dots and hyphens"],
+    ["https://a{b}.dev", "must name its host with letters, digits, dots and hyphens"],
+    ["https://a_b.dev", "must name its host with letters, digits, dots and hyphens"],
+    ["https://-identgineer.dev", "must name its host with letters, digits, dots and hyphens"],
+    ["https://identgineer..dev", "must name its host with letters, digits, dots and hyphens"],
   ])("refuses %s, which %s", (given, reason) => {
     expect(() => siteUrlFrom({ IDG_SITE_URL: given })).toThrow(reason);
   });
