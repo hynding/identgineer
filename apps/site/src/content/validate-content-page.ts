@@ -434,3 +434,51 @@ export function parseContentPage(input: unknown, context: ValidationContext): Co
     };
   }
 }
+
+/** A navigation item of the CMS, which may name a page of the site's navigation by another label. */
+export interface NavigationItem {
+  readonly label: string;
+  readonly href: string;
+  readonly placement: "header" | "footer" | "utility";
+  readonly order: number;
+}
+
+export type NavigationResult =
+  | { readonly ok: true; readonly item: NavigationItem }
+  | { readonly ok: false; readonly message: string };
+
+const NAVIGATION_LABEL = 60;
+
+/**
+ * A navigation item checked as a page's text and links are: a label of plain text, and a target
+ * that is a page of the site's own navigation (an item can rename a page there, never add a link).
+ */
+export function parseNavigationItem(
+  input: unknown,
+  navigationPaths: ReadonlySet<string>,
+): NavigationResult {
+  try {
+    const fields = fieldsOf(input, "", ["label", "href", "placement", "order"]);
+    const label = text(fields.label, "label", NAVIGATION_LABEL);
+    const href = text(fields.href, "href", CONTENT_LIMITS.href);
+    if (!navigationPaths.has(href)) {
+      throw new Refusal("href", `${quote(href)} is not a page of the site's navigation`);
+    }
+    const placement = oneOf(fields.placement, "placement", [
+      "header",
+      "footer",
+      "utility",
+    ] as const);
+    const order = fields.order;
+    if (typeof order !== "number" || !Number.isInteger(order) || order < 0) {
+      throw new Refusal("order", "must be a whole number, 0 or more");
+    }
+    return { ok: true, item: { label, href, placement, order } };
+  } catch (error) {
+    const refusal = error instanceof Refusal ? error : new Refusal("", "could not be read");
+    return {
+      ok: false,
+      message: refusal.path === "" ? refusal.message : `${refusal.path}: ${refusal.message}`,
+    };
+  }
+}
