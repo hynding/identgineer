@@ -668,10 +668,11 @@ figcaption {
     font-size: calc(var(--idg-font-size-step-2) * var(--idg-ux-type-scale));
   }
 
-  /* A manual's entry: its heading marked off by a heavy rule in the accent at its start. */
+  /* A manual's entry: its heading marked off by a heavy rule in the accent at its start, as heavy
+     in a design without borders. */
   .feature-head {
     padding-inline-start: var(--idg-space-s);
-    border-inline-start: calc(var(--idg-border-width) * 3) solid var(--idg-color-accent);
+    border-inline-start: var(--idg-space-3xs) solid var(--idg-color-accent);
   }
 
   @container home (min-inline-size: 40rem) {
