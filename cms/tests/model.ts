@@ -52,6 +52,8 @@ export interface Field {
   names?: { api?: string };
   inverse?: string;
   inverseNames?: { api: string };
+  component?: string;
+  repeatable?: boolean;
 }
 
 export interface ContentType {
@@ -68,6 +70,10 @@ export interface Endpoint {
   method: string;
   path: string;
   public?: boolean;
+  throttle?: { perMinute: number };
+  maxBodyBytes?: number;
+  accepts?: string[];
+  crossOrigin?: { headers: string[] };
 }
 
 export interface IrDocument {

@@ -68,11 +68,13 @@ describe("tracking data minimisation", () => {
     }
   });
 
-  it("keeps an event's path without its query string or fragment", () => {
+  // The handler keeps only the query parameters the property allows (tracking-model.test.ts).
+  it("keeps an event's path origin-relative and without a fragment", () => {
     const path = matcher("Event", "path");
     expect(path.test("/pricing")).toBe(true);
-    expect(path.test("/search?q=someone@example.com")).toBe(false);
+    expect(path.test("/pricing?utm_source=news")).toBe(true);
     expect(path.test("/docs#install")).toBe(false);
+    expect(path.test("/a b")).toBe(false);
     expect(path.test("https://example.com/pricing")).toBe(false);
   });
 
@@ -120,21 +122,18 @@ describe("event ingestion", () => {
     expect(contentTypeNamed(ir, contentType).options?.apiActions).toEqual(["list", "read"]);
   });
 
-  it.each([
-    ["Event", "/ingest/events"],
-    ["ConsentRecord", "/ingest/consent"],
-  ])("writes %s through a public POST %s endpoint", (contentType, path) => {
-    const endpoint = endpoints.find((e) => e.contentType === contentType);
-    expect(endpoint).toMatchObject({ method: "POST", path, public: true });
+  it("writes Event through a public POST /ingest/events endpoint", () => {
+    const endpoint = endpoints.find((e) => e.contentType === "Event");
+    expect(endpoint).toMatchObject({ method: "POST", path: "/ingest/events", public: true });
   });
 
-  it("has no public endpoint other than the two ingestion ones", () => {
-    expect(
-      endpoints
-        .filter((e) => e.public === true)
-        .map((e) => e.name)
-        .sort(),
-    ).toEqual(["IngestEvent", "RecordConsent"]);
+  // The SDK keeps consent in the browser and sends no record, so nothing writes ConsentRecord.
+  it("has no public endpoint other than event ingestion", () => {
+    expect(endpoints.filter((e) => e.public === true).map((e) => e.name)).toEqual(["IngestEvent"]);
+  });
+
+  it("has no endpoint that writes consent records", () => {
+    expect(endpoints.filter((e) => e.contentType === "ConsentRecord")).toEqual([]);
   });
 
   it("has no endpoint that reads", () => {

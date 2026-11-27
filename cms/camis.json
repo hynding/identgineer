@@ -197,6 +197,18 @@
           "repeatable": true
         },
         {
+          "type": "component",
+          "name": "allowedEvents",
+          "component": "AllowedEvent",
+          "repeatable": true
+        },
+        {
+          "type": "component",
+          "name": "allowedQueryParams",
+          "component": "AllowedQueryParam",
+          "repeatable": true
+        },
+        {
           "type": "string",
           "name": "ingestKey",
           "required": true,
@@ -242,13 +254,21 @@
           "name": "name",
           "required": true,
           "maxLength": 64,
-          "pattern": "^[a-z][a-z0-9_.:-]{0,63}$"
+          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+        },
+        {
+          "type": "string",
+          "name": "dedupeKey",
+          "required": true,
+          "unique": true,
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$"
         },
         { "type": "dateTime", "name": "occurredAt", "required": true },
         {
           "type": "string",
           "name": "sessionId",
-          "required": true,
           "minLength": 16,
           "maxLength": 64,
           "pattern": "^[A-Za-z0-9_-]{16,64}$"
@@ -256,9 +276,8 @@
         {
           "type": "string",
           "name": "path",
-          "required": true,
           "maxLength": 2048,
-          "pattern": "^/[^?#\\s]*$"
+          "pattern": "^/[^#\\s]*$"
         },
         {
           "type": "string",
@@ -358,6 +377,51 @@
       ]
     },
     {
+      "name": "AllowedEvent",
+      "names": { "display": "Allowed event", "group": "tracking" },
+      "fields": [
+        {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+        },
+        {
+          "type": "component",
+          "name": "propertyKeys",
+          "component": "AllowedPropertyKey",
+          "repeatable": true
+        }
+      ]
+    },
+    {
+      "name": "AllowedPropertyKey",
+      "names": { "display": "Allowed property key", "group": "tracking" },
+      "fields": [
+        {
+          "type": "string",
+          "name": "key",
+          "required": true,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+        }
+      ]
+    },
+    {
+      "name": "AllowedQueryParam",
+      "names": { "display": "Allowed query parameter", "group": "tracking" },
+      "fields": [
+        {
+          "type": "string",
+          "name": "name",
+          "required": true,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9_.-]{1,64}$"
+        }
+      ]
+    },
+    {
       "name": "ConsentCategories",
       "names": { "display": "Consent categories", "group": "tracking" },
       "fields": [
@@ -383,14 +447,11 @@
       "contentType": "Event",
       "method": "POST",
       "path": "/ingest/events",
-      "public": true
-    },
-    {
-      "name": "RecordConsent",
-      "contentType": "ConsentRecord",
-      "method": "POST",
-      "path": "/ingest/consent",
-      "public": true
+      "public": true,
+      "throttle": { "perMinute": 120 },
+      "maxBodyBytes": 65536,
+      "accepts": ["application/json", "text/plain"],
+      "crossOrigin": { "headers": ["Content-Type", "X-Idg-Write-Key"] }
     }
   ],
   "schedules": [{ "name": "PurgeExpiredEvents", "cron": "17 3 * * *" }]
