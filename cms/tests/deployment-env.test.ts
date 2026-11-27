@@ -174,3 +174,31 @@ describe(".env.example, strapi-php's deployment settings for the identity SDK", 
     },
   );
 });
+
+describe(".env.example, the ingestion handlers' limits", () => {
+  const section = (): Map<string, string> => {
+    const text = readCmsText(".env.example");
+    const lines = text.slice(text.indexOf("# Ingestion handlers")).split("\n");
+    return new Map(
+      lines
+        .filter((line) => /^[A-Z_]+=/.test(line))
+        .map((line) => [line.split("=")[0] ?? "", line.split("=")[1] ?? ""]),
+    );
+  };
+  it("lists exactly the variables the handlers and camis' guard read, at their defaults", () => {
+    expect(Object.fromEntries(section())).toEqual({
+      INGEST_MAX_BODY_BYTES: "65536",
+      INGEST_KEY_RATE_PER_MINUTE: "3000",
+      CAMIS_ENDPOINT_INGEST_EVENT_THROTTLE_PER_MINUTE: "120",
+    });
+  });
+
+  it("is read alike by both targets' handlers", () => {
+    for (const key of ["INGEST_MAX_BODY_BYTES", "INGEST_KEY_RATE_PER_MINUTE"]) {
+      expect(readCmsText("protected/config/ingest.php"), key).toContain(`env('${key}')`);
+      expect(readCmsText("protected/src/ingest/settings.ts"), key).toContain(`env.${key}`);
+    }
+    expect(readCmsText("protected/config/ingest.php")).toContain("65536");
+    expect(readCmsText("protected/config/ingest.php")).toContain("3000");
+  });
+});
