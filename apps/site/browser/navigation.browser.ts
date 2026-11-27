@@ -74,7 +74,9 @@ test.describe("a code sample's copy button", () => {
     const sample = page.locator("figure.code-sample").first();
     const code = await sample.locator("pre code").textContent();
     await sample.locator("idg-button.code-copy").click();
-    await expect(page.locator(".reading-body > p[role=status]")).toHaveText(/^Copied the .+ sample\.$/);
+    await expect(page.locator(".reading-body > p[role=status]")).toHaveText(
+      /^Copied the .+ sample\.$/,
+    );
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(code);
   });
 });
