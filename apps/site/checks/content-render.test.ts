@@ -195,9 +195,11 @@ describe.skipIf(!built)("a reading page, as the prerenderer draws it", () => {
     expect(figure.querySelector(".themes-room")).not.toBeNull();
   });
 
-  it("lists the headings in a table of contents, the level 3 ones under their section", () => {
-    const contents = one("nav.contents");
-    expect(contents.getAttribute("aria-labelledby")).toBe("contents-title");
+  it.each([
+    ["in the shell's aside, as the home page's", 'nav.contents[slot="aside"]'],
+    ["beside the article, for the layouts that draw no aside", "nav.contents-inline"],
+  ])("lists the headings in a table of contents %s, level 3 under level 2", (_, selector) => {
+    const contents = one(selector);
     const top = [...contents.querySelectorAll("a")].filter(
       (link) => link.parentElement?.parentElement?.parentElement === contents,
     );
@@ -206,6 +208,14 @@ describe.skipIf(!built)("a reading page, as the prerenderer draws it", () => {
       "#second-section",
     ]);
     expect(contents.querySelector("ul ul a")?.getAttribute("href")).toBe("#a-detail");
+  });
+
+  it("names each table of contents by its visible heading or label", () => {
+    expect(one('nav.contents[slot="aside"]').getAttribute("aria-labelledby")).toBe(
+      "contents-title",
+    );
+    expect(one("nav.contents-inline").getAttribute("aria-label")).toBe("On this page");
+    expect(one(".reading-body").classList.contains("with-section")).toBe(true);
   });
 
   it("marks the page in the docs' own navigation, and links the pages before and after", () => {
