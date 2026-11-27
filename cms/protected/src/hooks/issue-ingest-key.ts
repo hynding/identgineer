@@ -12,7 +12,7 @@ interface IssueIngestKeyHook {
 }
 
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-/** Random characters after `pk_`: 40 of 62 (238 bits), within Property.ingestKey's 19 to 61. */
+/** Random characters after `pk_`: 40 of 62 (238 bits), within Property.ingestKey's 32 to 61. */
 export const INGEST_KEY_RANDOM_LENGTH = 40;
 
 /** `pk_` and 40 characters from Node's cryptographically secure generator. */

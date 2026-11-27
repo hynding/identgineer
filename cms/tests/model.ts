@@ -76,10 +76,27 @@ export interface Endpoint {
   crossOrigin?: { headers: string[] };
 }
 
+export interface Hook {
+  name: string;
+  trigger: string;
+  contentType: string;
+  input: { name: string; type: string }[];
+  output: { name: string; type: string }[];
+}
+
+export interface RouteHook {
+  name: string;
+  contentType: string;
+  actions?: string[];
+}
+
 export interface IrDocument {
   version: 1;
   contentTypes: ContentType[];
   components: { name: string; fields: Field[] }[];
+  hooks?: Hook[];
+  middlewares?: RouteHook[];
+  policies?: RouteHook[];
   endpoints?: Endpoint[];
 }
 

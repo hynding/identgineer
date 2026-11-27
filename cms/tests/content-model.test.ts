@@ -140,14 +140,33 @@ describe("event ingestion", () => {
     expect(endpoints.filter((e) => e.method !== "POST")).toEqual([]);
   });
 
-  it("scopes ingestion by a unique, prefixed public key on the property", () => {
+  it("scopes ingestion by a unique, prefixed public key of 32 or more random characters", () => {
     const key = fieldOf("Property", "ingestKey");
-    expect(key.required).toBe(true);
     expect(key.unique).toBe(true);
     const pattern = matcher("Property", "ingestKey");
-    expect(pattern.test("pk_4Fq9ZsY2mRb7Xc1Lp0Tw8N")).toBe(true);
-    expect(pattern.test("sk_4Fq9ZsY2mRb7Xc1Lp0Tw8N")).toBe(false);
-    expect(pattern.test("pk_short")).toBe(false);
+    expect(pattern.test(`pk_${"a".repeat(32)}`)).toBe(true);
+    expect(pattern.test(`pk_${"a".repeat(31)}`)).toBe(false);
+    expect(pattern.test(`sk_${"a".repeat(40)}`)).toBe(false);
+    expect(key.minLength).toBe(35);
+  });
+
+  it("owns the ingest key on the server: a client need not send it, and what it sends is dropped", () => {
+    // Not required, so a create without one passes validation; the beforeCreate hook issues it.
+    expect(fieldOf("Property", "ingestKey").required).not.toBe(true);
+    expect(ir.hooks).toContainEqual(
+      expect.objectContaining({
+        name: "IssueIngestKey",
+        trigger: "beforeCreate",
+        contentType: "Property",
+        output: [{ name: "ingestKey", type: "string" }],
+      }),
+    );
+    // A key sent on a create or an update is taken out of the body before the controller reads it.
+    expect(ir.middlewares).toContainEqual({
+      name: "DropClientIngestKey",
+      contentType: "Property",
+      actions: ["create", "update"],
+    });
   });
 
   it("allows only https origins on a property", () => {

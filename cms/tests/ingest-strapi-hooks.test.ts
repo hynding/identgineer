@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import purgeTask, { type QueryEngineLike } from "../protected/src/cron/purge-expired-events.ts";
 import { issueIngestKey, newIngestKey } from "../protected/src/hooks/issue-ingest-key.ts";
+import dropClientIngestKey, {
+  type WriteContext,
+} from "../protected/src/middlewares/drop-client-ingest-key.ts";
 import { contentTypeNamed, loadIr } from "./model";
 
 const ingestKeyPattern = new RegExp(
@@ -27,6 +30,56 @@ describe("IssueIngestKey on Strapi", () => {
     expect(new Set(keys).size).toBe(200);
     const characters = new Set(keys.join("").replace(/pk_/g, ""));
     expect(characters.size).toBe(62);
+  });
+});
+
+describe("DropClientIngestKey on Strapi", () => {
+  const CHOSEN = `pk_${"A".repeat(40)}`;
+
+  /** Runs the middleware on a body and returns the body the next step (the controller) reads. */
+  const passOn = async (body: unknown): Promise<unknown> => {
+    const context: WriteContext = { request: { body } };
+    let seen: unknown = "not called";
+    await dropClientIngestKey()(context, () => {
+      seen = context.request.body;
+      return Promise.resolve();
+    });
+    return seen;
+  };
+
+  it("takes a client's key out of a create's or an update's data, keeping every other field", async () => {
+    expect(await passOn({ data: { name: "Shop", ingestKey: CHOSEN }, extra: 1 })).toEqual({
+      data: { name: "Shop" },
+      extra: 1,
+    });
+  });
+
+  it("takes it out of a multipart body's data, which arrives as JSON text", async () => {
+    const body = (await passOn({ data: JSON.stringify({ name: "Shop", ingestKey: CHOSEN }) })) as {
+      data: string;
+    };
+    expect(JSON.parse(body.data)).toEqual({ name: "Shop" });
+  });
+
+  it("passes a body without a key, or one it cannot read, on unchanged", async () => {
+    for (const body of [
+      { data: { name: "Shop" } },
+      { data: "not json" },
+      { data: null },
+      undefined,
+    ]) {
+      expect(await passOn(body)).toEqual(body);
+    }
+  });
+
+  it("drops a key sent as null or under an own __proto__ key too", async () => {
+    expect(await passOn({ data: { name: "Shop", ingestKey: null } })).toEqual({
+      data: { name: "Shop" },
+    });
+    const parsed = JSON.parse(`{"data":{"__proto__":{"x":1},"ingestKey":"${CHOSEN}"}}`) as unknown;
+    const body = (await passOn(parsed)) as { data: Record<string, unknown> };
+    expect(Object.prototype.hasOwnProperty.call(body.data, "ingestKey")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(body.data, "__proto__")).toBe(true);
   });
 });
 

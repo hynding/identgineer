@@ -211,11 +211,10 @@
         {
           "type": "string",
           "name": "ingestKey",
-          "required": true,
           "unique": true,
-          "minLength": 22,
+          "minLength": 35,
           "maxLength": 64,
-          "pattern": "^pk_[A-Za-z0-9]{19,61}$"
+          "pattern": "^pk_[A-Za-z0-9]{32,61}$"
         },
         {
           "type": "integer",
@@ -440,6 +439,9 @@
       "input": [{ "name": "ingestKey", "type": "string" }],
       "output": [{ "name": "ingestKey", "type": "string" }]
     }
+  ],
+  "middlewares": [
+    { "name": "DropClientIngestKey", "contentType": "Property", "actions": ["create", "update"] }
   ],
   "endpoints": [
     {
