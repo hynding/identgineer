@@ -80,6 +80,38 @@ describe("validatedSource", () => {
     await expect(source.summary("p1", "7d")).rejects.toBe(error);
   });
 
+  // A source in a package that may not import this one (the CMS source of
+  // @identgineer/tracking/dashboard) throws its own error class with the same name and codes.
+  it("takes an error named DashboardError with a known code as that code, without its message", async () => {
+    const lookalike = (code: string) =>
+      Object.assign(new Error(`secret ${code}`), { name: "DashboardError", code });
+    const source = validatedSource({
+      listProperties: () => Promise.reject(lookalike("unauthenticated")),
+      listEvents: () => Promise.reject(lookalike("not-found")),
+      summary: () => Promise.reject(lookalike("invalid-response")),
+    });
+    const listed = await source.listProperties().catch((error: unknown) => error);
+    expect(listed).toBeInstanceOf(DashboardError);
+    expect(listed).toMatchObject({ code: "unauthenticated" });
+    expect((listed as Error).message).not.toMatch(/secret/);
+    await expect(source.listEvents("p1", QUERY)).rejects.toMatchObject({ code: "not-found" });
+    await expect(source.summary("p1", "7d")).rejects.toMatchObject({ code: "invalid-response" });
+  });
+
+  it("does not take a code from an error of another name, or a code it does not know", async () => {
+    const source = validatedSource({
+      listProperties: () =>
+        Promise.reject(Object.assign(new Error("x"), { name: "FetchError", code: "not-found" })),
+      listEvents: () =>
+        Promise.reject(Object.assign(new Error("x"), { name: "DashboardError", code: "teapot" })),
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- a plain object, as a source may throw
+      summary: () => Promise.reject({ name: "DashboardError", code: "not-found" }),
+    });
+    await expect(source.listProperties()).rejects.toMatchObject({ code: "unavailable" });
+    await expect(source.listEvents("p1", QUERY)).rejects.toMatchObject({ code: "unavailable" });
+    await expect(source.summary("p1", "7d")).rejects.toMatchObject({ code: "unavailable" });
+  });
+
   it("turns any other failure into an unavailable error, without its message", async () => {
     const source = validatedSource({
       listProperties: () => Promise.reject(new TypeError("token abc123 expired")),

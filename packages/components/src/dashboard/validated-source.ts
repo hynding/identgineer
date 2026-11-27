@@ -1,5 +1,6 @@
 import {
   DashboardError,
+  type DashboardErrorCode,
   EVENT_SORT_KEYS,
   STAT_RANGES,
   type DashboardSource,
@@ -18,13 +19,36 @@ import {
 
 type Method = "listProperties" | "listEvents" | "summary";
 
+const ERROR_CODES: readonly DashboardErrorCode[] = [
+  "unauthenticated",
+  "forbidden",
+  "not-found",
+  "unavailable",
+  "invalid-request",
+  "invalid-response",
+];
+
+/**
+ * The code of an error a source threw from a package that may not import this one (the CMS source
+ * of `@identgineer/tracking/dashboard`): an `Error` named `DashboardError` with a known code.
+ */
+function lookalikeCode(error: unknown): DashboardErrorCode | undefined {
+  if (!(error instanceof Error) || error.name !== "DashboardError") return undefined;
+  const code: unknown = (error as { code?: unknown }).code;
+  return ERROR_CODES.find((known) => known === code);
+}
+
 // A failure the page can act on is passed on as it is. Anything else (a network error, a bug in a
-// source) may carry a token or an address in its message, so only the fact survives.
+// source) may carry a token or an address in its message, so only the fact survives; so does only
+// the code of a lookalike, whose message this package did not write.
 async function guarded<T>(method: Method, call: () => Promise<T>): Promise<T> {
   try {
     return await call();
   } catch (error) {
     if (error instanceof DashboardError) throw error;
+    const code = lookalikeCode(error);
+    if (code !== undefined)
+      throw new DashboardError(code, `${method}: the source answered ${code}`);
     throw new DashboardError("unavailable", `${method}: the source could not answer`);
   }
 }
