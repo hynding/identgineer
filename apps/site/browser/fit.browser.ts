@@ -1,7 +1,8 @@
 import type { Page } from "@playwright/test";
 import { REGISTRY } from "@identgineer/variations";
 import { expect, test } from "./fixtures";
-import { withoutCalcSize, withoutStyleQueries } from "./engines";
+import { withoutCalcSize } from "@identgineer/components/browser/without-calc-size";
+import { withoutStyleQueries } from "@identgineer/components/browser/without-style-queries";
 import { LAYOUTS, PAGES, hydrated, sidewaysScroll } from "./pages";
 
 const DESIGNS = REGISTRY.design.variations.map((variation) => variation.id);
@@ -199,19 +200,29 @@ async function settled(page: Page): Promise<void> {
   });
 }
 
-/** The engines a visitor may come with: Chromium, and the two features Firefox and Safari lack. */
+/** Takes out of the page both features Firefox lacks; returns the fewer changes of the two. */
+async function withoutEither(page: Page): Promise<number> {
+  const calcSize = await withoutCalcSize(page);
+  return Math.min(calcSize, await withoutStyleQueries(page));
+}
+
+/**
+ * The engines a visitor may come with: Chromium; one without `calc-size()`, as Safari is; and one
+ * without `calc-size()` or container style queries, as Firefox is. CI runs each as a part of its
+ * own by these names, so they are kept apart by their words: "calc-size() in" and "calc-size() or".
+ */
 const ENGINES = [
   { name: "", strip: undefined },
   { name: " without calc-size()", strip: withoutCalcSize },
-  { name: " without container style queries", strip: withoutStyleQueries },
+  { name: " without calc-size() or container style queries", strip: withoutEither },
 ] as const;
 
 // Every design with every layout and every UX mode, the theme and the scheme turning with them, so
 // that each theme meets each pair of the other three across the sweep, in each engine. A page is
-// opened once for each look and the window then widened through the four widths. Without style
-// queries every layout is the shell's own arrangement with the site's base rules in it, and the
-// layout's tokens still apply; without calc-size() the declarations that use it are dropped and the
-// fallbacks under @supports not apply.
+// opened once for each look and the window then widened through the four widths. Without calc-size()
+// the declarations that use it are dropped and the fallbacks under @supports not apply; without
+// style queries as well, every layout is the shell's own arrangement with the site's base rules in
+// it, and the layout's tokens still apply.
 for (const engine of ENGINES) {
   for (const { name, path, component } of PAGES) {
     DESIGNS.forEach((design, designIndex) => {

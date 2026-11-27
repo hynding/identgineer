@@ -21,7 +21,9 @@
       "import": "./dist/components/index.js"
     },
     "./docs.json": "./dist/docs.json",
-    "./stencil-workspace-sources": "./stencil-workspace-sources.ts"
+    "./stencil-workspace-sources": "./stencil-workspace-sources.ts",
+    "./browser/without-calc-size": "./browser/without-calc-size.ts",
+    "./browser/without-style-queries": "./browser/without-style-queries.ts"
   },
   "scripts": {
     "build": "stencil build --prod && node scripts/build-sdk-fixtures.ts",
