@@ -1,0 +1,49 @@
+{
+  "description": "How both ingestion handlers reduce what they store: a path to the property's allowed query parameters, and a referrer to its host. Read by cms/tests (Strapi) and by the strapi-php handler's PHPUnit tests.",
+  "paths": [
+    { "path": "/", "allowed": [], "stored": "/" },
+    { "path": "/pricing", "allowed": ["utm_source"], "stored": "/pricing" },
+    { "path": "/pricing?utm_source=news", "allowed": [], "stored": "/pricing" },
+    {
+      "path": "/pricing?utm_source=news",
+      "allowed": ["utm_source"],
+      "stored": "/pricing?utm_source=news"
+    },
+    {
+      "path": "/a?email=ada%40example.com&utm_source=news&token=x&utm_medium=mail",
+      "allowed": ["utm_source", "utm_medium"],
+      "stored": "/a?utm_source=news&utm_medium=mail"
+    },
+    {
+      "path": "/a?utm_source=one&utm_source=two",
+      "allowed": ["utm_source"],
+      "stored": "/a?utm_source=one&utm_source=two"
+    },
+    { "path": "/a?utm_source", "allowed": ["utm_source"], "stored": "/a?utm_source" },
+    { "path": "/a?utm_source=", "allowed": ["utm_source"], "stored": "/a?utm_source=" },
+    { "path": "/a?&&utm_source=x&&", "allowed": ["utm_source"], "stored": "/a?utm_source=x" },
+    { "path": "/a?UTM_SOURCE=x", "allowed": ["utm_source"], "stored": "/a" },
+    { "path": "/a?utm%5Fsource=x", "allowed": ["utm_source"], "stored": "/a" },
+    { "path": "/a?=x", "allowed": ["utm_source"], "stored": "/a" },
+    { "path": "/a?", "allowed": ["utm_source"], "stored": "/a" },
+    { "path": "/a?ref=b?c=d", "allowed": ["ref"], "stored": "/a?ref=b?c=d" },
+    { "path": "/a?x=1#frag", "allowed": ["x"], "stored": "/a?x=1" },
+    { "path": "/a#frag?x=1", "allowed": ["x"], "stored": "/a" }
+  ],
+  "referrers": [
+    { "referrer": "https://www.example.org", "stored": "www.example.org" },
+    { "referrer": "http://News.Example.COM", "stored": "news.example.com" },
+    { "referrer": "https://example.org:8443", "stored": "example.org" },
+    { "referrer": "https://example.org:", "stored": "example.org" },
+    { "referrer": "http://localhost:8080", "stored": null },
+    { "referrer": "http://localhost", "stored": null },
+    { "referrer": "http://192.168.0.1", "stored": null },
+    { "referrer": "http://192.168.0.1:80", "stored": null },
+    { "referrer": "http://[::1]:8080", "stored": null },
+    { "referrer": "http://[2001:db8::1]", "stored": null },
+    { "referrer": "https://-bad.example.org", "stored": null },
+    { "referrer": "https://example..org", "stored": null },
+    { "referrer": "https://xn--bcher-kva.example", "stored": "xn--bcher-kva.example" },
+    { "referrer": "https://a.b:1:2", "stored": null }
+  ]
+}
