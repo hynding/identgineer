@@ -10,12 +10,10 @@ export interface IngestSettings {
 
 export const DEFAULT_KEY_RATE_PER_MINUTE = 3000;
 
-// As camis reads its throttle variables: whole numbers in ASCII digits, floored at 1; anything
-// else keeps the default.
+// As the strapi-php handler reads them (config/ingest.php): a whole number in ASCII digits, at most
+// 15 so it is exact, floored at 1; anything else keeps the default.
 const wholeNumber = (value: string | undefined, fallback: number): number =>
-  value !== undefined && /^[0-9]+$/.test(value) && Number.isSafeInteger(Number(value))
-    ? Math.max(1, Number(value))
-    : fallback;
+  value !== undefined && /^[0-9]{1,15}$/.test(value) ? Math.max(1, Number(value)) : fallback;
 
 export const readIngestSettings = (
   env: Readonly<Record<string, string | undefined>>,
