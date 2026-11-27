@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import purgeTask, { type QueryEngineLike } from "../protected/src/cron/purge-expired-events.ts";
 import { issueIngestKey, newIngestKey } from "../protected/src/hooks/issue-ingest-key.ts";
 import { contentTypeNamed, loadIr } from "./model";
@@ -32,7 +32,8 @@ describe("IssueIngestKey on Strapi", () => {
 
 describe("PurgeExpiredEvents on Strapi", () => {
   it("deletes each property's events older than its retentionDays", async () => {
-    const now = Date.now();
+    const now = Date.parse("2026-03-10T12:00:00.000Z");
+    vi.useFakeTimers({ now });
     const deletes: Record<string, unknown>[] = [];
     const strapi: QueryEngineLike = {
       db: {
@@ -52,7 +53,11 @@ describe("PurgeExpiredEvents on Strapi", () => {
         }),
       },
     };
-    await purgeTask({ strapi });
+    try {
+      await purgeTask({ strapi });
+    } finally {
+      vi.useRealTimers();
+    }
     expect(deletes).toHaveLength(2);
     const cutoffs = deletes.map((params) => {
       const where = params.where as { property: { id: number }; occurredAt: { $lt: string } };
@@ -60,9 +65,8 @@ describe("PurgeExpiredEvents on Strapi", () => {
     });
     const day = 86_400_000;
     expect(cutoffs[0]?.[0]).toBe(1);
-    expect(cutoffs[0]?.[1]).toBeGreaterThanOrEqual(day);
-    expect(cutoffs[0]?.[1]).toBeLessThan(day + 5_000);
+    expect(cutoffs[0]?.[1]).toBe(day);
     expect(cutoffs[1]?.[0]).toBe(2);
-    expect(cutoffs[1]?.[1]).toBeGreaterThanOrEqual(180 * day);
+    expect(cutoffs[1]?.[1]).toBe(180 * day);
   });
 });
