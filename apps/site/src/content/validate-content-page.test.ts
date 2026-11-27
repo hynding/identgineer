@@ -51,6 +51,10 @@ function samplePage(): Record<string, unknown> {
   };
 }
 
+function without(page: Record<string, unknown>, key: string): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(page).filter(([name]) => name !== key));
+}
+
 function withBlock(block: unknown): Record<string, unknown> {
   return { ...samplePage(), body: [block] };
 }
@@ -104,7 +108,7 @@ describe("a content page is refused", () => {
 
   it("with a field the format does not have, __proto__ included", () => {
     expect(errorOf(parseContentPage({ ...samplePage(), html: "<b>" }, CONTEXT))).toMatch(
-      /page "sample", html: is not a field/,
+      /page "sample": html: is not a field/,
     );
     const proto = JSON.parse('{"__proto__": {"x": 1}}') as object;
     expect(errorOf(parseContentPage({ ...samplePage(), ...proto }, CONTEXT))).toMatch(
@@ -113,8 +117,9 @@ describe("a content page is refused", () => {
   });
 
   it("without a summary, or with a slug that is not a slug", () => {
-    const { summary: _, ...noSummary } = samplePage();
-    expect(errorOf(parseContentPage(noSummary, CONTEXT))).toMatch(/summary: is required/);
+    expect(errorOf(parseContentPage(without(samplePage(), "summary"), CONTEXT))).toMatch(
+      /summary: is required/,
+    );
     expect(errorOf(parseContentPage({ ...samplePage(), slug: "../etc" }, CONTEXT))).toMatch(
       /slug: must be lower-case words joined by hyphens/,
     );
@@ -241,8 +246,8 @@ describe("a content page is refused", () => {
       ["an escape", "a\u001bb"],
       ["a C1 control", "a\u0085b"],
       ["a delete", "a\u007fb"],
-      ["a right-to-left override", "a‮b"],
-      ["a line separator", "a b"],
+      ["a right-to-left override", "a\u202eb"],
+      ["a line separator", "a\u2028b"],
       ["a lone surrogate", "a\ud800b"],
       ["a newline outside code", "a\nb"],
       ["a tab outside code", "a\tb"],
@@ -326,9 +331,8 @@ describe("a content page is refused", () => {
   });
 
   it("naming no page when it has no slug to name it by", () => {
-    const { slug: _, ...noSlug } = samplePage();
-    expect(errorOf(parseContentPage(noSlug, CONTEXT))).toMatch(
-      /^page \(no slug\), slug: is required/,
+    expect(errorOf(parseContentPage(without(samplePage(), "slug"), CONTEXT))).toMatch(
+      /^page \(no slug\): slug: is required/,
     );
   });
 });
