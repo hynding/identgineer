@@ -301,6 +301,15 @@ figcaption {
   padding-block-end: var(--idg-layout-section-gap);
 }
 
+/* The height of the layout's sticky bar, which a layout without one sets to a unitless 0: arithmetic
+   on that in a length would make the whole declaration invalid, so it is read through a property
+   registered as a length, where 0 is 0px, set where it is used. */
+@property --_sticky-inset {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
 .feature {
   counter-increment: feature;
   display: grid;
@@ -313,7 +322,9 @@ figcaption {
   align-content: start;
   gap: calc(var(--idg-space-m) * var(--idg-density-gap-scale));
   min-inline-size: 0;
-  scroll-margin-block-start: calc(var(--idg-layout-sticky-inset) + var(--idg-space-m));
+  --_sticky-inset: var(--idg-layout-sticky-inset);
+
+  scroll-margin-block-start: calc(var(--_sticky-inset) + var(--idg-space-m));
 }
 
 .feature-head {
@@ -797,7 +808,7 @@ figcaption {
 
     .feature-variations {
       padding-block: var(--idg-space-l);
-      border-block: calc(var(--idg-border-width) * 3) solid var(--idg-color-text);
+      border-block: var(--idg-space-3xs) solid var(--idg-color-text);
     }
   }
 
@@ -1115,8 +1126,10 @@ figcaption {
 @media (min-width: 73rem) {
   @container style(--idg-layout-shell: top-bar) {
     .site-layout::part(aside) {
+      --_sticky-inset: var(--idg-layout-sticky-inset);
+
       position: sticky;
-      inset-block-start: calc(var(--idg-layout-sticky-inset) + var(--idg-space-m));
+      inset-block-start: calc(var(--_sticky-inset) + var(--idg-space-m));
     }
   }
 
