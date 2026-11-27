@@ -13,6 +13,7 @@ import {
   type Regions,
 } from "./layout-shell-page";
 import { setTextSize, TEXT_SIZES } from "./text-size";
+import { withoutStyleQueries } from "./without-style-queries";
 
 /** What a page puts into the shell that the fixture does not, so the layouts are held to it. */
 type Change =
@@ -1402,64 +1403,70 @@ test.describe("the brand is the measure of what the page puts in it beside the m
   // bar is a grid that places the brand beside the menu button or on a row of its own: a slotted
   // element 100cqi wide is as wide as the brand. A bar that wraps (immersive) puts the menu button
   // on the next line instead, where the brand is wider than the room left. Either way what the page
-  // puts in the brand stays in it.
-  for (const layout of LAYOUTS) {
-    test(`${layout}: 100cqi in the brand is the brand's own width, which stays clear of the menu button, in every UX mode`, async ({
-      page,
-    }) => {
-      test.setTimeout(120_000);
-      await openShell(page, { width: 320, layout });
-      await page.evaluate(() => {
-        const probe = document.createElement("span");
-        probe.id = "brand-probe";
-        // Out of the brand's flow, so that nothing in the brand narrows it.
-        probe.style.position = "absolute";
-        probe.style.inlineSize = "100cqi";
-        probe.style.blockSize = "1px";
-        document.getElementById("brand-link")?.append(probe);
-      });
-      const failures: string[] = [];
-      for (const ux of UX_MODES) {
-        await applyAxes(page, { ux });
-        for (const width of [320, 390, 600, 820]) {
-          await page.setViewportSize({ width, height: 800 });
-          await frames(page, 2);
-          const found = await page.locator("#shell").evaluate((host) => {
-            const brand = host.shadowRoot?.querySelector<HTMLElement>('[part="brand"]');
-            const toggle = host.shadowRoot?.querySelector<HTMLElement>('[part="toggle"]');
-            const probe = document.getElementById("brand-probe");
-            const link = document.getElementById("brand-link");
-            const header = host.shadowRoot?.querySelector<HTMLElement>('[part="header"]');
-            if (!brand || !toggle || !probe || !link || !header) throw new Error("missing");
-            if (!toggle.checkVisibility()) return undefined;
-            const room = brand.getBoundingClientRect();
-            const button = toggle.getBoundingClientRect();
-            const across = Math.min(room.right, button.right) - Math.max(room.left, button.left);
-            const down = Math.min(room.bottom, button.bottom) - Math.max(room.top, button.top);
-            const content = link.getBoundingClientRect();
-            return {
-              grid: getComputedStyle(header).display === "grid",
-              probe: probe.getBoundingClientRect().width,
-              brand: brand.clientWidth,
-              spill: Math.max(content.right - room.right, room.left - content.left),
-              overlap: across > 0.5 && down > 0.5,
-            };
-          });
-          if (!found) continue;
-          const where = `${ux} at ${String(width)}px`;
-          if (found.grid && Math.abs(found.probe - found.brand) > 0.5) {
-            failures.push(
-              `${where}: 100cqi is ${String(found.probe)}px, the brand ${String(found.brand)}px`,
-            );
-          }
-          if (found.overlap) failures.push(`${where}: the brand runs under the menu button`);
-          if (found.spill > 1) {
-            failures.push(`${where}: the brand's content leaves it by ${String(found.spill)}px`);
+  // puts in the brand stays in it. An engine without container style queries (Firefox) draws every
+  // layout as the shell's own arrangement, the menu button beside the brand, and holds to the same.
+  for (const engine of ["", " without container style queries"]) {
+    for (const layout of LAYOUTS) {
+      test(`${layout}${engine}: 100cqi in the brand is the brand's own width, which stays clear of the menu button, in every UX mode`, async ({
+        page,
+      }) => {
+        test.setTimeout(120_000);
+        await openShell(page, { width: 320, layout });
+        if (engine !== "") {
+          expect(await withoutStyleQueries(page), "style queries taken out").toBeGreaterThan(0);
+        }
+        await page.evaluate(() => {
+          const probe = document.createElement("span");
+          probe.id = "brand-probe";
+          // Out of the brand's flow, so that nothing in the brand narrows it.
+          probe.style.position = "absolute";
+          probe.style.inlineSize = "100cqi";
+          probe.style.blockSize = "1px";
+          document.getElementById("brand-link")?.append(probe);
+        });
+        const failures: string[] = [];
+        for (const ux of UX_MODES) {
+          await applyAxes(page, { ux });
+          for (const width of [320, 390, 600, 820]) {
+            await page.setViewportSize({ width, height: 800 });
+            await frames(page, 2);
+            const found = await page.locator("#shell").evaluate((host) => {
+              const brand = host.shadowRoot?.querySelector<HTMLElement>('[part="brand"]');
+              const toggle = host.shadowRoot?.querySelector<HTMLElement>('[part="toggle"]');
+              const probe = document.getElementById("brand-probe");
+              const link = document.getElementById("brand-link");
+              const header = host.shadowRoot?.querySelector<HTMLElement>('[part="header"]');
+              if (!brand || !toggle || !probe || !link || !header) throw new Error("missing");
+              if (!toggle.checkVisibility()) return undefined;
+              const room = brand.getBoundingClientRect();
+              const button = toggle.getBoundingClientRect();
+              const across = Math.min(room.right, button.right) - Math.max(room.left, button.left);
+              const down = Math.min(room.bottom, button.bottom) - Math.max(room.top, button.top);
+              const content = link.getBoundingClientRect();
+              return {
+                grid: getComputedStyle(header).display === "grid",
+                probe: probe.getBoundingClientRect().width,
+                brand: brand.clientWidth,
+                spill: Math.max(content.right - room.right, room.left - content.left),
+                overlap: across > 0.5 && down > 0.5,
+              };
+            });
+            if (!found) continue;
+            const where = `${ux} at ${String(width)}px`;
+            if (found.grid && Math.abs(found.probe - found.brand) > 0.5) {
+              failures.push(
+                `${where}: 100cqi is ${String(found.probe)}px, the brand ${String(found.brand)}px`,
+              );
+            }
+            if (found.overlap) failures.push(`${where}: the brand runs under the menu button`);
+            if (found.spill > 1) {
+              failures.push(`${where}: the brand's content leaves it by ${String(found.spill)}px`);
+            }
           }
         }
-      }
-      expect(failures).toEqual([]);
-    });
+        expect(failures).toEqual([]);
+      });
+    }
   }
 });
 
