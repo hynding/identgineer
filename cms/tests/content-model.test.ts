@@ -136,8 +136,10 @@ describe("event ingestion", () => {
     expect(endpoints.filter((e) => e.contentType === "ConsentRecord")).toEqual([]);
   });
 
-  it("has no endpoint that reads", () => {
-    expect(endpoints.filter((e) => e.method !== "POST")).toEqual([]);
+  it("has one endpoint that reads: the property summary", () => {
+    expect(endpoints.filter((e) => e.method !== "POST").map((e) => e.name)).toEqual([
+      "PropertySummary",
+    ]);
   });
 
   it("scopes ingestion by a unique, prefixed public key of 32 or more random characters", () => {
@@ -205,6 +207,46 @@ describe("event ingestion", () => {
     expect(origin.test("https://127.0.0.1:5173")).toBe(false);
     expect(origin.test("https://xn--bcher-kva.example")).toBe(true);
     expect(origin.test("https://shop.xn--p1ai")).toBe(false);
+  });
+});
+
+describe("the dashboard's reads", () => {
+  const summary = () => {
+    const endpoint = (ir.endpoints ?? []).find((e) => e.name === "PropertySummary");
+    if (endpoint === undefined) throw new Error("camis.json has no PropertySummary endpoint");
+    return endpoint;
+  };
+
+  it("summarises one property at GET /properties/:id/summary, for signed-in callers only", () => {
+    expect(summary()).toMatchObject({
+      contentType: "Property",
+      method: "GET",
+      path: "/properties/:id/summary",
+    });
+    expect(summary().public).not.toBe(true);
+  });
+
+  it("throttles the summary per client address, as it costs two grouped queries", () => {
+    const perMinute = summary().throttle?.perMinute ?? 0;
+    expect(Number.isInteger(perMinute) && perMinute > 0).toBe(true);
+  });
+
+  it("takes no body and answers no other origin", () => {
+    expect(summary().accepts).toBeUndefined();
+    expect(summary().maxBodyBytes).toBeUndefined();
+    expect(summary().crossOrigin).toBeUndefined();
+  });
+
+  // The key only de-duplicates ingestion; a reader learns nothing from it and could match it
+  // against a guessed event id to tell which events a visitor sent.
+  it("keeps an event's dedupe key out of every API answer, filter and sort", () => {
+    expect(fieldOf("Event", "dedupeKey").private).toBe(true);
+  });
+
+  it("keeps everything else the dashboard shows readable", () => {
+    for (const name of ["name", "occurredAt", "sessionId", "path", "properties"]) {
+      expect(fieldOf("Event", name).private, name).not.toBe(true);
+    }
   });
 });
 

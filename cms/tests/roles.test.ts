@@ -211,9 +211,17 @@ describe("the authenticated role", () => {
     for (const action of WRITES) expect(allows(authenticated, contentType, action)).toBe(false);
   });
 
-  it("lists no endpoints or services", () => {
-    expect(authenticated.endpoints ?? []).toEqual([]);
+  // The handler is the ownership check: it answers only for the caller's own property.
+  it("calls the property summary and no other endpoint, and lists no services", () => {
+    expect(authenticated.endpoints ?? []).toEqual(["PropertySummary"]);
     expect(authenticated.services ?? []).toEqual([]);
+  });
+
+  it("names only endpoints the IR declares, none of them public", () => {
+    const declared = new Map((ir.endpoints ?? []).map((e) => [e.name, e]));
+    for (const name of authenticated.endpoints ?? []) {
+      expect(declared.get(name)?.public, name).not.toBe(true);
+    }
   });
 });
 
