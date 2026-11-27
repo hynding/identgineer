@@ -54,21 +54,25 @@ arranges them by the layout, with container style queries on `--idg-layout-shell
 
 The "On this page" aside stays in view where it is beside the content, and is not drawn where a
 layout would put it after the content (`centered`, `side-rail` and `split-hero`). Sections side by
-side come out about as tall as each other (`browser/balance.browser.ts`), and the pages to come are
-one grid of equal columns, the first card, with what the features cover, spanning two or the row.
+side come out about as tall as each other in the default look (`browser/balance.browser.ts`; other
+designs and UX modes are not measured), and the pages to come, the theme tiles and the axes are grids
+of equal columns with every row full (`browser/grids.browser.ts`), the overview card, with what the
+features cover, spanning two columns or the row.
 
 What holds where: at 320 to 1440px, with text at the browser's own size, in every design, layout
 and UX mode, with Inter or a wider fallback face, no word, figure or the site's name is broken inside
 itself, nothing runs under anything else or out of its box, and the page does not scroll sideways.
 The cards and figures are never narrower than their content needs in the current face and type
 size, and the site's name is no larger than the room idg-layout's brand has beside the menu button.
-That holds in Chromium, in an engine without `calc-size()` (Firefox, Safari), where the cards and
-figures fall back to `min-content` and idg-stat and idg-button to their own fallbacks, and in one
-without container style queries; `browser/fit.browser.ts` checks all three. With text at 200% in a
-phone's window, a word wider than its column breaks rather than leave it, and in an engine without
+That holds in Chromium; in an engine without `calc-size()`, as Safari is, where the cards and
+figures fall back to `min-content` and idg-stat and idg-button to their own fallbacks; and in one
+without `calc-size()` or container style queries, as Firefox is. `browser/fit.browser.ts` checks
+all three. With text enlarged past the browser's own size, the page at 320px can scroll sideways by
+a few pixels at 125% and by more at 150% and 200% in some combinations; with text at 200% in a
+phone's window a word wider than its column breaks rather than leave it, and in an engine without
 `calc-size()` a figure keeps its width there and may reach past a narrow card.
 
-A browser without container style queries applies none of the eight arrangements, idg-layout's or
+A browser without container style queries (Firefox) applies none of the eight arrangements, idg-layout's or
 the site's: whatever the layout, it gets the shell's own arrangement (the bar, then the hero, the
 content and the "On this page" list one under another, at the content's measure), with the menu
 button beside a brand that is the container of its room, and the site's base rules in it, the
@@ -175,10 +179,13 @@ need not be served itself.
   the build wrote; every page in every layout reads and navigates with JavaScript off, with its
   links in the bar and no menu button; every page fits every design with every layout and every UX
   mode (the theme and the scheme turning with them) at 320, 390, 820 and 1440px, as Chromium draws
-  it, without `calc-size()` and without container style queries, with no sideways scroll, nothing
-  cut or spilling out of its box, no word, figure or name broken inside itself and no two controls
-  over each other; and in bento, dashboard and magazine at 768 to 1440px no section beside another
-  is more than a fifth empty below its content. Any console error, policy violation or request to
+  it, without `calc-size()` and without `calc-size()` or container style queries, with no sideways
+  scroll, nothing cut or spilling out of its box, no word, figure or name broken inside itself and
+  no two controls over each other; in the default look, in bento, dashboard and magazine at 768 to
+  1440px no section beside another is more than a fifth empty below its content, and in every
+  layout at 390 to 1920px every row of the pages to come, the theme tiles and the axes is full; and
+  in every design the rules side-rail and magazine draw are there, 2 to 8px, and in every layout a
+  section reached by a link stops short of the window's top. Any console error, policy violation or request to
   another origin fails a test.
 
 `IDG_CPU_THROTTLE=6` runs the hydration tests with the page's CPU six times slower, as a slow CI
