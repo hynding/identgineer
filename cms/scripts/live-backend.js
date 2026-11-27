@@ -6,8 +6,10 @@
 //   node cms/scripts/live-backend.js -- <command> [args…]   run the command, then stop the servers
 //   node cms/scripts/live-backend.js                        serve until interrupted (Ctrl-C)
 //
-// The command gets IDENTITY_LIVE_BACKEND, the path of a JSON file describing the servers. Each
-// server logs its requests to <live dir>/<name>.server.log. A server that exits stops the run at
+// The command gets IDENTITY_LIVE_BACKEND, the path of a JSON file describing the servers. Before
+// booting them it runs the app's PHPUnit tests of the protected ingestion code (tests/Feature/Ingest),
+// with the vector files they share with the TypeScript tests. Each server logs its requests to
+// <live dir>/<name>.server.log. A server that exits stops the run at
 // once; SIGINT, SIGTERM and SIGHUP are passed on to the command (or to camis or artisan while
 // they set up), and the script exits with 128 and the signal's number. After scaffolding it strips
 // the VCS checkouts Composer may leave in vendor.
@@ -29,6 +31,7 @@ import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const CMS_DIR = fileURLToPath(new URL("..", import.meta.url));
+const REPOSITORY_DIR = fileURLToPath(new URL("../..", import.meta.url));
 const LIVE_DIR = resolve(process.env.IDENTITY_LIVE_DIR || join(CMS_DIR, "generated", "live"));
 const APP_DIR = join(LIVE_DIR, "strapi-php");
 const HOST = "127.0.0.1";
@@ -67,6 +70,9 @@ const INHERITED = [
 // Rates high enough that the suite never meets them, except on the server kept for throttling.
 const RELAXED_RATE = 1000;
 const THROTTLED_RATE = 3;
+// The ingestion endpoint's rates on the server kept for them: per address (camis' guard) and per key.
+const INGEST_LIMITED_ADDRESS_RATE = 6;
+const INGEST_LIMITED_KEY_RATE = 3;
 // camis' default, and on the short-lived server a lifespan short enough to outlive in a test.
 const ACCESS_TOKEN_LIFESPAN = 600;
 const SHORT_ACCESS_TOKEN_LIFESPAN = 2;
@@ -122,6 +128,13 @@ const SERVERS = [
     emailConfirmation: false,
     rate: RELAXED_RATE,
     accessTokenLifespan: SHORT_ACCESS_TOKEN_LIFESPAN,
+  },
+  {
+    name: "ingestLimited",
+    emailConfirmation: false,
+    rate: RELAXED_RATE,
+    ingestRate: INGEST_LIMITED_ADDRESS_RATE,
+    ingestKeyRate: INGEST_LIMITED_KEY_RATE,
   },
 ];
 
@@ -271,6 +284,33 @@ const registerAuthProvider = () => {
   );
 };
 
+// The end of the StrapiErrors block in bootstrap/app.php, and the lines camis' scaffold adds after
+// it for an endpoint that answers browsers itself (camis' scaffold.ts, ENDPOINT_CORS_SKIP).
+const STRAPI_MIDDLEWARE_END =
+  "            $middleware->convertEmptyStringsToNull(except: [$strapiRoutes]);\n        }\n";
+const ENDPOINT_CORS_SKIP = `        // camis: an endpoint that answers browsers on any origin itself (crossOrigin) is left alone by the app's CORS.
+        if (class_exists(\\App\\Http\\Middleware\\StrapiEndpointCors::class)) {
+            \\Illuminate\\Http\\Middleware\\HandleCors::skipWhen(\\App\\Http\\Middleware\\StrapiEndpointCors::answers(...));
+        }
+`;
+
+/**
+ * Leaves Laravel's global CORS off the ingestion endpoint, which answers browsers on any origin
+ * itself, in an app scaffolded before camis' scaffold did so (camis build warns with these lines).
+ * Without them the endpoint's preflight gets the app's CORS answer, which does not allow the SDK's
+ * write-key header. Once there, or without camis' middleware block, the file is left alone.
+ */
+const leaveEndpointCorsToCamis = () => {
+  const path = join(APP_DIR, "bootstrap", "app.php");
+  if (!existsSync(path)) return;
+  const text = readFileSync(path, "utf8");
+  if (text.includes("StrapiEndpointCors") || !text.includes(STRAPI_MIDDLEWARE_END)) return;
+  writeFileSync(
+    path,
+    text.replace(STRAPI_MIDDLEWARE_END, () => `${STRAPI_MIDDLEWARE_END}${ENDPOINT_CORS_SKIP}`),
+  );
+};
+
 /** Scaffolds the Laravel host app once (Composer, network) and regenerates camis' files on it. */
 const generate = async () => {
   mkdirSync(LIVE_DIR, { recursive: true });
@@ -286,6 +326,7 @@ const generate = async () => {
     writeFileSync(SCAFFOLDED, "");
   }
   registerAuthProvider();
+  leaveEndpointCorsToCamis();
   const fromLive = (file) => relative(LIVE_DIR, join(CMS_DIR, file));
   const config = {
     ir: fromLive("camis.json"),
@@ -310,6 +351,8 @@ const ratesOf = (server) => ({
   throttlePerMinute: server.rate,
   addressThrottlePerMinute: Math.max(server.rate, 50),
   refreshThrottlePerMinute: server.rate,
+  ingestThrottlePerMinute: server.ingestRate ?? RELAXED_RATE,
+  ingestKeyRatePerMinute: server.ingestKeyRate ?? RELAXED_RATE,
 });
 
 const serverEnvironment = (server, port) => {
@@ -323,6 +366,8 @@ const serverEnvironment = (server, port) => {
     CAMIS_AUTH_THROTTLE_PER_MINUTE: String(rates.throttlePerMinute),
     CAMIS_AUTH_ADDRESS_THROTTLE_PER_MINUTE: String(rates.addressThrottlePerMinute),
     CAMIS_REFRESH_THROTTLE_PER_MINUTE: String(rates.refreshThrottlePerMinute),
+    CAMIS_ENDPOINT_INGEST_EVENT_THROTTLE_PER_MINUTE: String(rates.ingestThrottlePerMinute),
+    INGEST_KEY_RATE_PER_MINUTE: String(rates.ingestKeyRatePerMinute),
   };
 };
 
@@ -337,6 +382,29 @@ const prepareDatabase = async (env) => {
     ["artisan", "db:seed", "--class=RolePermissionSeeder", "--force", "--no-interaction"],
     options,
   );
+};
+
+/**
+ * The app's PHPUnit tests of the protected ingestion code, reading the vector files the TypeScript
+ * tests read, so both targets' handlers answer alike. phpunit.xml sets the testing environment (an
+ * in-memory sqlite, the array cache); the rest comes from the .env written above.
+ */
+const runPhpTests = async () => {
+  step("running the ingestion handler's PHPUnit tests");
+  await run("php", ["vendor/bin/phpunit", "--colors=never", "tests/Feature/Ingest"], {
+    cwd: APP_DIR,
+    env: phpEnvironment({
+      TRACKING_BATCH_VECTORS: join(
+        REPOSITORY_DIR,
+        "packages",
+        "tracking",
+        "src",
+        "testing",
+        "batch-vectors.json",
+      ),
+      INGEST_NORMALISE_VECTORS: join(CMS_DIR, "tests", "fixtures", "ingest-normalise-vectors.json"),
+    }),
+  });
 };
 
 const waitUntilUp = async (url, exited) => {
@@ -460,6 +528,7 @@ const main = async () => {
   await generate();
   const shared = sharedEnvironment();
   writeFileSync(join(APP_DIR, ".env"), dotenv(shared));
+  await runPhpTests();
   rmSync(MAIL_LOG, { force: true });
   const servers = [];
   for (const server of SERVERS) servers.push(await startServer(server, shared));
