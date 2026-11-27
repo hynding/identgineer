@@ -306,7 +306,7 @@ export class SiteHome {
 
   render() {
     return (
-      <SiteShell current="/">
+      <SiteShell current="/" navigation={this.navigation}>
         {this.renderHero()}
         <div class="home">
           <div class="sections">
