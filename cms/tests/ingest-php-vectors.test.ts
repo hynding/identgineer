@@ -17,9 +17,11 @@ const hasPhp = php.status === 0;
 const required = process.env.CI !== undefined && process.env.CI !== "";
 
 interface Answers {
+  readonly counts: { batches: number; paths: number; referrers: number; times: number };
   readonly batches: { name: string; accepted: boolean }[];
   readonly paths: string[];
   readonly referrers: (string | null)[];
+  readonly times: (number | null)[];
   readonly dedupeKey: string;
 }
 
@@ -49,20 +51,37 @@ describe.skipIf(!hasPhp)(
   () => {
     const answers = hasPhp ? run() : ({} as Answers);
 
+    const batchVectors = loadBatchVectors();
+    const normalise = JSON.parse(readFileSync(NORMALISE_VECTORS, "utf8")) as {
+      paths: { stored: string }[];
+      referrers: { stored: string | null }[];
+      times: { stored: number | null }[];
+    };
+
+    it("ran on every vector it was given, and there are vectors", () => {
+      const given = {
+        batches: batchVectors.length,
+        paths: normalise.paths.length,
+        referrers: normalise.referrers.length,
+        times: normalise.times.length,
+      };
+      for (const count of Object.values(given)) expect(count).toBeGreaterThan(0);
+      expect(answers.counts).toEqual(given);
+    });
+
     it("accepts and refuses each batch as parseTrackingBatch does", () => {
-      const vectors = loadBatchVectors();
       expect(answers.batches).toEqual(
-        vectors.map((vector) => ({ name: vector.name, accepted: vector.valid })),
+        batchVectors.map((vector) => ({ name: vector.name, accepted: vector.valid })),
       );
     });
 
     it("stores each path and referrer as the Strapi handler does", () => {
-      const normalise = JSON.parse(readFileSync(NORMALISE_VECTORS, "utf8")) as {
-        paths: { stored: string }[];
-        referrers: { stored: string | null }[];
-      };
       expect(answers.paths).toEqual(normalise.paths.map((vector) => vector.stored));
       expect(answers.referrers).toEqual(normalise.referrers.map((vector) => vector.stored));
+    });
+
+    it("keeps an event's corrected time inside the window as the Strapi handler does", () => {
+      expect(answers.times).toEqual(normalise.times.map((vector) => vector.stored));
     });
 
     it("derives the dedupe key the Strapi handler derives", () => {

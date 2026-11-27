@@ -32,6 +32,20 @@ final class IngestedEventTest extends TestCase
         }
     }
 
+    /** @return iterable<string, array{int, int, int, ?int}> */
+    public static function times(): iterable
+    {
+        foreach (SharedVectors::load('INGEST_NORMALISE_VECTORS')['times'] as $vector) {
+            yield (string) $vector['name'] => [(int) $vector['at'], (int) $vector['sentAt'], (int) $vector['now'], $vector['stored']];
+        }
+    }
+
+    #[DataProvider('times')]
+    public function test_an_events_corrected_time_is_kept_inside_the_window(int $at, int $sentAt, int $now, ?int $stored): void
+    {
+        $this->assertSame($stored, IngestedEvent::occurredAtMs($at, $sentAt, $now));
+    }
+
     /** @param list<string> $allowed */
     #[DataProvider('paths')]
     public function test_a_path_keeps_only_the_allowed_query_parameters(string $path, array $allowed, string $stored): void
@@ -43,17 +57,6 @@ final class IngestedEventTest extends TestCase
     public function test_a_referrer_is_stored_as_its_host_only(string $referrer, ?string $stored): void
     {
         $this->assertSame($stored, IngestedEvent::referrerHost($referrer));
-    }
-
-    public function test_the_time_is_corrected_by_the_clock_skew_and_kept_within_its_window(): void
-    {
-        $this->assertSame(self::NOW - 2000, IngestedEvent::occurredAtMs(1000, 3000, self::NOW));
-        $this->assertSame(self::NOW - 25 * self::HOUR, IngestedEvent::occurredAtMs(self::NOW - 25 * self::HOUR, self::NOW, self::NOW));
-        $this->assertNull(IngestedEvent::occurredAtMs(self::NOW - 25 * self::HOUR - 1, self::NOW, self::NOW));
-        $this->assertSame(self::NOW + 300000, IngestedEvent::occurredAtMs(self::NOW + 300000, self::NOW, self::NOW));
-        $this->assertNull(IngestedEvent::occurredAtMs(self::NOW + 300001, self::NOW, self::NOW));
-        $this->assertSame(self::NOW, IngestedEvent::occurredAtMs(self::NOW - 24 * self::HOUR, self::NOW - 24 * self::HOUR, self::NOW));
-        $this->assertNull(IngestedEvent::occurredAtMs(self::NOW, self::NOW + 48 * self::HOUR, self::NOW));
     }
 
     public function test_the_dedupe_key_is_the_sha256_of_the_property_and_event_ids(): void

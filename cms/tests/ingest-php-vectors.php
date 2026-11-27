@@ -40,10 +40,17 @@ $referrers = array_map(
     $normaliseVectors['referrers'],
 );
 
+$times = array_map(
+    static fn (array $vector): ?int => IngestedEvent::occurredAtMs((int) $vector['at'], (int) $vector['sentAt'], (int) $vector['now']),
+    $normaliseVectors['times'],
+);
+
 echo json_encode([
     'php' => PHP_VERSION,
+    'counts' => ['batches' => count($batchVectors['vectors']), 'paths' => count($normaliseVectors['paths']), 'referrers' => count($normaliseVectors['referrers']), 'times' => count($normaliseVectors['times'])],
     'batches' => $batches,
     'paths' => $paths,
     'referrers' => $referrers,
+    'times' => $times,
     'dedupeKey' => IngestedEvent::dedupeKey(7, 'AAAAAAAAAAAAAAAAAAAAAA'),
 ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);

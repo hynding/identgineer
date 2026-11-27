@@ -16,6 +16,7 @@ import { contentTypeNamed, loadIr } from "./model";
 interface NormaliseVectors {
   paths: { path: string; allowed: string[]; stored: string }[];
   referrers: { referrer: string; stored: string | null }[];
+  times: { name: string; at: number; sentAt: number; now: number; stored: number | null }[];
 }
 
 // Shared with the strapi-php handler's PHPUnit tests, so both targets store alike.
@@ -70,6 +71,16 @@ describe("referrerHostOf", () => {
 });
 
 describe("occurredAtOf", () => {
+  it("has the shared time vectors", () => {
+    expect(vectors.times.length).toBeGreaterThan(0);
+  });
+
+  it.each(vectors.times.map((vector) => [vector.name, vector] as const))("%s", (_name, vector) => {
+    expect(occurredAtOf(vector.at, vector.sentAt, vector.now)?.getTime() ?? null).toBe(
+      vector.stored,
+    );
+  });
+
   it("moves the event by the client's clock skew", () => {
     expect(occurredAtOf(1_000, 3_000, NOW)?.getTime()).toBe(NOW - 2_000);
   });

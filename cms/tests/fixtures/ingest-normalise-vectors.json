@@ -1,9 +1,21 @@
 {
-  "description": "How both ingestion handlers reduce what they store: a path to the property's allowed query parameters, and a referrer to its host. Read by cms/tests (Strapi) and by the strapi-php handler's PHPUnit tests.",
+  "description": "How both ingestion handlers reduce what they store: a path to the property's allowed query parameters, and a referrer to its host. Read by cms/tests (Strapi) and by the strapi-php handler's PHPUnit tests, and an event's time to the server's clock (at + (now - sentAt)), kept from 25 hours back to 5 minutes ahead (stored null: skipped).",
   "paths": [
-    { "path": "/", "allowed": [], "stored": "/" },
-    { "path": "/pricing", "allowed": ["utm_source"], "stored": "/pricing" },
-    { "path": "/pricing?utm_source=news", "allowed": [], "stored": "/pricing" },
+    {
+      "path": "/",
+      "allowed": [],
+      "stored": "/"
+    },
+    {
+      "path": "/pricing",
+      "allowed": ["utm_source"],
+      "stored": "/pricing"
+    },
+    {
+      "path": "/pricing?utm_source=news",
+      "allowed": [],
+      "stored": "/pricing"
+    },
     {
       "path": "/pricing?utm_source=news",
       "allowed": ["utm_source"],
@@ -19,31 +31,171 @@
       "allowed": ["utm_source"],
       "stored": "/a?utm_source=one&utm_source=two"
     },
-    { "path": "/a?utm_source", "allowed": ["utm_source"], "stored": "/a?utm_source" },
-    { "path": "/a?utm_source=", "allowed": ["utm_source"], "stored": "/a?utm_source=" },
-    { "path": "/a?&&utm_source=x&&", "allowed": ["utm_source"], "stored": "/a?utm_source=x" },
-    { "path": "/a?UTM_SOURCE=x", "allowed": ["utm_source"], "stored": "/a" },
-    { "path": "/a?utm%5Fsource=x", "allowed": ["utm_source"], "stored": "/a" },
-    { "path": "/a?=x", "allowed": ["utm_source"], "stored": "/a" },
-    { "path": "/a?", "allowed": ["utm_source"], "stored": "/a" },
-    { "path": "/a?ref=b?c=d", "allowed": ["ref"], "stored": "/a?ref=b?c=d" },
-    { "path": "/a?x=1#frag", "allowed": ["x"], "stored": "/a?x=1" },
-    { "path": "/a#frag?x=1", "allowed": ["x"], "stored": "/a" }
+    {
+      "path": "/a?utm_source",
+      "allowed": ["utm_source"],
+      "stored": "/a?utm_source"
+    },
+    {
+      "path": "/a?utm_source=",
+      "allowed": ["utm_source"],
+      "stored": "/a?utm_source="
+    },
+    {
+      "path": "/a?&&utm_source=x&&",
+      "allowed": ["utm_source"],
+      "stored": "/a?utm_source=x"
+    },
+    {
+      "path": "/a?UTM_SOURCE=x",
+      "allowed": ["utm_source"],
+      "stored": "/a"
+    },
+    {
+      "path": "/a?utm%5Fsource=x",
+      "allowed": ["utm_source"],
+      "stored": "/a"
+    },
+    {
+      "path": "/a?=x",
+      "allowed": ["utm_source"],
+      "stored": "/a"
+    },
+    {
+      "path": "/a?",
+      "allowed": ["utm_source"],
+      "stored": "/a"
+    },
+    {
+      "path": "/a?ref=b?c=d",
+      "allowed": ["ref"],
+      "stored": "/a?ref=b?c=d"
+    },
+    {
+      "path": "/a?x=1#frag",
+      "allowed": ["x"],
+      "stored": "/a?x=1"
+    },
+    {
+      "path": "/a#frag?x=1",
+      "allowed": ["x"],
+      "stored": "/a"
+    }
   ],
   "referrers": [
-    { "referrer": "https://www.example.org", "stored": "www.example.org" },
-    { "referrer": "http://News.Example.COM", "stored": "news.example.com" },
-    { "referrer": "https://example.org:8443", "stored": "example.org" },
-    { "referrer": "https://example.org:", "stored": "example.org" },
-    { "referrer": "http://localhost:8080", "stored": null },
-    { "referrer": "http://localhost", "stored": null },
-    { "referrer": "http://192.168.0.1", "stored": null },
-    { "referrer": "http://192.168.0.1:80", "stored": null },
-    { "referrer": "http://[::1]:8080", "stored": null },
-    { "referrer": "http://[2001:db8::1]", "stored": null },
-    { "referrer": "https://-bad.example.org", "stored": null },
-    { "referrer": "https://example..org", "stored": null },
-    { "referrer": "https://xn--bcher-kva.example", "stored": "xn--bcher-kva.example" },
-    { "referrer": "https://a.b:1:2", "stored": null }
+    {
+      "referrer": "https://www.example.org",
+      "stored": "www.example.org"
+    },
+    {
+      "referrer": "http://News.Example.COM",
+      "stored": "news.example.com"
+    },
+    {
+      "referrer": "https://example.org:8443",
+      "stored": "example.org"
+    },
+    {
+      "referrer": "https://example.org:",
+      "stored": "example.org"
+    },
+    {
+      "referrer": "http://localhost:8080",
+      "stored": null
+    },
+    {
+      "referrer": "http://localhost",
+      "stored": null
+    },
+    {
+      "referrer": "http://192.168.0.1",
+      "stored": null
+    },
+    {
+      "referrer": "http://192.168.0.1:80",
+      "stored": null
+    },
+    {
+      "referrer": "http://[::1]:8080",
+      "stored": null
+    },
+    {
+      "referrer": "http://[2001:db8::1]",
+      "stored": null
+    },
+    {
+      "referrer": "https://-bad.example.org",
+      "stored": null
+    },
+    {
+      "referrer": "https://example..org",
+      "stored": null
+    },
+    {
+      "referrer": "https://xn--bcher-kva.example",
+      "stored": "xn--bcher-kva.example"
+    },
+    {
+      "referrer": "https://a.b:1:2",
+      "stored": null
+    }
+  ],
+  "times": [
+    {
+      "name": "corrected by the client's clock skew",
+      "at": 1000,
+      "sentAt": 3000,
+      "now": 1800000000000,
+      "stored": 1799999998000
+    },
+    {
+      "name": "25 hours old, the oldest kept",
+      "at": 1799910000000,
+      "sentAt": 1800000000000,
+      "now": 1800000000000,
+      "stored": 1799910000000
+    },
+    {
+      "name": "a millisecond older than 25 hours",
+      "at": 1799909999999,
+      "sentAt": 1800000000000,
+      "now": 1800000000000,
+      "stored": null
+    },
+    {
+      "name": "5 minutes ahead, the furthest kept",
+      "at": 1800000300000,
+      "sentAt": 1800000000000,
+      "now": 1800000000000,
+      "stored": 1800000300000
+    },
+    {
+      "name": "a millisecond more than 5 minutes ahead",
+      "at": 1800000300001,
+      "sentAt": 1800000000000,
+      "now": 1800000000000,
+      "stored": null
+    },
+    {
+      "name": "a slow client clock's fresh event, at the server's time",
+      "at": 1799913600000,
+      "sentAt": 1799913600000,
+      "now": 1800000000000,
+      "stored": 1800000000000
+    },
+    {
+      "name": "an event the client calls fresh in a batch it sent two days later",
+      "at": 1800000000000,
+      "sentAt": 1800172800000,
+      "now": 1800000000000,
+      "stored": null
+    },
+    {
+      "name": "the epoch, sent now",
+      "at": 0,
+      "sentAt": 1800000000000,
+      "now": 1800000000000,
+      "stored": null
+    }
   ]
 }
