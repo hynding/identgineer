@@ -17,6 +17,10 @@
      content, so a button is as wide as its label needs wherever there is room. */
   min-inline-size: calc-size(min-content, min(size, 100% + var(--_word-reach)));
   max-inline-size: 100%;
+  /* A region of the page may let words break anywhere (idg-layout's hero does), which would make
+     the label's narrowest as narrow as a letter, so a row sized by content would break its words.
+     The label breaks a word only where the button is narrower than it. */
+  overflow-wrap: break-word;
   --_height-scale: 1;
   --_padding-scale: 1;
 

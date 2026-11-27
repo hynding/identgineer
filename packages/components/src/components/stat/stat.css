@@ -47,7 +47,9 @@
   font-weight: var(--idg-font-display-weight);
   letter-spacing: var(--idg-font-display-letter-spacing);
   line-height: var(--idg-font-display-line-height);
-  overflow-wrap: anywhere;
+  /* A figure is read whole: what sizes the stat by its content makes it as wide as the figure, and
+     the figure breaks only where the stat is narrower than it. */
+  overflow-wrap: break-word;
 }
 
 .change {
