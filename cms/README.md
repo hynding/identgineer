@@ -224,10 +224,20 @@ What is configuration:
   anonymously, and the write key reads nothing.
 
 What is hand-written, in `protected/` on both targets ([protected/README.md](protected/README.md)
-has the files and the full rules): the handler, the `IssueIngestKey` hook (a fresh `pk_` key of 40
-secure random characters on each create, whatever the client sent) and the `PurgeExpiredEvents`
-schedule (by each property's `retentionDays`). The handler accepts what `@identgineer/tracking`
-sends, both transports:
+has the files and the full rules): the handler, the `IssueIngestKey` hook, the
+`DropClientIngestKey` route middleware and the `PurgeExpiredEvents` schedule (by each property's
+`retentionDays`).
+
+**The key is the server's.** A client creates a property without `ingestKey` (`POST
+/api/properties`, as the dashboard will); `IssueIngestKey` gives it `pk_` and 40 secure random
+characters, and the answer carries it. `DropClientIngestKey` takes `ingestKey` out of every create
+and update body (and query string) on both targets before validation, so no client can choose,
+change, clear or probe a key (a unique check on a client's value would tell whether that key is
+taken). The model's pattern requires 32 to 61 random characters after `pk_`. The admin panel's
+super-admin can still edit the field. Rotating a key is a follow-up: today an owner deletes the
+property and creates another.
+
+The handler accepts what `@identgineer/tracking` sends, both transports:
 
 | Transport | Content type       | Write key                        |
 | --------- | ------------------ | -------------------------------- |
@@ -462,7 +472,8 @@ without SVG; brand logos are text for that reason among others); string lengths 
 each target counts them (UTF-16 units on Strapi, code points on strapi-php), hence the doubled
 brand kit name and tagline limits; a field cannot be unique per owner; relations have no delete
 behaviour, so on strapi-php a property with events cannot be deleted until its events are purged;
-there is no read-only field, so an owner can change `ingestKey` after it is issued; and one
+there is no read-only field (so `ingestKey` is kept server-owned by a route middleware, which the
+admin panel does not pass through); and one
 `protected/` directory is mirrored into both targets.
 
 **Deployment recommendation (Feature 14).** Put a rate limit per client address on

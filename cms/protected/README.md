@@ -10,16 +10,17 @@ camis has one protected directory for all targets, so a PHP file placed here is 
 the Strapi project and a TypeScript file into the Laravel app. Both are inert in the other target.
 Keep each language under the path its own target expects:
 
-| What                               | strapi-php (Laravel) path          | Strapi path                                 |
-| ---------------------------------- | ---------------------------------- | ------------------------------------------- |
-| `IngestEvent` endpoint             | `app/Hooks/IngestEvent.php`        | `src/api/event/controllers/ingest-event.ts` |
-| Its parts (validation, rows)       | `app/Ingest/*.php`                 | `src/ingest/*.ts`                           |
-| Its limits                         | `config/ingest.php`                | `src/ingest/settings.ts`                    |
-| `IssueIngestKey` hook (Property)   | `app/Hooks/IssueIngestKey.php`     | `src/hooks/issue-ingest-key.ts`             |
-| `PurgeExpiredEvents` schedule      | `app/Hooks/PurgeExpiredEvents.php` | `src/cron/purge-expired-events.ts`          |
-| Handler tests (PHPUnit)            | `tests/Feature/Ingest/*.php`       | — (Vitest, `cms/tests/ingest-*.test.ts`)    |
-| Extra API routes (strapi-php only) | `routes/api-custom.php`            | —                                           |
-| REST page cap (Strapi only)        | —                                  | `config/api.ts`                             |
+| What                               | strapi-php (Laravel) path           | Strapi path                                 |
+| ---------------------------------- | ----------------------------------- | ------------------------------------------- |
+| `IngestEvent` endpoint             | `app/Hooks/IngestEvent.php`         | `src/api/event/controllers/ingest-event.ts` |
+| Its parts (validation, rows)       | `app/Ingest/*.php`                  | `src/ingest/*.ts`                           |
+| Its limits                         | `config/ingest.php`                 | `src/ingest/settings.ts`                    |
+| `IssueIngestKey` hook (Property)   | `app/Hooks/IssueIngestKey.php`      | `src/hooks/issue-ingest-key.ts`             |
+| `DropClientIngestKey` middleware   | `app/Hooks/DropClientIngestKey.php` | `src/middlewares/drop-client-ingest-key.ts` |
+| `PurgeExpiredEvents` schedule      | `app/Hooks/PurgeExpiredEvents.php`  | `src/cron/purge-expired-events.ts`          |
+| Handler tests (PHPUnit)            | `tests/Feature/Ingest/*.php`        | — (Vitest, `cms/tests/ingest-*.test.ts`)    |
+| Extra API routes (strapi-php only) | `routes/api-custom.php`             | —                                           |
+| REST page cap (Strapi only)        | —                                   | `config/api.ts`                             |
 
 Each hook, endpoint and route path above is seeded by camis as a stub the first time it builds,
 implementing a generated contract (`app/Hooks/Contracts/*.php`, `src/hooks/contracts/*.ts`). Copy a
@@ -76,8 +77,11 @@ counter, keyed by a hash.
 
 - `IssueIngestKey` (Property `beforeCreate`) returns `pk_` followed by 40 characters from a
   cryptographically secure generator (`Str::random()` in PHP, `crypto.randomInt` in Node), ignoring
-  the key the client sent. The field is required, so a create must still send a placeholder that
-  matches `^pk_[A-Za-z0-9]{19,61}$`.
+  its input. The field is not required, so a create sends no key.
+- `DropClientIngestKey` (Property's create and update routes) removes `ingestKey` from the body's
+  `data` (an object, or a multipart body's JSON text on Strapi) and, on strapi-php, from the query
+  string, before the controller validates it. A key is therefore never set, changed, cleared or
+  probed through the content API on either target.
 - `PurgeExpiredEvents` (daily) deletes, for each property, the events older than its
   `retentionDays`. It deletes in bulk, so no per-entry webhook or lifecycle runs.
 
