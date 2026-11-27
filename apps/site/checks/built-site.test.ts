@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { parseHtmlToDocument } from "@stencil/core/mock-doc";
 import { beforeAll, describe, expect, it } from "vitest";
 import { HEADERS_FILE, styleSource } from "../scripts/security-headers";
-import { navigationRoutes, pageFile, prerenderedPages } from "../src/routes";
+import { livePaths, pageFile, prerenderedPages } from "../src/routes";
 
 const WWW = fileURLToPath(new URL("../www", import.meta.url));
 
@@ -88,8 +88,17 @@ describe.skipIf(!built)("the built site", () => {
   });
 
   it("has a file for every live route and a 404 page", () => {
-    for (const route of navigationRoutes()) expect(htmlFiles).toContain(pageFile(route.path));
+    for (const path of livePaths()) expect(htmlFiles).toContain(pageFile(path));
     expect(htmlFiles).toContain("404.html");
+  });
+
+  it("lists every live route in its sitemap by its canonical address, and the sitemap in robots.txt", () => {
+    const sitemap = readFileSync(join(WWW, "sitemap.xml"), "utf8");
+    const listed = [...sitemap.matchAll(/<loc>([^<]*)<\/loc>/g)].map((match) => match[1]);
+    expect(listed).toEqual([...livePaths()].map((path) => new URL(path, siteOrigin).href));
+    expect(sitemap).not.toContain("404");
+    const robots = readFileSync(join(WWW, "robots.txt"), "utf8");
+    expect(robots).toContain(`Sitemap: ${siteOrigin}/sitemap.xml\n`);
   });
 
   it("has no page that is not in the route table", () => {
@@ -161,6 +170,13 @@ describe.skipIf(!built)("the built site", () => {
           continue;
         }
         const url = new URL(value, `${siteOrigin}/${file}`);
+        // A reading page may link to another site: only an https: link a reader follows, which
+        // shares nothing with the page it leaves. Nothing is ever loaded from one.
+        const leaves =
+          element.localName === "a" &&
+          url.protocol === "https:" &&
+          element.getAttribute("rel") === "noopener noreferrer";
+        if (url.origin !== siteOrigin && leaves) continue;
         if (url.origin !== siteOrigin) {
           problems.push(`${where}: another origin`);
           continue;
@@ -182,7 +198,7 @@ describe.skipIf(!built)("the built site", () => {
 
   it("serves nothing that no page needs", () => {
     // What the pages link and load, then every chunk of the client build that one of those names.
-    const needed = new Set<string>([HEADERS_FILE, ...htmlFiles]);
+    const needed = new Set<string>([HEADERS_FILE, "sitemap.xml", "robots.txt", ...htmlFiles]);
     for (const page of pages.values()) {
       for (const element of page.elements) {
         for (const name of ["href", "src"]) {

@@ -1,0 +1,243 @@
+import { existsSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import type { HydrateResults, SerializeDocumentOptions } from "@stencil/core/internal";
+import { parseHtmlToDocument } from "@stencil/core/mock-doc";
+import { beforeAll, describe, expect, it } from "vitest";
+import { prepareServerDocument } from "../scripts/server-document";
+import type { ContentPage } from "../src/content/content-page";
+
+interface HydrateModule {
+  renderToString(html: string, options: SerializeDocumentOptions): Promise<HydrateResults>;
+}
+
+const HYDRATE = fileURLToPath(new URL("../hydrate/index.mjs", import.meta.url));
+const built = existsSync(HYDRATE);
+
+/** A page with every kind of block, on the theming guide's route, so it has the docs' navigation. */
+const PAGE: ContentPage = {
+  slug: "theming",
+  title: "Every block <b>once</b>",
+  summary: "A summary with <script>alert(1)</script> in it.",
+  seo: {},
+  body: [
+    {
+      type: "paragraph",
+      content: [
+        { type: "text", text: "Plain, " },
+        { type: "text", text: "strong", strong: true },
+        { type: "text", text: "emphasis", emphasis: true },
+        { type: "text", text: "ENV_NAME", code: true },
+        { type: "link", href: "/identity/", text: "inside" },
+        { type: "link", href: "https://example.com/", text: "outside" },
+        { type: "text", text: '<img src="https://evil.example/x.png" onerror="alert(1)">' },
+      ],
+    },
+    { type: "heading", level: 2, text: "First section" },
+    { type: "heading", level: 3, text: "A detail" },
+    { type: "list", style: "numbered", items: [[{ type: "text", text: "One" }]] },
+    { type: "list", style: "bulleted", items: [[{ type: "text", text: "Dot" }]] },
+    { type: "code", language: "html", code: "<style>body{display:none}</style>", caption: "Cap" },
+    { type: "heading", level: 2, text: "Second section" },
+    {
+      type: "callout",
+      tone: "warning",
+      title: "Mind",
+      content: [{ type: "text", text: "Careful" }],
+    },
+    {
+      type: "table",
+      caption: "Cells",
+      columns: ["Name", "Value"],
+      rows: [[[{ type: "text", text: "a" }], [{ type: "text", text: "b", code: true }]]],
+    },
+    { type: "example", name: "theme-tiles", caption: "Tiles" },
+  ],
+};
+
+/** Every element of a document, including those in declarative shadow roots. */
+function elementsOf(root: ParentNode): Element[] {
+  return [...root.querySelectorAll("*")].flatMap((element) =>
+    element.nodeName === "TEMPLATE"
+      ? [element, ...elementsOf((element as HTMLTemplateElement).content)]
+      : [element],
+  );
+}
+
+function escapeAttribute(value: string): string {
+  return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
+}
+
+async function render(page: string, navigation = ""): Promise<Document> {
+  const hydrate = (await import(pathToFileURL(HYDRATE).href)) as HydrateModule;
+  const attributes = `page="${escapeAttribute(page)}" navigation="${escapeAttribute(navigation)}"`;
+  const results = await hydrate.renderToString(
+    `<!doctype html><html><head></head><body><site-content-page ${attributes}></site-content-page></body></html>`,
+    {
+      url: "https://identgineer.example/docs/theming/",
+      serializeShadowRoot: "declarative-shadow-dom",
+      prettyHtml: false,
+      beforeHydrate: prepareServerDocument,
+    },
+  );
+  const document = parseHtmlToDocument(results.html ?? "") as unknown as Document;
+  return document;
+}
+
+describe.skipIf(!built)("a reading page, as the prerenderer draws it", () => {
+  let document: Document;
+  let elements: Element[];
+  const all = (selector: string) => [...document.querySelectorAll(selector)];
+  const one = (selector: string) => {
+    const found = document.querySelector(selector);
+    if (!found) throw new Error(`no ${selector}`);
+    return found;
+  };
+
+  beforeAll(async () => {
+    document = await render(JSON.stringify(PAGE));
+    elements = elementsOf(document);
+  });
+
+  it("has one h1, the title, as text", () => {
+    expect(all("h1")).toHaveLength(1);
+    expect(one("h1").textContent).toBe("Every block <b>once</b>");
+    expect(one(".lede").textContent).toBe("A summary with <script>alert(1)</script> in it.");
+  });
+
+  it("draws markup in the content only as text: no element, script, style or image it named", () => {
+    expect(elements.filter((element) => element.localName === "b")).toEqual([]);
+    expect(elements.filter((element) => element.localName === "img")).toEqual([]);
+    expect(elements.some((element) => element.hasAttribute("onerror"))).toBe(false);
+    const article = one("article.prose");
+    expect(article.querySelectorAll("script, style")).toHaveLength(0);
+    expect(article.textContent).toContain('<img src="https://evil.example/x.png"');
+    expect(one(".code-sample code").textContent).toBe("<style>body{display:none}</style>");
+  });
+
+  it("draws the body in an article, cut into a section for each level 2 heading", () => {
+    const article = one("article.prose");
+    expect(article.getAttribute("aria-labelledby")).toBe("page-title");
+    const sections = [...article.querySelectorAll("section.prose-section")];
+    expect(sections.map((section) => section.querySelector("h2")?.textContent)).toEqual([
+      "First section",
+      "Second section",
+    ]);
+    expect(sections.map((section) => section.getAttribute("aria-labelledby"))).toEqual([
+      "first-section",
+      "second-section",
+    ]);
+    expect(one("h3#a-detail").textContent).toBe("A detail");
+    expect(article.querySelector(".prose-intro p")).not.toBeNull();
+  });
+
+  it("keeps a run's emphasis, the code innermost, with places to wrap a long name", () => {
+    const paragraph = one(".prose-intro p");
+    expect(paragraph.querySelector("strong")?.textContent).toBe("strong");
+    expect(paragraph.querySelector("em")?.textContent).toBe("emphasis");
+    const code = paragraph.querySelector("code");
+    expect(code?.textContent).toBe("ENV_NAME");
+    expect(code?.querySelectorAll("wbr")).toHaveLength(1);
+  });
+
+  it("links inside the site plainly, and outside it with noopener noreferrer", () => {
+    const links = [...one(".prose-intro p").querySelectorAll("a")];
+    expect(links.map((link) => [link.getAttribute("href"), link.getAttribute("rel")])).toEqual([
+      ["/identity/", null],
+      ["https://example.com/", "noopener noreferrer"],
+    ]);
+  });
+
+  it("draws lists as ol and ul", () => {
+    expect(one("ol.prose-list li").textContent).toBe("One");
+    expect(one("ul.prose-list li").textContent).toBe("Dot");
+  });
+
+  it("draws a code sample as a figure: its language, its caption, a copy button and the code", () => {
+    const figure = one("figure.code-sample");
+    expect(figure.querySelector(".code-language")?.textContent).toBe("HTML");
+    expect(figure.querySelector(".code-caption")?.textContent).toBe("Cap");
+    const copy = figure.querySelector("idg-button.code-copy");
+    expect(copy?.classList.contains("needs-script")).toBe(true);
+    expect(copy?.textContent).toContain("Copy the Cap sample");
+    expect(figure.querySelector("pre")?.getAttribute("tabindex")).toBe("0");
+    // Plain text: no highlighter's spans.
+    expect(figure.querySelectorAll("pre span")).toHaveLength(0);
+  });
+
+  it("draws a callout as a quiet alert of its tone, with its title", () => {
+    const callout = one("idg-alert.callout");
+    expect(callout.getAttribute("variant")).toBe("warning");
+    expect(callout.hasAttribute("quiet")).toBe(true);
+    expect(callout.querySelector('[slot="title"]')?.textContent).toBe("Mind");
+  });
+
+  it("draws a table with its caption and column headers, in a region that scrolls", () => {
+    const region = one(".table-scroll");
+    expect(region.getAttribute("role")).toBe("region");
+    expect(region.getAttribute("tabindex")).toBe("0");
+    const caption = region.querySelector("caption");
+    expect(caption?.textContent).toBe("Cells");
+    expect(region.getAttribute("aria-labelledby")).toBe(caption?.id);
+    expect([...region.querySelectorAll("th")].map((th) => th.getAttribute("scope"))).toEqual([
+      "col",
+      "col",
+    ]);
+    expect(region.querySelector("td code")?.textContent).toBe("b");
+  });
+
+  it("draws a live example from the registry, in a figure with its caption", () => {
+    const figure = one("figure.example-theme-tiles");
+    expect(figure.querySelector("figcaption")?.textContent).toBe("Tiles");
+    expect(figure.querySelector(".themes-room")).not.toBeNull();
+  });
+
+  it("lists the headings in a table of contents, the level 3 ones under their section", () => {
+    const contents = one("nav.contents");
+    expect(contents.getAttribute("aria-labelledby")).toBe("contents-title");
+    const top = [...contents.querySelectorAll("a")].filter(
+      (link) => link.parentElement?.parentElement?.parentElement === contents,
+    );
+    expect(top.map((link) => link.getAttribute("href"))).toEqual([
+      "#first-section",
+      "#second-section",
+    ]);
+    expect(contents.querySelector("ul ul a")?.getAttribute("href")).toBe("#a-detail");
+  });
+
+  it("marks the page in the docs' own navigation, and links the pages before and after", () => {
+    const current = all('nav.docs-pages a[aria-current="page"]');
+    expect(current.map((link) => link.getAttribute("href"))).toEqual(["/docs/theming/"]);
+    expect(one("nav.docs-pages a").textContent).toBe("Overview");
+    expect(all("nav.pager a").map((link) => link.getAttribute("rel"))).toEqual(["prev", "next"]);
+  });
+
+  it("marks the docs as the current section in the site's navigation", () => {
+    const docs = all('a[slot="navigation"][href="/docs/"]');
+    expect(docs.map((link) => link.getAttribute("aria-current"))).toEqual(["true"]);
+  });
+
+  it("takes the navigation's labels from the CMS, checked again, and keeps the rest", async () => {
+    const labelled = await render(
+      JSON.stringify(PAGE),
+      JSON.stringify({
+        header: { "/tracking/": "Analytics", "/nowhere/": "Lost" },
+        footer: { "/docs/": "Read the docs" },
+      }),
+    );
+    const label = (selector: string) => labelled.querySelector(selector)?.textContent;
+    expect(label('a[slot="navigation"][href="/tracking/"]')).toBe("Analytics");
+    expect(label('.site-footer-pages a[href="/tracking/"]')).toBe("Tracking");
+    expect(label('.site-footer-pages a[href="/docs/"]')).toBe("Read the docs");
+    expect(labelled.querySelector('a[href="/nowhere/"]')).toBeNull();
+  });
+
+  it.each([
+    ["is not JSON", "{"],
+    ["is not valid", JSON.stringify({ ...PAGE, body: [{ type: "html", html: "<p>x</p>" }] })],
+    ["has no route", JSON.stringify({ ...PAGE, slug: "nowhere" })],
+  ])("says the page could not be shown when its content %s", async (_, page) => {
+    const refused = await render(page);
+    expect(refused.querySelector("h1")?.textContent).toBe("This page could not be shown");
+    expect(refused.querySelector("article")).toBeNull();
+  });
+});
