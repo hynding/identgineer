@@ -47,11 +47,13 @@ Field names are the IR's neutral camelCase; each target maps them to its own col
 ### Tracking (owner only)
 
 - **Property** — a tracked site or app: `owner`, `name`, `domain`, `allowedOrigins` (repeatable
-  component of `https://` origins), `ingestKey` (public, unique, `pk_…`), `retentionDays` (1–400,
-  default 180), `active`.
-- **Event** — `property`, `owner` (copied from the property, see below), `name`, `occurredAt`,
-  `sessionId`, `path`, `referrerHost`, `properties` (JSON), `viewportClass` (`xs`–`xl`), `country`
-  (two letters, optional). Read-only content API.
+  component of `https://` origins), `allowedEvents` (repeatable: an event `name` and the
+  `propertyKeys` kept for it), `allowedQueryParams` (repeatable: the query parameter names a stored
+  path keeps), `ingestKey` (public, unique, `pk_…`), `retentionDays` (1–400, default 180), `active`.
+- **Event** — `property`, `owner` (copied from the property, see below), `name` (the tracking wire
+  format's `[a-z][a-z0-9_]{0,63}`), `dedupeKey` (unique, see [Event ingestion](#event-ingestion)),
+  `occurredAt`, `sessionId` (optional), `path` (optional), `referrerHost`, `properties` (JSON),
+  `viewportClass` (`xs`–`xl`), `country` (two letters, optional). Read-only content API.
 - **ConsentRecord** — append-only: `property`, `owner`, `subjectId`, `categories` (component:
   `necessary`, `analytics`, `marketing`, `personalisation`), `policyVersion`, `recordedAt`,
   `withdrawnAt`. A withdrawal is a new record. Read-only content API.
@@ -131,10 +133,14 @@ visitor:
   ConsentRecord.
 - `sessionId` and `subjectId` are random tokens generated in the browser (16–64 URL-safe
   characters), not derived from anything about the visitor, and the two are never stored together.
-- `path` keeps no query string or fragment (where emails and tokens leak); `referrerHost` keeps the
-  host only; `country` is a coarse two-letter code, optional, and never stored with a city or
+- `path` keeps no fragment and only the query parameters the property lists in
+  `allowedQueryParams` (others are where emails and tokens leak); `referrerHost` keeps the host
+  only; `country` is a coarse two-letter code, optional, and never stored with a city or
   coordinates; `viewportClass` is a size bucket, not a resolution.
-- `properties` is bounded and flat (enforced by the ingestion handler; camis cannot bound JSON).
+- `properties` is flat and bounded by the wire format (32 values, strings of at most 1024 code
+  points), and keeps only the keys the property's `allowedEvents` lists for the event (enforced by
+  the ingestion handler; camis cannot bound JSON).
+- The visitor's `user` id that the tracking SDK may send is never stored.
 - Events older than the property's `retentionDays` are deleted by the `PurgeExpiredEvents` daily
   schedule.
 
@@ -169,8 +175,7 @@ visitor:
 - New registrations get `authenticated` (`defaultRole`).
 - `public` holds no grant on User, Profile, Property, Event, ConsentRecord or File, and no
   endpoint. Its one conditioned grant reads brand kits marked public. Tracking reaches the CMS only
-  through the two ingestion endpoints, which are public by declaration in `camis.json`, not by a
-  grant.
+  through the ingestion endpoint, which is public by declaration in `camis.json`, not by a grant.
 - A signed-in user holds brand kits under the owner grant only, and reads public kits without
   their credentials, as the public role (the brand package's store does). A read-only grant of
   public kits for `authenticated` was tried and dropped: a kit's `owner` cannot be filtered on
@@ -201,27 +206,63 @@ this project uses the last:
 | A route policy on Event's `create`                          | Still the generic route and body shape; the policy can only refuse, not map a key to a property.                                                                        |
 | **Public IR endpoints with hand-written handlers** (chosen) | One narrow route per job on both targets, the content API stays read-only, and the handler is the single place every check lives.                                       |
 
-What is configuration (done):
+What is configuration:
 
-- `camis.json` declares `IngestEvent` (`POST /api/ingest/events`) and `RecordConsent`
-  (`POST /api/ingest/consent`) with `"public": true`. strapi-php routes them through
-  `StrapiPublicRoute`; Strapi with `auth: false`. No role lists them and no grant is needed.
+- `camis.json` declares `IngestEvent` (`POST /api/ingest/events`) with `"public": true`.
+  strapi-php routes it through `StrapiPublicRoute`; Strapi with `auth: false`. No role lists it and
+  no grant is needed. Server-side consent records are not part of it (no `RecordConsent`
+  endpoint): consent is the SDK's, in the visitor's browser.
+- Its camis guards, enforced before the handler on both targets: `throttle` (120 a minute per
+  client address, `CAMIS_ENDPOINT_INGEST_EVENT_THROTTLE_PER_MINUTE`), `maxBodyBytes` (65,536),
+  `accepts` (`application/json`, `text/plain`) and `crossOrigin` (any origin, with the
+  `Content-Type` and `X-Idg-Write-Key` headers, no credentials). The tracked sites are not listed in
+  `CAMIS_CORS_ORIGIN`; the handler checks `Origin` against the property instead.
 - Event and ConsentRecord set `apiActions: ["list", "read"]`, so neither target generates a create,
-  update or delete route for them. Nothing but the endpoints can write tracking data through the
+  update or delete route for them. Nothing but the endpoint can write tracking data through the
   API, whatever a role is granted.
 - `public` has no grant on Event, ConsentRecord or Property, so nothing ingested can be read back
-  anonymously.
-- Property carries the public `ingestKey` (unique, `pk_` prefix, issued by the `IssueIngestKey`
-  `beforeCreate` hook) and `allowedOrigins`.
-- strapi-php's upload types, CORS origins and auth throttles are set in `.env` (`.env.example`).
+  anonymously, and the write key reads nothing.
 
-What is hand-written (not done yet, Feature 9): the two handlers and the hook and schedule bodies,
-in `protected/`, following the rules in [protected/README.md](protected/README.md): property lookup
-by key, origin allow-listing, body and JSON limits, rate limiting, field validation and
-normalisation, `202` with no body. Until then the seeded stubs write nothing. The tracking script
-sends with `navigator.sendBeacon` (a `text/plain` body), which needs no CORS preflight, so the
-tracked sites do not have to be listed in `CAMIS_CORS_ORIGIN`; the handler checks `Origin` against
-the property instead.
+What is hand-written, in `protected/` on both targets ([protected/README.md](protected/README.md)
+has the files and the full rules): the handler, the `IssueIngestKey` hook (a fresh `pk_` key of 40
+secure random characters on each create, whatever the client sent) and the `PurgeExpiredEvents`
+schedule (by each property's `retentionDays`). The handler accepts what `@identgineer/tracking`
+sends, both transports:
+
+| Transport | Content type       | Write key                        |
+| --------- | ------------------ | -------------------------------- |
+| fetch     | `application/json` | `X-Idg-Write-Key` header         |
+| beacon    | `text/plain`       | the body's `writeKey`, never URL |
+
+| Answer                   | When                                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------ |
+| `202`, no body           | Accepted, also when some or all events are skipped (not allowed, too old, repeated)  |
+| `400`                    | The batch breaks the wire format; the whole batch is refused                         |
+| `403`                    | `Origin` is absent or not one of the property's `allowedOrigins`                     |
+| `404`                    | The key is unknown or its property inactive; one identical answer for both           |
+| `413`                    | The body exceeds `INGEST_MAX_BODY_BYTES` (default and most 65,536), before parsing   |
+| `415`                    | Any other content type                                                               |
+| `429` with `Retry-After` | Per client address (camis' throttle) or per key (`INGEST_KEY_RATE_PER_MINUTE`, 3000) |
+
+Each accepted event is one Event row: `property` and `owner` from the key's property, `dedupeKey`
+the SHA-256 of the property id and event id (a repeat is skipped), `occurredAt` corrected for the
+client's clock (`at + (now - sentAt)`, kept only from 25 hours back to 5 minutes ahead), the path
+and referrer reduced as under [Data minimisation](#data-minimisation). `page_view` is always
+accepted, without properties; any other event must be listed in the property's `allowedEvents`.
+The IP address, the User-Agent, the visitor's `user` id and the write key reach neither the
+database nor the logs; the address is kept only in camis' throttle counter, keyed by a hash.
+
+Both targets' validators pass the request vectors the SDK's `parseTrackingBatch` passes
+(`packages/tracking/src/testing/batch-vectors.json`), and both reduce paths and referrers to the
+same `tests/fixtures/ingest-normalise-vectors.json`. `pnpm contract:live` sends the SDK's real
+fetch (through the CORS preflight) and beacon to a live strapi-php backend and checks every
+refusal, the key's reach and what is stored
+(`packages/identity/src/live-contract/tracking-ingest.live.test.ts`).
+
+**Upgrading a database.** Event gained `dedupeKey` (required, unique) and Property its two
+repeatable components, so the strapi-php migrations were renumbered: the allowed origins'
+migration is now `000010`, not `000008`. A database migrated before this change has stale
+migration names; recreate it (nothing was ingested before this change).
 
 ## Commands
 
@@ -265,14 +306,17 @@ packages from Packagist. `scripts/live-backend.js` then, on every run:
    `.env.example`, with sqlite, mail to the `log` driver and `APP_ENV=production`; PHP gets only
    the shell's path, home, temp, locale, Composer, proxy and CA variables plus these settings, so
    nothing exported in the shell changes the backend under test;
-3. migrates and seeds a fresh sqlite database for each of five servers that differ only in email
-   confirmation, hidden account existence, throttle rate and access token lifespan (`main`: off,
+3. runs the ingestion handler's PHPUnit tests (`protected/tests/Feature/Ingest`) in the app, with
+   the shared vector files, and stops if they fail;
+4. migrates and seeds a fresh sqlite database for each of six servers that differ only in email
+   confirmation, hidden account existence, throttle rates and access token lifespan (`main`: off,
    relaxed; `confirmation`: on, relaxed; `disclosing`: on, relaxed, accounts shown as Strapi
-   answers, so the SDK is checked against both; `throttled`: off, 3 a minute for every group,
-   refresh included; `shortLived`: off, relaxed, access tokens living 2 seconds; all but
-   `disclosing` hide accounts), and serves each with PHP's built-in server on a free
+   answers, so the SDK is checked against both; `throttled`: off, 3 a minute for every credential
+   group, refresh included; `shortLived`: off, relaxed, access tokens living 2 seconds;
+   `ingestLimited`: off, relaxed, but ingestion limited to 6 a minute per address and 3 per key;
+   all but `disclosing` hide accounts), and serves each with PHP's built-in server on a free
    port of 127.0.0.1 only, logging to `generated/live/<server>.server.log`;
-4. writes `generated/live/backend.json` describing them, runs the command after `--` with
+5. writes `generated/live/backend.json` describing them, runs the command after `--` with
    `IDENTITY_LIVE_BACKEND` set to its path, and stops the servers.
 
 A server that exits stops the run at once, with the end of its log. SIGINT, SIGTERM and SIGHUP are
@@ -292,7 +336,11 @@ and the live run does not add it: the users-permissions routes count with camis'
 Laravel's `ThrottleRequests`, so the line changes nothing they do. A fresh scaffold has it. Such an app
 also lacks the `CamisAuthServiceProvider` line in `bootstrap/providers.php` (the admin panel's
 sign-in, nothing the SDK uses); the live script adds that documented line after the panel's entry
-when it is missing, so the app matches a fresh scaffold and the build no longer warns.
+when it is missing, so the app matches a fresh scaffold and the build no longer warns. It also
+lacks camis' line that leaves the endpoint's CORS to camis (`ENDPOINT_CORS_SKIP` in
+`bootstrap/app.php`, generated DEPLOY.md): without it Laravel's own CORS answers the ingestion
+preflight without `X-Idg-Write-Key`, and the SDK's fetch is blocked. The live script adds those
+lines after the `StrapiErrors` block when they are missing.
 Everything it writes is under the git-ignored `generated/live`, one scaffold only; delete that
 directory to scaffold again. A scaffold counts as done only once `generated/live/strapi-php.scaffolded`
 is written, after it has finished, so one interrupted is started again from nothing. After
@@ -375,6 +423,10 @@ Limits that remain on Strapi, for this model:
   database does not enforce its uniqueness.
 - `remoteDataTransfer` (strapi-php): `strapi transfer` needs a WebSocket server; move data as an
   archive instead (see `DEPLOY.md`).
+- `endpointBodyLimit @ Event.IngestEvent` (Strapi): `strapi::body` refuses a `text/plain` body over
+  57,344 bytes (its default text limit) with 413 before the endpoint's 65,536-byte cap applies, so
+  on local Strapi a beacon between the two sizes is refused. The SDK's `maxPayloadBytes` default
+  (32,768) is below both.
 
 **Found while storing brand kits, fixed in camis.** Both need a camis that includes the fixes.
 
@@ -397,8 +449,10 @@ Limits that remain on Strapi, for this model:
   column type is not the server's or the request's limit (MySQL's `max_allowed_packet`).
 
 **Not reported by camis but limiting this model.** Conditions cannot follow a relation (hence the
-denormalised `owner` on Event and ConsentRecord); public endpoints have no declarative throttle,
-body limit or origin list (hence the hand-written checks); no read route has a throttle either, so
+denormalised `owner` on Event and ConsentRecord); an endpoint's guards cannot check `Origin`
+against a row or limit per key (hence the handler's own checks); the Strapi target generates no
+unique index, so `Event.dedupeKey` is unique only by the handler's per-process lock there (two
+Strapi processes could both store a repeat; strapi-php has the index); no read route has a throttle either, so
 public brand kits, which anyone may list page by page by design, can be enumerated as fast as the
 server answers (pages are capped at 25 rows, `CAMIS_REST_MAX_LIMIT` for strapi-php and
 `protected/config/api.ts` for Strapi, whose generated `maxLimit` reads no variable; a list asks for
