@@ -140,12 +140,14 @@ wider than they were. The other part styles (a gap, a column, a baseline) lay th
 The vertical list's narrowest width, a button's and a stat's figure's are set with `calc-size()`.
 In an engine without it (Firefox, Safari) a vertical tab may cross its list's border as before. A
 button falls back, under `@supports not`, to a largest size of the room it is in plus the same reach
-past it, so its longest word stays whole wherever the window has room, as with `calc-size()`; where
-the window is narrow against the text the word breaks inside the button. A stat's figure falls back
+past it, so its longest word stays whole wherever the window has room, as with `calc-size()`; a
+`full-width` button's control fills its row as a flex item there, with the same largest size, rather
+than at a set 100%. Where the window is narrow against the text the word breaks inside the button. A stat's figure falls back
 to `overflow-wrap: break-word`: it is whole wherever what holds the stat sizes it by its content,
 and breaks only where the stat is narrower than it, but at 200% text in a phone's window a parent
 sized by its content is as wide as the figure, where `calc-size()` would let it break to fit.
-`browser/whole-words.browser.ts` holds the button and the figure whole in both engines.
+`browser/whole-words.browser.ts` holds the button, a `full-width` button in a column narrower than
+a word, and the figure whole in both engines.
 
 ## `idg-button`
 

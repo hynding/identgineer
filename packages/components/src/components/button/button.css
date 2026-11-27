@@ -58,6 +58,18 @@
   inline-size: 100%;
 }
 
+/* Without calc-size() the full-width control fills the row as a flex item, not by a set width, and
+   its smallest size is a flex item's automatic one: its longest word, capped by its largest size,
+   the room and the same reach past it as the host's. */
+@supports not (min-inline-size: calc-size(min-content, size)) {
+  :host([full-width]) .control {
+    flex: 1 1 100%;
+    min-inline-size: auto;
+    max-inline-size: calc(100% + var(--_word-reach));
+    inline-size: auto;
+  }
+}
+
 /* Size */
 
 .size-sm {
