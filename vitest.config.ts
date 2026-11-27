@@ -72,6 +72,12 @@ export default defineConfig({
         },
       },
       "packages/components/vitest.*.config.ts",
+      {
+        test: {
+          name: "site",
+          include: ["apps/site/{src,scripts,checks}/**/*.test.ts"],
+        },
+      },
     ],
   },
 });
