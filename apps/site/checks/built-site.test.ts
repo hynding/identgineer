@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -45,8 +46,17 @@ function servedFile(path: string): string | undefined {
   return existsSync(full) && statSync(full).isFile() ? file : undefined;
 }
 
-// Reads the build output, so it needs the site built first (CI builds before it tests).
-describe.skipIf(!existsSync(join(WWW, HEADERS_FILE)))("the built site", () => {
+const built = existsSync(join(WWW, HEADERS_FILE));
+const required = process.env.CI !== undefined && process.env.CI !== "";
+
+describe("the site's build output", () => {
+  it.runIf(required)("is there on CI, which builds before it tests", () => {
+    expect(built, "CI must build the site before its tests, or they check nothing").toBe(true);
+  });
+});
+
+// Reads the build output, so it needs the site built first.
+describe.skipIf(!built)("the built site", () => {
   const headers = JSON.parse(readFileSync(join(WWW, HEADERS_FILE), "utf8")) as Record<
     string,
     string
@@ -88,6 +98,29 @@ describe.skipIf(!existsSync(join(WWW, HEADERS_FILE)))("the built site", () => {
       expect(servedFile(script.getAttribute("src") ?? "")).toBeDefined();
     }
   });
+
+  it.each(htmlFiles)(
+    "%s runs the bootstrap script first in the head, blocking and checked by its integrity",
+    (file) => {
+      const elements = pages.get(file)?.elements ?? [];
+      const loading = elements.filter((element) =>
+        ["script", "link", "style"].includes(element.localName),
+      );
+      const bootstrap = loading[0];
+      expect(bootstrap?.localName).toBe("script");
+      expect(bootstrap?.parentElement?.localName).toBe("head");
+      for (const attribute of ["async", "defer", "type"]) {
+        expect(bootstrap?.hasAttribute(attribute), attribute).toBe(false);
+      }
+      const src = bootstrap?.getAttribute("src") ?? "";
+      const served = servedFile(src);
+      expect(served).toBeDefined();
+      const digest = createHash("sha384")
+        .update(readFileSync(join(WWW, served ?? "")))
+        .digest("base64");
+      expect(bootstrap?.getAttribute("integrity")).toBe(`sha384-${digest}`);
+    },
+  );
 
   it.each(htmlFiles)("%s has no style or event handler attribute", (file) => {
     const found = (pages.get(file)?.elements ?? []).flatMap((element) =>
@@ -135,6 +168,43 @@ describe.skipIf(!existsSync(join(WWW, HEADERS_FILE)))("the built site", () => {
       }
     }
     expect(problems).toEqual([]);
+  });
+
+  it("serves nothing that no page needs", () => {
+    // What the pages link and load, then every chunk of the client build that one of those names.
+    const needed = new Set<string>([HEADERS_FILE, ...htmlFiles]);
+    for (const page of pages.values()) {
+      for (const element of page.elements) {
+        for (const name of ["href", "src"]) {
+          const value = element.getAttribute(name);
+          if (value?.startsWith("/") !== true) continue;
+          const file = servedFile(new URL(value, siteOrigin).pathname);
+          if (file !== undefined) needed.add(file);
+        }
+      }
+    }
+    const chunks = filesIn(WWW).filter((file) => file.startsWith("build/"));
+    // A lazy component is loaded by its bundle id, with ".entry.js" added at run time; any other
+    // chunk is named whole.
+    const idOf = (file: string) => {
+      const name = file.split("/").pop() ?? "";
+      return name.endsWith(".entry.js") ? name.slice(0, -".entry.js".length) : name;
+    };
+    let grown = true;
+    while (grown) {
+      grown = false;
+      const loaded = [...needed]
+        .filter((file) => file.startsWith("build/"))
+        .map((file) => readFileSync(join(WWW, file), "utf8"))
+        .join("\n");
+      for (const chunk of chunks) {
+        if (!needed.has(chunk) && loaded.includes(idOf(chunk))) {
+          needed.add(chunk);
+          grown = true;
+        }
+      }
+    }
+    expect(filesIn(WWW).filter((file) => !needed.has(file))).toEqual([]);
   });
 
   it("names only the site's own address in its metadata", () => {

@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { HydrateResults, SerializeDocumentOptions } from "@stencil/core/internal";
@@ -27,7 +27,7 @@ const ASSETS: DocumentAssets = {
   bootstrap: bootstrapScriptAttributes("/assets/bootstrap.js"),
   stylesheets: ["/assets/tokens.css", "/assets/site.css"],
   moduleScript: "/build/site.esm.js",
-  icon: "/favicon.svg",
+  icon: "/assets/favicon.svg",
 };
 
 async function render(
@@ -60,6 +60,12 @@ async function render(
   return results.html;
 }
 
+/**
+ * What Stencil's www output writes that no page loads: its dev server's settings, the loader for
+ * browsers without modules, and an empty entry for the app's own index, which has no exports.
+ */
+const UNUSED_OUTPUT = ["host.config.json", "build/site.js", "build/index.esm.js"];
+
 function write(file: string, content: string): void {
   const path = join(WWW, file);
   mkdirSync(dirname(path), { recursive: true });
@@ -79,6 +85,7 @@ async function prerender(): Promise<void> {
     styles.push(...inlineStyles(html));
     write(page.file, html);
   }
+  for (const file of UNUSED_OUTPUT) rmSync(join(WWW, file), { force: true });
   const headers = securityHeaders(contentSecurityPolicy(styles));
   write(HEADERS_FILE, `${JSON.stringify(headers, null, 2)}\n`);
   console.log(`Prerendered ${String(prerenderedPages().length)} pages for ${siteUrl.href}`);

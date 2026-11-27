@@ -46,8 +46,8 @@ export const config: Config = {
       serviceWorker: null,
       buildDir: "build",
       // The pages themselves are written by scripts/prerender.ts, from the hydrate build below.
+      // src/assets, the icon, is copied to www/assets as it is.
       copy: [
-        { src: "assets/favicon.svg", dest: "favicon.svg" },
         { src: "styles/site.css", dest: "assets/site.css" },
         { src: "../node_modules/@identgineer/tokens/dist/index.css", dest: "assets/tokens.css" },
         {
