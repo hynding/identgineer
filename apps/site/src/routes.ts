@@ -199,7 +199,7 @@ export function navigationRoutes(): readonly LiveRoute[] {
 }
 
 /** Every live path, a section's pages among them: what a link of the site may point to. */
-export function livePaths(): ReadonlySet<string> {
+export function livePaths(): ReadonlySet<RoutePath> {
   return new Set(ROUTES.filter(isLive).map((route) => route.path));
 }
 

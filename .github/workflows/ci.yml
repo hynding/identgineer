@@ -31,6 +31,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
+      # The site's browser suite runs in parts by tag; every test must be in exactly one of them.
+      - run: pnpm --filter @identgineer/site test:browser:parts
       # A build regenerates the committed component declarations; a difference means they are stale.
       - run: git diff --exit-code
       - run: pnpm audit --audit-level=high
@@ -60,24 +62,28 @@ jobs:
       - run: pnpm --filter @identgineer/components test:browser --shard=${{ matrix.shard }}/2
 
   site-browser:
+    # Short, so the parts' names fit in the checks list: "site (chromium-1)".
+    name: site (${{ matrix.part }})
     runs-on: ubuntu-latest
-    # A job of its own, so the components suite's two halves are not slowed. The sweep of every
-    # design, layout and UX mode runs in three engines (Chromium, without calc-size() as Safari, and
-    # without calc-size() or container style queries as Firefox), about fourteen minutes on two
-    # workers. Playwright's shards split by the number of tests, not their length, so the suite runs
-    # as three parts by name instead: each engine's sweep, the first with every other test, about
-    # six, four and four minutes after the build. The limit leaves room for a slow runner.
+    # A job of its own, so the components suite's two halves are not slowed. The fit sweep runs in
+    # three engines (Chromium, without calc-size() as Safari, and without calc-size() or container
+    # style queries as Firefox), and in each engine in two parts by page: the home and identity
+    # pages, every design with every layout, then the theming guide the same way and every other
+    # page in eight pairs. The last part is every other suite. Playwright's shards split by the
+    # number of tests, not their length, so the parts are chosen by tag (apps/site/browser/parts.ts),
+    # each under ten minutes on two workers after the build. The limit leaves room for a slow runner.
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - part: chromium and the rest
-            filter: --grep-invert "without calc-size"
-          - part: without calc-size()
-            filter: --grep "without calc-size.. in "
-          - part: without calc-size() or style queries
-            filter: --grep "without calc-size.. or "
+        part:
+          - chromium-1
+          - chromium-2
+          - no-calc-size-1
+          - no-calc-size-2
+          - no-style-queries-1
+          - no-style-queries-2
+          - rest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -91,4 +97,4 @@ jobs:
       - run: pnpm --filter @identgineer/site exec playwright install --with-deps chromium
       # The site and the workspace packages it is built from, and nothing else.
       - run: pnpm --filter "@identgineer/site..." build
-      - run: pnpm --filter @identgineer/site test:browser ${{ matrix.filter }}
+      - run: pnpm --filter @identgineer/site test:browser:part ${{ matrix.part }}

@@ -4,6 +4,7 @@ import { expect, test } from "./fixtures";
 import { withoutCalcSize } from "@identgineer/components/browser/without-calc-size";
 import { withoutStyleQueries } from "@identgineer/components/browser/without-style-queries";
 import { FULLY_SWEPT, LAYOUTS, PAGES, hydrated, sidewaysScroll } from "./pages";
+import { fitTag } from "./parts";
 
 const DESIGNS = REGISTRY.design.variations.map((variation) => variation.id);
 const THEMES = REGISTRY.theme.variations.map((variation) => variation.id);
@@ -218,13 +219,17 @@ async function withoutEither(page: Page): Promise<number> {
 
 /**
  * The engines a visitor may come with: Chromium; one without `calc-size()`, as Safari is; and one
- * without `calc-size()` or container style queries, as Firefox is. CI runs each as a part of its
- * own by these names, so they are kept apart by their words: "calc-size() in" and "calc-size() or".
+ * without `calc-size()` or container style queries, as Firefox is. Each test carries the tag of the
+ * CI part it runs in (see parts.ts).
  */
 const ENGINES = [
-  { name: "", strip: undefined },
-  { name: " without calc-size()", strip: withoutCalcSize },
-  { name: " without calc-size() or container style queries", strip: withoutEither },
+  { key: "chromium", name: "", strip: undefined },
+  { key: "no-calc-size", name: " without calc-size()", strip: withoutCalcSize },
+  {
+    key: "no-style-queries",
+    name: " without calc-size() or container style queries",
+    strip: withoutEither,
+  },
 ] as const;
 
 // Every design with every layout and every UX mode, the theme and the scheme turning with them, so
@@ -241,38 +246,40 @@ for (const engine of ENGINES) {
         // each design and, from page to page, different pairs.
         const paired = (designIndex + pageIndex) % LAYOUTS.length === layoutIndex;
         if (!FULLY_SWEPT.has(path) && !paired) return;
-        test(`${name}${engine.name} in ${design} with ${layout} fits every UX mode at 320, 390, 820 and 1440px: no sideways scroll, nothing cut or spilled, no word broken, no controls over each other`, async ({
-          page,
-        }) => {
-          test.setTimeout(60_000);
-          const problems: string[] = [];
-          for (const [uxIndex, ux] of UX_MODES.entries()) {
-            const turn = designIndex + layoutIndex + uxIndex;
-            const theme = THEMES[turn % THEMES.length] ?? "aurora";
-            const scheme = turn % 2 === 0 ? "light" : "dark";
-            await page.setViewportSize({ width: FIT_WIDTHS[0], height: 900 });
-            await page.goto(
-              `${path}?idg-design=${design}&idg-theme=${theme}&idg-layout=${layout}&idg-ux=${ux}&idg-scheme=${scheme}`,
-            );
-            await hydrated(page, component);
-            if (engine.strip) {
-              expect(await engine.strip(page), `${engine.name} taken out`).toBeGreaterThan(0);
+        test(
+          `${name}${engine.name} in ${design} with ${layout} fits every UX mode at 320, 390, 820 and 1440px: no sideways scroll, nothing cut or spilled, no word broken, no controls over each other`,
+          { tag: fitTag(engine.key, path) },
+          async ({ page }) => {
+            test.setTimeout(60_000);
+            const problems: string[] = [];
+            for (const [uxIndex, ux] of UX_MODES.entries()) {
+              const turn = designIndex + layoutIndex + uxIndex;
+              const theme = THEMES[turn % THEMES.length] ?? "aurora";
+              const scheme = turn % 2 === 0 ? "light" : "dark";
+              await page.setViewportSize({ width: FIT_WIDTHS[0], height: 900 });
+              await page.goto(
+                `${path}?idg-design=${design}&idg-theme=${theme}&idg-layout=${layout}&idg-ux=${ux}&idg-scheme=${scheme}`,
+              );
+              await hydrated(page, component);
+              if (engine.strip) {
+                expect(await engine.strip(page), `${engine.name} taken out`).toBeGreaterThan(0);
+              }
+              for (const width of FIT_WIDTHS) {
+                await page.setViewportSize({ width, height: 900 });
+                await settled(page);
+                const where = `${theme}/${ux}/${scheme} at ${String(width)}px`;
+                const sideways = await sidewaysScroll(page);
+                if (sideways > 0) problems.push(`${where}: scrolls ${String(sideways)}px sideways`);
+                const { brokenWords, cut, spilled, overlapping } = await misfitsOf(page);
+                for (const word of brokenWords) problems.push(`${where}: "${word}" broken`);
+                for (const what of cut) problems.push(`${where}: ${what} cut`);
+                for (const what of spilled) problems.push(`${where}: ${what} spilled`);
+                for (const pair of overlapping) problems.push(`${where}: ${pair} overlap`);
+              }
             }
-            for (const width of FIT_WIDTHS) {
-              await page.setViewportSize({ width, height: 900 });
-              await settled(page);
-              const where = `${theme}/${ux}/${scheme} at ${String(width)}px`;
-              const sideways = await sidewaysScroll(page);
-              if (sideways > 0) problems.push(`${where}: scrolls ${String(sideways)}px sideways`);
-              const { brokenWords, cut, spilled, overlapping } = await misfitsOf(page);
-              for (const word of brokenWords) problems.push(`${where}: "${word}" broken`);
-              for (const what of cut) problems.push(`${where}: ${what} cut`);
-              for (const what of spilled) problems.push(`${where}: ${what} spilled`);
-              for (const pair of overlapping) problems.push(`${where}: ${pair} overlap`);
-            }
-          }
-          expect(problems).toEqual([]);
-        });
+            expect(problems).toEqual([]);
+          },
+        );
       });
     });
   });

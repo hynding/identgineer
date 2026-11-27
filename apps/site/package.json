@@ -7,7 +7,9 @@
     "build": "stencil build --prod && node scripts/prerender.ts",
     "dev": "pnpm run build && node scripts/serve.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "test:browser": "playwright test --trace off"
+    "test:browser": "playwright test --trace off",
+    "test:browser:part": "node browser/parts.ts",
+    "test:browser:parts": "node browser/parts.ts --check"
   },
   "dependencies": {
     "@identgineer/components": "workspace:*",
