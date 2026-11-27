@@ -4,6 +4,12 @@ import { LAYOUTS, PAGES, hydrated } from "./pages";
 
 const CLIENT_BUILD = "**/build/site.esm.js";
 
+/**
+ * How many times slower than this machine the page's CPU runs (IDG_CPU_THROTTLE, default 1), to
+ * check hydration as a slow CI runner does it.
+ */
+const CPU_THROTTLE = Number(process.env.IDG_CPU_THROTTLE ?? "1");
+
 /** How far down the page the second screen is taken: past a hero as tall as the window. */
 const SCROLLED = 700;
 
@@ -83,6 +89,10 @@ for (const { name, path, component } of PAGES) {
       browser,
     }) => {
       await page.setViewportSize({ width: 1280, height: 900 });
+      if (CPU_THROTTLE > 1) {
+        const session = await page.context().newCDPSession(page);
+        await session.send("Emulation.setCPUThrottlingRate", { rate: CPU_THROTTLE });
+      }
       const url = `${path}?idg-layout=${layout}`;
       const [first, scrolled] = await prerendered(page, url);
       await page.goto(url);

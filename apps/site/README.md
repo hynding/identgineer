@@ -139,19 +139,27 @@ need not be served itself.
 
 ## Tests
 
-- **Unit** (`pnpm test`): the route table, the site address, the metadata, the document, the policy
-  and the prerender document.
-- **The built site** (`checks/built-site.test.ts`, in `pnpm test` once the site is built): every
-  route has a file, every internal link, fragment and asset resolves, no page holds an inline script,
-  a `style` or event handler attribute, or an inline style the policy does not name, and nothing
-  points at another origin.
+- **Unit** (`pnpm test`): the route table, the site address, the metadata, the document, the policy,
+  the prerender document and the static server.
+- **The built site** (`checks/built-site.test.ts`, in `pnpm test` once the site is built, and
+  required on CI): every route has a file, every internal link, fragment and asset resolves, the
+  bootstrap script comes first, blocking and with the integrity of the file served, no page holds an
+  inline script, a `style` or event handler attribute, or an inline style the policy does not name,
+  nothing points at another origin, and `www` holds nothing that no page needs.
 - **Browser** (`pnpm --filter @identgineer/site test:browser`, a CI job of its own): every page in
   each of the eight layouts at 390, 820 and 1440px passes axe, does not scroll sideways and opens the
   appearance panel; every page in each theme and design, in both schemes, and in each UX mode passes
   axe; the panel changes all four axes and the scheme, and the choice survives navigation and reload
-  already on the root before the body exists; hydration changes nothing in the first screen; the
-  headers are the ones the build wrote; and every page reads and navigates with JavaScript off. Any
-  console error, policy violation or request to another origin fails a test.
+  already on the root before the body exists; hydration changes nothing in the first screen or 700px
+  down; the current page is marked and the first Tab reaches the skip link; the headers are the ones
+  the build wrote; every page in every layout reads and navigates with JavaScript off, with its
+  links in the bar and no menu button; and every page fits each design, layout and UX mode at 320,
+  390, 820 and 1440px, with no sideways scroll, nothing cut or spilling out of its box, and no word,
+  figure or name broken inside itself. Any console error, policy violation or request to another
+  origin fails a test.
+
+`IDG_CPU_THROTTLE=6` runs the hydration tests with the page's CPU six times slower, as a slow CI
+runner is; add `--repeat-each=3` to repeat them.
 
 The layout tests pass with the fonts of a machine with Inter and with DejaVu Sans, the wider face a
 CI runner falls back to. To check the latter on a machine with Inter, point `FONTCONFIG_FILE` at a
