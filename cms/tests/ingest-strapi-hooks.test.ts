@@ -55,13 +55,6 @@ describe("DropClientIngestKey on Strapi", () => {
     });
   });
 
-  it("takes it out of a multipart body's data, which arrives as JSON text", async () => {
-    const body = (await passOn({ data: JSON.stringify({ name: "Shop", ingestKey: CHOSEN }) })) as {
-      data: string;
-    };
-    expect(JSON.parse(body.data)).toEqual({ name: "Shop" });
-  });
-
   it("passes a body without a key, or one it cannot read, on unchanged", async () => {
     for (const body of [
       { data: { name: "Shop" } },

@@ -22,17 +22,12 @@ final class DropClientIngestKey implements DropClientIngestKeyMiddleware
 
     public function handle(Request $request, Closure $next): Response
     {
-        // input() reads the body (JSON or form) and then the query string; merge() writes the body,
-        // which input() reads first, so a key in either is gone for the controller.
+        // input() reads the body (JSON or form) and then the query string, the body first; merge()
+        // writes the body, so a key sent in either is gone for the controller, which reads input().
         $data = $request->input('data');
         if (is_array($data) && array_key_exists(self::FIELD, $data)) {
             unset($data[self::FIELD]);
             $request->merge(['data' => $data]);
-        }
-        $query = $request->query('data');
-        if (is_array($query) && array_key_exists(self::FIELD, $query)) {
-            unset($query[self::FIELD]);
-            $request->query->set('data', $query);
         }
 
         return $next($request);

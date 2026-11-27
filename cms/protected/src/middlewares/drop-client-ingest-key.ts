@@ -32,26 +32,13 @@ const withoutKey = (data: Record<string, unknown>): Record<string, unknown> => {
   return copy;
 };
 
-/** A multipart body's data is JSON text, which Strapi parses later; undefined when it is not JSON. */
-const parsedText = (text: string): Record<string, unknown> | undefined => {
-  try {
-    const value: unknown = JSON.parse(text);
-    return isRecord(value) ? value : undefined;
-  } catch {
-    return undefined;
-  }
-};
-
 /** The body with the key taken out of its data, or the body itself when its data has none. */
 export const bodyWithoutIngestKey = (body: unknown): unknown => {
   if (!isRecord(body)) return body;
   const { data } = body;
-  if (isRecord(data)) return owns(data, FIELD) ? { ...body, data: withoutKey(data) } : body;
-  if (typeof data !== "string") return body;
-  const parsed = parsedText(data);
-  return parsed !== undefined && owns(parsed, FIELD)
-    ? { ...body, data: JSON.stringify(withoutKey(parsed)) }
-    : body;
+  // Any other data (a multipart body's JSON text among them) is refused with 400 by camis'
+  // generated controller before Strapi reads it, so only an object can carry a key on.
+  return isRecord(data) && owns(data, FIELD) ? { ...body, data: withoutKey(data) } : body;
 };
 
 export default () =>
