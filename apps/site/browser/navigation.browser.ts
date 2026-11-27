@@ -48,3 +48,33 @@ test.describe("the skip link", () => {
     });
   }
 });
+
+test.describe("a docs guide", () => {
+  test("is marked in the docs' own navigation, and its section in the site's", async ({ page }) => {
+    await page.goto("/docs/theming/");
+    await hydrated(page, "site-content-page");
+    const docs = page.getByRole("navigation", { name: "Docs" });
+    await expect(docs.locator('a[aria-current="page"]')).toHaveText("Theming guide");
+    await expect(docs.locator("[aria-current]")).toHaveCount(1);
+    await expect(page.locator('a[slot="navigation"][href="/docs/"]')).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    const pager = page.getByRole("navigation", { name: "Previous and next" });
+    await expect(pager.locator('a[rel="prev"]')).toHaveAttribute("href", "/docs/getting-started/");
+    await expect(pager.locator('a[rel="next"]')).toHaveAttribute("href", "/docs/security/");
+  });
+});
+
+test.describe("a code sample's copy button", () => {
+  test("copies the sample's text, exactly, and says so", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.goto("/docs/getting-started/");
+    await hydrated(page, "site-content-page");
+    const sample = page.locator("figure.code-sample").first();
+    const code = await sample.locator("pre code").textContent();
+    await sample.locator("idg-button.code-copy").click();
+    await expect(page.locator(".reading-body > p[role=status]")).toHaveText(/^Copied the .+ sample\.$/);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(code);
+  });
+});
