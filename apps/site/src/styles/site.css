@@ -675,7 +675,8 @@ figcaption {
       grid-column: 1 / -1;
     }
 
-    /* Each story its heading across, its text in the wider column and its example beside it. */
+    /* Each story its heading across, its text in the wider column and its example beside it; the
+       eight theme tiles go across under their text, where a column would hold one a row. */
     .feature-identity,
     .feature-tracking,
     .feature-brand-kits {
@@ -684,6 +685,15 @@ figcaption {
       grid-template-areas:
         "head head"
         "body visual";
+    }
+
+    .feature-brand-kits {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas:
+        "head"
+        "body"
+        "visual";
     }
 
     .site-layout .feature-identity h2 {
