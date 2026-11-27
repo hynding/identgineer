@@ -781,25 +781,16 @@ figcaption {
       grid-column: 1 / -1;
     }
 
-    /* Each story its heading across, its text in the wider column and its example beside it; the
-       eight theme tiles go across under their text, where a column would hold one a row. */
+    /* Each story its heading across, its text in the wider column and its example beside it. The
+       brand kits keep a section's own stack, their eight theme tiles across under their text, where
+       a column would hold one a row. */
     .feature-identity,
-    .feature-tracking,
-    .feature-brand-kits {
+    .feature-tracking {
       grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
       grid-template-rows: auto 1fr;
       grid-template-areas:
         "head head"
         "body visual";
-    }
-
-    .feature-brand-kits {
-      grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: auto auto 1fr;
-      grid-template-areas:
-        "head"
-        "body"
-        "visual";
     }
 
     .site-layout .feature-identity h2 {
@@ -888,8 +879,9 @@ figcaption {
 
   /* With room, the sign-in form and the figures are two panels side by side; the brand kits, the
      variations and the pages to come are panels across the grid, under their title bars, the brand
-     kits' text beside their tiles, so no panel is drawn taller than what it holds beside a taller one. 34rem is the
-     content beside the rail on a tablet: two panels of --idg-size-s and their padding. */
+     kits' text beside their tiles, so no panel is drawn taller than what it holds beside a taller
+     one. 34rem is the content beside the rail on a tablet: two panels of --idg-size-s and their
+     padding. */
   @container home (min-inline-size: 34rem) {
     .sections {
       grid-template-columns: repeat(12, minmax(0, 1fr));
