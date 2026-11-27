@@ -17,9 +17,10 @@ export const NODE = process.execPath;
 
 /**
  * A stand-in `php` on a PATH of its own (no Composer): `-r` prints the version in the file
- * `php-version`, `artisan` records its environment, and `-S` serves `/up` (or, as the file
- * `server-mode` says, fails at boot or exits a moment after coming up), recording its arguments,
- * environment and process id.
+ * `php-version`, `artisan` records its environment, `vendor/bin/phpunit` records its arguments and
+ * environment (and fails when the file `phpunit-mode` says `fail`), and `-S` serves `/up` (or, as
+ * the file `server-mode` says, fails at boot or exits a moment after coming up), recording its
+ * arguments, environment and process id.
  */
 const FAKE_PHP = `#!${NODE}
 const { appendFileSync, existsSync, readFileSync } = require("node:fs");
@@ -32,6 +33,12 @@ if (first === "-r") {
   process.stdout.write(readFileSync(join(here, "php-version"), "utf8"));
 } else if (first === "artisan") {
   record("artisan.jsonl", { args: process.argv.slice(2), env: process.env });
+} else if (first === "vendor/bin/phpunit") {
+  record("phpunit.jsonl", { args: process.argv.slice(2), env: process.env, cwd: process.cwd() });
+  if (existsSync(join(here, "phpunit-mode")) && readFileSync(join(here, "phpunit-mode"), "utf8") === "fail") {
+    process.stdout.write("FAILURES!\\n");
+    process.exit(1);
+  }
 } else if (first === "-S") {
   const mode = existsSync(join(here, "server-mode")) ? readFileSync(join(here, "server-mode"), "utf8") : "ok";
   record("server.jsonl", { args: process.argv.slice(2), env: process.env, pid: process.pid });
@@ -76,6 +83,21 @@ if (command === "scaffold") {
 }
 `;
 
+/** bootstrap/app.php's middleware block in an app scaffolded before camis' endpoint guards. */
+export const BOOTSTRAP_BEFORE_ENDPOINT_CORS = `<?php
+
+return Application::configure(basePath: dirname(__DIR__))
+    ->withMiddleware(function (Middleware $middleware): void {
+        // camis: the Strapi error envelope must wrap every API route, ahead of auth and throttling.
+        if (class_exists(\\App\\Http\\Middleware\\StrapiErrors::class)) {
+            $middleware->prependToGroup('api', \\App\\Http\\Middleware\\StrapiErrors::class);
+            $strapiRoutes = fn (\\Illuminate\\Http\\Request $request): bool => $request->is('api', 'api/*', 'graphql');
+            $middleware->trimStrings(except: [$strapiRoutes]);
+            $middleware->convertEmptyStringsToNull(except: [$strapiRoutes]);
+        }
+    })->create();
+`;
+
 /** bootstrap/providers.php of an app scaffolded before camis registered its auth provider. */
 export const PROVIDERS_BEFORE_AUTH = `<?php
 
@@ -102,6 +124,7 @@ export const fake = (
   options: {
     version?: string;
     serverMode?: string;
+    phpunitMode?: "fail";
     /** false: no app yet, and a stand-in `composer` on the PATH for the scaffold. */
     scaffolded?: boolean;
     buildMode?: "hang";
@@ -116,6 +139,8 @@ export const fake = (
   chmodSync(join(bin, "php"), 0o755);
   writeFileSync(join(bin, "php-version"), options.version ?? "80312 8.3.12");
   if (options.serverMode !== undefined) writeFileSync(join(bin, "server-mode"), options.serverMode);
+  if (options.phpunitMode !== undefined)
+    writeFileSync(join(bin, "phpunit-mode"), options.phpunitMode);
   const camis = join(root, "camis", "packages", "cli", "bin");
   mkdirSync(camis, { recursive: true });
   writeFileSync(join(camis, "camis.mjs"), FAKE_CAMIS);
@@ -134,6 +159,7 @@ export const fake = (
     }
     writeFileSync(join(app, "vendor", "autoload.php"), "<?php\n");
     writeFileSync(join(app, "bootstrap", "providers.php"), PROVIDERS_BEFORE_AUTH);
+    writeFileSync(join(app, "bootstrap", "app.php"), BOOTSTRAP_BEFORE_ENDPOINT_CORS);
     writeFileSync(join(live, "strapi-php.scaffolded"), "");
   }
   return {

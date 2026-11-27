@@ -68,11 +68,13 @@ describe("tracking data minimisation", () => {
     }
   });
 
-  it("keeps an event's path without its query string or fragment", () => {
+  // The handler keeps only the query parameters the property allows (tracking-model.test.ts).
+  it("keeps an event's path origin-relative and without a fragment", () => {
     const path = matcher("Event", "path");
     expect(path.test("/pricing")).toBe(true);
-    expect(path.test("/search?q=someone@example.com")).toBe(false);
+    expect(path.test("/pricing?utm_source=news")).toBe(true);
     expect(path.test("/docs#install")).toBe(false);
+    expect(path.test("/a b")).toBe(false);
     expect(path.test("https://example.com/pricing")).toBe(false);
   });
 
@@ -120,35 +122,51 @@ describe("event ingestion", () => {
     expect(contentTypeNamed(ir, contentType).options?.apiActions).toEqual(["list", "read"]);
   });
 
-  it.each([
-    ["Event", "/ingest/events"],
-    ["ConsentRecord", "/ingest/consent"],
-  ])("writes %s through a public POST %s endpoint", (contentType, path) => {
-    const endpoint = endpoints.find((e) => e.contentType === contentType);
-    expect(endpoint).toMatchObject({ method: "POST", path, public: true });
+  it("writes Event through a public POST /ingest/events endpoint", () => {
+    const endpoint = endpoints.find((e) => e.contentType === "Event");
+    expect(endpoint).toMatchObject({ method: "POST", path: "/ingest/events", public: true });
   });
 
-  it("has no public endpoint other than the two ingestion ones", () => {
-    expect(
-      endpoints
-        .filter((e) => e.public === true)
-        .map((e) => e.name)
-        .sort(),
-    ).toEqual(["IngestEvent", "RecordConsent"]);
+  // The SDK keeps consent in the browser and sends no record, so nothing writes ConsentRecord.
+  it("has no public endpoint other than event ingestion", () => {
+    expect(endpoints.filter((e) => e.public === true).map((e) => e.name)).toEqual(["IngestEvent"]);
+  });
+
+  it("has no endpoint that writes consent records", () => {
+    expect(endpoints.filter((e) => e.contentType === "ConsentRecord")).toEqual([]);
   });
 
   it("has no endpoint that reads", () => {
     expect(endpoints.filter((e) => e.method !== "POST")).toEqual([]);
   });
 
-  it("scopes ingestion by a unique, prefixed public key on the property", () => {
+  it("scopes ingestion by a unique, prefixed public key of 32 or more random characters", () => {
     const key = fieldOf("Property", "ingestKey");
-    expect(key.required).toBe(true);
     expect(key.unique).toBe(true);
     const pattern = matcher("Property", "ingestKey");
-    expect(pattern.test("pk_4Fq9ZsY2mRb7Xc1Lp0Tw8N")).toBe(true);
-    expect(pattern.test("sk_4Fq9ZsY2mRb7Xc1Lp0Tw8N")).toBe(false);
-    expect(pattern.test("pk_short")).toBe(false);
+    expect(pattern.test(`pk_${"a".repeat(32)}`)).toBe(true);
+    expect(pattern.test(`pk_${"a".repeat(31)}`)).toBe(false);
+    expect(pattern.test(`sk_${"a".repeat(40)}`)).toBe(false);
+    expect(key.minLength).toBe(35);
+  });
+
+  it("owns the ingest key on the server: a client need not send it, and what it sends is dropped", () => {
+    // Not required, so a create without one passes validation; the beforeCreate hook issues it.
+    expect(fieldOf("Property", "ingestKey").required).not.toBe(true);
+    expect(ir.hooks).toContainEqual(
+      expect.objectContaining({
+        name: "IssueIngestKey",
+        trigger: "beforeCreate",
+        contentType: "Property",
+        output: [{ name: "ingestKey", type: "string" }],
+      }),
+    );
+    // A key sent on a create or an update is taken out of the body before the controller reads it.
+    expect(ir.middlewares).toContainEqual({
+      name: "DropClientIngestKey",
+      contentType: "Property",
+      actions: ["create", "update"],
+    });
   });
 
   it("allows only https origins on a property", () => {
@@ -161,6 +179,32 @@ describe("event ingestion", () => {
     expect(origin.test("http://www.example.com")).toBe(false);
     expect(origin.test("*")).toBe(false);
     expect(origin.test("https://www.example.com/path")).toBe(false);
+  });
+
+  it("refuses an origin a browser never sends, so each listed origin can match an Origin header", () => {
+    const origin = new RegExp(
+      ir.components.find((c) => c.name === "AllowedOrigin")?.fields.find((f) => f.name === "origin")
+        ?.pattern ?? "(?!)",
+    );
+    // A browser leaves the scheme's default port out and writes a port without leading zeros.
+    expect(origin.test("https://www.example.com:443")).toBe(false);
+    expect(origin.test("https://www.example.com:0443")).toBe(false);
+    expect(origin.test("https://www.example.com:08443")).toBe(false);
+    expect(origin.test("https://www.example.com:4430")).toBe(true);
+    expect(origin.test("https://www.example.com:8443")).toBe(true);
+    expect(origin.test("https://WWW.example.com")).toBe(false);
+  });
+
+  it("lists a name under localhost for local testing, but not localhost, an address or an IDN TLD", () => {
+    const origin = new RegExp(
+      ir.components.find((c) => c.name === "AllowedOrigin")?.fields.find((f) => f.name === "origin")
+        ?.pattern ?? "(?!)",
+    );
+    expect(origin.test("https://shop.localhost:5173")).toBe(true);
+    expect(origin.test("https://localhost:5173")).toBe(false);
+    expect(origin.test("https://127.0.0.1:5173")).toBe(false);
+    expect(origin.test("https://xn--bcher-kva.example")).toBe(true);
+    expect(origin.test("https://shop.xn--p1ai")).toBe(false);
   });
 });
 

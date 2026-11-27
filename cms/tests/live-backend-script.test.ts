@@ -3,7 +3,15 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { fake, NODE, PROVIDERS_BEFORE_AUTH, removeFakes, runFake, SCRIPT } from "./fake-php";
+import {
+  BOOTSTRAP_BEFORE_ENDPOINT_CORS,
+  fake,
+  NODE,
+  PROVIDERS_BEFORE_AUTH,
+  removeFakes,
+  runFake,
+  SCRIPT,
+} from "./fake-php";
 
 const run = (camisDir: string | undefined) => {
   const env: NodeJS.ProcessEnv = { ...process.env, CAMIS_DIR: camisDir };
@@ -54,12 +62,12 @@ describe("cms/scripts/live-backend.js", () => {
     { timeout: 30_000 },
     () => {
       const setup = fake();
-      const check = `const b = require(process.env.IDENTITY_LIVE_BACKEND); process.exit(Object.keys(b.servers).length === 5 ? 0 : 3);`;
+      const check = `const b = require(process.env.IDENTITY_LIVE_BACKEND); process.exit(Object.keys(b.servers).length === 6 ? 0 : 3);`;
       const result = runFake(setup, [NODE, "-e", check]);
       expect(result.stderr).toBe("");
       expect(result.status).toBe(0);
       const servers = setup.records("server.jsonl");
-      expect(servers).toHaveLength(5);
+      expect(servers).toHaveLength(6);
       for (const server of servers) expect(server.args[1]).toMatch(/^127\.0\.0\.1:\d+$/);
       // One server answers as Strapi does, so the SDK is checked against both settings.
       const hiding = servers.map((server) => [
@@ -67,7 +75,89 @@ describe("cms/scripts/live-backend.js", () => {
         server.env.CAMIS_AUTH_HIDE_ACCOUNT_EXISTENCE,
       ]);
       expect(hiding.filter(([, hide]) => hide === "false")).toEqual([["true", "false"]]);
-      expect(hiding.filter(([, hide]) => hide === "true")).toHaveLength(4);
+      expect(hiding.filter(([, hide]) => hide === "true")).toHaveLength(5);
+    },
+  );
+
+  it(
+    "relaxes the ingestion endpoint's rates on every server but the one kept for them",
+    { timeout: 30_000 },
+    () => {
+      const setup = fake();
+      expect(runFake(setup, [NODE, "-e", ""]).status).toBe(0);
+      const rates = setup
+        .records("server.jsonl")
+        .map((server) => [
+          server.env.DB_DATABASE?.replace(/^.*[\\/]/, ""),
+          server.env.CAMIS_ENDPOINT_INGEST_EVENT_THROTTLE_PER_MINUTE,
+          server.env.INGEST_KEY_RATE_PER_MINUTE,
+        ]);
+      expect(rates.filter(([, address]) => address !== "1000")).toEqual([
+        ["ingestLimited.sqlite", "6", "3"],
+      ]);
+      expect(rates.filter(([, , key]) => key !== "1000")).toHaveLength(1);
+    },
+  );
+
+  it(
+    "runs the ingestion handler's PHPUnit tests in the app with the shared vector files",
+    { timeout: 30_000 },
+    () => {
+      const setup = fake();
+      expect(runFake(setup, [NODE, "-e", ""]).status).toBe(0);
+      const [phpunit, ...more] = setup.records("phpunit.jsonl") as unknown as {
+        args: string[];
+        env: Record<string, string>;
+        cwd: string;
+      }[];
+      expect(more).toEqual([]);
+      expect(phpunit?.args).toEqual([
+        "vendor/bin/phpunit",
+        "--colors=never",
+        "tests/Feature/Ingest",
+      ]);
+      expect(phpunit?.cwd).toBe(join(setup.live, "strapi-php"));
+      for (const name of ["TRACKING_BATCH_VECTORS", "INGEST_NORMALISE_VECTORS"]) {
+        expect(existsSync(phpunit?.env[name] ?? ""), name).toBe(true);
+      }
+      // The testing environment comes from phpunit.xml, not from the servers' settings.
+      expect(phpunit?.env.APP_ENV).toBeUndefined();
+      expect(phpunit?.env.DB_CONNECTION).toBeUndefined();
+    },
+  );
+
+  it("stops before booting any server when the PHPUnit tests fail", { timeout: 30_000 }, () => {
+    const setup = fake({ phpunitMode: "fail" });
+    const result = runFake(setup, [NODE, "-e", ""]);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("vendor/bin/phpunit");
+    expect(setup.records("server.jsonl")).toEqual([]);
+  });
+
+  it(
+    "leaves Laravel's CORS off the ingestion endpoint in an app scaffolded before, once",
+    { timeout: 30_000 },
+    () => {
+      const setup = fake();
+      const app = join(setup.live, "strapi-php", "bootstrap", "app.php");
+      expect(runFake(setup, [NODE, "-e", ""]).status).toBe(0);
+      const once = readFileSync(app, "utf8");
+      expect(once).toBe(
+        BOOTSTRAP_BEFORE_ENDPOINT_CORS.replace(
+          "            $middleware->convertEmptyStringsToNull(except: [$strapiRoutes]);\n        }\n",
+          [
+            "            $middleware->convertEmptyStringsToNull(except: [$strapiRoutes]);",
+            "        }",
+            "        // camis: an endpoint that answers browsers on any origin itself (crossOrigin) is left alone by the app's CORS.",
+            "        if (class_exists(\\App\\Http\\Middleware\\StrapiEndpointCors::class)) {",
+            "            \\Illuminate\\Http\\Middleware\\HandleCors::skipWhen(\\App\\Http\\Middleware\\StrapiEndpointCors::answers(...));",
+            "        }",
+            "",
+          ].join("\n"),
+        ),
+      );
+      expect(runFake(setup, [NODE, "-e", ""]).status).toBe(0);
+      expect(readFileSync(app, "utf8")).toBe(once);
     },
   );
 

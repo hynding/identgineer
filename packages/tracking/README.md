@@ -5,8 +5,10 @@ stores nothing until the visitor has granted consent, honours Global Privacy Con
 Track, and collects only the events the page declares, with URLs reduced to a path. It has no
 runtime dependencies, uses no cookie and keeps no identifier that outlives a tab.
 
-This package is the client SDK. The collecting endpoint (the CMS side) is a later task; what it
-must enforce is listed under [Security notes](#security-notes).
+This package is the client SDK. The collecting endpoint is the CMS's `POST /api/ingest/events`
+(on Strapi and on strapi-php; `cms/README.md`, "Event ingestion"): point `endpoint` at it and use a
+property's `ingestKey` as `writeKey`. What it enforces is listed under
+[Security notes](#security-notes).
 
 ## Use it
 
@@ -297,8 +299,8 @@ event ids unique within a batch (an array with holes is refused too), a
 path of at most 2048 ASCII characters with no fragment, a referrer that is an origin and nothing
 else.
 
-`@identgineer/tracking/wire` has no browser dependency, so a server (and the later ingestion
-feature) can reuse it:
+`@identgineer/tracking/wire` has no browser dependency, so a server can reuse it (the CMS, built
+on its own, restates it in its handlers and is held to the shared vectors instead):
 
 ```ts
 import {
@@ -327,9 +329,12 @@ event ids are unique within a batch: the validator refuses a duplicate id, a sch
 - **The write key is public and write-only by design.** It ships in page source, so anyone can
   read it. It can only append events; it reads nothing. It identifies a property (a site), not a
   person, and is not a secret.
-- **What the server must enforce**, since the key alone proves nothing:
+- **What the server must enforce**, since the key alone proves nothing (the CMS's ingestion
+  handlers do all of it, held to the same request vectors as `parseTrackingBatch`,
+  `src/testing/batch-vectors.json`):
   - an **origin allowlist**: accept a request only when `Origin` is one of the property's
-    origins, and answer CORS for exactly those;
+    origins. The CMS answers the CORS preflight for any origin (a key's origins are only known
+    once the body is read) and then refuses an absent or unlisted `Origin` with `403`;
   - **rate limits** per key and per client, answering `429` with `Retry-After`;
   - **schema validation** with `parseTrackingBatch` (or the schema), the payload cap, and
     refusal of any other `Content-Type` than `application/json` or `text/plain` (beacons);
