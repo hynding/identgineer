@@ -1,0 +1,30 @@
+import { describe, expect, it } from "vitest";
+import { ROUTES, livePaths } from "../routes";
+import { STATIC_PAGES } from "./pages";
+import { describeContentError, parseContentPage } from "./validate-content-page";
+
+const CONTEXT = { paths: livePaths() };
+
+describe("the repository's reading pages", () => {
+  it.each(STATIC_PAGES.map((page) => [page.slug, page] as const))(
+    "%s is a valid content page",
+    (_, page) => {
+      const result = parseContentPage(page, CONTEXT);
+      expect(result.ok ? "valid" : describeContentError(result.error)).toBe("valid");
+    },
+  );
+
+  it("are one for each reading route, and no more", () => {
+    const routed = ROUTES.flatMap((route) =>
+      route.status === "live" && route.component === "site-content-page" ? [route.content] : [],
+    );
+    expect(STATIC_PAGES.map((page) => page.slug)).toEqual(routed);
+  });
+
+  it.each(STATIC_PAGES.map((page) => [page.slug, page] as const))(
+    "%s has sections to list in its table of contents",
+    (_, page) => {
+      expect(page.body.filter((block) => block.type === "heading").length).toBeGreaterThan(1);
+    },
+  );
+});
