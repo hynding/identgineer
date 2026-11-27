@@ -441,5 +441,29 @@ describe.skipIf(liveBackend === undefined)(
       for (const secret of [USER_AGENT, VISITOR]) expect(log).not.toContain(secret);
       expect(log.slice(logBefore)).not.toContain("127.0.0.1");
     });
+
+    it("answers 503, which the tracker retries, when the database under the throttle fails", async () => {
+      // Last, on the server only this file uses: its cache table (CACHE_STORE=database), which
+      // camis' guard counts the address in before the handler runs, is taken away and put back.
+      const server = backend.servers.ingestLimited;
+      const database = new DatabaseSync(server.database);
+      const before = readLog().length;
+      database.exec("ALTER TABLE cache RENAME TO cache_gone");
+      try {
+        const answer = await ingest(server, batchText(), { key: `pk_${"z".repeat(40)}` });
+        expect(answer.status, answer.text).toBe(503);
+        expect(JSON.parse(answer.text)).toMatchObject({
+          error: { status: 503, name: "ServiceUnavailableError" },
+        });
+      } finally {
+        database.exec("ALTER TABLE cache_gone RENAME TO cache");
+        database.close();
+      }
+      const log = readLog().slice(before);
+      expect(log).toContain("IngestEvent: the database failed before the handler");
+      for (const secret of ["select", "camis-endpoint", "127.0.0.1"]) {
+        expect(log).not.toContain(secret);
+      }
+    });
   },
 );
