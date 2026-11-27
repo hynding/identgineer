@@ -62,6 +62,12 @@ describe.skipIf(!hasPhp)(
       for (const query of sent.mariadb ?? []) expect(query).toContain("CAST(session_id AS BINARY)");
     });
 
+    it("counts in the table under the connection's prefix", () => {
+      for (const query of [...(sent.sqlite ?? []), ...(sent.mariadb ?? [])]) {
+        expect(query).toMatch(/\bFROM [`"]?app_events\b/);
+      }
+    });
+
     it.each(vectors.map((vector, index) => [vector.name, index] as const))("%s", (_name, index) => {
       expect(answers[index]?.figures).toEqual(vectors[index]?.expected);
     });

@@ -16,7 +16,6 @@ require $summary.'/SummaryFigures.php';
 require $summary.'/SummaryCounts.php';
 
 use App\Summary\SummaryCounts;
-use App\Summary\SummaryFigures;
 use App\Summary\SummaryQueries;
 use App\Summary\SummaryWindow;
 
@@ -29,7 +28,7 @@ final class StubConnection
     /** @var list<string> */
     public array $sent = [];
 
-    public function __construct(private readonly string $driver, private readonly ?PDO $pdo = null) {}
+    public function __construct(private readonly string $driver, private readonly ?PDO $pdo = null, private readonly string $prefix = '') {}
 
     public function getDriverName(): string
     {
@@ -38,7 +37,7 @@ final class StubConnection
 
     public function getTablePrefix(): string
     {
-        return '';
+        return $this->prefix;
     }
 
     /** @param list<int|string> $bindings */
@@ -85,7 +84,7 @@ foreach (['sqlite', 'pgsql', 'mysql', 'mariadb'] as $driver) {
 // What the hook's counting sends through a connection, by the connection's own driver name.
 $sent = [];
 foreach (['sqlite', 'mariadb'] as $driver) {
-    $connection = new StubConnection($driver);
+    $connection = new StubConnection($driver, null, 'app_');
     SummaryCounts::of($window, $connection, 'events', PROPERTY);
     $sent[$driver] = $connection->sent;
 }
