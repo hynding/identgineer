@@ -59,6 +59,15 @@
   overflow-wrap: anywhere;
 }
 
+/* An engine without calc-size() (Firefox, Safari) drops that smallest size, so the figure breaks
+   only where the stat is narrower than it: what sizes the stat by its content keeps it whole. In a
+   window narrow against the text, a parent sized by its content is then as wide as the figure. */
+@supports not (min-inline-size: calc-size(min-content, size)) {
+  .value {
+    overflow-wrap: break-word;
+  }
+}
+
 .change {
   display: flex;
   flex-wrap: wrap;

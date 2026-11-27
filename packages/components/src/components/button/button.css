@@ -9,6 +9,17 @@
   max-inline-size: 100%;
 }
 
+/* An engine without calc-size() (Firefox, Safari) drops the two smallest sizes, and the button's
+   smallest is its longest word (its label breaks a word only where the button is narrower). The
+   largest it may then be is the room it is in and the same reach past it, so a row narrower than
+   the word leaves it whole wherever the window has room, as calc-size() does. */
+@supports not (min-inline-size: calc-size(min-content, size)) {
+  :host,
+  .control {
+    max-inline-size: calc(100% + var(--_word-reach));
+  }
+}
+
 .control {
   /* A button wider than the room it is in (a long label at a large text size in a narrow window)
      shrinks to it and wraps its label between words; a word is never broken. It is no narrower than
