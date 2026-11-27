@@ -180,6 +180,20 @@ describe("event ingestion", () => {
     expect(origin.test("*")).toBe(false);
     expect(origin.test("https://www.example.com/path")).toBe(false);
   });
+
+  it("refuses an origin a browser never sends, so each listed origin can match an Origin header", () => {
+    const origin = new RegExp(
+      ir.components.find((c) => c.name === "AllowedOrigin")?.fields.find((f) => f.name === "origin")
+        ?.pattern ?? "(?!)",
+    );
+    // A browser leaves the scheme's default port out and writes a port without leading zeros.
+    expect(origin.test("https://www.example.com:443")).toBe(false);
+    expect(origin.test("https://www.example.com:0443")).toBe(false);
+    expect(origin.test("https://www.example.com:08443")).toBe(false);
+    expect(origin.test("https://www.example.com:4430")).toBe(true);
+    expect(origin.test("https://www.example.com:8443")).toBe(true);
+    expect(origin.test("https://WWW.example.com")).toBe(false);
+  });
 });
 
 describe("media", () => {
