@@ -52,21 +52,40 @@ the 65,536-byte body cap. Then the handler, in this order, each refusal in Strap
    held to the shared vectors in `packages/tracking/src/testing/batch-vectors.json` on both targets.
 4. **404** when the key (the `X-Idg-Write-Key` header of a fetch, the body's `writeKey` of a beacon,
    never the URL) is unknown or its property is inactive. One query asks for both, and the answers
-   are identical. A key header sent twice counts as none. No property id, owner id or other
-   relation is ever taken from the body.
-5. **403** when `Origin` is absent, sent twice, or not one of the property's `allowedOrigins`
-   (compared exactly; the model refuses an origin a browser never sends, such as one with `:443`).
-6. **429** with `Retry-After` past `INGEST_KEY_RATE_PER_MINUTE` for the key, counted under the
-   property's id (in the cache on strapi-php, in bounded per-process memory on Strapi).
-7. **202** with no body. Each accepted event becomes one Event row with `property` and `owner` from
-   the key's property; an event skipped (below) changes nothing in the answer.
+   are identical. No property id, owner id or other relation is ever taken from the body.
+5. **403** when `Origin` is absent or not one of the property's `allowedOrigins` (compared exactly;
+   the model refuses an origin a browser never sends, such as one with `:443`).
 
-A database failure in the lookup, the key's count (strapi-php's cache may be the database) or the
-store answers **503**, which the SDK retries with backoff (it retries any `5xx` and `429`); events
-stored before the failure are skipped as repeats when the batch comes again. The failure is logged
-as `IngestEvent: the database failed at the <stage> (<error class>)`, never with the error's
-message, which holds the query and its bindings (the key, the body's values), nor with the body or
-headers. A deadlock between two batches on MySQL or PostgreSQL is such a failure.
+A header sent twice (`Origin` or `X-Idg-Write-Key`) depends on what the server hands the handler.
+Node (Strapi) joins the values with `, `, and so do Apache and nginx in front of PHP; the joined
+value matches no origin or key, so the request is refused (403 or 404). PHP's built-in server, the
+one `pnpm contract:live` uses, keeps only the first value, so there the second is ignored. 6. **429** with `Retry-After` past `INGEST_KEY_RATE_PER_MINUTE` for the key, counted under the
+property's id (in the cache on strapi-php, in bounded per-process memory on Strapi). 7. **202** with no body. Each accepted event becomes one Event row with `property` and `owner` from
+the key's property; an event skipped (below) changes nothing in the answer.
+
+**Database failures answer 503**, which the SDK retries with backoff (it retries any `5xx` and
+`429`, and drops a batch on any other `4xx`); events stored before the failure are skipped as
+repeats when the batch comes again. On both targets that holds for every database failure on this
+route:
+
+- in the handler: the key lookup, the per-key count (in strapi-php's cache, which `.env.example`
+  puts in the database) and each event's store, logged as `IngestEvent: the database failed at the
+<stage> (<error class>)`;
+- on strapi-php, before the handler: camis' endpoint guard counts the per-address throttle in the
+  same cache, and camis' error envelope (`StrapiErrors`) answers any `QueryException` 400
+  "Validation failed". `app/Ingest/IngestDatabaseFailures.php`, registered from the protected
+  `app/Providers/AppServiceProvider.php` (Laravel's own provider, which camis does not write), adds
+  an exception renderer at boot, ahead of the one `StrapiErrors` adds during the request, that
+  answers a `QueryException` or `PDOException` on `POST /api/ingest/events` 503, and stops Laravel
+  from reporting it with its query; it logs `IngestEvent: the database failed before the handler
+(<error class>)`. A broken or missing cache table, or an unreadable database file, is such a
+  failure. On Strapi the throttle counts in memory, so nothing before the handler reads the
+  database.
+
+None of these logs the error's message, which holds the query and its bindings (the key, the
+body's values), nor the body or headers. A deadlock between two batches on MySQL or PostgreSQL is
+such a failure. Every other database failure on the API keeps camis' answer (400). Any other
+unexpected error on the ingestion route answers 500, which the SDK also retries.
 
 What is stored (`app/Ingest/IngestedEvent.php`, `src/ingest/normalise.ts`, held to the same
 `cms/tests/fixtures/ingest-normalise-vectors.json`):
@@ -95,7 +114,8 @@ counter, keyed by a hash.
   cryptographically secure generator (`Str::random()` in PHP, `crypto.randomInt` in Node), ignoring
   its input. The field is not required, so a create sends no key.
 - `DropClientIngestKey` (Property's create and update routes) removes `ingestKey` from the body's
-  `data` (an object, or a multipart body's JSON text on Strapi) and, on strapi-php, from the query
+  `data` (camis' generated controllers refuse any other `data`, a multipart body's JSON text
+  among them, with 400) and, on strapi-php, from the query
   string, before the controller validates it. A key is therefore never set, changed, cleared or
   probed through the content API on either target.
 - `PurgeExpiredEvents` (daily) deletes, for each property, the events older than its

@@ -194,6 +194,18 @@ describe("event ingestion", () => {
     expect(origin.test("https://www.example.com:8443")).toBe(true);
     expect(origin.test("https://WWW.example.com")).toBe(false);
   });
+
+  it("lists a name under localhost for local testing, but not localhost, an address or an IDN TLD", () => {
+    const origin = new RegExp(
+      ir.components.find((c) => c.name === "AllowedOrigin")?.fields.find((f) => f.name === "origin")
+        ?.pattern ?? "(?!)",
+    );
+    expect(origin.test("https://shop.localhost:5173")).toBe(true);
+    expect(origin.test("https://localhost:5173")).toBe(false);
+    expect(origin.test("https://127.0.0.1:5173")).toBe(false);
+    expect(origin.test("https://xn--bcher-kva.example")).toBe(true);
+    expect(origin.test("https://shop.xn--p1ai")).toBe(false);
+  });
 });
 
 describe("media", () => {

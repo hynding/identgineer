@@ -47,7 +47,10 @@ Field names are the IR's neutral camelCase; each target maps them to its own col
 ### Tracking (owner only)
 
 - **Property** — a tracked site or app: `owner`, `name`, `domain`, `allowedOrigins` (repeatable
-  component of `https://` origins), `allowedEvents` (repeatable: an event `name` and the
+  component of `https://` origins as a browser sends them: a lower-case host name with a top-level
+  domain of letters, and a port only when it is not 443; so no `localhost`, IP address or IDN
+  top-level domain such as `xn--p1ai`; an IDN name under an ASCII one is listed in its `xn--` form),
+  `allowedEvents` (repeatable: an event `name` and the
   `propertyKeys` kept for it), `allowedQueryParams` (repeatable: the query parameter names a stored
   path keeps), `ingestKey` (public, unique, `pk_…`), `retentionDays` (1–400, default 180), `active`.
 - **Event** — `property`, `owner` (copied from the property, see below), `name` (the tracking wire
@@ -295,7 +298,14 @@ Local Strapi is never booted by any script here.
 - Two batches inserting the same events in opposite order can deadlock on MySQL or PostgreSQL; the
   database aborts one, which then answers 503, and the SDK sends it again.
 - On local Strapi the body parser inflates a compressed body (up to its 1 MB JSON limit) before the
-  handler refuses it with 415; camis' guard compares only the declared length (a camis gap).
+  handler refuses it with 415; camis' guard compares only the declared length (a camis gap). The
+  parser itself refuses a coding it does not know, `IDENTITY` in capitals among them, with 415 in
+  Koa's plain error body rather than Strapi's; strapi-php reads codings without regard to case and
+  takes `IDENTITY`. Where the handler is reached, both targets read codings alike.
+- Allowed origins cannot be `localhost`. To try tracking locally, serve the test page over https on
+  a name under `localhost`, which browsers resolve to this machine (for example
+  `https://shop.localhost:5173`, with a locally trusted certificate such as one from mkcert), and
+  list that origin on the property.
 - Invalid UTF-8 is refused (400) on strapi-php; on Strapi the body parser replaces it with U+FFFD
   before the handler sees it, so such a body is accepted with the replacement characters. A
   replacement character in decoded text cannot be told from one the client sent, so the handler
