@@ -746,8 +746,9 @@ figcaption {
 
   /* With room, the sign-in form and the figures are two panels side by side; the brand kits, the
      variations and the pages to come are panels across the grid, the brand kits' text beside their
-     tiles, so no panel is drawn taller than what it holds beside a taller one. */
-  @container home (min-inline-size: 40rem) {
+     tiles, so no panel is drawn taller than what it holds beside a taller one. 34rem is the
+     content beside the rail on a tablet: two panels of --idg-size-s and their padding. */
+  @container home (min-inline-size: 34rem) {
     .sections {
       grid-template-columns: repeat(12, minmax(0, 1fr));
     }
