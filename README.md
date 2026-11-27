@@ -50,7 +50,8 @@ Track, gives "Decline" and "Accept analytics" the same weight, and never blocks 
 A property picker, stat and sparkline figures, and a paged, sortable event table are web
 components that take their data as properties and never fetch: the page asks a `DashboardSource`
 (the typed seam a server implements over the authenticated API, which enforces who owns what) and
-hands the answers over. Everything they show from the public internet is drawn as neutralised
+hands the answers over. `@identgineer/tracking/dashboard` is that source over the CMS, read as the
+signed-in user ([cms/README.md](cms/README.md#the-dashboards-reads)). Everything they show from the public internet is drawn as neutralised
 text. Guides: [plain HTML](docs/dashboard/plain-html.md), [React](docs/dashboard/react.md),
 [Vue](docs/dashboard/vue.md) and [Angular](docs/dashboard/angular.md), and
 [what the source must enforce and how text is treated](docs/dashboard/rules.md).
@@ -74,7 +75,8 @@ that checks everything it reads back. See [packages/brand/README.md](packages/br
 until the visitor grants consent, Global Privacy Control and Do Not Track are honoured, only the
 events the page declares are collected, and URLs are reduced to a path. See
 [packages/tracking/README.md](packages/tracking/README.md) for what is collected, the consent
-model, the options, the wire format and what the collecting server must enforce.
+model, the options, the wire format and what the collecting server must enforce. Its
+`/dashboard` entry reads a signed-in user's properties, events and figures back from the CMS.
 
 ## Repository layout
 

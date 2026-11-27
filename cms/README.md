@@ -54,7 +54,7 @@ Field names are the IR's neutral camelCase; each target maps them to its own col
   `propertyKeys` kept for it), `allowedQueryParams` (repeatable: the query parameter names a stored
   path keeps), `ingestKey` (public, unique, `pk_…`), `retentionDays` (1–400, default 180), `active`.
 - **Event** — `property`, `owner` (copied from the property, see below), `name` (the tracking wire
-  format's `[a-z][a-z0-9_]{0,63}`), `dedupeKey` (unique, see [Event ingestion](#event-ingestion)),
+  format's `[a-z][a-z0-9_]{0,63}`), `dedupeKey` (unique and private, see [Event ingestion](#event-ingestion)),
   `occurredAt`, `sessionId` (optional), `path` (optional), `referrerHost`, `properties` (JSON),
   `viewportClass` (`xs`–`xl`), `country` (two letters, optional). Read-only content API.
 - **ConsentRecord** — append-only: `property`, `owner`, `subjectId`, `categories` (component:
@@ -171,6 +171,7 @@ visitor:
 | `authenticated` | BrandKit       | create, read, update, delete   | `record.ownerId == user.id`, owner = me | Manage their own brand kits                                       |
 | `authenticated` | Property       | create, read, update, delete   | `record.ownerId == user.id`, owner = me | Manage the sites they track                                       |
 | `authenticated` | Event          | read                           | `record.ownerId == user.id`             | See analytics of their own properties; never write them           |
+| `authenticated` | Property       | `PropertySummary` endpoint     | the handler checks the owner            | Figures of their own properties ([reads](#the-dashboards-reads))  |
 | `authenticated` | ConsentRecord  | read                           | `record.ownerId == user.id`             | Show consent evidence for their own properties; never write it    |
 | `authenticated` | File           | create                         | —                                       | Upload an avatar; no listing, editing or deleting files           |
 | `super-admin`   | every type     | every action (publish on Page) | —                                       | camis' admin role, as Strapi's Super Admin; signs in to the admin |
@@ -316,6 +317,77 @@ repeatable components, so the strapi-php migrations were renumbered: the allowed
 migration is now `000010`, not `000008`. A database migrated before this change has stale
 migration names; recreate it (nothing was ingested before this change).
 
+## The dashboard's reads
+
+The dashboard (`packages/components`, `docs/dashboard/`) reads through
+`createCmsDashboardSource({ fetch, baseUrl })` from `@identgineer/tracking/dashboard`, given the
+identity client's `authorizedFetch`, so every call is made as the signed-in user. It uses the
+content API the owner grants already scope, and one endpoint for the figures:
+
+| Call               | Request                                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------------------------- |
+| `listProperties()` | `GET /api/properties?fields[0]=name&fields[1]=domain&sort[0]=id:asc`, every page up to 200 properties     |
+| `listEvents(id,…)` | `GET /api/events?filters[property][documentId][$eq]=<id>`, 25 rows a page at most, sorted by time or name |
+| `summary(id, r)`   | `GET /api/properties/<id>/summary?range=24h\|7d\|30d`, one call                                           |
+
+The client never asks for or returns `ingestKey`. A filter by someone else's property finds no
+events (the grant scopes the query), so when a list is empty the client asks
+`GET /api/properties/<id>?fields[0]=name` and answers `not-found` when that is 404: an empty page
+is never the answer for a property that is not the caller's. The error codes: 401 `unauthenticated`;
+403 and 404 `not-found` for a property; a network failure, 429 and 5xx `unavailable`; a bad argument
+`invalid-request` without sending; an answer that is not exactly the model's `invalid-response`.
+
+**`GET /api/properties/:id/summary?range=24h|7d|30d`** (`PropertySummary` in `camis.json`) is not
+public: only `authenticated` lists it in `roles.json`. Its handler (`protected/`, both targets):
+
+| Answer | When                                                                                          |
+| ------ | --------------------------------------------------------------------------------------------- |
+| `200`  | The caller owns the property: `{ data: { propertyId, range, visitors, pageViews, events } }`  |
+| `400`  | `range` is missing, repeated, an array or not one of `24h`, `7d`, `30d`                       |
+| `401`  | The bearer token is invalid or expired                                                        |
+| `403`  | No session (camis' role check, before the handler), or a token with no user                   |
+| `404`  | The property does not exist or is not the caller's: one identical answer for both             |
+| `429`  | More than 60 a minute from one address (camis' throttle)                                      |
+| `503`  | The database failed; the error's class is logged, never its message, an id or an event's text |
+
+Every answer carries `Cache-Control: no-store` (strapi-php's framework writes it as
+`no-store, private`). Each figure is `{ value, previous, series }`: `events` counts every event,
+`pageViews` the `page_view` events, `visitors` the distinct `sessionId`s (events without one are not
+counted) over the whole range, not the sum of the buckets. `series` holds 24 hourly buckets for
+`24h`, 7 or 30 daily ones for the others, in UTC, oldest first; `previous` is the same count over
+the range before. The range ends where the current UTC hour (for `24h`) or day ends, so the last
+bucket is the one in progress. Each answer costs two grouped queries on the events of one property
+(a `CASE` over the bucket edges, then `COUNT(DISTINCT …)` for visitors), with bound times and no
+function of a database, so the same SQL runs on sqlite, MySQL and PostgreSQL.
+
+Both targets are held to the same `tests/fixtures/property-summary-vectors.json`: the Strapi
+handler in Vitest over `node:sqlite` with Strapi's tables (`tests/summary-*.test.ts`), strapi-php's
+queries with plain PHP and PDO sqlite (`tests/summary-php-vectors.test.ts`, so `pnpm test` and CI
+need PHP's `pdo_sqlite`), and the strapi-php handler by PHPUnit in the live app
+(`protected/tests/Feature/Summary`, run by `pnpm contract:live`). `pnpm contract:live` also runs
+the client against strapi-php with two users and events sent by the real tracker
+(`packages/identity/src/live-contract/dashboard-source.live.test.ts`).
+
+`Event.dedupeKey` is `private`: no answer carries it and a filter, sort or field list naming it is
+refused with 400, on both targets; ingestion still writes and checks it.
+
+**Known limits.**
+
+- On the hour (or at midnight) the current range has just begun its last bucket, so it covers up
+  to one bucket less time than `previous` until that bucket ends.
+- Visitors are sessions, so one person in two tabs or after the session timeout counts twice.
+- Events have no index on `(property, occurredAt)` (camis generates none), so a summary scans a
+  property's events; retention bounds how many there are.
+- `listProperties` stops after 200 properties; the rest are not shown.
+- `populate=property` on `GET /api/events` shows the caller's own property in full, its
+  `ingestKey` included, which is the caller's to see; never anyone else's.
+- An event keeps the `owner` it was stored with. A property moved to another owner (only the admin
+  panel can do that) leaves its earlier events readable by the earlier owner and out of the new
+  owner's lists, while the summary counts them for the new owner.
+- The SQL was run on sqlite, MariaDB 10.11 and PostgreSQL 16 (strapi-php's, with native and emulated
+  prepares), and Strapi's on sqlite through Strapi 5.48 itself, once, by hand. Strapi's on MySQL and
+  PostgreSQL, and MySQL 8 itself, were not run.
+
 ## Commands
 
 camis is not published to npm. Clone it beside this repository and point `CAMIS_DIR` at it:
@@ -358,8 +430,9 @@ packages from Packagist. `scripts/live-backend.js` then, on every run:
    `.env.example`, with sqlite, mail to the `log` driver and `APP_ENV=production`; PHP gets only
    the shell's path, home, temp, locale, Composer, proxy and CA variables plus these settings, so
    nothing exported in the shell changes the backend under test;
-3. runs the ingestion handler's PHPUnit tests (`protected/tests/Feature/Ingest`) in the app, with
-   the shared vector files, and stops if they fail;
+3. runs the ingestion and summary handlers' PHPUnit tests (`protected/tests/Feature/Ingest` and
+   `protected/tests/Feature/Summary`) in the app, with the shared vector files, and stops if they
+   fail;
 4. migrates and seeds a fresh sqlite database for each of six servers that differ only in email
    confirmation, hidden account existence, throttle rates and access token lifespan (`main`: off,
    relaxed; `confirmation`: on, relaxed; `disclosing`: on, relaxed, accounts shown as Strapi

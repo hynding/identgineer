@@ -12,9 +12,16 @@ the public internet.
 ```ts
 // dashboard-source.ts
 import { validatedSource, type DashboardSource } from "@identgineer/components";
-import { createApiSource } from "./api-source"; // the app's own, over its authenticated API
+import { createCmsDashboardSource } from "@identgineer/tracking/dashboard";
+import { identity } from "./identity"; // the app's createIdentityClient(...) from @identgineer/identity
 
-export const source: DashboardSource = validatedSource(createApiSource());
+// Every call is made as the signed-in user: the CMS answers only that user's properties.
+const cms = createCmsDashboardSource({
+  baseUrl: "https://cms.example.com",
+  fetch: identity.authorizedFetch,
+});
+
+export const source: DashboardSource = validatedSource(cms);
 ```
 
 ```tsx

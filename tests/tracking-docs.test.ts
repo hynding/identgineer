@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import * as tracking from "../packages/tracking/src/index.ts";
+import * as dashboard from "../packages/tracking/src/dashboard.ts";
 import * as wire from "../packages/tracking/src/wire.ts";
 import { STORAGE_KEYS } from "../packages/tracking/src/storage-keys.ts";
 import { codeBlocks, importsOf, namesIn } from "./docs-code.ts";
@@ -15,6 +16,7 @@ const SOURCE = (file: string) => read("packages", "tracking", "src", file);
 
 const TYPE_NAMES = namesIn(SOURCE("index.ts"), /export type \{([^}]*)\}/g);
 const WIRE_TYPE_NAMES = namesIn(SOURCE("wire.ts"), /export type \{([^}]*)\}/g);
+const DASHBOARD_TYPE_NAMES = namesIn(SOURCE("dashboard.ts"), /export type \{([^}]*)\}/g);
 
 const isExported = (source: string, name: string, typeOnly: boolean): boolean => {
   switch (source) {
@@ -22,6 +24,8 @@ const isExported = (source: string, name: string, typeOnly: boolean): boolean =>
       return name in tracking || (typeOnly && TYPE_NAMES.has(name));
     case "@identgineer/tracking/wire":
       return name in wire || (typeOnly && WIRE_TYPE_NAMES.has(name));
+    case "@identgineer/tracking/dashboard":
+      return name in dashboard || (typeOnly && DASHBOARD_TYPE_NAMES.has(name));
     default:
       return false;
   }
@@ -82,12 +86,30 @@ describe("the tracking README", () => {
         "createTracker",
         "parseTrackingBatchText",
         "MAX_TRACKING_BATCH_BYTES",
+        "createCmsDashboardSource",
       ]),
     );
     const missing = imports
       .filter(({ source, name, typeOnly }) => !isExported(source, name, typeOnly))
       .map(({ source, name }) => `${name} from ${source}`);
     expect(missing).toEqual([]);
+  });
+
+  it("documents the dashboard source's methods, limits and every error code", () => {
+    for (const method of membersOf("cms-dashboard-types.ts", "CmsDashboardSource")) {
+      expect(README, method).toContain(`\`${method}(`);
+    }
+    for (const limit of ["MAX_DASHBOARD_PAGE_SIZE", "MAX_DASHBOARD_PROPERTIES"]) {
+      expect(README, limit).toContain(`\`${limit}\` (${String(dashboard[limit])})`);
+    }
+    const codes = namesIn(
+      SOURCE("cms-dashboard-error.ts").replace(/\|/g, ","),
+      /export type CmsDashboardErrorCode =([^;]*);/g,
+    );
+    expect(codes.size).toBe(5);
+    for (const code of [...codes].map((entry) => entry.replace(/"/g, ""))) {
+      expect(README, code).toMatch(new RegExp(`^\\| \`${code}\``, "m"));
+    }
   });
 
   it("shows a wire example that the validator accepts", () => {
