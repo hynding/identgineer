@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
  */
 final class IssueIngestKey implements IssueIngestKeyHook
 {
-    /** Random characters after pk_: 40 letters and digits (238 bits), within Property.ingestKey's 19 to 61. */
+    /** Random characters after pk_: 40 letters and digits (238 bits), within Property.ingestKey's 32 to 61. */
     public const RANDOM_LENGTH = 40;
 
     /** Ignores the key the client sent: a client never chooses its key. Str::random reads random_bytes. */

@@ -83,9 +83,11 @@ const api = async (
   return { status: response.status, body, text };
 };
 
-const PLACEHOLDER_KEY = `pk_${"A".repeat(40)}`;
+/** A key a client might try to choose; the server never takes it. */
+const CHOSEN_KEY = `pk_${"A".repeat(40)}`;
+const STRONG_KEY = /^pk_[A-Za-z0-9]{32,61}$/;
 
-/** A property the owner creates through the content API, as the dashboard will. */
+/** A property the owner creates through the content API, as the dashboard will: without a key. */
 const createProperty = async (
   server: LiveServer,
   owner: Owner,
@@ -97,8 +99,6 @@ const createProperty = async (
       data: {
         name: "Shop",
         domain: "shop.example",
-        // Required by the model; IssueIngestKey replaces whatever is sent.
-        ingestKey: PLACEHOLDER_KEY,
         allowedOrigins: [{ origin: SITE }],
         allowedEvents: [{ name: "signup_completed", propertyKeys: [{ key: "plan" }] }],
         allowedQueryParams: [{ name: "utm_source" }],
@@ -226,15 +226,37 @@ describe.skipIf(liveBackend === undefined)(
       logBefore = readLog().length;
     });
 
-    it("issues each new property a key of its own, never the one sent", async () => {
+    it("issues each new property a strong key of its own, without the client sending one", async () => {
       const owner = await register(main(), "ingest-key");
       const first = await createProperty(main(), owner);
       const second = await createProperty(main(), owner);
-      for (const property of [first, second]) {
-        expect(property.ingestKey).toMatch(/^pk_[A-Za-z0-9]{40}$/);
-        expect(property.ingestKey).not.toBe(PLACEHOLDER_KEY);
-      }
+      for (const property of [first, second]) expect(property.ingestKey).toMatch(STRONG_KEY);
       expect(first.ingestKey).not.toBe(second.ingestKey);
+    });
+
+    it("never lets a client choose or change a key, so no one can claim or probe one", async () => {
+      const alice = await register(main(), "ingest-key-alice");
+      const mallory = await register(main(), "ingest-key-mallory");
+      // Both send one value on create: both succeed, and neither gets it.
+      const hers = await createProperty(main(), mallory, { ingestKey: CHOSEN_KEY });
+      const aliceFirst = await createProperty(main(), alice, { ingestKey: CHOSEN_KEY });
+      for (const property of [hers, aliceFirst]) {
+        expect(property.ingestKey).toMatch(STRONG_KEY);
+        expect(property.ingestKey).not.toBe(CHOSEN_KEY);
+      }
+      // An update cannot set her key to the chosen value, to Alice's key, or clear it.
+      for (const ingestKey of [CHOSEN_KEY, aliceFirst.ingestKey, null]) {
+        const answer = await api(main(), "PUT", `/api/properties/${hers.documentId}`, {
+          jwt: mallory.jwt,
+          body: { data: { name: "Mine", ingestKey } },
+        });
+        expect(answer.status, answer.text).toBe(200);
+        expect((answer.body as { data: CreatedProperty }).data.ingestKey).toBe(hers.ingestKey);
+      }
+      // So creating with any value still succeeds for Alice: nothing anyone sent is taken.
+      const aliceSecond = await createProperty(main(), alice, { ingestKey: hers.ingestKey });
+      expect(aliceSecond.ingestKey).not.toBe(hers.ingestKey);
+      expect(aliceSecond.ingestKey).toMatch(STRONG_KEY);
     });
 
     it("takes the tracker's fetch through a browser's preflight and stores what the model keeps", async () => {
