@@ -350,6 +350,26 @@
   }
 }
 
+/* Where the menu button is drawn, the brand shares the bar's grid with it, or has a row of its own,
+   and its width is the bar's to give, never its content's. It is a container there, so what the
+   page puts in it can size itself to the room the brand has (a name that must not break, set no
+   larger than fits in 100cqi), and so never runs under the menu button. Where the navigation is in
+   the bar there is no button, and the brand is as wide as its content; so it is where the bar wraps
+   (immersive) and where the brand sits on the split hero, which the layouts below say. */
+@container idg-nav style(--_nav: disclosure) {
+  .brand {
+    container-type: inline-size;
+    justify-self: stretch;
+  }
+}
+
+@container idg-nav style(--_nav: drawer) {
+  .brand {
+    container-type: inline-size;
+    justify-self: stretch;
+  }
+}
+
 @container idg-nav style(--_nav: disclosure) {
   .drawer[open] {
     display: block;
@@ -760,6 +780,8 @@
       /* Half of the page less the gutters it shares with the menu button, so a long name wraps in
          its half and never runs under the button and the actions. */
       max-inline-size: calc(50% - 2 * var(--_gutter));
+      /* Its width is its content's, up to that half, so it is no container here. */
+      container-type: normal;
       block-size: auto;
       min-block-size: var(--_bar);
       color: var(--idg-color-on-accent-subtle);
@@ -1329,8 +1351,11 @@
     color: var(--idg-color-on-accent-subtle);
   }
 
+  /* The bar wraps the menu button onto the next line where the brand leaves it no room, so the
+     brand is as wide as its content, and no container. */
   .brand {
     flex: 1 1 auto;
+    container-type: normal;
   }
 
   .actions {

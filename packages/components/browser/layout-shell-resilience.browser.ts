@@ -1399,7 +1399,10 @@ test.describe("the arrangement follows the width however the page has read the s
 test.describe("the brand is the measure of what the page puts in it beside the menu button", () => {
   // A brand that must not break (a name of one word) can only fit by sizing itself to the room the
   // bar leaves it, and that room is what a container query unit in the brand measures wherever the
-  // brand shares the bar with the menu button: a slotted element 100cqi wide is as wide as the brand.
+  // bar is a grid that places the brand beside the menu button or on a row of its own: a slotted
+  // element 100cqi wide is as wide as the brand. A bar that wraps (immersive) puts the menu button
+  // on the next line instead, where the brand is wider than the room left. Either way what the page
+  // puts in the brand stays in it.
   for (const layout of LAYOUTS) {
     test(`${layout}: 100cqi in the brand is the brand's own width, which stays clear of the menu button, in every UX mode`, async ({
       page,
@@ -1425,29 +1428,83 @@ test.describe("the brand is the measure of what the page puts in it beside the m
             const brand = host.shadowRoot?.querySelector<HTMLElement>('[part="brand"]');
             const toggle = host.shadowRoot?.querySelector<HTMLElement>('[part="toggle"]');
             const probe = document.getElementById("brand-probe");
-            if (!brand || !toggle || !probe) throw new Error("missing");
+            const link = document.getElementById("brand-link");
+            const header = host.shadowRoot?.querySelector<HTMLElement>('[part="header"]');
+            if (!brand || !toggle || !probe || !link || !header) throw new Error("missing");
             if (!toggle.checkVisibility()) return undefined;
             const room = brand.getBoundingClientRect();
             const button = toggle.getBoundingClientRect();
             const across = Math.min(room.right, button.right) - Math.max(room.left, button.left);
             const down = Math.min(room.bottom, button.bottom) - Math.max(room.top, button.top);
+            const content = link.getBoundingClientRect();
             return {
+              grid: getComputedStyle(header).display === "grid",
               probe: probe.getBoundingClientRect().width,
               brand: brand.clientWidth,
+              spill: Math.max(content.right - room.right, room.left - content.left),
               overlap: across > 0.5 && down > 0.5,
             };
           });
           if (!found) continue;
           const where = `${ux} at ${String(width)}px`;
-          if (Math.abs(found.probe - found.brand) > 0.5) {
+          if (found.grid && Math.abs(found.probe - found.brand) > 0.5) {
             failures.push(
               `${where}: 100cqi is ${String(found.probe)}px, the brand ${String(found.brand)}px`,
             );
           }
           if (found.overlap) failures.push(`${where}: the brand runs under the menu button`);
+          if (found.spill > 1) {
+            failures.push(`${where}: the brand's content leaves it by ${String(found.spill)}px`);
+          }
         }
       }
       expect(failures).toEqual([]);
     });
   }
+});
+
+test.describe("without a script", () => {
+  // A browser that runs no script cannot be asked for here, so the rule for one is made to apply:
+  // the shell's own `@media (scripting: none)` rule is given a media list that always matches.
+  test("the navigation is in the bar, with no menu button, in every layout and at every width", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await openShell(page);
+    const found = await page.locator("#shell").evaluate((host) => {
+      let rules = 0;
+      for (const sheet of host.shadowRoot?.adoptedStyleSheets ?? []) {
+        for (const rule of sheet.cssRules) {
+          if (rule instanceof CSSMediaRule && rule.conditionText === "(scripting: none)") {
+            rule.media.mediaText = "all";
+            rules += 1;
+          }
+        }
+      }
+      return rules;
+    });
+    expect(found, "the shell's rule for a browser without a script").toBe(1);
+    const failures: string[] = [];
+    for (const layout of LAYOUTS) {
+      await setLayout(page, layout);
+      for (const width of [320, 390, 820, 1280]) {
+        await page.setViewportSize({ width, height: 800 });
+        await frames(page, 2);
+        const state = await page.locator("#shell").evaluate((host) => {
+          const toggle = host.shadowRoot?.querySelector<HTMLElement>('[part="toggle"]');
+          const links = [...host.querySelectorAll<HTMLElement>('[slot="navigation"]')];
+          return {
+            toggle: toggle?.checkVisibility() ?? false,
+            hidden: links
+              .filter((link) => !link.checkVisibility())
+              .map((link) => link.id || link.textContent),
+          };
+        });
+        const where = `${layout} at ${String(width)}px`;
+        if (state.toggle) failures.push(`${where}: the menu button is drawn`);
+        if (state.hidden.length > 0) failures.push(`${where}: ${state.hidden.join(", ")} hidden`);
+      }
+    }
+    expect(failures).toEqual([]);
+  });
 });
