@@ -118,6 +118,10 @@ describe("dedupeKeyOf", () => {
     expect(dedupeKeyOf(7, "AAAAAAAAAAAAAAAAAAAAAA")).toBe(
       createHash("sha256").update("7:AAAAAAAAAAAAAAAAAAAAAA").digest("hex"),
     );
+    // The value the strapi-php handler's test expects too (IngestedEventTest).
+    expect(dedupeKeyOf(7, "AAAAAAAAAAAAAAAAAAAAAA")).toBe(
+      "8d843a1ceb571c66e03617ae03248b8440bf598a58914236a75b24ed41084031",
+    );
     expect(eventField("dedupeKey").test(dedupeKeyOf(7, "x"))).toBe(true);
   });
 
