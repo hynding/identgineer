@@ -137,9 +137,15 @@ tab, and a parent sized by its content (a table cell, a `min-content` track) no 
 tab down to its widest item, as it used to: tabs with an icon or a badge there can be 10 to 50px
 wider than they were. The other part styles (a gap, a column, a baseline) lay the items out as before.
 
-The vertical list's narrowest width and a button's are set with `calc-size()`. In an engine without
-it a vertical tab may cross its list's border as before, and a button's longest word may run past
-its background in a column narrower than the word, as before.
+The vertical list's narrowest width, a button's and a stat's figure's are set with `calc-size()`.
+In an engine without it (Firefox, Safari) a vertical tab may cross its list's border as before. A
+button falls back, under `@supports not`, to a largest size of the room it is in plus the same reach
+past it, so its longest word stays whole wherever the window has room, as with `calc-size()`; where
+the window is narrow against the text the word breaks inside the button. A stat's figure falls back
+to `overflow-wrap: break-word`: it is whole wherever what holds the stat sizes it by its content,
+and breaks only where the stat is narrower than it, but at 200% text in a phone's window a parent
+sized by its content is as wide as the figure, where `calc-size()` would let it break to fit.
+`browser/whole-words.browser.ts` holds the button and the figure whole in both engines.
 
 ## `idg-button`
 
@@ -1106,7 +1112,9 @@ the page slots there measures the room the bar leaves the brand. A name that mus
 set no larger than that, as `font-size: min(1em, 100cqi / 6.8)` for a word of about seven letters'
 height in the widest face, and never runs under the menu button. Where the navigation is in the bar,
 where the bar wraps (`immersive`) and where the brand sits on the split hero, the brand is as wide as
-its content and is no container.
+its content and is no container. The container is the brand's base rule, and those exceptions are
+style queries, so an engine without container style queries, which draws every layout as the
+shell's own arrangement with the menu button, has the brand as the measure of its room too.
 
 Changing `data-layout` while the page is open keeps the scroll position and keeps focus on the same
 element; focus that was in a navigation the new layout collapses goes to the menu button. Where a
