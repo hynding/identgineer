@@ -70,7 +70,7 @@ export class SiteHome {
             </idg-button>
             {this.renderShuffle("lg")}
           </idg-cluster>
-          <p class="visually-hidden" role="status">
+          <p class="shuffle-status visually-hidden" role="status">
             {this.announcement}
           </p>
         </div>
