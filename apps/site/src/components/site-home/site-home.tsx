@@ -2,6 +2,7 @@ import { Component, h, State } from "@stencil/core";
 import { REGISTRY, applyVariations, shuffleVariations } from "@identgineer/variations";
 import { isOverview, linkableRoutes } from "../../routes";
 import { describeLook, lookCount } from "../../shell/appearance";
+import { DashboardFigures, SignInPreview, ThemeTiles, VISITS_PER_DAY } from "../../shell/showcase";
 import { SiteShell, openAppearance } from "../../shell/site-shell";
 
 const AXIS_SHOWCASE = [
@@ -18,9 +19,6 @@ const ON_THIS_PAGE = [
   { id: "variations", label: "Variations" },
   { id: "next", label: "Where to next" },
 ] as const;
-
-const VISITS = "38,41,37,52,49,61,58,66,63,71,69,84";
-const CONSENT = "52,55,54,58,61,60,64,66,65,68,70,72";
 
 function formatCount(count: number): string {
   return count.toLocaleString("en-GB");
@@ -89,7 +87,7 @@ export class SiteHome {
           </idg-card>
           <idg-card class="showcase-stat" variant="raised" padding="sm">
             <idg-stat label="Visitors this week" value="12,480" delta="8.2%" direction="up">
-              <idg-sparkline slot="chart" values={VISITS} label="Visitors per day" area />
+              <idg-sparkline slot="chart" values={VISITS_PER_DAY} label="Visitors per day" area />
             </idg-stat>
           </idg-card>
           <idg-card class="showcase-palette" variant="raised" padding="sm">
@@ -128,11 +126,7 @@ export class SiteHome {
           </ul>
         </div>
         <figure class="feature-visual preview">
-          <idg-card variant="raised">
-            <div class="preview-frame" inert>
-              <idg-sign-in />
-            </div>
-          </idg-card>
+          <SignInPreview />
           <figcaption>
             The sign-in form, drawn in the current look. This preview is not connected.
           </figcaption>
@@ -161,21 +155,7 @@ export class SiteHome {
             <li>Only the events a page declares, and every URL cut down to its path</li>
           </ul>
         </div>
-        <div class="feature-visual figures" role="group" aria-label="Dashboard figures">
-          <idg-card variant="outlined" padding="sm">
-            <idg-stat label="Page views" value="48,210" delta="12.4%" direction="up">
-              <idg-sparkline slot="chart" values={VISITS} label="Page views per day" />
-            </idg-stat>
-          </idg-card>
-          <idg-card variant="outlined" padding="sm">
-            <idg-stat label="Consent given" value="72%" delta="3.1%" direction="up">
-              <idg-sparkline slot="chart" values={CONSENT} label="Consent rate per day" />
-            </idg-stat>
-          </idg-card>
-          <idg-card class="figures-wide" variant="outlined" padding="sm">
-            <idg-progress label="Events within budget" value={64} show-value />
-          </idg-card>
-        </div>
+        <DashboardFigures class="feature-visual" />
       </section>
     );
   }
@@ -202,21 +182,7 @@ export class SiteHome {
           </p>
         </div>
         <div class="feature-visual themes-room">
-          <ul class="themes">
-            {REGISTRY.theme.variations.map((theme) => (
-              <li class="theme-tile" data-theme={theme.id}>
-                <span class="theme-sample" aria-hidden="true">
-                  Aa
-                  <span class="theme-swatches">
-                    <span class="swatch swatch-accent" />
-                    <span class="swatch swatch-accent-subtle" />
-                    <span class="swatch swatch-text" />
-                  </span>
-                </span>
-                <span class="theme-name">{theme.label}</span>
-              </li>
-            ))}
-          </ul>
+          <ThemeTiles />
         </div>
       </section>
     );
@@ -297,7 +263,9 @@ export class SiteHome {
           <h2 id="next-title">Where to next</h2>
         </div>
         <div class="feature-body">
-          <p>The pages still to come, each made from the same components and tokens as this one.</p>
+          <p>
+            The rest of the site, each page made from the same components and tokens as this one.
+          </p>
         </div>
         <div class="feature-visual next">
           <div class="next-cards">
