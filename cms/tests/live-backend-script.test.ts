@@ -100,7 +100,7 @@ describe("cms/scripts/live-backend.js", () => {
   );
 
   it(
-    "runs the ingestion handler's PHPUnit tests in the app with the shared vector files",
+    "runs the ingestion and summary handlers' PHPUnit tests in the app with the shared vector files",
     { timeout: 30_000 },
     () => {
       const setup = fake();
@@ -115,9 +115,14 @@ describe("cms/scripts/live-backend.js", () => {
         "vendor/bin/phpunit",
         "--colors=never",
         "tests/Feature/Ingest",
+        "tests/Feature/Summary",
       ]);
       expect(phpunit?.cwd).toBe(join(setup.live, "strapi-php"));
-      for (const name of ["TRACKING_BATCH_VECTORS", "INGEST_NORMALISE_VECTORS"]) {
+      for (const name of [
+        "TRACKING_BATCH_VECTORS",
+        "INGEST_NORMALISE_VECTORS",
+        "PROPERTY_SUMMARY_VECTORS",
+      ]) {
         expect(existsSync(phpunit?.env[name] ?? ""), name).toBe(true);
       }
       // The testing environment comes from phpunit.xml, not from the servers' settings.
