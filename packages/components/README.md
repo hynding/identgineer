@@ -1245,8 +1245,9 @@ none`) and get an edge in `CanvasText`. The panel has no motion of its own.
   output is different: it is not bundled, so its switcher files keep a bare
   `import … from "@identgineer/variations"`, and that package is TypeScript source until it is
   published with built output (planned with the publishing feature). Until then the collection
-  output is not a supported entry for this component. Consume the loader or the custom-elements
-  build.
+  output is not a supported entry for this component outside this repository: consume the loader or
+  the custom-elements build. Inside it, `apps/site` consumes the collection, with the same transpile
+  step for the workspace sources as this package's own build.
 - **Types.** The switcher's public types (`VariationsChangeDetail`, `VariationState`, `StateKey`,
   `ThemeId`, `DesignId`, `LayoutId`, `UxModeId`, `SchemeChoice`, `SwitcherOrientation`) are declared in
   this package, so `dist/types` never refers to the variations source. A compile-time test holds them
