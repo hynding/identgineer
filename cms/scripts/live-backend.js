@@ -7,7 +7,8 @@
 //   node cms/scripts/live-backend.js                        serve until interrupted (Ctrl-C)
 //
 // The command gets IDENTITY_LIVE_BACKEND, the path of a JSON file describing the servers. Before
-// booting them it runs the app's PHPUnit tests of the protected ingestion code (tests/Feature/Ingest),
+// booting them it runs the app's PHPUnit tests of the protected ingestion and summary code
+// (tests/Feature/Ingest, tests/Feature/Summary),
 // with the vector files they share with the TypeScript tests. Each server logs its requests to
 // <live dir>/<name>.server.log. A server that exits stops the run at
 // once; SIGINT, SIGTERM and SIGHUP are passed on to the command (or to camis or artisan while
@@ -385,13 +386,14 @@ const prepareDatabase = async (env) => {
 };
 
 /**
- * The app's PHPUnit tests of the protected ingestion code, reading the vector files the TypeScript
- * tests read, so both targets' handlers answer alike. phpunit.xml sets the testing environment (an
+ * The app's PHPUnit tests of the protected ingestion and summary code, reading the vector files the
+ * TypeScript tests read, so both targets' handlers answer alike. phpunit.xml sets the testing environment (an
  * in-memory sqlite, the array cache); the rest comes from the .env written above.
  */
 const runPhpTests = async () => {
-  step("running the ingestion handler's PHPUnit tests");
-  await run("php", ["vendor/bin/phpunit", "--colors=never", "tests/Feature/Ingest"], {
+  step("running the ingestion and summary handlers' PHPUnit tests");
+  const suites = ["tests/Feature/Ingest", "tests/Feature/Summary"];
+  await run("php", ["vendor/bin/phpunit", "--colors=never", ...suites], {
     cwd: APP_DIR,
     env: phpEnvironment({
       TRACKING_BATCH_VECTORS: join(
@@ -403,6 +405,7 @@ const runPhpTests = async () => {
         "batch-vectors.json",
       ),
       INGEST_NORMALISE_VECTORS: join(CMS_DIR, "tests", "fixtures", "ingest-normalise-vectors.json"),
+      PROPERTY_SUMMARY_VECTORS: join(CMS_DIR, "tests", "fixtures", "property-summary-vectors.json"),
     }),
   });
 };

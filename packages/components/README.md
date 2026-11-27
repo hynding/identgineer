@@ -1482,11 +1482,12 @@ Four elements draw a dashboard of tracked events: `idg-property-picker`, `idg-st
 their data as properties, never fetch and store nothing. The page asks a `DashboardSource`
 (`src/dashboard/dashboard-types.ts`: `listProperties()`, `listEvents(propertyId, { page, pageSize,
 sort })` and `summary(propertyId, range)`) and hands the answers over. That interface is the typed
-seam the server task implements over the authenticated API; **ownership is the source's to
+seam to the server: `createCmsDashboardSource` from `@identgineer/tracking/dashboard` implements
+it over the CMS (`cms/README.md`, "The dashboard's reads"). **Ownership is the source's to
 enforce**, and a property the user does not own is answered exactly as one that does not exist
 (`DashboardError` `not-found`). `validatedSource(source)` wraps any source so that every request
 and answer is checked against the contract (`parseTrackedProperties`, `parseTrackedEvents`,
-`parseEventPage`, `parseStatSummary` are exported) and a failure that is not a `DashboardError` becomes one (`unavailable`, without its message).
+`parseEventPage`, `parseStatSummary` are exported) and a failure that is not a `DashboardError` becomes one (`unavailable`, without its message). An `Error` named `DashboardError` with one of the codes, which a source that cannot import this package throws (the CMS source does), keeps its code.
 `src/testing/fake-dashboard-source.ts` is a fake that enforces the same ownership rule; it is not
 part of `dist`.
 

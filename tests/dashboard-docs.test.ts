@@ -15,6 +15,9 @@ const component = (...path: string[]) => read(join(ROOT, "packages", "components
 const COMPONENTS_INDEX = component("index.ts");
 const COMPONENTS_TYPES = namesIn(COMPONENTS_INDEX, /export type \{([^}]*)\}/g);
 const COMPONENTS_VALUES = namesIn(COMPONENTS_INDEX, /export \{([^}]*)\}/g);
+const TRACKING_DASHBOARD = read(join(ROOT, "packages", "tracking", "src", "dashboard.ts"));
+const TRACKING_DASHBOARD_TYPES = namesIn(TRACKING_DASHBOARD, /export type \{([^}]*)\}/g);
+const TRACKING_DASHBOARD_VALUES = namesIn(TRACKING_DASHBOARD, /export \{([^}]*)\}/g);
 const GENERATED = component("components.d.ts");
 const GENERATED_NAMESPACES = new Set(
   [...GENERATED.matchAll(/^export namespace (\w+)/gm)].map((match) => match[1] ?? ""),
@@ -54,6 +57,10 @@ function isExported(source: string, name: string, typeOnly: boolean): boolean {
       );
     case "@identgineer/components/loader":
       return ["defineCustomElements", "applyPolyfills", "setNonce"].includes(name);
+    case "@identgineer/tracking/dashboard":
+      return (
+        TRACKING_DASHBOARD_VALUES.has(name) || (typeOnly && TRACKING_DASHBOARD_TYPES.has(name))
+      );
     default:
       return false;
   }
@@ -78,14 +85,28 @@ describe("the dashboard components guides", () => {
     expect(isExported("@identgineer/components", "validatedSource", false)).toBe(true);
     expect(isExported("@identgineer/components", "DashboardSource", false)).toBe(false);
     expect(isExported("@identgineer/components", "DashboardSource", true)).toBe(true);
+    expect(isExported("@identgineer/tracking/dashboard", "createCmsDashboardSource", false)).toBe(
+      true,
+    );
+    expect(isExported("@identgineer/tracking", "createCmsDashboardSource", false)).toBe(false);
   });
 
   describe.each(GUIDES)("%s", (guide) => {
     const markdown = read(join(DOCS, guide));
-    const imports = importsOf(markdown, ["components"]);
+    const imports = importsOf(markdown, ["components", "tracking"]);
 
     it("builds the source with validatedSource, so every answer is checked before an element sees it", () => {
       expect(code(markdown)).toMatch(/validatedSource\(/);
+    });
+
+    it("reads from the CMS as the signed-in user, through the dashboard entry of the tracking package", () => {
+      expect(imports).toContainEqual({
+        source: "@identgineer/tracking/dashboard",
+        name: "createCmsDashboardSource",
+        typeOnly: false,
+      });
+      expect(code(markdown)).toMatch(/fetch: identity\.authorizedFetch/);
+      expect(code(markdown)).toMatch(/validatedSource\(cms\)/);
     });
 
     it("imports only names the package really exports, from entry points it has", () => {

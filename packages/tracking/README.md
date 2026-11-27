@@ -45,6 +45,49 @@ that cannot be honoured is dropped and reported to `onDrop`. The package is safe
 call without a DOM (server-side rendering): without `window` or storage nothing can be recorded, so
 nothing happens.
 
+## Reading it back: `@identgineer/tracking/dashboard`
+
+A separate entry point, never loaded by the tracker, reads what was collected for the dashboard
+components (`docs/dashboard/`). It imports nothing from `@identgineer/components`, and its result
+is assignable to their `DashboardSource`:
+
+```ts
+import { validatedSource } from "@identgineer/components";
+import { createCmsDashboardSource } from "@identgineer/tracking/dashboard";
+
+const source = validatedSource(
+  createCmsDashboardSource({ baseUrl: "https://cms.example.com", fetch: identity.authorizedFetch }),
+);
+```
+
+`fetch` is the identity client's `authorizedFetch` (or any fetch that sends the signed-in user's
+bearer token), so the CMS answers only that user's properties. `baseUrl` is an https origin
+(`http` only for `localhost` and loopback addresses). Every request is a GET without cookies, that
+follows no redirect and is never cached; every answer is read to a bounded size and must be
+exactly what the model allows.
+
+| Method                  | Request                                                    | Notes                                                                                                                                              |
+| ----------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listProperties()`      | `GET /api/properties` (name and domain only), page by page | Up to `MAX_DASHBOARD_PROPERTIES` (200), in at most 8 pages, stopping at a page that adds none; never the `ingestKey`; origin is `https://<domain>` |
+| `listEvents(id, query)` | `GET /api/events` filtered by the property                 | `pageSize` at most `MAX_DASHBOARD_PAGE_SIZE` (25); an empty answer is confirmed (below)                                                            |
+| `summary(id, range)`    | `GET /api/properties/<id>/summary?range=24h\|7d\|30d`      | One call                                                                                                                                           |
+
+It rejects only with `CmsDashboardError`, whose `name` is `"DashboardError"` so that
+`validatedSource` carries its `code` on, with a fixed message that holds no id, URL or server text:
+
+| Code               | When                                                                                               |
+| ------------------ | -------------------------------------------------------------------------------------------------- |
+| `unauthenticated`  | 401, or the identity client has no session                                                         |
+| `not-found`        | 403 or 404 for a property; an empty event list for a property the caller cannot read               |
+| `unavailable`      | A network failure, 429, 5xx, or 403/404 on the property list                                       |
+| `invalid-request`  | An id, page, page size, sort or range that is not valid; nothing is sent                           |
+| `invalid-response` | Anything else: an answer that is not JSON, too large, or not exactly a page of the model's records |
+
+A filter by a property that is not the caller's finds no events rather than failing, so an empty
+list is followed by `GET /api/properties/<id>`, and a 404 there answers `not-found`: an empty page
+is never the answer for someone else's property. The CMS side is in `cms/README.md`, "The
+dashboard's reads".
+
 ## What is collected, and what never is
 
 | Collected                                                                                        | Never collected                                                                        |

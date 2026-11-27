@@ -10,17 +10,19 @@ camis has one protected directory for all targets, so a PHP file placed here is 
 the Strapi project and a TypeScript file into the Laravel app. Both are inert in the other target.
 Keep each language under the path its own target expects:
 
-| What                               | strapi-php (Laravel) path           | Strapi path                                 |
-| ---------------------------------- | ----------------------------------- | ------------------------------------------- |
-| `IngestEvent` endpoint             | `app/Hooks/IngestEvent.php`         | `src/api/event/controllers/ingest-event.ts` |
-| Its parts (validation, rows)       | `app/Ingest/*.php`                  | `src/ingest/*.ts`                           |
-| Its limits                         | `config/ingest.php`                 | `src/ingest/settings.ts`                    |
-| `IssueIngestKey` hook (Property)   | `app/Hooks/IssueIngestKey.php`      | `src/hooks/issue-ingest-key.ts`             |
-| `DropClientIngestKey` middleware   | `app/Hooks/DropClientIngestKey.php` | `src/middlewares/drop-client-ingest-key.ts` |
-| `PurgeExpiredEvents` schedule      | `app/Hooks/PurgeExpiredEvents.php`  | `src/cron/purge-expired-events.ts`          |
-| Handler tests (PHPUnit)            | `tests/Feature/Ingest/*.php`        | — (Vitest, `cms/tests/ingest-*.test.ts`)    |
-| Extra API routes (strapi-php only) | `routes/api-custom.php`             | —                                           |
-| REST page cap (Strapi only)        | —                                   | `config/api.ts`                             |
+| What                               | strapi-php (Laravel) path                                   | Strapi path                                                             |
+| ---------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `IngestEvent` endpoint             | `app/Hooks/IngestEvent.php`                                 | `src/api/event/controllers/ingest-event.ts`                             |
+| Its parts (validation, rows)       | `app/Ingest/*.php`                                          | `src/ingest/*.ts`                                                       |
+| Its limits                         | `config/ingest.php`                                         | `src/ingest/settings.ts`                                                |
+| `PropertySummary` endpoint         | `app/Hooks/PropertySummary.php`                             | `src/api/property/controllers/property-summary.ts`                      |
+| Its parts (range, SQL, figures)    | `app/Summary/*.php`                                         | `src/summary/*.ts`                                                      |
+| `IssueIngestKey` hook (Property)   | `app/Hooks/IssueIngestKey.php`                              | `src/hooks/issue-ingest-key.ts`                                         |
+| `DropClientIngestKey` middleware   | `app/Hooks/DropClientIngestKey.php`                         | `src/middlewares/drop-client-ingest-key.ts`                             |
+| `PurgeExpiredEvents` schedule      | `app/Hooks/PurgeExpiredEvents.php`                          | `src/cron/purge-expired-events.ts`                                      |
+| Handler tests (PHPUnit)            | `tests/Feature/Ingest/*.php`, `tests/Feature/Summary/*.php` | — (Vitest, `cms/tests/ingest-*.test.ts`, `cms/tests/summary-*.test.ts`) |
+| Extra API routes (strapi-php only) | `routes/api-custom.php`                                     | —                                                                       |
+| REST page cap (Strapi only)        | —                                                           | `config/api.ts`                                                         |
 
 Each hook, endpoint and route path above is seeded by camis as a stub the first time it builds,
 implementing a generated contract (`app/Hooks/Contracts/*.php`, `src/hooks/contracts/*.ts`). Copy a
@@ -111,6 +113,34 @@ Never read, stored or logged: the caller's IP address, its User-Agent, cookies, 
 the write key (compared, never stored). The address exists only in camis' short-lived throttle
 counter, keyed by a hash.
 
+## The summary endpoint
+
+`PropertySummary` (`GET /api/properties/:id/summary?range=24h|7d|30d`) is not public: camis lets
+through only a role that lists it in `roles.json` (`authenticated`), and answers 403 without a
+session and 401 for a bad token before the handler runs. On strapi-php it is
+`App\Hooks\PropertySummary`; on Strapi the `property-summary` controller. Both, in this order,
+every answer with `Cache-Control: no-store` (on strapi-php camis' refusals before the handler get it
+too, from `app/Summary/SummaryNoStore.php`, prepended to Laravel's global middleware by
+`app/Providers/AppServiceProvider.php`; Strapi's refusals before the controller have none):
+
+1. **400** unless the query string holds `range` exactly once, as `24h`, `7d` or `30d` (strapi-php
+   reads the raw query string, so `range[]=7d` and a repeated `range` are refused as on Strapi).
+2. **403** when the request has no user (a token that is not a user's).
+3. **404** for an id that is not a document id, or that is not a property **owned by the caller**:
+   one query asks for both (`document_id` and `owner`), so a missing property and someone else's
+   answer identically.
+4. **200** with the figures, from two grouped queries over the property's events
+   (`app/Summary/SummaryQueries.php`, `src/summary/summary-sql.ts`): the bucket of each event by a
+   `CASE` over bound edge times, then the distinct sessions of the range and of the one before (on MySQL and MariaDB by
+   their bytes, as the default collations fold case). The
+   clock is the server's, in UTC (`SummaryWindow.php`, `summary-window.ts`).
+5. **503** when the database fails, logged as `PropertySummary: the database failed at the <stage>
+(<error class>)`, never with the error's message, the id or an event's text.
+
+Strapi's queries take the table and column names from Strapi's own metadata for Event, checked
+against `[a-z_][a-z0-9_]{0,62}`; strapi-php's use the Event model's table with its prefix. Both are
+held to `cms/tests/fixtures/property-summary-vectors.json`.
+
 ## The hook and the schedule
 
 - `IssueIngestKey` (Property `beforeCreate`) returns `pk_` followed by 40 characters from a
@@ -128,11 +158,15 @@ counter, keyed by a hash.
 
 ## Tests and type checking
 
-- PHPUnit (`tests/Feature/Ingest`) runs in the live app on every `pnpm contract:live`
-  (`scripts/live-backend.js`), with the two shared vector files passed by `TRACKING_BATCH_VECTORS`
-  and `INGEST_NORMALISE_VECTORS`.
+- PHPUnit (`tests/Feature/Ingest`, `tests/Feature/Summary`) runs in the live app on every
+  `pnpm contract:live` (`scripts/live-backend.js`), with the three shared vector files passed by
+  `TRACKING_BATCH_VECTORS`, `INGEST_NORMALISE_VECTORS` and `PROPERTY_SUMMARY_VECTORS`.
 - Vitest (`cms/tests/ingest-*.test.ts`) tests the Strapi side against a fake document service, and
   `cms/tests/ingest-php-vectors.test.ts` runs `app/Ingest`'s validator and normaliser on the shared
   vectors with plain PHP (no Laravel app), so `pnpm test` and CI hold both targets to them.
+  `cms/tests/summary-php-vectors.test.ts` does the same for `app/Summary` with PDO sqlite (through
+  `SummaryCounts`, the hook's counting, on a stand-in connection that also shows a `mariadb` driver
+  gets the byte-wise SQL), and
+  `cms/tests/summary-*.test.ts` run the Strapi handler and its SQL over `node:sqlite`.
 - `cms/tsconfig.strapi.json` type-checks `src/` and `config/` as the generated Strapi project
   compiles them (CommonJS, the ES2020 library, `strict` off), as part of `pnpm typecheck`.

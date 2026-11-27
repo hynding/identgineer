@@ -78,12 +78,19 @@ has moved on is dropped:
 ```js
 // dashboard.js
 import { DashboardError, validatedSource } from "@identgineer/components";
-import { createApiSource } from "./api-source.js"; // the page's own, over its authenticated API
+import { createCmsDashboardSource } from "@identgineer/tracking/dashboard";
+import { identity } from "./identity.js"; // the page's createIdentityClient(...) from @identgineer/identity
+
+// Every call is made as the signed-in user: the CMS answers only that user's properties.
+const cms = createCmsDashboardSource({
+  baseUrl: "https://cms.example.com",
+  fetch: identity.authorizedFetch,
+});
 
 // validatedSource checks every answer and every request against the contract, and turns a
-// failure that is not a DashboardError into one (code "unavailable"); the source's own
-// DashboardErrors pass through as they were.
-const source = validatedSource(createApiSource());
+// failure that is not a DashboardError into one (code "unavailable"); the CMS source's errors
+// carry their code on (not-found, unauthenticated, ...).
+const source = validatedSource(cms);
 
 const picker = document.getElementById("picker");
 const table = document.getElementById("events");

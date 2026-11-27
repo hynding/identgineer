@@ -260,6 +260,7 @@
           "name": "dedupeKey",
           "required": true,
           "unique": true,
+          "private": true,
           "minLength": 64,
           "maxLength": 64,
           "pattern": "^[0-9a-f]{64}$"
@@ -454,6 +455,13 @@
       "maxBodyBytes": 65536,
       "accepts": ["application/json", "text/plain"],
       "crossOrigin": { "headers": ["Content-Type", "X-Idg-Write-Key"] }
+    },
+    {
+      "name": "PropertySummary",
+      "contentType": "Property",
+      "method": "GET",
+      "path": "/properties/:id/summary",
+      "throttle": { "perMinute": 60 }
     }
   ],
   "schedules": [{ "name": "PurgeExpiredEvents", "cron": "17 3 * * *" }]

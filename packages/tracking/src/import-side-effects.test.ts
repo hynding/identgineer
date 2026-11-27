@@ -37,6 +37,7 @@ describe("importing the package", () => {
       await import("./index.ts");
       await import("./testing/index.ts");
       await import("./wire.ts");
+      await import("./dashboard.ts");
     } finally {
       for (const name of TOUCHED) Reflect.deleteProperty(globalThis, name);
     }
@@ -57,6 +58,13 @@ describe("importing the package", () => {
       "parseTrackingBatchText",
       "parseTrackingEvent",
     ]);
+    const dashboard = await import("./dashboard.ts");
+    expect(Object.keys(dashboard).sort()).toEqual([
+      "CmsDashboardError",
+      "MAX_DASHBOARD_PAGE_SIZE",
+      "MAX_DASHBOARD_PROPERTIES",
+      "createCmsDashboardSource",
+    ]);
     const testing = await import("./testing/index.ts");
     expect(Object.keys(testing).sort()).toEqual([
       "createCrossTabHub",
@@ -66,6 +74,22 @@ describe("importing the package", () => {
       "createMemoryStorage",
       "createSeededRandom",
     ]);
+  });
+
+  // The dashboard source is for the signed-in owner's pages, not the tracked sites: the tracker's
+  // entry point (and so its bundle) never reaches it.
+  it("keeps the dashboard source out of the tracker's entry point", async () => {
+    const { readFileSync } = await import("node:fs");
+    const reached = new Set<string>();
+    const visit = (file: string): void => {
+      if (reached.has(file)) return;
+      reached.add(file);
+      const source = readFileSync(new URL(`./${file}`, import.meta.url), "utf8");
+      for (const match of source.matchAll(/from "\.\/([\w-]+\.ts)"/g)) visit(match[1] ?? "");
+    };
+    visit("index.ts");
+    expect(reached.size).toBeGreaterThan(10);
+    expect([...reached].filter((file) => file.includes("dashboard"))).toEqual([]);
   });
 
   it("keeps the wire format free of any browser API", async () => {

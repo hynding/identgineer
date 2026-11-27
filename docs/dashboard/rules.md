@@ -9,8 +9,11 @@ not legal advice about what may be collected or shown.
 ## Ownership is the source's to enforce
 
 The elements cannot know who the user is, and nothing a browser does can make a request safe: a
-page's JavaScript can ask for any property id. The `DashboardSource` that the server task
-implements over the authenticated API therefore enforces ownership, on the server, on every call:
+page's JavaScript can ask for any property id. The source therefore leaves ownership to the
+server, which checks it on every call. `createCmsDashboardSource` from
+`@identgineer/tracking/dashboard` is that source over the CMS (`cms/README.md`, "The dashboard's
+reads"): give it the identity client's `authorizedFetch` and every call is made as the signed-in
+user. What it and the CMS guarantee:
 
 - Every call is made as the signed-in user, with the session the API already trusts. An
   unauthenticated call rejects with `unauthenticated`.
@@ -24,9 +27,13 @@ implements over the authenticated API therefore enforces ownership, on the serve
   server that sends a hundred thousand events, an event with a `javascript:` URL as its name or
   an answer for another property is stopped before an element sees it.
 - Requests are checked too: a page below 1, a page size above 100 or a sort key that is not
-  `time` or `name` rejects with `invalid-request` and the source is never asked.
+  `time` or `name` rejects with `invalid-request` and the source is never asked. The CMS
+  source refuses a page size above 25 (the CMS's own page cap) the same way, without sending.
 - A `DashboardError` the source throws passes through as it was, so its code and its message are
-  the source's to choose: write messages that are safe to log. Any other failure (a network error,
+  the source's to choose: write messages that are safe to log. A source that cannot import this
+  package (the CMS source is one) throws an `Error` whose `name` is `"DashboardError"` and whose
+  `code` is one of the codes; `validatedSource` rethrows its code as its own `DashboardError`,
+  with a message of its own that names only the method and the code. Any other failure (a network error,
   a bug) is turned into `unavailable` with no message of the original, so a stack trace or a
   server's address is not carried on. Neither is for the page to print: show a sentence of your
   own and send the code to the console.

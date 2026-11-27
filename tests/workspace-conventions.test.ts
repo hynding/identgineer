@@ -43,3 +43,20 @@ describe("workspace conventions", () => {
     expect(manifest.private).toBe(true);
   });
 });
+
+describe("the Node versions the workspace supports", () => {
+  const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
+    engines?: { node?: string };
+  };
+
+  // cms/tests open databases with node:sqlite, which needs no flag only from Node 22.13.
+  it("start at 22.13, in package.json and in the README", () => {
+    expect(manifest.engines?.node).toBe(">=22.13");
+    expect(readFileSync(join(ROOT, "README.md"), "utf8")).toContain("Node.js 22.13 or newer");
+  });
+
+  it("are stated only by the root package.json, so no package can claim an older one", () => {
+    const stating = listWorkspacePackages().filter(({ manifest }) => "engines" in manifest);
+    expect(stating.map(({ directory }) => directory)).toEqual([]);
+  });
+});

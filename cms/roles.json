@@ -33,6 +33,7 @@
     {
       "name": "authenticated",
       "description": "Every signed-in user (the default role on registration). Manages only what it owns.",
+      "endpoints": ["PropertySummary"],
       "grants": [
         {
           "contentType": "Page",

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./dashboard": "./src/dashboard.ts",
     "./testing": "./src/testing/index.ts",
     "./wire": "./src/wire.ts"
   },
