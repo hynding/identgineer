@@ -1907,8 +1907,10 @@ pnpm --filter @identgineer/components test:browser   # real-browser tests agains
   not possible, set `IDG_CHROMIUM_PATH` to a Chromium binary (`/opt/pw-browsers/chromium` is used if it
   exists). `IDG_BROWSER_PORT` changes the port (4173). Only Chromium is run.
 - **Variations in the build.** `@identgineer/variations` is TypeScript source with `.ts` import
-  specifiers. Stencil only compiles its own `src`, so `stencil.config.ts` carries a small rollup
-  plugin that transpiles that package's files (and nothing else), and `tsconfig.json` allows `.ts`
+  specifiers. Stencil only compiles its own `src`, so `stencil.config.ts` uses a small rollup
+  plugin, `stencil-workspace-sources.ts` (exported as
+  `@identgineer/components/stencil-workspace-sources` for `apps/site`'s build), that transpiles
+  that package's files (and nothing else), and `tsconfig.json` allows `.ts`
   import specifiers for the type check while `tsconfig.build.json` turns that off again, which
   emit requires. The `variation-switcher.html` fixture loads the bootstrap script from
   `/variations/bootstrap.js`, which the www build copies from `packages/variations/dist` (that

@@ -20,7 +20,8 @@
       "types": "./dist/components/index.d.ts",
       "import": "./dist/components/index.js"
     },
-    "./docs.json": "./dist/docs.json"
+    "./docs.json": "./dist/docs.json",
+    "./stencil-workspace-sources": "./stencil-workspace-sources.ts"
   },
   "scripts": {
     "build": "stencil build --prod && node scripts/build-sdk-fixtures.ts",

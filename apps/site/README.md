@@ -40,8 +40,8 @@ canonical link and asks not to be indexed.
 1. **`stencil build --prod`** compiles the site's components together with the component library.
    The site imports `@identgineer/components`, whose package names its Stencil collection, so the
    library's components are compiled into this app and prerendered and hydrated with the site's own.
-   The workspace packages are TypeScript source; `stencil.config.ts` transpiles their files as the
-   components package does. Two outputs are written: `www/build`, the client build the pages load,
+   The workspace packages are TypeScript source; `stencil.config.ts` transpiles their files with
+   the components package's own plugin (`@identgineer/components/stencil-workspace-sources`). Two outputs are written: `www/build`, the client build the pages load,
    and `hydrate/`, the server build that renders them. The `www` copy step adds the tokens
    stylesheet, the variation bootstrap script, the site stylesheet and the icon under `www/assets`.
    The library's built types are not there before its build, and CI lints and type-checks first, so
