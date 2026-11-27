@@ -1,0 +1,17 @@
+{
+  // The same check under TypeScript 5.4, the compiler Strapi 5 pins and builds the project with:
+  // it narrows less than the repository's TypeScript, and a type error there stops Strapi's build.
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "lib": ["ES2020"],
+    "target": "ES2019",
+    "strict": false,
+    "noImplicitThis": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["protected/src/**/*.ts", "protected/config/**/*.ts"]
+}

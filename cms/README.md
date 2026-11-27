@@ -274,9 +274,10 @@ refusal, the key's reach and what is stored
 handler, middleware, hook and schedule against fakes of Strapi's services, and strapi-php's
 validator and normaliser (`protected/app/Ingest`) on the shared vectors with plain PHP, which the
 runner has (`tests/ingest-php-vectors.test.ts` fails on CI without PHP). `pnpm typecheck` checks the
-protected TypeScript as the generated Strapi project compiles it (`tsconfig.strapi.json`), but with
-this repository's TypeScript, not the 5.4.5 that Strapi 5.48 pins: a construct only newer
-TypeScript accepts is caught only by booting Strapi. Not in CI: the strapi-php PHPUnit suite
+protected TypeScript as the generated Strapi project compiles it, twice: with this repository's
+TypeScript (`tsconfig.strapi.json`) and with the 5.4.5 that Strapi 5.48 pins
+(`tsconfig.strapi-5.4.json`, the `typescript-strapi` dev dependency), so a construct only newer
+TypeScript accepts fails here and not first in Strapi's build. Not in CI: the strapi-php PHPUnit suite
 (`protected/tests/Feature/Ingest`, which needs a Laravel app) and the live tracking test, both run
 by `pnpm contract:live` only, which needs a camis checkout and a scaffolded app; without
 `IDENTITY_LIVE_BACKEND` the live suites are skipped, and the run's summary names them as skipped.
