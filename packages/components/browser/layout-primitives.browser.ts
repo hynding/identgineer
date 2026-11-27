@@ -880,7 +880,9 @@ test.describe("the primitives leave their content alone", () => {
               element.querySelector(".pill"),
             ].map((label) => (label ? getComputedStyle(label).overflowWrap : "missing")),
           );
-        expect(wraps).toEqual(["normal", "normal"]);
+        // The button's label sets its own wrapping, so a page's break anywhere never reaches it, and
+        // breaks a word only where the button is narrower than the word, which here it is not.
+        expect(wraps).toEqual(["break-word", "normal"]);
         expect((await boxOf(page.locator(`#${host} .pill`))).width).toBeGreaterThanOrEqual(
           word.width - 1,
         );

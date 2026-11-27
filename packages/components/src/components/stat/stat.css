@@ -47,9 +47,16 @@
   font-weight: var(--idg-font-display-weight);
   letter-spacing: var(--idg-font-display-letter-spacing);
   line-height: var(--idg-font-display-line-height);
-  /* A figure is read whole: what sizes the stat by its content makes it as wide as the figure, and
-     the figure breaks only where the stat is narrower than it. */
-  overflow-wrap: break-word;
+  /* A figure is read whole, so it is never narrower than itself where there is room for it: what
+     sizes the stat by its content makes it as wide as the figure, even where the page lets words
+     break anywhere. Only where the window is narrow against the text (its width less sixteen times
+     the page's text size), as with the text at 200% in a phone's window, is the room the stat has
+     the most it may take, and the figure breaks in it rather than leave it. A percentage does not
+     count in a size that is sized by content. */
+  --_word-reach: max(0px, 100vw - 16rem);
+
+  min-inline-size: calc-size(max-content, min(size, 100% + var(--_word-reach)));
+  overflow-wrap: anywhere;
 }
 
 .change {
