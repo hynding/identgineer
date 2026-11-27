@@ -99,7 +99,7 @@ describe("the tracking README", () => {
     for (const method of membersOf("cms-dashboard-types.ts", "CmsDashboardSource")) {
       expect(README, method).toContain(`\`${method}(`);
     }
-    for (const limit of ["MAX_DASHBOARD_PAGE_SIZE", "MAX_DASHBOARD_PROPERTIES"]) {
+    for (const limit of ["MAX_DASHBOARD_PAGE_SIZE", "MAX_DASHBOARD_PROPERTIES"] as const) {
       expect(README, limit).toContain(`\`${limit}\` (${String(dashboard[limit])})`);
     }
     const codes = namesIn(
