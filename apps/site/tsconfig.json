@@ -1,4 +1,15 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src"]
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "jsx": "react",
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "Fragment",
+    "types": ["node"],
+    "allowImportingTsExtensions": true,
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["src", "scripts", "checks", "browser", "*.config.ts"],
+  "exclude": ["node_modules", "www", "hydrate"]
 }

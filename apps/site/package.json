@@ -3,10 +3,21 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json"
+    "build": "stencil build --prod && node scripts/prerender.ts",
+    "dev": "pnpm run build && node scripts/serve.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test:browser": "playwright test --trace off"
+  },
+  "dependencies": {
+    "@identgineer/components": "workspace:*",
+    "@identgineer/tokens": "workspace:*",
+    "@identgineer/variations": "workspace:*",
+    "@stencil/core": "4.45.5"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.63.0",
+    "typescript": "6.0.3"
   }
 }

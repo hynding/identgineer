@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
 
+/** The file in `www` a deployment reads, to send exactly the headers the pages were built for. */
+export const HEADERS_FILE = "_headers.json";
+
 /**
  * The text of every `<style>` element of a rendered page, including those in declarative shadow
  * roots. Stencil's serialiser writes CSS that never holds `</style>`, so the text ends at the first.

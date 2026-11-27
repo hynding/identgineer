@@ -6,10 +6,11 @@ import {
   navigationRoutes,
   pageFile,
   prerenderedPages,
+  type LiveRoute,
   type Route,
 } from "./routes";
 
-const live = ROUTES.filter((route) => route.status === "live");
+const live = ROUTES.filter((route): route is LiveRoute => route.status === "live");
 
 describe("the route table", () => {
   it("has the home page at / and declares it live", () => {
@@ -50,7 +51,7 @@ describe("the route table", () => {
   });
 
   it("gives each live page a component of its own", () => {
-    const components = live.map((route) => (route.status === "live" ? route.component : ""));
+    const components = live.map((route) => route.component);
     expect(new Set(components).size).toBe(components.length);
   });
 });
@@ -93,14 +94,17 @@ describe("the prerendered files", () => {
   });
 });
 
-// A compile-time check: a live route without a component is not a Route.
-const missingComponent = {
-  path: "/x/",
-  label: "X",
-  title: "X",
-  description: "x".repeat(60),
-  status: "live",
-} as const;
-// @ts-expect-error a live route must name its component
-const rejected: Route = missingComponent;
-void rejected;
+describe("the route type", () => {
+  it("refuses a live route without a component, at compile time", () => {
+    const missingComponent = {
+      path: "/x/",
+      label: "X",
+      title: "X",
+      description: "x".repeat(60),
+      status: "live",
+    } as const;
+    // @ts-expect-error a live route must name its component
+    const rejected: Route = missingComponent;
+    expect(rejected.status).toBe("live");
+  });
+});
