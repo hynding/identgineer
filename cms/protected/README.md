@@ -40,18 +40,33 @@ that path. camis' endpoint guard runs first on both targets: CORS for the two re
 throttle per client address (`CAMIS_ENDPOINT_INGEST_EVENT_THROTTLE_PER_MINUTE`), the media type and
 the 65,536-byte body cap. Then the handler, in this order, each refusal in Strapi's error body:
 
-1. **415** unless the body is `application/json` (fetch) or `text/plain` (beacon).
-2. **413** for a body over `INGEST_MAX_BODY_BYTES` (at most 65,536), before it is parsed.
+1. **415** unless the body is `application/json` (fetch) or `text/plain` (beacon), and for any
+   `Content-Encoding` but `identity`. Strapi's body parser inflates gzip, deflate and br before the
+   handler runs, so a compressed body would otherwise pass the cap on its compressed size; both
+   targets refuse an encoded body alike.
+2. **413** for a body over `INGEST_MAX_BODY_BYTES` (at most 65,536): its declared length, then the
+   body itself (text by its bytes; on Strapi a body the JSON parser already decoded by the bytes of
+   its JSON, which can only exceed what was sent for numbers in exponent form, which the SDK never
+   sends). On strapi-php the body is read raw, at most one byte past the cap.
 3. **400** for an invalid batch, the whole batch: the same rules as the SDK's `parseTrackingBatch`,
    held to the shared vectors in `packages/tracking/src/testing/batch-vectors.json` on both targets.
 4. **404** when the key (the `X-Idg-Write-Key` header of a fetch, the body's `writeKey` of a beacon,
    never the URL) is unknown or its property is inactive. One query asks for both, and the answers
-   are identical. No property id, owner id or other relation is ever taken from the body.
-5. **403** when `Origin` is absent or not one of the property's `allowedOrigins`.
+   are identical. A key header sent twice counts as none. No property id, owner id or other
+   relation is ever taken from the body.
+5. **403** when `Origin` is absent, sent twice, or not one of the property's `allowedOrigins`
+   (compared exactly; the model refuses an origin a browser never sends, such as one with `:443`).
 6. **429** with `Retry-After` past `INGEST_KEY_RATE_PER_MINUTE` for the key, counted under the
    property's id (in the cache on strapi-php, in bounded per-process memory on Strapi).
 7. **202** with no body. Each accepted event becomes one Event row with `property` and `owner` from
    the key's property; an event skipped (below) changes nothing in the answer.
+
+A database failure in the lookup, the key's count (strapi-php's cache may be the database) or the
+store answers **503**, which the SDK retries with backoff (it retries any `5xx` and `429`); events
+stored before the failure are skipped as repeats when the batch comes again. The failure is logged
+as `IngestEvent: the database failed at the <stage> (<error class>)`, never with the error's
+message, which holds the query and its bindings (the key, the body's values), nor with the body or
+headers. A deadlock between two batches on MySQL or PostgreSQL is such a failure.
 
 What is stored (`app/Ingest/IngestedEvent.php`, `src/ingest/normalise.ts`, held to the same
 `cms/tests/fixtures/ingest-normalise-vectors.json`):
@@ -59,7 +74,8 @@ What is stored (`app/Ingest/IngestedEvent.php`, `src/ingest/normalise.ts`, held 
 - `dedupeKey`: the SHA-256 of `<property id>:<event id>`, unique. A repeat is skipped. strapi-php
   relies on the unique index, each event in its own savepoint; Strapi has no unique index (camis
   does not generate one), so it serialises writes per `dedupeKey` within the process and reads
-  before it creates.
+  before it creates, and when a create fails but the row is there afterwards (another process
+  stored it, which Strapi's unique check refuses), it counts as a repeat, not a failure.
 - `occurredAt = at + (now - sentAt)`. An event more than 25 hours back or 5 minutes ahead after
   that correction is skipped.
 - `path` with only the query parameters named in the property's `allowedQueryParams`, in their
@@ -83,13 +99,17 @@ counter, keyed by a hash.
   string, before the controller validates it. A key is therefore never set, changed, cleared or
   probed through the content API on either target.
 - `PurgeExpiredEvents` (daily) deletes, for each property, the events older than its
-  `retentionDays`. It deletes in bulk, so no per-entry webhook or lifecycle runs.
+  `retentionDays`. It deletes in bulk, so no per-entry webhook or lifecycle runs. A property whose
+  `retentionDays` is below 1 or not a whole number (only a row written past the model's 1 to 400)
+  keeps every event, on both targets.
 
 ## Tests and type checking
 
 - PHPUnit (`tests/Feature/Ingest`) runs in the live app on every `pnpm contract:live`
   (`scripts/live-backend.js`), with the two shared vector files passed by `TRACKING_BATCH_VECTORS`
   and `INGEST_NORMALISE_VECTORS`.
-- Vitest (`cms/tests/ingest-*.test.ts`) tests the Strapi side against a fake document service.
+- Vitest (`cms/tests/ingest-*.test.ts`) tests the Strapi side against a fake document service, and
+  `cms/tests/ingest-php-vectors.test.ts` runs `app/Ingest`'s validator and normaliser on the shared
+  vectors with plain PHP (no Laravel app), so `pnpm test` and CI hold both targets to them.
 - `cms/tsconfig.strapi.json` type-checks `src/` and `config/` as the generated Strapi project
   compiles them (CommonJS, the ES2020 library, `strict` off), as part of `pnpm typecheck`.

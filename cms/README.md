@@ -251,8 +251,9 @@ The handler accepts what `@identgineer/tracking` sends, both transports:
 | `403`                    | `Origin` is absent or not one of the property's `allowedOrigins`                     |
 | `404`                    | The key is unknown or its property inactive; one identical answer for both           |
 | `413`                    | The body exceeds `INGEST_MAX_BODY_BYTES` (default and most 65,536), before parsing   |
-| `415`                    | Any other content type                                                               |
+| `415`                    | Any other content type, or any `Content-Encoding` but `identity`                     |
 | `429` with `Retry-After` | Per client address (camis' throttle) or per key (`INGEST_KEY_RATE_PER_MINUTE`, 3000) |
+| `503`                    | The database failed; the SDK retries, and nothing identifying is logged              |
 
 Each accepted event is one Event row: `property` and `owner` from the key's property, `dedupeKey`
 the SHA-256 of the property id and event id (a repeat is skipped), `occurredAt` corrected for the
@@ -268,6 +269,36 @@ same `tests/fixtures/ingest-normalise-vectors.json`. `pnpm contract:live` sends 
 fetch (through the CORS preflight) and beacon to a live strapi-php backend and checks every
 refusal, the key's reach and what is stored
 (`packages/identity/src/live-contract/tracking-ingest.live.test.ts`).
+
+**What CI covers, and what it does not.** `pnpm test` (the CI `verify` job) runs the Strapi
+handler, middleware, hook and schedule against fakes of Strapi's services, and strapi-php's
+validator and normaliser (`protected/app/Ingest`) on the shared vectors with plain PHP, which the
+runner has (`tests/ingest-php-vectors.test.ts` fails on CI without PHP). `pnpm typecheck` checks the
+protected TypeScript as the generated Strapi project compiles it (`tsconfig.strapi.json`), but with
+this repository's TypeScript, not the 5.4.5 that Strapi 5.48 pins: a construct only newer
+TypeScript accepts is caught only by booting Strapi. Not in CI: the strapi-php PHPUnit suite
+(`protected/tests/Feature/Ingest`, which needs a Laravel app) and the live tracking test, both run
+by `pnpm contract:live` only, which needs a camis checkout and a scaffolded app; without
+`IDENTITY_LIVE_BACKEND` the live suites are skipped, and the run's summary names them as skipped.
+Local Strapi is never booted by any script here.
+
+**Known limits.**
+
+- The key is public, so anyone holding it can spend the property's per-key rate
+  (`INGEST_KEY_RATE_PER_MINUTE`) from many addresses with a forged `Origin` (a script outside a
+  browser sends any `Origin`), and the property's own visitors are then answered 429 until the
+  minute passes. The per-address throttle only bounds each address. A deployment that sees this
+  lowers the per-address rate or rotates the key (a follow-up).
+- A batch of 500 events costs one database write per accepted event (on Strapi a read and a write
+  each): 500 page views took about 3.5 seconds on local Strapi over sqlite.
+- Two batches inserting the same events in opposite order can deadlock on MySQL or PostgreSQL; the
+  database aborts one, which then answers 503, and the SDK sends it again.
+- On local Strapi the body parser inflates a compressed body (up to its 1 MB JSON limit) before the
+  handler refuses it with 415; camis' guard compares only the declared length (a camis gap).
+- Invalid UTF-8 is refused (400) on strapi-php; on Strapi the body parser replaces it with U+FFFD
+  before the handler sees it, so such a body is accepted with the replacement characters. A
+  replacement character in decoded text cannot be told from one the client sent, so the handler
+  does not guess.
 
 **Upgrading a database.** Event gained `dedupeKey` (required, unique) and Property its two
 repeatable components, so the strapi-php migrations were renumbered: the allowed origins'
