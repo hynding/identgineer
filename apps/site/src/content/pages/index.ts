@@ -1,11 +1,11 @@
-import type { ContentPage } from "../content-page";
-import { DOCS } from "./docs";
-import { FEATURES } from "./features";
-import { GETTING_STARTED } from "./getting-started";
-import { IDENTITY } from "./identity";
-import { SECURITY } from "./security";
-import { THEMING } from "./theming";
-import { TRACKING } from "./tracking";
+import type { ContentPage } from "../content-page.ts";
+import { DOCS } from "./docs.ts";
+import { FEATURES } from "./features.ts";
+import { GETTING_STARTED } from "./getting-started.ts";
+import { IDENTITY } from "./identity.ts";
+import { SECURITY } from "./security.ts";
+import { THEMING } from "./theming.ts";
+import { TRACKING } from "./tracking.ts";
 
 /** The reading pages as the repository has them, in the route table's order. */
 export const STATIC_PAGES: readonly ContentPage[] = [

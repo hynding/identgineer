@@ -1,4 +1,4 @@
-import type { Block, HeadingBlock } from "./content-page";
+import type { Block, HeadingBlock } from "./content-page.ts";
 
 /**
  * The ids the page around the body already uses, which a heading's address must not take: two

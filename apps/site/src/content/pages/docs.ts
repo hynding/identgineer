@@ -1,4 +1,4 @@
-import { bullets, h2, link, p, page, repository, type Piece } from "../authoring";
+import { bullets, h2, link, p, page, repository, type Piece } from "../authoring.ts";
 
 /** One topic's four framework guides, as "Topic: plain HTML, React, Vue and Angular". */
 function guides(topic: string, folder: string): Piece[] {
@@ -17,7 +17,7 @@ function guides(topic: string, folder: string): Piece[] {
 
 export const DOCS = page({
   slug: "docs",
-  title: "Documentation",
+  title: "Put Identgineer to work",
   summary:
     "How to put Identgineer's packages to work in a page or an app, how its looks are made, and what it does for a page's security.",
   body: [

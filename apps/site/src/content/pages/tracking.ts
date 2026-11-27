@@ -10,7 +10,7 @@ import {
   repository,
   sample,
   table,
-} from "../authoring";
+} from "../authoring.ts";
 
 export const TRACKING = page({
   slug: "tracking",

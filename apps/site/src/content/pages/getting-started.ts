@@ -1,4 +1,4 @@
-import { bullets, code, h2, link, note, p, page, repository, sample, table } from "../authoring";
+import { bullets, code, h2, link, note, p, page, repository, sample, table } from "../authoring.ts";
 
 export const GETTING_STARTED = page({
   slug: "getting-started",

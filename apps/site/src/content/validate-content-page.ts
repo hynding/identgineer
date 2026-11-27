@@ -8,8 +8,8 @@ import {
   type Inline,
   type InlineContent,
   type Seo,
-} from "./content-page";
-import { RESERVED_IDS, headingId } from "./headings";
+} from "./content-page.ts";
+import { RESERVED_IDS, headingId } from "./headings.ts";
 
 /** What a page is checked against: the paths of the site's live pages, which links may name. */
 export interface ValidationContext {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Block } from "./content-page";
-import { headingId, sectionsOf, tableOfContents } from "./headings";
+import type { Block } from "./content-page.ts";
+import { headingId, sectionsOf, tableOfContents } from "./headings.ts";
 
 function heading(level: 2 | 3 | 4, text: string): Block {
   return { type: "heading", level, text };

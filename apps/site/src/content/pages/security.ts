@@ -1,4 +1,4 @@
-import { bullets, code, h2, link, p, page, repository, sample, warning } from "../authoring";
+import { bullets, code, h2, link, p, page, repository, sample, warning } from "../authoring.ts";
 
 export const SECURITY = page({
   slug: "security",

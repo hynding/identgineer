@@ -10,7 +10,7 @@ import {
   sample,
   table,
   warning,
-} from "../authoring";
+} from "../authoring.ts";
 
 export const IDENTITY = page({
   slug: "identity",

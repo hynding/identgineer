@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { ROUTES, livePaths } from "../routes";
-import { STATIC_PAGES } from "./pages";
-import { describeContentError, parseContentPage } from "./validate-content-page";
+import { ROUTES, livePaths } from "../routes.ts";
+import { STATIC_PAGES } from "./pages/index.ts";
+import { describeContentError, parseContentPage } from "./validate-content-page.ts";
 
 const CONTEXT = { paths: livePaths() };
 

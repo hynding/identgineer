@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { CONTENT_LIMITS } from "./content-page";
+import { CONTENT_LIMITS } from "./content-page.ts";
 import {
   describeContentError,
   parseContentPage,
   type ContentResult,
-} from "./validate-content-page";
+} from "./validate-content-page.ts";
 
 const CONTEXT = { paths: new Set(["/", "/docs/", "/identity/"]) };
 

@@ -12,7 +12,7 @@ import {
   table,
   warning,
   type Piece,
-} from "../authoring";
+} from "../authoring.ts";
 
 /** A list of ids as code, separated as a sentence is: `a`, `b` and `c`. */
 function ids(...values: string[]): Piece[] {
@@ -147,7 +147,7 @@ export const THEMING = page({
       "It only reads. A choice is stored by the switcher, or by applyVariations with persist.",
       [
         "A shared address such as ",
-        code("?idg-theme=ember&idg-design=glass"),
+        code("?idg-theme=ember"),
         " is applied by the recipient's bootstrap script before their first paint.",
       ],
     ),

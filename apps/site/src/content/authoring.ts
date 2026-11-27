@@ -13,7 +13,7 @@ import type {
   ParagraphBlock,
   TableBlock,
   TextRun,
-} from "./content-page";
+} from "./content-page.ts";
 
 /**
  * Shorthands for writing the repository's pages: each returns the plain data of the body format,
