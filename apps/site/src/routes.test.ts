@@ -55,9 +55,7 @@ describe("the route table", () => {
       "/docs/theming/",
       "/docs/security/",
     ]);
-    const slugs = reading.map((route) =>
-      route.component === "site-content-page" ? route.content : "",
-    );
+    const slugs = reading.map((route) => route.content);
     expect(new Set(slugs).size).toBe(slugs.length);
   });
 
