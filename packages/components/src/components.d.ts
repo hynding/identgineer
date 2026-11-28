@@ -2244,8 +2244,14 @@ export namespace Components {
      * While the pointer is over it, focus is inside it, the window is in the background or the user
      * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
      * and nothing slides under the pointer.
+     * Embedded, it stands in its host instead, which the page lays out and positions.
      */
     interface IdgToastRegion {
+        /**
+          * Whether the region sits inside a page's own box instead of the corner of the window: it is positioned within its host, not in the top layer, so a page can show it standing in a frame.
+          * @default false
+         */
+        "embedded": boolean;
         /**
           * The key, as `KeyboardEvent.key` names it, that moves focus to the toasts.
           * @default "F8"
@@ -3533,6 +3539,7 @@ declare global {
      * While the pointer is over it, focus is inside it, the window is in the background or the user
      * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
      * and nothing slides under the pointer.
+     * Embedded, it stands in its host instead, which the page lays out and positions.
      */
     interface HTMLIdgToastRegionElement extends Components.IdgToastRegion, HTMLStencilElement {
     }
@@ -5848,8 +5855,14 @@ declare namespace LocalJSX {
      * While the pointer is over it, focus is inside it, the window is in the background or the user
      * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
      * and nothing slides under the pointer.
+     * Embedded, it stands in its host instead, which the page lays out and positions.
      */
     interface IdgToastRegion {
+        /**
+          * Whether the region sits inside a page's own box instead of the corner of the window: it is positioned within its host, not in the top layer, so a page can show it standing in a frame.
+          * @default false
+         */
+        "embedded"?: boolean;
         /**
           * The key, as `KeyboardEvent.key` names it, that moves focus to the toasts.
           * @default "F8"
@@ -6377,6 +6390,7 @@ declare namespace LocalJSX {
     }
     interface IdgToastRegionAttributes {
         "position": ToastPosition;
+        "embedded": boolean;
         "max": number;
         "label": string;
         "hotkey": string;
@@ -6916,6 +6930,7 @@ declare module "@stencil/core" {
              * While the pointer is over it, focus is inside it, the window is in the background or the user
              * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
              * and nothing slides under the pointer.
+             * Embedded, it stands in its host instead, which the page lays out and positions.
              */
             "idg-toast-region": LocalJSX.IntrinsicElements["idg-toast-region"] & JSXBase.HTMLAttributes<HTMLIdgToastRegionElement>;
             /**

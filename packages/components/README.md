@@ -779,7 +779,9 @@ which the toast removes itself. Parts `toast`, `icon`, `heading`, `description`,
 `idg-toast-region`: `position` (`top-start`, `top-center`, `top-end`, `bottom-start`,
 `bottom-center`, `bottom-end`, logical, so `start` is the right in right-to-left text; default
 `bottom-end`), `max` (shown at once, default 3), `label`
-(default `Notifications`) and `hotkey` (default `F8`). Part `region`.
+(default `Notifications`), `hotkey` (default `F8`) and `embedded` (default off: the region is laid out
+inside its host, which the page positions, instead of in the top layer at the window's corner, so
+that a page can show it standing in a frame). Part `region`.
 
 - **Announcements.** The region has one polite live region, and an assertive one used only for
   `danger`. Each toast is announced as it comes into view (a queued one when its turn comes), as
