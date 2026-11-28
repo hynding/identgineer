@@ -189,3 +189,44 @@ for (const layout of LAYOUTS) {
     expect(problems).toEqual([]);
   });
 }
+
+// Where the shell's aside stands beside the content, it is a column already: a docs page puts its
+// own pages in a row over the article rather than a third column, so the article has the content
+// column's width and not a fraction of it. (immersive sets every band in a centred column of its
+// own, tested above.)
+for (const layout of ["top-bar", "magazine", "dashboard", "bento"] as const) {
+  test(`a docs page in ${layout} gives its article the content column beside the aside`, async ({
+    page,
+  }) => {
+    const problems: string[] = [];
+    for (const width of [1440, 1920] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`/docs/theming/?idg-layout=${layout}`);
+      await hydrated(page, "site-content-page");
+      const { article, column, pagesAbove } = await page.evaluate(() => {
+        const main = document
+          .querySelector(".site-layout")
+          ?.shadowRoot?.querySelector('[part="main"]');
+        const style = main ? getComputedStyle(main) : undefined;
+        const padding = style
+          ? Number.parseFloat(style.paddingInlineStart) + Number.parseFloat(style.paddingInlineEnd)
+          : 0;
+        const docs = document.querySelector("nav.docs-pages")?.getBoundingClientRect();
+        const prose = document.querySelector("article.prose")?.getBoundingClientRect();
+        return {
+          article: prose?.width ?? 0,
+          column: (main?.clientWidth ?? 0) - padding,
+          pagesAbove: docs !== undefined && prose !== undefined && docs.bottom <= prose.top,
+        };
+      });
+      if (article < column * 0.9) {
+        problems.push(
+          `${String(width)}px: the article is ${String(Math.round(article))}px of ${String(Math.round(column))}px`,
+        );
+      }
+      if (!pagesAbove)
+        problems.push(`${String(width)}px: the docs' pages are not over the article`);
+    }
+    expect(problems).toEqual([]);
+  });
+}
