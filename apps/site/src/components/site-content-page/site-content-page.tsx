@@ -186,7 +186,8 @@ export class SiteContentPage {
           </idg-alert>
         );
       case "table":
-        return this.renderTable(block, `table-${String(index)}`);
+        // A heading's id holds only letters, digits and hyphens, so no heading can take this one.
+        return this.renderTable(block, `table_${String(index)}`);
       case "example":
         return (
           <figure class={`example example-${block.name}`}>
