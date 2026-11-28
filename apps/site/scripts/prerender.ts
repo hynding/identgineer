@@ -3,12 +3,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { HydrateResults, SerializeDocumentOptions } from "@stencil/core/internal";
 import { bootstrapScriptAttributes } from "@identgineer/variations/bootstrap-tag";
-import { BUNDLES } from "@identgineer/components/bundles";
 import type { ContentPage } from "../src/content/content-page.ts";
 import { STATIC_PAGES } from "../src/content/pages/index.ts";
 import { NO_LABELS, type NavigationLabels } from "../src/content/navigation.ts";
-import { checkReference, referencePages } from "../src/reference/component-pages.ts";
-import { readDocsFile } from "../src/reference/docs-file.ts";
+import { checkReference } from "../src/reference/component-pages.ts";
+import { builtReference } from "../src/reference/generated-routes.ts";
 import { prerenderedPages, type PrerenderedPage } from "../src/routes.ts";
 import { resolveSiteContent } from "./cms-content.ts";
 import { renderDocument, type DocumentAssets } from "./document.ts";
@@ -106,7 +105,7 @@ async function prerender(): Promise<void> {
   for (const warning of warnings) console.warn(warning);
   // The components' pages are made from the library's own documentation and are checked before
   // anything is written; a CMS record cannot replace them.
-  const reference = referencePages(readDocsFile(), BUNDLES);
+  const reference = builtReference();
   checkReference(reference);
   const generated = reference.components.map(({ route }) => route);
   const generatedContents = new Map(
