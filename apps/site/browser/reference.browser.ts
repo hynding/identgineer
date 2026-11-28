@@ -193,17 +193,24 @@ test.describe("a component's page", () => {
     expect(row.labels.every((label) => label === "none" || label === "normal")).toBe(true);
   });
 
-  test("keeps a table of two columns a table on a phone", async ({ page }) => {
+  test("keeps a table of three columns or fewer a table on a phone, as a method's signature needs a wide cell", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 390, height: 900 });
-    await page.goto("/components/");
+    await page.goto("/components/idg-input/");
     await hydrated(page, "site-content-page");
-    const tops = await page
-      .locator(".table-scroll tbody tr")
-      .first()
-      .evaluate((row) =>
-        [...row.querySelectorAll("td")].map((cell) => Math.round(cell.getBoundingClientRect().top)),
-      );
-    expect(new Set(tops).size).toBe(1);
+    const rows = await page.locator(".table-scroll table").evaluateAll((tables) =>
+      tables.map((table) => ({
+        columns: table.querySelectorAll("thead th").length,
+        tops: [...(table.querySelector("tbody tr")?.querySelectorAll("td") ?? [])].map((cell) =>
+          Math.round(cell.getBoundingClientRect().top),
+        ),
+      })),
+    );
+    expect(rows.some((row) => row.columns <= 3)).toBe(true);
+    for (const row of rows.filter((table) => table.columns <= 3)) {
+      expect(new Set(row.tops).size, `${String(row.columns)} columns`).toBe(1);
+    }
   });
 
   test("never wraps a short code name, and wraps a long one only between its parts", async ({
