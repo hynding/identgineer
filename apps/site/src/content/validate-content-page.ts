@@ -17,10 +17,8 @@ export interface ValidationContext {
   readonly paths: ReadonlySet<string>;
 }
 
-/** Where a page was refused and why: which page, which block, which field and which rule. */
+/** Where a page was refused and why: which block, which field and which rule. */
 export interface ContentError {
-  /** The page's slug, or none when it has no valid slug to be named by. */
-  readonly page: string | undefined;
   /** The block's place in the body, from 1, and its type when it has a known one. */
   readonly block?: { readonly index: number; readonly type: BlockType | undefined };
   /** The field inside the page or the block, as `content[2].href`. */
@@ -460,18 +458,13 @@ function seoOf(value: unknown): Seo {
  * only the fields of the format.
  */
 export function parseContentPage(input: unknown, context: ValidationContext): ContentResult {
-  let page: string | undefined;
   const reader = new BodyReader(context);
   let inBody = false;
   let blocks: unknown[] = [];
   try {
-    // Named by its slug from the start, if it has one, so even its first refusal says which page.
-    const named = isPlainObject(input) ? input.slug : undefined;
-    if (isSlug(named)) page = named;
     const fields = fieldsOf(input, "", ["slug", "title", "summary", "body", "seo"]);
     const slug = text(fields.slug, "slug", CONTENT_LIMITS.slug);
     if (!SLUG.test(slug)) throw new Refusal("slug", "must be lower-case words joined by hyphens");
-    page = slug;
     const title = text(fields.title, "title", CONTENT_LIMITS.title);
     const summary = text(fields.summary, "summary", CONTENT_LIMITS.summary);
     const seo = seoOf(fields.seo);
@@ -490,7 +483,6 @@ export function parseContentPage(input: unknown, context: ValidationContext): Co
     return {
       ok: false,
       error: {
-        page,
         ...(inBody && index > 0
           ? { block: { index, type: reader.typeOf(blocks[index - 1]) } }
           : {}),

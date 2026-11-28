@@ -10,7 +10,7 @@ export function readContentPage(json: string): ContentResult {
   try {
     input = JSON.parse(json);
   } catch {
-    return { ok: false, error: { page: undefined, path: "", message: "is not JSON" } };
+    return { ok: false, error: { path: "", message: "is not JSON" } };
   }
   return parseContentPage(input, { paths: livePaths() });
 }

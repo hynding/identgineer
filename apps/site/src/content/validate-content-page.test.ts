@@ -3,7 +3,6 @@ import { CONTENT_LIMITS } from "./content-page.ts";
 import {
   describeContentProblem,
   parseContentPage,
-  type ContentError,
   type ContentResult,
 } from "./validate-content-page.ts";
 
@@ -64,14 +63,9 @@ function withLink(href: string): Record<string, unknown> {
   return withBlock({ type: "paragraph", content: [{ type: "link", href, text: "x" }] });
 }
 
-function refusalOf(result: ContentResult): ContentError | undefined {
-  expect(result.ok).toBe(false);
-  return result.ok ? undefined : result.error;
-}
-
 function errorOf(result: ContentResult): string {
-  const error = refusalOf(result);
-  return error === undefined ? "" : describeContentProblem(error);
+  expect(result.ok).toBe(false);
+  return result.ok ? "" : describeContentProblem(result.error);
 }
 
 describe("a content page", () => {
@@ -336,10 +330,10 @@ describe("a content page is refused", () => {
     );
   });
 
-  it("naming no page when it has no slug to name it by", () => {
-    const refusal = refusalOf(parseContentPage(without(samplePage(), "slug"), CONTEXT));
-    expect(refusal?.page).toBeUndefined();
-    expect(refusal && describeContentProblem(refusal)).toMatch(/^slug: is required/);
+  it("without a slug", () => {
+    expect(errorOf(parseContentPage(without(samplePage(), "slug"), CONTEXT))).toMatch(
+      /^slug: is required/,
+    );
   });
 });
 
@@ -378,16 +372,11 @@ describe("what a refusal says", () => {
     expect(message).toContain("x\\u202ekkk");
   });
 
-  it("names the page by its slug, from its first refusal", () => {
-    const refusal = refusalOf(parseContentPage({ ...samplePage(), title: 5 }, CONTEXT));
-    expect(refusal?.page).toBe("sample");
-  });
-
-  it("names no page by a slug longer than a slug may be", () => {
+  it("names a slug longer than a slug may be by its length only", () => {
     const slug = "a".repeat(100_000);
-    const refusal = refusalOf(parseContentPage({ ...samplePage(), slug }, CONTEXT));
-    expect(refusal?.page).toBeUndefined();
-    expect(refusal && describeContentProblem(refusal)).toBe("slug: must be at most 120 characters");
+    expect(errorOf(parseContentPage({ ...samplePage(), slug }, CONTEXT))).toBe(
+      "slug: must be at most 120 characters",
+    );
   });
 });
 

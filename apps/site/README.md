@@ -60,7 +60,7 @@ fields (`metaTitle`, `metaDescription`, `noIndex`) and a body of blocks:
 | `example`   | A live example by name: `sign-in`, `dashboard-figures` or `theme-tiles`, with a caption. |
 
 `parseContentPage` (`src/content/validate-content-page.ts`) gives a valid page or an error that says
-which page, which block, which field and which rule: an unknown key or block, an unknown example or
+which block, which field and which rule (the build names the page itself): an unknown key or block, an unknown example or
 language, a heading that skips a level or repeats an id, a control or direction-changing character,
 or a length past its bound (`CONTENT_LIMITS`, including the body's text as a whole). A link is a live
 path of the route table, the `#id` of a heading of the same page, or an `https:` address without
