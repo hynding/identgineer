@@ -1634,6 +1634,17 @@ figcaption {
   font-weight: var(--idg-font-weight-semibold);
 }
 
+/* A name that leads a row, such as a component's on the index, is read whole: on a window too
+   narrow for the table the table scrolls along itself, as its other cells do. */
+.table-scroll td:first-child > a {
+  white-space: nowrap;
+}
+
+/* A place to wrap offers a break even where the text may not wrap. */
+.table-scroll td:first-child > a wbr {
+  display: none;
+}
+
 .example {
   display: grid;
   gap: var(--idg-space-xs);
