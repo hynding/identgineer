@@ -67,6 +67,20 @@ function drawExample(node: ExampleNode): string | VNode {
 }
 
 /**
+ * What holds an example that is drawn inert, so it can be looked at and not used. The words that
+ * say so are outside the inert part, where a screen reader reads them, and every inert example has
+ * them because this is the only way to draw one.
+ */
+function PreviewFrame(_: unknown, children: VNode[]) {
+  return [
+    <p class="preview-tag">Preview only</p>,
+    <div class="preview-frame" inert>
+      {children}
+    </div>,
+  ];
+}
+
+/**
  * A name shorter than this fits a line of the narrowest column whole (sixteen characters of code
  * in a note at 320px), so it is never broken; a longer one may need to be.
  */
@@ -277,13 +291,7 @@ export class SiteContentPage {
                 {opener.label}
               </idg-button>
             )}
-            {example.inert === true ? (
-              <div class="preview-frame" inert>
-                {stage}
-              </div>
-            ) : (
-              stage
-            )}
+            {example.inert === true ? <PreviewFrame>{stage}</PreviewFrame> : stage}
           </div>
           {this.renderCode({
             type: "code",

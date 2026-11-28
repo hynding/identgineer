@@ -1892,6 +1892,17 @@ figcaption {
   display: block;
 }
 
+/* The words on an example that can be looked at and not used. */
+.example-stage > .preview-tag {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 /* A toast region embedded in its frame stands in the frame's corner, so the frame has a height. */
 .example-stage idg-toast-region[embedded] {
   min-block-size: 9rem;
