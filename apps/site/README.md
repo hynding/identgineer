@@ -86,8 +86,10 @@ What can go wrong never fails the build: a record that is invalid, a draft (no `
 the site has no route for, or a page missing from the answer leaves the static copy, and the build
 prints a warning that names it and why. Any error at all, in one record, in one collection or in the
 whole read, falls back the same way (`scripts/cms-content.test.ts` reaches each fallback, and feeds
-it deep, random and wide answers). The build prints the first 50 warnings and a line counting the
-rest, so no answer can flood its log. A warning names a record by its slug only when it is a valid one, and otherwise
+it deep, random and wide answers). The build prints at most 50 warnings about single records and
+navigation items, and a line counting the rest, so no answer can flood its log; after them it always
+prints what it fell back to, a line for each page not drawn from the CMS and one if the navigation
+could not be read. A warning names a record by its slug only when it is a valid one, and otherwise
 by its position; it quotes CMS text short with anything outside printable ASCII escaped, and never
 prints `IDG_CMS_URL`. What an editor may write, and what the site makes of it, is in
 [cms/README.md](../../cms/README.md#what-an-editor-may-write). The read is bounded: `https:` only (or `http:` on
@@ -232,8 +234,8 @@ need not be served itself.
   a timeout, a body that stalls, an oversized answer, a wrong content type, a redirect to another
   origin, drafts, the page count, what an editor may write, and answers that must never fail the
   build: links and values nested thousands deep, 150 seeded random and adversarial answers, a
-  failure in each of its fallbacks, answers of more records than asked for; at most 50 warnings,
-  each short printable ASCII, never holding the setting), every reading page
+  failure in each of its fallbacks, answers of more records than asked for; at most 50 warnings
+  about records and items, then every fallback whatever came before, each short printable ASCII, never holding the setting), every reading page
   in the repository, and the browser suite's parts.
 - **Rendering** (`checks/content-render.test.ts`, once the site is built): a page with every block,
   drawn by the hydrate build as the prerenderer draws it: one h1, the sections and their headings,
