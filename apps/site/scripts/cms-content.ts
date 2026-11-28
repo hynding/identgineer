@@ -72,8 +72,26 @@ function reasonOf(error: unknown): string {
   return error instanceof ReadFailure ? error.message : "its answer could not be read";
 }
 
+/**
+ * What a read gives, or the deadline's reason once it has passed, whichever comes first. Node's
+ * fetch can leave a read of a body pending after its signal aborts, so the deadline is not left to
+ * it.
+ */
+function beforeDeadline<T>(read: Promise<T>, signal: AbortSignal): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => {
+      reject(signal.reason instanceof Error ? signal.reason : new Error("aborted"));
+    };
+    if (signal.aborted) abort();
+    signal.addEventListener("abort", abort, { once: true });
+    read.then(resolve, reject).finally(() => {
+      signal.removeEventListener("abort", abort);
+    });
+  });
+}
+
 /** The body of an answer, read no further than the bound, whatever the answer says of its size. */
-async function boundedText(response: Response): Promise<string> {
+async function boundedText(response: Response, signal: AbortSignal): Promise<string> {
   const declared = Number(response.headers.get("content-length") ?? "0");
   const tooLarge = `the CMS answered more than ${String(CMS_LIMITS.answerBytes)} bytes`;
   if (declared > CMS_LIMITS.answerBytes) {
@@ -84,15 +102,18 @@ async function boundedText(response: Response): Promise<string> {
   if (!reader) return "";
   const chunks: Uint8Array[] = [];
   let size = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > CMS_LIMITS.answerBytes) {
-      await reader.cancel();
-      throw new ReadFailure(tooLarge);
+  try {
+    for (;;) {
+      const { done, value } = await beforeDeadline(reader.read(), signal);
+      if (done) break;
+      size += value.byteLength;
+      if (size > CMS_LIMITS.answerBytes) throw new ReadFailure(tooLarge);
+      chunks.push(value);
     }
-    chunks.push(value);
+  } catch (error) {
+    // Cancelling the body lets its connection go, which would otherwise keep the build waiting.
+    reader.cancel().catch(() => undefined);
+    throw error;
   }
   return new TextDecoder("utf-8", { fatal: false }).decode(Buffer.concat(chunks));
 }
@@ -155,7 +176,7 @@ async function readCollection(
     }
     let answer: unknown;
     try {
-      answer = JSON.parse(await boundedText(response));
+      answer = JSON.parse(await boundedText(response, signal));
     } catch (error) {
       if (error instanceof ReadFailure) throw error;
       if (signal.aborted) {
