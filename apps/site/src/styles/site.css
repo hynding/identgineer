@@ -1365,6 +1365,36 @@ figcaption {
   display: none;
 }
 
+/* From 72rem the shell's aside stands beside the content in top-bar, magazine, dashboard and bento,
+   as a column of its own: a third column for the docs' pages would leave the article a fraction of
+   the window. There the docs' pages are a row over the article, which has the whole content
+   column. */
+@media (min-width: 72rem) {
+  @container style(--idg-layout-shell: top-bar) or style(--idg-layout-shell: magazine) or
+    style(--idg-layout-shell: dashboard) or style(--idg-layout-shell: bento) {
+    @container reading (min-inline-size: 46rem) {
+      .reading-body.with-section {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: none;
+      }
+
+      .with-section > :is(.reading-guide, .prose, .pager) {
+        grid-area: auto;
+      }
+
+      .with-section > .reading-guide {
+        position: static;
+      }
+    }
+
+    .docs-pages ul {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--idg-space-2xs) var(--idg-space-m);
+    }
+  }
+}
+
 /* Until the shell puts its aside beside the content (from 72rem, which the window stands in for, as
    above), every layout puts the aside after the content, where a table of contents comes too late.
    There the copy in the guide is shown instead, so the contents come before the article in every
