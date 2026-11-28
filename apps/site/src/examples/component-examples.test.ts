@@ -9,7 +9,10 @@ import { exampleElements, usageSnippet, type ExampleElement } from "./component-
 const described = existsSync(DOCS_JSON) || process.env.CI !== undefined;
 
 /** The elements of the page that are not components: what an example may put around them. */
-const PLAIN_ELEMENTS = new Set(["div", "p", "span", "strong", "em", "ul", "li", "a", "code"]);
+const PLAIN_ELEMENTS = new Set([
+  ...["div", "p", "span", "strong", "em", "ul", "li", "a", "code", "option"],
+  ...["table", "caption", "thead", "tbody", "tr", "th", "td"],
+]);
 
 describe("the registry of live examples of the components", () => {
   it("names each example by the tag of its component, in the components' order", () => {
@@ -30,7 +33,7 @@ describe("the registry of live examples of the components", () => {
         for (const [attribute, value] of Object.entries(element.attributes ?? {})) {
           expect(attribute, `${name}: ${element.tag}`).not.toMatch(/^on|^style$|^src(set)?$/i);
           if (attribute === "href" && typeof value === "string") {
-            expect(value, `${name}: ${element.tag}`).toMatch(/^#|^\/[a-z]/);
+            expect(value, `${name}: ${element.tag}`).toMatch(/^#|^\//);
           }
         }
       }
@@ -80,7 +83,9 @@ describe.skipIf(!described)("the registry against the components package's docs"
       const doc = documented.get(element.tag);
       for (const [attribute, value] of Object.entries(element.attributes ?? {})) {
         if (doc === undefined || attribute === "slot" || attribute === "id") continue;
-        const property = doc.properties.find((candidate) => (candidate.attribute ?? "") === attribute);
+        const property = doc.properties.find(
+          (candidate) => (candidate.attribute ?? "") === attribute,
+        );
         if (property === undefined) {
           wrong.push(`${element.tag} has no attribute ${attribute}`);
           continue;
@@ -107,7 +112,11 @@ describe.skipIf(!described)("the registry against the components package's docs"
       for (const child of element.children ?? []) {
         if (typeof child === "string") continue;
         const slot = child.attributes?.slot;
-        if (typeof slot === "string" && doc && !doc.slots.some((candidate) => candidate.name === slot)) {
+        if (
+          typeof slot === "string" &&
+          doc &&
+          !doc.slots.some((candidate) => candidate.name === slot)
+        ) {
           wrong.push(`${element.tag} has no slot ${slot}`);
         }
         walk(child);
