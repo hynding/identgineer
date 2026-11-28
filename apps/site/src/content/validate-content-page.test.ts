@@ -149,8 +149,17 @@ describe("a content page is refused", () => {
 
   it("with a live example the registry does not have", () => {
     expect(errorOf(parseContentPage(withBlock({ type: "example", name: "iframe" }), CONTEXT))).toBe(
-      'block 1 (example): name: "iframe" is not a live example (sign-in, dashboard-figures, theme-tiles)',
+      'block 1 (example): name: "iframe" is not a live example (sign-in, dashboard-figures, theme-tiles, or the tag of a component)',
     );
+  });
+
+  it("with the live example of a component, by its tag, and not one of a component the library lacks", () => {
+    expect(parseContentPage(withBlock({ type: "example", name: "idg-button" }), CONTEXT).ok).toBe(
+      true,
+    );
+    expect(
+      errorOf(parseContentPage(withBlock({ type: "example", name: "idg-nothing" }), CONTEXT)),
+    ).toMatch(/name: "idg-nothing" is not a live example/);
   });
 
   it("with a code sample in a language it does not name", () => {

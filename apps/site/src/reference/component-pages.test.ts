@@ -155,7 +155,7 @@ describe("the page of one component", () => {
   });
 
   it("is valid content, so the one renderer draws it", () => {
-    const result = validated(componentPage(SAMPLE, EXAMPLES), ["/components/idg-sample/"]);
+    const result = validated(componentPage(SAMPLE, {}));
     expect(result.ok ? "valid" : describeContentProblem(result.error)).toBe("valid");
   });
 

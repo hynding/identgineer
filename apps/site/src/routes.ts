@@ -1,6 +1,14 @@
 /** A path of the site: it starts and ends with a slash, and its file is `<path>index.html`. */
 export type RoutePath = `/${string}`;
 
+/** The index of the components, which the page of each component sits under. */
+export const COMPONENTS_PATH: RoutePath = "/components/";
+
+/** The page of one component of the library, by its element name. */
+export function componentPath(tag: string): RoutePath {
+  return `${COMPONENTS_PATH}${tag}/`;
+}
+
 /** The Stencil component that draws a whole page, shell included. */
 export type PageComponent = "site-home" | "site-content-page" | "site-not-found";
 
