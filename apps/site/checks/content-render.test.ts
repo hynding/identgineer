@@ -204,6 +204,28 @@ describe.skipIf(!built)("a reading page, as the prerenderer draws it", () => {
     expect(pieces.length === 1 ? [] : pieces).toEqual(parts);
   });
 
+  it("gives a long name in the summary places to wrap between its parts, and leaves short words whole", async () => {
+    const drawn = await render(
+      JSON.stringify({
+        ...PAGE,
+        summary: "Read SubmitEvent.submitter, not a short.name, in the summary.",
+      }),
+    );
+    const lede = drawn.querySelector(".page-hero .lede");
+    expect(lede?.textContent).toBe("Read SubmitEvent.submitter, not a short.name, in the summary.");
+    expect(lede?.querySelectorAll("wbr").length).toBe(2);
+    const pieces = [""];
+    for (const node of lede?.childNodes ?? []) {
+      if (node.nodeName === "WBR") pieces.push("");
+      else if (node.nodeType === 3) pieces.push(`${pieces.pop() ?? ""}${node.textContent ?? ""}`);
+    }
+    expect(pieces).toEqual([
+      "Read Submit",
+      "Event.",
+      "submitter, not a short.name, in the summary.",
+    ]);
+  });
+
   it("links inside the site plainly, and outside it with noopener noreferrer", () => {
     const links = [...one(".prose-intro p").querySelectorAll("a")];
     expect(links.map((link) => [link.getAttribute("href"), link.getAttribute("rel")])).toEqual([
