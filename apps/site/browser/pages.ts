@@ -1,12 +1,26 @@
 import type { Page } from "@playwright/test";
+import { generatedRoutes } from "../src/reference/generated-routes";
 import { prerenderedPages } from "../src/routes";
 import { expect } from "./fixtures";
 
 /** An address the site does not have, which the server answers with the 404 page. */
 export const MISSING_PATH = "/no-such-page/";
 
+/** The page of every component of the library: each is checked once, in `reference.browser.ts`. */
+export const COMPONENT_ROUTES = generatedRoutes();
+
+/**
+ * The component pages that meet every other suite: the longest tables (idg-input) and the longest
+ * text (idg-layout), as the page of one component stands for the 60 of the same markup.
+ */
+export const SAMPLED_COMPONENTS = ["idg-input", "idg-layout"] as const;
+
 /** Every prerendered page, by the address a visitor opens it at. */
-export const PAGES = prerenderedPages().map((page) => ({
+export const PAGES = prerenderedPages(
+  COMPONENT_ROUTES.filter((route) =>
+    (SAMPLED_COMPONENTS as readonly string[]).includes(route.content),
+  ),
+).map((page) => ({
   name: page.path ?? "404",
   path: page.path ?? MISSING_PATH,
   component: page.component,
@@ -14,10 +28,18 @@ export const PAGES = prerenderedPages().map((page) => ({
 
 /**
  * The pages the fit sweep takes through every design with every layout: the home page, the longest
- * reading page and the docs page with the widest content (tables and code). Every other page meets
+ * reading page, the docs page with the widest content (tables and code), the index of the
+ * components, the component page with the longest tables and the variations gallery. Every other page meets
  * each design, each layout and each UX mode once, in eight of the pairs.
  */
-export const FULLY_SWEPT: ReadonlySet<string> = new Set(["/", "/identity/", "/docs/theming/"]);
+export const FULLY_SWEPT: ReadonlySet<string> = new Set([
+  "/",
+  "/identity/",
+  "/docs/theming/",
+  "/components/",
+  "/components/idg-input/",
+  "/variations/",
+]);
 
 export const LAYOUTS = [
   "top-bar",

@@ -1,3 +1,8 @@
+import {
+  COMPONENT_EXAMPLE_NAMES,
+  type ComponentExampleName,
+} from "../examples/component-examples.ts";
+
 /**
  * A reading page of the site, as data: the same fields as the CMS's `Page` type, with a body that
  * is an ordered list of blocks, never HTML. The renderer draws each block as elements and text, so
@@ -87,13 +92,20 @@ export interface TableBlock {
   readonly rows: readonly (readonly InlineContent[])[];
 }
 
-/**
- * The live examples a page can place by name. Each is drawn by the renderer from a fixed registry,
- * so content chooses a demo without carrying any of its markup.
- */
-export const EXAMPLE_NAMES = ["sign-in", "dashboard-figures", "theme-tiles"] as const;
+/** The demos of the home page, which a reading page can place as well. */
+export const SHOWCASE_EXAMPLE_NAMES = ["sign-in", "dashboard-figures", "theme-tiles"] as const;
 
-export type ExampleName = (typeof EXAMPLE_NAMES)[number];
+/**
+ * The live examples a page can place by name: the home page's demos, and the example of each
+ * component by its tag. Each is drawn by the renderer from a fixed registry, so content chooses a
+ * demo without carrying any of its markup.
+ */
+export const EXAMPLE_NAMES: readonly ExampleName[] = [
+  ...SHOWCASE_EXAMPLE_NAMES,
+  ...COMPONENT_EXAMPLE_NAMES,
+];
+
+export type ExampleName = (typeof SHOWCASE_EXAMPLE_NAMES)[number] | ComponentExampleName;
 
 export interface ExampleBlock {
   readonly type: "example";

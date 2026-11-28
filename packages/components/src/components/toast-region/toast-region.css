@@ -21,7 +21,8 @@
   pointer-events: none;
 }
 
-.region:popover-open {
+.region:popover-open,
+:host([embedded]) .region {
   display: flex;
   flex-direction: column;
   gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
@@ -71,4 +72,15 @@
   .region:focus-visible {
     outline-color: Highlight;
   }
+}
+
+/* Embedded, the region is laid out inside its host rather than in the top layer. */
+:host([embedded]) {
+  position: relative;
+}
+
+:host([embedded]) .region {
+  position: absolute;
+  inline-size: min(26rem, 100%);
+  max-block-size: 100%;
 }

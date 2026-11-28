@@ -1,0 +1,318 @@
+import {
+  CONTENT_LIMITS,
+  type Block,
+  type ContentPage,
+  type ExampleName,
+  type Inline,
+  type InlineContent,
+  type TableBlock,
+} from "../content/content-page.ts";
+import { COMPONENT_EXAMPLES } from "../examples/component-examples.ts";
+import type { ComponentExample } from "../examples/component-example.ts";
+import { parseContentPage, describeContentProblem } from "../content/validate-content-page.ts";
+import {
+  componentPath,
+  isComponentPath,
+  routeOfComponent,
+  livePaths,
+  type ContentRoute,
+} from "../routes.ts";
+import { clipAtWord } from "./clip.ts";
+import type { ComponentDoc } from "./component-docs.ts";
+import { groupComponents, type Bundle, type ComponentGroup } from "./component-groups.ts";
+
+type Examples = Readonly<Record<string, ComponentExample>>;
+
+/** A component's page and where it is: what the prerenderer needs to write it. */
+export interface ComponentReferencePage {
+  readonly route: ContentRoute;
+  readonly page: ContentPage;
+}
+
+export interface Reference {
+  readonly index: ContentPage;
+  readonly components: readonly ComponentReferencePage[];
+}
+
+const text = (value: string): Inline => ({ type: "text", text: value });
+const code = (value: string): Inline => ({ type: "text", text: value, code: true });
+
+/** The text of a cell when the package says nothing, which a cell may not leave empty. */
+const NOT_DOCUMENTED = "Not documented";
+const NONE = "None";
+
+/**
+ * Text with each pair of backticks read as code, and nothing else read as anything: a doc comment
+ * is written in Markdown's habit of code spans, and every other character is shown as it is. A text
+ * with more spans than a cell may hold is shown whole as plain text.
+ */
+function runs(value: string): InlineContent {
+  const parts = value.split(/`([^`]+)`/);
+  const result = parts.flatMap((part, index): Inline[] => {
+    if (part === "") return [];
+    return index % 2 === 1 ? [code(part)] : [text(part)];
+  });
+  if (result.length === 0) return [text(NOT_DOCUMENTED)];
+  return result.length > CONTENT_LIMITS.runs ? [text(value)] : result;
+}
+
+function cell(value: string, fallback: string): InlineContent {
+  return value === "" ? [text(fallback)] : runs(value);
+}
+
+function codeCell(value: string, fallback: string): InlineContent {
+  return value === "" ? [text(fallback)] : [code(value)];
+}
+
+/** Tables of at most as many rows as the content format takes, the later ones saying which rows. */
+function tables(
+  caption: string,
+  columns: readonly string[],
+  rows: readonly (readonly InlineContent[])[],
+): Block[] {
+  const size = CONTENT_LIMITS.rows;
+  if (rows.length <= size) return [{ type: "table", caption, columns, rows }];
+  const chunks: Block[] = [];
+  for (let start = 0; start < rows.length; start += size) {
+    const end = Math.min(start + size, rows.length);
+    const part: TableBlock = {
+      type: "table",
+      caption: `${caption}, ${String(start + 1)} to ${String(end)}`,
+      columns,
+      rows: rows.slice(start, end),
+    };
+    chunks.push(part);
+  }
+  return chunks;
+}
+
+function section(
+  heading: string,
+  caption: string,
+  columns: readonly string[],
+  rows: readonly (readonly InlineContent[])[],
+): Block[] {
+  if (rows.length === 0) return [];
+  return [{ type: "heading", level: 2, text: heading }, ...tables(caption, columns, rows)];
+}
+
+function withoutBackticks(value: string): string {
+  return value.replaceAll("`", "");
+}
+
+const LEDE_LIMIT = 200;
+
+/** A paragraph's first sentence, and what follows it. */
+function sentenceOf(paragraph: string): { readonly sentence: string; readonly tail: string } {
+  const end = paragraph.search(/[.!?](?:\s|$)/);
+  if (end < 0) return { sentence: paragraph, tail: "" };
+  return { sentence: paragraph.slice(0, end + 1), tail: paragraph.slice(end + 1).trim() };
+}
+
+/**
+ * The lede is the first sentence of the description, cut at a word if it is too long for the line a
+ * lede is. A hero is as tall as its text, and a long description would push a page's first
+ * screen down; the body goes on from where the lede stops, so nothing is said twice.
+ */
+function lede(doc: ComponentDoc): { readonly summary: string; readonly rest: string } {
+  const first = doc.summary[0] ?? "";
+  if (withoutBackticks(first) === "") {
+    return { summary: `The ${doc.tag} web component.`, rest: "" };
+  }
+  const { sentence, tail } = sentenceOf(first);
+  const { head, rest } = clipAtWord(sentence, LEDE_LIMIT);
+  const unsaid = rest === "" ? [] : [`…${rest}`];
+  return { summary: withoutBackticks(head), rest: [...unsaid, tail].join(" ").trim() };
+}
+
+function introduction(doc: ComponentDoc, rest: string): Block[] {
+  const paragraphs = [rest, ...doc.summary.slice(1)].filter((paragraph) => paragraph !== "");
+  return paragraphs.map((paragraph): Block => ({ type: "paragraph", content: runs(paragraph) }));
+}
+
+function exampleBlock(doc: ComponentDoc, examples: Examples): Block[] {
+  const example = examples[doc.tag];
+  if (example === undefined) return [];
+  return [
+    { type: "heading", level: 2, text: "Example" },
+    { type: "example", name: doc.tag as ExampleName, caption: example.caption },
+  ];
+}
+
+/**
+ * One component's page, in the body format the reading pages use: its description, its live
+ * example when the registry has one, and a table for each of what it documents, left out when it
+ * documents none. Everything is text or code, never markup.
+ */
+export function componentPage(
+  doc: ComponentDoc,
+  examples: Examples = COMPONENT_EXAMPLES,
+): ContentPage {
+  const { summary, rest } = lede(doc);
+  const named = (what: string) => `${what} of ${doc.tag}`;
+  return {
+    slug: doc.tag,
+    title: doc.tag,
+    summary,
+    seo: {},
+    body: [
+      ...introduction(doc, rest),
+      ...exampleBlock(doc, examples),
+      ...section(
+        "Properties",
+        named("Properties"),
+        ["Property", "Attribute", "Type", "Default", "Description"],
+        doc.properties.map((property) => [
+          [code(property.name)],
+          codeCell(property.attribute ?? "", NONE),
+          codeCell(property.type, "Unknown"),
+          codeCell(property.default ?? "", NONE),
+          cell(property.description, NOT_DOCUMENTED),
+        ]),
+      ),
+      ...section(
+        "Events",
+        named("Events"),
+        ["Event", "Detail", "Cancelable", "Description"],
+        doc.events.map((event) => [
+          [code(event.name)],
+          codeCell(event.detail, "Unknown"),
+          [text(event.cancelable ? "Yes" : "No")],
+          cell(event.description, NOT_DOCUMENTED),
+        ]),
+      ),
+      ...section(
+        "Methods",
+        named("Methods"),
+        ["Method", "Returns", "Description"],
+        doc.methods.map((method) => [
+          codeCell(method.signature, "Unknown"),
+          codeCell(method.returns, "Unknown"),
+          cell(method.description, NOT_DOCUMENTED),
+        ]),
+      ),
+      ...section(
+        "Slots",
+        named("Slots"),
+        ["Slot", "Description"],
+        doc.slots.map((slot) => [
+          slot.name === "" ? [text("Default")] : [code(slot.name)],
+          cell(slot.description, NOT_DOCUMENTED),
+        ]),
+      ),
+      ...section(
+        "CSS parts",
+        named("CSS parts"),
+        ["Part", "Description"],
+        doc.parts.map((part) => [[code(part.name)], cell(part.description, NOT_DOCUMENTED)]),
+      ),
+      ...section(
+        "CSS custom properties",
+        named("CSS custom properties"),
+        ["Name", "Description"],
+        doc.cssProperties.map((property) => [
+          [code(property.name)],
+          cell(property.description, NOT_DOCUMENTED),
+        ]),
+      ),
+    ],
+  };
+}
+
+const DESCRIPTION_LIMIT = 160;
+
+/** The route of a component's page: under the components' index, found by the component's tag. */
+export function componentRoute(doc: ComponentDoc): ContentRoute {
+  return routeOfComponent(
+    doc.tag,
+    clipAtWord(`${doc.tag}: ${lede(doc).summary}`, DESCRIPTION_LIMIT).head,
+  );
+}
+
+const INDEX_SUMMARY_LIMIT = 140;
+
+/** The first sentence of the description, for a line of the index, cut at a word if it is long. */
+function firstSentence(doc: ComponentDoc): string {
+  const first = doc.summary[0] ?? "";
+  if (withoutBackticks(first) === "") return NOT_DOCUMENTED;
+  return withoutBackticks(clipAtWord(sentenceOf(first).sentence, INDEX_SUMMARY_LIMIT).head);
+}
+
+function counted(count: number, noun: string): string {
+  return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+/** The index: every group of components as a table of links to their pages. */
+export function componentIndexPage(groups: readonly ComponentGroup[]): ContentPage {
+  const total = groups.reduce((sum, group) => sum + group.components.length, 0);
+  return {
+    slug: "components",
+    title: "Components",
+    summary:
+      "Every idg- web component, with its properties, events, slots and parts and a live example of each, generated from the component library.",
+    seo: {},
+    body: [
+      {
+        type: "paragraph",
+        content: [
+          text(
+            `${counted(total, "component")} in ${counted(groups.length, "group")}, as the library loads them. Every page is generated from the library's own documentation, so a component added to it appears here.`,
+          ),
+        ],
+      },
+      ...groups.flatMap((group): Block[] => [
+        { type: "heading", level: 2, text: group.title },
+        ...(group.description === undefined
+          ? []
+          : [{ type: "paragraph", content: [text(group.description)] } as const]),
+        ...tables(
+          `The components in ${group.title}`,
+          ["Component", "Summary"],
+          group.components.map((doc) => [
+            [{ type: "link", href: componentPath(doc.tag), text: doc.tag }],
+            [text(firstSentence(doc))],
+          ]),
+        ),
+      ]),
+    ],
+  };
+}
+
+/** The index and a page for each documented component, from the package's docs and bundles. */
+export function referencePages(
+  docs: readonly ComponentDoc[],
+  bundles: readonly Bundle[],
+  examples: Examples = COMPONENT_EXAMPLES,
+): Reference {
+  return {
+    index: componentIndexPage(groupComponents(docs, bundles)),
+    components: docs.map((doc) => ({
+      route: componentRoute(doc),
+      page: componentPage(doc, examples),
+    })),
+  };
+}
+
+/**
+ * Refuses a reference whose page the content format would refuse, naming the page and the rule, so
+ * a build stops with a message instead of writing a page its component cannot draw. A page is
+ * checked as the browser will check it, after the JSON the prerenderer writes.
+ */
+export function checkReference(reference: Reference): void {
+  const context = {
+    paths: livePaths(reference.components.map(({ route }) => route)),
+    accepts: isComponentPath,
+  };
+  const pages = [
+    { name: "the components' index", page: reference.index },
+    ...reference.components.map(({ page }) => ({ name: page.slug, page })),
+  ];
+  for (const { name, page } of pages) {
+    const result = parseContentPage(JSON.parse(JSON.stringify(page)), context);
+    if (!result.ok) {
+      throw new Error(
+        `The page of ${name} is not valid content: ${describeContentProblem(result.error)}`,
+      );
+    }
+  }
+}

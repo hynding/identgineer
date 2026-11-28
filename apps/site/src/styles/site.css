@@ -1610,6 +1610,51 @@ figcaption {
 .table-scroll {
   max-inline-size: 100%;
   overflow-x: auto;
+  container: table / inline-size;
+}
+
+/* A table of many columns, where it does not fit, is a card for each row: the column's name before
+   each cell, and the header row kept for a reader who has no use for the card's look. */
+@container table (max-inline-size: 44rem) {
+  .table-cards,
+  .table-cards caption,
+  .table-cards :is(thead, tbody, tr, th, td) {
+    display: block;
+  }
+
+  .table-cards thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .table-cards tbody tr {
+    margin-block-end: var(--idg-space-s);
+    padding: var(--idg-space-2xs) var(--idg-space-s);
+    border: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+    border-radius: var(--idg-radius-m);
+  }
+
+  .table-cards td {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--idg-space-3xs);
+    padding-inline: 0;
+    overflow-wrap: break-word;
+  }
+
+  .table-cards td:last-child {
+    border-block-end: 0;
+  }
+
+  .table-cards td::before {
+    content: attr(data-label);
+    color: var(--idg-color-text-muted);
+    font-size: var(--idg-font-size-s);
+    font-weight: var(--idg-font-weight-semibold);
+  }
 }
 
 .table-scroll table {
@@ -1632,6 +1677,17 @@ figcaption {
 
 .table-scroll th {
   font-weight: var(--idg-font-weight-semibold);
+}
+
+/* A name that leads a row, such as a component's on the index, is read whole: on a window too
+   narrow for the table the table scrolls along itself, as its other cells do. */
+.table-scroll td:first-child > a {
+  white-space: nowrap;
+}
+
+/* A place to wrap offers a break even where the text may not wrap. */
+.table-scroll td:first-child > a wbr {
+  display: none;
 }
 
 .example {
@@ -1843,4 +1899,750 @@ figcaption {
   .pager {
     padding-block-start: var(--idg-layout-section-gap);
   }
+}
+
+/* A component's example: the live element on a panel, and the HTML that writes it beside the panel
+   where the room holds both, under it where it does not. The room is the example's own width. */
+.example-component {
+  container: example / inline-size;
+}
+
+.example-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  align-items: start;
+}
+
+/* An example drawn inert is a frame of a whole page or a form, which is laid out for a page's width
+   and keeps the panel's whole row, with its HTML under it. */
+@container example (min-inline-size: 44rem) {
+  .example-body:not(:has(.preview-frame)) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.example-stage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--idg-space-xs);
+  min-inline-size: 0;
+  padding: var(--idg-space-s);
+  border: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--idg-color-bg-subtle);
+}
+
+.example-stage > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+/* An example the registry lays out as blocks takes the panel's width, each; the rest sit in a row. */
+.stage-block > * {
+  flex: 1 1 100%;
+}
+
+.example-stage > .preview-frame {
+  display: block;
+}
+
+/* The words on an example that can be looked at and not used. */
+.example-stage > .preview-tag {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* A toast region embedded in its frame stands in the frame's corner, so the frame has a height. */
+.example-stage idg-toast-region[embedded] {
+  min-block-size: 9rem;
+}
+
+.example-component .code-sample {
+  min-inline-size: 0;
+}
+
+/* The gallery */
+.section-says {
+  max-inline-size: var(--idg-density-measure);
+  margin: 0;
+}
+
+/* The tiles of an axis, in as many columns as their count fills at the room there is. The rules
+   that choose the columns are written by the build from each list's own count (gallery-grid.ts),
+   so eight tiles are four to a row or two, and nine three. The room is a container whose text size
+   is the page's, so its widths follow the type scale. */
+.gallery-room {
+  container: gallery / inline-size;
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+}
+
+.gallery-tiles {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gallery-tile,
+.combo {
+  position: relative;
+  min-inline-size: 0;
+  overflow: hidden;
+  border: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+  border-radius: var(--idg-shape-radius-lg);
+  background: var(--idg-surface-background, var(--idg-color-bg));
+  transition: transform var(--idg-motion-duration-base) var(--idg-motion-easing-standard);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .gallery-tile:hover,
+  .combo:hover {
+    transform: translateY(calc(var(--idg-feedback-hover-lift) * -1 - 2px));
+  }
+}
+
+/* A tile is a container of its own: where it is wide, as a single column is on a tablet, its
+   preview stands beside its text and the column is no taller than the text. */
+.gallery-tile {
+  container: tile / inline-size;
+}
+
+.tile-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  block-size: 100%;
+}
+
+@container tile (min-inline-size: 30em) {
+  .tile-card {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    grid-template-rows: none;
+  }
+
+  .tile-preview {
+    border-block-end: 0;
+    border-inline-end: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+  }
+}
+
+.combo {
+  display: grid;
+  align-content: start;
+  gap: var(--idg-space-2xs);
+  padding: 0 0 var(--idg-space-s);
+}
+
+.combo > :not(.combo-preview) {
+  margin-inline: var(--idg-space-s);
+}
+
+.combo p,
+.tile-description {
+  margin: 0;
+  overflow-wrap: break-word;
+}
+
+.combo-values {
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+}
+
+.tile-preview,
+.combo-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  min-block-size: 8em;
+  padding: var(--idg-space-s);
+  background: var(--idg-color-bg);
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+  border-block-end: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+}
+
+.tile-preview-theme {
+  padding: 0;
+}
+
+/* The tallest mode's sample is about this high, so the samples of a row are of one height and the
+   text under them starts at the same place; nothing is clipped, a sample taller than this is. */
+.tile-preview-ux {
+  min-block-size: 13em;
+}
+
+.tile-preview-design {
+  min-block-size: 9em;
+}
+
+.tile-text {
+  display: grid;
+  align-content: start;
+  gap: var(--idg-space-3xs);
+  padding: var(--idg-space-s);
+}
+
+.tile-name,
+.combo-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--idg-space-2xs);
+  margin: 0;
+}
+
+/* A name is a heading of the article, which breaks anywhere to fit; a value's name is one word, to
+   be broken only where the box leaves no choice, and a step smaller than the sections' headings so
+   that the widest designs draw the longest of them whole in a tile one column wide. */
+.prose h3.tile-name,
+.prose h3.combo-name {
+  overflow-wrap: break-word;
+}
+
+.prose h3.tile-name {
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+}
+
+/* The whole tile is the link: its own box is drawn over the tile, under nothing else that is
+   interactive, since the preview is inert. */
+.tile-link::after,
+.combo-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.tile-link:focus-visible,
+.combo-link:focus-visible {
+  outline: none;
+}
+
+.tile-link:focus-visible::after,
+.combo-link:focus-visible::after {
+  outline: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis)) var(--idg-focus-ring-style)
+    var(--idg-color-focus-ring);
+  outline-offset: calc(var(--idg-focus-ring-offset) * -1);
+}
+
+/* Shown by the rules the build writes for the current value of each axis. */
+.tile-current {
+  display: none;
+  padding: 0 var(--idg-space-2xs);
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--idg-color-accent-indicator);
+  color: var(--idg-color-on-accent-indicator);
+  font-family: var(--idg-font-family-body);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-semibold);
+}
+
+/* A theme: its light and its dark scheme side by side, each a heading in the theme's display face,
+   a line of body text and the five colours the theme is made of. */
+.scheme-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-self: stretch;
+}
+
+.scheme-half {
+  display: grid;
+  align-content: center;
+  gap: var(--idg-space-2xs);
+  padding: var(--idg-space-s) var(--idg-space-2xs);
+  background: var(--idg-color-bg);
+  color: var(--idg-color-text);
+}
+
+.sample-heading,
+.sample-text {
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.sample-heading {
+  font-family: var(--idg-font-family-display);
+  /* Whole in a half of a tile (a container) as narrow as the grid makes one: eight letters of the
+     widest face are about 5em, so the size is at most 6.5% of the tile's width. */
+  font-size: min(calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale)), 6.5cqi);
+  font-weight: var(--idg-font-weight-bold);
+  line-height: 1.1;
+  overflow-wrap: break-word;
+}
+
+.sample-text {
+  font-family: var(--idg-font-family-body);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+}
+
+.scheme-swatches {
+  display: flex;
+  gap: 2px;
+}
+
+.scheme-swatch {
+  flex: 1 1 0;
+  min-inline-size: 0;
+  block-size: 1.25em;
+  border: 1px solid var(--idg-color-border-strong);
+}
+
+.scheme-swatch-bg {
+  background: var(--idg-color-bg);
+}
+
+.scheme-swatch-surface {
+  background: var(--idg-color-surface);
+}
+
+.scheme-swatch-text {
+  background: var(--idg-color-text);
+}
+
+.scheme-swatch-accent {
+  background: var(--idg-color-accent);
+}
+
+.scheme-swatch-accent-subtle {
+  background: var(--idg-color-accent-subtle);
+}
+
+/* A design: the same card in every tile. */
+.sample {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--idg-space-2xs);
+}
+
+.sample-title {
+  font-weight: var(--idg-font-weight-semibold);
+}
+
+.sample idg-progress {
+  flex: 1 1 100%;
+}
+
+/* A UX mode, in what a still frame can show of it: the controls' size and the space between them,
+   the text's size, the width of a line, the weight of the focus ring, a hint and a shortcut where
+   the mode shows them, and a dot that moves as the mode's motion does when the tile is hovered. */
+.ux-sample {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
+}
+
+.ux-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--idg-space-2xs) * var(--idg-density-gap-scale));
+}
+
+.ux-control {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  block-size: var(--idg-density-control-height);
+  padding-inline: var(--idg-density-control-padding-inline);
+  border-radius: var(--idg-shape-radius-sm);
+  background: var(--idg-color-accent);
+  color: var(--idg-color-on-accent);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-semibold);
+  transition: transform var(--idg-motion-duration-base) var(--idg-motion-easing-standard);
+}
+
+.ux-focused {
+  outline: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis)) var(--idg-focus-ring-style)
+    var(--idg-color-focus-ring);
+  outline-offset: var(--idg-focus-ring-offset);
+}
+
+.ux-kbd {
+  padding: 0 var(--idg-space-2xs);
+  border: 1px solid var(--idg-color-border-strong);
+  border-radius: var(--idg-shape-radius-sm);
+  font-family: var(--idg-font-family-mono);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  opacity: var(--idg-ux-shortcuts);
+}
+
+.ux-type {
+  display: flex;
+  align-items: center;
+  gap: var(--idg-space-2xs);
+  font-size: calc(var(--idg-font-size-step-2) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-bold);
+  line-height: 1;
+}
+
+/* A line of text as wide as the mode's reading width, a fifth of it, so every mode's fits a tile. The
+   width is in characters, so it is set in text of the preview's own size, not the sample's "Aa". */
+.ux-measure {
+  flex: none;
+  font-size: 0.875rem;
+  max-inline-size: 100%;
+  inline-size: calc(var(--idg-density-measure) * 0.2);
+  block-size: 0.35rem;
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--idg-color-border-strong);
+}
+
+.ux-track {
+  position: relative;
+  block-size: 0.75rem;
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--idg-color-accent-subtle);
+}
+
+.ux-dot {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: 0.75rem;
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--idg-color-accent);
+  transition: inset-inline-start var(--idg-motion-duration-slow) var(--idg-motion-easing-emphasized);
+}
+
+.ux-hint {
+  margin: 0;
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  color: var(--idg-color-text-muted);
+  opacity: var(--idg-ux-hints);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .gallery-tile:is(:hover, :focus-within) .ux-dot {
+    inset-inline-start: calc(100% - 0.75rem);
+  }
+
+  .gallery-tile:is(:hover, :focus-within) .ux-control {
+    transform: translateY(calc(var(--idg-feedback-hover-lift) * -1));
+  }
+
+  .gallery-tile:is(:hover, :focus-within) .ux-focused {
+    transform: scale(var(--idg-feedback-press-scale));
+  }
+}
+
+/* A mode with no motion keeps its dot where it is, which the token states: the sample moves only
+   as far as the mode's own motion allows. */
+@media (prefers-reduced-motion: no-preference) {
+  .tile-preview[data-ux="calm"] .ux-dot {
+    transition-duration: 0ms;
+  }
+}
+
+.combine-actions {
+  display: flex;
+}
+
+/* A combination: a small page drawn in its theme's colours, its design's corners and borders and
+   its layout's wireframe. */
+.combo-preview {
+  min-block-size: 0;
+}
+
+.combo-preview .layout-thumb {
+  box-shadow: var(--idg-elevation-sm);
+}
+
+.combo-preview .layout-thumb > span {
+  border-radius: var(--idg-shape-radius-sm);
+}
+
+/* A wireframe of a layout: its regions as boxes on a grid, which each layout lays out as its page
+   does, in the colours of the page's theme. Regions a layout does not have are not drawn. Children,
+   in order: bar, rail, hero, main, aside, foot and six tiles. The brand mark, the links and the
+   headings are lines in the bar and the rail. */
+.layout-thumb {
+  --_chrome: var(--idg-color-surface-raised);
+  --_ink: color-mix(in srgb, var(--idg-color-text) 35%, transparent);
+  --_line: repeating-linear-gradient(to bottom, var(--_ink) 0 0.2rem, transparent 0.2rem 0.5rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 3px;
+  box-sizing: border-box;
+  aspect-ratio: 16 / 10;
+  padding: 3px;
+  border: 1px solid var(--idg-color-border-strong);
+  border-radius: var(--idg-shape-radius-sm);
+  background: var(--idg-color-bg-subtle);
+}
+
+.layout-thumb > span {
+  display: flex;
+  min-inline-size: 0;
+  min-block-size: 0;
+  border: 1px solid var(--idg-color-border);
+  border-radius: 2px;
+  background: var(--_chrome);
+}
+
+.layout-thumb > :is(.t-rail, .t-hero, .t-aside, .t-foot, .t-tile) {
+  display: none;
+}
+
+.layout-thumb > .t-bar {
+  align-items: center;
+  gap: 4px;
+  padding: 2px 3px;
+}
+
+.layout-thumb > .t-rail {
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+}
+
+.layout-thumb .t-title {
+  flex: none;
+  inline-size: 1.1em;
+  block-size: 0.55em;
+  border-radius: 2px;
+  background: var(--idg-color-accent);
+}
+
+.layout-thumb .t-link {
+  flex: none;
+  inline-size: 1em;
+  block-size: 3px;
+  border-radius: 2px;
+  background: var(--_ink);
+}
+
+.layout-thumb > .t-rail > .t-link {
+  inline-size: 80%;
+}
+
+.layout-thumb > .t-hero {
+  background: var(--idg-color-accent-subtle);
+  border-color: var(--idg-color-accent);
+}
+
+.layout-thumb > .t-main {
+  background: var(--_chrome) var(--_line);
+  background-origin: content-box;
+  padding: 3px;
+}
+
+.layout-thumb > .t-foot {
+  background: var(--idg-color-border);
+  min-block-size: 0.5em;
+}
+
+.layout-thumb > .t-tile {
+  background: var(--_chrome) var(--_line);
+  background-origin: content-box;
+  padding: 3px;
+}
+
+/* top-bar: the bar across the top, one column and a foot. */
+.layout-thumb[data-layout="top-bar"] {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.layout-thumb[data-layout="top-bar"] > .t-foot {
+  display: block;
+}
+
+.layout-thumb[data-layout="top-bar"] > .t-main {
+  margin-inline: 12%;
+}
+
+/* side-rail: a rail the whole height of the page, beside the content and a foot. */
+.layout-thumb[data-layout="side-rail"] {
+  grid-template-columns: 28% minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.layout-thumb[data-layout="side-rail"] > .t-bar {
+  display: none;
+}
+
+.layout-thumb[data-layout="side-rail"] > .t-rail {
+  display: flex;
+  grid-row: 1 / -1;
+}
+
+.layout-thumb[data-layout="side-rail"] > .t-foot {
+  display: block;
+  grid-column: 2;
+}
+
+/* split-hero: a bar, then a hero and the content side by side, and a foot. */
+.layout-thumb[data-layout="split-hero"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.layout-thumb[data-layout="split-hero"] > .t-bar,
+.layout-thumb[data-layout="split-hero"] > .t-foot {
+  grid-column: 1 / -1;
+}
+
+.layout-thumb[data-layout="split-hero"] > .t-hero {
+  display: block;
+}
+
+.layout-thumb[data-layout="split-hero"] > .t-foot {
+  display: block;
+}
+
+/* magazine: a lead story over two columns and short stories beside and under it. */
+.layout-thumb[data-layout="magazine"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: auto repeat(2, minmax(0, 1fr));
+}
+
+.layout-thumb[data-layout="magazine"] > .t-bar {
+  grid-column: 1 / -1;
+}
+
+.layout-thumb[data-layout="magazine"] > .t-main {
+  display: none;
+}
+
+.layout-thumb[data-layout="magazine"] > .t-tile:nth-child(-n + 10) {
+  display: block;
+}
+
+.layout-thumb[data-layout="magazine"] > .t-tile:nth-child(7) {
+  grid-column: span 2;
+  grid-row: span 2;
+  /* The lead story's picture over its text. */
+  background:
+    linear-gradient(var(--idg-color-accent-subtle) 0 0) 0 0 / 100% 45% no-repeat,
+    var(--_chrome) var(--_line);
+  background-origin: border-box, content-box;
+  padding-block-start: 55%;
+}
+
+.layout-thumb[data-layout="magazine"] > .t-tile:nth-child(10) {
+  grid-column: span 2;
+}
+
+/* dashboard: a slim bar over a canvas of small tiles of one size. */
+.layout-thumb[data-layout="dashboard"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto repeat(2, minmax(0, 1fr));
+}
+
+.layout-thumb[data-layout="dashboard"] > .t-bar {
+  grid-column: 1 / -1;
+}
+
+.layout-thumb[data-layout="dashboard"] > .t-main {
+  display: none;
+}
+
+.layout-thumb[data-layout="dashboard"] > .t-tile {
+  display: block;
+  /* A chart in each tile: bars of different heights from the tile's foot. */
+  background:
+    linear-gradient(var(--idg-color-accent) 0 0) 12% 88% / 14% 30% no-repeat,
+    linear-gradient(var(--idg-color-accent) 0 0) 34% 88% / 14% 55% no-repeat,
+    linear-gradient(var(--idg-color-accent) 0 0) 56% 88% / 14% 42% no-repeat,
+    linear-gradient(var(--idg-color-accent) 0 0) 78% 88% / 14% 68% no-repeat,
+    var(--_chrome);
+  background-origin: border-box;
+}
+
+/* centered: a bar and one narrow column of content between wide margins. */
+.layout-thumb[data-layout="centered"] {
+  grid-template-columns: minmax(0, 1fr) 46% minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.layout-thumb[data-layout="centered"] > .t-bar {
+  grid-column: 1 / -1;
+  justify-content: center;
+}
+
+.layout-thumb[data-layout="centered"] > .t-main {
+  grid-column: 2;
+}
+
+.layout-thumb[data-layout="centered"] > .t-foot {
+  display: block;
+  grid-column: 2;
+}
+
+/* bento: a mosaic of tiles of different sizes. */
+.layout-thumb[data-layout="bento"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: auto repeat(3, minmax(0, 1fr));
+}
+
+.layout-thumb[data-layout="bento"] > .t-bar {
+  grid-column: 1 / -1;
+}
+
+.layout-thumb[data-layout="bento"] > .t-main {
+  display: none;
+}
+
+.layout-thumb[data-layout="bento"] > .t-tile {
+  display: block;
+}
+
+.layout-thumb[data-layout="bento"] > .t-tile {
+  background: var(--_chrome);
+  border-radius: var(--idg-shape-radius-md);
+}
+
+.layout-thumb[data-layout="bento"] > .t-tile:is(:nth-child(7), :nth-child(11)) {
+  background: var(--idg-color-accent-subtle);
+}
+
+.layout-thumb[data-layout="bento"] > .t-tile:nth-child(10) {
+  background: var(--idg-color-accent);
+}
+
+.layout-thumb[data-layout="bento"] > .t-tile:nth-child(7) {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.layout-thumb[data-layout="bento"] > .t-tile:nth-child(10) {
+  grid-column: span 2;
+}
+
+/* immersive: bands that run edge to edge, the first a hero. */
+.layout-thumb[data-layout="immersive"] {
+  grid-template-rows: auto minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  gap: 0;
+  padding: 0;
+}
+
+.layout-thumb[data-layout="immersive"] > span {
+  border-radius: 0;
+}
+
+.layout-thumb[data-layout="immersive"] > :is(.t-hero, .t-foot) {
+  display: block;
+}
+
+.layout-thumb[data-layout="immersive"] > .t-hero {
+  order: 1;
+  background: var(--idg-color-accent);
+}
+
+.layout-thumb[data-layout="immersive"] > .t-main {
+  order: 2;
+}
+
+.layout-thumb[data-layout="immersive"] > .t-foot {
+  order: 3;
 }

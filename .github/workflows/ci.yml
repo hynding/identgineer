@@ -67,11 +67,14 @@ jobs:
     runs-on: ubuntu-latest
     # A job of its own, so the components suite's two halves are not slowed. The fit sweep runs in
     # three engines (Chromium, without calc-size() as Safari, and without calc-size() or container
-    # style queries as Firefox), and in each engine in two parts by page: the home and identity
+    # style queries as Firefox), and in each engine in four parts by page: the home and identity
     # pages, every design with every layout, then the theming guide the same way and every other
-    # page in eight pairs. The last part is every other suite. Playwright's shards split by the
-    # number of tests, not their length, so the parts are chosen by tag (apps/site/browser/parts.ts),
-    # each under ten minutes on two workers after the build. The limit leaves room for a slow runner.
+    # page in eight pairs, then the components index with one component's page, and the variations
+    # gallery alone, as it is swept at seven widths. The axe sweep of every page in every look is a
+    # part of its own, the layouts suite another, and the last part is every other suite.
+    # Playwright's shards split by the number of tests, not their length, so the parts are chosen
+    # by tag and file (apps/site/browser/parts.ts), each under about eight minutes on two workers
+    # after the build. The limit leaves room for a slow runner.
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -79,10 +82,18 @@ jobs:
         part:
           - chromium-1
           - chromium-2
+          - chromium-reference
+          - chromium-gallery
           - no-calc-size-1
           - no-calc-size-2
+          - no-calc-size-reference
+          - no-calc-size-gallery
           - no-style-queries-1
           - no-style-queries-2
+          - no-style-queries-reference
+          - no-style-queries-gallery
+          - axe
+          - layouts
           - rest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

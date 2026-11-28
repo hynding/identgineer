@@ -11,6 +11,36 @@ export function inlineStyles(html: string): string[] {
   return [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map((match) => match[1] ?? "");
 }
 
+const START_TAG = /<[a-z][^\s/>]*(?:\s+[^\s=>/]+(?:="[^"]*")?)*\s*\/?>/gi;
+
+/** The text of every `style` attribute in the page's start tags, in document order. */
+export function styleAttributes(html: string): string[] {
+  return [...html.matchAll(START_TAG)].flatMap((tag) =>
+    [...tag[0].matchAll(/\sstyle="([^"]*)"/gi)].map((attribute) => attribute[1] ?? ""),
+  );
+}
+
+const KNOWN_STYLE_ATTRIBUTE = /^--_offset: \d+px;$/;
+
+/**
+ * The style attributes that are not the one offset a component is known to write. Stripping is
+ * safe for that one because the browser writes it again; anything else would lose a style
+ * silently, so the prerender refuses it.
+ */
+export function unexpectedStyleAttributes(html: string): string[] {
+  return styleAttributes(html).filter((text) => !KNOWN_STYLE_ATTRIBUTE.test(text));
+}
+
+/**
+ * The page without its `style` attributes. A few components write a custom property to a surface
+ * once they render, which the prerender serialises as an attribute the policy forbids. The browser
+ * writes the same property again through the style object when the component loads, which the
+ * policy allows, so nothing is lost but the attribute.
+ */
+export function withoutStyleAttributes(html: string): string {
+  return html.replace(START_TAG, (tag) => tag.replace(/\sstyle="[^"]*"/gi, ""));
+}
+
 /** The CSP source that allows exactly this inline style. */
 export function styleSource(css: string): string {
   return `'sha256-${createHash("sha256").update(css, "utf8").digest("base64")}'`;

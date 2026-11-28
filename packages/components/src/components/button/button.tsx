@@ -10,6 +10,9 @@ import {
 } from "./button-options";
 
 /**
+ * A button, or a link drawn as one when it has an `href`. It is form associated, so a submit or
+ * reset button acts on its form with no script in the page.
+ *
  * @slot - The label.
  * @slot start - Content before the label, such as an icon. Replaced by the spinner while loading.
  * @slot end - Content after the label.

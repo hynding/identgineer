@@ -31,7 +31,9 @@ title, its description and the Stencil component that draws it. The prerenderer,
 home page's links and the build check all read it. A route marked `coming` is a page a later task
 adds: the home page lists it as coming soon, without a link, and it is left out of the navigation
 until it is `live`. Each live route is written to `<path>index.html`, and links between pages are
-ordinary links with full page loads.
+ordinary links with full page loads. The pages of the components reference are not in the table:
+they are made at build time, one for each component (see below), and join the prerendered files,
+the sitemap and the checks. The sandbox is the one route still `coming`.
 
 An address the site does not have gets `404.html`, which the server sends with status 404. It has no
 canonical link and asks not to be indexed. The build writes `sitemap.xml`, every live route by its
@@ -49,15 +51,15 @@ docs their own section navigation, marked with `aria-current`, and links to the 
 A content page (`src/content/content-page.ts`) is data, never HTML: a slug, a title, a summary, SEO
 fields (`metaTitle`, `metaDescription`, `noIndex`) and a body of blocks:
 
-| Block       | What it holds                                                                            |
-| ----------- | ---------------------------------------------------------------------------------------- |
-| `heading`   | Level 2, 3 or 4, as text. The first is level 2 and none skips a level.                   |
-| `paragraph` | Runs of text, each strong, emphasised or code, and links.                                |
-| `list`      | Bulleted or numbered items, each runs of text and links.                                 |
-| `code`      | A sample in one of `html`, `css`, `ts`, `js`, `json`, `sh` or `text`, with a caption.    |
-| `callout`   | A note or a warning, with a title, holding runs of text and links.                       |
-| `table`     | A caption, up to six column headings and rows of cells of runs.                          |
-| `example`   | A live example by name: `sign-in`, `dashboard-figures` or `theme-tiles`, with a caption. |
+| Block       | What it holds                                                                                               |
+| ----------- | ----------------------------------------------------------------------------------------------------------- |
+| `heading`   | Level 2, 3 or 4, as text. The first is level 2 and none skips a level.                                      |
+| `paragraph` | Runs of text, each strong, emphasised or code, and links.                                                   |
+| `list`      | Bulleted or numbered items, each runs of text and links.                                                    |
+| `code`      | A sample in one of `html`, `css`, `ts`, `js`, `json`, `sh` or `text`, with a caption.                       |
+| `callout`   | A note or a warning, with a title, holding runs of text and links.                                          |
+| `table`     | A caption, up to six column headings and rows of cells of runs.                                             |
+| `example`   | A live example by name: `sign-in`, `dashboard-figures`, `theme-tiles` or a component's tag, with a caption. |
 
 `parseContentPage` (`src/content/validate-content-page.ts`) gives a valid page or an error that says
 which block, which field and which rule (the build names the page itself): an unknown key or block, an unknown example or
@@ -146,6 +148,113 @@ measure) and the design and UX mode still apply. The base rules are written for 
 the style queries only add to them; `browser/fit.browser.ts` takes every style query out of a page
 and checks the whole sweep again.
 
+### The components reference
+
+`/components/` and one page for each `idg-` component (`/components/idg-button/`) are generated
+from the components package's own documentation, `packages/components/dist/docs.json`, which
+Stencil's `docs-json` output writes when that package is built. Nothing about a component is
+written by hand in the site, apart from its live example: a component added to the package, with
+its doc comments, has a page, a row in the index, a sitemap entry and a check at the next build.
+`src/reference/` holds the generators, each tested on its own:
+
+- `docs-file.ts` reads `docs.json`. A missing file is an error that says to build the components
+  package first.
+- `component-docs.ts` turns it into plain data: each component's summary, properties (name,
+  attribute, type, default, description), events, methods, slots, CSS parts and custom properties.
+  Doc comments are text, so they are only ever drawn as text; control and direction-changing
+  characters are removed, whitespace is collapsed, and a name or a text longer than the content
+  format takes (`REFERENCE_LIMITS`) is cut at that length with an ellipsis. A tag that is not
+  `idg-` or is documented twice is an error.
+- `component-groups.ts` groups the index as the package groups its components, by the bundles in
+  `@identgineer/components/bundles` (`stencil-bundles.ts`): the `brand-*` bundles share one group,
+  and a component in no bundle is in "Other components".
+- `component-pages.ts` writes each page as a content page, the body format the reading pages use,
+  so the same renderer draws it: a table is split in two or more when it has over 60 rows, a
+  backticked word is code, an empty cell says "Not documented" and an empty list "None". The
+  build checks every page with the content validator, and fails if one is refused.
+
+A component's page has one `h1`, the first sentence of its description as the lede (cut at 200
+characters, and then the whole paragraph leads the body, so a long description does not push the first screen
+down; the rest of the paragraph follows), a live example with its usage snippet and copy
+button, a table of contents, and a table for each of properties, events, methods, slots, parts and
+custom properties that it documents. The generated pages win over a CMS record of the same slug,
+and a component page's link back is to `/components/`.
+
+Live examples are in `src/examples/component-examples.ts`, a typed registry from a component's tag
+to what to draw: the example is data (tags, attributes and text, never markup) that draws the live
+element and writes the HTML snippet beside it, so the two cannot differ. Every documented
+component needs an entry, and a test fails when one has none, or an example uses an attribute or
+slot the component does not document. A few examples are drawn inert (the sign-in form, the layout
+frame) or with a button that opens the dialog, shown with scripting only, as a closed dialog
+shows nothing. The example takes the theme, design, layout and UX mode of the page like any other
+element, as the tokens are attribute selectors.
+
+Each entry also says how its stage is laid out, with a required `stage` field: `block` for a
+component that fills the row (a form, a banner, a layout frame), `row` for small controls set side
+by side. An element may carry JavaScript `properties` as well as attributes, for the components
+that need an object (the consent banner's consent, the session guard's client): the registry gives
+them stub clients (`example-clients.ts`) that are passed as properties when the page is drawn, so the
+prerendered example and the browser's are the same, and the usage snippet shows the attributes only.
+An example drawn inert has a "Preview only" tag in its stage, so a visitor who cannot use it knows
+why. The toast region's example sets its `embedded` property, which lays the region out inside its
+stage instead of pinning it to the viewport as a popover; its own use is unchanged.
+A sentence cut for a lede, a description or a line of the index is cut at a word, by `clip.ts`, and
+ends with an ellipsis.
+
+A table of four columns or more (a component's properties) is a row of
+cells where the table fits, and a card for each row where it does not (a container query on the
+table's own box): the column's name is drawn before each cell, and the cells keep their table roles
+so a screen reader still reads a table. A table of fewer columns (the events, methods, slots and parts, whose signatures and types need a wide cell) scrolls along itself instead.
+
+`docs.json` reaches the site through the build order, which is also CI's: the site depends on the
+components package, so `pnpm build` (or `pnpm --filter "@identgineer/site..." build`) builds that
+package first. The prerenderer and the tests read it from `packages/components/dist/docs.json`, and
+the site's own `build` alone, run without that package's, stops with the message above. Under
+`CI=1` a test that needs `docs.json` fails when it is missing; elsewhere it is skipped.
+
+### The variations gallery
+
+`/variations/` shows every value of the four axes, as a tile with its name, its description and a
+preview, from `@identgineer/variations`' registries: a value added to a registry has a tile at the
+next build, and a fixture in `src/gallery/gallery-records.test.ts` proves it with a ninth theme.
+
+- A **theme** tile shows the theme in both its schemes, side by side: a heading in the theme's
+  display face, a line in its body face and its five colours (background, surface, text, accent and
+  the accent's tint). Each half carries the theme and a scheme of its own, so the page's scheme
+  choice changes neither.
+- A **design** tile is a card holding a badge, two buttons and a progress bar, made of the library's
+  real components inside a container that carries the design as the root's attributes do, with the
+  page's other axes mirrored so the tokens resolve as they will on the page.
+- A **UX mode** tile shows what the mode sets, as things a still frame tells apart: the controls'
+  height and the space between them, the type size, a line as wide as the mode's reading width, the
+  weight of the focus ring, a hint and a shortcut where the mode shows them. A dot travels a track
+  with the mode's own duration and easing, and the controls take its hover lift and press scale,
+  when the tile is hovered or focused; for a visitor who asks for reduced motion nothing moves.
+- A **layout** tile is a wireframe in the page's colours, not the real `idg-layout`, which draws the
+  whole window: the bar or rail with the brand mark and links, the hero, the content as lines of text,
+  tiles and the foot, arranged as that layout arranges them.
+- A **combination** has a small page of its own: the wireframe of its layout, drawn in its theme's
+  colours with its design's corners and shadow.
+- The tiles of an axis stand in as many columns as the room holds (a container query on the
+  gallery, so it follows the type scale), one to four. The build writes the rules from each list's
+  own count (`src/gallery/gallery-grid.ts`), so a count a registry changes to is laid out in full
+  rows, or with a last row of at least two, with no rule written for it. A single column wide enough
+  puts the preview beside the text, so it is no taller than the text.
+- The lede and the route's description count the values from the registries
+  (`src/gallery/gallery-counts.ts`), so they stay true when a value is added.
+- Each tile is a link to the page with the choice in its address (`?idg-theme=ember#themes`).
+  The bootstrap script reads that address before the page paints, so the link works whenever the
+  bootstrap script runs, even if the app's own script is blocked or slow. With the app running, a
+  plain click applies the choice in place through the variations runtime and says so in a status
+  line. With scripting off nothing can apply a choice, so the page says "Choosing a look needs
+  JavaScript" and Surprise me, which needs a script, is not drawn.
+- The tile of the current value has `aria-current`, and a visible mark. The mark is drawn by CSS
+  from the root's attributes (`src/gallery/current-marker.ts` writes the rules), so the prerendered
+  page and the hydrated one look alike; the client then keeps `aria-current` in step.
+- "Combine" links six curated combinations, each a link that sets all four axes, and Surprise me.
+
+Both pages are in the navigation, the footer, the sitemap and the home page's links.
+
 ## How it is built
 
 1. **`stencil build --prod`** compiles the site's components together with the component library.
@@ -166,7 +275,11 @@ and checks the whole sweep again.
    shadow DOM: a page is drawn and styled by the HTML parser alone. Stencil's prerender document
    lacks three things the components reach for while they connect (`adoptedStyleSheets`,
    `MutationObserver` and native `validity`); `scripts/server-document.ts` gives each the answer a
-   browser gives before anything has happened.
+   browser gives before anything has happened. The prerenderer then takes every `style` attribute
+   out of the markup: the overlay components write a custom property to their surface once they
+   render, which the prerender serialises as an attribute the policy forbids, and the browser
+   writes the same property again through the style object when the component loads, which the
+   policy allows. The pages of the components reference are made here from `docs.json`.
 3. The prerenderer then writes **`www/_headers.json`**: the content security policy and the other
    security headers, which a deployment must send with every response. It also removes what
    Stencil's `www` output writes that no page loads (its dev server's `host.config.json`, the loader
@@ -212,8 +325,9 @@ require-trusted-types-for 'script'; trusted-types 'none'
   No page holds an inline script.
 - **Styles** are the two stylesheets and the components' styles inside their declarative shadow
   roots, each allowed by its SHA-256 hash. The hashes are taken from the pages as written, so a
-  change to a component's style changes the policy at the next build. No element has a `style`
-  attribute, and nothing writes one: the client build adopts constructed stylesheets.
+  change to a component's style changes the policy at the next build. No page has a `style`
+  attribute: the prerenderer removes those the server render writes, and in the browser a style
+  object is written, never an attribute, as the client build adopts constructed stylesheets.
 - **Trusted Types** are required and no policy may be created: neither the components nor the
   bootstrap script write HTML from a string.
 - **Nothing from another origin**, fonts included: the themes use system fonts.
@@ -238,7 +352,12 @@ need not be served itself.
   build: links and values nested thousands deep, 150 seeded random and adversarial answers, a
   failure in each of its fallbacks, answers of more records than asked for; at most 50 warnings
   about records and items, then every fallback whatever came before, each short printable ASCII, never holding the setting), every reading page
-  in the repository, and the browser suite's parts.
+  in the repository, the browser suite's parts, and the components reference: reading `docs.json`
+  (markup, control and bidirectional characters and very long unbroken names and types as text
+  only, a missing list, a duplicated tag), the groups, the pages and the index drawn from them
+  (split tables, empty cells, the limits), the example registry against the real `docs.json`
+  (every component has one, with documented attributes and slots only, and no event handler), the
+  usage snippets, the gallery's records and the stylesheet that marks the current tile.
 - **Rendering** (`checks/content-render.test.ts`, once the site is built): a page with every block,
   drawn by the hydrate build as the prerenderer draws it: one h1, the sections and their headings,
   each block's elements, outbound links' `rel`, both tables of contents, the docs' navigation and
@@ -251,7 +370,8 @@ need not be served itself.
   `noopener noreferrer` and nothing is loaded from another origin, the
   bootstrap script comes first, blocking and with the integrity of the file served, no page holds an
   inline script, a `style` or event handler attribute, or an inline style the policy does not name,
-  and `www` holds nothing that no page needs.
+  and `www` holds nothing that no page needs; the generated component pages and the gallery are
+  among the pages it checks.
 - **Browser** (`pnpm --filter @identgineer/site test:browser`, a CI job of its own): every page in
   each of the eight layouts at 390, 820 and 1440px passes axe, does not scroll sideways and opens the
   appearance panel; every page in each theme and design, in both schemes, and in each UX mode passes
@@ -268,7 +388,11 @@ need not be served itself.
   design once, each with a different layout (eight pairs, shifted from page to page) in every UX
   mode, in all three engines; a reading page and a docs page filled with the longest unbroken text
   the validator takes in every field (labels, title, summary, headings, captions, cells, code, links)
-  fit every layout in all three engines at 320 to 1440px; fitting is no sideways scroll, nothing cut or spilling out of its box
+  fit every layout in all three engines at 320 to 1440px, as does the page of a component filled
+  with the longest unbroken names, types and descriptions the reference takes, in every cell; the
+  components index, the page of the component with the longest tables (`idg-input`) and the
+  variations gallery are swept as the home page is, but at 320, 390, 820, 1100, 1152, 1440 and
+  1920px; fitting is no sideways scroll, nothing cut or spilling out of its box
   (a code sample or table that scrolls sideways and takes focus, or a bar of links that scrolls to each as it takes focus, may hold what it scrolls), no word,
   figure or name broken inside itself and no two controls over each other; in the default look, in
   bento, dashboard and magazine at 768 to 1440px no section beside another is more than a fifth
@@ -283,11 +407,24 @@ need not be served itself.
   beyond, in every layout; and a short name in code never wraps. Any console error, policy violation or request to
   another origin fails a test.
 
-CI runs the browser suite in seven parts (`browser/parts.ts`): each engine's fit sweep in two (the
-home and identity pages, then the rest), chosen by a tag on each test, and every other test in the
-last. `pnpm --filter @identgineer/site test:browser:part <part>` runs one, and
+The browser suite also visits every component's page (`browser/reference.browser.ts`): its
+example and snippet are there, it does not scroll sideways at 320 and 1440px and passes axe;
+the example follows the page's design, theme and UX mode; the copy button copies the snippet; a
+dialog's opener opens it; a table scrolls inside its own box; a short name does not wrap; and the
+index and the pages read without JavaScript. `browser/gallery.browser.ts` checks the gallery:
+every value has a tile, a tile's link applies the choice both with and without scripting, the
+current value is marked with `aria-current` and visibly, the combinations and Surprise me work,
+and the page reads without scripting.
+
+CI runs the browser suite in fifteen parts (`browser/parts.ts`): each engine's fit sweep in four (the
+home and identity pages together, every other page, the components index with the page of
+`idg-input`, and the variations gallery alone), the axe sweep of every page in every look, the layouts
+suite, chosen by a tag on each test or by its file, and every other test in the last.
+`pnpm --filter @identgineer/site test:browser:part <part>` runs one, and
 `test:browser:parts` checks that the parts hold every test exactly once, which CI does on every run.
-On two workers each fit part takes about four to five minutes and the last about seven.
+On two workers a fit part takes four to five minutes (the components' pages, which are two sweeps in
+one, seven), the axe sweep about four, the layouts suite three and a half and the last part about
+four, so none is near the nine minutes at which another part would be added.
 
 `IDG_CPU_THROTTLE=6` runs the hydration tests with the page's CPU six times slower, as a slow CI
 runner is; add `--repeat-each=3` to repeat them.

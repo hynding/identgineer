@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { LAYOUTS, PAGES, WIDTHS, sidewaysScroll } from "./pages";
 
@@ -22,6 +22,19 @@ async function openWithoutScript(page: Page, path: string, layout: string): Prom
   await expect(page.locator("html")).toHaveAttribute("data-layout", layout);
 }
 
+/** The positions of those of the locator's elements that no inert ancestor holds, through shadow roots. */
+function reachable(locator: Locator): Promise<number[]> {
+  return locator.evaluateAll((elements) =>
+    elements.flatMap((element, index) => {
+      for (let node: Node | null = element; node;) {
+        if (node instanceof Element && node.hasAttribute("inert")) return [];
+        node = node.parentNode instanceof ShadowRoot ? node.parentNode.host : node.parentNode;
+      }
+      return [index];
+    }),
+  );
+}
+
 for (const { name, path } of PAGES) {
   for (const layout of LAYOUTS) {
     for (const width of WIDTHS) {
@@ -31,13 +44,24 @@ for (const { name, path } of PAGES) {
         await page.setViewportSize({ width, height: 900 });
         await openWithoutScript(page, path, layout);
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-        await expect(page.getByRole("main")).toBeVisible();
+        // A landmark is the page's own unless it is inside an inert example, which nothing can reach:
+        // each page has one main and one main navigation of its own, and they are shown.
+        for (const landmark of [
+          page.getByRole("main"),
+          page.getByRole("navigation", { name: "Main navigation" }),
+        ]) {
+          const mine = await reachable(landmark);
+          expect(mine).toHaveLength(1);
+          await expect(landmark.nth(mine[0] ?? 0)).toBeVisible();
+        }
         await expect(page.getByRole("contentinfo")).toBeVisible();
         // A menu button needs a script to open; without one the header shows its links instead.
         await expect(page.getByRole("button", { name: "Menu" })).toBeHidden();
         // The links are the shell's light content, slotted into its navigation landmark.
-        await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
-        await expect(page.locator('a[slot="navigation"]', { hasText: "Home" })).toBeVisible();
+        const home = page.locator('a[slot="navigation"]', { hasText: "Home" });
+        const own = await reachable(home);
+        expect(own).toHaveLength(1);
+        await expect(home.nth(own[0] ?? 0)).toBeVisible();
         // The footer lists the pages as well.
         const pages = page.getByRole("navigation", { name: "Site pages" });
         await expect(pages.getByRole("link", { name: "Home" })).toBeVisible();

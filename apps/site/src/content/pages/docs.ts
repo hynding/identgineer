@@ -77,7 +77,13 @@ export const DOCS = page({
       ],
     ),
     p(
-      "A reference of every component, generated from the library itself, will come with the components page. Until then the components README is the reference.",
+      "Every component has a page of its own in the ",
+      link("/components/", "components reference"),
+      ", generated from the library's documentation, with a live example you can copy. The ",
+      link("/variations/", "variations gallery"),
+      " shows every theme, design, layout and UX mode, and applies the one you choose. What the packages are for is on the ",
+      link("/features/", "features page"),
+      ".",
     ),
   ],
 });

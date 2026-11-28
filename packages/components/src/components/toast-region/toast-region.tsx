@@ -37,6 +37,8 @@ function isToast(element: Element): element is RegionToast {
  * prefers reduced motion, every toast stands still, so nothing disappears while it is being read
  * and nothing slides under the pointer.
  *
+ * Embedded, it stands in its host instead, which the page lays out and positions.
+ *
  * @slot - The idg-toast elements.
  * @part region - The landmark holding the toasts.
  */
@@ -50,6 +52,12 @@ export class IdgToastRegion {
 
   /** The corner or edge the toasts gather at. */
   @Prop({ reflect: true }) position: ToastPosition = "bottom-end";
+
+  /**
+   * Whether the region sits inside a page's own box instead of the corner of the window: it is
+   * positioned within its host, not in the top layer, so a page can show it standing in a frame.
+   */
+  @Prop({ reflect: true }) embedded = false;
 
   /** How many toasts show at once. The rest wait their turn. */
   @Prop() max = 3;
@@ -205,7 +213,7 @@ export class IdgToastRegion {
   private showRegion(show: boolean): void {
     const region = this.region;
     // Without the Popover API the region stays in the page as a fixed box, always laid out.
-    if (!region || show === this.shown || !("showPopover" in region)) return;
+    if (this.embedded || !region || show === this.shown || !("showPopover" in region)) return;
     this.shown = show;
     if (show) region.showPopover();
     else region.hidePopover();
@@ -315,7 +323,7 @@ export class IdgToastRegion {
         aria-label={this.label}
         aria-keyshortcuts={this.hotkey}
         tabindex="-1"
-        popover="manual"
+        popover={this.embedded ? undefined : "manual"}
         onToggle={this.handleToggle}
       >
         <slot onSlotchange={this.sync} />

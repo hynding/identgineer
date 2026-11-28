@@ -13,6 +13,9 @@ import type { CheckedDetail } from "../../utils/event-details";
 import { validityFlags } from "../../utils/validity";
 
 /**
+ * A checkbox with its label, form associated: it takes part in `FormData`, `form.reset()` and
+ * validation like a native one, and can be indeterminate.
+ *
  * @slot - The label. It also names the checkbox.
  * @part control - The native checkbox.
  * @part label - The text beside the box.

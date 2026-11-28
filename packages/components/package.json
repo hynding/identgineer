@@ -21,6 +21,7 @@
       "import": "./dist/components/index.js"
     },
     "./docs.json": "./dist/docs.json",
+    "./bundles": "./stencil-bundles.ts",
     "./stencil-workspace-sources": "./stencil-workspace-sources.ts",
     "./browser/without-calc-size": "./browser/without-calc-size.ts",
     "./browser/without-style-queries": "./browser/without-style-queries.ts"

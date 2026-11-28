@@ -2,6 +2,7 @@ import {
   CODE_LANGUAGES,
   CONTENT_LIMITS,
   EXAMPLE_NAMES,
+  SHOWCASE_EXAMPLE_NAMES,
   type Block,
   type BlockType,
   type ContentPage,
@@ -15,6 +16,8 @@ import { RESERVED_IDS, headingId } from "./headings.ts";
 /** What a page is checked against: the paths of the site's live pages, which links may name. */
 export interface ValidationContext {
   readonly paths: ReadonlySet<string>;
+  /** Pages a link may name that the set does not list, for a reader that has no list of them. */
+  readonly accepts?: (path: string) => boolean;
 }
 
 /** Where a page was refused and why: which block, which field and which rule. */
@@ -71,6 +74,16 @@ const FORBIDDEN_IN_TEXT =
 const FORBIDDEN_IN_CODE =
   /[\u0000-\u0008\u000b-\u001f\u007f-\u009f\u061c\u180e\u200b\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2028\u2029\ufeff]|[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/u;
 /* eslint-enable no-control-regex */
+
+/**
+ * Text from outside with what the validator refuses taken out: a line break, a tab and the line and
+ * paragraph separators become a space, every other forbidden character goes, and runs of spaces
+ * become one. What it returns is never refused for its characters.
+ */
+export function withoutForbiddenText(value: string): string {
+  const spaced = value.replace(/[\n\r\t\u2028\u2029]+/g, " ");
+  return spaced.replace(new RegExp(FORBIDDEN_IN_TEXT.source, "gu"), "").replace(/\s+/g, " ").trim();
+}
 
 class Refusal extends Error {
   readonly path: string;
@@ -215,8 +228,9 @@ function flag(fields: Record<string, unknown>, key: string, path: string): boole
  * A path of the site as the route table writes it: given exactly, or without its last slash (as a
  * CMS's link field lets an editor write `/identity`), which is put back.
  */
-function sitePath(href: string, paths: ReadonlySet<string>): string | undefined {
-  if (paths.has(href)) return href;
+function sitePath(href: string, context: ValidationContext): string | undefined {
+  const { paths, accepts } = context;
+  if (paths.has(href) || accepts?.(href) === true) return href;
   return !href.endsWith("/") && paths.has(`${href}/`) ? `${href}/` : undefined;
 }
 
@@ -231,7 +245,7 @@ function linkTarget(value: unknown, path: string, context: ValidationContext): s
   const href = text(value, path, CONTENT_LIMITS.href);
   if (href.startsWith("#")) return href;
   if (href.startsWith("/")) {
-    const page = sitePath(href, context.paths);
+    const page = sitePath(href, context);
     if (page !== undefined) return page;
     throw new Refusal(path, `${quote(href)} ${LINK_REFUSED}`);
   }
@@ -406,7 +420,7 @@ class BodyReader {
           fields.name,
           "name",
           EXAMPLE_NAMES,
-          `a live example (${EXAMPLE_NAMES.join(", ")})`,
+          `a live example (${SHOWCASE_EXAMPLE_NAMES.join(", ")}, or the tag of a component)`,
         );
         const caption = optionalText(fields, "caption", "", CONTENT_LIMITS.caption);
         return caption === undefined
@@ -519,7 +533,7 @@ export function parseNavigationItem(
     const fields = fieldsOf(input, "", ["label", "href", "placement", "order"]);
     const label = text(fields.label, "label", NAVIGATION_LABEL);
     const given = text(fields.href, "href", CONTENT_LIMITS.href);
-    const href = sitePath(given, navigationPaths);
+    const href = sitePath(given, { paths: navigationPaths });
     if (href === undefined) {
       throw new Refusal("href", `${quote(given)} is not a page of the site's navigation`);
     }

@@ -23,4 +23,17 @@ describe("a content page read from its attribute", () => {
     };
     expect(readContentPage(JSON.stringify(page)).ok).toBe(false);
   });
+
+  it("takes a link to the page of a component, which the browser has no list of", () => {
+    const page = (href: string) => ({
+      slug: "components",
+      title: "Components",
+      summary: "The components.",
+      seo: {},
+      body: [{ type: "paragraph", content: [{ type: "link", href, text: "x" }] }],
+    });
+    expect(readContentPage(JSON.stringify(page("/components/idg-button/"))).ok).toBe(true);
+    expect(readContentPage(JSON.stringify(page("/components/button/"))).ok).toBe(false);
+    expect(readContentPage(JSON.stringify(page("/components/idg-a/../x/"))).ok).toBe(false);
+  });
 });

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { parseHtmlToDocument } from "@stencil/core/mock-doc";
 import { beforeAll, describe, expect, it } from "vitest";
 import { HEADERS_FILE, styleSource } from "../scripts/security-headers";
+import { generatedRoutes } from "../src/reference/generated-routes";
 import { livePaths, pageFile, prerenderedPages } from "../src/routes";
 
 const WWW = fileURLToPath(new URL("../www", import.meta.url));
@@ -72,6 +73,9 @@ function servedFile(path: string): string | undefined {
 }
 
 const built = existsSync(join(WWW, HEADERS_FILE));
+
+// The pages made from the components package's documentation, as the build wrote them.
+const GENERATED = built ? generatedRoutes() : [];
 const required = process.env.CI !== undefined && process.env.CI !== "";
 
 describe("the site's build output", () => {
@@ -113,14 +117,14 @@ describe.skipIf(!built)("the built site", () => {
   });
 
   it("has a file for every live route and a 404 page", () => {
-    for (const path of livePaths()) expect(htmlFiles).toContain(pageFile(path));
+    for (const path of livePaths(GENERATED)) expect(htmlFiles).toContain(pageFile(path));
     expect(htmlFiles).toContain("404.html");
   });
 
   it("lists every live route in its sitemap by its canonical address, and the sitemap in robots.txt", () => {
     const sitemap = readFileSync(join(WWW, "sitemap.xml"), "utf8");
     const listed = [...sitemap.matchAll(/<loc>([^<]*)<\/loc>/g)].map((match) => match[1]);
-    expect(listed).toEqual([...livePaths()].map((path) => new URL(path, siteOrigin).href));
+    expect(listed).toEqual([...livePaths(GENERATED)].map((path) => new URL(path, siteOrigin).href));
     expect(sitemap).not.toContain("404");
     const robots = readFileSync(join(WWW, "robots.txt"), "utf8");
     expect(robots).toContain(`Sitemap: ${siteOrigin}/sitemap.xml\n`);
@@ -128,7 +132,7 @@ describe.skipIf(!built)("the built site", () => {
 
   it("has no page that is not in the route table", () => {
     expect(htmlFiles.sort()).toEqual(
-      prerenderedPages()
+      prerenderedPages(GENERATED)
         .map((page) => page.file)
         .sort(),
     );
@@ -176,6 +180,16 @@ describe.skipIf(!built)("the built site", () => {
         .filter(({ name }) => name === "style" || name.startsWith("on"))
         .map(({ name }) => `${element.localName}[${name}]`),
     );
+    expect(found).toEqual([]);
+  });
+
+  // The elements above are those the parser attaches; the markup is read as written, so that an
+  // attribute inside a declarative shadow root is found too, which the policy would block.
+  it.each(htmlFiles)("%s is written without a style attribute anywhere in its markup", (file) => {
+    const html = readFileSync(join(WWW, file), "utf8");
+    // A plain scan for the attribute name inside any start tag, not the prerender's own tag reader,
+    // so a gap in that reader cannot hide what it missed.
+    const found = [...html.matchAll(/<[a-zA-Z][^>]*?\sstyle\s*=/g)].map((m) => m[0].slice(0, 80));
     expect(found).toEqual([]);
   });
 

@@ -6,6 +6,8 @@ import { bootstrapScriptAttributes } from "@identgineer/variations/bootstrap-tag
 import type { ContentPage } from "../src/content/content-page.ts";
 import { STATIC_PAGES } from "../src/content/pages/index.ts";
 import { NO_LABELS, type NavigationLabels } from "../src/content/navigation.ts";
+import { checkReference } from "../src/reference/component-pages.ts";
+import { builtReference } from "../src/reference/generated-routes.ts";
 import { prerenderedPages, type PrerenderedPage } from "../src/routes.ts";
 import { resolveSiteContent } from "./cms-content.ts";
 import { renderDocument, type DocumentAssets } from "./document.ts";
@@ -15,6 +17,8 @@ import {
   contentSecurityPolicy,
   inlineStyles,
   securityHeaders,
+  unexpectedStyleAttributes,
+  withoutStyleAttributes,
 } from "./security-headers.ts";
 import { prepareServerDocument } from "./server-document.ts";
 import { siteUrlFrom } from "./site-url.ts";
@@ -101,23 +105,45 @@ async function prerender(): Promise<void> {
     staticPages: STATIC_PAGES,
   });
   for (const warning of warnings) console.warn(warning);
+  // The components' pages are made from the library's own documentation and are checked before
+  // anything is written; a CMS record cannot replace them.
+  const reference = builtReference();
+  checkReference(reference);
+  const generated = reference.components.map(({ route }) => route);
+  const generatedContents = new Map(
+    [reference.index, ...reference.components.map(({ page }) => page)].map((page) => [
+      page.slug,
+      page,
+    ]),
+  );
   const noIndex = new Set<string>();
-  for (const page of prerenderedPages()) {
-    const content = page.content === undefined ? undefined : contents.get(page.content);
+  const pages = prerenderedPages(generated);
+  for (const page of pages) {
+    const content =
+      page.content === undefined
+        ? undefined
+        : (generatedContents.get(page.content) ?? contents.get(page.content));
     if (page.content !== undefined && content === undefined) {
       throw new Error(`${page.file} has no content page "${page.content}"`);
     }
     if (content?.seo.noIndex === true && page.path !== undefined) noIndex.add(page.path);
-    const html = await render(hydrate, page, content, labels, siteUrl);
+    const rendered = await render(hydrate, page, content, labels, siteUrl);
+    const unexpected = unexpectedStyleAttributes(rendered);
+    if (unexpected.length > 0) {
+      throw new Error(
+        `${page.file} has style attributes the build would drop: ${unexpected.join(" | ")}`,
+      );
+    }
+    const html = withoutStyleAttributes(rendered);
     styles.push(...inlineStyles(html));
     write(page.file, html);
   }
-  write("sitemap.xml", sitemapXml(siteUrl, noIndex));
+  write("sitemap.xml", sitemapXml(siteUrl, noIndex, generated));
   write("robots.txt", robotsTxt(siteUrl));
   for (const file of UNUSED_OUTPUT) rmSync(join(WWW, file), { force: true });
   const headers = securityHeaders(contentSecurityPolicy(styles));
   write(HEADERS_FILE, `${JSON.stringify(headers, null, 2)}\n`);
-  console.log(`Prerendered ${String(prerenderedPages().length)} pages for ${siteUrl.href}`);
+  console.log(`Prerendered ${String(pages.length)} pages for ${siteUrl.href}`);
 }
 
 await prerender();

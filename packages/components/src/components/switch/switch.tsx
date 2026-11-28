@@ -13,6 +13,9 @@ import type { CheckedDetail } from "../../utils/event-details";
 import { validityFlags } from "../../utils/controls-copies";
 
 /**
+ * An on and off switch with its label, form associated: it takes part in `FormData`,
+ * `form.reset()` and validation like a native checkbox, and is read as a switch.
+ *
  * @slot - The label. It also names the switch.
  * @part control - The native input, given the switch role.
  * @part label - The text beside the box.

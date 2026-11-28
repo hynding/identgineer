@@ -76,7 +76,10 @@ Two builds are produced by `pnpm --filter @identgineer/components build`:
 - **Custom elements** (`@identgineer/components/custom-elements`). Tree-shakeable, needs a bundler
   to resolve `@stencil/core`.
 
-`dist/docs.json` describes every component (props, slots, parts) for the sandbox. Framework
+`dist/docs.json` describes every component (props, events, methods, slots, parts and custom
+properties) for the sandbox, and the site's components reference is generated from it at build
+time, so a component's doc comments are what a visitor reads; the site's build needs it, which
+is why the site's build follows this package's. Framework
 wrappers are a later feature.
 
 To avoid a flash of unstyled content without an injected `<style>`, hide the elements yourself:
@@ -776,7 +779,9 @@ which the toast removes itself. Parts `toast`, `icon`, `heading`, `description`,
 `idg-toast-region`: `position` (`top-start`, `top-center`, `top-end`, `bottom-start`,
 `bottom-center`, `bottom-end`, logical, so `start` is the right in right-to-left text; default
 `bottom-end`), `max` (shown at once, default 3), `label`
-(default `Notifications`) and `hotkey` (default `F8`). Part `region`.
+(default `Notifications`), `hotkey` (default `F8`) and `embedded` (default off: the region is laid out
+inside its host, which the page positions, instead of in the top layer at the window's corner, so
+that a page can show it standing in a frame). Part `region`.
 
 - **Announcements.** The region has one polite live region, and an assertive one used only for
   `danger`. Each toast is announced as it comes into view (a queued one when its turn comes), as

@@ -11,6 +11,17 @@ const UX_MODES = REGISTRY.ux.variations.map((variation) => variation.id);
 /** The smallest phone in common use, a phone, a tablet and a desktop window. */
 const FIT_WIDTHS = [320, 390, 820, 1440] as const;
 
+/**
+ * The widths the reference and the gallery are swept at: also the two widths the grids of their
+ * tiles change columns near, and the widest window, where a grid is likeliest to stretch.
+ */
+const GRID_FIT_WIDTHS = [320, 390, 820, 1100, 1152, 1440, 1920] as const;
+const GRID_PAGES: ReadonlySet<string> = new Set([
+  "/components/",
+  "/components/idg-input/",
+  "/variations/",
+]);
+
 // Every design with every layout and every UX mode, the theme and the scheme turning with them, so
 // that each theme meets each pair of the other three across the sweep, in each engine. A page is
 // opened once for each look and the window then widened through the four widths. Without calc-size()
@@ -25,8 +36,9 @@ for (const engine of ENGINES) {
         // each design and, from page to page, different pairs.
         const paired = (designIndex + pageIndex) % LAYOUTS.length === layoutIndex;
         if (!FULLY_SWEPT.has(path) && !paired) return;
+        const widths = GRID_PAGES.has(path) ? GRID_FIT_WIDTHS : FIT_WIDTHS;
         test(
-          `${name}${engine.name} in ${design} with ${layout} fits every UX mode at 320, 390, 820 and 1440px: no sideways scroll, nothing cut or spilled, no word broken, no controls over each other`,
+          `${name}${engine.name} in ${design} with ${layout} fits every UX mode at ${widths.join(", ")}px: no sideways scroll, nothing cut or spilled, no word broken, no controls over each other`,
           { tag: fitTag(engine.key, path) },
           async ({ page }) => {
             test.setTimeout(60_000);
@@ -35,7 +47,7 @@ for (const engine of ENGINES) {
               const turn = designIndex + layoutIndex + uxIndex;
               const theme = THEMES[turn % THEMES.length] ?? "aurora";
               const scheme = turn % 2 === 0 ? "light" : "dark";
-              await page.setViewportSize({ width: FIT_WIDTHS[0], height: 900 });
+              await page.setViewportSize({ width: 320, height: 900 });
               await page.goto(
                 `${path}?idg-design=${design}&idg-theme=${theme}&idg-layout=${layout}&idg-ux=${ux}&idg-scheme=${scheme}`,
               );
@@ -43,7 +55,7 @@ for (const engine of ENGINES) {
               if (engine.strip) {
                 expect(await engine.strip(page), `${engine.name} taken out`).toBeGreaterThan(0);
               }
-              for (const width of FIT_WIDTHS) {
+              for (const width of widths) {
                 await page.setViewportSize({ width, height: 900 });
                 await settled(page);
                 const where = `${theme}/${ux}/${scheme} at ${String(width)}px`;

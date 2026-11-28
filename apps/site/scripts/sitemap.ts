@@ -1,11 +1,16 @@
-import { livePaths } from "../src/routes.ts";
+import { livePaths, type LiveRoute } from "../src/routes.ts";
 
 /**
- * The sitemap: every live page by its canonical address, in the route table's order, but those
+ * The sitemap: every live page by its canonical address, in the route table's order and then the
+ * generated pages', but those
  * asked to stay out of search. The page not found is no route, so it is never listed.
  */
-export function sitemapXml(siteUrl: URL, noIndex: ReadonlySet<string>): string {
-  const urls = [...livePaths()]
+export function sitemapXml(
+  siteUrl: URL,
+  noIndex: ReadonlySet<string>,
+  generated: readonly LiveRoute[] = [],
+): string {
+  const urls = [...livePaths(generated)]
     .filter((path) => !noIndex.has(path))
     .map((path) => `  <url><loc>${new URL(path, siteUrl).href}</loc></url>`);
   return [

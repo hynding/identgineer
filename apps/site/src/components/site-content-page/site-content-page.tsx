@@ -1,18 +1,28 @@
-import { Component, Prop, State, h } from "@stencil/core";
+import { Component, Prop, State, h, type VNode } from "@stencil/core";
 import type {
   Block,
   CodeBlock,
   CodeLanguage,
-  ContentPage,
+  ExampleBlock,
   ExampleName,
   Inline,
   InlineContent,
   TableBlock,
 } from "../../content/content-page";
 import { headingId, sectionsOf, tableOfContents, type BodySection } from "../../content/headings";
+import type { ComponentExample, ExampleNode } from "../../examples/component-example";
+import { usageSnippet } from "../../examples/component-example";
+import { COMPONENT_EXAMPLES, type ComponentExampleName } from "../../examples/component-examples";
 import { readContentPage } from "../../content/read-content-page";
-import { ROUTES, neighboursOf, sectionOf, type ContentRoute } from "../../routes";
+import {
+  neighboursOf,
+  routeOfContent,
+  routeOfPath,
+  sectionOf,
+  type ContentRoute,
+} from "../../routes";
 import { DashboardFigures, SignInPreview, ThemeTiles } from "../../shell/showcase";
+import { ContentsNav } from "../../shell/contents-nav";
 import { SiteShell } from "../../shell/site-shell";
 
 const LANGUAGE_NAMES: Readonly<Record<CodeLanguage, string>> = {
@@ -29,7 +39,7 @@ const LANGUAGE_NAMES: Readonly<Record<CodeLanguage, string>> = {
  * The live examples content can place, by name. Each is drawn from the project's own components
  * with sample data; content names one and carries none of its markup.
  */
-const EXAMPLES: Readonly<Record<ExampleName, () => unknown>> = {
+const SHOWCASES: Readonly<Record<Exclude<ExampleName, ComponentExampleName>, () => unknown>> = {
   "sign-in": () => <SignInPreview />,
   "dashboard-figures": () => <DashboardFigures />,
   "theme-tiles": () => (
@@ -39,11 +49,35 @@ const EXAMPLES: Readonly<Record<ExampleName, () => unknown>> = {
   ),
 };
 
-function contentRouteOf(slug: string): ContentRoute | undefined {
-  return ROUTES.find(
-    (route): route is ContentRoute =>
-      route.status === "live" && route.component === "site-content-page" && route.content === slug,
+function isComponentExample(name: ExampleName): name is ComponentExampleName {
+  return Object.hasOwn(COMPONENT_EXAMPLES, name);
+}
+
+/**
+ * An example's description as the element it describes. The tags and attributes come from the
+ * registry, never from a page's content, and the text is a text node: nothing here reads markup.
+ */
+function drawExample(node: ExampleNode): string | VNode {
+  if (typeof node === "string") return node;
+  return h(
+    node.tag,
+    { ...node.attributes, ...node.properties },
+    ...(node.children ?? []).map(drawExample),
   );
+}
+
+/**
+ * What holds an example that is drawn inert, so it can be looked at and not used. The words that
+ * say so are outside the inert part, where a screen reader reads them, and every inert example has
+ * them because this is the only way to draw one.
+ */
+function PreviewFrame(_: unknown, children: VNode[]) {
+  return [
+    <p class="preview-tag">Preview only</p>,
+    <div class="preview-frame" inert>
+      {children}
+    </div>,
+  ];
 }
 
 /**
@@ -122,6 +156,13 @@ export class SiteContentPage {
   /** What the last press of a copy button did, for a polite status. */
   @State() private copyStatus = "";
 
+  /** Opens the dialog of an example with the method its description names, as a page's script would. */
+  private open(event: MouseEvent, tag: string, method: "show" | "showModal"): void {
+    const figure = (event.currentTarget as HTMLElement).closest("figure");
+    const target = figure?.querySelector<HTMLElement & Record<string, () => Promise<void>>>(tag);
+    void target?.[method]?.();
+  }
+
   private async copy(block: CodeBlock): Promise<void> {
     const name = `the ${block.caption ?? LANGUAGE_NAMES[block.language]} sample`;
     try {
@@ -157,23 +198,34 @@ export class SiteContentPage {
     );
   }
 
+  /**
+   * A table of four columns or more is drawn as one card for each row on a window too narrow for
+   * its columns. Its cells then stop being table cells to the browser, so each says what it is
+   * with a role, and carries its column's name for the card to show.
+   */
   private renderTable(block: TableBlock, id: string) {
+    const cards = block.columns.length > 3;
+    const role = (name: string) => (cards ? { role: name } : {});
     return (
       <div class="table-scroll" role="region" aria-labelledby={id} tabindex="0">
-        <table>
+        <table class={cards ? "table-cards" : undefined} {...role("table")}>
           <caption id={id}>{block.caption}</caption>
-          <thead>
-            <tr>
+          <thead {...role("rowgroup")}>
+            <tr {...role("row")}>
               {block.columns.map((column) => (
-                <th scope="col">{column}</th>
+                <th scope="col" {...role("columnheader")}>
+                  {column}
+                </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody {...role("rowgroup")}>
             {block.rows.map((row) => (
-              <tr>
-                {row.map((cell) => (
-                  <td>{renderInlines(cell)}</td>
+              <tr {...role("row")}>
+                {row.map((cell, column) => (
+                  <td data-label={cards ? block.columns[column] : undefined} {...role("cell")}>
+                    {renderInlines(cell)}
+                  </td>
                 ))}
               </tr>
             ))}
@@ -214,13 +266,54 @@ export class SiteContentPage {
         // A heading's id holds only letters, digits and hyphens, so no heading can take this one.
         return this.renderTable(block, `table_${String(index)}`);
       case "example":
-        return (
-          <figure class={`example example-${block.name}`}>
-            {EXAMPLES[block.name]()}
-            {block.caption === undefined ? null : <figcaption>{block.caption}</figcaption>}
-          </figure>
-        );
+        return this.renderExample(block);
     }
+  }
+
+  /**
+   * A component's example is the live element beside the HTML that writes it; the home page's demos
+   * stand alone. Both are in a figure with the caption under it.
+   */
+  private renderExample(block: ExampleBlock) {
+    const caption = block.caption === undefined ? null : <figcaption>{block.caption}</figcaption>;
+    if (!isComponentExample(block.name)) {
+      return (
+        <figure class={`example example-${block.name}`}>
+          {SHOWCASES[block.name]()}
+          {caption}
+        </figure>
+      );
+    }
+    const example: ComponentExample = COMPONENT_EXAMPLES[block.name];
+    const { opener } = example;
+    const stage = example.nodes.map(drawExample);
+    return (
+      <figure class="example example-component">
+        <div class="example-body">
+          <div class={`example-stage stage-${example.stage}`}>
+            {opener === undefined ? null : (
+              <idg-button
+                class="needs-script"
+                variant="secondary"
+                onClick={(event: MouseEvent) => {
+                  this.open(event, block.name, opener.method);
+                }}
+              >
+                {opener.label}
+              </idg-button>
+            )}
+            {example.inert === true ? <PreviewFrame>{stage}</PreviewFrame> : stage}
+          </div>
+          {this.renderCode({
+            type: "code",
+            language: "html",
+            code: usageSnippet(example.nodes),
+            caption: "Usage",
+          })}
+        </div>
+        {caption}
+      </figure>
+    );
   }
 
   private renderSection(section: BodySection, body: readonly Block[]) {
@@ -232,45 +325,6 @@ export class SiteContentPage {
         <h2 id={id}>{section.heading.text}</h2>
         {blocks}
       </section>
-    );
-  }
-
-  /**
-   * The table of contents, drawn twice: in the shell's aside, where the home page has its own, and
-   * beside the article for the layouts that draw no aside (centered, side-rail and split-hero). The
-   * stylesheet shows one of the two in each layout.
-   */
-  private renderContents(page: ContentPage, inline: boolean) {
-    const entries = tableOfContents(page.body);
-    if (entries.length === 0) return null;
-    const list = (
-      <ul>
-        {entries.map((entry) => (
-          <li>
-            <a href={`#${entry.id}`}>{entry.text}</a>
-            {entry.children.length === 0 ? null : (
-              <ul>
-                {entry.children.map((child) => (
-                  <li>
-                    <a href={`#${child.id}`}>{child.text}</a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </li>
-        ))}
-      </ul>
-    );
-    return inline ? (
-      <nav class="contents contents-inline" aria-label="On this page">
-        <h2>On this page</h2>
-        {list}
-      </nav>
-    ) : (
-      <nav slot="aside" class="contents on-this-page" aria-labelledby="contents-title">
-        <h2 id="contents-title">On this page</h2>
-        {list}
-      </nav>
     );
   }
 
@@ -330,22 +384,31 @@ export class SiteContentPage {
 
   render() {
     const result = readContentPage(this.page);
-    const route = result.ok ? contentRouteOf(result.page.slug) : undefined;
+    const route = result.ok ? routeOfContent(result.page.slug) : undefined;
     if (!result.ok || !route) return this.renderUnavailable();
     const { page } = result;
     const section = sectionOf(route.path);
+    // A page that sits under another without a section's navigation (a component's) links back.
+    const parent =
+      route.parent !== undefined && section.length === 0 ? routeOfPath(route.parent) : undefined;
     return (
       <SiteShell current={route.path} navigation={this.navigation}>
         <div slot="hero" class="page-hero">
-          <p class="eyebrow">{section[0]?.label ?? route.label}</p>
+          <p class="eyebrow">
+            {parent === undefined ? (
+              (section[0]?.label ?? route.label)
+            ) : (
+              <a href={parent.path}>{parent.label}</a>
+            )}
+          </p>
           <h1 id="page-title">{page.title}</h1>
-          <p class="lede">{page.summary}</p>
+          <p class="lede">{breakable(page.summary)}</p>
         </div>
         <div class="reading">
           <div class={{ "reading-body": true, "with-section": section.length > 0 }}>
             <div class="reading-guide">
               {this.renderSectionNavigation(route)}
-              {this.renderContents(page, true)}
+              <ContentsNav entries={tableOfContents(page.body)} inline />
             </div>
             <article class="prose" aria-labelledby="page-title">
               {sectionsOf(page.body).map((part) => this.renderSection(part, page.body))}
@@ -356,7 +419,7 @@ export class SiteContentPage {
             </p>
           </div>
         </div>
-        {this.renderContents(page, false)}
+        <ContentsNav entries={tableOfContents(page.body)} inline={false} />
       </SiteShell>
     );
   }
