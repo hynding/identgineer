@@ -11,6 +11,8 @@ import { ContentsNav } from "../../shell/contents-nav";
 import { SiteShell } from "../../shell/site-shell";
 import { describeChoice, describeLook, labelOf } from "../../shell/appearance";
 import { currentMarkerCss } from "../../gallery/current-marker";
+import { countsLine } from "../../gallery/gallery-counts";
+import { gridCss } from "../../gallery/gallery-grid";
 import {
   COMBINE_ID,
   combinationRecords,
@@ -23,20 +25,51 @@ import {
 const THUMBNAIL_PARTS = ["bar", "rail", "hero", "main", "aside", "foot", "tile"] as const;
 const THUMBNAIL_TILES = 6;
 
+/** The most tiles in a list that the grid's rules are written for; a longer list stands in one column. */
+const GRID_COUNTS = 24;
+
 const AXES: readonly VariationAxis[] = ["theme", "design", "layout", "ux"];
 
 /** What each axis changes, in a line under its heading. */
 const SECTION_SAYS: Readonly<Record<VariationAxis, string>> = {
-  theme: "Colour, type and a light and a dark scheme. Each tile is drawn in its own theme.",
-  design: "Surfaces, borders, corners and depth. Each tile is drawn in its own design.",
+  theme:
+    "Colour and type, in a light and a dark scheme. Each tile shows the theme's heading face and its five colours in both.",
+  design:
+    "Surfaces, borders, corners and depth. Each tile is a card, two buttons and a progress bar drawn in its own design.",
   layout:
-    "Where the page's regions go. Each tile is a sketch of its layout, not the layout itself.",
-  ux: "Density, type scale, motion and hints. Each tile is drawn in its own mode.",
+    "Where the page's regions go. Each tile is a wireframe of its layout in the page's colours, not the layout itself.",
+  ux: "Density, type scale, motion and hints. Each tile shows its mode's controls, spacing, text, reading width, focus ring, hint and shortcut, and moves its motion when you point at it.",
 };
 
+/** The sizes a theme's sample is set in: a heading, a line of text and the theme's colours. */
+const SWATCHES = ["bg", "surface", "text", "accent", "accent-subtle"] as const;
+
 /**
- * The components a theme, a design or a UX mode is drawn on: a small card with a button, a badge
- * and a progress bar, the same in every tile, so what differs between tiles is the value alone.
+ * A theme drawn in both its schemes: a heading in the theme's display face, a line in its body face
+ * and the colours it is made of. Each half carries the theme and a scheme of its own, so the page's
+ * own scheme choice changes neither.
+ */
+function ThemeSample({ theme, label }: { readonly theme: string; readonly label: string }) {
+  return (
+    <div class="theme-sample">
+      {(["light", "dark"] as const).map((scheme) => (
+        <div class="scheme-half" data-theme={theme} data-scheme={scheme}>
+          <p class="sample-heading">{label}</p>
+          <p class="sample-text">Body text</p>
+          <span class="scheme-swatches">
+            {SWATCHES.map((role) => (
+              <span class={`scheme-swatch scheme-swatch-${role}`} />
+            ))}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The components a design is drawn on: a raised card holding a badge, two buttons and a progress
+ * bar, the same in every tile, so what differs between tiles is the design alone.
  */
 function Sample() {
   return (
@@ -46,7 +79,10 @@ function Sample() {
         <idg-badge variant="accent" size="sm">
           Badge
         </idg-badge>
-        <idg-button size="sm">Button</idg-button>
+        <idg-button size="sm">Save</idg-button>
+        <idg-button size="sm" variant="secondary">
+          Cancel
+        </idg-button>
         <idg-progress value={64} />
       </div>
     </idg-card>
@@ -54,18 +90,52 @@ function Sample() {
 }
 
 /**
- * A sketch of a layout in CSS: its regions as boxes. A layout cannot be scoped to a container, as
- * a theme, a design or a UX mode can, because it is the arrangement of the page's own landmarks,
- * which idg-layout draws once, so the thumbnail is a drawing of it and says so.
+ * What a UX mode sets, as things a still frame shows: the size of its controls and the space
+ * between them, its type, the width of a line of text, how heavy its focus ring is, whether it
+ * shows a hint and a shortcut, and a dot that travels the way its motion does when the tile is
+ * hovered or focused.
+ */
+function UxSample() {
+  return (
+    <div class="ux-sample">
+      <div class="ux-controls">
+        <span class="ux-control">Save</span>
+        <span class="ux-control ux-focused">Edit</span>
+        <kbd class="ux-kbd">Ctrl K</kbd>
+      </div>
+      <div class="ux-type">
+        Aa <span class="ux-measure" />
+      </div>
+      <div class="ux-track">
+        <span class="ux-dot" />
+      </div>
+      <p class="ux-hint">Tip: press ? for help</p>
+    </div>
+  );
+}
+
+/**
+ * A wireframe of a layout in CSS: its regions as boxes, with the page's brand mark, its navigation
+ * and its headings drawn as lines. A layout cannot be scoped to a container, as a theme, a design
+ * or a UX mode can, because it is the arrangement of the page's own landmarks, which idg-layout
+ * draws once, so the thumbnail is a drawing of it and says so.
  */
 function LayoutThumbnail({ id }: { readonly id: string }) {
+  const brand = () => [
+    <i class="t-title" />,
+    <i class="t-link" />,
+    <i class="t-link" />,
+    <i class="t-link" />,
+  ];
   return (
     <div class="layout-thumb" data-layout={id}>
-      {THUMBNAIL_PARTS.flatMap((part) =>
-        part === "tile"
-          ? Array.from({ length: THUMBNAIL_TILES }, () => <span class="t-tile" />)
-          : [<span class={`t-${part}`} />],
-      )}
+      {THUMBNAIL_PARTS.flatMap((part) => {
+        if (part === "tile") {
+          return Array.from({ length: THUMBNAIL_TILES }, () => <span class="t-tile" />);
+        }
+        const inside = part === "bar" || part === "rail" ? brand() : null;
+        return [<span class={`t-${part}`}>{inside}</span>];
+      })}
     </div>
   );
 }
@@ -159,9 +229,20 @@ export class SiteVariations {
   }
 
   private renderPreview(section: GallerySection, tile: GalleryTile) {
+    const sample = {
+      theme: <ThemeSample theme={tile.id} label={tile.label} />,
+      design: <Sample />,
+      layout: <LayoutThumbnail id={tile.id} />,
+      ux: <UxSample />,
+    }[section.axis];
     return (
-      <div class="tile-preview" aria-hidden="true" inert {...this.scopeOf(section, tile)}>
-        {section.axis === "layout" ? <LayoutThumbnail id={tile.id} /> : <Sample />}
+      <div
+        class={`tile-preview tile-preview-${section.axis}`}
+        aria-hidden="true"
+        inert
+        {...this.scopeOf(section, tile)}
+      >
+        {sample}
       </div>
     );
   }
@@ -170,25 +251,27 @@ export class SiteVariations {
     const describedBy = `${section.axis}-${tile.id}-description`;
     return (
       <li class="gallery-tile" data-axis={section.axis} data-value={tile.id}>
-        {this.renderPreview(section, tile)}
-        <div class="tile-text">
-          <h3 class="tile-name">
-            <a
-              class="tile-link"
-              href={tile.href}
-              aria-describedby={describedBy}
-              onClick={this.choose(
-                { [section.axis]: tile.id },
-                describeChoice(section.axis, tile.id),
-              )}
-            >
-              {tile.label}
-            </a>
-            <span class="tile-current">Current</span>
-          </h3>
-          <p class="tile-description" id={describedBy}>
-            {tile.description}
-          </p>
+        <div class="tile-card">
+          {this.renderPreview(section, tile)}
+          <div class="tile-text">
+            <h3 class="tile-name">
+              <a
+                class="tile-link"
+                href={tile.href}
+                aria-describedby={describedBy}
+                onClick={this.choose(
+                  { [section.axis]: tile.id },
+                  describeChoice(section.axis, tile.id),
+                )}
+              >
+                {tile.label}
+              </a>
+              <span class="tile-current">Current</span>
+            </h3>
+            <p class="tile-description" id={describedBy}>
+              {tile.description}
+            </p>
+          </div>
         </div>
       </li>
     );
@@ -200,7 +283,7 @@ export class SiteVariations {
         <h2 id={section.id}>{section.title}</h2>
         <p class="section-says">{SECTION_SAYS[section.axis]}</p>
         <div class="gallery-room">
-          <ul class="gallery-tiles">
+          <ul class="gallery-tiles" data-count={String(section.tiles.length)}>
             {section.tiles.map((tile) => this.renderTile(section, tile))}
           </ul>
         </div>
@@ -216,9 +299,19 @@ export class SiteVariations {
           Four values make a look. These go well together, and each link applies all four.
         </p>
         <div class="gallery-room">
-          <ul class="combos">
+          <ul class="gallery-tiles combos" data-count={String(combinationRecords().length)}>
             {combinationRecords().map((combination) => (
               <li class="combo">
+                <div
+                  class="combo-preview"
+                  aria-hidden="true"
+                  inert
+                  data-theme={combination.state.theme}
+                  data-design={combination.state.design}
+                  data-ux={combination.state.ux}
+                >
+                  <LayoutThumbnail id={combination.state.layout} />
+                </div>
                 <h3 class="combo-name">
                   <a
                     class="combo-link"
@@ -257,13 +350,15 @@ export class SiteVariations {
     ];
     return (
       <SiteShell current="/variations/" navigation={this.navigation}>
-        <style>{currentMarkerCss(sections)}</style>
+        <style>
+          {currentMarkerCss(sections)}
+          {gridCss(Math.max(GRID_COUNTS, ...sections.map((section) => section.tiles.length)))}
+        </style>
         <div slot="hero" class="page-hero">
           <p class="eyebrow">Variations</p>
           <h1 id="page-title">Variations gallery</h1>
           <p class="lede">
-            Eight themes, eight designs, eight layouts and eight UX modes: every value on a tile,
-            ready to apply to this page and to mix.
+            {countsLine()}: every value on a tile, ready to apply to this page and to mix.
           </p>
         </div>
         <div class="reading">

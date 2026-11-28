@@ -201,12 +201,30 @@ the site's own `build` alone, run without that package's, stops with the message
 preview, from `@identgineer/variations`' registries: a value added to a registry has a tile at the
 next build, and a fixture in `src/gallery/gallery-records.test.ts` proves it with a ninth theme.
 
-- A **theme**, **design** or **UX mode** preview is a sample made of real components
-  (a card holding a badge, a button and a progress bar) inside a container that carries the value as the root's
-  attributes do, with the page's other axes mirrored so the tokens resolve as they will on the
-  page.
-- A **layout** preview is not the real `idg-layout`: it is a schematic made of boxes in CSS, one
-  arrangement for each layout, since the real layout draws the whole window.
+- A **theme** tile shows the theme in both its schemes, side by side: a heading in the theme's
+  display face, a line in its body face and its five colours (background, surface, text, accent and
+  the accent's tint). Each half carries the theme and a scheme of its own, so the page's scheme
+  choice changes neither.
+- A **design** tile is a card holding a badge, two buttons and a progress bar, made of the library's
+  real components inside a container that carries the design as the root's attributes do, with the
+  page's other axes mirrored so the tokens resolve as they will on the page.
+- A **UX mode** tile shows what the mode sets, as things a still frame tells apart: the controls'
+  height and the space between them, the type size, a line as wide as the mode's reading width, the
+  weight of the focus ring, a hint and a shortcut where the mode shows them. A dot travels a track
+  with the mode's own duration and easing, and the controls take its hover lift and press scale,
+  when the tile is hovered or focused; for a visitor who asks for reduced motion nothing moves.
+- A **layout** tile is a wireframe in the page's colours, not the real `idg-layout`, which draws the
+  whole window: the bar or rail with the brand mark and links, the hero, the content as lines of text,
+  tiles and the foot, arranged as that layout arranges them.
+- A **combination** has a small page of its own: the wireframe of its layout, drawn in its theme's
+  colours with its design's corners and shadow.
+- The tiles of an axis stand in as many columns as the room holds (a container query on the
+  gallery, so it follows the type scale), one to four. The build writes the rules from each list's
+  own count (`src/gallery/gallery-grid.ts`), so a count a registry changes to is laid out in full
+  rows, or with a last row of at least two, with no rule written for it. A single column wide enough
+  puts the preview beside the text, so it is no taller than the text.
+- The lede and the route's description count the values from the registries
+  (`src/gallery/gallery-counts.ts`), so they stay true when a value is added.
 - Each tile is a link to the page with the choice in its address (`?idg-theme=ember#themes`).
   The bootstrap script reads that address before the page paints, so the link works whenever the
   bootstrap script runs, even if the app's own script is blocked or slow. With the app running, a
