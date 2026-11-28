@@ -7,7 +7,7 @@ export interface ExampleReport {
   readonly escaping: string[];
   /** How much of the stage the example's elements fill, in CSS pixels. */
   readonly size: { readonly width: number; readonly height: number };
-  /** The widths of the example's own elements, and of the room the stage leaves them. */
+  /** The widths of what the stage lays out, and of the room it leaves them. */
   readonly widths: { readonly own: number[]; readonly room: number };
 }
 
@@ -139,8 +139,12 @@ export function inspectExample(page: Page): Promise<ExampleReport> {
     const border =
       Number.parseFloat(getComputedStyle(stage).borderInlineStartWidth) +
       Number.parseFloat(getComputedStyle(stage).borderInlineEndWidth);
+    // What the stage lays out is its own children: a frame, for an example drawn inert.
+    const laidOut = [...stage.children].filter(
+      (element) => !element.matches(".needs-script, .preview-tag"),
+    );
     const widths = {
-      own: own.map((element) => Math.round(boxOf(element).width)),
+      own: laidOut.map((element) => Math.round(boxOf(element).width)),
       room: Math.round(room.width - padding - border),
     };
     return { empty, escaping, size, widths };
