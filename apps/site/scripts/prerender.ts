@@ -3,9 +3,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { HydrateResults, SerializeDocumentOptions } from "@stencil/core/internal";
 import { bootstrapScriptAttributes } from "@identgineer/variations/bootstrap-tag";
+import { BUNDLES } from "@identgineer/components/bundles";
 import type { ContentPage } from "../src/content/content-page.ts";
 import { STATIC_PAGES } from "../src/content/pages/index.ts";
 import { NO_LABELS, type NavigationLabels } from "../src/content/navigation.ts";
+import { checkReference, referencePages } from "../src/reference/component-pages.ts";
+import { readDocsFile } from "../src/reference/docs-file.ts";
 import { prerenderedPages, type PrerenderedPage } from "../src/routes.ts";
 import { resolveSiteContent } from "./cms-content.ts";
 import { renderDocument, type DocumentAssets } from "./document.ts";
@@ -101,9 +104,24 @@ async function prerender(): Promise<void> {
     staticPages: STATIC_PAGES,
   });
   for (const warning of warnings) console.warn(warning);
+  // The components' pages are made from the library's own documentation and are checked before
+  // anything is written; a CMS record cannot replace them.
+  const reference = referencePages(readDocsFile(), BUNDLES);
+  checkReference(reference);
+  const generated = reference.components.map(({ route }) => route);
+  const generatedContents = new Map(
+    [reference.index, ...reference.components.map(({ page }) => page)].map((page) => [
+      page.slug,
+      page,
+    ]),
+  );
   const noIndex = new Set<string>();
-  for (const page of prerenderedPages()) {
-    const content = page.content === undefined ? undefined : contents.get(page.content);
+  const pages = prerenderedPages(generated);
+  for (const page of pages) {
+    const content =
+      page.content === undefined
+        ? undefined
+        : (generatedContents.get(page.content) ?? contents.get(page.content));
     if (page.content !== undefined && content === undefined) {
       throw new Error(`${page.file} has no content page "${page.content}"`);
     }
@@ -112,12 +130,12 @@ async function prerender(): Promise<void> {
     styles.push(...inlineStyles(html));
     write(page.file, html);
   }
-  write("sitemap.xml", sitemapXml(siteUrl, noIndex));
+  write("sitemap.xml", sitemapXml(siteUrl, noIndex, generated));
   write("robots.txt", robotsTxt(siteUrl));
   for (const file of UNUSED_OUTPUT) rmSync(join(WWW, file), { force: true });
   const headers = securityHeaders(contentSecurityPolicy(styles));
   write(HEADERS_FILE, `${JSON.stringify(headers, null, 2)}\n`);
-  console.log(`Prerendered ${String(prerenderedPages().length)} pages for ${siteUrl.href}`);
+  console.log(`Prerendered ${String(pages.length)} pages for ${siteUrl.href}`);
 }
 
 await prerender();

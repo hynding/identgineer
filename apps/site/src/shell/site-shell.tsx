@@ -3,7 +3,7 @@ import { Build, h, type FunctionalComponent } from "@stencil/core";
 // hydrates its components together with the site's own.
 import "@identgineer/components";
 import { readNavigationLabels } from "../content/navigation";
-import { ROUTES, navigationRoutes, type RoutePath } from "../routes";
+import { navigationRoutes, routeOfPath, type RoutePath } from "../routes";
 import { BrandMark } from "./brand-mark";
 
 const APPEARANCE_DIALOG = "appearance";
@@ -26,7 +26,7 @@ export function openAppearance(): void {
  */
 function currentness(path: RoutePath, current: RoutePath | undefined): "page" | "true" | undefined {
   if (path === current) return "page";
-  const parent = ROUTES.find((route) => route.path === current)?.parent;
+  const parent = routeOfPath(current)?.parent;
   return path === parent ? "true" : undefined;
 }
 

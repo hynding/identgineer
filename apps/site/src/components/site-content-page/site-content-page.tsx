@@ -4,14 +4,24 @@ import type {
   CodeBlock,
   CodeLanguage,
   ContentPage,
+  ExampleBlock,
   ExampleName,
   Inline,
   InlineContent,
   TableBlock,
 } from "../../content/content-page";
 import { headingId, sectionsOf, tableOfContents, type BodySection } from "../../content/headings";
+import type { ExampleNode } from "../../examples/component-example";
+import { usageSnippet } from "../../examples/component-example";
+import { COMPONENT_EXAMPLES, type ComponentExampleName } from "../../examples/component-examples";
 import { readContentPage } from "../../content/read-content-page";
-import { ROUTES, neighboursOf, sectionOf, type ContentRoute } from "../../routes";
+import {
+  neighboursOf,
+  routeOfContent,
+  routeOfPath,
+  sectionOf,
+  type ContentRoute,
+} from "../../routes";
 import { DashboardFigures, SignInPreview, ThemeTiles } from "../../shell/showcase";
 import { SiteShell } from "../../shell/site-shell";
 
@@ -29,7 +39,7 @@ const LANGUAGE_NAMES: Readonly<Record<CodeLanguage, string>> = {
  * The live examples content can place, by name. Each is drawn from the project's own components
  * with sample data; content names one and carries none of its markup.
  */
-const EXAMPLES: Readonly<Record<ExampleName, () => unknown>> = {
+const SHOWCASES: Readonly<Record<Exclude<ExampleName, ComponentExampleName>, () => unknown>> = {
   "sign-in": () => <SignInPreview />,
   "dashboard-figures": () => <DashboardFigures />,
   "theme-tiles": () => (
@@ -39,11 +49,17 @@ const EXAMPLES: Readonly<Record<ExampleName, () => unknown>> = {
   ),
 };
 
-function contentRouteOf(slug: string): ContentRoute | undefined {
-  return ROUTES.find(
-    (route): route is ContentRoute =>
-      route.status === "live" && route.component === "site-content-page" && route.content === slug,
-  );
+function isComponentExample(name: ExampleName): name is ComponentExampleName {
+  return Object.hasOwn(COMPONENT_EXAMPLES, name);
+}
+
+/**
+ * An example's description as the element it describes. The tags and attributes come from the
+ * registry, never from a page's content, and the text is a text node: nothing here reads markup.
+ */
+function drawExample(node: ExampleNode): unknown {
+  if (typeof node === "string") return node;
+  return h(node.tag, { ...node.attributes }, ...(node.children ?? []).map(drawExample));
 }
 
 /**
@@ -214,13 +230,49 @@ export class SiteContentPage {
         // A heading's id holds only letters, digits and hyphens, so no heading can take this one.
         return this.renderTable(block, `table_${String(index)}`);
       case "example":
-        return (
-          <figure class={`example example-${block.name}`}>
-            {EXAMPLES[block.name]()}
-            {block.caption === undefined ? null : <figcaption>{block.caption}</figcaption>}
-          </figure>
-        );
+        return this.renderExample(block);
     }
+  }
+
+  /**
+   * A component's example is the live element beside the HTML that writes it; the home page's demos
+   * stand alone. Both are in a figure with the caption under it.
+   */
+  private renderExample(block: ExampleBlock) {
+    const caption = block.caption === undefined ? null : <figcaption>{block.caption}</figcaption>;
+    if (!isComponentExample(block.name)) {
+      return (
+        <figure class={`example example-${block.name}`}>
+          {SHOWCASES[block.name]()}
+          {caption}
+        </figure>
+      );
+    }
+    const example: { readonly nodes: readonly ExampleNode[]; readonly inert?: true } =
+      COMPONENT_EXAMPLES[block.name];
+    const stage = example.nodes.map(drawExample);
+    return (
+      <figure class="example example-component">
+        <div class="example-body">
+          <div class="example-stage">
+            {example.inert === true ? (
+              <div class="preview-frame" inert>
+                {stage}
+              </div>
+            ) : (
+              stage
+            )}
+          </div>
+          {this.renderCode({
+            type: "code",
+            language: "html",
+            code: usageSnippet(example.nodes),
+            caption: "Usage",
+          })}
+        </div>
+        {caption}
+      </figure>
+    );
   }
 
   private renderSection(section: BodySection, body: readonly Block[]) {
@@ -330,14 +382,23 @@ export class SiteContentPage {
 
   render() {
     const result = readContentPage(this.page);
-    const route = result.ok ? contentRouteOf(result.page.slug) : undefined;
+    const route = result.ok ? routeOfContent(result.page.slug) : undefined;
     if (!result.ok || !route) return this.renderUnavailable();
     const { page } = result;
     const section = sectionOf(route.path);
+    // A page that sits under another without a section's navigation (a component's) links back.
+    const parent =
+      route.parent !== undefined && section.length === 0 ? routeOfPath(route.parent) : undefined;
     return (
       <SiteShell current={route.path} navigation={this.navigation}>
         <div slot="hero" class="page-hero">
-          <p class="eyebrow">{section[0]?.label ?? route.label}</p>
+          <p class="eyebrow">
+            {parent === undefined ? (
+              (section[0]?.label ?? route.label)
+            ) : (
+              <a href={parent.path}>{parent.label}</a>
+            )}
+          </p>
           <h1 id="page-title">{page.title}</h1>
           <p class="lede">{page.summary}</p>
         </div>
