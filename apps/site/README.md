@@ -33,7 +33,7 @@ adds: the home page lists it as coming soon, without a link, and it is left out 
 until it is `live`. Each live route is written to `<path>index.html`, and links between pages are
 ordinary links with full page loads. The pages of the components reference are not in the table:
 they are made at build time, one for each component (see below), and join the prerendered files,
-the sitemap and the checks. No route is `coming` any more.
+the sitemap and the checks. The sandbox is the one route still `coming`.
 
 An address the site does not have gets `404.html`, which the server sends with status 404. It has no
 canonical link and asks not to be indexed. The build writes `sitemap.xml`, every live route by its

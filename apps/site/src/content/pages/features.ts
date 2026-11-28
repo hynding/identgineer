@@ -58,9 +58,15 @@ export const FEATURES = page({
     ),
     h2("Still to come"),
     p(
-      "A reference of every component, a gallery of the variations, a sandbox to try them in, packages on npm and a deployment are later work. Until the packages are published, you build them from the repository: ",
+      "A sandbox to try the components in, packages on npm and a deployment are later work. Every component is already documented in the ",
+      link("/components/", "components reference"),
+      ", and every look is in the ",
+      link("/variations/", "variations gallery"),
+      ". Until the packages are published, you build them from the repository: ",
       link("/docs/getting-started/", "getting started"),
-      " shows how.",
+      " shows how, and the ",
+      link("/docs/", "docs"),
+      " hold the guides.",
     ),
   ],
 });
