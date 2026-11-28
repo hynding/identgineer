@@ -676,6 +676,28 @@ describe("the site's content", () => {
     expect(warnings[0]).toMatch(/did not answer within 200 ms/);
   });
 
+  it("stops reading a body that ignores the deadline, and lets its connection go", async () => {
+    // Node's fetch can leave a read of a body pending after the abort, which kept the build
+    // waiting for the socket's own timeout of five minutes.
+    let cancelled = false;
+    const { warnings } = await resolve({
+      pages: () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode('{"data":['));
+            },
+            cancel() {
+              cancelled = true;
+            },
+          }),
+          { headers: { "content-type": "application/json" } },
+        ),
+    });
+    expect(warnings[0]).toMatch(/did not answer within 200 ms/);
+    expect(cancelled).toBe(true);
+  }, 2_000);
+
   describe("takes what an editor may write in the CMS", () => {
     it("with no summary, giving the page the route's description", async () => {
       const { pages, warnings } = await resolve({
