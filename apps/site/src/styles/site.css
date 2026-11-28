@@ -2057,6 +2057,7 @@ figcaption {
 .tile-preview,
 .combo-preview {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-content: center;
   min-block-size: 8em;
   padding: var(--idg-space-s);
@@ -2070,10 +2071,10 @@ figcaption {
   padding: 0;
 }
 
-/* Previews of one axis are one height, so the text under them starts at the same place on a row. */
+/* The tallest mode's sample is about this high, so the samples of a row are of one height and the
+   text under them starts at the same place; nothing is clipped, a sample taller than this is. */
 .tile-preview-ux {
-  block-size: 13em;
-  overflow: hidden;
+  min-block-size: 13em;
 }
 
 .tile-preview-design {
@@ -2153,7 +2154,7 @@ figcaption {
   display: grid;
   align-content: center;
   gap: var(--idg-space-2xs);
-  padding: var(--idg-space-s) var(--idg-space-xs);
+  padding: var(--idg-space-s) var(--idg-space-2xs);
   background: var(--idg-color-bg);
   color: var(--idg-color-text);
 }
@@ -2166,7 +2167,9 @@ figcaption {
 
 .sample-heading {
   font-family: var(--idg-font-family-display);
-  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+  /* Whole in a half of a tile (a container) as narrow as the grid makes one: eight letters of the
+     widest face are about 5em, so the size is at most 6.5% of the tile's width. */
+  font-size: min(calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale)), 6.5cqi);
   font-weight: var(--idg-font-weight-bold);
   line-height: 1.1;
   overflow-wrap: break-word;
@@ -2230,6 +2233,7 @@ figcaption {
    the mode shows them, and a dot that moves as the mode's motion does when the tile is hovered. */
 .ux-sample {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: calc(var(--idg-space-xs) * var(--idg-density-gap-scale));
 }
 
