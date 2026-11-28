@@ -97,3 +97,23 @@ describe("the document a page is rendered from", () => {
     expect(hostile).not.toContain("<script>");
   });
 });
+
+describe("the page's component", () => {
+  it("is the body's one element, without attributes when it needs none", () => {
+    expect(html).toContain("<body><site-home></site-home></body>");
+  });
+
+  it("carries the attributes it is given, escaped, so a value can never close the tag", () => {
+    const page = JSON.stringify({ title: `"><script>alert('x')</script>&` });
+    const rendered = renderDocument({
+      metadata: METADATA,
+      component: "site-content-page",
+      attributes: { page },
+      assets: ASSETS,
+    });
+    expect(rendered).toContain(
+      '<body><site-content-page page="{&quot;title&quot;:&quot;\\&quot;&gt;&lt;script&gt;alert(&#39;x&#39;)&lt;/script&gt;&amp;&quot;}"></site-content-page></body>',
+    );
+    expect(rendered).not.toContain("<script>alert");
+  });
+});

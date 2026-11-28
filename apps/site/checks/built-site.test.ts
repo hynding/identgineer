@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { parseHtmlToDocument } from "@stencil/core/mock-doc";
 import { beforeAll, describe, expect, it } from "vitest";
 import { HEADERS_FILE, styleSource } from "../scripts/security-headers";
-import { navigationRoutes, pageFile, prerenderedPages } from "../src/routes";
+import { livePaths, pageFile, prerenderedPages } from "../src/routes";
 
 const WWW = fileURLToPath(new URL("../www", import.meta.url));
 
@@ -25,10 +25,30 @@ function elementsOf(root: ParentNode): Element[] {
   );
 }
 
+/**
+ * The ids used twice in one tree: the document, or one declarative shadow root, as ids are
+ * looked up in the tree that holds them.
+ */
+function duplicateIds(root: ParentNode): string[] {
+  const seen = new Set<string>();
+  const twice: string[] = [];
+  for (const element of root.querySelectorAll("*")) {
+    if (element.id !== "" && element.closest("template") === null) {
+      if (seen.has(element.id)) twice.push(element.id);
+      seen.add(element.id);
+    }
+  }
+  for (const template of root.querySelectorAll("template")) {
+    twice.push(...duplicateIds(template.content));
+  }
+  return twice;
+}
+
 interface BuiltPage {
   readonly file: string;
   readonly elements: readonly Element[];
   readonly ids: ReadonlySet<string>;
+  readonly duplicateIds: readonly string[];
 }
 
 function readPage(file: string): BuiltPage {
@@ -36,7 +56,12 @@ function readPage(file: string): BuiltPage {
     readFileSync(join(WWW, file), "utf8"),
   ) as unknown as Document;
   const elements = elementsOf(document);
-  return { file, elements, ids: new Set(elements.map((element) => element.id).filter(Boolean)) };
+  return {
+    file,
+    elements,
+    ids: new Set(elements.map((element) => element.id).filter(Boolean)),
+    duplicateIds: duplicateIds(document),
+  };
 }
 
 /** The file a root-relative path is served from, as the deployment serves it. */
@@ -88,8 +113,17 @@ describe.skipIf(!built)("the built site", () => {
   });
 
   it("has a file for every live route and a 404 page", () => {
-    for (const route of navigationRoutes()) expect(htmlFiles).toContain(pageFile(route.path));
+    for (const path of livePaths()) expect(htmlFiles).toContain(pageFile(path));
     expect(htmlFiles).toContain("404.html");
+  });
+
+  it("lists every live route in its sitemap by its canonical address, and the sitemap in robots.txt", () => {
+    const sitemap = readFileSync(join(WWW, "sitemap.xml"), "utf8");
+    const listed = [...sitemap.matchAll(/<loc>([^<]*)<\/loc>/g)].map((match) => match[1]);
+    expect(listed).toEqual([...livePaths()].map((path) => new URL(path, siteOrigin).href));
+    expect(sitemap).not.toContain("404");
+    const robots = readFileSync(join(WWW, "robots.txt"), "utf8");
+    expect(robots).toContain(`Sitemap: ${siteOrigin}/sitemap.xml\n`);
   });
 
   it("has no page that is not in the route table", () => {
@@ -98,6 +132,10 @@ describe.skipIf(!built)("the built site", () => {
         .map((page) => page.file)
         .sort(),
     );
+  });
+
+  it.each(htmlFiles)("%s gives no two elements of one tree the same id", (file) => {
+    expect(pages.get(file)?.duplicateIds).toEqual([]);
   });
 
   it.each(htmlFiles)("%s runs no inline script and every script is the site's own", (file) => {
@@ -161,6 +199,13 @@ describe.skipIf(!built)("the built site", () => {
           continue;
         }
         const url = new URL(value, `${siteOrigin}/${file}`);
+        // A reading page may link to another site: only an https: link a reader follows, which
+        // shares nothing with the page it leaves. Nothing is ever loaded from one.
+        const leaves =
+          element.localName === "a" &&
+          url.protocol === "https:" &&
+          element.getAttribute("rel") === "noopener noreferrer";
+        if (url.origin !== siteOrigin && leaves) continue;
         if (url.origin !== siteOrigin) {
           problems.push(`${where}: another origin`);
           continue;
@@ -182,7 +227,7 @@ describe.skipIf(!built)("the built site", () => {
 
   it("serves nothing that no page needs", () => {
     // What the pages link and load, then every chunk of the client build that one of those names.
-    const needed = new Set<string>([HEADERS_FILE, ...htmlFiles]);
+    const needed = new Set<string>([HEADERS_FILE, "sitemap.xml", "robots.txt", ...htmlFiles]);
     for (const page of pages.values()) {
       for (const element of page.elements) {
         for (const name of ["href", "src"]) {

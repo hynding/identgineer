@@ -11,6 +11,7 @@ interface Answer {
   readonly status: number;
   readonly location: string | undefined;
   readonly policy: string | undefined;
+  readonly type: string | undefined;
 }
 
 /** Asks for a path exactly as written: fetch would tidy it first. */
@@ -22,6 +23,7 @@ function ask(port: number, path: string): Promise<Answer> {
         status: response.statusCode ?? 0,
         location: response.headers.location,
         policy: response.headers["content-security-policy"] as string | undefined,
+        type: response.headers["content-type"],
       });
     })
       .on("error", reject)
@@ -39,6 +41,8 @@ describe("the static server", () => {
     writeFileSync(join(root, HEADERS_FILE), JSON.stringify({ "Content-Security-Policy": "x" }));
     writeFileSync(join(root, "index.html"), "home");
     writeFileSync(join(root, "404.html"), "missing");
+    writeFileSync(join(root, "sitemap.xml"), "<urlset/>");
+    writeFileSync(join(root, "robots.txt"), "User-agent: *");
     mkdirSync(join(root, "x"));
     writeFileSync(join(root, "x", "index.html"), "x");
     server = await startStaticServer(root, 0);
@@ -51,7 +55,19 @@ describe("the static server", () => {
   });
 
   it("serves a folder by its index, with the headers the build wrote", async () => {
-    expect(await ask(port, "/x/")).toEqual({ status: 200, location: undefined, policy: "x" });
+    expect(await ask(port, "/x/")).toEqual({
+      status: 200,
+      location: undefined,
+      policy: "x",
+      type: "text/html; charset=utf-8",
+    });
+  });
+
+  it.each([
+    ["/sitemap.xml", "application/xml; charset=utf-8"],
+    ["/robots.txt", "text/plain; charset=utf-8"],
+  ])("serves %s as %s", async (path, type) => {
+    expect(await ask(port, path)).toMatchObject({ status: 200, type });
   });
 
   it("redirects a folder asked for without its slash to the folder", async () => {

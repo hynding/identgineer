@@ -2,10 +2,15 @@
 export type RoutePath = `/${string}`;
 
 /** The Stencil component that draws a whole page, shell included. */
-export type PageComponent = "site-home" | "site-not-found";
+export type PageComponent = "site-home" | "site-content-page" | "site-not-found";
 
 interface RouteFields {
   readonly path: RoutePath;
+  /**
+   * The page a section's pages sit under (the docs index for a guide): they are left out of the
+   * site's navigation and listed, with links to the one before and after, in the section's own.
+   */
+  readonly parent?: RoutePath;
   /** The short name, in the navigation and in links to the page. */
   readonly label: string;
   /** The document title, before the site's name is added. */
@@ -14,10 +19,20 @@ interface RouteFields {
   readonly description: string;
 }
 
-export interface LiveRoute extends RouteFields {
+interface LivePage extends RouteFields {
   readonly status: "live";
-  readonly component: PageComponent;
+  readonly component: "site-home";
 }
+
+/** A reading page, drawn by one component from the content page of its slug. */
+export interface ContentRoute extends RouteFields {
+  readonly status: "live";
+  readonly component: "site-content-page";
+  /** The slug of its content page, in the repository and in the CMS. */
+  readonly content: string;
+}
+
+export type LiveRoute = LivePage | ContentRoute;
 
 /**
  * A page a later task adds. It is listed so the home page can say it is coming, and it is left out
@@ -49,7 +64,9 @@ export const ROUTES: readonly Route[] = [
     title: "Features",
     description:
       "What Identgineer does, from sign-in and sessions to consent-first tracking, brand kits and the variation system.",
-    status: "coming",
+    status: "live",
+    component: "site-content-page",
+    content: "features",
   },
   {
     path: "/identity/",
@@ -57,7 +74,9 @@ export const ROUTES: readonly Route[] = [
     title: "Identity",
     description:
       "User accounts, sign-in, sessions, password reset and profiles, as an SDK and as web components that run under a strict policy.",
-    status: "coming",
+    status: "live",
+    component: "site-content-page",
+    content: "identity",
   },
   {
     path: "/tracking/",
@@ -65,7 +84,9 @@ export const ROUTES: readonly Route[] = [
     title: "Tracking",
     description:
       "A privacy-first tracker that sends nothing until the visitor agrees, honours Global Privacy Control and keeps URLs to a path.",
-    status: "coming",
+    status: "live",
+    component: "site-content-page",
+    content: "tracking",
   },
   {
     path: "/components/",
@@ -89,7 +110,42 @@ export const ROUTES: readonly Route[] = [
     title: "Documentation",
     description:
       "Getting started, the theming guide and the security notes: how to adopt Identgineer in a page or an app.",
-    status: "coming",
+    status: "live",
+    component: "site-content-page",
+    content: "docs",
+  },
+  {
+    path: "/docs/getting-started/",
+    parent: "/docs/",
+    label: "Getting started",
+    title: "Getting started",
+    description:
+      "Build the packages, copy the tokens, the bootstrap script and the components to your site, and put a first themed page together.",
+    status: "live",
+    component: "site-content-page",
+    content: "getting-started",
+  },
+  {
+    path: "/docs/theming/",
+    parent: "/docs/",
+    label: "Theming guide",
+    title: "Theming guide",
+    description:
+      "The four variation axes, the tokens behind them, a visitor's choice without a flash, and a theme of your own from a brand kit.",
+    status: "live",
+    component: "site-content-page",
+    content: "theming",
+  },
+  {
+    path: "/docs/security/",
+    parent: "/docs/",
+    label: "Security",
+    title: "Security notes",
+    description:
+      "What the components, the identity client and the tracker do for a page's security, what they leave to your server, and how to report a flaw.",
+    status: "live",
+    component: "site-content-page",
+    content: "security",
   },
   {
     path: "/sandbox/",
@@ -122,6 +178,8 @@ export interface PrerenderedPage {
   readonly file: string;
   readonly path: RoutePath | undefined;
   readonly component: PageComponent;
+  /** The slug of the content page a reading page is drawn from. */
+  readonly content?: string;
   readonly title: string;
   readonly description: string;
 }
@@ -135,8 +193,37 @@ function isLive(route: Route): route is LiveRoute {
   return route.status === "live";
 }
 
+/** The live pages of the site's navigation and footer: every top-level one, in table order. */
 export function navigationRoutes(): readonly LiveRoute[] {
-  return ROUTES.filter(isLive);
+  return ROUTES.filter(isLive).filter((route) => route.parent === undefined);
+}
+
+/** Every live path, a section's pages among them: what a link of the site may point to. */
+export function livePaths(): ReadonlySet<RoutePath> {
+  return new Set(ROUTES.filter(isLive).map((route) => route.path));
+}
+
+/** The pages of the section a path is in (its top page, then the pages under it), or none. */
+export function sectionOf(path: RoutePath): readonly LiveRoute[] {
+  const route = ROUTES.find((candidate) => candidate.path === path);
+  const top = route?.parent ?? path;
+  const pages = ROUTES.filter(isLive).filter((candidate) => candidate.parent === top);
+  if (pages.length === 0) return [];
+  const head = ROUTES.filter(isLive).find((candidate) => candidate.path === top);
+  return head ? [head, ...pages] : pages;
+}
+
+/** The pages before and after a path in its section, where there are any. */
+export function neighboursOf(path: RoutePath): {
+  readonly previous?: LiveRoute;
+  readonly next?: LiveRoute;
+} {
+  const section = sectionOf(path);
+  const index = section.findIndex((route) => route.path === path);
+  if (index < 0) return {};
+  const previous = section[index - 1];
+  const next = section[index + 1];
+  return { ...(previous ? { previous } : {}), ...(next ? { next } : {}) };
 }
 
 /**
@@ -147,19 +234,17 @@ export function isOverview(route: Route): boolean {
   return route.path === "/features/";
 }
 
-/** The routes the home page points to: everything but itself, live or coming. */
+/** The routes the home page points to: every top-level one but itself, live or coming. */
 export function linkableRoutes(): readonly Route[] {
-  return ROUTES.filter((route) => route.path !== "/");
+  return ROUTES.filter((route) => route.path !== "/" && route.parent === undefined);
 }
 
 export function prerenderedPages(): readonly PrerenderedPage[] {
-  const routes = navigationRoutes().map(({ path, component, title, description }) => ({
-    file: pageFile(path),
-    path,
-    component,
-    title,
-    description,
-  }));
+  const routes = ROUTES.filter(isLive).map((route): PrerenderedPage => {
+    const { path, component, title, description } = route;
+    const page = { file: pageFile(path), path, component, title, description };
+    return route.component === "site-content-page" ? { ...page, content: route.content } : page;
+  });
   const { file, component, title, description } = NOT_FOUND_PAGE;
   return [...routes, { file, path: undefined, component, title, description }];
 }

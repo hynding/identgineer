@@ -75,7 +75,7 @@ export default defineConfig({
       {
         test: {
           name: "site",
-          include: ["apps/site/{src,scripts,checks}/**/*.test.ts"],
+          include: ["apps/site/{src,scripts,checks,browser}/**/*.test.ts"],
         },
       },
     ],

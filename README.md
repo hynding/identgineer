@@ -86,7 +86,11 @@ and navigates without JavaScript and re-skins live across the four axes with it.
 bootstrap runs before the first paint, and the build writes the strict content security policy the
 pages need (inline styles only by hash, no inline script, Trusted Types, nothing from another
 origin) to `www/_headers.json` for the deployment to send. `IDG_SITE_URL` sets its public address.
-See [apps/site/README.md](apps/site/README.md).
+The features, identity, tracking and docs pages are reading pages: typed content, checked by a
+strict validator and drawn as semantic HTML by one component. With `IDG_CMS_URL` set, the build reads
+the CMS's published pages and navigation labels in their place, checked the same way, and falls back
+to the repository's copy, with a warning, for anything it cannot read or does not accept. The build
+also writes `sitemap.xml` and `robots.txt`. See [apps/site/README.md](apps/site/README.md).
 
 ## Repository layout
 

@@ -15,9 +15,10 @@ prerendered, so a change is seen after the next `dev` (or `build`). `IDG_SITE_PO
 
 ## Settings
 
-| Variable       | Meaning                                                                                                                            | Default                        |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| `IDG_SITE_URL` | The site's public address, the root of an origin (`https://identgineer.dev`). Canonical links and Open Graph URLs are built on it. | `https://identgineer.example/` |
+| Variable       | Meaning                                                                                                                                    | Default                        |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
+| `IDG_SITE_URL` | The site's public address, the root of an origin (`https://identgineer.dev`). Canonical links, Open Graph URLs and the sitemap use it.     | `https://identgineer.example/` |
+| `IDG_CMS_URL`  | The CMS's address (`https://cms.example.com`, or `http://localhost:1337`), read at build time for the reading pages and navigation labels. | unset: the repository's pages  |
 
 The default is on a reserved domain, so a build that forgot the setting never points at anyone's
 site. An address with a path, a query, a fragment or credentials is refused: every link of the site is
@@ -33,7 +34,71 @@ until it is `live`. Each live route is written to `<path>index.html`, and links 
 ordinary links with full page loads.
 
 An address the site does not have gets `404.html`, which the server sends with status 404. It has no
-canonical link and asks not to be indexed.
+canonical link and asks not to be indexed. The build writes `sitemap.xml`, every live route by its
+canonical address (not the 404 page, nor a page whose SEO asks for `noIndex`), and `robots.txt`, which
+names it.
+
+### Reading pages
+
+Features, Identity, Tracking and the docs (the index, Getting started, the theming guide and the
+security notes) are reading pages: one component, `site-content-page`, draws each from a content page
+in `src/content/pages/`, written from the packages' READMEs and the guides in `docs/`. A route names
+its page by `content: "<slug>"`; a docs guide names the docs index as its `parent`, which gives the
+docs their own section navigation, marked with `aria-current`, and links to the page before and after.
+
+A content page (`src/content/content-page.ts`) is data, never HTML: a slug, a title, a summary, SEO
+fields (`metaTitle`, `metaDescription`, `noIndex`) and a body of blocks:
+
+| Block       | What it holds                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------- |
+| `heading`   | Level 2, 3 or 4, as text. The first is level 2 and none skips a level.                   |
+| `paragraph` | Runs of text, each strong, emphasised or code, and links.                                |
+| `list`      | Bulleted or numbered items, each runs of text and links.                                 |
+| `code`      | A sample in one of `html`, `css`, `ts`, `js`, `json`, `sh` or `text`, with a caption.    |
+| `callout`   | A note or a warning, with a title, holding runs of text and links.                       |
+| `table`     | A caption, up to six column headings and rows of cells of runs.                          |
+| `example`   | A live example by name: `sign-in`, `dashboard-figures` or `theme-tiles`, with a caption. |
+
+`parseContentPage` (`src/content/validate-content-page.ts`) gives a valid page or an error that says
+which block, which field and which rule (the build names the page itself): an unknown key or block, an unknown example or
+language, a heading that skips a level or repeats an id, a control or direction-changing character,
+or a length past its bound (`CONTENT_LIMITS`, including the body's text as a whole). A link is a live
+path of the route table, the `#id` of a heading of the same page, or an `https:` address without
+credentials; anything else (`javascript:`, `data:`, `//host`, `http:`) is refused. The prerenderer
+passes the page to the component as JSON, and the component checks it again before it draws
+anything; every piece becomes an element or text, never markup. An external link gets
+`rel="noopener noreferrer"`. A code sample is plain text with a copy button that is drawn only with
+scripting, and no highlighter.
+
+### The CMS
+
+With `IDG_CMS_URL` set, the build reads the CMS's public REST API (`scripts/cms-content.ts`):
+`GET api/pages?status=published&populate[seo]=true` and `GET api/navigation-items`, as Strapi 5 and
+strapi-php both answer them (`{ data: [records], meta: { pagination } }`). Each Page record's
+`body` is the CMS's rich text (a `blocks` field), made into a body (`scripts/strapi-blocks.ts`):
+paragraphs, headings, lists and code as they are, a quote as a note; an image is refused, since the
+site loads nothing from another origin, and tables and examples cannot come from the CMS. The record
+is then checked by the same validator as the repository's pages and, if valid, replaces the static
+page of the same slug. A navigation item may give a page of the navigation another label in the bar
+or the footer; it can never add a link.
+
+What can go wrong never fails the build: a record that is invalid, a draft (no `publishedAt`), a slug
+the site has no route for, or a page missing from the answer leaves the static copy, and the build
+prints a warning that names it and why. A refused copy of a page that another copy supplies, and
+any refused copy after the first, is named as a copy left out instead. Any error at all, in one record, in one collection or in the
+whole read, falls back the same way (`scripts/cms-content.test.ts` reaches each fallback, and feeds
+it deep, random and wide answers). The build prints at most 50 warnings about single records and
+navigation items, and a line counting the rest, so no answer can flood its log; after them it always
+prints what it fell back to: a line for each page not drawn from the CMS (one line for all pages
+when `IDG_CMS_URL` is refused or the pages could not be read at all), a line for pages or navigation items past the four pages of
+records it reads, and one if the navigation could not be read. A warning names a record by its slug only when it is a valid one, and otherwise
+by its position; it quotes CMS text short with anything outside printable ASCII escaped, and never
+prints `IDG_CMS_URL`. What an editor may write, and what the site makes of it, is in
+[cms/README.md](../../cms/README.md#what-an-editor-may-write). The read is bounded: `https:` only (or `http:` on
+`localhost`, `127.0.0.1` or `[::1]`), no credentials, query or fragment in the address, no
+credentials sent, no redirect followed, one 10 s deadline for all of it, 1 MiB per answer (by
+`Content-Length` and as read), `application/json` only, a status of 200 only, and 4 answers of 25
+records per collection (an answer of more than 25 is refused whole). With the setting unset no request is made.
 
 ### One page, eight arrangements
 
@@ -164,12 +229,29 @@ need not be served itself.
 ## Tests
 
 - **Unit** (`pnpm test`): the route table, the site address, the metadata, the document, the policy,
-  the prerender document and the static server.
+  the prerender document, the static server, the sitemap and robots.txt, the content validator
+  (hostile and malformed input: `javascript:`, `data:` and protocol-relative links, unknown blocks
+  and examples, heading jumps, control and direction characters, oversized bodies), the navigation
+  items, the CMS's rich text, the CMS read against a fake CMS (success, an invalid record, 404, 5xx,
+  a timeout, a body that stalls, an oversized answer, a wrong content type, a redirect to another
+  origin, drafts, the page count, what an editor may write, and answers that must never fail the
+  build: links and values nested thousands deep, 150 seeded random and adversarial answers, a
+  failure in each of its fallbacks, answers of more records than asked for; at most 50 warnings
+  about records and items, then every fallback whatever came before, each short printable ASCII, never holding the setting), every reading page
+  in the repository, and the browser suite's parts.
+- **Rendering** (`checks/content-render.test.ts`, once the site is built): a page with every block,
+  drawn by the hydrate build as the prerenderer draws it: one h1, the sections and their headings,
+  each block's elements, outbound links' `rel`, both tables of contents, the docs' navigation and
+  pager, markup in the content only ever as text, places to wrap only in long names, no id used twice
+  in one tree (a heading named as a table's caption included), a refused page, and the navigation's
+  labels on every page component.
 - **The built site** (`checks/built-site.test.ts`, in `pnpm test` once the site is built, and
-  required on CI): every route has a file, every internal link, fragment and asset resolves, the
+  required on CI): every live route has a file and is in the sitemap, which robots.txt names, every
+  internal link, fragment and asset resolves, no page uses an id twice in one tree, an outbound link is an `https:` link with
+  `noopener noreferrer` and nothing is loaded from another origin, the
   bootstrap script comes first, blocking and with the integrity of the file served, no page holds an
   inline script, a `style` or event handler attribute, or an inline style the policy does not name,
-  nothing points at another origin, and `www` holds nothing that no page needs.
+  and `www` holds nothing that no page needs.
 - **Browser** (`pnpm --filter @identgineer/site test:browser`, a CI job of its own): every page in
   each of the eight layouts at 390, 820 and 1440px passes axe, does not scroll sideways and opens the
   appearance panel; every page in each theme and design, in both schemes, and in each UX mode passes
@@ -177,16 +259,35 @@ need not be served itself.
   already on the root before the body exists; hydration changes nothing in the first screen or 700px
   down; the current page is marked and the first Tab reaches the skip link; the headers are the ones
   the build wrote; every page in every layout reads and navigates with JavaScript off, with its
-  links in the bar and no menu button; every page fits every design with every layout and every UX
-  mode (the theme and the scheme turning with them) at 320, 390, 820 and 1440px, as Chromium draws
-  it, without `calc-size()` and without `calc-size()` or container style queries, with no sideways
-  scroll, nothing cut or spilling out of its box, no word, figure or name broken inside itself and
-  no two controls over each other; in the default look, in bento, dashboard and magazine at 768 to
-  1440px no section beside another is more than a fifth empty below its content, and in every
-  layout at 390 to 1920px every row of the pages to come, the theme tiles and the axes is full; and
+  links in the bar and no menu button; the docs' own navigation marks the guide shown, the pager
+  links its neighbours and a code sample's copy button copies it; the home page, the identity page
+  (the longest reading page) and the theming guide (the docs page with the widest content: tables
+  and code) fit every design with every layout and every UX mode (the theme and the scheme turning
+  with them) at 320, 390, 820 and 1440px, as Chromium draws it, without `calc-size()` and without
+  `calc-size()` or container style queries; every other page, the 404 page included, fits each
+  design once, each with a different layout (eight pairs, shifted from page to page) in every UX
+  mode, in all three engines; a reading page and a docs page filled with the longest unbroken text
+  the validator takes in every field (labels, title, summary, headings, captions, cells, code, links)
+  fit every layout in all three engines at 320 to 1440px; fitting is no sideways scroll, nothing cut or spilling out of its box
+  (a code sample or table that scrolls sideways and takes focus, or a bar of links that scrolls to each as it takes focus, may hold what it scrolls), no word,
+  figure or name broken inside itself and no two controls over each other; in the default look, in
+  bento, dashboard and magazine at 768 to 1440px no section beside another is more than a fifth
+  empty below its content, in every layout at 390 to 2560px every row of the pages to come, the
+  theme tiles and the axes is full and the theme tiles of a row are laid out alike, and the
+  overview spans two of four columns in the dashboard at 1920px and the side rail at 2560px; and
   in every design the rules side-rail and magazine draw are there, 2 to 8px, and in every layout a
-  section reached by a link stops short of the window's top. Any console error, policy violation or request to
+  section reached by a link stops short of the window's top; a reading page shows one table of
+  contents, beside the article or before it, in every layout from 390 to 1440px; immersive centres
+  each band's heading on its text's column on every reading page at 820 to 1920px and starts the
+  content one gap under the hero; a docs page in top-bar, magazine, dashboard and bento puts its pages in a row over the article where the aside stands beside it, from 72rem (1152, 1440 and 1920px), and in a column beside the article just below (1151px); a table or code sample that scrolls shades the edge it has more
+  beyond, in every layout; and a short name in code never wraps. Any console error, policy violation or request to
   another origin fails a test.
+
+CI runs the browser suite in seven parts (`browser/parts.ts`): each engine's fit sweep in two (the
+home and identity pages, then the rest), chosen by a tag on each test, and every other test in the
+last. `pnpm --filter @identgineer/site test:browser:part <part>` runs one, and
+`test:browser:parts` checks that the parts hold every test exactly once, which CI does on every run.
+On two workers each fit part takes about four to five minutes and the last about seven.
 
 `IDG_CPU_THROTTLE=6` runs the hydration tests with the page's CPU six times slower, as a slow CI
 runner is; add `--repeat-each=3` to repeat them.

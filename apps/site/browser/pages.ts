@@ -12,6 +12,13 @@ export const PAGES = prerenderedPages().map((page) => ({
   component: page.component,
 }));
 
+/**
+ * The pages the fit sweep takes through every design with every layout: the home page, the longest
+ * reading page and the docs page with the widest content (tables and code). Every other page meets
+ * each design, each layout and each UX mode once, in eight of the pairs.
+ */
+export const FULLY_SWEPT: ReadonlySet<string> = new Set(["/", "/identity/", "/docs/theming/"]);
+
 export const LAYOUTS = [
   "top-bar",
   "side-rail",

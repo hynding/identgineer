@@ -3,7 +3,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { HydrateResults, SerializeDocumentOptions } from "@stencil/core/internal";
 import { bootstrapScriptAttributes } from "@identgineer/variations/bootstrap-tag";
+import type { ContentPage } from "../src/content/content-page.ts";
+import { STATIC_PAGES } from "../src/content/pages/index.ts";
+import { NO_LABELS, type NavigationLabels } from "../src/content/navigation.ts";
 import { prerenderedPages, type PrerenderedPage } from "../src/routes.ts";
+import { resolveSiteContent } from "./cms-content.ts";
 import { renderDocument, type DocumentAssets } from "./document.ts";
 import { pageMetadata } from "./metadata.ts";
 import {
@@ -14,6 +18,7 @@ import {
 } from "./security-headers.ts";
 import { prepareServerDocument } from "./server-document.ts";
 import { siteUrlFrom } from "./site-url.ts";
+import { robotsTxt, sitemapXml } from "./sitemap.ts";
 
 interface HydrateModule {
   renderToString(html: string, options: SerializeDocumentOptions): Promise<HydrateResults>;
@@ -33,11 +38,17 @@ const ASSETS: DocumentAssets = {
 async function render(
   hydrate: HydrateModule,
   page: PrerenderedPage,
+  content: ContentPage | undefined,
+  labels: NavigationLabels,
   siteUrl: URL,
 ): Promise<string> {
-  const metadata = pageMetadata(page, siteUrl);
+  const metadata = pageMetadata(page, siteUrl, content?.seo);
+  const attributes: Record<string, string> = {};
+  if (content !== undefined) attributes.page = JSON.stringify(content);
+  // Only labels the CMS gave: with none, the page is the same byte for byte as without a CMS.
+  if (labels !== NO_LABELS) attributes.navigation = JSON.stringify(labels);
   const results = await hydrate.renderToString(
-    renderDocument({ metadata, component: page.component, assets: ASSETS }),
+    renderDocument({ metadata, component: page.component, attributes, assets: ASSETS }),
     {
       url: new URL(page.path ?? page.file, siteUrl).href,
       // Without it, Stencil takes the canonical link out of the document.
@@ -73,18 +84,36 @@ function write(file: string, content: string): void {
 }
 
 /**
- * Renders every page with the hydrate build of the Stencil app, writes each to its file in `www`,
- * and writes the policy that allows exactly the inline styles those pages hold.
+ * Renders every page with the hydrate build of the Stencil app, from the CMS's content when one is
+ * set and the repository's otherwise, writes each to its file in `www`, with the sitemap and
+ * robots.txt, and writes the policy that allows exactly the inline styles those pages hold.
  */
 async function prerender(): Promise<void> {
   const siteUrl = siteUrlFrom(process.env);
   const hydrate = (await import(pathToFileURL(HYDRATE).href)) as HydrateModule;
   const styles: string[] = [];
+  const {
+    pages: contents,
+    labels,
+    warnings,
+  } = await resolveSiteContent({
+    url: process.env.IDG_CMS_URL,
+    staticPages: STATIC_PAGES,
+  });
+  for (const warning of warnings) console.warn(warning);
+  const noIndex = new Set<string>();
   for (const page of prerenderedPages()) {
-    const html = await render(hydrate, page, siteUrl);
+    const content = page.content === undefined ? undefined : contents.get(page.content);
+    if (page.content !== undefined && content === undefined) {
+      throw new Error(`${page.file} has no content page "${page.content}"`);
+    }
+    if (content?.seo.noIndex === true && page.path !== undefined) noIndex.add(page.path);
+    const html = await render(hydrate, page, content, labels, siteUrl);
     styles.push(...inlineStyles(html));
     write(page.file, html);
   }
+  write("sitemap.xml", sitemapXml(siteUrl, noIndex));
+  write("robots.txt", robotsTxt(siteUrl));
   for (const file of UNUSED_OUTPUT) rmSync(join(WWW, file), { force: true });
   const headers = securityHeaders(contentSecurityPolicy(styles));
   write(HEADERS_FILE, `${JSON.stringify(headers, null, 2)}\n`);
