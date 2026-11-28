@@ -207,11 +207,12 @@ next build, and a fixture in `src/gallery/gallery-records.test.ts` proves it wit
   page.
 - A **layout** preview is not the real `idg-layout`: it is a schematic made of boxes in CSS, one
   arrangement for each layout, since the real layout draws the whole window.
-- Each tile is a link to the page with the choice in its address (`?idg-theme=ember#themes`), which
-  the bootstrap script reads, so choosing works without scripting by loading the page again. With
-  scripting, the tile applies the choice in place through the variations runtime and says so in a
-  status line. Without scripting nothing can change the look but the link, and Surprise me, which
-  needs a script, is not drawn; the page says so.
+- Each tile is a link to the page with the choice in its address (`?idg-theme=ember#themes`).
+  The bootstrap script reads that address before the page paints, so the link works whenever the
+  bootstrap script runs, even if the app's own script is blocked or slow. With the app running, a
+  plain click applies the choice in place through the variations runtime and says so in a status
+  line. With scripting off nothing can apply a choice, so the page says "Choosing a look needs
+  JavaScript" and Surprise me, which needs a script, is not drawn.
 - The tile of the current value has `aria-current`, and a visible mark. The mark is drawn by CSS
   from the root's attributes (`src/gallery/current-marker.ts` writes the rules), so the prerendered
   page and the hydrated one look alike; the client then keeps `aria-current` in step.
