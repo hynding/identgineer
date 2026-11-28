@@ -205,12 +205,22 @@ describe("the page of one component", () => {
     expect(page.body).toEqual([{ type: "paragraph", content: [t("Next.")] }]);
   });
 
-  it("cuts a first sentence longer than a lede may be, and keeps the whole paragraph in the body", () => {
+  it("cuts a first sentence longer than a lede may be at a word, and goes on with the rest in the body", () => {
     const long = `${"Word ".repeat(100)}end. After.`;
     const page = componentPage({ ...EMPTY, summary: [long] }, {});
-    expect(page.summary.length).toBe(200);
+    expect(page.summary.length).toBeLessThanOrEqual(200);
     expect(page.summary.endsWith("…")).toBe(true);
-    expect(page.body).toEqual([{ type: "paragraph", content: [t(long)] }]);
+    const spoken = page.summary.slice(0, -1);
+    expect(spoken.split(" ").every((word) => word === "Word")).toBe(true);
+    const [first] = page.body;
+    expect(first?.type).toBe("paragraph");
+    const rest = first?.type === "paragraph" ? first.content : [];
+    const [run] = rest;
+    expect(rest).toHaveLength(1);
+    expect(run?.type === "text" ? run.text.startsWith("…Word") : false).toBe(true);
+    // Said once: the lede and the body together are the paragraph, word for word.
+    const continued = run?.type === "text" ? run.text.slice(1) : "";
+    expect(`${spoken} ${continued}`).toBe(long);
   });
 
   it("splits a table of more than 60 rows into tables that each hold at most 60", () => {
@@ -295,6 +305,13 @@ describe("the route of a component's page", () => {
     expect(route.description.length).toBeLessThanOrEqual(160);
     expect(route.description.startsWith("idg-empty: Word")).toBe(true);
   });
+
+  it("ends a description at a whole word, with an ellipsis", () => {
+    const route = componentRoute({ ...EMPTY, summary: ["Word ".repeat(100)] });
+    expect(route.description.endsWith("…")).toBe(true);
+    const words = route.description.slice(0, -1).split(" ");
+    expect(words.slice(1).every((word) => word === "Word")).toBe(true);
+  });
 });
 
 describe("the index of the components", () => {
@@ -305,6 +322,26 @@ describe("the index of the components", () => {
       { name: "chips", components: ["idg-empty"] },
     ],
   );
+
+  it("ends a line of the index at a whole word, never inside one", () => {
+    const long = `${"Alphabetical ".repeat(30)}end.`;
+    const [group] = groupComponents(
+      [{ ...EMPTY, summary: [long] }],
+      [{ name: "controls", components: ["idg-empty"] }],
+    );
+    const index = componentIndexPage(group ? [group] : []);
+    const table = index.body.find((block) => block.type === "table");
+    const cell = table?.type === "table" ? table.rows[0]?.[1]?.[0] : undefined;
+    const said = cell?.type === "text" ? cell.text : "";
+    expect(said.length).toBeLessThanOrEqual(140);
+    expect(said.endsWith("…")).toBe(true);
+    expect(
+      said
+        .slice(0, -1)
+        .split(" ")
+        .every((word) => word === "Alphabetical"),
+    ).toBe(true);
+  });
 
   it("is a table of each group's components, each linked to its page with its first sentence", () => {
     expect(componentIndexPage(groups)).toEqual({
