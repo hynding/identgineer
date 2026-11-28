@@ -78,7 +78,7 @@ describe("grouping the components as the components package bundles them", () =>
   it("holds every component of the package once, whichever bundle names it", () => {
     const all = BUNDLES.flatMap((bundle) => bundle.components);
     const groups = groupComponents(all.map(doc), BUNDLES);
-    expect(groups.flatMap(tags).toSorted()).toEqual([...all].toSorted());
+    expect([...groups.flatMap(tags)].sort()).toEqual([...all].sort());
     expect(groups.map((group) => group.key)).not.toContain("other");
   });
 });

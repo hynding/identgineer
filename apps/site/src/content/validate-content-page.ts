@@ -2,6 +2,7 @@ import {
   CODE_LANGUAGES,
   CONTENT_LIMITS,
   EXAMPLE_NAMES,
+  SHOWCASE_EXAMPLE_NAMES,
   type Block,
   type BlockType,
   type ContentPage,
@@ -416,7 +417,7 @@ class BodyReader {
           fields.name,
           "name",
           EXAMPLE_NAMES,
-          `a live example (${EXAMPLE_NAMES.join(", ")})`,
+          `a live example (${SHOWCASE_EXAMPLE_NAMES.join(", ")}, or the tag of a component)`,
         );
         const caption = optionalText(fields, "caption", "", CONTENT_LIMITS.caption);
         return caption === undefined

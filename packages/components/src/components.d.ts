@@ -549,6 +549,10 @@ export namespace Components {
          */
         "separator": BreadcrumbSeparator;
     }
+    /**
+     * A button, or a link drawn as one when it has an `href`. It is form associated, so a submit or
+     * reset button acts on its form with no script in the page.
+     */
     interface IdgButton {
         /**
           * Set by an overlay this button opens: the element it opens (`aria-controls`).
@@ -658,6 +662,10 @@ export namespace Components {
          */
         "variant": CardVariant;
     }
+    /**
+     * A checkbox with its label, form associated: it takes part in `FormData`, `form.reset()` and
+     * validation like a native one, and can be indeterminate.
+     */
     interface IdgCheckbox {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -1881,6 +1889,10 @@ export namespace Components {
          */
         "value"?: string;
     }
+    /**
+     * An on and off switch with its label, form associated: it takes part in `FormData`,
+     * `form.reset()` and validation like a native checkbox, and is read as a switch.
+     */
     interface IdgSwitch {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -2100,6 +2112,10 @@ export namespace Components {
          */
         "value": string;
     }
+    /**
+     * A multi-line text input, form associated: it takes part in `FormData`, `form.reset()` and
+     * validation like a native textarea, and can grow with its text and count its characters.
+     */
     interface IdgTextarea {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -2666,6 +2682,10 @@ declare global {
         prototype: HTMLIdgBreadcrumbItemElement;
         new (): HTMLIdgBreadcrumbItemElement;
     };
+    /**
+     * A button, or a link drawn as one when it has an `href`. It is form associated, so a submit or
+     * reset button acts on its form with no script in the page.
+     */
     interface HTMLIdgButtonElement extends Components.IdgButton, HTMLStencilElement {
     }
     var HTMLIdgButtonElement: {
@@ -2688,6 +2708,10 @@ declare global {
     interface HTMLIdgCheckboxElementEventMap {
         "idgChange": CheckedDetail;
     }
+    /**
+     * A checkbox with its label, form associated: it takes part in `FormData`, `form.reset()` and
+     * validation like a native one, and can be indeterminate.
+     */
     interface HTMLIdgCheckboxElement extends Components.IdgCheckbox, HTMLStencilElement {
         addEventListener<K extends keyof HTMLIdgCheckboxElementEventMap>(type: K, listener: (this: HTMLIdgCheckboxElement, ev: IdgCheckboxCustomEvent<HTMLIdgCheckboxElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
         addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
@@ -3347,6 +3371,10 @@ declare global {
     interface HTMLIdgSwitchElementEventMap {
         "idgChange": CheckedDetail;
     }
+    /**
+     * An on and off switch with its label, form associated: it takes part in `FormData`,
+     * `form.reset()` and validation like a native checkbox, and is read as a switch.
+     */
     interface HTMLIdgSwitchElement extends Components.IdgSwitch, HTMLStencilElement {
         addEventListener<K extends keyof HTMLIdgSwitchElementEventMap>(type: K, listener: (this: HTMLIdgSwitchElement, ev: IdgSwitchCustomEvent<HTMLIdgSwitchElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
         addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
@@ -3453,6 +3481,10 @@ declare global {
         "idgInput": ValueDetail;
         "idgChange": ValueDetail;
     }
+    /**
+     * A multi-line text input, form associated: it takes part in `FormData`, `form.reset()` and
+     * validation like a native textarea, and can grow with its text and count its characters.
+     */
     interface HTMLIdgTextareaElement extends Components.IdgTextarea, HTMLStencilElement {
         addEventListener<K extends keyof HTMLIdgTextareaElementEventMap>(type: K, listener: (this: HTMLIdgTextareaElement, ev: IdgTextareaCustomEvent<HTMLIdgTextareaElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
         addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
@@ -4065,6 +4097,10 @@ declare namespace LocalJSX {
          */
         "separator"?: BreadcrumbSeparator;
     }
+    /**
+     * A button, or a link drawn as one when it has an `href`. It is form associated, so a submit or
+     * reset button acts on its form with no script in the page.
+     */
     interface IdgButton {
         /**
           * Set by an overlay this button opens: the element it opens (`aria-controls`).
@@ -4182,6 +4218,10 @@ declare namespace LocalJSX {
          */
         "variant"?: CardVariant;
     }
+    /**
+     * A checkbox with its label, form associated: it takes part in `FormData`, `form.reset()` and
+     * validation like a native one, and can be indeterminate.
+     */
     interface IdgCheckbox {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -5449,6 +5489,10 @@ declare namespace LocalJSX {
          */
         "value"?: string;
     }
+    /**
+     * An on and off switch with its label, form associated: it takes part in `FormData`,
+     * `form.reset()` and validation like a native checkbox, and is read as a switch.
+     */
     interface IdgSwitch {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -5668,6 +5712,10 @@ declare namespace LocalJSX {
          */
         "value"?: string;
     }
+    /**
+     * A multi-line text input, form associated: it takes part in `FormData`, `form.reset()` and
+     * validation like a native textarea, and can grow with its text and count its characters.
+     */
     interface IdgTextarea {
         /**
           * Set by idg-field: the hint and error text, as the control's accessible description.
@@ -6522,6 +6570,10 @@ declare module "@stencil/core" {
              * one, and separator are drawn in its own shadow root.
              */
             "idg-breadcrumb-item": LocalJSX.IntrinsicElements["idg-breadcrumb-item"] & JSXBase.HTMLAttributes<HTMLIdgBreadcrumbItemElement>;
+            /**
+             * A button, or a link drawn as one when it has an `href`. It is form associated, so a submit or
+             * reset button acts on its form with no script in the page.
+             */
             "idg-button": LocalJSX.IntrinsicElements["idg-button"] & JSXBase.HTMLAttributes<HTMLIdgButtonElement>;
             /**
              * A surface that groups related content, drawn in the design language's own surface, border and
@@ -6531,6 +6583,10 @@ declare module "@stencil/core" {
              * the footer slot sits above the link and stays clickable.
              */
             "idg-card": LocalJSX.IntrinsicElements["idg-card"] & JSXBase.HTMLAttributes<HTMLIdgCardElement>;
+            /**
+             * A checkbox with its label, form associated: it takes part in `FormData`, `form.reset()` and
+             * validation like a native one, and can be indeterminate.
+             */
             "idg-checkbox": LocalJSX.IntrinsicElements["idg-checkbox"] & JSXBase.HTMLAttributes<HTMLIdgCheckboxElement>;
             /**
              * A group of items in a row that wraps onto further rows when it runs out of room, such as tags,
@@ -6792,6 +6848,10 @@ declare module "@stencil/core" {
              * A figure with its label and, optionally, how it changed.
              */
             "idg-stat": LocalJSX.IntrinsicElements["idg-stat"] & JSXBase.HTMLAttributes<HTMLIdgStatElement>;
+            /**
+             * An on and off switch with its label, form associated: it takes part in `FormData`,
+             * `form.reset()` and validation like a native checkbox, and is read as a switch.
+             */
             "idg-switch": LocalJSX.IntrinsicElements["idg-switch"] & JSXBase.HTMLAttributes<HTMLIdgSwitchElement>;
             /**
              * Items in one row that switch to one column when their container is narrower than `threshold`.
@@ -6834,6 +6894,10 @@ declare module "@stencil/core" {
              * without a `value` takes its position among its own kind as its value.
              */
             "idg-tabs": LocalJSX.IntrinsicElements["idg-tabs"] & JSXBase.HTMLAttributes<HTMLIdgTabsElement>;
+            /**
+             * A multi-line text input, form associated: it takes part in `FormData`, `form.reset()` and
+             * validation like a native textarea, and can grow with its text and count its characters.
+             */
             "idg-textarea": LocalJSX.IntrinsicElements["idg-textarea"] & JSXBase.HTMLAttributes<HTMLIdgTextareaElement>;
             /**
              * A short notification that comes and goes. Put it in an idg-toast-region, which shows a few at a

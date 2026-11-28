@@ -59,10 +59,10 @@ const GROUP_TEXT: Readonly<Record<string, GroupText>> = {
 };
 
 /** Each brand component is a bundle of its own, so that its sanitiser loads only where it is used. */
-const BRAND_BUNDLE = /^brand-/;
+const BRAND_BUNDLE_PREFIX = "brand-";
 
 function keyOf(bundle: string): string {
-  return BRAND_BUNDLE.test(bundle) ? "brand" : bundle;
+  return bundle.startsWith(BRAND_BUNDLE_PREFIX) ? "brand" : bundle;
 }
 
 function titleOf(key: string): string {

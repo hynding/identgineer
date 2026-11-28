@@ -17,6 +17,9 @@ import { validityFlags } from "../../utils/validity";
 import { INPUT_SIZES, type InputSize } from "../input/input-options";
 
 /**
+ * A multi-line text input, form associated: it takes part in `FormData`, `form.reset()` and
+ * validation like a native textarea, and can grow with its text and count its characters.
+ *
  * @part control - The native textarea.
  * @part counter - The character count.
  */
