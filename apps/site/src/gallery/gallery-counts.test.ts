@@ -20,16 +20,24 @@ function withThemes(count: number): VariationsRegistry {
 
 describe("the line that counts the gallery's values", () => {
   it("names every axis's count in words, from the registries", () => {
-    expect(countsLine(REGISTRY)).toBe("Eight themes, eight designs, eight layouts and eight UX modes");
+    expect(countsLine(REGISTRY)).toBe(
+      "Eight themes, eight designs, eight layouts and eight UX modes",
+    );
   });
 
   it("follows a registry that gains or loses a value", () => {
-    expect(countsLine(withThemes(9))).toBe("Nine themes, eight designs, eight layouts and eight UX modes");
-    expect(countsLine(withThemes(1))).toBe("One theme, eight designs, eight layouts and eight UX modes");
+    expect(countsLine(withThemes(9))).toBe(
+      "Nine themes, eight designs, eight layouts and eight UX modes",
+    );
+    expect(countsLine(withThemes(1))).toBe(
+      "One theme, eight designs, eight layouts and eight UX modes",
+    );
   });
 
   it("writes a count past twelve as a number", () => {
-    expect(countsLine(withThemes(13))).toBe("13 themes, eight designs, eight layouts and eight UX modes");
+    expect(countsLine(withThemes(13))).toBe(
+      "13 themes, eight designs, eight layouts and eight UX modes",
+    );
   });
 
   it("is what the gallery's route says of the page", () => {

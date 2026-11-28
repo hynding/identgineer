@@ -25,7 +25,8 @@ describe("the columns of a gallery's tiles", () => {
         const columns = columnsFor(count, fit);
         expect(columns).toBeGreaterThanOrEqual(1);
         expect(columns).toBeLessThanOrEqual(fit);
-        if (columns > 1) expect(lastRow(count, columns), `${String(count)} in ${String(fit)}`).toBeGreaterThan(1);
+        if (columns > 1)
+          expect(lastRow(count, columns), `${String(count)} in ${String(fit)}`).toBeGreaterThan(1);
       }
     }
   });
