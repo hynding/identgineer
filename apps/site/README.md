@@ -275,7 +275,7 @@ need not be served itself.
   section reached by a link stops short of the window's top; a reading page shows one table of
   contents, beside the article or before it, in every layout from 390 to 1440px; immersive centres
   each band's heading on its text's column on every reading page at 820 to 1920px and starts the
-  content one gap under the hero; a table or code sample that scrolls shades the edge it has more
+  content one gap under the hero; a docs page in top-bar, magazine, dashboard and bento puts its pages in a row over the article where the aside stands beside it, at 1440 and 1920px; a table or code sample that scrolls shades the edge it has more
   beyond, in every layout; and a short name in code never wraps. Any console error, policy violation or request to
   another origin fails a test.
 
