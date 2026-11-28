@@ -23,6 +23,7 @@ import {
   type ContentRoute,
 } from "../../routes";
 import { DashboardFigures, SignInPreview, ThemeTiles } from "../../shell/showcase";
+import { ContentsNav } from "../../shell/contents-nav";
 import { SiteShell } from "../../shell/site-shell";
 
 const LANGUAGE_NAMES: Readonly<Record<CodeLanguage, string>> = {
@@ -287,45 +288,6 @@ export class SiteContentPage {
     );
   }
 
-  /**
-   * The table of contents, drawn twice: in the shell's aside, where the home page has its own, and
-   * beside the article for the layouts that draw no aside (centered, side-rail and split-hero). The
-   * stylesheet shows one of the two in each layout.
-   */
-  private renderContents(page: ContentPage, inline: boolean) {
-    const entries = tableOfContents(page.body);
-    if (entries.length === 0) return null;
-    const list = (
-      <ul>
-        {entries.map((entry) => (
-          <li>
-            <a href={`#${entry.id}`}>{entry.text}</a>
-            {entry.children.length === 0 ? null : (
-              <ul>
-                {entry.children.map((child) => (
-                  <li>
-                    <a href={`#${child.id}`}>{child.text}</a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </li>
-        ))}
-      </ul>
-    );
-    return inline ? (
-      <nav class="contents contents-inline" aria-label="On this page">
-        <h2>On this page</h2>
-        {list}
-      </nav>
-    ) : (
-      <nav slot="aside" class="contents on-this-page" aria-labelledby="contents-title">
-        <h2 id="contents-title">On this page</h2>
-        {list}
-      </nav>
-    );
-  }
-
   private renderSectionNavigation(route: ContentRoute) {
     const pages = sectionOf(route.path);
     if (pages.length === 0) return null;
@@ -406,7 +368,7 @@ export class SiteContentPage {
           <div class={{ "reading-body": true, "with-section": section.length > 0 }}>
             <div class="reading-guide">
               {this.renderSectionNavigation(route)}
-              {this.renderContents(page, true)}
+              <ContentsNav entries={tableOfContents(page.body)} inline />
             </div>
             <article class="prose" aria-labelledby="page-title">
               {sectionsOf(page.body).map((part) => this.renderSection(part, page.body))}
@@ -417,7 +379,7 @@ export class SiteContentPage {
             </p>
           </div>
         </div>
-        {this.renderContents(page, false)}
+        <ContentsNav entries={tableOfContents(page.body)} inline={false} />
       </SiteShell>
     );
   }
