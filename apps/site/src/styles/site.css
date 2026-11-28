@@ -76,7 +76,7 @@ body {
    around it, so nothing else (a name in a table, a line of code) breaks where it should not. */
 .site-layout :is(a[slot="navigation"], .site-footer-pages a, .contents a, .docs-pages a),
 .site-layout :is(.page-hero h1, .lede, .pager-title),
-.prose :is(h2, h3, h4, p, li, .code-caption, figcaption, caption, [slot="title"]) {
+.prose :is(h2, h3, h4, .code-caption, figcaption, caption, [slot="title"]) {
   overflow-wrap: anywhere;
 }
 

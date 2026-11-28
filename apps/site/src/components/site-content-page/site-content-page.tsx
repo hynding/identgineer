@@ -46,14 +46,18 @@ function contentRouteOf(slug: string): ContentRoute | undefined {
   );
 }
 
-/** A word shorter than this fits a line of the narrowest column, so it is never broken. */
-const LONG_NAME = 20;
+/**
+ * A name shorter than this fits a line of the narrowest column whole (sixteen characters of code
+ * in a note at 320px), so it is never broken; a longer one may need to be.
+ */
+const LONG_NAME = 17;
 
 /**
- * Where a long name may wrap: after a `_`, `/`, `.`, `=` or `-` that follows a part of it and comes
- * before another (so not after a leading `?` or `/`, nor inside `://`), and inside camelCase.
+ * Where a long name may wrap: after a `_`, `/`, `.`, `=` or `-` that follows a letter or a digit,
+ * or after `://`, and comes before another part (so not after a leading `?`, `/` or `--`), and
+ * inside camelCase.
  */
-const NAME_PARTS = /(?<=[^\s?][_/.=-])(?=[\p{L}\p{N}@])|(?<=\p{Ll})(?=\p{Lu})/u;
+const NAME_PARTS = /(?<=[\p{L}\p{N}][_/.=-]|:\/\/)(?=[\p{L}\p{N}@])|(?<=\p{Ll})(?=\p{Lu})/u;
 
 /**
  * Text with a chance to wrap between the parts of each long name in it, such as an environment

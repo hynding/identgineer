@@ -177,7 +177,7 @@ for (const layout of LAYOUTS) {
       await hydrated(page, "site-content-page");
       const wrapped = await page.evaluate(() =>
         [...document.querySelectorAll(".prose code")]
-          .filter((code) => code.closest("pre") === null && code.textContent.length < 20)
+          .filter((code) => code.closest("pre") === null && code.textContent.length < 17)
           .filter((code) => {
             const tops = [...code.getClientRects()].map((line) => Math.round(line.top));
             return new Set(tops).size > 1;
