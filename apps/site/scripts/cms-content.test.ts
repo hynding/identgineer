@@ -3,7 +3,13 @@ import type { ContentPage } from "../src/content/content-page.ts";
 import { STATIC_PAGES } from "../src/content/pages/index.ts";
 import { ROUTES } from "../src/routes.ts";
 import { parseContentPage, parseNavigationItem } from "../src/content/validate-content-page.ts";
-import { CMS_LIMITS, cmsBaseUrl, resolveSiteContent, type ContentOptions } from "./cms-content.ts";
+import {
+  CMS_LIMITS,
+  MOST_WARNINGS,
+  cmsBaseUrl,
+  resolveSiteContent,
+  type ContentOptions,
+} from "./cms-content.ts";
 
 const BASE = "https://cms.example.com/";
 
@@ -108,6 +114,18 @@ function fakeFetch(cms: FakeCms) {
       return Promise.resolve(cms.navigation?.(signal) ?? json(page([])));
     }
     return Promise.resolve(new Response("not found", { status: 404 }));
+  });
+}
+
+/**
+ * What the build says it drew from each page of the repository: the line given for a slug, none
+ * for one given as undefined (drawn from the CMS), and "no published page" for every other.
+ */
+function outcomes(given: Readonly<Record<string, string | undefined>>): string[] {
+  return STATIC_PAGES.flatMap(({ slug }) => {
+    if (!(slug in given)) return [`CMS: no published page "${slug}"; the static copy is used`];
+    const line = given[slug];
+    return line === undefined ? [] : [`CMS: page "${slug}" ${line}`];
   });
 }
 
@@ -693,9 +711,40 @@ describe("the site's content", () => {
       "block 1 (paragraph): a link inside a link is not drawn",
     ],
     ["the validator", { title: 5 }, "title: must be text"],
-  ])("names a page %s refuses once", async (_, change, why) => {
+  ])("names a page %s refuses once, and says nothing else of it", async (_, change, why) => {
     const { warnings } = await resolve({ pages: () => json(page([record("identity", change)])) });
-    expect(warnings[0]).toBe(`CMS: page "identity" is not valid (${why}); the static copy is used`);
+    expect(warnings).toEqual(
+      outcomes({ identity: `is not valid (${why}); the static copy is used` }),
+    );
+  });
+
+  it("names a draft once, and says nothing else of it", async () => {
+    const { warnings } = await resolve({
+      pages: () => json(page([record("identity", { publishedAt: null })])),
+    });
+    expect(warnings).toEqual(outcomes({ identity: "is not published; it is left out" }));
+  });
+
+  it("draws a page sent twice from its first copy, and names the second", async () => {
+    const { pages, warnings } = await resolve({
+      pages: () => json(page([record("identity"), record("identity", { title: 5 })])),
+    });
+    expect(pages.get("identity")?.title).toBe("Edited in the CMS");
+    expect(warnings).toEqual([
+      'CMS: page "identity" is there twice; the first is used',
+      ...outcomes({ identity: undefined }),
+    ]);
+  });
+
+  it("takes a page from a later copy when the first is refused", async () => {
+    const { pages, warnings } = await resolve({
+      pages: () => json(page([record("identity", { title: 5 }), record("identity")])),
+    });
+    expect(pages.get("identity")?.title).toBe("Edited in the CMS");
+    expect(warnings).toEqual([
+      'CMS: page "identity" is not valid (title: must be text); the static copy is used',
+      ...outcomes({ identity: undefined }),
+    ]);
   });
 
   describe("prints a bounded number of lines, whatever the CMS sends", () => {
@@ -721,17 +770,39 @@ describe("the site's content", () => {
       expect(warnings[0]).toMatch(/answered more than 25 records at once/);
     });
 
-    it("prints the first fifty warnings and counts the rest", async () => {
-      const junk = Array.from({ length: CMS_LIMITS.pageSize }, () => 0);
+    const junk = Array.from({ length: CMS_LIMITS.pageSize }, () => 0);
+    const noSlug = (count: number) =>
+      Array.from(
+        { length: count },
+        (_, index) => `CMS: record ${String(index + 1)} has no slug; it is left out`,
+      );
+
+    it("prints the first records' warnings, counts the rest, and then what the build drew", async () => {
       const { warnings } = await resolve({
         pages: () => json(page(junk, CMS_LIMITS.pages)),
         navigation: () => json(page(junk, CMS_LIMITS.pages)),
       });
-      // 100 records without a slug, the 7 pages missing from the answer, 100 invalid items.
-      expect(warnings).toHaveLength(51);
-      expect(warnings[0]).toBe("CMS: record 1 has no slug; it is left out");
-      expect(warnings[49]).toBe("CMS: record 50 has no slug; it is left out");
-      expect(warnings[50]).toBe("CMS: 157 more warnings are not shown");
+      // 100 records without a slug and 100 invalid items, then every page the static copy.
+      const records = CMS_LIMITS.pages * CMS_LIMITS.pageSize;
+      expect(warnings).toEqual([
+        ...noSlug(MOST_WARNINGS),
+        `CMS: ${String(2 * records - MOST_WARNINGS)} more warnings are not shown`,
+        ...outcomes({}),
+      ]);
+    });
+
+    it("never hides that the navigation fell back, however many records came before", async () => {
+      const { warnings } = await resolve({
+        pages: () => json(page(junk, CMS_LIMITS.pages)),
+        navigation: () => new Response("", { status: 500 }),
+      });
+      const records = CMS_LIMITS.pages * CMS_LIMITS.pageSize;
+      expect(warnings).toEqual([
+        ...noSlug(MOST_WARNINGS),
+        `CMS: ${String(records - MOST_WARNINGS)} more warnings are not shown`,
+        ...outcomes({}),
+        "CMS: navigation items could not be read (the CMS answered 500); the route table's labels are used",
+      ]);
     });
   });
 
