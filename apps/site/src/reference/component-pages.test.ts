@@ -8,7 +8,7 @@ import {
   type ContentResult,
 } from "../content/validate-content-page.ts";
 import { el, type ComponentExample } from "../examples/component-example.ts";
-import { livePaths } from "../routes.ts";
+import { livePaths, routeOfPath } from "../routes.ts";
 import type { ComponentDoc } from "./component-docs.ts";
 import {
   checkReference,
@@ -287,6 +287,11 @@ describe("the page of one component", () => {
 });
 
 describe("the route of a component's page", () => {
+  it("is the one the browser makes from the path alone, but for its description", () => {
+    const built = componentRoute(SAMPLE);
+    expect({ ...routeOfPath(built.path), description: built.description }).toEqual(built);
+  });
+
   it("is a page of the components section, found by the component's tag", () => {
     expect(componentRoute(SAMPLE)).toEqual({
       path: "/components/idg-sample/",
@@ -297,6 +302,7 @@ describe("the route of a component's page", () => {
       status: "live",
       component: "site-content-page",
       content: "idg-sample",
+      generated: true,
     });
   });
 
