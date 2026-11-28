@@ -21,6 +21,24 @@ test.describe("the index of the components", () => {
     expect(new Set(headings).size).toBe(headings.length);
   });
 
+  test("keeps each component's name whole, on one line, at 1100px and at 320px", async ({
+    page,
+  }) => {
+    for (const width of [1100, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/components/");
+      await hydrated(page, "site-content-page");
+      const lines = await page
+        .locator("article.prose td:first-child a")
+        .evaluateAll((links) =>
+          links.map((link) => ({ name: link.textContent, lines: link.getClientRects().length })),
+        );
+      expect(lines.length).toBeGreaterThan(50);
+      expect(lines.filter(({ lines: count }) => count !== 1)).toEqual([]);
+      expect(await sidewaysScroll(page)).toBeLessThanOrEqual(0);
+    }
+  });
+
   test("leads to a component's page, which marks the index as its section", async ({ page }) => {
     await page.goto("/components/");
     await page.getByRole("link", { name: "idg-button", exact: true }).click();
