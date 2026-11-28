@@ -121,11 +121,11 @@ describe.skipIf(!described)("the registry against the components package's docs"
     // A component that asks a client or a consent object draws nothing without one.
     for (const tag of ["idg-consent-banner", "idg-consent-preferences"]) {
       const [element] = COMPONENT_EXAMPLES[tag as keyof typeof COMPONENT_EXAMPLES].nodes;
-      expect(Object.keys((element as ExampleElement).properties ?? {}), tag).toEqual(["consent"]);
+      expect(Object.keys(element.properties ?? {}), tag).toEqual(["consent"]);
     }
     for (const tag of ["idg-session-guard", "idg-user-menu"]) {
       const [element] = COMPONENT_EXAMPLES[tag as keyof typeof COMPONENT_EXAMPLES].nodes;
-      expect(Object.keys((element as ExampleElement).properties ?? {}), tag).toEqual(["client"]);
+      expect(Object.keys(element.properties ?? {}), tag).toEqual(["client"]);
     }
   });
 
