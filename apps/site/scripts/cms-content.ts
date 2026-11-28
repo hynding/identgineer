@@ -255,7 +255,9 @@ export const MOST_WARNINGS = 50;
 
 /**
  * The build's warnings. What it said of single records and items is capped, and counted past the
- * cap; what it fell back to (a line for each page and for the navigation at most) always follows.
+ * cap; what it fell back to always follows: a line for each page drawn from its static copy (or one for
+ * all pages), one if the pages or the navigation items were cut short, and one if the navigation
+ * could not be read.
  */
 class Warnings {
   private readonly details: string[] = [];
@@ -284,7 +286,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 interface PagesRead {
   readonly found: ReadonlyMap<string, ContentPage>;
-  /** Why each page of the site that was sent was first left out, for a page not yet found. */
+  /** The line for the first refused copy of each page of the site, without what it leads to. */
   readonly refused: ReadonlyMap<string, string>;
 }
 
@@ -298,12 +300,11 @@ function pagesFrom(
   const paths = livePaths();
   const found = new Map<string, ContentPage>();
   const refused = new Map<string, string>();
-  // The first reason a page of the site is left out says what the build drew for it, so it is
-  // kept back to be shown; any other line is said of one record only.
-  const refuse = (slug: string | undefined, line: string): void => {
-    if (slug !== undefined && known.has(slug) && !found.has(slug) && !refused.has(slug)) {
-      refused.set(slug, line);
-    } else warnings.detail(line);
+  // The first reason a page of the site is refused is kept back: what it leads to is known only
+  // once every record is read. A later refused copy is left out, whatever the page is drawn from.
+  const refuse = (slug: string, line: string): void => {
+    if (!refused.has(slug)) refused.set(slug, line);
+    else warnings.detail(`${line}; this copy is left out`);
   };
   records.forEach((record, index) => {
     let name = `record ${String(index + 1)}`;
@@ -318,36 +319,42 @@ function pagesFrom(
         warnings.detail(`CMS: ${name} is no page of the site; it is left out`);
         return;
       }
+      name = `page "${record.slug}"`;
+      if (!known.has(record.slug)) {
+        warnings.detail(`CMS: ${name} is no page of the site; it is left out`);
+        return;
+      }
       slug = record.slug;
-      name = `page "${slug}"`;
-      const warning = pageFrom(record, slug, { known, paths, found, parsePage });
-      if (warning !== undefined) refuse(slug, `CMS: ${name} ${warning}`);
+      if (found.has(slug)) {
+        warnings.detail(`CMS: ${name} is there twice; the first is used`);
+        return;
+      }
+      const reason = pageFrom(record, slug, { paths, found, parsePage });
+      if (reason !== undefined) refuse(slug, `CMS: ${name} ${reason}`);
     } catch {
-      refuse(slug, `CMS: ${name} could not be read; the static copy is used`);
+      if (slug === undefined) warnings.detail(`CMS: ${name} could not be read; it is left out`);
+      else refuse(slug, `CMS: ${name} could not be read`);
     }
   });
   return { found, refused };
 }
 
 interface PageContext {
-  readonly known: ReadonlySet<string>;
   readonly paths: ReadonlySet<string>;
   readonly found: Map<string, ContentPage>;
   readonly parsePage: typeof parseContentPage;
 }
 
-/** Takes one record's page into `found`, or says why it is left out. */
+/** Takes the first copy of a page of the site into `found`, or says why it is refused. */
 function pageFrom(
   record: Record<string, unknown>,
   slug: string,
-  { known, paths, found, parsePage }: PageContext,
+  { paths, found, parsePage }: PageContext,
 ): string | undefined {
-  if (!known.has(slug)) return "is no page of the site; it is left out";
-  if (found.has(slug)) return "is there twice; the first is used";
   // The public API answers published pages only; one without a date of publication is a draft,
   // and is never drawn, whatever the CMS sent.
   if (typeof record.publishedAt !== "string" || record.publishedAt === "") {
-    return "is not published; the static copy is used";
+    return "is not published";
   }
   let reason: string;
   try {
@@ -361,7 +368,7 @@ function pageFrom(
     if (!(error instanceof StrapiBlocksError)) throw error;
     reason = error.message;
   }
-  return `is not valid (${reason}); the static copy is used`;
+  return `is not valid (${reason})`;
 }
 
 interface PlacedItem {
@@ -493,10 +500,14 @@ async function readSiteContent(
     for (const slug of statics.keys()) {
       const page = found.get(slug);
       if (page) pages.set(slug, page);
-      const reason = refused.get(slug);
-      if (page && reason !== undefined) warnings.detail(reason);
+      const refusal = refused.get(slug);
+      if (page && refusal !== undefined) warnings.detail(`${refusal}; this copy is left out`);
       else if (!page) {
-        warnings.outcome(reason ?? `CMS: no published page "${slug}"; the static copy is used`);
+        warnings.outcome(
+          refusal === undefined
+            ? `CMS: no published page "${slug}"; the static copy is used`
+            : `${refusal}; the static copy is used`,
+        );
       }
     }
   } catch (error) {
