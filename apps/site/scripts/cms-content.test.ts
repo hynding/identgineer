@@ -74,7 +74,7 @@ function stringify(root: unknown): string {
         if (index > 0) stack.push({ [CLOSE]: "," });
       }
     } else {
-      out.push((JSON.stringify(item)) ?? "null");
+      out.push(item === undefined ? "null" : JSON.stringify(item));
     }
   }
   return out.join("");
