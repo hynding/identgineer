@@ -228,16 +228,20 @@ need not be served itself.
   (hostile and malformed input: `javascript:`, `data:` and protocol-relative links, unknown blocks
   and examples, heading jumps, control and direction characters, oversized bodies), the navigation
   items, the CMS's rich text, the CMS read against a fake CMS (success, an invalid record, 404, 5xx,
-  a timeout, an oversized answer, a wrong content type, a redirect to another origin, drafts, the
-  page count), every reading page in the repository, and the browser suite's parts.
+  a timeout, a body that stalls, an oversized answer, a wrong content type, a redirect to another
+  origin, drafts, the page count, what an editor may write, and answers that must never fail the
+  build: links and values nested thousands deep, 150 seeded random and adversarial answers, fields
+  that throw; its warnings are short printable ASCII and never hold the setting), every reading page
+  in the repository, and the browser suite's parts.
 - **Rendering** (`checks/content-render.test.ts`, once the site is built): a page with every block,
   drawn by the hydrate build as the prerenderer draws it: one h1, the sections and their headings,
   each block's elements, outbound links' `rel`, both tables of contents, the docs' navigation and
-  pager, markup in the content only ever as text, a refused page, and the navigation's labels on
-  every page component.
+  pager, markup in the content only ever as text, places to wrap only in long names, no id used twice
+  in one tree (a heading named as a table's caption included), a refused page, and the navigation's
+  labels on every page component.
 - **The built site** (`checks/built-site.test.ts`, in `pnpm test` once the site is built, and
   required on CI): every live route has a file and is in the sitemap, which robots.txt names, every
-  internal link, fragment and asset resolves, an outbound link is an `https:` link with
+  internal link, fragment and asset resolves, no page uses an id twice in one tree, an outbound link is an `https:` link with
   `noopener noreferrer` and nothing is loaded from another origin, the
   bootstrap script comes first, blocking and with the integrity of the file served, no page holds an
   inline script, a `style` or event handler attribute, or an inline style the policy does not name,
@@ -256,7 +260,9 @@ need not be served itself.
   with them) at 320, 390, 820 and 1440px, as Chromium draws it, without `calc-size()` and without
   `calc-size()` or container style queries; every other page, the 404 page included, fits each
   design once, each with a different layout (eight pairs, shifted from page to page) in every UX
-  mode, in all three engines; fitting is no sideways scroll, nothing cut or spilling out of its box
+  mode, in all three engines; a reading page and a docs page filled with the longest unbroken text
+  the validator takes in every field (labels, title, summary, headings, captions, cells, code, links)
+  fit every layout in all three engines at 320 to 1440px; fitting is no sideways scroll, nothing cut or spilling out of its box
   (a code sample or table that scrolls sideways and takes focus may hold what it scrolls), no word,
   figure or name broken inside itself and no two controls over each other; in the default look, in
   bento, dashboard and magazine at 768 to 1440px no section beside another is more than a fifth
@@ -264,7 +270,11 @@ need not be served itself.
   theme tiles and the axes is full and the theme tiles of a row are laid out alike, and the
   overview spans two of four columns in the dashboard at 1920px and the side rail at 2560px; and
   in every design the rules side-rail and magazine draw are there, 2 to 8px, and in every layout a
-  section reached by a link stops short of the window's top. Any console error, policy violation or request to
+  section reached by a link stops short of the window's top; a reading page shows one table of
+  contents, beside the article or before it, in every layout from 390 to 1440px; immersive centres
+  each band's heading on its text's column on every reading page at 820 to 1920px and starts the
+  content one gap under the hero; a table or code sample that scrolls shades the edge it has more
+  beyond, in every layout; and a short name in code never wraps. Any console error, policy violation or request to
   another origin fails a test.
 
 CI runs the browser suite in seven parts (`browser/parts.ts`): each engine's fit sweep in two (the
