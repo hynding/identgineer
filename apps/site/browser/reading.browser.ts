@@ -165,3 +165,26 @@ for (const layout of LAYOUTS) {
     }
   });
 }
+
+// A short name in code (an attribute, a value) is read whole: it never wraps, even at a hyphen.
+for (const layout of LAYOUTS) {
+  test(`a short name in code is never wrapped in ${layout}`, async ({ page }) => {
+    const problems: string[] = [];
+    for (const width of [320, 390, 1024, 1440] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`/docs/theming/?idg-layout=${layout}`);
+      await hydrated(page, "site-content-page");
+      const wrapped = await page.evaluate(() =>
+        [...document.querySelectorAll(".prose code")]
+          .filter((code) => code.closest("pre") === null && code.textContent.length < 20)
+          .filter((code) => {
+            const tops = [...code.getClientRects()].map((line) => Math.round(line.top));
+            return new Set(tops).size > 1;
+          })
+          .map((code) => code.textContent),
+      );
+      for (const name of wrapped) problems.push(`${String(width)}px: ${name}`);
+    }
+    expect(problems).toEqual([]);
+  });
+}
