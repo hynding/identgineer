@@ -88,8 +88,9 @@ prints a warning that names it and why. Any error at all, in one record, in one 
 whole read, falls back the same way (`scripts/cms-content.test.ts` reaches each fallback, and feeds
 it deep, random and wide answers). The build prints at most 50 warnings about single records and
 navigation items, and a line counting the rest, so no answer can flood its log; after them it always
-prints what it fell back to, a line for each page not drawn from the CMS and one if the navigation
-could not be read. A warning names a record by its slug only when it is a valid one, and otherwise
+prints what it fell back to: a line for each page not drawn from the CMS (one line for every page
+when `IDG_CMS_URL` is refused or the pages could not be read at all), a line for pages or navigation items past the four pages of
+records it reads, and one if the navigation could not be read. A warning names a record by its slug only when it is a valid one, and otherwise
 by its position; it quotes CMS text short with anything outside printable ASCII escaped, and never
 prints `IDG_CMS_URL`. What an editor may write, and what the site makes of it, is in
 [cms/README.md](../../cms/README.md#what-an-editor-may-write). The read is bounded: `https:` only (or `http:` on
