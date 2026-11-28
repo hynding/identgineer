@@ -13,6 +13,24 @@ export function inlineStyles(html: string): string[] {
 
 const START_TAG = /<[a-z][^\s/>]*(?:\s+[^\s=>/]+(?:="[^"]*")?)*\s*\/?>/gi;
 
+/** The text of every `style` attribute in the page's start tags, in document order. */
+export function styleAttributes(html: string): string[] {
+  return [...html.matchAll(START_TAG)].flatMap((tag) =>
+    [...tag[0].matchAll(/\sstyle="([^"]*)"/gi)].map((attribute) => attribute[1] ?? ""),
+  );
+}
+
+const KNOWN_STYLE_ATTRIBUTE = /^--_offset: \d+px;$/;
+
+/**
+ * The style attributes that are not the one offset a component is known to write. Stripping is
+ * safe for that one because the browser writes it again; anything else would lose a style
+ * silently, so the prerender refuses it.
+ */
+export function unexpectedStyleAttributes(html: string): string[] {
+  return styleAttributes(html).filter((text) => !KNOWN_STYLE_ATTRIBUTE.test(text));
+}
+
 /**
  * The page without its `style` attributes. A few components write a custom property to a surface
  * once they render, which the prerender serialises as an attribute the policy forbids. The browser
