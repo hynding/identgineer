@@ -5,6 +5,8 @@ import {
   inlineStyles,
   securityHeaders,
   styleSource,
+  styleAttributes,
+  unexpectedStyleAttributes,
   withoutStyleAttributes,
 } from "./security-headers";
 
@@ -38,6 +40,25 @@ describe("a prerendered page's style attributes", () => {
       '<p data-style="x" title="a style=&quot;b&quot;">use style="--_offset: 8px;" here</p>';
     expect(withoutStyleAttributes(html)).toBe(html);
   });
+});
+
+describe("the style attributes of a page", () => {
+  it("are listed with their text, in order", () => {
+    const html = '<div style="--_offset: 8px;"><p class="a" style="color:red"></p></div>';
+    expect(styleAttributes(html)).toEqual(["--_offset: 8px;", "color:red"]);
+  });
+
+  it("are all expected when each is the offset a component writes", () => {
+    const html = '<i style="--_offset: 8px;"></i><i style="--_offset: 0px;"></i>';
+    expect(unexpectedStyleAttributes(html)).toEqual([]);
+  });
+
+  it.each(["color:red", "--_offset: 8em;", "--_offset: 8px; color:red", "--other: 8px;"])(
+    "name %s as unexpected, so that stripping it is not silent",
+    (text) => {
+      expect(unexpectedStyleAttributes(`<i style="${text}"></i>`)).toEqual([text]);
+    },
+  );
 });
 
 describe("a style source", () => {
