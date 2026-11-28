@@ -349,6 +349,14 @@ describe("the index of the components", () => {
     ).toBe(true);
   });
 
+  it("names each table apart from the heading above it, so no two landmarks share a name", () => {
+    const body = componentIndexPage(groups).body;
+    const headings = body.flatMap((block) => (block.type === "heading" ? [block.text] : []));
+    const captions = body.flatMap((block) => (block.type === "table" ? [block.caption] : []));
+    expect(captions.filter((caption) => headings.includes(caption))).toEqual([]);
+    expect(new Set(captions).size).toBe(captions.length);
+  });
+
   it("is a table of each group's components, each linked to its page with its first sentence", () => {
     expect(componentIndexPage(groups)).toEqual({
       slug: "components",
@@ -374,7 +382,7 @@ describe("the index of the components", () => {
         },
         {
           type: "table",
-          caption: "Controls and feedback",
+          caption: "The components in Controls and feedback",
           columns: ["Component", "Summary"],
           rows: [
             [
@@ -386,7 +394,7 @@ describe("the index of the components", () => {
         { type: "heading", level: 2, text: "Chips" },
         {
           type: "table",
-          caption: "Chips",
+          caption: "The components in Chips",
           columns: ["Component", "Summary"],
           rows: [
             [
