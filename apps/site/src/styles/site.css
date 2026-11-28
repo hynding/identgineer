@@ -1509,6 +1509,57 @@ figcaption {
   color: var(--idg-color-text);
 }
 
+/* A box that scrolls along itself shades each edge it has more beyond: the shade's width follows
+   how far it is scrolled, so the start has none at the start and the end none at the end. A box
+   that does not scroll has no scroll timeline, so the animation does nothing and no shade is drawn.
+   A browser without scroll-driven animations draws none either. */
+@property --_shade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --_shade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes scroll-shade {
+  from {
+    --_shade-start: 0px;
+    --_shade-end: var(--idg-space-s);
+  }
+
+  1% {
+    --_shade-start: var(--idg-space-s);
+  }
+
+  99% {
+    --_shade-end: var(--idg-space-s);
+  }
+
+  to {
+    --_shade-start: var(--idg-space-s);
+    --_shade-end: 0px;
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  .code-sample pre,
+  .table-scroll {
+    --_shade: color-mix(in srgb, var(--idg-color-text) 22%, transparent);
+
+    background:
+      radial-gradient(farthest-side at 0 50%, var(--_shade), transparent) left / var(--_shade-start)
+        100% no-repeat,
+      radial-gradient(farthest-side at 100% 50%, var(--_shade), transparent) right /
+        var(--_shade-end) 100% no-repeat;
+    animation: scroll-shade linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+
 .code-sample pre:focus-visible,
 .table-scroll:focus-visible {
   outline: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis)) var(--idg-focus-ring-style)
