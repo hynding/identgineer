@@ -5,6 +5,7 @@ import {
   inlineStyles,
   securityHeaders,
   styleSource,
+  withoutStyleAttributes,
 } from "./security-headers";
 
 function sha256(text: string): string {
@@ -20,6 +21,21 @@ describe("the inline styles of a page", () => {
 
   it("are none in a page without style elements", () => {
     expect(inlineStyles('<link rel="stylesheet" href="/a.css"><p>styled</p>')).toEqual([]);
+  });
+});
+
+describe("a prerendered page's style attributes", () => {
+  it("are removed from every element, whatever else it carries", () => {
+    const html =
+      '<div class="surface" popover="manual" style="--_offset: 8px;" title="a > b"><p style="color:red">x</p><br style="a:b"/></div>';
+    expect(withoutStyleAttributes(html)).toBe(
+      '<div class="surface" popover="manual" title="a > b"><p>x</p><br/></div>',
+    );
+  });
+
+  it("leave text and other attributes that merely look like one", () => {
+    const html = '<p data-style="x" title="a style=&quot;b&quot;">use style="--_offset: 8px;" here</p>';
+    expect(withoutStyleAttributes(html)).toBe(html);
   });
 });
 
