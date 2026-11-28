@@ -4,7 +4,7 @@ import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseHtmlToDocument } from "@stencil/core/mock-doc";
 import { beforeAll, describe, expect, it } from "vitest";
-import { HEADERS_FILE, styleSource, withoutStyleAttributes } from "../scripts/security-headers";
+import { HEADERS_FILE, styleSource } from "../scripts/security-headers";
 import { generatedRoutes } from "../src/reference/generated-routes";
 import { livePaths, pageFile, prerenderedPages } from "../src/routes";
 
@@ -187,7 +187,10 @@ describe.skipIf(!built)("the built site", () => {
   // attribute inside a declarative shadow root is found too, which the policy would block.
   it.each(htmlFiles)("%s is written without a style attribute anywhere in its markup", (file) => {
     const html = readFileSync(join(WWW, file), "utf8");
-    expect(withoutStyleAttributes(html) === html).toBe(true);
+    // A plain scan for the attribute name inside any start tag, not the prerender's own tag reader,
+    // so a gap in that reader cannot hide what it missed.
+    const found = [...html.matchAll(/<[a-zA-Z][^>]*?\sstyle\s*=/g)].map((m) => m[0].slice(0, 80));
+    expect(found).toEqual([]);
   });
 
   it.each(htmlFiles)("%s holds only inline styles the policy names by hash", (file) => {
