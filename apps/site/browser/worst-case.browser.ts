@@ -75,14 +75,14 @@ function worstNavigation(): string {
 
 /**
  * The longest unbroken text the components package may document, in every cell of a component's
- * page: names and types as long as the reference takes them, in as many rows as it lays out in one
- * table, and a description of the full length.
+ * page: names and types as long as the reference takes them and descriptions of the full length, in
+ * as many rows of every table as the body's text, which has a bound of its own, takes.
  */
 function worstComponentPage(): ContentPage {
   const name = (mark: string) => word(REFERENCE_LIMITS.name, mark);
   const long = (mark: string) => word(REFERENCE_LIMITS.text, mark);
   const rows = <Row>(make: (mark: string) => Row) =>
-    Array.from({ length: 12 }, (_, index) => make(String(index)));
+    Array.from({ length: 3 }, (_, index) => make(String(index)));
   const doc: ComponentDoc = {
     tag: "idg-input",
     summary: [long("a"), long("b")],

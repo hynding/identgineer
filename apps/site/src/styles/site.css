@@ -2025,7 +2025,18 @@ figcaption {
   align-items: baseline;
   gap: var(--idg-space-2xs);
   margin: 0;
-  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+}
+
+/* A name is a heading of the article, which breaks anywhere to fit; a value's name is one word, to
+   be broken only where the box leaves no choice, and a step smaller than the sections' headings so
+   that the widest designs draw the longest of them whole in a tile one column wide. */
+.prose h3.tile-name,
+.prose h3.combo-name {
+  overflow-wrap: break-word;
+}
+
+.prose h3.tile-name {
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
 }
 
 /* The whole tile is the link: its own box is drawn over the tile, under nothing else that is
