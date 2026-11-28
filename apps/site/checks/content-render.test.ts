@@ -165,6 +165,11 @@ describe.skipIf(!built)("a reading page, as the prerenderer draws it", () => {
     ["a short name", "data-theme", []],
     ["a query that starts with its mark", "?idg-theme=ember", []],
     ["a path that starts with its slash", "/docs/theming/", []],
+    [
+      "a custom property's name, between its parts but not after its leading dashes",
+      "--idg-border-width",
+      ["--idg-", "border-", "width"],
+    ],
     ["a long name, between its parts", "@identgineer/components", ["@identgineer/", "components"]],
     [
       "a long setting, between its parts",
