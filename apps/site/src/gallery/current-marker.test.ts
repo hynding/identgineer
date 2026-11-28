@@ -20,8 +20,10 @@ describe("the stylesheet that marks each axis's current tile from the root's att
     expect(css).toContain(
       `:root:not([data-theme]) .gallery-tile[data-axis="theme"][data-value="aurora"]`,
     );
-    expect(css).not.toContain(`:root:not([data-theme]) .gallery-tile[data-axis="theme"][data-value="ember"]`);
-    expect(css.match(/:root:not\(\[data-[a-z]+\]\)/g)).toHaveLength(4);
+    expect(css).not.toContain(
+      `:root:not([data-theme]) .gallery-tile[data-axis="theme"][data-value="ember"]`,
+    );
+    expect(css.match(/:root:not\(\[data-[a-z]+\]\)/g)).toHaveLength(8);
   });
 
   it("shows the label of the current tile and outlines it, in two rules for each value", () => {
