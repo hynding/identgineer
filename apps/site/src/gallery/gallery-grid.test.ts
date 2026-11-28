@@ -9,7 +9,9 @@ function lastRow(count: number, columns: number): number {
 describe("the columns of a gallery's tiles", () => {
   it.each([
     [8, 4, 4],
-    [8, 3, 2],
+    [8, 3, 3],
+    [9, 3, 3],
+    [9, 2, 1],
     [9, 4, 3],
     [6, 4, 3],
     [7, 4, 4],
