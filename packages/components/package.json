@@ -38,10 +38,10 @@
     "@stencil/core": "4.45.5"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.14.0",
+    "@axe-core/playwright": "4.14.1",
     "@identgineer/identity": "workspace:*",
     "@identgineer/tracking": "workspace:*",
-    "@playwright/test": "1.63.0",
+    "@playwright/test": "1.65.1",
     "@stencil/vitest": "1.16.2",
     "typescript": "6.0.3"
   }
