@@ -164,7 +164,9 @@ test.describe("the variations gallery", () => {
     ).toBeHidden();
   });
 
-  test("draws each preview under its own value, with the real components", async ({ page }) => {
+  test("draws each preview under its own value, a design on the real components", async ({
+    page,
+  }) => {
     await page.emulateMedia({ colorScheme: "light" });
     await open(page);
     const read = (axis: string, property: string) =>
@@ -182,15 +184,17 @@ test.describe("the variations gallery", () => {
     expect(new Set(radii).size).toBeGreaterThan(3);
     const gaps = await read("ux", "--idg-density-gap-scale");
     expect(new Set(gaps).size).toBeGreaterThan(3);
+    // A design is drawn on the library's own components; a theme and a mode on what they set.
+    const previews = page.locator('li[data-axis="design"] .tile-preview');
+    await expect(previews.locator("idg-button")).toHaveCount(16);
+    await expect(previews.first().locator("idg-button").first()).toHaveJSProperty(
+      "tagName",
+      "IDG-BUTTON",
+    );
     for (const axis of ["theme", "design", "ux"] as const) {
-      const previews = page.locator(`li[data-axis="${axis}"] .tile-preview`);
-      await expect(previews.locator("idg-button")).toHaveCount(8);
-      await expect(previews.first().locator("idg-button")).toHaveJSProperty(
-        "tagName",
-        "IDG-BUTTON",
-      );
-      await expect(previews.first()).toHaveAttribute("aria-hidden", "true");
-      await expect(previews.first()).toHaveJSProperty("inert", true);
+      const first = page.locator(`li[data-axis="${axis}"] .tile-preview`).first();
+      await expect(first).toHaveAttribute("aria-hidden", "true");
+      await expect(first).toHaveJSProperty("inert", true);
     }
   });
 
