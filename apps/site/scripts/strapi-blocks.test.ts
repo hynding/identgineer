@@ -49,6 +49,25 @@ describe("Strapi's blocks rich text, as a page body", () => {
     ]);
   });
 
+  it("brings any level into 2 to 4, a later level 1 too, never skipping one on the way down", () => {
+    const heading = (level: number, words: string) => ({
+      type: "heading",
+      level,
+      children: [text(words)],
+    });
+    expect(
+      bodyFromStrapiBlocks([
+        heading(2, "A"),
+        heading(3, "B"),
+        heading(1, "C"),
+        heading(6, "D"),
+        heading(5, "E"),
+        heading(6, "F"),
+        heading(4, "G"),
+      ]).map((block) => block.level),
+    ).toEqual([2, 3, 2, 3, 4, 4, 4]);
+  });
+
   it("keeps lists, bulleted and numbered", () => {
     const list = (format: string) => ({
       type: "list",

@@ -16,8 +16,18 @@ describe("a heading's address", () => {
     ["Café crème", "cafe-creme"],
     ["CSP", "csp"],
     ["!!!", ""],
+    ["table_2", "table-2"],
+    ["Table_2", "table-2"],
+    ["__init__ and snake_case", "init-and-snake-case"],
   ])("of %j is %j", (text, id) => {
     expect(headingId(text)).toBe(id);
+  });
+
+  // A table's caption is named `table_N`: no heading can take that name only while no heading's
+  // address holds an underscore.
+  it("holds only lower-case letters, digits and single hyphens, never an underscore", () => {
+    const texts = ["a_b", "_x_", "A__B", "x - _ - y", "ÆØÅ_1", "\u00a0_\u2014_", "Ω_ω", "1_2_3"];
+    for (const text of texts) expect(headingId(text)).toMatch(/^(?:[a-z0-9]+(?:-[a-z0-9]+)*)?$/);
   });
 });
 

@@ -301,18 +301,22 @@ describe.skipIf(!built)("a reading page, as the prerenderer draws it", () => {
     expect(labelled.querySelector('a[href="/nowhere/"]')).toBeNull();
   });
 
-  it("gives no two elements of one tree the same id, even a heading named as a table is", async () => {
+  it("gives no two elements of one tree the same id", () => {
     expect(duplicateIds(document)).toEqual([]);
-    const table = PAGE.body.find((block) => block.type === "table");
-    const named = await render(
-      JSON.stringify({
-        ...PAGE,
-        body: [{ type: "heading", level: 2, text: "Table 2" }, table],
-      }),
-    );
-    expect(named.querySelector("h2#table-2")).not.toBeNull();
-    expect(duplicateIds(named)).toEqual([]);
   });
+
+  it.each(["Table 2", "table_2", "Table_2"])(
+    "gives a heading named %j an id apart from the table's caption",
+    async (text) => {
+      const table = PAGE.body.find((block) => block.type === "table");
+      const named = await render(
+        JSON.stringify({ ...PAGE, body: [{ type: "heading", level: 2, text }, table] }),
+      );
+      expect(named.querySelector(".prose-section > h2")?.id).toBe("table-2");
+      expect(named.querySelector("caption")?.id).toBe("table_2");
+      expect(duplicateIds(named)).toEqual([]);
+    },
+  );
 
   it.each([
     ["is not JSON", "{"],
