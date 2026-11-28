@@ -153,13 +153,45 @@ describe.skipIf(!built)("a reading page, as the prerenderer draws it", () => {
     expect(article.querySelector(".prose-intro p")).not.toBeNull();
   });
 
-  it("keeps a run's emphasis, the code innermost, with places to wrap a long name", () => {
+  it("keeps a run's emphasis, the code innermost", () => {
     const paragraph = one(".prose-intro p");
     expect(paragraph.querySelector("strong")?.textContent).toBe("strong");
     expect(paragraph.querySelector("em")?.textContent).toBe("emphasis");
     const code = paragraph.querySelector("code");
     expect(code?.textContent).toBe("ENV_NAME");
-    expect(code?.querySelectorAll("wbr")).toHaveLength(1);
+  });
+
+  it.each([
+    ["a short name", "data-theme", []],
+    ["a query that starts with its mark", "?idg-theme=ember", []],
+    ["a path that starts with its slash", "/docs/theming/", []],
+    ["a long name, between its parts", "@identgineer/components", ["@identgineer/", "components"]],
+    [
+      "a long setting, between its parts",
+      "IDG_CMS_URL=https://cms.example.com/",
+      ["IDG_", "CMS_", "URL=", "https://", "cms.", "example.", "com/"],
+    ],
+    [
+      "a long name, inside its camelCase",
+      "createIdentityClientFromEnvironment",
+      ["create", "Identity", "Client", "From", "Environment"],
+    ],
+  ])("gives %s places to wrap only where it is long", async (_, name, parts) => {
+    const drawn = await render(
+      JSON.stringify({
+        ...PAGE,
+        body: [{ type: "paragraph", content: [{ type: "text", text: name, code: true }] }],
+      }),
+    );
+    const code = drawn.querySelector(".prose-intro p code");
+    expect(code?.textContent).toBe(name);
+    // The text between the places to wrap, its other nodes (the renderer's comments) left out.
+    const pieces = [""];
+    for (const node of code?.childNodes ?? []) {
+      if (node.nodeName === "WBR") pieces.push("");
+      else if (node.nodeType === 3) pieces.push(`${pieces.pop() ?? ""}${node.textContent ?? ""}`);
+    }
+    expect(pieces.length === 1 ? [] : pieces).toEqual(parts);
   });
 
   it("links inside the site plainly, and outside it with noopener noreferrer", () => {
