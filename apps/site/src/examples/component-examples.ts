@@ -1,4 +1,5 @@
-import { el, type ComponentExample, type ExampleElement } from "./component-example.ts";
+import { el, having, type ComponentExample, type ExampleElement } from "./component-example.ts";
+import { SIGNED_OUT_CLIENT, UNDECIDED_CONSENT } from "./example-clients.ts";
 
 /** A plain box to arrange: an outlined card with a word in it. */
 const box = (text: string): ExampleElement =>
@@ -161,12 +162,18 @@ export const COMPONENT_EXAMPLES = {
   "idg-consent-banner": {
     caption: "The banner in the page's flow, before anyone has chosen.",
     inert: true,
-    nodes: [el("idg-consent-banner", { placement: "inline" })],
+    nodes: [
+      having(el("idg-consent-banner", { placement: "inline" }), { consent: UNDECIDED_CONSENT }),
+    ],
   },
   "idg-consent-preferences": {
     caption: "The preferences panel before a consent object is given to it.",
     inert: true,
-    nodes: [el("idg-consent-preferences", { "heading-level": "3" })],
+    nodes: [
+      having(el("idg-consent-preferences", { "heading-level": "3" }), {
+        consent: UNDECIDED_CONSENT,
+      }),
+    ],
   },
   "idg-cover": {
     caption: "Content centred in a block, with a region pinned to each edge.",
@@ -381,11 +388,14 @@ export const COMPONENT_EXAMPLES = {
   "idg-session-guard": {
     caption: "What a visitor sees while nobody is signed in.",
     nodes: [
-      el(
-        "idg-session-guard",
-        {},
-        el("p", {}, "Only for people who are signed in."),
-        el("p", { slot: "fallback" }, "Sign in to see this."),
+      having(
+        el(
+          "idg-session-guard",
+          {},
+          el("p", {}, "Only for people who are signed in."),
+          el("p", { slot: "fallback" }, "Sign in to see this."),
+        ),
+        { client: SIGNED_OUT_CLIENT },
       ),
     ],
   },
@@ -533,7 +543,7 @@ export const COMPONENT_EXAMPLES = {
     nodes: [
       el(
         "idg-toast-region",
-        { position: "bottom-start" },
+        { position: "bottom-start", embedded: true },
         el("idg-toast", { heading: "Welcome back", variant: "info" }),
       ),
     ],
@@ -551,7 +561,12 @@ export const COMPONENT_EXAMPLES = {
   "idg-user-menu": {
     caption: "The user menu while nobody is signed in.",
     inert: true,
-    nodes: [el("idg-user-menu", {}, el("idg-link", { slot: "signed-out", href: "/" }, "Sign in"))],
+    nodes: [
+      having(
+        el("idg-user-menu", {}, el("idg-link", { slot: "signed-out", href: "/" }, "Sign in")),
+        { client: SIGNED_OUT_CLIENT },
+      ),
+    ],
   },
   "idg-variation-switcher": {
     caption: "The real switcher: it changes this page's look.",

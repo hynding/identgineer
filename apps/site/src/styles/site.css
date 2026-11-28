@@ -1928,6 +1928,11 @@ figcaption {
   display: block;
 }
 
+/* A toast region embedded in its frame stands in the frame's corner, so the frame has a height. */
+.example-stage idg-toast-region[embedded] {
+  min-block-size: 9rem;
+}
+
 .example-component .code-sample {
   min-inline-size: 0;
 }

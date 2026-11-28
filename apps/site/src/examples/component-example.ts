@@ -8,6 +8,12 @@ export type ExampleAttribute = string | true;
 export interface ExampleElement {
   readonly tag: string;
   readonly attributes?: Readonly<Record<string, ExampleAttribute>>;
+  /**
+   * JavaScript properties, for what an attribute cannot carry: the client a component is given to
+   * ask its questions of. They draw the example and are not part of its HTML, so the usage snippet
+   * leaves them out.
+   */
+  readonly properties?: Readonly<Record<string, unknown>>;
   readonly children?: readonly ExampleNode[];
 }
 
@@ -38,6 +44,14 @@ export function el(
   ...children: ExampleNode[]
 ): ExampleElement {
   return { tag, attributes, children };
+}
+
+/** The element with JavaScript properties it is drawn with, which its HTML does not hold. */
+export function having(
+  element: ExampleElement,
+  properties: Readonly<Record<string, unknown>>,
+): ExampleElement {
+  return { ...element, properties };
 }
 
 /** Every element of the nodes, outermost first. */

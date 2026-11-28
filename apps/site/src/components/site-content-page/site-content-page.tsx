@@ -59,7 +59,11 @@ function isComponentExample(name: ExampleName): name is ComponentExampleName {
  */
 function drawExample(node: ExampleNode): string | VNode {
   if (typeof node === "string") return node;
-  return h(node.tag, { ...node.attributes }, ...(node.children ?? []).map(drawExample));
+  return h(
+    node.tag,
+    { ...node.attributes, ...node.properties },
+    ...(node.children ?? []).map(drawExample),
+  );
 }
 
 /**
