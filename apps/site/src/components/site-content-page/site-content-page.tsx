@@ -199,12 +199,12 @@ export class SiteContentPage {
   }
 
   /**
-   * A table of three columns or more is drawn as one card for each row on a window too narrow for
+   * A table of four columns or more is drawn as one card for each row on a window too narrow for
    * its columns. Its cells then stop being table cells to the browser, so each says what it is
    * with a role, and carries its column's name for the card to show.
    */
   private renderTable(block: TableBlock, id: string) {
-    const cards = block.columns.length > 2;
+    const cards = block.columns.length > 3;
     const role = (name: string) => (cards ? { role: name } : {});
     return (
       <div class="table-scroll" role="region" aria-labelledby={id} tabindex="0">

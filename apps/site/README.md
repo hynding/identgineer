@@ -201,10 +201,10 @@ stage instead of pinning it to the viewport as a popover; its own use is unchang
 A sentence cut for a lede, a description or a line of the index is cut at a word, by `clip.ts`, and
 ends with an ellipsis.
 
-A table of three columns or more (a component's properties, events and the like) is a row of
+A table of four columns or more (a component's properties) is a row of
 cells where the table fits, and a card for each row where it does not (a container query on the
 table's own box): the column's name is drawn before each cell, and the cells keep their table roles
-so a screen reader still reads a table. A table of two columns scrolls along itself instead.
+so a screen reader still reads a table. A table of fewer columns (the events, methods, slots and parts, whose signatures and types need a wide cell) scrolls along itself instead.
 
 `docs.json` reaches the site through the build order, which is also CI's: the site depends on the
 components package, so `pnpm build` (or `pnpm --filter "@identgineer/site..." build`) builds that
