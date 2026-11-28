@@ -17,7 +17,7 @@ import {
   livePaths,
   type ContentRoute,
 } from "../routes.ts";
-import { clip } from "./clip.ts";
+import { clipAtWord } from "./clip.ts";
 import type { ComponentDoc } from "./component-docs.ts";
 import { groupComponents, type Bundle, type ComponentGroup } from "./component-groups.ts";
 
@@ -102,21 +102,27 @@ function withoutBackticks(value: string): string {
 
 const LEDE_LIMIT = 200;
 
+/** A paragraph's first sentence, and what follows it. */
+function sentenceOf(paragraph: string): { readonly sentence: string; readonly tail: string } {
+  const end = paragraph.search(/[.!?](?:\s|$)/);
+  if (end < 0) return { sentence: paragraph, tail: "" };
+  return { sentence: paragraph.slice(0, end + 1), tail: paragraph.slice(end + 1).trim() };
+}
+
 /**
- * The lede is the first sentence of the description, cut short if it is too long for the line a
+ * The lede is the first sentence of the description, cut at a word if it is too long for the line a
  * lede is. A hero is as tall as its text, and a long description would push a page's first
- * screen down; the rest of the paragraph leads the body, or all of it when the sentence was cut.
+ * screen down; the body goes on from where the lede stops, so nothing is said twice.
  */
 function lede(doc: ComponentDoc): { readonly summary: string; readonly rest: string } {
   const first = doc.summary[0] ?? "";
   if (withoutBackticks(first) === "") {
     return { summary: `The ${doc.tag} web component.`, rest: "" };
   }
-  const end = first.search(/[.!?](?:\s|$)/);
-  const sentence = end < 0 ? first : first.slice(0, end + 1);
-  const summary = clip(withoutBackticks(sentence), LEDE_LIMIT);
-  const cut = summary !== withoutBackticks(sentence);
-  return { summary, rest: cut ? first : first.slice(sentence.length).trim() };
+  const { sentence, tail } = sentenceOf(first);
+  const { head, rest } = clipAtWord(sentence, LEDE_LIMIT);
+  const unsaid = rest === "" ? [] : [`…${rest}`];
+  return { summary: withoutBackticks(head), rest: [...unsaid, tail].join(" ").trim() };
 }
 
 function introduction(doc: ComponentDoc, rest: string): Block[] {
@@ -222,7 +228,7 @@ export function componentRoute(doc: ComponentDoc): ContentRoute {
     parent: COMPONENTS_PATH,
     label: doc.tag,
     title: doc.tag,
-    description: clip(`${doc.tag}: ${lede(doc).summary}`, DESCRIPTION_LIMIT),
+    description: clipAtWord(`${doc.tag}: ${lede(doc).summary}`, DESCRIPTION_LIMIT).head,
     status: "live",
     component: "site-content-page",
     content: doc.tag,
@@ -231,12 +237,11 @@ export function componentRoute(doc: ComponentDoc): ContentRoute {
 
 const INDEX_SUMMARY_LIMIT = 140;
 
-/** The first sentence of the description, for a line of the index. */
+/** The first sentence of the description, for a line of the index, cut at a word if it is long. */
 function firstSentence(doc: ComponentDoc): string {
-  const first = withoutBackticks(doc.summary[0] ?? "");
-  if (first === "") return NOT_DOCUMENTED;
-  const end = first.search(/[.!?](?:\s|$)/);
-  return clip(end < 0 ? first : first.slice(0, end + 1), INDEX_SUMMARY_LIMIT);
+  const first = doc.summary[0] ?? "";
+  if (withoutBackticks(first) === "") return NOT_DOCUMENTED;
+  return withoutBackticks(clipAtWord(sentenceOf(first).sentence, INDEX_SUMMARY_LIMIT).head);
 }
 
 function counted(count: number, noun: string): string {
