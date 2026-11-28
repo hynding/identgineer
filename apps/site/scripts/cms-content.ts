@@ -342,13 +342,13 @@ function pageFrom(
   slug: string,
   { known, paths, found, parsePage }: PageContext,
 ): string | undefined {
+  if (!known.has(slug)) return "is no page of the site; it is left out";
+  if (found.has(slug)) return "is there twice; the first is used";
   // The public API answers published pages only; one without a date of publication is a draft,
   // and is never drawn, whatever the CMS sent.
   if (typeof record.publishedAt !== "string" || record.publishedAt === "") {
-    return "is not published; it is left out";
+    return "is not published; the static copy is used";
   }
-  if (!known.has(slug)) return "is no page of the site; it is left out";
-  if (found.has(slug)) return "is there twice; the first is used";
   let reason: string;
   try {
     const result = parsePage(candidateOf(record, slug), { paths });
@@ -510,7 +510,7 @@ async function readSiteContent(
 
   let labels = NO_LABELS;
   try {
-    const { records } = await readCollection(
+    const { records, truncated } = await readCollection(
       base.url,
       "api/navigation-items",
       {},
@@ -518,6 +518,11 @@ async function readSiteContent(
       signal,
       timeoutMs,
     );
+    if (truncated) {
+      warnings.outcome(
+        `CMS: navigation items has more than ${String(CMS_LIMITS.pages)} pages of records; the rest are not read`,
+      );
+    }
     labels = labelsFrom(records, warnings, options.parseNavigationItem ?? parseNavigationItem);
   } catch (error) {
     warnings.outcome(
