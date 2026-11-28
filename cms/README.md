@@ -38,9 +38,35 @@ Field names are the IR's neutral camelCase; each target maps them to its own col
 
 The site's build reads both when `IDG_CMS_URL` names the CMS: a published page replaces the
 repository's page of the same slug, and a header or footer item relabels a page of the site's
-navigation. A page's body may hold paragraphs, headings, lists, quotes and code; an image is refused.
-Each record is checked as the repository's pages are, and one that fails leaves the repository's copy
-(see [apps/site/README.md](../apps/site/README.md#the-cms)).
+navigation. Each record is checked as the repository's pages are, and one that fails leaves the
+repository's copy (see [apps/site/README.md](../apps/site/README.md#the-cms)).
+
+#### What an editor may write
+
+The admin takes more than the site draws. What the site does with each thing, at its next build:
+
+| In the admin                                       | On the site                                                                               |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| A page whose slug the site has a route for         | Replaces the repository's page of that slug. A slug with no route is left out.            |
+| A draft                                            | Never drawn; the published version, or the repository's page, is.                         |
+| No summary                                         | The route's own description is the summary (the field is optional in the model).          |
+| Paragraphs, lists, code; bold, italic, inline code | Drawn as they are. Underline and strikethrough keep their text, without the line.         |
+| Headings, of any level                             | Levels 2 to 4: the first is a level 2, none skips a level on the way down, 5 and 6 are 4. |
+| A quote                                            | A note.                                                                                   |
+| A link to a page of the site, or to `https:`       | Drawn; `/docs` is taken as `/docs/`. Any other address is refused.                        |
+| An image                                           | Refused: the site loads nothing from another origin.                                      |
+| A link inside a link, a list inside a list         | Refused.                                                                                  |
+| A navigation item for a page of the navigation     | Relabels it in the header or the footer; it never adds a link. `utility` is not drawn.    |
+| Two items for one page in one place                | The lower `order` wins, the first on a tie; the other is named in a warning.              |
+
+A page is refused whole, and the repository's copy drawn, for anything the validator does not take:
+a field over its bound (the model's own, and 200 blocks or 100,000 characters of body text), a
+control, bidirectional or invisible formatting character (ZWJ and ZWNJ are kept, for emoji and for
+Persian and Indic words), two headings with one address, or a heading whose address the page
+already uses (`Main`, `Contents`, `Page title`). Nothing an editor writes fails the build: each
+refusal is a line of the build's output, beginning `CMS:`, that names the page or item, the field and
+why, quoting at most a few dozen characters of what was sent with anything outside printable ASCII
+escaped. The setting's own value is never printed.
 
 ### Identity (owner only)
 

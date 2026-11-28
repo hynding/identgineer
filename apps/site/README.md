@@ -84,7 +84,12 @@ or the footer; it can never add a link.
 
 What can go wrong never fails the build: a record that is invalid, a draft (no `publishedAt`), a slug
 the site has no route for, or a page missing from the answer leaves the static copy, and the build
-prints a warning that names it and why. The read is bounded: `https:` only (or `http:` on
+prints a warning that names it and why. Any error at all, in one record, in one collection or in the
+whole read, falls back the same way (`scripts/cms-content.test.ts` feeds it deep, random and
+throwing answers). A warning names a record by its slug only when it is a valid one, and otherwise
+by its position; it quotes CMS text short with anything outside printable ASCII escaped, and never
+prints `IDG_CMS_URL`. What an editor may write, and what the site makes of it, is in
+[cms/README.md](../../cms/README.md#what-an-editor-may-write). The read is bounded: `https:` only (or `http:` on
 `localhost`, `127.0.0.1` or `[::1]`), no credentials, query or fragment in the address, no
 credentials sent, no redirect followed, one 10 s deadline for all of it, 1 MiB per answer (by
 `Content-Length` and as read), `application/json` only, a status of 200 only, and 4 answers of 25
