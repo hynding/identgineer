@@ -266,7 +266,7 @@ export function componentIndexPage(groups: readonly ComponentGroup[]): ContentPa
           ? []
           : [{ type: "paragraph", content: [text(group.description)] } as const]),
         ...tables(
-          group.title,
+          `The components in ${group.title}`,
           ["Component", "Summary"],
           group.components.map((doc) => [
             [{ type: "link", href: componentPath(doc.tag), text: doc.tag }],
