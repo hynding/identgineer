@@ -84,11 +84,12 @@ or the footer; it can never add a link.
 
 What can go wrong never fails the build: a record that is invalid, a draft (no `publishedAt`), a slug
 the site has no route for, or a page missing from the answer leaves the static copy, and the build
-prints a warning that names it and why. Any error at all, in one record, in one collection or in the
+prints a warning that names it and why; the first copy of a page decides only if no later copy is
+valid, and any other copy refused is named as a copy left out. Any error at all, in one record, in one collection or in the
 whole read, falls back the same way (`scripts/cms-content.test.ts` reaches each fallback, and feeds
 it deep, random and wide answers). The build prints at most 50 warnings about single records and
 navigation items, and a line counting the rest, so no answer can flood its log; after them it always
-prints what it fell back to: a line for each page not drawn from the CMS (one line for every page
+prints what it fell back to: a line for each page not drawn from the CMS (one line for all pages
 when `IDG_CMS_URL` is refused or the pages could not be read at all), a line for pages or navigation items past the four pages of
 records it reads, and one if the navigation could not be read. A warning names a record by its slug only when it is a valid one, and otherwise
 by its position; it quotes CMS text short with anything outside printable ASCII escaped, and never

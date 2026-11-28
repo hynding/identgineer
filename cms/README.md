@@ -68,7 +68,7 @@ refusal is a line of the build's output, beginning `CMS:`, that names the page o
 why, quoting at most a few dozen characters of what was sent with anything outside printable ASCII
 escaped; the first 50 lines about single records and items are printed, and a line counts the
 rest. Then, always, comes what the build fell back to: a line for each page drawn from its static
-copy, or one line for every page when `IDG_CMS_URL` is refused or the pages could not be read at all; a line if the pages or the
+copy, or one line for all pages when `IDG_CMS_URL` is refused or the pages could not be read at all; a line if the pages or the
 navigation items ran past the pages of records the build reads; and one if the navigation could not
 be read. The setting's own value is never
 printed.
