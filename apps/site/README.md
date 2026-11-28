@@ -263,7 +263,7 @@ need not be served itself.
   mode, in all three engines; a reading page and a docs page filled with the longest unbroken text
   the validator takes in every field (labels, title, summary, headings, captions, cells, code, links)
   fit every layout in all three engines at 320 to 1440px; fitting is no sideways scroll, nothing cut or spilling out of its box
-  (a code sample or table that scrolls sideways and takes focus may hold what it scrolls), no word,
+  (a code sample or table that scrolls sideways and takes focus, or a bar of links that scrolls to each as it takes focus, may hold what it scrolls), no word,
   figure or name broken inside itself and no two controls over each other; in the default look, in
   bento, dashboard and magazine at 768 to 1440px no section beside another is more than a fifth
   empty below its content, in every layout at 390 to 2560px every row of the pages to come, the
