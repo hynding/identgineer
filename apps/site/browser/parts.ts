@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
  * The parts CI runs the site's browser suite in, each a job of its own of a few minutes on two
  * workers. Playwright's shards split by the number of tests, not their length, so the fit sweep's
  * tests carry a tag that names their part (by engine, then by page), the axe sweep of the looks one
- * of its own, and the last part is every test without one.
+ * of its own, the layouts suite another, and the last part is every test without a tag.
  *
  * Run one with `node browser/parts.ts <part>`, and check with `node browser/parts.ts --check` that
  * the parts hold every test of the suite exactly once.
@@ -14,17 +14,18 @@ export const ENGINE_KEYS = ["chromium", "no-calc-size", "no-style-queries"] as c
 
 /**
  * The pages whose fit sweep is a part of its own in each engine, by the part's name: the two longest
- * of the original sweeps together, and the three that are swept at seven widths, each alone.
+ * of the original sweeps together, the components' index and a component's page together, and the
+ * gallery, which is swept at seven widths, alone.
  */
 const OWN_PART: Readonly<Record<string, string>> = {
   "/": "1",
   "/identity/": "1",
   "/components/": "reference",
-  "/components/idg-input/": "component",
+  "/components/idg-input/": "reference",
   "/variations/": "gallery",
 };
 const OTHER_PART = "2";
-const PART_NAMES = ["1", OTHER_PART, "reference", "component", "gallery"] as const;
+const PART_NAMES = ["1", OTHER_PART, "reference", "gallery"] as const;
 
 export type EngineKey = (typeof ENGINE_KEYS)[number];
 
@@ -32,6 +33,13 @@ export type EngineKey = (typeof ENGINE_KEYS)[number];
 export function fitTag(engine: EngineKey, path: string): string {
   return `@fit-${engine}-${OWN_PART[path] ?? OTHER_PART}`;
 }
+
+/**
+ * The suite of every layout with every look, which is as long as the rest of the untagged suites
+ * together, so it is a part of its own and the last part is every untagged suite but this one. A
+ * file filter is a regular expression on the path, so the last part names it as a negative.
+ */
+const LAYOUTS_FILE = "layouts.browser";
 
 /** The tag of the axe sweep of every page in every look, a part of its own. */
 export const AXE_TAG = "@axe";
@@ -44,7 +52,8 @@ const FIT_TAGS = ENGINE_KEYS.flatMap((engine) =>
 export const PARTS: Readonly<Record<string, readonly string[]>> = {
   ...Object.fromEntries(FIT_TAGS.map((tag) => [tag.slice("@fit-".length), ["--grep", tag]])),
   axe: ["--grep", AXE_TAG],
-  rest: ["--grep-invert", `@fit-|${AXE_TAG}`],
+  layouts: ["--grep-invert", `@fit-|${AXE_TAG}`, LAYOUTS_FILE],
+  rest: ["--grep-invert", `@fit-|${AXE_TAG}`, `^(?!.*${LAYOUTS_FILE.replace(".", "\\.")})`],
 };
 
 const SITE = fileURLToPath(new URL("..", import.meta.url));
