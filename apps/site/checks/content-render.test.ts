@@ -5,6 +5,11 @@ import { parseHtmlToDocument } from "@stencil/core/mock-doc";
 import { beforeAll, describe, expect, it } from "vitest";
 import { prepareServerDocument } from "../scripts/server-document";
 import type { ContentPage } from "../src/content/content-page";
+import { COMPONENT_EXAMPLES } from "../src/examples/component-examples";
+import { usageSnippet } from "../src/examples/component-example";
+import type { ComponentDoc } from "../src/reference/component-docs";
+import { componentIndexPage, componentPage } from "../src/reference/component-pages";
+import { groupComponents } from "../src/reference/component-groups";
 
 interface HydrateModule {
   renderToString(html: string, options: SerializeDocumentOptions): Promise<HydrateResults>;
@@ -339,4 +344,134 @@ describe.skipIf(!built)("every page, as the prerenderer draws it", () => {
       expect(label).toBe("Analytics");
     },
   );
+});
+
+const MARKUP = '<img src="https://evil.example/x.png" onerror="alert(1)"><script>x()</script>';
+
+/** A button's documentation, with markup where a doc comment may put any text. */
+const BUTTON: ComponentDoc = {
+  tag: "idg-button",
+  summary: [`A button, ${MARKUP}.`, "Its second paragraph, with `code`."],
+  properties: [
+    {
+      name: "variant",
+      attribute: "variant",
+      type: '"primary" | "secondary"',
+      default: '"primary"',
+      description: MARKUP,
+    },
+    { name: "createIdentityClientFromEnvironmentVariables", type: "string", description: "Long." },
+  ],
+  events: [],
+  methods: [],
+  slots: [{ name: "", description: "The label." }],
+  parts: [{ name: "control", description: "The native button." }],
+  cssProperties: [],
+};
+
+describe.skipIf(!built)("a component's page, as the prerenderer draws it", () => {
+  let document: Document;
+  const all = (selector: string) => [...document.querySelectorAll(selector)];
+  const one = (selector: string) => {
+    const found = document.querySelector(selector);
+    if (!found) throw new Error(`no ${selector}`);
+    return found;
+  };
+
+  beforeAll(async () => {
+    document = await render(JSON.stringify(componentPage(BUTTON)));
+  });
+
+  it("has one h1, the tag, and a link back to the index of the components", () => {
+    expect(all("h1")).toHaveLength(1);
+    expect(one("h1").textContent).toBe("idg-button");
+    expect(one(".page-hero .eyebrow a").getAttribute("href")).toBe("/components/");
+    expect(one(".page-hero .eyebrow a").textContent).toBe("Components");
+  });
+
+  it("marks the components in the site's navigation as the current section", () => {
+    const index = all('a[slot="navigation"][href="/components/"]');
+    expect(index.map((link) => link.getAttribute("aria-current"))).toEqual(["true"]);
+    expect(all("nav.docs-pages")).toHaveLength(0);
+    expect(all("nav.pager")).toHaveLength(0);
+  });
+
+  it("draws the live example, and the usage snippet that its description writes beside it", () => {
+    const figure = one("figure.example-component");
+    expect(figure.querySelector("figcaption")?.textContent).toBe(
+      COMPONENT_EXAMPLES["idg-button"].caption,
+    );
+    const live = [...figure.querySelectorAll(".example-stage > idg-button")];
+    expect(live.map((button) => button.textContent?.trim())).toEqual([
+      "Save",
+      "Cancel",
+      "Skip",
+      "Delete",
+      "Saving",
+    ]);
+    const snippet = figure.querySelector("figure.code-sample");
+    expect(snippet?.querySelector(".code-language")?.textContent).toBe("HTML");
+    expect(snippet?.querySelector(".code-caption")?.textContent).toBe("Usage");
+    expect(snippet?.querySelector("pre code")?.textContent).toBe(
+      usageSnippet(COMPONENT_EXAMPLES["idg-button"].nodes),
+    );
+    expect(snippet?.querySelector("idg-button.code-copy.needs-script")).not.toBeNull();
+  });
+
+  it("draws an example that is only to be looked at inert", async () => {
+    const drawn = await render(
+      JSON.stringify({
+        ...componentPage({ ...BUTTON, tag: "idg-sign-in" }),
+      }),
+    );
+    expect(
+      drawn.querySelector(".example-stage > .preview-frame[inert] > idg-sign-in"),
+    ).not.toBeNull();
+    expect(document.querySelector(".preview-frame")).toBeNull();
+  });
+
+  it("draws what the package documents as tables, in code, and markup only as text", () => {
+    const tables = all(".table-scroll");
+    expect(tables.map((table) => table.querySelector("caption")?.textContent)).toEqual([
+      "Properties of idg-button",
+      "Slots of idg-button",
+      "CSS parts of idg-button",
+    ]);
+    const properties = tables[0];
+    expect(
+      [...(properties?.querySelectorAll("tbody tr td:first-child code") ?? [])].map(
+        (code) => code.textContent,
+      ),
+    ).toEqual(["variant", "createIdentityClientFromEnvironmentVariables"]);
+    const article = one("article.prose");
+    expect(article.textContent).toContain(MARKUP);
+    expect(all("img, script, [onerror]")).toHaveLength(0);
+    expect(all("style").every((style) => !(style.textContent ?? "").includes("evil"))).toBe(true);
+  });
+
+  it("lists its sections in one table of contents, and gives no two elements one id", () => {
+    const links = (selector: string) =>
+      [...one(selector).querySelectorAll("a")].map((link) => link.getAttribute("href"));
+    const sections = ["#example", "#properties", "#slots", "#css-parts"];
+    expect(links('nav.contents[slot="aside"]')).toEqual(sections);
+    expect(links("nav.contents-inline")).toEqual(sections);
+    expect(duplicateIds(document)).toEqual([]);
+  });
+
+  it("draws the index with a table of links for each group", async () => {
+    const groups = groupComponents([BUTTON], [{ name: "controls", components: ["idg-button"] }]);
+    const drawn = await render(JSON.stringify(componentIndexPage(groups)));
+    expect(drawn.querySelector("h1")?.textContent).toBe("Components");
+    expect([...drawn.querySelectorAll("article h2")].map((heading) => heading.textContent)).toEqual(
+      ["Controls and feedback"],
+    );
+    const link = drawn.querySelector("article td a");
+    expect(link?.getAttribute("href")).toBe("/components/idg-button/");
+    expect(link?.textContent).toBe("idg-button");
+    expect(
+      drawn
+        .querySelector('a[slot="navigation"][href="/components/"]')
+        ?.getAttribute("aria-current"),
+    ).toBe("page");
+  });
 });
