@@ -1,4 +1,5 @@
 import { CODE_LANGUAGES, type CodeLanguage } from "../src/content/content-page.ts";
+import { printable } from "../src/content/validate-content-page.ts";
 
 /**
  * A page body in the shape the content validator reads, made from the CMS's `blocks` field: Strapi's
@@ -18,7 +19,7 @@ export class StrapiBlocksError extends Error {
     super(
       block === 0
         ? `body: ${reason}`
-        : `block ${String(block)}${type === undefined ? "" : ` (${type})`}: ${reason}`,
+        : `block ${String(block)}${type === undefined ? "" : ` (${printable(type, 20)})`}: ${reason}`,
     );
     this.block = block;
     this.type = type;
@@ -40,19 +41,39 @@ function textOf(node: Node): string {
   return typeof node.text === "string" ? node.text : "";
 }
 
+/** What a type is called in a message: printable and short, whatever was sent. */
+function named(type: unknown): string {
+  return typeof type === "string" ? `"${printable(type, 40)}"` : "a type that is not text";
+}
+
+/** A heading's level clamped to the page's levels (2 to 4), with nothing skipped on the way down. */
+function headingLevel(level: unknown, previous: number): unknown {
+  if (typeof level !== "number" || !Number.isInteger(level)) return level;
+  const wanted = Math.min(Math.max(level, 2), 4);
+  return previous === 0 ? 2 : Math.min(wanted, previous + 1);
+}
+
 class Converter {
   block = 0;
   type: string | undefined;
+  private lastHeading = 0;
 
   fail(reason: string): never {
     throw new StrapiBlocksError(this.block, this.type, reason);
   }
 
-  plainText(children: unknown[]): string {
+  /**
+   * The text of some inlines. A link's own children are read here too, and a link inside one is
+   * refused (Strapi's editor makes none), so this goes one level down at most, however deep an
+   * answer nests them.
+   */
+  plainText(children: unknown[], insideLink = false): string {
     return children
       .map((child) => {
         if (!isNode(child)) return this.fail("an inline must be an object");
-        return child.type === "link" ? this.plainText(childrenOf(child)) : textOf(child);
+        if (child.type !== "link") return textOf(child);
+        if (insideLink) return this.fail("a link inside a link is not drawn");
+        return this.plainText(childrenOf(child), true);
       })
       .join("");
   }
@@ -61,10 +82,9 @@ class Converter {
     return children.map((child) => {
       if (!isNode(child)) return this.fail("an inline must be an object");
       if (child.type === "link") {
-        return { type: "link", href: child.url, text: this.plainText(childrenOf(child)) };
+        return { type: "link", href: child.url, text: this.plainText(childrenOf(child), true) };
       }
-      if (child.type !== "text")
-        return this.fail(`${JSON.stringify(child.type)} is not text or a link`);
+      if (child.type !== "text") return this.fail(`${named(child.type)} is not text or a link`);
       // Underline and strikethrough have no place in the body format; the text is kept.
       return {
         type: "text",
@@ -89,8 +109,13 @@ class Converter {
     switch (node.type) {
       case "paragraph":
         return { type: "paragraph", content: this.inlines(childrenOf(node)) };
-      case "heading":
-        return { type: "heading", level: node.level, text: this.plainText(childrenOf(node)) };
+      case "heading": {
+        // The page's title is its one level 1 heading, and the body has levels 2 to 4: Strapi's
+        // levels are brought into that range, in order, rather than the page refused.
+        const level = headingLevel(node.level, this.lastHeading);
+        if (typeof level === "number") this.lastHeading = level;
+        return { type: "heading", level, text: this.plainText(childrenOf(node)) };
+      }
       case "list":
         return {
           type: "list",
@@ -109,7 +134,7 @@ class Converter {
         return this.fail("images are not drawn: the site loads nothing from another origin");
       default:
         this.type = undefined;
-        return this.fail(`${JSON.stringify(node.type)} is not a block of Strapi's rich text`);
+        return this.fail(`${named(node.type)} is not a block of Strapi's rich text`);
     }
   }
 }

@@ -3,9 +3,12 @@ import { NO_LABELS, navigationPaths, type NavigationLabels } from "../src/conten
 import {
   describeContentError,
   parseContentPage,
+  isSlug,
   parseNavigationItem,
+  printable,
+  type NavigationItem,
 } from "../src/content/validate-content-page.ts";
-import { livePaths } from "../src/routes.ts";
+import { ROUTES, livePaths } from "../src/routes.ts";
 import { StrapiBlocksError, bodyFromStrapiBlocks } from "./strapi-blocks.ts";
 
 /** How much of the CMS the build reads, at most. */
@@ -45,7 +48,8 @@ export function cmsBaseUrl(
   try {
     url = new URL(value);
   } catch {
-    return { ok: false, reason: `${JSON.stringify(value)} is not an address` };
+    // The value is never printed: an address the parser refuses may still hold a token.
+    return { ok: false, reason: "it is not an address" };
   }
   const local = url.protocol === "http:" && LOOPBACK.has(url.hostname);
   if (url.protocol !== "https:" && !local) {
@@ -62,6 +66,11 @@ export function cmsBaseUrl(
 }
 
 class ReadFailure extends Error {}
+
+/** A failed read's own reason; any other error's text is not printed, as it may echo the CMS. */
+function reasonOf(error: unknown): string {
+  return error instanceof ReadFailure ? error.message : "its answer could not be read";
+}
 
 /** The body of an answer, read no further than the bound, whatever the answer says of its size. */
 async function boundedText(response: Response): Promise<string> {
@@ -141,13 +150,17 @@ async function readCollection(
       (response.headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
     if (type !== "application/json") {
       await response.body?.cancel();
-      throw new ReadFailure(`the CMS answered ${type === "" ? "no content type" : type}, not JSON`);
+      const named = type === "" ? "no content type" : printable(type, 40);
+      throw new ReadFailure(`the CMS answered ${named}, not JSON`);
     }
     let answer: unknown;
     try {
       answer = JSON.parse(await boundedText(response));
     } catch (error) {
       if (error instanceof ReadFailure) throw error;
+      if (signal.aborted) {
+        throw new ReadFailure(`the CMS did not answer within ${String(timeoutMs)} ms`);
+      }
       throw new ReadFailure("the CMS answered something that is not JSON");
     }
     const { data, meta } = (answer ?? {}) as { data?: unknown; meta?: unknown };
@@ -168,8 +181,22 @@ function field(record: Record<string, unknown>, key: string): unknown {
   return value === null ? undefined : value;
 }
 
-/** A Page record of the CMS in the shape of a content page, for the validator to judge. */
-function candidateOf(record: Record<string, unknown>): Record<string, unknown> {
+/** The description the route table gives the reading page of a slug. */
+function routeDescription(slug: string): string | undefined {
+  for (const route of ROUTES) {
+    if (route.status === "live" && route.component === "site-content-page") {
+      if (route.content === slug) return route.description;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * A Page record of the CMS in the shape of a content page, for the validator to judge. The CMS
+ * lets an editor leave the summary out; the page then takes the route table's description, which
+ * is written for that page and already says what it is about.
+ */
+function candidateOf(record: Record<string, unknown>, slug: string): Record<string, unknown> {
   const seoRecord = field(record, "seo");
   const seo: Record<string, unknown> = {};
   if (isRecord(seoRecord)) {
@@ -185,7 +212,8 @@ function candidateOf(record: Record<string, unknown>): Record<string, unknown> {
     seo,
   };
   const summary = field(record, "summary");
-  if (summary !== undefined) candidate.summary = summary;
+  const fallback = summary === undefined || summary === "" ? routeDescription(slug) : summary;
+  if (fallback !== undefined) candidate.summary = fallback;
   return candidate;
 }
 
@@ -202,67 +230,119 @@ function pagesFrom(
   const paths = livePaths();
   const found = new Map<string, ContentPage>();
   records.forEach((record, index) => {
-    const slug = isRecord(record) && typeof record.slug === "string" ? record.slug : undefined;
-    const name =
-      slug === undefined ? `record ${String(index + 1)}` : `page ${JSON.stringify(slug)}`;
-    if (!isRecord(record) || slug === undefined) {
-      warnings.push(`CMS: ${name} has no slug; it is left out`);
-      return;
-    }
-    // The public API answers published pages only; one without a date of publication is a draft,
-    // and is never drawn, whatever the CMS sent.
-    if (typeof record.publishedAt !== "string" || record.publishedAt === "") {
-      warnings.push(`CMS: ${name} is not published; it is left out`);
-      return;
-    }
-    if (!known.has(slug)) {
-      warnings.push(`CMS: ${name} is no page of the site; it is left out`);
-      return;
-    }
-    if (found.has(slug)) {
-      warnings.push(`CMS: ${name} is there twice; the first is used`);
-      return;
-    }
-    let reason: string;
+    let name = `record ${String(index + 1)}`;
+    // Whatever a record holds, it can cost the build its own page and no more.
     try {
-      const result = parseContentPage(candidateOf(record), { paths });
-      if (result.ok) {
-        found.set(slug, result.page);
+      if (!isRecord(record) || typeof record.slug !== "string") {
+        warnings.push(`CMS: ${name} has no slug; it is left out`);
         return;
       }
-      reason = describeContentError(result.error);
-    } catch (error) {
-      if (!(error instanceof StrapiBlocksError)) throw error;
-      reason = `${name}, ${error.message}`;
+      const slug = record.slug;
+      if (!isSlug(slug)) {
+        warnings.push(`CMS: ${name} is no page of the site; it is left out`);
+        return;
+      }
+      name = `page "${slug}"`;
+      const warning = pageFrom(record, slug, { known, paths, found });
+      if (warning !== undefined) warnings.push(`CMS: ${name} ${warning}`);
+    } catch {
+      warnings.push(`CMS: ${name} could not be read; the static copy is used`);
     }
-    warnings.push(`CMS: ${name} is not valid (${reason}); the static copy is used`);
   });
   return found;
 }
 
+interface PageContext {
+  readonly known: ReadonlySet<string>;
+  readonly paths: ReadonlySet<string>;
+  readonly found: Map<string, ContentPage>;
+}
+
+/** Takes one record's page into `found`, or says why it is left out. */
+function pageFrom(
+  record: Record<string, unknown>,
+  slug: string,
+  { known, paths, found }: PageContext,
+): string | undefined {
+  // The public API answers published pages only; one without a date of publication is a draft,
+  // and is never drawn, whatever the CMS sent.
+  if (typeof record.publishedAt !== "string" || record.publishedAt === "") {
+    return "is not published; it is left out";
+  }
+  if (!known.has(slug)) return "is no page of the site; it is left out";
+  if (found.has(slug)) return "is there twice; the first is used";
+  let reason: string;
+  try {
+    const result = parseContentPage(candidateOf(record, slug), { paths });
+    if (result.ok) {
+      found.set(slug, result.page);
+      return undefined;
+    }
+    reason = describeContentError(result.error);
+  } catch (error) {
+    if (!(error instanceof StrapiBlocksError)) throw error;
+    reason = `page "${slug}", ${error.message}`;
+  }
+  return `is not valid (${reason}); the static copy is used`;
+}
+
+interface PlacedItem {
+  readonly item: NavigationItem;
+  readonly index: number;
+}
+
+/**
+ * The CMS's labels for the navigation. Two items may name one page in one place; the one of the
+ * lowest order is used, the first of them on a tie, and every other is named in a warning.
+ */
 function labelsFrom(records: readonly unknown[], warnings: string[]): NavigationLabels {
   const paths = navigationPaths();
-  const header: Record<string, string> = {};
-  const footer: Record<string, string> = {};
+  const chosen = new Map<string, PlacedItem>();
+  const others: PlacedItem[] = [];
   records.forEach((record, index) => {
     const name = `navigation item ${String(index + 1)}`;
-    const candidate = isRecord(record)
-      ? {
-          label: field(record, "label"),
-          href: field(record, "href"),
-          placement: field(record, "placement"),
-          order: field(record, "order"),
-        }
-      : record;
-    const result = parseNavigationItem(candidate, paths);
-    if (!result.ok) {
-      warnings.push(`CMS: ${name} is not valid (${result.message}); it is left out`);
-      return;
+    try {
+      const candidate = isRecord(record)
+        ? {
+            label: field(record, "label"),
+            href: field(record, "href"),
+            placement: field(record, "placement"),
+            order: field(record, "order"),
+          }
+        : record;
+      const result = parseNavigationItem(candidate, paths);
+      if (!result.ok) {
+        warnings.push(`CMS: ${name} is not valid (${result.message}); it is left out`);
+        return;
+      }
+      const placed = { item: result.item, index };
+      const key = `${result.item.placement} ${result.item.href}`;
+      const held = chosen.get(key);
+      if (held === undefined || placed.item.order < held.item.order) {
+        if (held !== undefined) others.push(held);
+        chosen.set(key, placed);
+      } else {
+        others.push(placed);
+      }
+    } catch {
+      warnings.push(`CMS: ${name} could not be read; it is left out`);
     }
-    const { href, label, placement } = result.item;
-    if (placement === "header") header[href] = label;
-    else if (placement === "footer") footer[href] = label;
   });
+  for (const other of others.sort((a, b) => a.index - b.index)) {
+    const { placement, href, order } = other.item;
+    const held = chosen.get(`${placement} ${href}`);
+    if (held === undefined) continue;
+    warnings.push(
+      `CMS: navigation item ${String(other.index + 1)} is another ${placement} label for ${href} ` +
+        `(order ${String(order)}, after item ${String(held.index + 1)}'s ${String(held.item.order)}); it is left out`,
+    );
+  }
+  const header: Record<string, string> = {};
+  const footer: Record<string, string> = {};
+  for (const { item } of chosen.values()) {
+    if (item.placement === "header") header[item.href] = item.label;
+    else if (item.placement === "footer") footer[item.href] = item.label;
+  }
   return { header, footer };
 }
 
@@ -273,8 +353,25 @@ function labelsFrom(records: readonly unknown[], warnings: string[]): Navigation
  * falls back to the static copy with a warning that names it. It never throws for the CMS's sake.
  */
 export async function resolveSiteContent(options: ContentOptions): Promise<SiteContent> {
+  const statics = new Map(options.staticPages.map((page) => [page.slug, page]));
+  try {
+    return await readSiteContent(options, statics);
+  } catch {
+    // Each read already falls back on its own; this is the last guard, so a mistake of ours in
+    // reading the CMS costs its content, never the build.
+    return {
+      pages: statics,
+      labels: NO_LABELS,
+      warnings: ["CMS: the CMS could not be read; the static copy of every page is used"],
+    };
+  }
+}
+
+async function readSiteContent(
+  options: ContentOptions,
+  statics: ReadonlyMap<string, ContentPage>,
+): Promise<SiteContent> {
   const { url, staticPages } = options;
-  const statics = new Map(staticPages.map((page) => [page.slug, page]));
   if (url === undefined || url.trim() === "") {
     return { pages: statics, labels: NO_LABELS, warnings: [] };
   }
@@ -314,9 +411,11 @@ export async function resolveSiteContent(options: ContentOptions): Promise<SiteC
       }
     }
   } catch (error) {
-    if (!(error instanceof ReadFailure)) throw error;
+    // Anything at all, not only a failed read: nothing the CMS sends may fail the build.
+    pages.clear();
+    for (const [slug, page] of statics) pages.set(slug, page);
     warnings.push(
-      `CMS: pages could not be read (${error.message}); the static copy of every page is used`,
+      `CMS: pages could not be read (${reasonOf(error)}); the static copy of every page is used`,
     );
   }
 
@@ -332,9 +431,8 @@ export async function resolveSiteContent(options: ContentOptions): Promise<SiteC
     );
     labels = labelsFrom(records, warnings);
   } catch (error) {
-    if (!(error instanceof ReadFailure)) throw error;
     warnings.push(
-      `CMS: navigation items could not be read (${error.message}); the route table's labels are used`,
+      `CMS: navigation items could not be read (${reasonOf(error)}); the route table's labels are used`,
     );
   }
   return { pages, labels, warnings };

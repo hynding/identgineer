@@ -8,6 +8,7 @@ import {
   type Inline,
   type InlineContent,
   type Seo,
+  type TextRun,
 } from "./content-page.ts";
 import { RESERVED_IDS, headingId } from "./headings.ts";
 
@@ -33,7 +34,7 @@ export type ContentResult =
 
 /** One line for a build warning or a test: `page "x", block 3 (paragraph): content[0].href: …`. */
 export function describeContentError({ page, block, path, message }: ContentError): string {
-  const where = [page === undefined ? "page (no slug)" : `page ${JSON.stringify(page)}`];
+  const where = [page === undefined ? "page (no slug)" : `page "${printable(page, 120)}"`];
   if (block) where.push(`block ${String(block.index)}${block.type ? ` (${block.type})` : ""}`);
   return `${where.join(", ")}: ${path === "" ? "" : `${path}: `}${message}`;
 }
@@ -50,16 +51,26 @@ const BLOCK_TYPES: readonly BlockType[] = [
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+/** Whether a value could be a page's slug, and so may be printed as it is to name the page. */
+export function isSlug(value: unknown): value is string {
+  return typeof value === "string" && value.length <= CONTENT_LIMITS.slug && SLUG.test(value);
+}
+
 /**
- * C0 and C1 controls, delete, the bidirectional embeddings, overrides and isolates (which can make
- * text read differently from what it holds), the line and paragraph separators and lone surrogates.
- * Code may hold a newline and a tab; nothing else may.
+ * C0 and C1 controls, delete, the bidirectional marks, embeddings, overrides and isolates (which
+ * can make text read differently from what it holds), the characters that take no room and hide in
+ * text (the zero-width space, the word joiner and the invisible operators, the byte order mark, the
+ * Mongolian vowel separator), the line and paragraph separators and lone surrogates. Code may hold
+ * a newline and a tab; nothing else may.
+ *
+ * The zero-width joiner and non-joiner (U+200C, U+200D) are kept: an emoji sequence and the
+ * shaping of Persian and the Indic scripts need them, and neither reorders or hides other text.
  */
 /* eslint-disable no-control-regex -- matching control characters is the point of these two. */
 const FORBIDDEN_IN_TEXT =
-  /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069\u2028\u2029]|[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/u;
+  /[\u0000-\u001f\u007f-\u009f\u061c\u180e\u200b\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2028\u2029\ufeff]|[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/u;
 const FORBIDDEN_IN_CODE =
-  /[\u0000-\u0008\u000b-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069\u2028\u2029]|[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/u;
+  /[\u0000-\u0008\u000b-\u001f\u007f-\u009f\u061c\u180e\u200b\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2028\u2029\ufeff]|[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/u;
 /* eslint-enable no-control-regex */
 
 class Refusal extends Error {
@@ -71,10 +82,37 @@ class Refusal extends Error {
   }
 }
 
+/**
+ * Text from outside, made safe to print in a message or a build log: at most `limit` characters,
+ * printable ASCII only, everything else (controls, bidi overrides, any other character) written as
+ * `\uXXXX`, and a quote or a backslash escaped, so a line says what was sent and can do nothing.
+ */
+export function printable(text: string, limit = 60): string {
+  let out = "";
+  for (const character of text.slice(0, limit)) {
+    const point = character.codePointAt(0) ?? 0;
+    if (character === '"' || character === "\\") out += `\\${character}`;
+    else if (point >= 0x20 && point <= 0x7e) out += character;
+    else {
+      for (let index = 0; index < character.length; index += 1) {
+        out += `\\u${character.charCodeAt(index).toString(16).padStart(4, "0")}`;
+      }
+    }
+  }
+  return text.length > limit ? `${out}...` : out;
+}
+
+/** A value a message names: text in quotes, made printable; anything else by what it is. */
 function quote(value: unknown): string {
-  // JSON.stringify gives undefined for undefined and for a function.
-  const text = (JSON.stringify(value) as string | undefined) ?? String(value);
-  return text.length > 60 ? `${text.slice(0, 57)}…"` : text;
+  if (typeof value === "string") return `"${printable(value)}"`;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return printable(String(value));
+  }
+  if (value === null) return "null";
+  if (value === undefined) return "nothing";
+  return Array.isArray(value)
+    ? "a list"
+    : `a${typeof value === "object" ? "n object" : ` ${typeof value}`}`;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -85,7 +123,9 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 function join(path: string, key: string | number): string {
   if (typeof key === "number") return `${path}[${String(key)}]`;
-  return path === "" ? key : `${path}.${key}`;
+  // A key may come from outside (an unknown field), so it is named short and printable.
+  const name = printable(key, 40);
+  return path === "" ? name : `${path}.${name}`;
 }
 
 /** Reads one object, field by field, and refuses any field it was not asked for. */
@@ -154,7 +194,15 @@ function arrayOf(value: unknown, path: string, min: 0 | 1, max: number, noun: st
   if (value.length > max) {
     throw new Refusal(path, `must hold at most ${String(max)} ${noun}s`);
   }
+  holes(value, path);
   return value;
+}
+
+/** A list with a hole in it (`[a, , b]`) reads as `[a, null, b]` once written as JSON: refused. */
+function holes(value: unknown[], path: string): void {
+  for (let index = 0; index < value.length; index += 1) {
+    if (!(index in value)) throw new Refusal(join(path, index), "is a hole in the list");
+  }
 }
 
 function flag(fields: Record<string, unknown>, key: string, path: string): boolean | undefined {
@@ -162,6 +210,15 @@ function flag(fields: Record<string, unknown>, key: string, path: string): boole
   const value = fields[key];
   if (typeof value !== "boolean") throw new Refusal(join(path, key), "must be true or false");
   return value;
+}
+
+/**
+ * A path of the site as the route table writes it: given exactly, or without its last slash (as a
+ * CMS's link field lets an editor write `/identity`), which is put back.
+ */
+function sitePath(href: string, paths: ReadonlySet<string>): string | undefined {
+  if (paths.has(href)) return href;
+  return !href.endsWith("/") && paths.has(`${href}/`) ? `${href}/` : undefined;
 }
 
 const LINK_REFUSED = "is not a path of the site, a heading of this page or an https: address";
@@ -175,7 +232,8 @@ function linkTarget(value: unknown, path: string, context: ValidationContext): s
   const href = text(value, path, CONTENT_LIMITS.href);
   if (href.startsWith("#")) return href;
   if (href.startsWith("/")) {
-    if (context.paths.has(href)) return href;
+    const page = sitePath(href, context.paths);
+    if (page !== undefined) return page;
     throw new Refusal(path, `${quote(href)} ${LINK_REFUSED}`);
   }
   if (href.startsWith("https://") && !/[\s\\]/.test(href)) {
@@ -233,15 +291,17 @@ class BodyReader {
     }
     const fields = fieldsOf(value, path, ["type", "text"], ["strong", "emphasis", "code"]);
     // A run may be a space between two others, so it need not hold anything else.
-    const run: { -readonly [K in keyof Inline]?: unknown } & Record<string, unknown> = {
+    const strong = flag(fields, "strong", path);
+    const emphasis = flag(fields, "emphasis", path);
+    const code = flag(fields, "code", path);
+    const run: TextRun = {
       type,
       text: this.count(text(fields.text, join(path, "text"), CONTENT_LIMITS.run, { blank: true })),
+      ...(strong === undefined ? {} : { strong }),
+      ...(emphasis === undefined ? {} : { emphasis }),
+      ...(code === undefined ? {} : { code }),
     };
-    for (const key of ["strong", "emphasis", "code"] as const) {
-      const set = flag(fields, key, path);
-      if (set !== undefined) run[key] = set;
-    }
-    return run as unknown as Inline;
+    return run;
   }
 
   private inlineContent(value: unknown, path: string): InlineContent {
@@ -288,6 +348,7 @@ class BodyReader {
     const rows = arrayOf(fields.rows, "rows", 1, CONTENT_LIMITS.rows, "row").map((row, index) => {
       const path = join("rows", index);
       if (!Array.isArray(row)) throw new Refusal(path, "must be a list");
+      holes(row, path);
       if (row.length !== columns.length) {
         throw new Refusal(
           path,
@@ -405,7 +466,7 @@ export function parseContentPage(input: unknown, context: ValidationContext): Co
   try {
     // Named by its slug from the start, if it has one, so even its first refusal says which page.
     const named = isPlainObject(input) ? input.slug : undefined;
-    if (typeof named === "string" && SLUG.test(named)) page = named;
+    if (isSlug(named)) page = named;
     const fields = fieldsOf(input, "", ["slug", "title", "summary", "body", "seo"]);
     const slug = text(fields.slug, "slug", CONTENT_LIMITS.slug);
     if (!SLUG.test(slug)) throw new Refusal("slug", "must be lower-case words joined by hyphens");
@@ -464,9 +525,10 @@ export function parseNavigationItem(
   try {
     const fields = fieldsOf(input, "", ["label", "href", "placement", "order"]);
     const label = text(fields.label, "label", NAVIGATION_LABEL);
-    const href = text(fields.href, "href", CONTENT_LIMITS.href);
-    if (!navigationPaths.has(href)) {
-      throw new Refusal("href", `${quote(href)} is not a page of the site's navigation`);
+    const given = text(fields.href, "href", CONTENT_LIMITS.href);
+    const href = sitePath(given, navigationPaths);
+    if (href === undefined) {
+      throw new Refusal("href", `${quote(given)} is not a page of the site's navigation`);
     }
     const placement = oneOf(fields.placement, "placement", [
       "header",

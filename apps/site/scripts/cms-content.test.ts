@@ -244,7 +244,7 @@ describe("the site's content", () => {
       },
       /body: must hold at most 200 blocks/,
     ],
-    ["no summary", { summary: null }, /summary: is required/],
+    ["a summary that is not text", { summary: 5 }, /summary: must be text/],
   ])(
     "falls back to the static copy, with a warning, for a page with %s",
     async (_, change, why) => {

@@ -395,7 +395,6 @@ describe("a content page is refused, too,", () => {
 
   it.each([
     ["a zero-width space", "a\u200bb"],
-    ["a zero-width joiner", "a\u200db"],
     ["a byte order mark", "a\ufeffb"],
     ["an Arabic letter mark", "a\u061cb"],
     ["a left-to-right mark", "a\u200eb"],
@@ -407,6 +406,17 @@ describe("a content page is refused, too,", () => {
       /holds a control or formatting character \(U\+[0-9A-F]{4}\)/,
     );
   });
+
+  it.each([
+    ["a zero-width joiner", "\u{1F469}\u200d\u{1F4BB}"],
+    ["a zero-width non-joiner", "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645"],
+  ])(
+    "but not for %s, which emoji and Persian or Indic words need to be written right",
+    (_, text) => {
+      const page = withBlock({ type: "paragraph", content: [{ type: "text", text }] });
+      expect(parseContentPage(page, CONTEXT).ok).toBe(true);
+    },
+  );
 
   it.each([
     ["Main", "main"],

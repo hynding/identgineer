@@ -37,12 +37,16 @@ describe("Strapi's blocks rich text, as a page body", () => {
     ]);
   });
 
-  it("keeps headings as plain text, at the level they have", () => {
+  it("keeps headings as plain text, at the level they have where the page can hold it", () => {
     expect(
       bodyFromStrapiBlocks([
-        { type: "heading", level: 3, children: [text("A "), text("b", { bold: true })] },
+        { type: "heading", level: 2, children: [text("A "), text("b", { bold: true })] },
+        { type: "heading", level: 3, children: [text("C")] },
       ]),
-    ).toEqual([{ type: "heading", level: 3, text: "A b" }]);
+    ).toEqual([
+      { type: "heading", level: 2, text: "A b" },
+      { type: "heading", level: 3, text: "C" },
+    ]);
   });
 
   it("keeps lists, bulleted and numbered", () => {
