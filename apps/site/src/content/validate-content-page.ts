@@ -72,6 +72,16 @@ const FORBIDDEN_IN_CODE =
   /[\u0000-\u0008\u000b-\u001f\u007f-\u009f\u061c\u180e\u200b\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2028\u2029\ufeff]|[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/u;
 /* eslint-enable no-control-regex */
 
+/**
+ * Text from outside with what the validator refuses taken out: a line break, a tab and the line and
+ * paragraph separators become a space, every other forbidden character goes, and runs of spaces
+ * become one. What it returns is never refused for its characters.
+ */
+export function withoutForbiddenText(value: string): string {
+  const spaced = value.replace(/[\n\r\t\u2028\u2029]+/g, " ");
+  return spaced.replace(new RegExp(FORBIDDEN_IN_TEXT.source, "gu"), "").replace(/\s+/g, " ").trim();
+}
+
 class Refusal extends Error {
   readonly path: string;
 
