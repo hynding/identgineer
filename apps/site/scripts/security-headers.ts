@@ -11,6 +11,18 @@ export function inlineStyles(html: string): string[] {
   return [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map((match) => match[1] ?? "");
 }
 
+const START_TAG = /<[a-z][^\s/>]*(?:\s+[^\s=>/]+(?:="[^"]*")?)*\s*\/?>/gi;
+
+/**
+ * The page without its `style` attributes. A few components write a custom property to a surface
+ * once they render, which the prerender serialises as an attribute the policy forbids. The browser
+ * writes the same property again through the style object when the component loads, which the
+ * policy allows, so nothing is lost but the attribute.
+ */
+export function withoutStyleAttributes(html: string): string {
+  return html.replace(START_TAG, (tag) => tag.replace(/\sstyle="[^"]*"/gi, ""));
+}
+
 /** The CSP source that allows exactly this inline style. */
 export function styleSource(css: string): string {
   return `'sha256-${createHash("sha256").update(css, "utf8").digest("base64")}'`;

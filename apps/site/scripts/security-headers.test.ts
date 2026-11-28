@@ -34,7 +34,8 @@ describe("a prerendered page's style attributes", () => {
   });
 
   it("leave text and other attributes that merely look like one", () => {
-    const html = '<p data-style="x" title="a style=&quot;b&quot;">use style="--_offset: 8px;" here</p>';
+    const html =
+      '<p data-style="x" title="a style=&quot;b&quot;">use style="--_offset: 8px;" here</p>';
     expect(withoutStyleAttributes(html)).toBe(html);
   });
 });

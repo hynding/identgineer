@@ -17,6 +17,7 @@ import {
   contentSecurityPolicy,
   inlineStyles,
   securityHeaders,
+  withoutStyleAttributes,
 } from "./security-headers.ts";
 import { prepareServerDocument } from "./server-document.ts";
 import { siteUrlFrom } from "./site-url.ts";
@@ -125,7 +126,7 @@ async function prerender(): Promise<void> {
       throw new Error(`${page.file} has no content page "${page.content}"`);
     }
     if (content?.seo.noIndex === true && page.path !== undefined) noIndex.add(page.path);
-    const html = await render(hydrate, page, content, labels, siteUrl);
+    const html = withoutStyleAttributes(await render(hydrate, page, content, labels, siteUrl));
     styles.push(...inlineStyles(html));
     write(page.file, html);
   }
