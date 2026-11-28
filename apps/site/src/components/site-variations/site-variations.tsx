@@ -99,10 +99,13 @@ export class SiteVariations {
   }
 
   /**
-   * The page was drawn with the defaults marked, and the browser's first render does not take a
-   * mark off a link the server wrote it on, so each link is set from what the root says.
+   * Says which tile is current to assistive technology, once the app has read the page's root. The
+   * page is drawn without the claim: it is written with the defaults, and a visitor's choice may
+   * have been put on the root since, so before this runs the word "Current", which the root's own
+   * attributes show and hide, is the only mark, and it is always right.
    */
   componentDidRender(): void {
+    if (!Build.isBrowser) return;
     Array.from(this.host.querySelectorAll("a.tile-link")).forEach((link) => {
       const tile = link.closest("li.gallery-tile");
       const axis = tile?.getAttribute("data-axis") as VariationAxis | undefined;
@@ -165,7 +168,6 @@ export class SiteVariations {
 
   private renderTile(section: GallerySection, tile: GalleryTile) {
     const describedBy = `${section.axis}-${tile.id}-description`;
-    const current = this.state[section.axis] === tile.id;
     return (
       <li class="gallery-tile" data-axis={section.axis} data-value={tile.id}>
         {this.renderPreview(section, tile)}
@@ -174,7 +176,6 @@ export class SiteVariations {
             <a
               class="tile-link"
               href={tile.href}
-              aria-current={current ? "true" : undefined}
               aria-describedby={describedBy}
               onClick={this.choose(
                 { [section.axis]: tile.id },
