@@ -21,6 +21,13 @@ export type ExampleNode = string | ExampleElement;
 
 /** A live example of one component, drawn from the project's own element and nothing else. */
 export interface ComponentExample {
+  /**
+   * How the stage lays the example out: as `block`s, each the stage's whole width, for what lays
+   * out a block of its own (a card, a table, a form, a page's frame), or in a `row`, for what is
+   * the size of its content (a button, a badge). The layout is the registry's to say, so a
+   * component added to it cannot fall back to the wrong one unnoticed.
+   */
+  readonly stage: "block" | "row";
   /** What the example shows, under it. */
   readonly caption: string;
   readonly nodes: readonly ExampleNode[];

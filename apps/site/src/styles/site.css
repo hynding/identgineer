@@ -1883,44 +1883,8 @@ figcaption {
   max-inline-size: 100%;
 }
 
-/* What lays out a block of its own takes the panel's width; the rest sit in a row. */
-.example-stage
-  > :is(
-    idg-accordion,
-    idg-alert,
-    idg-brand-editor,
-    idg-brand-export,
-    idg-brand-guidelines,
-    idg-brand-swatches,
-    idg-breadcrumb,
-    idg-card,
-    idg-cluster,
-    idg-consent-banner,
-    idg-consent-preferences,
-    idg-cover,
-    idg-divider,
-    idg-event-table,
-    idg-field,
-    idg-grid,
-    idg-layout,
-    idg-pagination,
-    idg-password-reset,
-    idg-profile,
-    idg-progress,
-    idg-radio-group,
-    idg-register,
-    idg-sidebar,
-    idg-skeleton,
-    idg-stack,
-    idg-stat,
-    idg-switcher,
-    idg-table,
-    idg-tabs,
-    idg-toast,
-    idg-variation-switcher,
-    p,
-    .preview-frame
-  ) {
+/* An example the registry lays out as blocks takes the panel's width, each; the rest sit in a row. */
+.stage-block > * {
   flex: 1 1 100%;
 }
 

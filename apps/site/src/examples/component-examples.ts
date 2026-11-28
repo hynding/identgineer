@@ -17,6 +17,7 @@ const SERIES = "38,41,37,52,49,61,58,66,63,71,69,84";
  */
 export const COMPONENT_EXAMPLES = {
   "idg-accordion": {
+    stage: "block",
     caption: "Two items, the first open.",
     nodes: [
       el(
@@ -28,12 +29,14 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-accordion-item": {
+    stage: "row",
     caption: "One item, open.",
     nodes: [
       el("idg-accordion-item", { heading: "Shipping", open: true }, "Orders leave within a day."),
     ],
   },
   "idg-alert": {
+    stage: "block",
     caption: "A warning that can be dismissed.",
     nodes: [
       el(
@@ -45,10 +48,12 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-avatar": {
+    stage: "row",
     caption: "A person's initials, with their status.",
     nodes: [el("idg-avatar", { name: "Ada Lovelace", size: "lg", status: "online" })],
   },
   "idg-avatar-group": {
+    stage: "row",
     caption: "Five people, three shown.",
     nodes: [
       el(
@@ -63,6 +68,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-badge": {
+    stage: "row",
     caption: "Each variant.",
     nodes: [
       el("idg-badge", {}, "Neutral"),
@@ -72,30 +78,36 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-brand-editor": {
+    stage: "block",
     caption: "The editor as it opens, before a kit is given to it.",
     inert: true,
     nodes: [el("idg-brand-editor", { label: "Brand kit" })],
   },
   "idg-brand-export": {
+    stage: "block",
     caption: "The export panel before a theme is given to it.",
     inert: true,
     nodes: [el("idg-brand-export", { label: "Export your theme" })],
   },
   "idg-brand-guidelines": {
+    stage: "block",
     caption: "The guidelines before a kit is given to them.",
     inert: true,
     nodes: [el("idg-brand-guidelines", { label: "Brand guidelines" })],
   },
   "idg-brand-logo": {
+    stage: "row",
     caption: "A brand with no logo yet, drawn as its name.",
     nodes: [el("idg-brand-logo", { name: "Acme Rockets", size: "lg" })],
   },
   "idg-brand-swatches": {
+    stage: "block",
     caption: "The swatches before a theme is given to them.",
     inert: true,
     nodes: [el("idg-brand-swatches", { label: "Brand colours" })],
   },
   "idg-breadcrumb": {
+    stage: "block",
     caption: "A trail of three steps.",
     nodes: [
       el(
@@ -108,6 +120,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-breadcrumb-item": {
+    stage: "block",
     caption: "Steps with a slash between them.",
     nodes: [
       el(
@@ -119,6 +132,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-button": {
+    stage: "row",
     caption: "Each variant, and one that is loading.",
     nodes: [
       el("idg-button", {}, "Save"),
@@ -129,6 +143,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-card": {
+    stage: "block",
     caption: "A raised card with a heading and an action.",
     nodes: [
       el(
@@ -140,6 +155,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-checkbox": {
+    stage: "row",
     caption: "A checked box and one left open.",
     nodes: [
       el("idg-checkbox", { checked: true }, "Send me the newsletter"),
@@ -147,6 +163,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-cluster": {
+    stage: "block",
     caption: "Badges that wrap onto the next line as the room runs out.",
     nodes: [
       el(
@@ -160,6 +177,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-consent-banner": {
+    stage: "block",
     caption: "The banner in the page's flow, before anyone has chosen.",
     inert: true,
     nodes: [
@@ -167,6 +185,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-consent-preferences": {
+    stage: "block",
     caption: "The preferences panel before a consent object is given to it.",
     inert: true,
     nodes: [
@@ -176,6 +195,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-cover": {
+    stage: "block",
     caption: "Content centred in a block, with a region pinned to each edge.",
     nodes: [
       el(
@@ -188,6 +208,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-dialog": {
+    stage: "row",
     caption: "A modal dialog, closed until it is opened with its showModal() method.",
     opener: { label: "Open the dialog", method: "showModal" },
     nodes: [
@@ -200,14 +221,17 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-divider": {
+    stage: "block",
     caption: "A rule between two paragraphs.",
     nodes: [el("p", {}, "Above"), el("idg-divider"), el("p", {}, "Below")],
   },
   "idg-event-table": {
+    stage: "block",
     caption: "The table while its events are loading.",
     nodes: [el("idg-event-table", { caption: "Recent events", loading: true })],
   },
   "idg-field": {
+    stage: "block",
     caption: "A labelled input with a hint.",
     nodes: [
       el(
@@ -218,16 +242,19 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-grid": {
+    stage: "block",
     caption: "Boxes in as many columns as the room holds.",
     nodes: [el("idg-grid", { min: "xs", gap: "s" }, ...boxes("One", "Two", "Three", "Four"))],
   },
   "idg-icon": {
+    stage: "row",
     caption: "A few of the icons.",
     nodes: ["check", "bell", "search", "settings", "user"].map((name) =>
       el("idg-icon", { name, size: "lg" }),
     ),
   },
   "idg-input": {
+    stage: "block",
     caption: "A search input, in a field that names it.",
     nodes: [
       el(
@@ -238,6 +265,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-layout": {
+    stage: "block",
     caption: "The page shell with a brand, navigation and content, inside this page.",
     inert: true,
     nodes: [
@@ -252,6 +280,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-link": {
+    stage: "row",
     caption: "A link, and one that leaves the site.",
     nodes: [
       el("idg-link", { href: "/docs/" }, "Read the docs"),
@@ -259,6 +288,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-menu": {
+    stage: "row",
     caption: "A button that opens a menu of actions.",
     nodes: [
       el(
@@ -272,6 +302,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-menu-group": {
+    stage: "row",
     caption: "A menu with its items in two labelled groups.",
     nodes: [
       el(
@@ -284,6 +315,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-menu-item": {
+    stage: "row",
     caption: "Items that are choices: one checked, one a link.",
     nodes: [
       el(
@@ -296,6 +328,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-menu-separator": {
+    stage: "row",
     caption: "A rule between two kinds of action.",
     nodes: [
       el(
@@ -309,15 +342,18 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-pagination": {
+    stage: "block",
     caption: "Page 4 of 12.",
     nodes: [el("idg-pagination", { page: "4", "page-count": "12" })],
   },
   "idg-password-reset": {
+    stage: "block",
     caption: "The request step, inert: it sends nothing.",
     inert: true,
     nodes: [el("idg-password-reset")],
   },
   "idg-popover": {
+    stage: "row",
     caption: "A button that opens a surface of content.",
     nodes: [
       el(
@@ -329,19 +365,23 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-profile": {
+    stage: "block",
     caption: "The profile panel, inert: it needs a signed-in client.",
     inert: true,
     nodes: [el("idg-profile", { "heading-level": "3" })],
   },
   "idg-progress": {
+    stage: "block",
     caption: "Progress with its value shown.",
     nodes: [el("idg-progress", { label: "Upload", value: "64", "show-value": true })],
   },
   "idg-property-picker": {
+    stage: "row",
     caption: "The picker before it has any properties.",
     nodes: [el("idg-property-picker", { label: "Site" })],
   },
   "idg-radio": {
+    stage: "block",
     caption: "Radios in a group, the second chosen.",
     nodes: [
       el(
@@ -354,6 +394,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-radio-group": {
+    stage: "block",
     caption: "A group laid out in a row.",
     nodes: [
       el(
@@ -365,11 +406,13 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-register": {
+    stage: "block",
     caption: "The registration form, inert: it sends nothing.",
     inert: true,
     nodes: [el("idg-register")],
   },
   "idg-select": {
+    stage: "block",
     caption: "A select in a field that names it.",
     nodes: [
       el(
@@ -386,6 +429,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-session-guard": {
+    stage: "row",
     caption: "What a visitor sees while nobody is signed in.",
     nodes: [
       having(
@@ -400,6 +444,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-sidebar": {
+    stage: "block",
     caption: "A side region beside the content, which stack when the room is short.",
     nodes: [
       el(
@@ -411,23 +456,28 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-sign-in": {
+    stage: "block",
     caption: "The sign-in form, inert: it sends nothing.",
     inert: true,
     nodes: [el("idg-sign-in")],
   },
   "idg-skeleton": {
+    stage: "block",
     caption: "Three lines of text still to arrive.",
     nodes: [el("idg-skeleton", { lines: "3" })],
   },
   "idg-sparkline": {
+    stage: "row",
     caption: "A trend of twelve days, with its area filled.",
     nodes: [el("idg-sparkline", { values: SERIES, label: "Visitors per day", area: true })],
   },
   "idg-stack": {
+    stage: "block",
     caption: "Boxes one under another with a gap.",
     nodes: [el("idg-stack", { gap: "s" }, ...boxes("One", "Two", "Three"))],
   },
   "idg-stat": {
+    stage: "block",
     caption: "A figure with how it changed, and a chart beside it.",
     nodes: [
       el(
@@ -438,6 +488,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-switch": {
+    stage: "row",
     caption: "A switch that is on, and one that is off.",
     nodes: [
       el("idg-switch", { checked: true }, "Notifications"),
@@ -445,10 +496,12 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-switcher": {
+    stage: "block",
     caption: "Items in one row that become a column where the room is short.",
     nodes: [el("idg-switcher", { threshold: "m", gap: "s" }, ...boxes("One", "Two", "Three"))],
   },
   "idg-tab": {
+    stage: "block",
     caption: "Tabs down the side of their panel.",
     nodes: [
       el(
@@ -462,6 +515,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-tab-panel": {
+    stage: "block",
     caption: "A panel for each tab, the one of the selected tab shown.",
     nodes: [
       el(
@@ -475,6 +529,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-table": {
+    stage: "block",
     caption: "A native table, striped, in a scroll region.",
     nodes: [
       el(
@@ -501,6 +556,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-tabs": {
+    stage: "block",
     caption: "Three tabs, the first selected.",
     nodes: [
       el(
@@ -516,6 +572,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-textarea": {
+    stage: "block",
     caption: "A textarea with a character counter, in a field that names it.",
     nodes: [
       el(
@@ -526,6 +583,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-toast": {
+    stage: "block",
     caption: "A toast with an action, drawn where it stands.",
     nodes: [
       el("idg-toast", {
@@ -538,6 +596,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-toast-region": {
+    stage: "block",
     caption: "The corner toasts appear in, with one toast waiting.",
     inert: true,
     nodes: [
@@ -549,6 +608,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-tooltip": {
+    stage: "row",
     caption: "A hint on hover and on focus.",
     nodes: [
       el(
@@ -559,6 +619,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-user-menu": {
+    stage: "block",
     caption: "The user menu while nobody is signed in.",
     inert: true,
     nodes: [
@@ -569,6 +630,7 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-variation-switcher": {
+    stage: "block",
     caption: "The real switcher: it changes this page's look.",
     nodes: [el("idg-variation-switcher", { orientation: "inline", axes: "theme,layout" })],
   },

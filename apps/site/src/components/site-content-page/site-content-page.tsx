@@ -265,7 +265,7 @@ export class SiteContentPage {
     return (
       <figure class="example example-component">
         <div class="example-body">
-          <div class="example-stage">
+          <div class={`example-stage stage-${example.stage}`}>
             {opener === undefined ? null : (
               <idg-button
                 class="needs-script"
