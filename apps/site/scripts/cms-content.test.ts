@@ -766,7 +766,16 @@ describe("the site's content", () => {
         json(page([record("identity", { publishedAt: null }), record("identity", { title: 5 })])),
     });
     expect(warnings).toEqual([
-      'CMS: page "identity" is not valid (title: must be text); the static copy is used',
+      'CMS: page "identity" is not valid (title: must be text); this copy is left out',
+      ...outcomes({ identity: "is not published; the static copy is used" }),
+    ]);
+  });
+
+  it("names a second draft of a page as a copy left out, apart from what was drawn", async () => {
+    const draft = record("identity", { publishedAt: null });
+    const { warnings } = await resolve({ pages: () => json(page([draft, draft])) });
+    expect(warnings).toEqual([
+      'CMS: page "identity" is not published; this copy is left out',
       ...outcomes({ identity: "is not published; the static copy is used" }),
     ]);
   });
@@ -777,10 +786,67 @@ describe("the site's content", () => {
     });
     expect(pages.get("identity")?.title).toBe("Edited in the CMS");
     expect(warnings).toEqual([
-      'CMS: page "identity" is not valid (title: must be text); the static copy is used',
+      'CMS: page "identity" is not valid (title: must be text); this copy is left out',
       ...outcomes({ identity: undefined }),
     ]);
   });
+
+  it("takes a page from a published copy after a draft", async () => {
+    const { pages, warnings } = await resolve({
+      pages: () => json(page([record("identity", { publishedAt: null }), record("identity")])),
+    });
+    expect(pages.get("identity")?.title).toBe("Edited in the CMS");
+    expect(warnings).toEqual([
+      'CMS: page "identity" is not published; this copy is left out',
+      ...outcomes({ identity: undefined }),
+    ]);
+  });
+
+  it("names a draft after a published copy as the second copy", async () => {
+    const { pages, warnings } = await resolve({
+      pages: () => json(page([record("identity"), record("identity", { publishedAt: null })])),
+    });
+    expect(pages.get("identity")?.title).toBe("Edited in the CMS");
+    expect(warnings).toEqual([
+      'CMS: page "identity" is there twice; the first is used',
+      ...outcomes({ identity: undefined }),
+    ]);
+  });
+
+  it("names a draft of a page the site does not have as no page of the site", async () => {
+    const { warnings } = await resolve({
+      pages: () => json(page([record("no-such-page", { publishedAt: null })])),
+    });
+    expect(warnings).toEqual([
+      'CMS: page "no-such-page" is no page of the site; it is left out',
+      ...outcomes({}),
+    ]);
+  });
+
+  it.each([
+    ["a draft, then a published copy", [{ publishedAt: null }, {}]],
+    ["an invalid copy, then a published one", [{ title: 5 }, {}]],
+    ["two invalid copies, then a published one", [{ title: 5 }, { summary: 5 }, {}]],
+    [
+      "a published copy, then a draft and an invalid one",
+      [{}, { publishedAt: null }, { title: 5 }],
+    ],
+    ["a draft, an invalid copy, then a published one", [{ publishedAt: null }, { title: 5 }, {}]],
+  ] as const)(
+    "never says the static copy is used for a page drawn from the CMS: %s",
+    async (_, copies) => {
+      const records = ["identity", "tracking"].flatMap((slug) =>
+        copies.map((change) => record(slug, change)),
+      );
+      const { pages, warnings } = await resolve({ pages: () => json(page(records)) });
+      const drawn = STATIC_PAGES.filter(({ slug }) => pages.get(slug) !== staticPage(slug));
+      expect(drawn.map(({ slug }) => slug)).toEqual(["identity", "tracking"]);
+      for (const { slug } of drawn) {
+        const said = warnings.filter((line) => line.startsWith(`CMS: page "${slug}" `));
+        expect(said.filter((line) => line.endsWith("the static copy is used"))).toEqual([]);
+      }
+    },
+  );
 
   describe("prints a bounded number of lines, whatever the CMS sends", () => {
     it("refuses an answer of more records than it asked for", async () => {
