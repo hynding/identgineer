@@ -84,6 +84,17 @@ describe("idg-toast-region rendering", () => {
     expect(part(root, "region").classList.contains("position-top-center")).toBe(true);
   });
 
+  it("stays in its own box, outside the top layer, when it is embedded", async () => {
+    const { root, waitForChanges } = await render(<idg-toast-region embedded />);
+    const region = part(root, "region");
+    expect(root.hasAttribute("embedded")).toBe(true);
+    expect(region.hasAttribute("popover")).toBe(false);
+    addToast(root, "Saved");
+    await waitForChanges();
+    expect(region.hasAttribute("data-popover-open")).toBe(false);
+    expect(toasts(root).map((toast) => toast.queued)).toEqual([false]);
+  });
+
   // Not atomic, so a screen reader reads only the line added, not every line still held.
   it("has one polite and one assertive live region, not atomic, outside the popover", async () => {
     const { root } = await render(empty);
