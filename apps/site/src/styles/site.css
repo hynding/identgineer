@@ -1616,6 +1616,8 @@ figcaption {
 /* A table of many columns, where it does not fit, is a card for each row: the column's name before
    each cell, and the header row kept for a reader who has no use for the card's look. */
 @container table (max-inline-size: 44rem) {
+  .table-cards,
+  .table-cards caption,
   .table-cards :is(thead, tbody, tr, th, td) {
     display: block;
   }
@@ -1628,7 +1630,7 @@ figcaption {
     clip-path: inset(50%);
   }
 
-  .table-cards tr {
+  .table-cards tbody tr {
     margin-block-end: var(--idg-space-s);
     padding: var(--idg-space-2xs) var(--idg-space-s);
     border: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
@@ -1637,6 +1639,7 @@ figcaption {
 
   .table-cards td {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--idg-space-3xs);
     padding-inline: 0;
     overflow-wrap: break-word;
