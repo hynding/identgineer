@@ -189,6 +189,23 @@ frame) or with a button that opens the dialog, shown with scripting only, as a c
 shows nothing. The example takes the theme, design, layout and UX mode of the page like any other
 element, as the tokens are attribute selectors.
 
+Each entry also says how its stage is laid out, with a required `stage` field: `block` for a
+component that fills the row (a form, a banner, a layout frame), `row` for small controls set side
+by side. An element may carry JavaScript `properties` as well as attributes, for the components
+that need an object (the consent banner's consent, the session guard's client): the registry gives
+them stub clients (`example-clients.ts`) that are passed as properties when the page is drawn, so the
+prerendered example and the browser's are the same, and the usage snippet shows the attributes only.
+An example drawn inert has a "Preview only" tag in its stage, so a visitor who cannot use it knows
+why. The toast region's example sets its `embedded` property, which lays the region out inside its
+stage instead of pinning it to the viewport as a popover; its own use is unchanged.
+A sentence cut for a lede, a description or a line of the index is cut at a word, by `clip.ts`, and
+ends with an ellipsis.
+
+A table of three columns or more (a component's properties, events and the like) is a row of
+cells where the table fits, and a card for each row where it does not (a container query on the
+table's own box): the column's name is drawn before each cell, and the cells keep their table roles
+so a screen reader still reads a table. A table of two columns scrolls along itself instead.
+
 `docs.json` reaches the site through the build order, which is also CI's: the site depends on the
 components package, so `pnpm build` (or `pnpm --filter "@identgineer/site..." build`) builds that
 package first. The prerenderer and the tests read it from `packages/components/dist/docs.json`, and
