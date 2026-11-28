@@ -512,7 +512,7 @@ export type NavigationResult =
   | { readonly ok: true; readonly item: NavigationItem }
   | { readonly ok: false; readonly message: string };
 
-const NAVIGATION_LABEL = 60;
+export const NAVIGATION_LABEL = 60;
 
 /**
  * A navigation item checked as a page's text and links are: a label of plain text, and a target
