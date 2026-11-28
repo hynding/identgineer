@@ -80,7 +80,16 @@ function renderInline(inline: Inline) {
     );
   }
   let node: unknown = inline.text;
-  if (inline.code) node = <code>{breakable(inline.text)}</code>;
+  if (inline.code) {
+    // A short name is read whole, so it never wraps, not even at a hyphen; a long one wraps
+    // between its parts.
+    node =
+      inline.text.length < LONG_NAME ? (
+        <code class="name">{inline.text}</code>
+      ) : (
+        <code>{breakable(inline.text)}</code>
+      );
+  }
   if (inline.emphasis) node = <em>{node}</em>;
   if (inline.strong) node = <strong>{node}</strong>;
   return node;

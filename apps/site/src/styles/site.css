@@ -1460,6 +1460,10 @@ figcaption {
   overflow-wrap: break-word;
 }
 
+.prose code.name {
+  white-space: nowrap;
+}
+
 .prose :is(p, li, td) code {
   padding: 0 0.2em;
   border-radius: var(--idg-shape-radius-sm);
@@ -1777,6 +1781,7 @@ figcaption {
   .reading-body > :is(.reading-guide, .pager),
   .prose-intro > *,
   .prose-section > * {
+    box-sizing: border-box;
     justify-self: center;
     inline-size: 100%;
     max-inline-size: var(--idg-density-measure);

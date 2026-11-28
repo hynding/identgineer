@@ -142,7 +142,8 @@ for (const layout of LAYOUTS) {
           (box) => {
             const style = getComputedStyle(box);
             return {
-              scrolls: box.scrollWidth > box.clientWidth + 1,
+              // Any overflow is a scroll, a pixel of a rounded width too, and the timeline runs.
+              scrolls: box.scrollWidth > box.clientWidth,
               start: Number.parseFloat(style.getPropertyValue("--_shade-start")) > 0,
               end: Number.parseFloat(style.getPropertyValue("--_shade-end")) > 0,
             };
