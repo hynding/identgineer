@@ -20,6 +20,13 @@ describe("the registry of live examples of the components", () => {
     expect(COMPONENT_EXAMPLE_NAMES.every((name) => /^idg-[a-z0-9-]+$/.test(name))).toBe(true);
   });
 
+  it("says of every example how its stage lays it out: as blocks of the stage's width, or in a row", () => {
+    const stages = Object.entries(COMPONENT_EXAMPLES).map(
+      ([name, example]) => [name, (example as { stage?: unknown }).stage] as const,
+    );
+    expect(stages.filter(([, stage]) => stage !== "block" && stage !== "row")).toEqual([]);
+  });
+
   it("gives every example a caption and something to draw", () => {
     for (const [name, example] of Object.entries(COMPONENT_EXAMPLES)) {
       expect(example.caption.trim(), name).not.toBe("");

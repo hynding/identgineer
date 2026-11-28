@@ -7,6 +7,8 @@ export interface ExampleReport {
   readonly escaping: string[];
   /** How much of the stage the example's elements fill, in CSS pixels. */
   readonly size: { readonly width: number; readonly height: number };
+  /** The widths of the example's own elements, and of the room the stage leaves them. */
+  readonly widths: { readonly own: number[]; readonly room: number };
 }
 
 /**
@@ -131,6 +133,16 @@ export function inspectExample(page: Page): Promise<ExampleReport> {
       }
     }
     const size = { width: Math.round(room.width), height: Math.round(room.height) };
-    return { empty, escaping, size };
+    const padding =
+      Number.parseFloat(getComputedStyle(stage).paddingInlineStart) +
+      Number.parseFloat(getComputedStyle(stage).paddingInlineEnd);
+    const border =
+      Number.parseFloat(getComputedStyle(stage).borderInlineStartWidth) +
+      Number.parseFloat(getComputedStyle(stage).borderInlineEndWidth);
+    const widths = {
+      own: own.map((element) => Math.round(boxOf(element).width)),
+      room: Math.round(room.width - padding - border),
+    };
+    return { empty, escaping, size, widths };
   });
 }

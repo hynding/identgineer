@@ -23,6 +23,13 @@ for (const scripting of [true, false]) {
         expect(report.empty, "elements that draw nothing").toEqual([]);
         expect(report.escaping, "painted outside the stage").toEqual([]);
         expect(report.size.height, "the stage is more than its padding").toBeGreaterThan(48);
+        // An example laid out as blocks takes the stage's whole width, each; one in a row does not
+        // have to.
+        if (example.stage === "block") {
+          expect(report.widths.own.map((width) => width >= report.widths.room - 1)).not.toContain(
+            false,
+          );
+        }
       });
     }
   });
