@@ -58,17 +58,36 @@ export function misfitsOf(page: Page): Promise<Misfit> {
 
     const scrollsSideways = (style: CSSStyleDeclaration) =>
       style.overflowX === "auto" || style.overflowX === "scroll";
+    const focusable = (element: Element) =>
+      CONTROLS.includes(element.localName) && (element as HTMLElement).tabIndex >= 0;
+
+    /** The part of a box in view: a box that scrolls sideways shows only what is inside it. */
+    const inView = (box: DOMRect, element: Element): DOMRect | undefined => {
+      let left = box.left;
+      let right = box.right;
+      for (let current = parentOf(element); current; current = parentOf(current)) {
+        if (current === document.documentElement || current === document.body) break;
+        if (!scrollsSideways(getComputedStyle(current))) continue;
+        const edge = current.getBoundingClientRect();
+        left = Math.max(left, edge.left);
+        right = Math.min(right, edge.right);
+      }
+      return right - left > 0 ? new DOMRect(left, box.top, right - left, box.height) : undefined;
+    };
 
     /** Whether a line or control box reaches past the window, its clipping box or its drawn box. */
     const check = (boxes: Iterable<DOMRect>, what: string, node: Node) => {
       let drawn: Element | undefined;
       const clippers: Element[] = [];
+      let control = node instanceof Element && focusable(node);
       for (let current = parentOf(node); current; current = parentOf(current)) {
         if (current === document.documentElement || current === document.body) break;
         const style = getComputedStyle(current);
         // A box that scrolls sideways and takes focus to be scrolled (a code sample, a wide table)
-        // holds lines past its edge on purpose: they are reached by scrolling it, not cut.
-        if (scrollsSideways(style) && (current as HTMLElement).tabIndex >= 0) return;
+        // holds lines past its edge on purpose: they are reached by scrolling it, not cut. So does
+        // one that scrolls to each control in it as the control takes focus (a long navigation).
+        if (scrollsSideways(style) && ((current as HTMLElement).tabIndex >= 0 || control)) return;
+        control ||= focusable(current);
         if (clips(style)) clippers.push(current);
         if (drawn === undefined && isDrawnBox(style)) drawn = current;
       }
@@ -143,8 +162,12 @@ export function misfitsOf(page: Page): Promise<Misfit> {
             if (CONTROLS.includes(node.localName) && box.width >= 2 && box.height >= 2) {
               // A link that runs over two lines of a paragraph is a box on each line, not the
               // rectangle around both, which would cover the links beside it.
-              const boxes = [...node.getClientRects()].filter((line) => line.width > 0);
-              controls.push({ element: node, boxes: boxes.length > 0 ? boxes : [box] });
+              // Only the part in view can cover another control.
+              const lines = [...node.getClientRects()].filter((line) => line.width > 0);
+              const boxes = (lines.length > 0 ? lines : [box]).flatMap(
+                (line) => inView(line, node) ?? [],
+              );
+              if (boxes.length > 0) controls.push({ element: node, boxes });
             }
           }
           continue;

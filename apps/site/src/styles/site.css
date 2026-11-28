@@ -70,6 +70,16 @@ body {
   overflow-wrap: break-word;
 }
 
+/* Text the CMS may send: a label, a title or a heading can be one word as long as its field
+   allows. It breaks wherever it must, and is counted as breakable when a box sizes itself to its
+   content, so it never pushes its box, or the page, wider. Set on the text alone, not on the boxes
+   around it, so nothing else (a name in a table, a line of code) breaks where it should not. */
+.site-layout :is(a[slot="navigation"], .site-footer-pages a, .contents a, .docs-pages a),
+.site-layout :is(.page-hero h1, .lede, .pager-title),
+.prose :is(h2, h3, h4, p, li, .code-caption, figcaption, caption, [slot="title"]) {
+  overflow-wrap: anywhere;
+}
+
 .site-layout :is(.lede, .feature-body > p) {
   font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
   line-height: var(--idg-font-line-height-snug);
