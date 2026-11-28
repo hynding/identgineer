@@ -181,7 +181,7 @@ describe("a content page is refused", () => {
     });
 
     it("to a path the route table does not have, or one with a query or a fragment", () => {
-      for (const href of ["/no-such-page/", "/docs", "/docs/?x=1", "/docs/#top", "/docs/../"]) {
+      for (const href of ["/no-such-page/", "/nope", "/docs/?x=1", "/docs/#top", "/docs/../"]) {
         expect(errorOf(parseContentPage(withLink(href), CONTEXT)), href).toMatch(
           /is not a path of the site/,
         );
@@ -334,5 +334,99 @@ describe("a content page is refused", () => {
     expect(errorOf(parseContentPage(without(samplePage(), "slug"), CONTEXT))).toMatch(
       /^page \(no slug\): slug: is required/,
     );
+  });
+});
+
+describe("what a refusal says", () => {
+  function deep(depth: number): unknown {
+    let value: unknown = "x";
+    for (let level = 0; level < depth; level += 1) value = [value];
+    return value;
+  }
+
+  it("names a deeply nested value without walking it, wherever it is", () => {
+    const cases: [Record<string, unknown>, RegExp][] = [
+      [{ ...samplePage(), title: deep(100_000) }, /^page "sample": title: must be text$/],
+      [withBlock({ type: deep(100_000), text: "x" }), /type: a list is not a block type/],
+      [withBlock({ type: "code", language: deep(100_000), code: "x" }), /language: a list is not/],
+      [withLink(deep(100_000) as string), /content\[0\]\.href: must be text/],
+    ];
+    for (const [page, message] of cases) {
+      expect(errorOf(parseContentPage(page, CONTEXT))).toMatch(message);
+    }
+  });
+
+  it("quotes text it refuses short, in printable ASCII", () => {
+    const page = withBlock({ type: `heading\u009b${"y".repeat(100_000)}`, text: "x" });
+    const message = errorOf(parseContentPage(page, CONTEXT));
+    expect(message.length).toBeLessThan(250);
+    expect(message).toMatch(/^[\x20-\x7e]+$/);
+    expect(message).toContain('"heading\\u009byyy');
+  });
+
+  it("names a field it does not know short, in printable ASCII", () => {
+    const key = `x\u202e${"k".repeat(100_000)}`;
+    const message = errorOf(parseContentPage({ ...samplePage(), [key]: 1 }, CONTEXT));
+    expect(message.length).toBeLessThan(250);
+    expect(message).toMatch(/^[\x20-\x7e]+$/);
+    expect(message).toContain("x\\u202ekkk");
+  });
+
+  it("names a page by a slug no longer than a slug may be", () => {
+    const slug = "a".repeat(100_000);
+    const message = errorOf(parseContentPage({ ...samplePage(), slug }, CONTEXT));
+    expect(message).toMatch(/^page \(no slug\): slug: must be at most 120 characters$/);
+  });
+});
+
+describe("a content page is refused, too,", () => {
+  it("with a list that has holes in it", () => {
+    const content: unknown[] = [{ type: "text", text: "a" }];
+    content[2] = { type: "text", text: "b" };
+    expect(errorOf(parseContentPage(withBlock({ type: "paragraph", content }), CONTEXT))).toMatch(
+      /content\[1\]: is a hole in the list/,
+    );
+    const body: unknown[] = [{ type: "paragraph", content: [{ type: "text", text: "a" }] }];
+    body.length = 2;
+    expect(errorOf(parseContentPage({ ...samplePage(), body }, CONTEXT))).toMatch(
+      /body\[1\]: is a hole in the list/,
+    );
+  });
+
+  it.each([
+    ["a zero-width space", "a\u200bb"],
+    ["a zero-width joiner", "a\u200db"],
+    ["a byte order mark", "a\ufeffb"],
+    ["an Arabic letter mark", "a\u061cb"],
+    ["a left-to-right mark", "a\u200eb"],
+    ["a right-to-left mark", "a\u200fb"],
+    ["a word joiner", "a\u2060b"],
+  ])("with %s, which hides in text", (_, text) => {
+    const page = withBlock({ type: "paragraph", content: [{ type: "text", text }] });
+    expect(errorOf(parseContentPage(page, CONTEXT))).toMatch(
+      /holds a control or formatting character \(U\+[0-9A-F]{4}\)/,
+    );
+  });
+
+  it.each([
+    ["Main", "main"],
+    ["Contents", "contents"],
+    ["Page title", "page-title"],
+    ["Contents title", "contents-title"],
+  ])("with a heading %j, whose address the page around it uses", (heading, id) => {
+    const page = withBlock({ type: "heading", level: 2, text: heading });
+    expect(errorOf(parseContentPage(page, CONTEXT))).toContain(
+      `text: its address "#${id}" is one the page already uses`,
+    );
+  });
+});
+
+describe("a link to a page of the site", () => {
+  it("may leave out the path's last slash, and is given it", () => {
+    const result = parseContentPage(withLink("/docs"), CONTEXT);
+    expect(result.ok && result.page.body[0]).toEqual({
+      type: "paragraph",
+      content: [{ type: "link", href: "/docs/", text: "x" }],
+    });
   });
 });

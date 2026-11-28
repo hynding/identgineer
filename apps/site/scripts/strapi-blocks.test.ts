@@ -114,4 +114,34 @@ describe("Strapi's blocks rich text, as a page body", () => {
       bodyFromStrapiBlocks([{ type: "paragraph", children: [{ type: "mention", id: 1 }] }]),
     ).toThrow(/block 1 \(paragraph\): "mention" is not text or a link/);
   });
+
+  it("refuses a link inside a link, however deep, without running out of stack", () => {
+    let link: Record<string, unknown> = { type: "text", text: "x" };
+    for (let depth = 0; depth < 5000; depth += 1) {
+      link = { type: "link", url: "/docs/", children: [link] };
+    }
+    for (const block of [
+      { type: "paragraph", children: [link] },
+      { type: "heading", level: 2, children: [link] },
+      { type: "code", language: "ts", children: [link] },
+      { type: "list", format: "unordered", children: [{ type: "list-item", children: [link] }] },
+      { type: "quote", children: [link] },
+    ]) {
+      expect(() => bodyFromStrapiBlocks([block])).toThrow(StrapiBlocksError);
+      expect(() => bodyFromStrapiBlocks([block])).toThrow(/a link inside a link is not drawn/);
+    }
+  });
+
+  it("names a type it does not know without echoing it unbounded or raw", () => {
+    const type = `x\u009b31m${"y".repeat(10_000)}`;
+    let message = "";
+    try {
+      bodyFromStrapiBlocks([{ type, children: [] }]);
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    expect(message.length).toBeLessThan(200);
+    expect(message).toMatch(/^[\x20-\x7e]+$/);
+    expect(message).toContain("\\u009b");
+  });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ContentPage } from "../src/content/content-page.ts";
 import { STATIC_PAGES } from "../src/content/pages/index.ts";
+import { ROUTES } from "../src/routes.ts";
 import { CMS_LIMITS, cmsBaseUrl, resolveSiteContent } from "./cms-content.ts";
 
 const BASE = "https://cms.example.com/";
@@ -43,8 +44,44 @@ function page(data: unknown[], pageCount = 1, current = 1) {
   };
 }
 
+/**
+ * JSON text for any value, however deep: JSON.stringify recurses and would give up on the very
+ * answers these tests send, so this writes it with a stack of its own.
+ */
+function stringify(root: unknown): string {
+  const out: string[] = [];
+  const stack: unknown[] = [root];
+  const CLOSE = Symbol("close");
+  while (stack.length > 0) {
+    const item = stack.pop();
+    if (typeof item === "object" && item !== null && CLOSE in item) {
+      out.push((item as { [CLOSE]: string })[CLOSE]);
+    } else if (Array.isArray(item)) {
+      out.push("[");
+      stack.push({ [CLOSE]: "]" });
+      for (let index = item.length - 1; index >= 0; index -= 1) {
+        stack.push(item[index] ?? null);
+        if (index > 0) stack.push({ [CLOSE]: "," });
+      }
+    } else if (typeof item === "object" && item !== null) {
+      const entries = Object.entries(item) as [string, unknown][];
+      out.push("{");
+      stack.push({ [CLOSE]: "}" });
+      for (let index = entries.length - 1; index >= 0; index -= 1) {
+        const [key, value] = entries[index] ?? ["", null];
+        stack.push(value);
+        stack.push({ [CLOSE]: `${JSON.stringify(key)}:` });
+        if (index > 0) stack.push({ [CLOSE]: "," });
+      }
+    } else {
+      out.push((JSON.stringify(item)) ?? "null");
+    }
+  }
+  return out.join("");
+}
+
 function json(body: unknown, init: ResponseInit = {}): Response {
-  return new Response(JSON.stringify(body), {
+  return new Response(stringify(body), {
     status: 200,
     headers: { "content-type": "application/json; charset=utf-8" },
     ...init,
@@ -397,6 +434,318 @@ describe("the site's content", () => {
       expect(labels).toEqual({ header: {}, footer: {} });
       expect(warnings).toContain(
         "CMS: navigation items could not be read (the CMS answered 500); the route table's labels are used",
+      );
+    });
+  });
+
+  describe("never fails the build, whatever the CMS sends", () => {
+    function deepLinks(depth: number): Record<string, unknown> {
+      let node: Record<string, unknown> = { type: "text", text: "x" };
+      for (let level = 0; level < depth; level += 1) {
+        node = { type: "link", url: "/docs/", children: [node] };
+      }
+      return node;
+    }
+
+    it("falls back for a body of links nested thousands deep", async () => {
+      const body = [{ type: "paragraph", children: [deepLinks(5000)] }];
+      const { pages, warnings } = await resolve({
+        pages: () => json(page([record("identity", { body })])),
+      });
+      expect(pages.get("identity")).toBe(staticPage("identity"));
+      expect(warnings[0]).toMatch(
+        /^CMS: page "identity" is not valid \(.*a link inside a link is not drawn\); the static copy is used$/,
+      );
+    });
+
+    it("falls back for values nested thousands deep in any field", async () => {
+      let deep: unknown = "x";
+      for (let level = 0; level < 100_000; level += 1) deep = [deep];
+      const { pages } = await resolve({
+        pages: () =>
+          json(
+            page([
+              record("identity", { title: deep }),
+              record("tracking", { seo: { metaTitle: deep } }),
+              record("features", { body: [{ type: "heading", level: deep, children: [] }] }),
+            ]),
+          ),
+        navigation: () => json(page([{ label: deep, href: deep, placement: deep, order: deep }])),
+      });
+      expect(pages.get("identity")).toBe(staticPage("identity"));
+      expect(pages.get("tracking")).toBe(staticPage("tracking"));
+      expect(pages.get("features")).toBe(staticPage("features"));
+    });
+
+    /** A small seeded generator, so a failure names the seed that found it. */
+    function random(seed: number): () => number {
+      let state = seed >>> 0;
+      return () => {
+        state = (state * 1_664_525 + 1_013_904_223) >>> 0;
+        return state / 2 ** 32;
+      };
+    }
+
+    const NASTY_STRINGS = [
+      "",
+      " ",
+      "\u0000",
+      "\u009b31m",
+      "‮",
+      "\ud800",
+      "__proto__",
+      "constructor",
+      "javascript:alert(1)",
+      "/docs",
+      "//evil.example/",
+      "<script>alert(1)</script>",
+      "identity",
+      "heading",
+      "paragraph",
+      "link",
+      "list",
+      "list-item",
+      "quote",
+      "code",
+      "image",
+      "text",
+      "x".repeat(5000),
+    ];
+
+    function value(next: () => number, depth: number): unknown {
+      const roll = next();
+      if (depth <= 0 || roll < 0.3) {
+        const pick = Math.floor(next() * 8);
+        if (pick === 0) return null;
+        if (pick === 1) return next() < 0.5;
+        if (pick === 2) return Math.floor(next() * 10) - 2;
+        if (pick === 3) return next() * 1e308 * (next() < 0.5 ? -1 : 1);
+        return NASTY_STRINGS[Math.floor(next() * NASTY_STRINGS.length)];
+      }
+      if (roll < 0.6) {
+        return Array.from({ length: Math.floor(next() * 4) }, () => value(next, depth - 1));
+      }
+      const keys = ["type", "children", "text", "url", "level", "format", "language", "slug"];
+      const object: Record<string, unknown> = {};
+      for (let count = Math.floor(next() * 5); count > 0; count -= 1) {
+        const key =
+          next() < 0.8
+            ? (keys[Math.floor(next() * keys.length)] ?? "type")
+            : (NASTY_STRINGS[Math.floor(next() * NASTY_STRINGS.length)] ?? "");
+        object[key] = value(next, depth - 1);
+      }
+      return object;
+    }
+
+    function chain(next: () => number): unknown {
+      // A long chain of one shape, as an attacker would send to exhaust a recursion.
+      const shapes = [
+        (inner: unknown) => [inner],
+        (inner: unknown) => ({ type: "link", url: "/docs/", children: [inner] }),
+        (inner: unknown) => ({ type: "paragraph", children: [inner] }),
+        (inner: unknown) => ({ children: inner }),
+      ];
+      const shape = shapes[Math.floor(next() * shapes.length)] ?? shapes[0];
+      let node: unknown = { type: "text", text: "x" };
+      for (let level = 0; level < 20_000; level += 1) node = shape?.(node);
+      return node;
+    }
+
+    it("never throws for random and adversarial answers", async () => {
+      for (let seed = 1; seed <= 150; seed += 1) {
+        const next = random(seed);
+        const records = Array.from({ length: 1 + Math.floor(next() * 3) }, () => {
+          const base = record(next() < 0.5 ? "identity" : String(value(next, 1)));
+          const changed: Record<string, unknown> = { ...base };
+          for (const key of ["title", "summary", "body", "seo", "slug", "publishedAt"]) {
+            if (next() < 0.4) changed[key] = next() < 0.2 ? chain(next) : value(next, 6);
+          }
+          if (next() < 0.25) {
+            changed.body = [{ type: "paragraph", children: [chain(next)] }];
+          } else if (next() < 0.5) {
+            changed.body = Array.from({ length: 1 + Math.floor(next() * 4) }, () =>
+              next() < 0.1 ? chain(next) : value(next, 6),
+            );
+          }
+          return next() < 0.1 ? value(next, 4) : changed;
+        });
+        const answer = next() < 0.8 ? page(records) : value(next, 5);
+        const navigation = next() < 0.5 ? page([value(next, 4), chain(next)]) : value(next, 5);
+        await expect(
+          resolve({ pages: () => json(answer), navigation: () => json(navigation) }),
+          `seed ${String(seed)}`,
+        ).resolves.toBeDefined();
+      }
+    });
+
+    it("never throws when a record's fields throw as they are read", async () => {
+      const fetcher = vi.fn(() => {
+        const hostile = new Proxy(
+          {},
+          {
+            get() {
+              throw new Error("boom");
+            },
+            ownKeys() {
+              throw new Error("boom");
+            },
+          },
+        );
+        const response = json(page([]));
+        Object.defineProperty(response, "json", { value: () => Promise.resolve(hostile) });
+        return Promise.resolve(response);
+      });
+      await expect(
+        resolveSiteContent({ url: BASE, fetch: fetcher, staticPages: STATIC_PAGES }),
+      ).resolves.toBeDefined();
+    });
+  });
+
+  describe("names what it refuses short, in printable ASCII, and never prints the setting", () => {
+    const printable = (line: string) => {
+      expect(line.length, line.slice(0, 80)).toBeLessThan(400);
+      expect(line).toMatch(/^[\x20-\x7e]+$/);
+    };
+
+    it("for a slug of any length or character", async () => {
+      const { warnings } = await resolve({
+        pages: () =>
+          json(
+            page([
+              record("a".repeat(100_000)),
+              record("x\u009b31m‮"),
+              record("identity", { body: [{ type: `x\u009b${"y".repeat(100_000)}` }] }),
+              record("tracking", { [`k‮${"k".repeat(100_000)}`]: 1 }),
+            ]),
+          ),
+        navigation: () =>
+          json(
+            page([
+              {
+                label: "x",
+                href: "/docs/",
+                placement: "header",
+                order: 0,
+                ["z".repeat(100_000)]: 1,
+              },
+            ]),
+          ),
+      });
+      expect(warnings.length).toBeGreaterThan(3);
+      for (const warning of warnings) printable(warning);
+      expect(warnings).toContain("CMS: record 1 is no page of the site; it is left out");
+      expect(warnings).toContain("CMS: record 2 is no page of the site; it is left out");
+    });
+
+    it("for a content type of any length", async () => {
+      const { warnings } = await resolve({
+        pages: () =>
+          new Response("{}", { headers: { "content-type": `text/\u009b${"x".repeat(10_000)}` } }),
+      });
+      for (const warning of warnings) printable(warning);
+    });
+
+    it.each([
+      "https://cms example/?token=SECRET",
+      "https://user:SECRET@cms.example.com/",
+      "https://cms.example.com/?token=SECRET",
+      "http://cms.example.com/SECRET",
+    ])("for an IDG_CMS_URL it does not use, %s", async (url) => {
+      const { warnings } = await resolve({}, url);
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).not.toContain("SECRET");
+      expect(warnings[0]).toMatch(/^CMS: IDG_CMS_URL is not used \(/);
+    });
+  });
+
+  it("reports a body that stops coming as a timeout, not as something that is not JSON", async () => {
+    const { warnings } = await resolve({
+      pages: (signal) =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode('{"data":['));
+              signal.addEventListener("abort", () => {
+                controller.error(signal.reason);
+              });
+            },
+          }),
+          { headers: { "content-type": "application/json" } },
+        ),
+    });
+    expect(warnings[0]).toMatch(/did not answer within 200 ms/);
+  });
+
+  describe("takes what an editor may write in the CMS", () => {
+    it("with no summary, giving the page the route's description", async () => {
+      const { pages, warnings } = await resolve({
+        pages: () => json(page([record("identity", { summary: null })])),
+      });
+      const route = ROUTES.find((candidate) => candidate.path === "/identity/");
+      expect(pages.get("identity")?.title).toBe("Edited in the CMS");
+      expect(pages.get("identity")?.summary).toBe(route?.description);
+      expect(warnings.some((warning) => warning.includes('"identity"'))).toBe(false);
+    });
+
+    it("with a heading 1, or any level, made a level the page can hold in order", async () => {
+      const heading = (level: number, text: string) => ({
+        type: "heading",
+        level,
+        children: [{ type: "text", text }],
+      });
+      const body = [
+        heading(1, "One"),
+        heading(4, "Four"),
+        heading(6, "Six"),
+        heading(2, "Two"),
+        heading(3, "Three"),
+      ];
+      const { pages } = await resolve({
+        pages: () => json(page([record("identity", { body })])),
+      });
+      expect(pages.get("identity")?.body).toEqual([
+        { type: "heading", level: 2, text: "One" },
+        { type: "heading", level: 3, text: "Four" },
+        { type: "heading", level: 4, text: "Six" },
+        { type: "heading", level: 2, text: "Two" },
+        { type: "heading", level: 3, text: "Three" },
+      ]);
+    });
+
+    it("with a link to a page without its last slash", async () => {
+      const body = [
+        {
+          type: "paragraph",
+          children: [{ type: "link", url: "/identity", children: [{ type: "text", text: "x" }] }],
+        },
+      ];
+      const { pages } = await resolve({
+        pages: () => json(page([record("tracking", { body })])),
+        navigation: () =>
+          json(page([{ label: "Accounts", href: "/identity", placement: "header", order: 0 }])),
+      });
+      expect(pages.get("tracking")?.body[0]).toEqual({
+        type: "paragraph",
+        content: [{ type: "link", href: "/identity/", text: "x" }],
+      });
+    });
+
+    it("with two items for one page: the lower order wins, and the other is named", async () => {
+      const item = (label: string, order: number) => ({
+        label,
+        href: "/identity/",
+        placement: "header",
+        order,
+      });
+      const { labels, warnings } = await resolve({
+        navigation: () => json(page([item("Later", 5), item("First", 1), item("Tie", 1)])),
+      });
+      expect(labels.header).toEqual({ "/identity/": "First" });
+      expect(warnings).toEqual(
+        expect.arrayContaining([
+          "CMS: navigation item 1 is another header label for /identity/ (order 5, after item 2's 1); it is left out",
+          "CMS: navigation item 3 is another header label for /identity/ (order 1, after item 2's 1); it is left out",
+        ]),
       );
     });
   });
