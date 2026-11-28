@@ -141,16 +141,69 @@ test.describe("a component's page", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 320, height: 900 });
+    await page.goto("/components/");
+    await hydrated(page, "site-content-page");
+    const boxes = await page.locator(".table-scroll").evaluateAll((all) =>
+      all.map((element) => ({
+        scrolls: element.scrollWidth > element.clientWidth,
+        client: element.clientWidth,
+      })),
+    );
+    expect(boxes.some((box) => box.scrolls)).toBe(true);
+    for (const box of boxes) expect(box.client).toBeLessThanOrEqual(320);
+    expect(await sidewaysScroll(page)).toBeLessThanOrEqual(0);
+  });
+
+  test("draws each property as a card on a phone, and as a row of a table where the table fits", async ({
+    page,
+  }) => {
+    const firstRow = () =>
+      page
+        .locator(".table-scroll")
+        .first()
+        .evaluate((box) => {
+          const table = box.querySelector("table");
+          const row = table?.querySelector("tbody tr");
+          const cells = [...(row?.querySelectorAll("td") ?? [])];
+          return {
+            columns: table?.querySelectorAll("thead th").length ?? 0,
+            scrolls: box.scrollWidth > box.clientWidth,
+            lefts: cells.map((cell) => Math.round(cell.getBoundingClientRect().left)),
+            tops: cells.map((cell) => Math.round(cell.getBoundingClientRect().top)),
+            labels: cells.map((cell) => getComputedStyle(cell, "::before").content),
+            roles: [table, row, ...cells].map((element) => element?.getAttribute("role")),
+          };
+        });
+    await page.setViewportSize({ width: 390, height: 900 });
     await page.goto("/components/idg-input/");
     await hydrated(page, "site-content-page");
-    const box = page.locator(".table-scroll").first();
-    const [scrolls, client] = await box.evaluate((element) => [
-      element.scrollWidth > element.clientWidth,
-      element.clientWidth,
-    ]);
-    expect(scrolls).toBe(true);
-    expect(client).toBeLessThanOrEqual(320);
-    expect(await sidewaysScroll(page)).toBeLessThanOrEqual(0);
+    const card = await firstRow();
+    expect(card.columns).toBeGreaterThan(2);
+    expect(card.scrolls).toBe(false);
+    expect(new Set(card.lefts).size).toBe(1);
+    expect(card.tops).toEqual([...card.tops].sort((a, b) => a - b));
+    expect(new Set(card.tops).size).toBe(card.tops.length);
+    expect(card.labels.every((label) => label !== "none" && label !== "normal")).toBe(true);
+    // A table drawn as blocks keeps what it is for a reader of the page's structure.
+    expect(card.roles).toEqual(["table", "row", ...card.tops.map(() => "cell")]);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const row = await firstRow();
+    expect(new Set(row.tops).size).toBe(1);
+    expect(new Set(row.lefts).size).toBe(row.lefts.length);
+    expect(row.labels.every((label) => label === "none" || label === "normal")).toBe(true);
+  });
+
+  test("keeps a table of two columns a table on a phone", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto("/components/");
+    await hydrated(page, "site-content-page");
+    const tops = await page
+      .locator(".table-scroll tbody tr")
+      .first()
+      .evaluate((row) =>
+        [...row.querySelectorAll("td")].map((cell) => Math.round(cell.getBoundingClientRect().top)),
+      );
+    expect(new Set(tops).size).toBe(1);
   });
 
   test("never wraps a short code name, and wraps a long one only between its parts", async ({
