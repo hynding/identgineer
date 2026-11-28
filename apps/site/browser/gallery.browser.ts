@@ -144,6 +144,26 @@ test.describe("the variations gallery", () => {
     await expect(page.locator(".tile-current:visible")).toHaveCount(4);
   });
 
+  test("claims no tile as current to assistive technology before the app has run, and says so in words", async ({
+    page,
+  }) => {
+    // The bootstrap script has put the choice of the address on the root, and the app, which would
+    // set aria-current from it, is not there: no tile may say it is current on the strength of the
+    // defaults it was written with. The word "Current", drawn from the root, is the honest mark.
+    await page.route("**/build/site.esm.js", (route) =>
+      route.fulfill({ contentType: "text/javascript", body: "" }),
+    );
+    await page.goto("/variations/?idg-theme=ember");
+    await expect(page.locator("a.tile-link")).toHaveCount(32);
+    await expect(page.locator("a.tile-link[aria-current]")).toHaveCount(0);
+    await expect(
+      page.locator('li[data-axis="theme"][data-value="ember"] .tile-current'),
+    ).toBeVisible();
+    await expect(
+      page.locator('li[data-axis="theme"][data-value="aurora"] .tile-current'),
+    ).toBeHidden();
+  });
+
   test("draws each preview under its own value, with the real components", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "light" });
     await open(page);
@@ -258,6 +278,8 @@ test.describe("the variations gallery without JavaScript", () => {
     await expect(page.locator("a.tile-link").first()).toHaveAttribute("href", /idg-theme=aurora/);
     await expect(page.locator(".tile-preview idg-button").first()).toBeVisible();
     await expect(page.locator(".tile-current:visible")).toHaveCount(4);
+    // Nothing has said what is current but the page's own words; the app does, when it has run.
+    await expect(page.locator("a.tile-link[aria-current]")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Surprise me" })).toBeHidden();
     await expect(page.locator('section[aria-labelledby="combine"] a.combo-link')).toHaveCount(
       COMBINATIONS.length,
