@@ -32,13 +32,7 @@ export type ContentResult =
   | { readonly ok: true; readonly page: ContentPage }
   | { readonly ok: false; readonly error: ContentError };
 
-/** One line for a build warning or a test: `page "x", block 3 (paragraph): content[0].href: …`. */
-export function describeContentError(error: ContentError): string {
-  const page = error.page === undefined ? "page (no slug)" : `page "${printable(error.page, 120)}"`;
-  return `${page}${error.block ? ", " : ": "}${describeContentProblem(error)}`;
-}
-
-/** What is wrong and where in the page, for a line that names the page already. */
+/** What is wrong and where in the page: `block 3 (paragraph): content[0].href: …`. */
 export function describeContentProblem({ block, path, message }: ContentError): string {
   const where = block
     ? `block ${String(block.index)}${block.type ? ` (${block.type})` : ""}: `

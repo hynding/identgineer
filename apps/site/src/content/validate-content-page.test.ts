@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { CONTENT_LIMITS } from "./content-page.ts";
 import {
-  describeContentError,
+  describeContentProblem,
   parseContentPage,
+  type ContentError,
   type ContentResult,
 } from "./validate-content-page.ts";
 
@@ -63,9 +64,14 @@ function withLink(href: string): Record<string, unknown> {
   return withBlock({ type: "paragraph", content: [{ type: "link", href, text: "x" }] });
 }
 
-function errorOf(result: ContentResult): string {
+function refusalOf(result: ContentResult): ContentError | undefined {
   expect(result.ok).toBe(false);
-  return result.ok ? "" : describeContentError(result.error);
+  return result.ok ? undefined : result.error;
+}
+
+function errorOf(result: ContentResult): string {
+  const error = refusalOf(result);
+  return error === undefined ? "" : describeContentProblem(error);
 }
 
 describe("a content page", () => {
@@ -108,7 +114,7 @@ describe("a content page is refused", () => {
 
   it("with a field the format does not have, __proto__ included", () => {
     expect(errorOf(parseContentPage({ ...samplePage(), html: "<b>" }, CONTEXT))).toMatch(
-      /page "sample": html: is not a field/,
+      /^html: is not a field/,
     );
     const proto = JSON.parse('{"__proto__": {"x": 1}}') as object;
     expect(errorOf(parseContentPage({ ...samplePage(), ...proto }, CONTEXT))).toMatch(
@@ -136,7 +142,7 @@ describe("a content page is refused", () => {
     const body = [...(page.body as unknown[])];
     body.splice(2, 0, { type: "html", html: "<script>alert(1)</script>" });
     expect(errorOf(parseContentPage({ ...page, body }, CONTEXT))).toBe(
-      'page "sample", block 3: type: "html" is not a block type (heading, paragraph, list, code, callout, table, example)',
+      'block 3: type: "html" is not a block type (heading, paragraph, list, code, callout, table, example)',
     );
   });
 
@@ -149,7 +155,7 @@ describe("a content page is refused", () => {
 
   it("with a live example the registry does not have", () => {
     expect(errorOf(parseContentPage(withBlock({ type: "example", name: "iframe" }), CONTEXT))).toBe(
-      'page "sample", block 1 (example): name: "iframe" is not a live example (sign-in, dashboard-figures, theme-tiles)',
+      'block 1 (example): name: "iframe" is not a live example (sign-in, dashboard-figures, theme-tiles)',
     );
   });
 
@@ -204,7 +210,7 @@ describe("a content page is refused", () => {
     it("starting below level 2", () => {
       const page = withBlock({ type: "heading", level: 3, text: "Too deep" });
       expect(errorOf(parseContentPage(page, CONTEXT))).toBe(
-        'page "sample", block 1 (heading): level: the first heading must be level 2, not 3',
+        "block 1 (heading): level: the first heading must be level 2, not 3",
       );
     });
 
@@ -217,7 +223,7 @@ describe("a content page is refused", () => {
         ],
       };
       expect(errorOf(parseContentPage(page, CONTEXT))).toBe(
-        'page "sample", block 2 (heading): level: a level 4 heading cannot follow a level 2 one',
+        "block 2 (heading): level: a level 4 heading cannot follow a level 2 one",
       );
     });
 
@@ -331,9 +337,9 @@ describe("a content page is refused", () => {
   });
 
   it("naming no page when it has no slug to name it by", () => {
-    expect(errorOf(parseContentPage(without(samplePage(), "slug"), CONTEXT))).toMatch(
-      /^page \(no slug\): slug: is required/,
-    );
+    const refusal = refusalOf(parseContentPage(without(samplePage(), "slug"), CONTEXT));
+    expect(refusal?.page).toBeUndefined();
+    expect(refusal && describeContentProblem(refusal)).toMatch(/^slug: is required/);
   });
 });
 
@@ -346,7 +352,7 @@ describe("what a refusal says", () => {
 
   it("names a deeply nested value without walking it, wherever it is", () => {
     const cases: [Record<string, unknown>, RegExp][] = [
-      [{ ...samplePage(), title: deep(100_000) }, /^page "sample": title: must be text$/],
+      [{ ...samplePage(), title: deep(100_000) }, /^title: must be text$/],
       [withBlock({ type: deep(100_000), text: "x" }), /type: a list is not a block type/],
       [withBlock({ type: "code", language: deep(100_000), code: "x" }), /language: a list is not/],
       [withLink(deep(100_000) as string), /content\[0\]\.href: must be text/],
@@ -372,10 +378,16 @@ describe("what a refusal says", () => {
     expect(message).toContain("x\\u202ekkk");
   });
 
-  it("names a page by a slug no longer than a slug may be", () => {
+  it("names the page by its slug, from its first refusal", () => {
+    const refusal = refusalOf(parseContentPage({ ...samplePage(), title: 5 }, CONTEXT));
+    expect(refusal?.page).toBe("sample");
+  });
+
+  it("names no page by a slug longer than a slug may be", () => {
     const slug = "a".repeat(100_000);
-    const message = errorOf(parseContentPage({ ...samplePage(), slug }, CONTEXT));
-    expect(message).toMatch(/^page \(no slug\): slug: must be at most 120 characters$/);
+    const refusal = refusalOf(parseContentPage({ ...samplePage(), slug }, CONTEXT));
+    expect(refusal?.page).toBeUndefined();
+    expect(refusal && describeContentProblem(refusal)).toBe("slug: must be at most 120 characters");
   });
 });
 

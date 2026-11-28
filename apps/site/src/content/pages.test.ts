@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ROUTES, livePaths } from "../routes.ts";
 import { STATIC_PAGES } from "./pages/index.ts";
-import { describeContentError, parseContentPage } from "./validate-content-page.ts";
+import { describeContentProblem, parseContentPage } from "./validate-content-page.ts";
 
 const CONTEXT = { paths: livePaths() };
 
@@ -10,7 +10,7 @@ describe("the repository's reading pages", () => {
     "%s is a valid content page",
     (_, page) => {
       const result = parseContentPage(page, CONTEXT);
-      expect(result.ok ? "valid" : describeContentError(result.error)).toBe("valid");
+      expect(result.ok ? "valid" : describeContentProblem(result.error)).toBe("valid");
     },
   );
 
