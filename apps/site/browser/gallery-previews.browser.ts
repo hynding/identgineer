@@ -218,7 +218,8 @@ test.describe("the gallery's grid", () => {
     const grid = await gridOf(page, 'ul.gallery-tiles:has(li[data-axis="theme"])');
     expect(grid.columns).toBeGreaterThanOrEqual(2);
     const total = await page.evaluate(() => document.documentElement.scrollHeight);
-    expect(total).toBeLessThan(10000);
+    // Large type is a fifth taller again than the default look's 8,600px; one column was 18,000.
+    expect(total).toBeLessThan(14000);
   });
 
   test("lays out a ninth value in full rows or with no row of one, at every width", async ({
