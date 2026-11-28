@@ -105,6 +105,30 @@ describe.skipIf(!described)("the registry against the components package's docs"
     expect(wrong).toEqual([]);
   });
 
+  it("sets only properties the component documents, and gives every client a component asks for", () => {
+    const wrong: string[] = [];
+    for (const example of Object.values(COMPONENT_EXAMPLES)) {
+      for (const element of exampleElements(example.nodes)) {
+        const doc = documented.get(element.tag);
+        for (const name of Object.keys(element.properties ?? {})) {
+          if (!doc?.properties.some((property) => property.name === name)) {
+            wrong.push(`${element.tag} has no property ${name}`);
+          }
+        }
+      }
+    }
+    expect(wrong).toEqual([]);
+    // A component that asks a client or a consent object draws nothing without one.
+    for (const tag of ["idg-consent-banner", "idg-consent-preferences"]) {
+      const [element] = COMPONENT_EXAMPLES[tag as keyof typeof COMPONENT_EXAMPLES].nodes;
+      expect(Object.keys((element as ExampleElement).properties ?? {}), tag).toEqual(["consent"]);
+    }
+    for (const tag of ["idg-session-guard", "idg-user-menu"]) {
+      const [element] = COMPONENT_EXAMPLES[tag as keyof typeof COMPONENT_EXAMPLES].nodes;
+      expect(Object.keys((element as ExampleElement).properties ?? {}), tag).toEqual(["client"]);
+    }
+  });
+
   it("puts a child in a slot only where its parent has that slot", () => {
     const wrong: string[] = [];
     const walk = (element: ExampleElement): void => {

@@ -1,11 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { el, usageSnippet } from "./component-example.ts";
+import { el, having, usageSnippet } from "./component-example.ts";
 
 describe("the usage snippet of an example", () => {
   it("writes an element with text on one line, attributes in the order given", () => {
     expect(usageSnippet([el("idg-button", { variant: "primary", size: "sm" }, "Save")])).toBe(
       '<idg-button variant="primary" size="sm">Save</idg-button>',
     );
+  });
+
+  it("leaves out the JavaScript properties an element is drawn with, which are not HTML", () => {
+    const guard = having(el("idg-session-guard", { hidden: true }, "Inside"), {
+      client: { getState: () => undefined },
+    });
+    expect(guard.properties).toEqual({ client: { getState: expect.any(Function) as unknown } });
+    expect(usageSnippet([guard])).toBe("<idg-session-guard hidden>Inside</idg-session-guard>");
   });
 
   it("writes a true attribute bare, and an element with nothing in it with a closing tag", () => {
