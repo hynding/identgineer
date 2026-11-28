@@ -231,13 +231,17 @@ export function isComponentPath(path: string): path is RoutePath {
   return COMPONENT_PATH.test(path);
 }
 
-function componentRoute(tag: string): ContentRoute {
+/**
+ * The route of a component's page, from its tag alone. The build gives it the description it has
+ * read from the documentation; the browser, which has no documentation, draws the page without one.
+ */
+export function routeOfComponent(tag: string, description = ""): ContentRoute {
   return {
     path: componentPath(tag),
     parent: COMPONENTS_PATH,
     label: tag,
     title: tag,
-    description: "",
+    description,
     status: "live",
     component: "site-content-page",
     content: tag,
@@ -253,7 +257,7 @@ export function routeOfPath(path: string | undefined): Route | undefined {
   const known = ROUTES.find((route) => route.path === path);
   if (known !== undefined || path === undefined) return known;
   const tag = COMPONENT_PATH.exec(path)?.[1];
-  return tag === undefined ? undefined : componentRoute(tag);
+  return tag === undefined ? undefined : routeOfComponent(tag);
 }
 
 /** The reading route a content page of this slug is drawn at, or none. */
@@ -263,7 +267,7 @@ export function routeOfContent(slug: string): ContentRoute | undefined {
       route.status === "live" && route.component === "site-content-page" && route.content === slug,
   );
   if (known !== undefined) return known;
-  return /^idg-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? componentRoute(slug) : undefined;
+  return /^idg-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? routeOfComponent(slug) : undefined;
 }
 
 /** The pages of the section a path is in (its top page, then the pages under it), or none. */

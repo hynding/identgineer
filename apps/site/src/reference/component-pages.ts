@@ -11,9 +11,9 @@ import { COMPONENT_EXAMPLES } from "../examples/component-examples.ts";
 import type { ComponentExample } from "../examples/component-example.ts";
 import { parseContentPage, describeContentProblem } from "../content/validate-content-page.ts";
 import {
-  COMPONENTS_PATH,
   componentPath,
   isComponentPath,
+  routeOfComponent,
   livePaths,
   type ContentRoute,
 } from "../routes.ts";
@@ -223,16 +223,10 @@ const DESCRIPTION_LIMIT = 160;
 
 /** The route of a component's page: under the components' index, found by the component's tag. */
 export function componentRoute(doc: ComponentDoc): ContentRoute {
-  return {
-    path: componentPath(doc.tag),
-    parent: COMPONENTS_PATH,
-    label: doc.tag,
-    title: doc.tag,
-    description: clipAtWord(`${doc.tag}: ${lede(doc).summary}`, DESCRIPTION_LIMIT).head,
-    status: "live",
-    component: "site-content-page",
-    content: doc.tag,
-  };
+  return routeOfComponent(
+    doc.tag,
+    clipAtWord(`${doc.tag}: ${lede(doc).summary}`, DESCRIPTION_LIMIT).head,
+  );
 }
 
 const INDEX_SUMMARY_LIMIT = 140;
