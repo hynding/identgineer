@@ -2,6 +2,7 @@ import { REGISTRY } from "@identgineer/variations";
 import { expectNoAxeViolations } from "./accessibility";
 import { test } from "./fixtures";
 import { PAGES, hydrated } from "./pages";
+import { AXE_TAG } from "./parts";
 
 // The components suite checks every component's contrast in every theme. The site adds colours of
 // its own on top (links, chips, the hero's text on the accent's subtle colour), so each page is
@@ -20,7 +21,7 @@ const AXES = [
 
 for (const { name, path, component } of PAGES) {
   for (const query of AXES) {
-    test(`${name} with ${query} passes axe`, async ({ page }) => {
+    test(`${name} with ${query} passes axe`, { tag: AXE_TAG }, async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto(`${path}?${query}`);
       await hydrated(page, component);

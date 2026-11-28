@@ -173,7 +173,9 @@ its doc comments, has a page, a row in the index, a sitemap entry and a check at
   backticked word is code, an empty cell says "Not documented" and an empty list "None". The
   build checks every page with the content validator, and fails if one is refused.
 
-A component's page has one `h1`, the summary, a live example with its usage snippet and copy
+A component's page has one `h1`, the first sentence of its description as the lede (cut at 200
+characters, and then the whole paragraph leads the body, so a long description does not push the first screen
+down; the rest of the paragraph follows), a live example with its usage snippet and copy
 button, a table of contents, and a table for each of properties, events, methods, slots, parts and
 custom properties that it documents. The generated pages win over a CMS record of the same slug,
 and a component page's link back is to `/components/`.
@@ -378,9 +380,9 @@ every value has a tile, a tile's link applies the choice both with and without s
 current value is marked with `aria-current` and visibly, the combinations and Surprise me work,
 and the page reads without scripting.
 
-CI runs the browser suite in sixteen parts (`browser/parts.ts`): each engine's fit sweep in five (the
+CI runs the browser suite in seventeen parts (`browser/parts.ts`): each engine's fit sweep in five (the
 home and identity pages together, every other page, then the components index, the page of
-`idg-input` and the variations gallery, each alone), chosen by a tag on each test, and every other
+`idg-input` and the variations gallery, each alone), the axe sweep of every page in every look, chosen by a tag on each test, and every other
 test in the last. `pnpm --filter @identgineer/site test:browser:part <part>` runs one, and
 `test:browser:parts` checks that the parts hold every test exactly once, which CI does on every run.
 PARTTIMES

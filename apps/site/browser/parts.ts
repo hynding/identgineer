@@ -2,10 +2,10 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 /**
- * The parts CI runs the site's browser suite in, each a job of its own of about ten minutes on two
+ * The parts CI runs the site's browser suite in, each a job of its own of a few minutes on two
  * workers. Playwright's shards split by the number of tests, not their length, so the fit sweep's
- * tests carry a tag that names their part (by engine, then by page), and the last part is every
- * test without one.
+ * tests carry a tag that names their part (by engine, then by page), the axe sweep of the looks one
+ * of its own, and the last part is every test without one.
  *
  * Run one with `node browser/parts.ts <part>`, and check with `node browser/parts.ts --check` that
  * the parts hold every test of the suite exactly once.
@@ -33,6 +33,9 @@ export function fitTag(engine: EngineKey, path: string): string {
   return `@fit-${engine}-${OWN_PART[path] ?? OTHER_PART}`;
 }
 
+/** The tag of the axe sweep of every page in every look, a part of its own. */
+export const AXE_TAG = "@axe";
+
 const FIT_TAGS = ENGINE_KEYS.flatMap((engine) =>
   PART_NAMES.map((part) => `@fit-${engine}-${part}`),
 );
@@ -40,7 +43,8 @@ const FIT_TAGS = ENGINE_KEYS.flatMap((engine) =>
 /** Each part by its short name, as Playwright's filter arguments. */
 export const PARTS: Readonly<Record<string, readonly string[]>> = {
   ...Object.fromEntries(FIT_TAGS.map((tag) => [tag.slice("@fit-".length), ["--grep", tag]])),
-  rest: ["--grep-invert", "@fit-"],
+  axe: ["--grep", AXE_TAG],
+  rest: ["--grep-invert", `@fit-|${AXE_TAG}`],
 };
 
 const SITE = fileURLToPath(new URL("..", import.meta.url));

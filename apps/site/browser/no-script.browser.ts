@@ -31,13 +31,21 @@ for (const { name, path } of PAGES) {
         await page.setViewportSize({ width, height: 900 });
         await openWithoutScript(page, path, layout);
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-        await expect(page.getByRole("main")).toBeVisible();
+        // The page's own landmarks come first. The example of idg-layout is a whole page's frame,
+        // inert, so it holds a main and a navigation that nothing can reach; they are the only others.
+        const frames = await page.locator(".preview-frame[inert]").count();
+        const mainNavigation = page.getByRole("navigation", { name: "Main navigation" });
+        for (const landmark of [page.getByRole("main"), mainNavigation]) {
+          await expect(landmark).toHaveCount(1 + frames);
+          await expect(landmark.first()).toBeVisible();
+        }
         await expect(page.getByRole("contentinfo")).toBeVisible();
         // A menu button needs a script to open; without one the header shows its links instead.
         await expect(page.getByRole("button", { name: "Menu" })).toBeHidden();
         // The links are the shell's light content, slotted into its navigation landmark.
-        await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
-        await expect(page.locator('a[slot="navigation"]', { hasText: "Home" })).toBeVisible();
+        await expect(
+          page.locator('a[slot="navigation"]', { hasText: "Home" }).first(),
+        ).toBeVisible();
         // The footer lists the pages as well.
         const pages = page.getByRole("navigation", { name: "Site pages" });
         await expect(pages.getByRole("link", { name: "Home" })).toBeVisible();

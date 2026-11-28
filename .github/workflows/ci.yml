@@ -70,8 +70,9 @@ jobs:
     # style queries as Firefox), and in each engine in five parts by page: the home and identity
     # pages, every design with every layout, then the theming guide the same way and every other
     # page in eight pairs, then the components index, one component's page and the variations
-    # gallery, each of them alone, as they are swept at seven widths. The last part is every other
-    # suite. Playwright's shards split by the number of tests, not their length, so the parts are
+    # gallery, each of them alone, as they are swept at seven widths. The axe sweep of every page in
+    # every look is a part of its own, and the last part is every other suite. Playwright's shards
+    # split by the number of tests, not their length, so the parts are
     # chosen by tag (apps/site/browser/parts.ts), each under ten minutes on two workers after the
     # build. The limit leaves room for a slow runner.
     timeout-minutes: 20
@@ -94,6 +95,7 @@ jobs:
           - no-style-queries-reference
           - no-style-queries-component
           - no-style-queries-gallery
+          - axe
           - rest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
