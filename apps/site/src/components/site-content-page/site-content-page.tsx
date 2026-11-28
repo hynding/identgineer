@@ -379,7 +379,7 @@ export class SiteContentPage {
             )}
           </p>
           <h1 id="page-title">{page.title}</h1>
-          <p class="lede">{page.summary}</p>
+          <p class="lede">{breakable(page.summary)}</p>
         </div>
         <div class="reading">
           <div class={{ "reading-body": true, "with-section": section.length > 0 }}>

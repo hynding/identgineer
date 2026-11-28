@@ -178,10 +178,33 @@ describe("the page of one component", () => {
     });
   });
 
-  it("keeps a whole first paragraph out of the body, and a clipped one in it", () => {
-    const long = `${"Word ".repeat(100)}end.`;
+  it("takes the first sentence as the lede and leaves the rest of the paragraph first in the body", () => {
+    const page = componentPage(
+      {
+        ...EMPTY,
+        summary: ["A text field. Enter submits `form` as SubmitEvent.submitter is null. More."],
+      },
+      {},
+    );
+    expect(page.summary).toBe("A text field.");
+    expect(page.body).toEqual([
+      {
+        type: "paragraph",
+        content: [t("Enter submits "), code("form"), t(" as SubmitEvent.submitter is null. More.")],
+      },
+    ]);
+  });
+
+  it("keeps the first paragraph out of the body when it is one sentence", () => {
+    const page = componentPage({ ...EMPTY, summary: ["One sentence, with `code`.", "Next."] }, {});
+    expect(page.summary).toBe("One sentence, with code.");
+    expect(page.body).toEqual([{ type: "paragraph", content: [t("Next.")] }]);
+  });
+
+  it("cuts a first sentence longer than a lede may be, and keeps the whole paragraph in the body", () => {
+    const long = `${"Word ".repeat(100)}end. After.`;
     const page = componentPage({ ...EMPTY, summary: [long] }, {});
-    expect(page.summary.length).toBeLessThanOrEqual(CONTENT_LIMITS.summary);
+    expect(page.summary.length).toBe(200);
     expect(page.summary.endsWith("…")).toBe(true);
     expect(page.body).toEqual([{ type: "paragraph", content: [t(long)] }]);
   });
