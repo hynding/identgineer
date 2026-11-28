@@ -1,0 +1,130 @@
+import { prerenderedPages } from "../src/routes";
+import { expect, test } from "./fixtures";
+import { LAYOUTS, hydrated } from "./pages";
+
+/** Every reading page, by its address. */
+const READING_PAGES = prerenderedPages().flatMap((page) =>
+  page.component === "site-content-page" && page.path !== undefined ? [page.path] : [],
+);
+
+// Where the table of contents cannot stand beside the article, it comes before it in every layout,
+// never after the whole article where it would be found too late.
+for (const layout of LAYOUTS) {
+  test(`a reading page in ${layout} shows one table of contents, beside the article or before it`, async ({
+    page,
+  }) => {
+    const problems: string[] = [];
+    for (const width of [390, 820, 1100, 1440] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`/identity/?idg-layout=${layout}`);
+      await hydrated(page, "site-content-page");
+      const found = await page.evaluate(() => {
+        const article = document.querySelector("article.prose")?.getBoundingClientRect();
+        return [...document.querySelectorAll("nav.contents")]
+          .filter((contents) => contents.checkVisibility())
+          .map((contents) => {
+            const box = contents.getBoundingClientRect();
+            const beside =
+              article !== undefined &&
+              box.top < article.bottom &&
+              (box.left >= article.right || box.right <= article.left);
+            const before = article !== undefined && box.bottom <= article.top;
+            return beside || before;
+          });
+      });
+      if (found.length !== 1) problems.push(`${String(width)}px: ${String(found.length)} shown`);
+      else if (found[0] !== true) problems.push(`${String(width)}px: after the article`);
+    }
+    expect(problems).toEqual([]);
+  });
+}
+
+interface Band {
+  readonly heading: number;
+  readonly text: number;
+  readonly column: number;
+}
+
+// immersive draws each section as a band across the window. Its heading is centred over the
+// column of its text, and that column is centred in the band, at every width, on every page.
+test("immersive centres each band's heading on the column of its text, on every reading page", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const problems: string[] = [];
+  for (const path of READING_PAGES) {
+    for (const width of [820, 1024, 1440, 1920] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`${path}?idg-layout=immersive`);
+      await hydrated(page, "site-content-page");
+      const bands = await page.evaluate(() =>
+        [...document.querySelectorAll(".prose-section")].map((section) => {
+          const centre = (element: Element | null) => {
+            const box = element?.getBoundingClientRect();
+            return box === undefined ? Number.NaN : (box.left + box.right) / 2;
+          };
+          const heading = section.querySelector(":scope > h2");
+          const range = document.createRange();
+          if (heading) range.selectNodeContents(heading);
+          const text = range.getBoundingClientRect();
+          return {
+            heading: (text.left + text.right) / 2,
+            text: centre(section.querySelector(":scope > :not(h2)")),
+            column: centre(section),
+          };
+        }),
+      );
+      bands.forEach(({ heading, text, column }: Band, index) => {
+        const where = `${path} at ${String(width)}px, section ${String(index + 1)}`;
+        if (Math.abs(heading - text) > 2) {
+          problems.push(`${where}: heading ${String(Math.round(heading - text))}px off its text`);
+        }
+        if (Math.abs(text - column) > 2) {
+          problems.push(`${where}: text ${String(Math.round(text - column))}px off the band`);
+        }
+      });
+    }
+  }
+  expect(problems).toEqual([]);
+});
+
+// The first band starts under the hero after the shell's own gap, not after a second one.
+test("immersive starts a reading page's content one gap under the hero", async ({ page }) => {
+  const problems: string[] = [];
+  for (const width of [390, 820, 1440] as const) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/identity/?idg-layout=immersive");
+    await hydrated(page, "site-content-page");
+    const { gap, sectionGap } = await page.evaluate(() => {
+      const hero = document
+        .querySelector(".site-layout")
+        ?.shadowRoot?.querySelector('[part="hero"]');
+      // The first line of text drawn under the hero: the contents, or the article's first words.
+      const body = document.querySelector(".reading-body") ?? document.body;
+      const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+      const range = document.createRange();
+      let top = Number.NaN;
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (!/\S/.test(node.textContent ?? "") || !node.parentElement?.checkVisibility()) continue;
+        range.selectNodeContents(node);
+        const box = range.getBoundingClientRect();
+        if (box.height > 0) {
+          top = box.top;
+          break;
+        }
+      }
+      const probe = document.createElement("div");
+      probe.style.blockSize = "var(--idg-layout-section-gap)";
+      body.append(probe);
+      const sectionGap = probe.getBoundingClientRect().height;
+      probe.remove();
+      return { gap: top - (hero?.getBoundingClientRect().bottom ?? Number.NaN), sectionGap };
+    });
+    if (!(gap <= sectionGap * 1.6)) {
+      problems.push(
+        `${String(width)}px: ${String(Math.round(gap))}px under the hero, the gap is ${String(Math.round(sectionGap))}px`,
+      );
+    }
+  }
+  expect(problems).toEqual([]);
+});
