@@ -1365,6 +1365,21 @@ figcaption {
   display: none;
 }
 
+/* Until the shell puts its aside beside the content (from 72rem, which the window stands in for, as
+   above), every layout puts the aside after the content, where a table of contents comes too late.
+   There the copy in the guide is shown instead, so the contents come before the article in every
+   layout. */
+@media not (min-width: 72rem) {
+  site-content-page .site-layout::part(aside) {
+    display: none;
+  }
+
+  .contents-inline,
+  .reading-guide:not(:has(> :not(.contents-inline))) {
+    display: grid;
+  }
+}
+
 /* centered, side-rail and split-hero draw no aside (see the home page's rules), so the table of
    contents is in the guide, beside the article where there is room, before it where there is not. */
 @container style(--idg-layout-shell: centered) or style(--idg-layout-shell: side-rail) or
@@ -1684,8 +1699,9 @@ figcaption {
   }
 }
 
-/* immersive: every other section a tinted band across the window, the headings large and
-   centred. The guide comes first in every width, so no band runs under it. */
+/* immersive: every other section a tinted band across the window, each band a centred reading
+   column with its large heading centred on the same axis. The guide comes first in every width, so
+   no band runs under it; the first band starts under the hero at the shell's own gap. */
 @container style(--idg-layout-shell: immersive) {
   .reading-body,
   .prose {
@@ -1707,9 +1723,21 @@ figcaption {
     padding-block-end: var(--idg-layout-section-gap);
   }
 
+  .reading-body > :is(.reading-guide, .pager),
+  .prose-intro > *,
+  .prose-section > * {
+    justify-self: center;
+    inline-size: 100%;
+    max-inline-size: var(--idg-density-measure);
+  }
+
   .prose-intro,
   .prose-section {
     padding-block: var(--idg-layout-section-gap);
+  }
+
+  .prose > :first-child {
+    padding-block-start: 0;
   }
 
   .prose-section:nth-child(even) {
