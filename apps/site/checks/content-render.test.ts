@@ -402,7 +402,7 @@ describe.skipIf(!built)("a component's page, as the prerenderer draws it", () =>
       COMPONENT_EXAMPLES["idg-button"].caption,
     );
     const live = [...figure.querySelectorAll(".example-stage > idg-button")];
-    expect(live.map((button) => button.textContent?.trim())).toEqual([
+    expect(live.map((button) => button.textContent.trim())).toEqual([
       "Save",
       "Cancel",
       "Skip",
@@ -445,8 +445,8 @@ describe.skipIf(!built)("a component's page, as the prerenderer draws it", () =>
     ).toEqual(["variant", "createIdentityClientFromEnvironmentVariables"]);
     const article = one("article.prose");
     expect(article.textContent).toContain(MARKUP);
-    expect(all("img, script, [onerror]")).toHaveLength(0);
-    expect(all("style").every((style) => !(style.textContent ?? "").includes("evil"))).toBe(true);
+    expect(article.querySelectorAll("img, script, style, [onerror]")).toHaveLength(0);
+    expect(one(".page-hero").querySelectorAll("img, script, style, [onerror]")).toHaveLength(0);
   });
 
   it("lists its sections in one table of contents, and gives no two elements one id", () => {

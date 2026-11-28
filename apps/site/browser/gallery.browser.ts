@@ -51,7 +51,6 @@ test.describe("the variations gallery", () => {
       const values = REGISTRY[axis].variations;
       const links = tiles(page, axis).locator("a.tile-link");
       await expect(links).toHaveText(values.map((value) => value.label));
-      await expect(links).toHaveAttribute("href", /./);
       const hrefs = await links.evaluateAll((anchors) =>
         anchors.map((anchor) => anchor.getAttribute("href")),
       );
@@ -118,7 +117,7 @@ test.describe("the variations gallery", () => {
       page.locator('li[data-axis="design"][data-value="brutalist"] a[aria-current="true"]'),
     ).toHaveCount(1);
     await expect(page.locator('li[data-axis="design"] a[aria-current]')).toHaveCount(1);
-    await expect(page.locator("p[role=status]")).toHaveText("Design: Brutalist.");
+    await expect(page.locator("article p[role=status]")).toHaveText("Design: Brutalist.");
     const stored = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
     expect(JSON.parse(stored ?? "{}")).toMatchObject({ design: "brutalist" });
     await page.reload();
@@ -213,7 +212,7 @@ test.describe("the variations gallery", () => {
     page,
   }) => {
     await open(page);
-    const links = page.locator("#combine a.combo-link");
+    const links = page.locator('section[aria-labelledby="combine"] a.combo-link');
     await expect(links).toHaveText(COMBINATIONS.map((combination) => combination.label));
     const first = COMBINATIONS[0];
     if (first === undefined) throw new Error("no combination");
@@ -236,7 +235,7 @@ test.describe("the variations gallery", () => {
     await open(page);
     const before = await page.evaluate(() => document.documentElement.outerHTML.slice(0, 200));
     await page.getByRole("button", { name: "Surprise me" }).click();
-    await expect(page.locator("p[role=status]")).toHaveText(/\w/);
+    await expect(page.locator("article p[role=status]")).toHaveText(/\w/);
     const after = await page.evaluate(() => document.documentElement.outerHTML.slice(0, 200));
     expect(after).not.toBe(before);
     await expect(page.locator('a.tile-link[aria-current="true"]')).toHaveCount(4);
@@ -260,7 +259,9 @@ test.describe("the variations gallery without JavaScript", () => {
     await expect(page.locator(".tile-preview idg-button").first()).toBeVisible();
     await expect(page.locator(".tile-current:visible")).toHaveCount(4);
     await expect(page.getByRole("button", { name: "Surprise me" })).toBeHidden();
-    await expect(page.locator("#combine a.combo-link")).toHaveCount(COMBINATIONS.length);
+    await expect(page.locator('section[aria-labelledby="combine"] a.combo-link')).toHaveCount(
+      COMBINATIONS.length,
+    );
     await expect(page.getByText("Choosing a look needs JavaScript")).toBeVisible();
   });
 });

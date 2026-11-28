@@ -1,9 +1,8 @@
-import { Component, Prop, State, h } from "@stencil/core";
+import { Component, Prop, State, h, type VNode } from "@stencil/core";
 import type {
   Block,
   CodeBlock,
   CodeLanguage,
-  ContentPage,
   ExampleBlock,
   ExampleName,
   Inline,
@@ -11,7 +10,7 @@ import type {
   TableBlock,
 } from "../../content/content-page";
 import { headingId, sectionsOf, tableOfContents, type BodySection } from "../../content/headings";
-import type { ExampleNode } from "../../examples/component-example";
+import type { ComponentExample, ExampleNode } from "../../examples/component-example";
 import { usageSnippet } from "../../examples/component-example";
 import { COMPONENT_EXAMPLES, type ComponentExampleName } from "../../examples/component-examples";
 import { readContentPage } from "../../content/read-content-page";
@@ -58,7 +57,7 @@ function isComponentExample(name: ExampleName): name is ComponentExampleName {
  * An example's description as the element it describes. The tags and attributes come from the
  * registry, never from a page's content, and the text is a text node: nothing here reads markup.
  */
-function drawExample(node: ExampleNode): unknown {
+function drawExample(node: ExampleNode): string | VNode {
   if (typeof node === "string") return node;
   return h(node.tag, { ...node.attributes }, ...(node.children ?? []).map(drawExample));
 }
@@ -138,6 +137,13 @@ export class SiteContentPage {
 
   /** What the last press of a copy button did, for a polite status. */
   @State() private copyStatus = "";
+
+  /** Opens the dialog of an example with the method its description names, as a page's script would. */
+  private open(event: MouseEvent, tag: string, method: "show" | "showModal"): void {
+    const figure = (event.currentTarget as HTMLElement).closest("figure");
+    const target = figure?.querySelector<HTMLElement & Record<string, () => Promise<void>>>(tag);
+    void target?.[method]?.();
+  }
 
   private async copy(block: CodeBlock): Promise<void> {
     const name = `the ${block.caption ?? LANGUAGE_NAMES[block.language]} sample`;
@@ -249,13 +255,24 @@ export class SiteContentPage {
         </figure>
       );
     }
-    const example: { readonly nodes: readonly ExampleNode[]; readonly inert?: true } =
-      COMPONENT_EXAMPLES[block.name];
+    const example: ComponentExample = COMPONENT_EXAMPLES[block.name];
+    const { opener } = example;
     const stage = example.nodes.map(drawExample);
     return (
       <figure class="example example-component">
         <div class="example-body">
           <div class="example-stage">
+            {opener === undefined ? null : (
+              <idg-button
+                class="needs-script"
+                variant="secondary"
+                onClick={(event: MouseEvent) => {
+                  this.open(event, block.name, opener.method);
+                }}
+              >
+                {opener.label}
+              </idg-button>
+            )}
             {example.inert === true ? (
               <div class="preview-frame" inert>
                 {stage}

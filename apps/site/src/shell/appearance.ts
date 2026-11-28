@@ -7,10 +7,16 @@ const AXIS_NOUNS: Readonly<Record<VariationAxis, string>> = {
   ux: "UX mode",
 };
 
-function labelOf(axis: VariationAxis, id: string): string {
+export function labelOf(axis: VariationAxis, id: string): string {
   const variations: readonly { readonly id: string; readonly label: string }[] =
     REGISTRY[axis].variations;
   return variations.find((variation) => variation.id === id)?.label ?? id;
+}
+
+/** One choice of an axis, as a sentence for a polite live region: `Design: Brutalist.` */
+export function describeChoice(axis: VariationAxis, id: string): string {
+  const noun = AXIS_NOUNS[axis];
+  return `${noun.charAt(0).toUpperCase()}${noun.slice(1)}: ${labelOf(axis, id)}.`;
 }
 
 /** What a shuffle landed on, as one sentence for a polite live region. */

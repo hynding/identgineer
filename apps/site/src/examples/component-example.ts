@@ -24,6 +24,12 @@ export interface ComponentExample {
    * second page's landmarks.
    */
   readonly inert?: true;
+  /**
+   * A button drawn before the example, with scripting only, that opens the dialog of the example
+   * as the page's own script would. A dialog is closed until something opens it, so the example
+   * alone would show nothing. The snippet does not hold the button: it is the dialog's markup.
+   */
+  readonly opener?: { readonly label: string; readonly method: "show" | "showModal" };
 }
 
 export function el(

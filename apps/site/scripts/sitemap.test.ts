@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { componentPath, livePaths, routeOfPath } from "../src/routes.ts";
+import { livePaths, routeOfContent } from "../src/routes.ts";
 import { robotsTxt, sitemapXml } from "./sitemap.ts";
 
 const SITE = new URL("https://identgineer.example/");
@@ -26,7 +26,7 @@ describe("the sitemap", () => {
 
   it("lists the generated pages after the table's, each by its canonical address", () => {
     const generated = ["idg-button", "idg-input"].flatMap((tag) => {
-      const route = routeOfPath(componentPath(tag));
+      const route = routeOfContent(tag);
       return route === undefined ? [] : [route];
     });
     const xml = sitemapXml(SITE, new Set(), generated);

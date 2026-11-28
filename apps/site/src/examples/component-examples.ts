@@ -181,11 +181,12 @@ export const COMPONENT_EXAMPLES = {
     ],
   },
   "idg-dialog": {
-    caption: "A dialog drawn open in the page, without the backdrop.",
+    caption: "A modal dialog, closed until it is opened with its showModal() method.",
+    opener: { label: "Open the dialog", method: "showModal" },
     nodes: [
       el(
         "idg-dialog",
-        { heading: "Discard the draft?", open: true, modal: "false", size: "sm" },
+        { heading: "Discard the draft?", size: "sm" },
         "The changes you made will be lost.",
         el("idg-button", { slot: "footer", variant: "secondary" }, "Keep editing"),
       ),

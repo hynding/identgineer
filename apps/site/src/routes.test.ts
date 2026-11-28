@@ -143,10 +143,10 @@ describe("the navigation", () => {
 });
 
 describe("the pages of the library's components", () => {
-  const generated = [
-    routeOfPath(componentPath("idg-button")),
-    routeOfPath(componentPath("idg-input")),
-  ].filter((route) => route !== undefined);
+  const generated = ["idg-button", "idg-input"].flatMap((tag) => {
+    const route = routeOfContent(tag);
+    return route === undefined ? [] : [route];
+  });
 
   it("have a path under the components' index, by element name", () => {
     expect(COMPONENTS_PATH).toBe("/components/");

@@ -47,6 +47,19 @@ export namespace Components {
          */
         "navigation": string;
     }
+    /**
+     * The variations gallery: every value of the four axes on a tile, drawn from the registries of
+     * `@identgineer/variations`, each tile a link that applies it. The page reads as links without a
+     * script. With one, a tile applies its value in place, as the appearance panel does, and the
+     * current value of each axis is marked.
+     */
+    interface SiteVariations {
+        /**
+          * The labels the CMS gives the navigation's pages, as JSON, from the prerenderer.
+          * @default ""
+         */
+        "navigation": string;
+    }
 }
 declare global {
     /**
@@ -82,10 +95,23 @@ declare global {
         prototype: HTMLSiteNotFoundElement;
         new (): HTMLSiteNotFoundElement;
     };
+    /**
+     * The variations gallery: every value of the four axes on a tile, drawn from the registries of
+     * `@identgineer/variations`, each tile a link that applies it. The page reads as links without a
+     * script. With one, a tile applies its value in place, as the appearance panel does, and the
+     * current value of each axis is marked.
+     */
+    interface HTMLSiteVariationsElement extends Components.SiteVariations, HTMLStencilElement {
+    }
+    var HTMLSiteVariationsElement: {
+        prototype: HTMLSiteVariationsElement;
+        new (): HTMLSiteVariationsElement;
+    };
     interface HTMLElementTagNameMap {
         "site-content-page": HTMLSiteContentPageElement;
         "site-home": HTMLSiteHomeElement;
         "site-not-found": HTMLSiteNotFoundElement;
+        "site-variations": HTMLSiteVariationsElement;
     }
 }
 declare namespace LocalJSX {
@@ -130,6 +156,19 @@ declare namespace LocalJSX {
          */
         "navigation"?: string;
     }
+    /**
+     * The variations gallery: every value of the four axes on a tile, drawn from the registries of
+     * `@identgineer/variations`, each tile a link that applies it. The page reads as links without a
+     * script. With one, a tile applies its value in place, as the appearance panel does, and the
+     * current value of each axis is marked.
+     */
+    interface SiteVariations {
+        /**
+          * The labels the CMS gives the navigation's pages, as JSON, from the prerenderer.
+          * @default ""
+         */
+        "navigation"?: string;
+    }
 
     interface SiteContentPageAttributes {
         "navigation": string;
@@ -141,11 +180,15 @@ declare namespace LocalJSX {
     interface SiteNotFoundAttributes {
         "navigation": string;
     }
+    interface SiteVariationsAttributes {
+        "navigation": string;
+    }
 
     interface IntrinsicElements {
         "site-content-page": Omit<SiteContentPage, keyof SiteContentPageAttributes> & { [K in keyof SiteContentPage & keyof SiteContentPageAttributes]?: SiteContentPage[K] } & { [K in keyof SiteContentPage & keyof SiteContentPageAttributes as `attr:${K}`]?: SiteContentPageAttributes[K] } & { [K in keyof SiteContentPage & keyof SiteContentPageAttributes as `prop:${K}`]?: SiteContentPage[K] };
         "site-home": Omit<SiteHome, keyof SiteHomeAttributes> & { [K in keyof SiteHome & keyof SiteHomeAttributes]?: SiteHome[K] } & { [K in keyof SiteHome & keyof SiteHomeAttributes as `attr:${K}`]?: SiteHomeAttributes[K] } & { [K in keyof SiteHome & keyof SiteHomeAttributes as `prop:${K}`]?: SiteHome[K] };
         "site-not-found": Omit<SiteNotFound, keyof SiteNotFoundAttributes> & { [K in keyof SiteNotFound & keyof SiteNotFoundAttributes]?: SiteNotFound[K] } & { [K in keyof SiteNotFound & keyof SiteNotFoundAttributes as `attr:${K}`]?: SiteNotFoundAttributes[K] } & { [K in keyof SiteNotFound & keyof SiteNotFoundAttributes as `prop:${K}`]?: SiteNotFound[K] };
+        "site-variations": Omit<SiteVariations, keyof SiteVariationsAttributes> & { [K in keyof SiteVariations & keyof SiteVariationsAttributes]?: SiteVariations[K] } & { [K in keyof SiteVariations & keyof SiteVariationsAttributes as `attr:${K}`]?: SiteVariationsAttributes[K] } & { [K in keyof SiteVariations & keyof SiteVariationsAttributes as `prop:${K}`]?: SiteVariations[K] };
     }
 }
 export { LocalJSX as JSX };
@@ -170,6 +213,13 @@ declare module "@stencil/core" {
              * every link on it is root-relative and nothing in the navigation is marked as current.
              */
             "site-not-found": LocalJSX.IntrinsicElements["site-not-found"] & JSXBase.HTMLAttributes<HTMLSiteNotFoundElement>;
+            /**
+             * The variations gallery: every value of the four axes on a tile, drawn from the registries of
+             * `@identgineer/variations`, each tile a link that applies it. The page reads as links without a
+             * script. With one, a tile applies its value in place, as the appearance panel does, and the
+             * current value of each axis is marked.
+             */
+            "site-variations": LocalJSX.IntrinsicElements["site-variations"] & JSXBase.HTMLAttributes<HTMLSiteVariationsElement>;
         }
     }
 }

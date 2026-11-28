@@ -1844,3 +1844,423 @@ figcaption {
     padding-block-start: var(--idg-layout-section-gap);
   }
 }
+
+/* A component's example: the live element on a panel, and the HTML that writes it beside the panel
+   where the room holds both, under it where it does not. The room is the example's own width. */
+.example-component {
+  container: example / inline-size;
+}
+
+.example-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  align-items: start;
+}
+
+@container example (min-inline-size: 44rem) {
+  .example-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.example-stage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--idg-space-xs);
+  min-inline-size: 0;
+  padding: var(--idg-space-s);
+  border: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+  border-radius: var(--idg-shape-radius-md);
+  background: var(--idg-color-bg-subtle);
+}
+
+.example-stage > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+/* What lays out a block of its own takes the panel's width; the rest sit in a row. */
+.example-stage
+  > :is(
+    idg-accordion,
+    idg-alert,
+    idg-brand-editor,
+    idg-brand-export,
+    idg-brand-guidelines,
+    idg-brand-swatches,
+    idg-breadcrumb,
+    idg-card,
+    idg-cluster,
+    idg-consent-banner,
+    idg-consent-preferences,
+    idg-cover,
+    idg-divider,
+    idg-event-table,
+    idg-field,
+    idg-grid,
+    idg-layout,
+    idg-pagination,
+    idg-password-reset,
+    idg-profile,
+    idg-progress,
+    idg-radio-group,
+    idg-register,
+    idg-sidebar,
+    idg-skeleton,
+    idg-stack,
+    idg-stat,
+    idg-switcher,
+    idg-table,
+    idg-tabs,
+    idg-toast,
+    idg-variation-switcher,
+    p,
+    .preview-frame
+  ) {
+  flex: 1 1 100%;
+}
+
+.example-stage > .preview-frame {
+  display: block;
+}
+
+.example-component .code-sample {
+  min-inline-size: 0;
+}
+
+/* The gallery */
+.section-says {
+  max-inline-size: var(--idg-density-measure);
+  margin: 0;
+}
+
+/* The tiles of an axis: one, two or four to a row, as many as the row holds, so that eight tiles
+   never leave a row part empty. A container query cannot read a token, so the widths are written
+   out in em, which follow the type scale: 31em holds two tiles of 15em and their gap, 63em four. */
+.gallery-room {
+  container: gallery / inline-size;
+  font-size: calc(var(--idg-font-size-step-0) * var(--idg-ux-type-scale));
+}
+
+.gallery-tiles,
+.combos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--idg-space-s) * var(--idg-density-gap-scale));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@container gallery (min-inline-size: 31em) {
+  .gallery-tiles,
+  .combos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container gallery (min-inline-size: 48em) {
+  .combos {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container gallery (min-inline-size: 63em) {
+  .gallery-tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.gallery-tile,
+.combo {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-inline-size: 0;
+  overflow: hidden;
+  border: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+  border-radius: var(--idg-shape-radius-lg);
+  background: var(--idg-surface-background, var(--idg-color-bg));
+}
+
+.combo {
+  align-content: start;
+  grid-template-rows: none;
+  gap: var(--idg-space-2xs);
+  padding: var(--idg-space-s);
+}
+
+.combo p,
+.tile-description {
+  margin: 0;
+  overflow-wrap: break-word;
+}
+
+.combo-values {
+  color: var(--idg-color-text-muted);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+}
+
+.tile-preview {
+  padding: var(--idg-space-s);
+  background: var(--idg-color-bg);
+  color: var(--idg-color-text);
+  font-family: var(--idg-font-family-body);
+  border-block-end: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+}
+
+.tile-text {
+  display: grid;
+  align-content: start;
+  gap: var(--idg-space-3xs);
+  padding: var(--idg-space-s);
+}
+
+.tile-name,
+.combo-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--idg-space-2xs);
+  margin: 0;
+  font-size: calc(var(--idg-font-size-step-1) * var(--idg-ux-type-scale));
+}
+
+/* The whole tile is the link: its own box is drawn over the tile, under nothing else that is
+   interactive, since the preview is inert. */
+.tile-link::after,
+.combo-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.tile-link:focus-visible,
+.combo-link:focus-visible {
+  outline: none;
+}
+
+.tile-link:focus-visible::after,
+.combo-link:focus-visible::after {
+  outline: calc(var(--idg-focus-ring-width) * var(--idg-focus-emphasis)) var(--idg-focus-ring-style)
+    var(--idg-color-focus-ring);
+  outline-offset: calc(var(--idg-focus-ring-offset) * -1);
+}
+
+/* Shown by the rules the build writes for the current value of each axis. */
+.tile-current {
+  display: none;
+  padding: 0 var(--idg-space-2xs);
+  border-radius: var(--idg-shape-radius-pill);
+  background: var(--idg-color-accent-indicator);
+  color: var(--idg-color-on-accent-indicator);
+  font-family: var(--idg-font-family-body);
+  font-size: calc(var(--idg-font-size-step-neg1) * var(--idg-ux-type-scale));
+  font-weight: var(--idg-font-weight-semibold);
+}
+
+.sample {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--idg-space-2xs);
+}
+
+.sample-title {
+  font-weight: var(--idg-font-weight-semibold);
+}
+
+.sample idg-progress {
+  flex: 1 1 100%;
+}
+
+.combine-actions {
+  display: flex;
+}
+
+/* A sketch of a layout: its regions as boxes on a grid, which each layout lays out as its page
+   does. Regions a layout does not have are not drawn. Children, in order: bar, rail, hero, main,
+   aside, foot and six tiles. */
+.layout-thumb {
+  --_chrome: var(--idg-color-accent-subtle);
+  --_content: var(--idg-color-border);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--idg-space-3xs);
+  aspect-ratio: 16 / 10;
+}
+
+.layout-thumb > span {
+  min-inline-size: 0;
+  min-block-size: 0;
+  border-radius: var(--idg-shape-radius-sm);
+  background: var(--_content);
+}
+
+.layout-thumb > :is(.t-bar, .t-rail, .t-foot, .t-hero) {
+  background: var(--_chrome);
+}
+
+.layout-thumb > :is(.t-rail, .t-hero, .t-aside, .t-foot, .t-tile) {
+  display: none;
+}
+
+.layout-thumb > .t-bar {
+  block-size: 0.7em;
+}
+
+.layout-thumb > .t-main {
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--_content) 0 0.25em,
+    transparent 0.25em 0.6em
+  );
+}
+
+.layout-thumb[data-layout="top-bar"] {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.layout-thumb[data-layout="top-bar"] > .t-foot {
+  display: block;
+  block-size: 0.5em;
+}
+
+.layout-thumb[data-layout="side-rail"] {
+  grid-template-columns: 30% minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.layout-thumb[data-layout="side-rail"] > .t-bar {
+  display: none;
+}
+
+.layout-thumb[data-layout="side-rail"] > .t-rail {
+  display: block;
+}
+
+.layout-thumb[data-layout="split-hero"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.layout-thumb[data-layout="split-hero"] > .t-bar {
+  grid-column: 1 / -1;
+}
+
+.layout-thumb[data-layout="split-hero"] > .t-hero {
+  display: block;
+}
+
+.layout-thumb[data-layout="magazine"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.layout-thumb[data-layout="magazine"] > .t-bar {
+  grid-column: 1 / -1;
+}
+
+.layout-thumb[data-layout="magazine"] > .t-main {
+  display: none;
+}
+
+.layout-thumb[data-layout="magazine"] > .t-tile:nth-child(-n + 10) {
+  display: block;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--_content) 0 0.25em,
+    transparent 0.25em 0.6em
+  );
+}
+
+.layout-thumb[data-layout="magazine"] > .t-tile:nth-child(7) {
+  grid-column: span 2;
+}
+
+.layout-thumb[data-layout="dashboard"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto repeat(2, minmax(0, 1fr));
+}
+
+.layout-thumb[data-layout="dashboard"] > .t-bar {
+  grid-column: 1 / -1;
+  block-size: 0.4em;
+}
+
+.layout-thumb[data-layout="dashboard"] > .t-main {
+  display: none;
+}
+
+.layout-thumb[data-layout="dashboard"] > .t-tile {
+  display: block;
+}
+
+.layout-thumb[data-layout="centered"] {
+  grid-template-columns: minmax(0, 1fr) 50% minmax(0, 1fr);
+}
+
+.layout-thumb[data-layout="centered"] > .t-bar {
+  grid-column: 1 / -1;
+}
+
+.layout-thumb[data-layout="centered"] > .t-main {
+  grid-column: 2;
+}
+
+.layout-thumb[data-layout="bento"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: auto repeat(3, minmax(0, 1fr));
+}
+
+.layout-thumb[data-layout="bento"] > .t-bar {
+  grid-column: 1 / -1;
+  block-size: 0.4em;
+}
+
+.layout-thumb[data-layout="bento"] > .t-main {
+  display: none;
+}
+
+.layout-thumb[data-layout="bento"] > .t-tile {
+  display: block;
+}
+
+.layout-thumb[data-layout="bento"] > .t-tile:nth-child(7) {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.layout-thumb[data-layout="bento"] > .t-tile:nth-child(10) {
+  grid-column: span 2;
+}
+
+.layout-thumb[data-layout="immersive"] {
+  grid-template-rows: auto repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+
+.layout-thumb[data-layout="immersive"] > span {
+  border-radius: 0;
+}
+
+.layout-thumb[data-layout="immersive"] > :is(.t-hero, .t-foot) {
+  display: block;
+}
+
+.layout-thumb[data-layout="immersive"] > .t-main {
+  background: var(--_content);
+}
+
+.layout-thumb[data-layout="immersive"] > .t-hero {
+  order: 1;
+}
+
+.layout-thumb[data-layout="immersive"] > .t-main {
+  order: 2;
+}
+
+.layout-thumb[data-layout="immersive"] > .t-foot {
+  order: 3;
+}
