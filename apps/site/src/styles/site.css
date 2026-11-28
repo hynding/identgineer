@@ -1858,8 +1858,10 @@ figcaption {
   align-items: start;
 }
 
+/* An example drawn inert is a frame of a whole page or a form, which is laid out for a page's width
+   and keeps the panel's whole row, with its HTML under it. */
 @container example (min-inline-size: 44rem) {
-  .example-body {
+  .example-body:not(:has(.preview-frame)) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
