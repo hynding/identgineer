@@ -18,8 +18,8 @@
     "@stencil/core": "4.45.5"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.14.0",
-    "@playwright/test": "1.63.0",
+    "@axe-core/playwright": "4.14.1",
+    "@playwright/test": "1.65.1",
     "typescript": "6.0.3"
   }
 }
