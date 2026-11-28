@@ -28,11 +28,13 @@ test.describe("the index of the components", () => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/components/");
       await hydrated(page, "site-content-page");
-      const lines = await page
-        .locator("article.prose td:first-child a")
-        .evaluateAll((links) =>
-          links.map((link) => ({ name: link.textContent, lines: link.getClientRects().length })),
-        );
+      const lines = await page.locator("article.prose td:first-child a").evaluateAll((links) =>
+        links.map((link) => ({
+          name: link.textContent,
+          // A place to wrap splits a link into boxes; the lines are the tops they sit at.
+          lines: new Set([...link.getClientRects()].map((box) => Math.round(box.top))).size,
+        })),
+      );
       expect(lines.length).toBeGreaterThan(50);
       expect(lines.filter(({ lines: count }) => count !== 1)).toEqual([]);
       expect(await sidewaysScroll(page)).toBeLessThanOrEqual(0);
