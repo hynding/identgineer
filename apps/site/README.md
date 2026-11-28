@@ -385,7 +385,8 @@ home and identity pages together, every other page, then the components index, t
 `idg-input` and the variations gallery, each alone), the axe sweep of every page in every look, chosen by a tag on each test, and every other
 test in the last. `pnpm --filter @identgineer/site test:browser:part <part>` runs one, and
 `test:browser:parts` checks that the parts hold every test exactly once, which CI does on every run.
-PARTTIMES
+On two workers each fit part takes three to five minutes, the axe sweep about four and a half and the
+last about six and a half, so none is near the nine minutes at which another part would be added.
 
 `IDG_CPU_THROTTLE=6` runs the hydration tests with the page's CPU six times slower, as a slow CI
 runner is; add `--repeat-each=3` to repeat them.

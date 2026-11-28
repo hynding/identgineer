@@ -33,7 +33,7 @@ for (const { name, path } of PAGES) {
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
         // The page's own landmarks come first. The example of idg-layout is a whole page's frame,
         // inert, so it holds a main and a navigation that nothing can reach; they are the only others.
-        const frames = await page.locator(".preview-frame[inert]").count();
+        const frames = path === "/components/idg-layout/" ? 1 : 0;
         const mainNavigation = page.getByRole("navigation", { name: "Main navigation" });
         for (const landmark of [page.getByRole("main"), mainNavigation]) {
           await expect(landmark).toHaveCount(1 + frames);
