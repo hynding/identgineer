@@ -76,7 +76,10 @@ Two builds are produced by `pnpm --filter @identgineer/components build`:
 - **Custom elements** (`@identgineer/components/custom-elements`). Tree-shakeable, needs a bundler
   to resolve `@stencil/core`.
 
-`dist/docs.json` describes every component (props, slots, parts) for the sandbox. Framework
+`dist/docs.json` describes every component (props, events, methods, slots, parts and custom
+properties) for the sandbox, and the site's components reference is generated from it at build
+time, so a component's doc comments are what a visitor reads; the site's build needs it, which
+is why the site's build follows this package's. Framework
 wrappers are a later feature.
 
 To avoid a flash of unstyled content without an injected `<style>`, hide the elements yourself:

@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { BUNDLES } from "@identgineer/components/bundles";
 import { describe, expect, it } from "vitest";
-import { CONTENT_LIMITS, type ContentPage } from "../content/content-page.ts";
+import type { ContentPage } from "../content/content-page.ts";
 import {
   describeContentProblem,
   parseContentPage,

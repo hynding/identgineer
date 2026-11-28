@@ -107,16 +107,27 @@ function withoutBackticks(value: string): string {
   return value.replaceAll("`", "");
 }
 
-/** The lede: the first paragraph, whole if the page's lede may hold it, else cut short. */
-function lede(doc: ComponentDoc): { readonly summary: string; readonly whole: boolean } {
-  const first = withoutBackticks(doc.summary[0] ?? "");
-  if (first === "") return { summary: `The ${doc.tag} web component.`, whole: true };
-  const summary = clip(first, CONTENT_LIMITS.summary);
-  return { summary, whole: summary === first };
+const LEDE_LIMIT = 200;
+
+/**
+ * The lede is the first sentence of the description, cut short if it is too long for the line a
+ * lede is. A hero is as tall as its text, and a long description would push a page's first
+ * screen down; the rest of the paragraph leads the body, or all of it when the sentence was cut.
+ */
+function lede(doc: ComponentDoc): { readonly summary: string; readonly rest: string } {
+  const first = doc.summary[0] ?? "";
+  if (withoutBackticks(first) === "") {
+    return { summary: `The ${doc.tag} web component.`, rest: "" };
+  }
+  const end = first.search(/[.!?](?:\s|$)/);
+  const sentence = end < 0 ? first : first.slice(0, end + 1);
+  const summary = clip(withoutBackticks(sentence), LEDE_LIMIT);
+  const cut = summary !== withoutBackticks(sentence);
+  return { summary, rest: cut ? first : first.slice(sentence.length).trim() };
 }
 
-function introduction(doc: ComponentDoc, whole: boolean): Block[] {
-  const paragraphs = whole ? doc.summary.slice(1) : doc.summary;
+function introduction(doc: ComponentDoc, rest: string): Block[] {
+  const paragraphs = [rest, ...doc.summary.slice(1)].filter((paragraph) => paragraph !== "");
   return paragraphs.map((paragraph): Block => ({ type: "paragraph", content: runs(paragraph) }));
 }
 
@@ -138,7 +149,7 @@ export function componentPage(
   doc: ComponentDoc,
   examples: Examples = COMPONENT_EXAMPLES,
 ): ContentPage {
-  const { summary, whole } = lede(doc);
+  const { summary, rest } = lede(doc);
   const named = (what: string) => `${what} of ${doc.tag}`;
   return {
     slug: doc.tag,
@@ -146,7 +157,7 @@ export function componentPage(
     summary,
     seo: {},
     body: [
-      ...introduction(doc, whole),
+      ...introduction(doc, rest),
       ...exampleBlock(doc, examples),
       ...section(
         "Properties",

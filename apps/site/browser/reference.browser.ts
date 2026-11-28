@@ -146,7 +146,7 @@ test.describe("a component's page", () => {
       })),
     );
     for (const { text, lines } of names) {
-      if ((text?.length ?? 0) < 17) expect(lines, text ?? "").toBe(1);
+      if (text.length < 17) expect(lines, text).toBe(1);
     }
     expect(names.some(({ text }) => text === "accessibleControls")).toBe(true);
   });

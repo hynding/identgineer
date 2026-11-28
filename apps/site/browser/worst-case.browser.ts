@@ -2,6 +2,8 @@ import { REGISTRY } from "@identgineer/variations";
 import { CONTENT_LIMITS, type Block, type ContentPage } from "../src/content/content-page";
 import { navigationPaths } from "../src/content/navigation";
 import { NAVIGATION_LABEL } from "../src/content/validate-content-page";
+import { REFERENCE_LIMITS, type ComponentDoc } from "../src/reference/component-docs";
+import { componentPage } from "../src/reference/component-pages";
 import { expect, test } from "./fixtures";
 import { ENGINES, misfitsOf, settled } from "./misfits";
 import { LAYOUTS, hydrated, sidewaysScroll } from "./pages";
@@ -71,16 +73,59 @@ function worstNavigation(): string {
   return JSON.stringify({ header: labels, footer: labels });
 }
 
-/** A reading page with a section's navigation, and one without. */
-const READING = [
-  { path: "/docs/theming/", slug: "theming" },
-  { path: "/identity/", slug: "identity" },
-] as const;
+/**
+ * The longest unbroken text the components package may document, in every cell of a component's
+ * page: names and types as long as the reference takes them, in as many rows as it lays out in one
+ * table, and a description of the full length.
+ */
+function worstComponentPage(): ContentPage {
+  const name = (mark: string) => word(REFERENCE_LIMITS.name, mark);
+  const long = (mark: string) => word(REFERENCE_LIMITS.text, mark);
+  const rows = <Row>(make: (mark: string) => Row) =>
+    Array.from({ length: 12 }, (_, index) => make(String(index)));
+  const doc: ComponentDoc = {
+    tag: "idg-input",
+    summary: [long("a"), long("b")],
+    properties: rows((mark) => ({
+      name: name(mark),
+      attribute: name(`-${mark}`),
+      type: long(mark),
+      default: long(`d${mark}`),
+      description: long(`p${mark}`),
+    })),
+    events: rows((mark) => ({
+      name: name(mark),
+      detail: long(mark),
+      cancelable: true,
+      description: long(`e${mark}`),
+    })),
+    methods: rows((mark) => ({
+      signature: long(mark),
+      returns: long(`r${mark}`),
+      description: long(`m${mark}`),
+    })),
+    slots: rows((mark) => ({ name: name(mark), description: long(`s${mark}`) })),
+    parts: rows((mark) => ({ name: name(mark), description: long(`t${mark}`) })),
+    cssProperties: rows((mark) => ({ name: name(mark), description: long(`c${mark}`) })),
+  };
+  return componentPage(doc);
+}
+
+/** A reading page with a section's navigation, and one without, and a component's page. */
+const READING: readonly {
+  path: string;
+  slug: string;
+  page: (slug: string) => ContentPage;
+}[] = [
+  { path: "/docs/theming/", slug: "theming", page: worstPage },
+  { path: "/identity/", slug: "identity", page: worstPage },
+  { path: "/components/idg-input/", slug: "idg-input", page: worstComponentPage },
+];
 
 // What the fit sweep checks, for the worst an editor can send: each field as long as it may be, in
 // one unbroken word. Words are broken here, as they must be to fit; nothing else may go wrong.
 for (const engine of ENGINES) {
-  READING.forEach(({ path, slug }, readingIndex) => {
+  READING.forEach(({ path, slug, page: makePage }, readingIndex) => {
     LAYOUTS.forEach((layout, layoutIndex) => {
       const design = DESIGNS[(layoutIndex + readingIndex) % DESIGNS.length] ?? "studio";
       const ux = UX_MODES[layoutIndex % UX_MODES.length] ?? "standard";
@@ -92,7 +137,7 @@ for (const engine of ENGINES) {
           await page.setViewportSize({ width: WIDTHS[0], height: 900 });
           await page.goto(`${path}?idg-design=${design}&idg-layout=${layout}&idg-ux=${ux}`);
           await hydrated(page, "site-content-page");
-          const worst = worstPage(slug);
+          const worst = makePage(slug);
           await page.evaluate(
             async ({ json, navigation }) => {
               const host = document.querySelector("site-content-page");
