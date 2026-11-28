@@ -128,3 +128,40 @@ test("immersive starts a reading page's content one gap under the hero", async (
   }
   expect(problems).toEqual([]);
 });
+
+// A table or a code sample wider than its column scrolls along itself; a shade at the edge that
+// has more to show says so, and none is drawn on a box that does not scroll.
+for (const layout of LAYOUTS) {
+  test(`a box that scrolls in ${layout} shades the edge it has more beyond`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto(`/docs/theming/?idg-layout=${layout}`);
+    await hydrated(page, "site-content-page");
+    const shades = () =>
+      page.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>(".table-scroll, .code-sample pre")].map(
+          (box) => {
+            const style = getComputedStyle(box);
+            return {
+              scrolls: box.scrollWidth > box.clientWidth + 1,
+              start: Number.parseFloat(style.getPropertyValue("--_shade-start")) > 0,
+              end: Number.parseFloat(style.getPropertyValue("--_shade-end")) > 0,
+            };
+          },
+        ),
+      );
+    const before = await shades();
+    expect(before.some((box) => box.scrolls)).toBe(true);
+    for (const { scrolls, start, end } of before) {
+      expect({ start, end }).toEqual({ start: false, end: scrolls });
+    }
+    await page.evaluate(() => {
+      for (const box of document.querySelectorAll<HTMLElement>(".table-scroll, .code-sample pre")) {
+        box.scrollLeft = box.scrollWidth;
+      }
+    });
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+    for (const { scrolls, start, end } of await shades()) {
+      expect({ start, end }).toEqual({ start: scrolls, end: false });
+    }
+  });
+}
