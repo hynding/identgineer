@@ -10,7 +10,8 @@ export function componentPath(tag: string): RoutePath {
 }
 
 /** The Stencil component that draws a whole page, shell included. */
-export type PageComponent = "site-home" | "site-content-page" | "site-not-found";
+export type PageComponent =
+  "site-home" | "site-variations" | "site-content-page" | "site-not-found";
 
 interface RouteFields {
   readonly path: RoutePath;
@@ -29,7 +30,7 @@ interface RouteFields {
 
 interface LivePage extends RouteFields {
   readonly status: "live";
-  readonly component: "site-home";
+  readonly component: "site-home" | "site-variations";
 }
 
 /** A reading page, drawn by one component from the content page of its slug. */
@@ -38,6 +39,11 @@ export interface ContentRoute extends RouteFields {
   readonly component: "site-content-page";
   /** The slug of its content page, in the repository and in the CMS. */
   readonly content: string;
+  /**
+   * The page is made at build time from the components package's documentation, so it is in none
+   * of the repository's content pages and the CMS has no record for it.
+   */
+  readonly generated?: true;
 }
 
 export type LiveRoute = LivePage | ContentRoute;
@@ -102,7 +108,10 @@ export const ROUTES: readonly Route[] = [
     title: "Components",
     description:
       "Every idg- web component with its properties, slots, parts and live examples, generated from the component library itself.",
-    status: "coming",
+    status: "live",
+    component: "site-content-page",
+    content: "components",
+    generated: true,
   },
   {
     path: "/variations/",
@@ -110,7 +119,8 @@ export const ROUTES: readonly Route[] = [
     title: "Variations gallery",
     description:
       "Eight themes, eight design languages, eight layouts and eight UX modes, side by side and ready to mix.",
-    status: "coming",
+    status: "live",
+    component: "site-variations",
   },
   {
     path: "/docs/",
@@ -206,9 +216,54 @@ export function navigationRoutes(): readonly LiveRoute[] {
   return ROUTES.filter(isLive).filter((route) => route.parent === undefined);
 }
 
-/** Every live path, a section's pages among them: what a link of the site may point to. */
-export function livePaths(): ReadonlySet<RoutePath> {
-  return new Set(ROUTES.filter(isLive).map((route) => route.path));
+/**
+ * Every live path, a section's pages among them: what a link of the site may point to. The pages a
+ * build generates (the components') follow the table's, when it gives them.
+ */
+export function livePaths(generated: readonly LiveRoute[] = []): ReadonlySet<RoutePath> {
+  return new Set([...ROUTES.filter(isLive), ...generated].map((route) => route.path));
+}
+
+const COMPONENT_PATH = /^\/components\/(idg-[a-z0-9]+(?:-[a-z0-9]+)*)\/$/;
+
+/** Whether a path is the page of a component, whose existence only the build knows. */
+export function isComponentPath(path: string): path is RoutePath {
+  return COMPONENT_PATH.test(path);
+}
+
+function componentRoute(tag: string): ContentRoute {
+  return {
+    path: componentPath(tag),
+    parent: COMPONENTS_PATH,
+    label: tag,
+    title: tag,
+    description: "",
+    status: "live",
+    component: "site-content-page",
+    content: tag,
+    generated: true,
+  };
+}
+
+/**
+ * The route at a path: one of the table, or the page of a component, which is recognised by its
+ * path. The browser has no list of the components, and needs none to draw the page it is given.
+ */
+export function routeOfPath(path: string | undefined): Route | undefined {
+  const known = ROUTES.find((route) => route.path === path);
+  if (known !== undefined || path === undefined) return known;
+  const tag = COMPONENT_PATH.exec(path)?.[1];
+  return tag === undefined ? undefined : componentRoute(tag);
+}
+
+/** The reading route a content page of this slug is drawn at, or none. */
+export function routeOfContent(slug: string): ContentRoute | undefined {
+  const known = ROUTES.find(
+    (route): route is ContentRoute =>
+      route.status === "live" && route.component === "site-content-page" && route.content === slug,
+  );
+  if (known !== undefined) return known;
+  return /^idg-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? componentRoute(slug) : undefined;
 }
 
 /** The pages of the section a path is in (its top page, then the pages under it), or none. */
@@ -247,8 +302,8 @@ export function linkableRoutes(): readonly Route[] {
   return ROUTES.filter((route) => route.path !== "/" && route.parent === undefined);
 }
 
-export function prerenderedPages(): readonly PrerenderedPage[] {
-  const routes = ROUTES.filter(isLive).map((route): PrerenderedPage => {
+export function prerenderedPages(generated: readonly LiveRoute[] = []): readonly PrerenderedPage[] {
+  const routes = [...ROUTES.filter(isLive), ...generated].map((route): PrerenderedPage => {
     const { path, component, title, description } = route;
     const page = { file: pageFile(path), path, component, title, description };
     return route.component === "site-content-page" ? { ...page, content: route.content } : page;

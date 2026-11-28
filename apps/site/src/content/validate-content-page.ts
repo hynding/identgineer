@@ -16,6 +16,8 @@ import { RESERVED_IDS, headingId } from "./headings.ts";
 /** What a page is checked against: the paths of the site's live pages, which links may name. */
 export interface ValidationContext {
   readonly paths: ReadonlySet<string>;
+  /** Pages a link may name that the set does not list, for a reader that has no list of them. */
+  readonly accepts?: (path: string) => boolean;
 }
 
 /** Where a page was refused and why: which block, which field and which rule. */
@@ -226,8 +228,9 @@ function flag(fields: Record<string, unknown>, key: string, path: string): boole
  * A path of the site as the route table writes it: given exactly, or without its last slash (as a
  * CMS's link field lets an editor write `/identity`), which is put back.
  */
-function sitePath(href: string, paths: ReadonlySet<string>): string | undefined {
-  if (paths.has(href)) return href;
+function sitePath(href: string, context: ValidationContext): string | undefined {
+  const { paths, accepts } = context;
+  if (paths.has(href) || accepts?.(href) === true) return href;
   return !href.endsWith("/") && paths.has(`${href}/`) ? `${href}/` : undefined;
 }
 
@@ -242,7 +245,7 @@ function linkTarget(value: unknown, path: string, context: ValidationContext): s
   const href = text(value, path, CONTENT_LIMITS.href);
   if (href.startsWith("#")) return href;
   if (href.startsWith("/")) {
-    const page = sitePath(href, context.paths);
+    const page = sitePath(href, context);
     if (page !== undefined) return page;
     throw new Refusal(path, `${quote(href)} ${LINK_REFUSED}`);
   }
@@ -530,7 +533,7 @@ export function parseNavigationItem(
     const fields = fieldsOf(input, "", ["label", "href", "placement", "order"]);
     const label = text(fields.label, "label", NAVIGATION_LABEL);
     const given = text(fields.href, "href", CONTENT_LIMITS.href);
-    const href = sitePath(given, navigationPaths);
+    const href = sitePath(given, { paths: navigationPaths });
     if (href === undefined) {
       throw new Refusal("href", `${quote(given)} is not a page of the site's navigation`);
     }

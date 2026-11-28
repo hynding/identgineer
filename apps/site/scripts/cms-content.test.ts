@@ -451,7 +451,7 @@ describe("the site's content", () => {
             page([
               item({ label: "Elsewhere", href: "https://evil.example/" }),
               item({ label: "Script", href: "javascript:alert(1)" }),
-              item({ label: "Gallery", href: "/variations/" }),
+              item({ label: "Playground", href: "/sandbox/" }),
               item({ label: "Bad\u202eone", href: "/tracking/" }),
             ]),
           ),

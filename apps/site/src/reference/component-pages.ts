@@ -9,7 +9,14 @@ import {
 } from "../content/content-page.ts";
 import { COMPONENT_EXAMPLES } from "../examples/component-examples.ts";
 import type { ComponentExample } from "../examples/component-example.ts";
-import { COMPONENTS_PATH, componentPath, type ContentRoute } from "../routes.ts";
+import { parseContentPage, describeContentProblem } from "../content/validate-content-page.ts";
+import {
+  COMPONENTS_PATH,
+  componentPath,
+  isComponentPath,
+  livePaths,
+  type ContentRoute,
+} from "../routes.ts";
 import type { ComponentDoc } from "./component-docs.ts";
 import { groupComponents, type Bundle, type ComponentGroup } from "./component-groups.ts";
 
@@ -281,4 +288,28 @@ export function referencePages(
       page: componentPage(doc, examples),
     })),
   };
+}
+
+/**
+ * Refuses a reference whose page the content format would refuse, naming the page and the rule, so
+ * a build stops with a message instead of writing a page its component cannot draw. A page is
+ * checked as the browser will check it, after the JSON the prerenderer writes.
+ */
+export function checkReference(reference: Reference): void {
+  const context = {
+    paths: livePaths(reference.components.map(({ route }) => route)),
+    accepts: isComponentPath,
+  };
+  const pages = [
+    { name: "the components' index", page: reference.index },
+    ...reference.components.map(({ page }) => ({ name: page.slug, page })),
+  ];
+  for (const { name, page } of pages) {
+    const result = parseContentPage(JSON.parse(JSON.stringify(page)), context);
+    if (!result.ok) {
+      throw new Error(
+        `The page of ${name} is not valid content: ${describeContentProblem(result.error)}`,
+      );
+    }
+  }
 }

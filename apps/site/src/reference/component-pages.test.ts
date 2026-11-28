@@ -11,6 +11,7 @@ import { el, type ComponentExample } from "../examples/component-example.ts";
 import { livePaths } from "../routes.ts";
 import type { ComponentDoc } from "./component-docs.ts";
 import {
+  checkReference,
   componentIndexPage,
   componentPage,
   componentRoute,
