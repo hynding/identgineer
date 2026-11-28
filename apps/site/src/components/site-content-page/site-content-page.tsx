@@ -46,14 +46,26 @@ function contentRouteOf(slug: string): ContentRoute | undefined {
   );
 }
 
+/** A word shorter than this fits a line of the narrowest column, so it is never broken. */
+const LONG_NAME = 20;
+
 /**
- * Text with a chance to wrap after each `_`, `/`, `.`, `=` and `-` and inside camelCase, so a long
- * name such as an environment variable, a file's path or a function breaks between its parts on a
- * narrow screen, never inside a word.
+ * Where a long name may wrap: after a `_`, `/`, `.`, `=` or `-` that follows a part of it and comes
+ * before another (so not after a leading `?` or `/`, nor inside `://`), and inside camelCase.
+ */
+const NAME_PARTS = /(?<=[^\s?][_/.=-])(?=[\p{L}\p{N}@])|(?<=\p{Ll})(?=\p{Lu})/u;
+
+/**
+ * Text with a chance to wrap between the parts of each long name in it, such as an environment
+ * variable, a file's path or a function, so it breaks there on a narrow screen and never inside a
+ * word. A short one is left whole: it wraps as a word does.
  */
 function breakable(text: string) {
-  const parts = text.split(/(?<=[_/.=-])(?=.)|(?<=\p{Ll})(?=\p{Lu})/u);
-  return parts.flatMap((part, index) => (index === 0 ? [part] : [<wbr />, part]));
+  return text.split(/(\s+)/).flatMap((word) => {
+    if (word.length < LONG_NAME) return [word];
+    const parts = word.split(NAME_PARTS);
+    return parts.flatMap((part, index) => (index === 0 ? [part] : [<wbr />, part]));
+  });
 }
 
 /** A run of text with its emphasis, the code innermost, or a link. */
