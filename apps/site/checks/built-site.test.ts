@@ -25,10 +25,30 @@ function elementsOf(root: ParentNode): Element[] {
   );
 }
 
+/**
+ * The ids used twice in one tree: the document, or one declarative shadow root, as ids are
+ * looked up in the tree that holds them.
+ */
+function duplicateIds(root: ParentNode): string[] {
+  const seen = new Set<string>();
+  const twice: string[] = [];
+  for (const element of root.querySelectorAll("*")) {
+    if (element.id !== "" && element.closest("template") === null) {
+      if (seen.has(element.id)) twice.push(element.id);
+      seen.add(element.id);
+    }
+  }
+  for (const template of root.querySelectorAll("template")) {
+    twice.push(...duplicateIds(template.content));
+  }
+  return twice;
+}
+
 interface BuiltPage {
   readonly file: string;
   readonly elements: readonly Element[];
   readonly ids: ReadonlySet<string>;
+  readonly duplicateIds: readonly string[];
 }
 
 function readPage(file: string): BuiltPage {
@@ -36,7 +56,12 @@ function readPage(file: string): BuiltPage {
     readFileSync(join(WWW, file), "utf8"),
   ) as unknown as Document;
   const elements = elementsOf(document);
-  return { file, elements, ids: new Set(elements.map((element) => element.id).filter(Boolean)) };
+  return {
+    file,
+    elements,
+    ids: new Set(elements.map((element) => element.id).filter(Boolean)),
+    duplicateIds: duplicateIds(document),
+  };
 }
 
 /** The file a root-relative path is served from, as the deployment serves it. */
@@ -107,6 +132,10 @@ describe.skipIf(!built)("the built site", () => {
         .map((page) => page.file)
         .sort(),
     );
+  });
+
+  it.each(htmlFiles)("%s gives no two elements of one tree the same id", (file) => {
+    expect(pages.get(file)?.duplicateIds).toEqual([]);
   });
 
   it.each(htmlFiles)("%s runs no inline script and every script is the site's own", (file) => {

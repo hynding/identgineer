@@ -63,6 +63,25 @@ function elementsOf(root: ParentNode): Element[] {
   );
 }
 
+/**
+ * The ids used twice in one tree: the document, or one declarative shadow root, as ids are
+ * looked up in the tree that holds them.
+ */
+function duplicateIds(root: ParentNode): string[] {
+  const seen = new Set<string>();
+  const twice: string[] = [];
+  for (const element of root.querySelectorAll("*")) {
+    if (element.id !== "" && element.closest("template") === null) {
+      if (seen.has(element.id)) twice.push(element.id);
+      seen.add(element.id);
+    }
+  }
+  for (const template of root.querySelectorAll("template")) {
+    twice.push(...duplicateIds(template.content));
+  }
+  return twice;
+}
+
 function escapeAttribute(value: string): string {
   return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
 }
@@ -243,6 +262,19 @@ describe.skipIf(!built)("a reading page, as the prerenderer draws it", () => {
     expect(label('.site-footer-pages a[href="/tracking/"]')).toBe("Tracking");
     expect(label('.site-footer-pages a[href="/docs/"]')).toBe("Read the docs");
     expect(labelled.querySelector('a[href="/nowhere/"]')).toBeNull();
+  });
+
+  it("gives no two elements of one tree the same id, even a heading named as a table is", async () => {
+    expect(duplicateIds(document)).toEqual([]);
+    const table = PAGE.body.find((block) => block.type === "table");
+    const named = await render(
+      JSON.stringify({
+        ...PAGE,
+        body: [{ type: "heading", level: 2, text: "Table 2" }, table],
+      }),
+    );
+    expect(named.querySelector("h2#table-2")).not.toBeNull();
+    expect(duplicateIds(named)).toEqual([]);
   });
 
   it.each([
