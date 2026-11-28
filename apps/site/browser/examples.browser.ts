@@ -19,6 +19,14 @@ for (const scripting of [true, false]) {
         await page.setViewportSize({ width: 1152, height: 900 });
         await page.goto(route.path);
         if (scripting) await hydrated(page, "site-content-page");
+        // An example drawn inert can be looked at and not used, and says so, in words.
+        const cue = page.locator("figure.example-component .example-stage .preview-tag");
+        if (example.inert === true) {
+          await expect(cue).toHaveText("Preview only");
+          await expect(cue).toBeVisible();
+        } else {
+          await expect(cue).toHaveCount(0);
+        }
         const report = await inspectExample(page);
         expect(report.empty, "elements that draw nothing").toEqual([]);
         expect(report.escaping, "painted outside the stage").toEqual([]);
