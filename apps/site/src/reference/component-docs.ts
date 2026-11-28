@@ -1,4 +1,5 @@
 import { withoutForbiddenText } from "../content/validate-content-page.ts";
+import { clip } from "./clip.ts";
 
 /** The bounds the reference holds the components package's text to, as the content format needs. */
 export const REFERENCE_LIMITS = {
@@ -66,15 +67,6 @@ type Source = Record<string, unknown>;
 
 function isSource(value: unknown): value is Source {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/** At most `limit` characters, the last an ellipsis when something was cut, never half a pair. */
-function clip(text: string, limit: number): string {
-  if (text.length <= limit) return text;
-  let end = limit - 1;
-  const last = text.charCodeAt(end - 1);
-  if (last >= 0xd800 && last <= 0xdbff) end -= 1;
-  return `${text.slice(0, end)}…`;
 }
 
 function plain(value: unknown, limit: number): string {

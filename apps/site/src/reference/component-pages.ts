@@ -17,6 +17,7 @@ import {
   livePaths,
   type ContentRoute,
 } from "../routes.ts";
+import { clip } from "./clip.ts";
 import type { ComponentDoc } from "./component-docs.ts";
 import { groupComponents, type Bundle, type ComponentGroup } from "./component-groups.ts";
 
@@ -39,14 +40,6 @@ const code = (value: string): Inline => ({ type: "text", text: value, code: true
 /** The text of a cell when the package says nothing, which a cell may not leave empty. */
 const NOT_DOCUMENTED = "Not documented";
 const NONE = "None";
-
-function clip(value: string, limit: number): string {
-  if (value.length <= limit) return value;
-  let end = limit - 1;
-  const last = value.charCodeAt(end - 1);
-  if (last >= 0xd800 && last <= 0xdbff) end -= 1;
-  return `${value.slice(0, end)}…`;
-}
 
 /**
  * Text with each pair of backticks read as code, and nothing else read as anything: a doc comment
