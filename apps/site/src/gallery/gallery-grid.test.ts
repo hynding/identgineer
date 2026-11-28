@@ -34,7 +34,8 @@ describe("the columns of a gallery's tiles", () => {
   it("are written as rules for every count, one for each width the grid steps at", () => {
     const css = gridCss(24);
     expect(css).toContain('.gallery-tiles[data-count="9"]');
-    for (const { minimum } of GRID_STEPS) expect(css).toContain(`(min-inline-size: ${minimum}em)`);
+    for (const { minimum } of GRID_STEPS)
+      expect(css).toContain(`(min-inline-size: ${String(minimum)}em)`);
     const nine = css.split("\n").filter((line) => line.includes('data-count="9"'));
     expect(nine.join("\n")).toContain("repeat(3,");
   });
