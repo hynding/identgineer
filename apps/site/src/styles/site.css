@@ -1610,6 +1610,48 @@ figcaption {
 .table-scroll {
   max-inline-size: 100%;
   overflow-x: auto;
+  container: table / inline-size;
+}
+
+/* A table of many columns, where it does not fit, is a card for each row: the column's name before
+   each cell, and the header row kept for a reader who has no use for the card's look. */
+@container table (max-inline-size: 44rem) {
+  .table-cards :is(thead, tbody, tr, th, td) {
+    display: block;
+  }
+
+  .table-cards thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .table-cards tr {
+    margin-block-end: var(--idg-space-s);
+    padding: var(--idg-space-2xs) var(--idg-space-s);
+    border: var(--idg-border-width) var(--idg-border-style) var(--idg-color-border);
+    border-radius: var(--idg-radius-m);
+  }
+
+  .table-cards td {
+    display: grid;
+    gap: var(--idg-space-3xs);
+    padding-inline: 0;
+    overflow-wrap: break-word;
+  }
+
+  .table-cards td:last-child {
+    border-block-end: 0;
+  }
+
+  .table-cards td::before {
+    content: attr(data-label);
+    color: var(--idg-color-text-muted);
+    font-size: var(--idg-font-size-s);
+    font-weight: var(--idg-font-weight-semibold);
+  }
 }
 
 .table-scroll table {

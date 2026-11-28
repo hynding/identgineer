@@ -198,23 +198,34 @@ export class SiteContentPage {
     );
   }
 
+  /**
+   * A table of three columns or more is drawn as one card for each row on a window too narrow for
+   * its columns. Its cells then stop being table cells to the browser, so each says what it is
+   * with a role, and carries its column's name for the card to show.
+   */
   private renderTable(block: TableBlock, id: string) {
+    const cards = block.columns.length > 2;
+    const role = (name: string) => (cards ? { role: name } : {});
     return (
       <div class="table-scroll" role="region" aria-labelledby={id} tabindex="0">
-        <table>
+        <table class={cards ? "table-cards" : undefined} {...role("table")}>
           <caption id={id}>{block.caption}</caption>
-          <thead>
-            <tr>
+          <thead {...role("rowgroup")}>
+            <tr {...role("row")}>
               {block.columns.map((column) => (
-                <th scope="col">{column}</th>
+                <th scope="col" {...role("columnheader")}>
+                  {column}
+                </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody {...role("rowgroup")}>
             {block.rows.map((row) => (
-              <tr>
-                {row.map((cell) => (
-                  <td>{renderInlines(cell)}</td>
+              <tr {...role("row")}>
+                {row.map((cell, column) => (
+                  <td data-label={cards ? block.columns[column] : undefined} {...role("cell")}>
+                    {renderInlines(cell)}
+                  </td>
                 ))}
               </tr>
             ))}
