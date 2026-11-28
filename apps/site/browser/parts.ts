@@ -12,17 +12,30 @@ import { fileURLToPath } from "node:url";
  */
 export const ENGINE_KEYS = ["chromium", "no-calc-size", "no-style-queries"] as const;
 
-/** The pages whose fit sweep is a part of its own in each engine: the two longest full sweeps. */
-const FIRST_HALF: ReadonlySet<string> = new Set(["/", "/identity/"]);
+/**
+ * The pages whose fit sweep is a part of its own in each engine, by the part's name: the two longest
+ * of the original sweeps together, and the three that are swept at seven widths, each alone.
+ */
+const OWN_PART: Readonly<Record<string, string>> = {
+  "/": "1",
+  "/identity/": "1",
+  "/components/": "reference",
+  "/components/idg-input/": "component",
+  "/variations/": "gallery",
+};
+const OTHER_PART = "2";
+const PART_NAMES = ["1", OTHER_PART, "reference", "component", "gallery"] as const;
 
 export type EngineKey = (typeof ENGINE_KEYS)[number];
 
 /** The tag of a fit test, which names the part it runs in. */
 export function fitTag(engine: EngineKey, path: string): string {
-  return `@fit-${engine}-${FIRST_HALF.has(path) ? "1" : "2"}`;
+  return `@fit-${engine}-${OWN_PART[path] ?? OTHER_PART}`;
 }
 
-const FIT_TAGS = ENGINE_KEYS.flatMap((engine) => [`@fit-${engine}-1`, `@fit-${engine}-2`]);
+const FIT_TAGS = ENGINE_KEYS.flatMap((engine) =>
+  PART_NAMES.map((part) => `@fit-${engine}-${part}`),
+);
 
 /** Each part by its short name, as Playwright's filter arguments. */
 export const PARTS: Readonly<Record<string, readonly string[]>> = {
