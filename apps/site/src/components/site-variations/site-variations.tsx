@@ -51,7 +51,7 @@ const SWATCHES = ["bg", "surface", "text", "accent", "accent-subtle"] as const;
  */
 function ThemeSample({ theme, label }: { readonly theme: string; readonly label: string }) {
   return (
-    <div class="theme-sample">
+    <div class="scheme-pair">
       {(["light", "dark"] as const).map((scheme) => (
         <div class="scheme-half" data-theme={theme} data-scheme={scheme}>
           <p class="sample-heading">{label}</p>

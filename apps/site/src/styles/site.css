@@ -2147,7 +2147,7 @@ figcaption {
 
 /* A theme: its light and its dark scheme side by side, each a heading in the theme's display face,
    a line of body text and the five colours the theme is made of. */
-.theme-sample {
+.scheme-pair {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-self: stretch;
@@ -2285,9 +2285,11 @@ figcaption {
   line-height: 1;
 }
 
-/* A line of text as wide as the mode's reading width, a fifth of it, so every mode's fits a tile. */
+/* A line of text as wide as the mode's reading width, a fifth of it, so every mode's fits a tile. The
+   width is in characters, so it is set in text of the preview's own size, not the sample's "Aa". */
 .ux-measure {
   flex: none;
+  font-size: 0.875rem;
   max-inline-size: 100%;
   inline-size: calc(var(--idg-density-measure) * 0.2);
   block-size: 0.35rem;
