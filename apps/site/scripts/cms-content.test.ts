@@ -476,8 +476,10 @@ describe("the site's content", () => {
         pages: () => json(page([record("identity", { body })])),
       });
       expect(pages.get("identity")).toBe(staticPage("identity"));
-      expect(warnings[0]).toMatch(
-        /^CMS: page "identity" is not valid \(.*a link inside a link is not drawn\); the static copy is used$/,
+      expect(warnings).toContainEqual(
+        expect.stringMatching(
+          /^CMS: page "identity" is not valid \(.*a link inside a link is not drawn\); the static copy is used$/,
+        ),
       );
     });
 
@@ -617,7 +619,9 @@ describe("the site's content", () => {
       );
       expect(pages.get("identity")).toBe(staticPage("identity"));
       expect(pages.get("tracking")?.title).toBe("Edited in the CMS");
-      expect(warnings).toContain('CMS: page "identity" could not be read; the static copy is used');
+      expect(warnings).toEqual(
+        outcomes({ identity: "could not be read; the static copy is used", tracking: undefined }),
+      );
     });
 
     it("keeps the other labels when reading one navigation item fails", async () => {
@@ -727,12 +731,24 @@ describe("the site's content", () => {
 
   it("draws a page sent twice from its first copy, and names the second", async () => {
     const { pages, warnings } = await resolve({
-      pages: () => json(page([record("identity"), record("identity", { title: 5 })])),
+      pages: () => json(page([record("identity"), record("identity", { title: 5 }), 0])),
     });
     expect(pages.get("identity")?.title).toBe("Edited in the CMS");
     expect(warnings).toEqual([
       'CMS: page "identity" is there twice; the first is used',
+      "CMS: record 3 has no slug; it is left out",
       ...outcomes({ identity: undefined }),
+    ]);
+  });
+
+  it("says what was drawn for a page from the first copy refused, and names the others", async () => {
+    const { warnings } = await resolve({
+      pages: () =>
+        json(page([record("identity", { publishedAt: null }), record("identity", { title: 5 })])),
+    });
+    expect(warnings).toEqual([
+      'CMS: page "identity" is not valid (title: must be text); the static copy is used',
+      ...outcomes({ identity: "is not published; it is left out" }),
     ]);
   });
 

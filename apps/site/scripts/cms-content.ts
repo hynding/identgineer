@@ -247,23 +247,34 @@ function candidateOf(record: Record<string, unknown>, slug: string): Record<stri
   return candidate;
 }
 
-/** The most warnings printed: an answer can hold a fault in every record, and fill the log. */
+/**
+ * The most lines printed about single records and items: an answer can hold a fault in every
+ * record, and fill the log.
+ */
 export const MOST_WARNINGS = 50;
 
-/** The build's warnings: the first of them, and how many more there were. */
+/**
+ * The build's warnings. What it said of single records and items is capped, and counted past the
+ * cap; what it fell back to (a line for each page and for the navigation at most) always follows.
+ */
 class Warnings {
-  private readonly shown: string[] = [];
+  private readonly details: string[] = [];
   private hidden = 0;
+  private readonly outcomes: string[] = [];
 
-  add(line: string): void {
-    if (this.shown.length < MOST_WARNINGS) this.shown.push(line);
+  detail(line: string): void {
+    if (this.details.length < MOST_WARNINGS) this.details.push(line);
     else this.hidden += 1;
   }
 
+  outcome(line: string): void {
+    this.outcomes.push(line);
+  }
+
   lines(): string[] {
-    return this.hidden === 0
-      ? this.shown
-      : [...this.shown, `CMS: ${String(this.hidden)} more warnings are not shown`];
+    const more =
+      this.hidden === 0 ? [] : [`CMS: ${String(this.hidden)} more warnings are not shown`];
+    return [...this.details, ...more, ...this.outcomes];
   }
 }
 
@@ -273,8 +284,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 interface PagesRead {
   readonly found: ReadonlyMap<string, ContentPage>;
-  /** The pages a warning has named already, shown or not. */
-  readonly named: ReadonlySet<string>;
+  /** Why each page of the site that was sent was first left out, for a page not yet found. */
+  readonly refused: ReadonlyMap<string, string>;
 }
 
 function pagesFrom(
@@ -286,29 +297,36 @@ function pagesFrom(
   const known = new Set(staticPages.map((page) => page.slug));
   const paths = livePaths();
   const found = new Map<string, ContentPage>();
-  const named = new Set<string>();
+  const refused = new Map<string, string>();
+  // The first reason a page of the site is left out says what the build drew for it, so it is
+  // kept back to be shown; any other line is said of one record only.
+  const refuse = (slug: string | undefined, line: string): void => {
+    if (slug !== undefined && known.has(slug) && !found.has(slug) && !refused.has(slug)) {
+      refused.set(slug, line);
+    } else warnings.detail(line);
+  };
   records.forEach((record, index) => {
     let name = `record ${String(index + 1)}`;
+    let slug: string | undefined;
     // Whatever a record holds, it can cost the build its own page and no more.
     try {
       if (!isRecord(record) || typeof record.slug !== "string") {
-        warnings.add(`CMS: ${name} has no slug; it is left out`);
+        warnings.detail(`CMS: ${name} has no slug; it is left out`);
         return;
       }
-      const slug = record.slug;
-      if (!isSlug(slug)) {
-        warnings.add(`CMS: ${name} is no page of the site; it is left out`);
+      if (!isSlug(record.slug)) {
+        warnings.detail(`CMS: ${name} is no page of the site; it is left out`);
         return;
       }
+      slug = record.slug;
       name = `page "${slug}"`;
-      named.add(slug);
       const warning = pageFrom(record, slug, { known, paths, found, parsePage });
-      if (warning !== undefined) warnings.add(`CMS: ${name} ${warning}`);
+      if (warning !== undefined) refuse(slug, `CMS: ${name} ${warning}`);
     } catch {
-      warnings.add(`CMS: ${name} could not be read; the static copy is used`);
+      refuse(slug, `CMS: ${name} could not be read; the static copy is used`);
     }
   });
-  return { found, named };
+  return { found, refused };
 }
 
 interface PageContext {
@@ -376,7 +394,7 @@ function labelsFrom(
         : record;
       const result = parseItem(candidate, paths);
       if (!result.ok) {
-        warnings.add(`CMS: ${name} is not valid (${result.message}); it is left out`);
+        warnings.detail(`CMS: ${name} is not valid (${result.message}); it is left out`);
         return;
       }
       const placed = { item: result.item, index };
@@ -389,14 +407,14 @@ function labelsFrom(
         others.push(placed);
       }
     } catch {
-      warnings.add(`CMS: ${name} could not be read; it is left out`);
+      warnings.detail(`CMS: ${name} could not be read; it is left out`);
     }
   });
   for (const other of others.sort((a, b) => a.index - b.index)) {
     const { placement, href, order } = other.item;
     const held = chosen.get(`${placement} ${href}`);
     if (held === undefined) continue;
-    warnings.add(
+    warnings.detail(
       `CMS: navigation item ${String(other.index + 1)} is another ${placement} label for ${href} ` +
         `(order ${String(order)}, after item ${String(held.index + 1)}'s ${String(held.item.order)}); it is left out`,
     );
@@ -442,7 +460,7 @@ async function readSiteContent(
   const warnings = new Warnings();
   const base = cmsBaseUrl(url.trim());
   if (!base.ok) {
-    warnings.add(
+    warnings.outcome(
       `CMS: IDG_CMS_URL is not used (${base.reason}); the static copy of every page is used`,
     );
     return { pages: statics, labels: NO_LABELS, warnings: warnings.lines() };
@@ -462,11 +480,11 @@ async function readSiteContent(
       timeoutMs,
     );
     if (truncated) {
-      warnings.add(
+      warnings.outcome(
         `CMS: pages has more than ${String(CMS_LIMITS.pages)} pages of records; the rest are not read`,
       );
     }
-    const { found, named } = pagesFrom(
+    const { found, refused } = pagesFrom(
       records,
       staticPages,
       warnings,
@@ -475,15 +493,17 @@ async function readSiteContent(
     for (const slug of statics.keys()) {
       const page = found.get(slug);
       if (page) pages.set(slug, page);
-      else if (!named.has(slug)) {
-        warnings.add(`CMS: no published page "${slug}"; the static copy is used`);
+      const reason = refused.get(slug);
+      if (page && reason !== undefined) warnings.detail(reason);
+      else if (!page) {
+        warnings.outcome(reason ?? `CMS: no published page "${slug}"; the static copy is used`);
       }
     }
   } catch (error) {
     // Anything at all, not only a failed read: nothing the CMS sends may fail the build.
     pages.clear();
     for (const [slug, page] of statics) pages.set(slug, page);
-    warnings.add(
+    warnings.outcome(
       `CMS: pages could not be read (${reasonOf(error)}); the static copy of every page is used`,
     );
   }
@@ -500,7 +520,7 @@ async function readSiteContent(
     );
     labels = labelsFrom(records, warnings, options.parseNavigationItem ?? parseNavigationItem);
   } catch (error) {
-    warnings.add(
+    warnings.outcome(
       `CMS: navigation items could not be read (${reasonOf(error)}); the route table's labels are used`,
     );
   }
