@@ -4,7 +4,7 @@ import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseHtmlToDocument } from "@stencil/core/mock-doc";
 import { beforeAll, describe, expect, it } from "vitest";
-import { HEADERS_FILE, styleSource } from "../scripts/security-headers";
+import { HEADERS_FILE, styleSource, withoutStyleAttributes } from "../scripts/security-headers";
 import { generatedRoutes } from "../src/reference/generated-routes";
 import { livePaths, pageFile, prerenderedPages } from "../src/routes";
 
@@ -181,6 +181,13 @@ describe.skipIf(!built)("the built site", () => {
         .map(({ name }) => `${element.localName}[${name}]`),
     );
     expect(found).toEqual([]);
+  });
+
+  // The elements above are those the parser attaches; the markup is read as written, so that an
+  // attribute inside a declarative shadow root is found too, which the policy would block.
+  it.each(htmlFiles)("%s is written without a style attribute anywhere in its markup", (file) => {
+    const html = readFileSync(join(WWW, file), "utf8");
+    expect(withoutStyleAttributes(html) === html).toBe(true);
   });
 
   it.each(htmlFiles)("%s holds only inline styles the policy names by hash", (file) => {
