@@ -286,7 +286,7 @@ describe("the site's content", () => {
     const draft = record("identity", { publishedAt: null, title: "Unpublished" });
     const { pages, warnings } = await resolve({ pages: () => json(page([draft])) });
     expect(pages.get("identity")).toBe(staticPage("identity"));
-    expect(warnings).toContain('CMS: page "identity" is not published; it is left out');
+    expect(warnings).toContain('CMS: page "identity" is not published; the static copy is used');
   });
 
   it("adds no page the route table does not have", async () => {
@@ -407,6 +407,25 @@ describe("the site's content", () => {
       order: 0,
       placement: "header",
       ...fields,
+    });
+
+    it("says it read only the first pages of items, after every item's line", async () => {
+      let calls = 0;
+      const nulls = Array.from({ length: CMS_LIMITS.pageSize }, () => null);
+      const guide = item({ label: "Guide", href: "/docs/", order: 1 });
+      const { labels, warnings } = await resolve({
+        pages: () => json(page(STATIC_PAGES.map((each) => record(each.slug)))),
+        navigation: () => {
+          calls += 1;
+          const last = CMS_LIMITS.pages + 1;
+          return json(page(calls === last ? [guide] : nulls, last, calls));
+        },
+      });
+      expect(calls).toBe(CMS_LIMITS.pages);
+      expect(labels).toEqual({ header: {}, footer: {} });
+      expect(warnings.at(-1)).toBe(
+        `CMS: navigation items has more than ${String(CMS_LIMITS.pages)} pages of records; the rest are not read`,
+      );
     });
 
     it("takes a CMS label for a page of the site's navigation, in its place", async () => {
@@ -726,7 +745,7 @@ describe("the site's content", () => {
     const { warnings } = await resolve({
       pages: () => json(page([record("identity", { publishedAt: null })])),
     });
-    expect(warnings).toEqual(outcomes({ identity: "is not published; it is left out" }));
+    expect(warnings).toEqual(outcomes({ identity: "is not published; the static copy is used" }));
   });
 
   it("draws a page sent twice from its first copy, and names the second", async () => {
@@ -748,7 +767,7 @@ describe("the site's content", () => {
     });
     expect(warnings).toEqual([
       'CMS: page "identity" is not valid (title: must be text); the static copy is used',
-      ...outcomes({ identity: "is not published; it is left out" }),
+      ...outcomes({ identity: "is not published; the static copy is used" }),
     ]);
   });
 
