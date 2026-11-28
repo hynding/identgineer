@@ -190,20 +190,21 @@ for (const layout of LAYOUTS) {
   });
 }
 
-// Where the shell's aside stands beside the content, it is a column already: a docs page puts its
-// own pages in a row over the article rather than a third column, so the article has the content
-// column's width and not a fraction of it. (immersive sets every band in a centred column of its
-// own, tested above.)
+// Where the shell's aside stands beside the content (from 72rem), it is a column already: a docs
+// page puts its own pages in a row over the article rather than a third column, so the article has
+// the content column's width and not a fraction of it. Just below 72rem the shell's aside is hidden,
+// and the docs' pages are a column beside the article again. (immersive sets every band in a
+// centred column of its own, tested above.)
 for (const layout of ["top-bar", "magazine", "dashboard", "bento"] as const) {
   test(`a docs page in ${layout} gives its article the content column beside the aside`, async ({
     page,
   }) => {
     const problems: string[] = [];
-    for (const width of [1440, 1920] as const) {
+    for (const width of [1151, 1152, 1440, 1920] as const) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(`/docs/theming/?idg-layout=${layout}`);
       await hydrated(page, "site-content-page");
-      const { article, column, pagesAbove } = await page.evaluate(() => {
+      const { article, column, pagesAbove, pagesBeside, inRow } = await page.evaluate(() => {
         const main = document
           .querySelector(".site-layout")
           ?.shadowRoot?.querySelector('[part="main"]');
@@ -213,19 +214,34 @@ for (const layout of ["top-bar", "magazine", "dashboard", "bento"] as const) {
           : 0;
         const docs = document.querySelector("nav.docs-pages")?.getBoundingClientRect();
         const prose = document.querySelector("article.prose")?.getBoundingClientRect();
+        const [first, second] = [...document.querySelectorAll("nav.docs-pages li")].map((item) =>
+          item.getBoundingClientRect(),
+        );
         return {
           article: prose?.width ?? 0,
           column: (main?.clientWidth ?? 0) - padding,
           pagesAbove: docs !== undefined && prose !== undefined && docs.bottom <= prose.top,
+          pagesBeside: docs !== undefined && prose !== undefined && docs.right <= prose.left,
+          inRow:
+            first !== undefined &&
+            second !== undefined &&
+            Math.round(first.top) === Math.round(second.top) &&
+            second.left >= first.right,
         };
       });
+      const where = `${String(width)}px:`;
+      if (width < 1152) {
+        if (!pagesBeside) problems.push(`${where} the docs' pages are not beside the article`);
+        if (inRow) problems.push(`${where} the docs' pages are a row`);
+        continue;
+      }
       if (article < column * 0.9) {
         problems.push(
-          `${String(width)}px: the article is ${String(Math.round(article))}px of ${String(Math.round(column))}px`,
+          `${where} the article is ${String(Math.round(article))}px of ${String(Math.round(column))}px`,
         );
       }
-      if (!pagesAbove)
-        problems.push(`${String(width)}px: the docs' pages are not over the article`);
+      if (!pagesAbove) problems.push(`${where} the docs' pages are not over the article`);
+      if (!inRow) problems.push(`${where} the docs' pages are not a row`);
     }
     expect(problems).toEqual([]);
   });
