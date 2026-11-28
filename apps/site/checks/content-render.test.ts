@@ -398,9 +398,8 @@ describe.skipIf(!built)("a component's page, as the prerenderer draws it", () =>
 
   it("draws the live example, and the usage snippet that its description writes beside it", () => {
     const figure = one("figure.example-component");
-    expect(figure.querySelector("figcaption")?.textContent).toBe(
-      COMPONENT_EXAMPLES["idg-button"].caption,
-    );
+    const caption = [...figure.children].find((child) => child.localName === "figcaption");
+    expect(caption?.textContent).toBe(COMPONENT_EXAMPLES["idg-button"].caption);
     const live = [...figure.querySelectorAll(".example-stage > idg-button")];
     expect(live.map((button) => button.textContent.trim())).toEqual([
       "Save",
