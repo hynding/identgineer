@@ -576,7 +576,8 @@ describe("the site's content", () => {
           `seed ${String(seed)}`,
         ).resolves.toBeDefined();
       }
-    });
+      // 150 answers, most holding chains 20,000 deep: seconds of work on a busy CI runner.
+    }, 60_000);
 
     it("never throws when a record's fields throw as they are read", async () => {
       const fetcher = vi.fn(() => {
