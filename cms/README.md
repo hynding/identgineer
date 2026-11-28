@@ -66,7 +66,8 @@ Persian and Indic words), two headings with one address, or a heading whose addr
 already uses (`Main`, `Contents`, `Page title`). Nothing an editor writes fails the build: each
 refusal is a line of the build's output, beginning `CMS:`, that names the page or item, the field and
 why, quoting at most a few dozen characters of what was sent with anything outside printable ASCII
-escaped. The setting's own value is never printed.
+escaped; the first 50 are printed, and a line counts the rest. The setting's own value is never
+printed.
 
 ### Identity (owner only)
 

@@ -85,15 +85,16 @@ or the footer; it can never add a link.
 What can go wrong never fails the build: a record that is invalid, a draft (no `publishedAt`), a slug
 the site has no route for, or a page missing from the answer leaves the static copy, and the build
 prints a warning that names it and why. Any error at all, in one record, in one collection or in the
-whole read, falls back the same way (`scripts/cms-content.test.ts` feeds it deep, random and
-throwing answers). A warning names a record by its slug only when it is a valid one, and otherwise
+whole read, falls back the same way (`scripts/cms-content.test.ts` reaches each fallback, and feeds
+it deep, random and wide answers). The build prints the first 50 warnings and a line counting the
+rest, so no answer can flood its log. A warning names a record by its slug only when it is a valid one, and otherwise
 by its position; it quotes CMS text short with anything outside printable ASCII escaped, and never
 prints `IDG_CMS_URL`. What an editor may write, and what the site makes of it, is in
 [cms/README.md](../../cms/README.md#what-an-editor-may-write). The read is bounded: `https:` only (or `http:` on
 `localhost`, `127.0.0.1` or `[::1]`), no credentials, query or fragment in the address, no
 credentials sent, no redirect followed, one 10 s deadline for all of it, 1 MiB per answer (by
 `Content-Length` and as read), `application/json` only, a status of 200 only, and 4 answers of 25
-records per collection. With the setting unset no request is made.
+records per collection (an answer of more than 25 is refused whole). With the setting unset no request is made.
 
 ### One page, eight arrangements
 
@@ -230,8 +231,9 @@ need not be served itself.
   items, the CMS's rich text, the CMS read against a fake CMS (success, an invalid record, 404, 5xx,
   a timeout, a body that stalls, an oversized answer, a wrong content type, a redirect to another
   origin, drafts, the page count, what an editor may write, and answers that must never fail the
-  build: links and values nested thousands deep, 150 seeded random and adversarial answers, fields
-  that throw; its warnings are short printable ASCII and never hold the setting), every reading page
+  build: links and values nested thousands deep, 150 seeded random and adversarial answers, a
+  failure in each of its fallbacks, answers of more records than asked for; at most 50 warnings,
+  each short printable ASCII, never holding the setting), every reading page
   in the repository, and the browser suite's parts.
 - **Rendering** (`checks/content-render.test.ts`, once the site is built): a page with every block,
   drawn by the hydrate build as the prerenderer draws it: one h1, the sections and their headings,
