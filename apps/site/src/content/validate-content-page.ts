@@ -33,10 +33,17 @@ export type ContentResult =
   | { readonly ok: false; readonly error: ContentError };
 
 /** One line for a build warning or a test: `page "x", block 3 (paragraph): content[0].href: …`. */
-export function describeContentError({ page, block, path, message }: ContentError): string {
-  const where = [page === undefined ? "page (no slug)" : `page "${printable(page, 120)}"`];
-  if (block) where.push(`block ${String(block.index)}${block.type ? ` (${block.type})` : ""}`);
-  return `${where.join(", ")}: ${path === "" ? "" : `${path}: `}${message}`;
+export function describeContentError(error: ContentError): string {
+  const page = error.page === undefined ? "page (no slug)" : `page "${printable(error.page, 120)}"`;
+  return `${page}${error.block ? ", " : ": "}${describeContentProblem(error)}`;
+}
+
+/** What is wrong and where in the page, for a line that names the page already. */
+export function describeContentProblem({ block, path, message }: ContentError): string {
+  const where = block
+    ? `block ${String(block.index)}${block.type ? ` (${block.type})` : ""}: `
+    : "";
+  return `${where}${path === "" ? "" : `${path}: `}${message}`;
 }
 
 const BLOCK_TYPES: readonly BlockType[] = [
