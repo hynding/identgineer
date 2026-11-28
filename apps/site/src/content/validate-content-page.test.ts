@@ -162,6 +162,20 @@ describe("a content page is refused", () => {
     ).toMatch(/name: "idg-nothing" is not a live example/);
   });
 
+  it("with a link to a page that only the context's own test knows", () => {
+    const page = withBlock({
+      type: "paragraph",
+      content: [{ type: "link", href: "/made-up/", text: "x" }],
+    });
+    expect(parseContentPage(page, CONTEXT).ok).toBe(false);
+    expect(parseContentPage(page, { ...CONTEXT, accepts: (path) => path === "/made-up/" }).ok).toBe(
+      true,
+    );
+    expect(parseContentPage(page, { ...CONTEXT, accepts: (path) => path === "/other/" }).ok).toBe(
+      false,
+    );
+  });
+
   it("with a code sample in a language it does not name", () => {
     const page = withBlock({ type: "code", language: "php", code: "<?php" });
     expect(errorOf(parseContentPage(page, CONTEXT))).toMatch(

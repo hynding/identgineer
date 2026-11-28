@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  COMPONENTS_PATH,
   NOT_FOUND_PAGE,
   ROUTES,
+  componentPath,
+  isComponentPath,
+  routeOfContent,
+  routeOfPath,
   isOverview,
   linkableRoutes,
   livePaths,
@@ -41,7 +46,7 @@ describe("the route table", () => {
 
   it("lists the pages later tasks add as coming, so nothing links to them yet", () => {
     const coming = ROUTES.filter((route) => route.status === "coming").map((route) => route.path);
-    expect(coming).toEqual(["/components/", "/variations/", "/sandbox/"]);
+    expect(coming).toEqual(["/sandbox/"]);
   });
 
   it("has the reading pages live, each drawn from the content page of its own slug", () => {
@@ -50,6 +55,7 @@ describe("the route table", () => {
       "/features/",
       "/identity/",
       "/tracking/",
+      "/components/",
       "/docs/",
       "/docs/getting-started/",
       "/docs/theming/",
@@ -107,6 +113,8 @@ describe("the navigation", () => {
       "/features/",
       "/identity/",
       "/tracking/",
+      "/components/",
+      "/variations/",
       "/docs/",
     ]);
   });
@@ -131,6 +139,93 @@ describe("the navigation", () => {
     const links = linkableRoutes();
     expect(links.every((route) => route.path !== "/" && route.parent === undefined)).toBe(true);
     expect(links.length).toBe(ROUTES.filter((route) => route.parent === undefined).length - 1);
+  });
+});
+
+describe("the pages of the library's components", () => {
+  const generated = [
+    routeOfPath(componentPath("idg-button")),
+    routeOfPath(componentPath("idg-input")),
+  ].filter((route) => route !== undefined);
+
+  it("have a path under the components' index, by element name", () => {
+    expect(COMPONENTS_PATH).toBe("/components/");
+    expect(componentPath("idg-button")).toBe("/components/idg-button/");
+    expect(isComponentPath("/components/idg-button/")).toBe(true);
+    expect(isComponentPath("/components/idg-a-b-1/")).toBe(true);
+  });
+
+  it.each([
+    "/components/",
+    "/components/button/",
+    "/components/idg-/",
+    "/components/idg-Button/",
+    "/components/idg-button",
+    "/components/idg-button/extra/",
+    "/components/idg-a/../idg-b/",
+    "/docs/idg-button/",
+    "//components/idg-button/",
+  ])("do not include %s", (path) => {
+    expect(isComponentPath(path)).toBe(false);
+    expect(routeOfPath(path)).toBe(ROUTES.find((route) => route.path === path));
+  });
+
+  it("are routes the shell and the renderer can find without a list of them", () => {
+    expect(routeOfPath("/components/idg-button/")).toMatchObject({
+      path: "/components/idg-button/",
+      parent: "/components/",
+      label: "idg-button",
+      status: "live",
+      component: "site-content-page",
+      content: "idg-button",
+    });
+    expect(routeOfContent("idg-button")?.path).toBe("/components/idg-button/");
+    expect(routeOfContent("identity")?.path).toBe("/identity/");
+    expect(routeOfContent("no such slug")).toBeUndefined();
+    expect(routeOfContent("components")?.path).toBe("/components/");
+  });
+
+  it("add their paths to the live ones, after them, when a build gives them", () => {
+    expect([...livePaths(generated)]).toEqual([
+      ...live.map((route) => route.path),
+      "/components/idg-button/",
+      "/components/idg-input/",
+    ]);
+    expect([...livePaths()]).toEqual(live.map((route) => route.path));
+  });
+
+  it("are left out of the navigation and out of any section's list of pages", () => {
+    expect(navigationRoutes().some((route) => route.path.startsWith("/components/idg-"))).toBe(
+      false,
+    );
+    expect(sectionOf("/components/idg-button/")).toEqual([]);
+    expect(neighboursOf("/components/idg-button/")).toEqual({});
+  });
+
+  it("each get a file of their own, between the live routes and the page not found", () => {
+    const files = prerenderedPages(generated).map((page) => page.file);
+    expect(files).toEqual([
+      ...live.map((route) => pageFile(route.path)),
+      "components/idg-button/index.html",
+      "components/idg-input/index.html",
+      "404.html",
+    ]);
+    const page = prerenderedPages(generated).find((candidate) => candidate.file.includes("input"));
+    expect(page).toMatchObject({
+      path: "/components/idg-input/",
+      component: "site-content-page",
+      content: "idg-input",
+    });
+  });
+});
+
+describe("the gallery and the reference in the route table", () => {
+  it("draw the gallery with its own component and the index from the library's documentation", () => {
+    const gallery = live.find((route) => route.path === "/variations/");
+    expect(gallery?.component).toBe("site-variations");
+    const index = live.find((route) => route.path === "/components/");
+    expect(index).toMatchObject({ component: "site-content-page", content: "components" });
+    expect(index?.component === "site-content-page" && index.generated).toBe(true);
   });
 });
 

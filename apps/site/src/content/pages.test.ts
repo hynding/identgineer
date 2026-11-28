@@ -14,9 +14,11 @@ describe("the repository's reading pages", () => {
     },
   );
 
-  it("are one for each reading route, and no more", () => {
+  it("are one for each reading route not made from the library's documentation, and no more", () => {
     const routed = ROUTES.flatMap((route) =>
-      route.status === "live" && route.component === "site-content-page" ? [route.content] : [],
+      route.status === "live" && route.component === "site-content-page" && !route.generated
+        ? [route.content]
+        : [],
     );
     expect(STATIC_PAGES.map((page) => page.slug)).toEqual(routed);
   });

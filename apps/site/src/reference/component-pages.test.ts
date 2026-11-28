@@ -358,6 +358,33 @@ describe("the whole reference", () => {
   });
 });
 
+describe("checking the whole reference before it is written", () => {
+  it("accepts a reference of valid pages", () => {
+    expect(() => {
+      checkReference(
+        referencePages([SAMPLE], [{ name: "controls", components: ["idg-sample"] }], {}),
+      );
+    }).not.toThrow();
+  });
+
+  it("names the component whose page the content format refuses, and why", () => {
+    const long = "x".repeat(2_000);
+    const heavy: ComponentDoc = {
+      ...EMPTY,
+      tag: "idg-heavy",
+      properties: Array.from({ length: 30 }, (_, index) => ({
+        name: `prop${String(index)}`,
+        type: long,
+        default: long,
+        description: long,
+      })),
+    };
+    expect(() => {
+      checkReference(referencePages([SAMPLE, heavy], [], {}));
+    }).toThrow(/^The page of idg-heavy is not valid content: .*text/);
+  });
+});
+
 // Reads docs.json, a build output of the components package: CI builds it first, and a machine
 // that has not built it skips the checks.
 describe.skipIf(!existsSync(DOCS_JSON) && process.env.CI === undefined)(
