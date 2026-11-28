@@ -68,6 +68,13 @@ describe("Strapi's blocks rich text, as a page body", () => {
     ).toEqual([2, 3, 2, 3, 4, 4, 4]);
   });
 
+  it.each([3, 4])("makes a first heading of level %i the page's level 2", (first) => {
+    const heading = (level: number) => ({ type: "heading", level, children: [text("A")] });
+    expect(bodyFromStrapiBlocks([heading(first), heading(4)]).map((block) => block.level)).toEqual([
+      2, 3,
+    ]);
+  });
+
   it("keeps lists, bulleted and numbered", () => {
     const list = (format: string) => ({
       type: "list",
