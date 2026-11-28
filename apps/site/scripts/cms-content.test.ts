@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import type { ContentPage } from "../src/content/content-page.ts";
 import { STATIC_PAGES } from "../src/content/pages/index.ts";
 import { ROUTES } from "../src/routes.ts";
-import { CMS_LIMITS, cmsBaseUrl, resolveSiteContent } from "./cms-content.ts";
+import { parseContentPage, parseNavigationItem } from "../src/content/validate-content-page.ts";
+import { CMS_LIMITS, cmsBaseUrl, resolveSiteContent, type ContentOptions } from "./cms-content.ts";
 
 const BASE = "https://cms.example.com/";
 
@@ -110,7 +111,10 @@ function fakeFetch(cms: FakeCms) {
   });
 }
 
-async function resolve(cms: FakeCms, ...given: [url?: string | undefined]) {
+async function resolve(
+  cms: FakeCms,
+  ...given: [url?: string | undefined, readers?: Partial<ContentOptions>]
+) {
   const url = given.length === 0 ? BASE : given[0];
   const fetch = fakeFetch(cms);
   const content = await resolveSiteContent({
@@ -118,6 +122,7 @@ async function resolve(cms: FakeCms, ...given: [url?: string | undefined]) {
     fetch,
     timeoutMs: 200,
     staticPages: STATIC_PAGES,
+    ...given[1],
   });
   return { ...content, fetch };
 }
@@ -538,7 +543,9 @@ describe("the site's content", () => {
     }
 
     function chain(next: () => number): unknown {
-      // A long chain of one shape, as an attacker would send to exhaust a recursion.
+      // A chain of one shape, mixed with everything else the generator makes. How deep an answer
+      // may go is the deep tests' point above; here it only has to be deeper than the body
+      // format, so each answer takes milliseconds.
       const shapes = [
         (inner: unknown) => [inner],
         (inner: unknown) => ({ type: "link", url: "/docs/", children: [inner] }),
@@ -547,7 +554,7 @@ describe("the site's content", () => {
       ];
       const shape = shapes[Math.floor(next() * shapes.length)] ?? shapes[0];
       let node: unknown = { type: "text", text: "x" };
-      for (let level = 0; level < 20_000; level += 1) node = shape?.(node);
+      for (let level = 0; level < 200; level += 1) node = shape?.(node);
       return node;
     }
 
@@ -576,29 +583,155 @@ describe("the site's content", () => {
           `seed ${String(seed)}`,
         ).resolves.toBeDefined();
       }
-      // 150 answers, most holding chains 20,000 deep: seconds of work on a busy CI runner.
+      // 150 answers take well under a second; the bound is for a busy CI runner.
     }, 60_000);
 
-    it("never throws when a record's fields throw as they are read", async () => {
-      const fetcher = vi.fn(() => {
-        const hostile = new Proxy(
-          {},
-          {
-            get() {
-              throw new Error("boom");
-            },
-            ownKeys() {
-              throw new Error("boom");
-            },
+    it("keeps the other pages when reading one record fails", async () => {
+      const { pages, warnings } = await resolve(
+        { pages: () => json(page([record("identity"), record("tracking")])) },
+        BASE,
+        {
+          parsePage: (input, context) => {
+            if ((input as { slug?: unknown }).slug === "identity") throw new Error("boom");
+            return parseContentPage(input, context);
           },
-        );
-        const response = json(page([]));
-        Object.defineProperty(response, "json", { value: () => Promise.resolve(hostile) });
-        return Promise.resolve(response);
+        },
+      );
+      expect(pages.get("identity")).toBe(staticPage("identity"));
+      expect(pages.get("tracking")?.title).toBe("Edited in the CMS");
+      expect(warnings).toContain('CMS: page "identity" could not be read; the static copy is used');
+    });
+
+    it("keeps the other labels when reading one navigation item fails", async () => {
+      const item = (label: string, href: string) => ({
+        label,
+        href,
+        placement: "header",
+        order: 0,
       });
-      await expect(
-        resolveSiteContent({ url: BASE, fetch: fetcher, staticPages: STATIC_PAGES }),
-      ).resolves.toBeDefined();
+      const { labels, warnings } = await resolve(
+        { navigation: () => json(page([item("Lost", "/identity/"), item("Kept", "/tracking/")])) },
+        BASE,
+        {
+          parseNavigationItem: (input, paths) => {
+            if ((input as { label?: unknown }).label === "Lost") throw new Error("boom");
+            return parseNavigationItem(input, paths);
+          },
+        },
+      );
+      expect(labels.header).toEqual({ "/tracking/": "Kept" });
+      expect(warnings).toContain("CMS: navigation item 1 could not be read; it is left out");
+    });
+
+    /** An answer whose headers throw as they are read: an error that is not a failed read. */
+    function throwing(): Response {
+      const response = json(page([]));
+      Object.defineProperty(response, "headers", {
+        value: {
+          get() {
+            throw new Error("boom");
+          },
+        },
+      });
+      return response;
+    }
+
+    const labelled = () =>
+      json(page([{ label: "Analytics", href: "/tracking/", placement: "header", order: 0 }]));
+
+    it("keeps the navigation's labels when reading the pages fails in any way", async () => {
+      const { pages, labels, warnings } = await resolve({ pages: throwing, navigation: labelled });
+      expect([...pages.values()]).toEqual(STATIC_PAGES);
+      expect(labels.header).toEqual({ "/tracking/": "Analytics" });
+      expect(warnings).toContain(
+        "CMS: pages could not be read (its answer could not be read); the static copy of every page is used",
+      );
+    });
+
+    it("keeps the CMS's pages when reading the navigation fails in any way", async () => {
+      const { pages, warnings } = await resolve({
+        pages: () => json(page([record("identity")])),
+        navigation: throwing,
+      });
+      expect(pages.get("identity")?.title).toBe("Edited in the CMS");
+      expect(warnings).toContain(
+        "CMS: navigation items could not be read (its answer could not be read); the route table's labels are used",
+      );
+    });
+
+    it("falls back whole when a mistake of its own stops the read before it starts", async () => {
+      const content = await resolveSiteContent({
+        url: BASE,
+        fetch: fakeFetch({}),
+        timeoutMs: Number.NaN,
+        staticPages: STATIC_PAGES,
+      });
+      expect(content.pages).toEqual(new Map(STATIC_PAGES.map((page) => [page.slug, page])));
+      expect(content.warnings).toEqual([
+        "CMS: the CMS could not be read; the static copy of every page is used",
+      ]);
+    });
+  });
+
+  it.each([
+    [
+      "the converter",
+      {
+        body: [
+          {
+            type: "paragraph",
+            children: [
+              {
+                type: "link",
+                url: "/docs/",
+                children: [{ type: "link", url: "/docs/", children: [] }],
+              },
+            ],
+          },
+        ],
+      },
+      "block 1 (paragraph): a link inside a link is not drawn",
+    ],
+    ["the validator", { title: 5 }, "title: must be text"],
+  ])("names a page %s refuses once", async (_, change, why) => {
+    const { warnings } = await resolve({ pages: () => json(page([record("identity", change)])) });
+    expect(warnings[0]).toBe(`CMS: page "identity" is not valid (${why}); the static copy is used`);
+  });
+
+  describe("prints a bounded number of lines, whatever the CMS sends", () => {
+    it("refuses an answer of more records than it asked for", async () => {
+      const records = Array.from({ length: CMS_LIMITS.pageSize + 1 }, () => record("identity"));
+      const { pages, labels, warnings } = await resolve({
+        pages: () => json(page(records)),
+        navigation: () => json(page(Array.from({ length: CMS_LIMITS.pageSize + 1 }, () => 0))),
+      });
+      expect([...pages.values()]).toEqual(STATIC_PAGES);
+      expect(labels).toEqual({ header: {}, footer: {} });
+      expect(warnings).toEqual([
+        `CMS: pages could not be read (the CMS answered more than ${String(CMS_LIMITS.pageSize)} records at once); the static copy of every page is used`,
+        `CMS: navigation items could not be read (the CMS answered more than ${String(CMS_LIMITS.pageSize)} records at once); the route table's labels are used`,
+      ]);
+    });
+
+    it("refuses an answer of hundreds of thousands of records, and says why", async () => {
+      const zeros = `{"data":[${Array.from({ length: 300_000 }, () => "0").join(",")}]}`;
+      const { warnings } = await resolve({
+        pages: () => new Response(zeros, { headers: { "content-type": "application/json" } }),
+      });
+      expect(warnings[0]).toMatch(/answered more than 25 records at once/);
+    });
+
+    it("prints the first fifty warnings and counts the rest", async () => {
+      const junk = Array.from({ length: CMS_LIMITS.pageSize }, () => 0);
+      const { warnings } = await resolve({
+        pages: () => json(page(junk, CMS_LIMITS.pages)),
+        navigation: () => json(page(junk, CMS_LIMITS.pages)),
+      });
+      // 100 records without a slug, the 7 pages missing from the answer, 100 invalid items.
+      expect(warnings).toHaveLength(51);
+      expect(warnings[0]).toBe("CMS: record 1 has no slug; it is left out");
+      expect(warnings[49]).toBe("CMS: record 50 has no slug; it is left out");
+      expect(warnings[50]).toBe("CMS: 157 more warnings are not shown");
     });
   });
 

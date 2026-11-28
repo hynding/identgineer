@@ -36,6 +36,9 @@ export interface ContentOptions {
   readonly staticPages: readonly ContentPage[];
   readonly fetch?: typeof fetch;
   readonly timeoutMs?: number;
+  /** The checks a record is read with; the real ones unless a test puts its own in their place. */
+  readonly parsePage?: typeof parseContentPage;
+  readonly parseNavigationItem?: typeof parseNavigationItem;
 }
 
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
