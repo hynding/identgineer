@@ -1,3 +1,5 @@
+import { countsLine } from "./gallery/gallery-counts.ts";
+
 /** A path of the site: it starts and ends with a slash, and its file is `<path>index.html`. */
 export type RoutePath = `/${string}`;
 
@@ -117,8 +119,7 @@ export const ROUTES: readonly Route[] = [
     path: "/variations/",
     label: "Variations",
     title: "Variations gallery",
-    description:
-      "Eight themes, eight design languages, eight layouts and eight UX modes, side by side and ready to mix.",
+    description: `${countsLine()}, side by side and ready to mix.`,
     status: "live",
     component: "site-variations",
   },
