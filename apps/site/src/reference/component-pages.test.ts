@@ -57,7 +57,11 @@ const SAMPLE: ComponentDoc = {
 };
 
 const EXAMPLES: Readonly<Record<string, ComponentExample>> = {
-  "idg-sample": { caption: "A sample, as it is.", nodes: [el("idg-sample", { tone: "loud" })] },
+  "idg-sample": {
+    stage: "row",
+    caption: "A sample, as it is.",
+    nodes: [el("idg-sample", { tone: "loud" })],
+  },
 };
 
 const t = (text: string) => ({ type: "text", text }) as const;
