@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ENGINE_KEYS, PARTS, fitTag, partProblems } from "./parts";
 
 describe("the browser suite's parts", () => {
-  it("are each engine's fit sweep in five, by page, and the rest", () => {
+  it("are each engine's fit sweep in five, by page, the axe sweep of the looks, and the rest", () => {
     expect(Object.keys(PARTS)).toEqual([
       "chromium-1",
       "chromium-2",
@@ -19,10 +19,12 @@ describe("the browser suite's parts", () => {
       "no-style-queries-reference",
       "no-style-queries-component",
       "no-style-queries-gallery",
+      "axe",
       "rest",
     ]);
     expect(PARTS["no-calc-size-2"]).toEqual(["--grep", "@fit-no-calc-size-2"]);
-    expect(PARTS.rest).toEqual(["--grep-invert", "@fit-"]);
+    expect(PARTS.axe).toEqual(["--grep", "@axe"]);
+    expect(PARTS.rest).toEqual(["--grep-invert", "@fit-|@axe"]);
   });
 
   it("put the home page and the identity page first in each engine, the reference, a component's page and the gallery in a part each, and every other page second", () => {
